@@ -1,1 +1,1 @@
-export const serviceName = 'Ntlango';
+export const APP_NAME = 'Ntlango';

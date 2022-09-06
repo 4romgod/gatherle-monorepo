@@ -1,7 +1,7 @@
 import {Construct} from 'constructs';
 import {CfnIdentityPool, CfnIdentityPoolRoleAttachment} from 'aws-cdk-lib/aws-cognito';
 import {Role, FederatedPrincipal, PolicyStatement, Effect} from 'aws-cdk-lib/aws-iam';
-import {serviceName} from '../constants/appConstants';
+import {APP_NAME} from '../constants/appConstants';
 
 export interface CognitoAuthRoleProps {
     identityPool: CfnIdentityPool;
@@ -28,7 +28,7 @@ export class CognitoAuthRole extends Construct {
             'sts:AssumeRoleWithWebIdentity',
         );
 
-        this.authRole = new Role(this, `${serviceName}CognitoDefaultAuthRole`, {
+        this.authRole = new Role(this, `${APP_NAME}CognitoDefaultAuthRole`, {
             assumedBy: federatedPrincipal,
         });
 
@@ -40,7 +40,7 @@ export class CognitoAuthRole extends Construct {
             }),
         );
 
-        new CfnIdentityPoolRoleAttachment(this, `${serviceName}IdentityPoolRoleAttachment`, {
+        new CfnIdentityPoolRoleAttachment(this, `${APP_NAME}IdentityPoolRoleAttachment`, {
             identityPoolId: identityPool.ref,
             roles: {
                 authenticated: this.authRole.roleArn,

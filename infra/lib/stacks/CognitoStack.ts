@@ -1,7 +1,7 @@
 import {Stack, StackProps, App} from 'aws-cdk-lib';
 import {UserPool, UserPoolClient, CfnIdentityPool, AccountRecovery, StringAttribute} from 'aws-cdk-lib/aws-cognito';
 import {CfnOutput} from 'aws-cdk-lib';
-import {serviceName} from '../constants/appConstants';
+import {APP_NAME} from '../constants/appConstants';
 import {CognitoAuthRole} from '../constructs/CognitoAuthRole';
 
 /**
@@ -11,11 +11,15 @@ export class CognitoStack extends Stack {
     constructor(scope: App, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        const userPool = new UserPool(this, `${serviceName}UserPool`, {
+        const userPool = new UserPool(this, `${APP_NAME}UserPool`, {
             standardAttributes: {
-                email: {required: true, mutable: false},
+                preferredUsername: {required: false, mutable: true},
+                email: {required: true, mutable: true},
+                address: {required: true, mutable: true},
+                gender: {required: true, mutable: true},
                 givenName: {required: true, mutable: true},
-                familyName: {required: true, mutable: false},
+                familyName: {required: true, mutable: true},
+                birthdate: {required: true, mutable: false},
             },
             customAttributes: {
                 isAdmin: new StringAttribute({mutable: true}),
@@ -33,12 +37,16 @@ export class CognitoStack extends Stack {
             signInAliases: {email: true},
         });
 
-        const userPoolClient = new UserPoolClient(this, `${serviceName}UserPoolClient`, {
+        const userPoolClient = new UserPoolClient(this, `${APP_NAME}UserPoolClient`, {
             userPool,
             generateSecret: false,
+            authFlows: {
+                adminUserPassword: true,
+                userPassword: true,
+            },
         });
 
-        const identityPool = new CfnIdentityPool(this, `${serviceName}IdentityPool`, {
+        const identityPool = new CfnIdentityPool(this, `${APP_NAME}IdentityPool`, {
             allowUnauthenticatedIdentities: false,
             cognitoIdentityProviders: [
                 {
@@ -48,20 +56,20 @@ export class CognitoStack extends Stack {
             ],
         });
 
-        const cognitoAuthRole = new CognitoAuthRole(this, `${serviceName}CognitoAuthRole`, {
+        const cognitoAuthRole = new CognitoAuthRole(this, `${APP_NAME}CognitoAuthRole`, {
             identityPool,
         });
 
-        new CfnOutput(this, `${serviceName}UserPoolId`, {
+        new CfnOutput(this, `${APP_NAME}UserPoolId`, {
             value: userPool.userPoolId,
         });
-        new CfnOutput(this, `${serviceName}UserPoolClientId`, {
+        new CfnOutput(this, `${APP_NAME}UserPoolClientId`, {
             value: userPoolClient.userPoolClientId,
         });
-        new CfnOutput(this, `${serviceName}IdentityPoolId`, {
+        new CfnOutput(this, `${APP_NAME}IdentityPoolId`, {
             value: identityPool.ref,
         });
-        new CfnOutput(this, `${serviceName}AuthRoleName`, {
+        new CfnOutput(this, `${APP_NAME}AuthRoleName`, {
             value: cognitoAuthRole.authRole.roleName,
         });
     }
