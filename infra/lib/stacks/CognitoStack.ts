@@ -1,8 +1,9 @@
 import {Stack, StackProps, App} from 'aws-cdk-lib';
-import {UserPool, UserPoolClient, CfnIdentityPool, AccountRecovery, StringAttribute} from 'aws-cdk-lib/aws-cognito';
+import {UserPool, UserPoolClient, CfnIdentityPool, AccountRecovery, StringAttribute, VerificationEmailStyle} from 'aws-cdk-lib/aws-cognito';
 import {CfnOutput} from 'aws-cdk-lib';
 import {APP_NAME} from '../constants/appConstants';
 import {CognitoAuthRole} from '../constructs/CognitoAuthRole';
+import {sendPostSignUpEmail} from '../utils';
 
 /**
  * Documentaion https://branchv60--serverless-stack.netlify.app/chapters/configure-cognito-identity-pool-in-cdk.html
@@ -11,6 +12,7 @@ export class CognitoStack extends Stack {
     constructor(scope: App, id: string, props?: StackProps) {
         super(scope, id, props);
 
+        const {subject, htmlContent} = sendPostSignUpEmail();
         const userPool = new UserPool(this, `${APP_NAME}UserPool`, {
             standardAttributes: {
                 preferredUsername: {required: false, mutable: true},
@@ -35,6 +37,17 @@ export class CognitoStack extends Stack {
             autoVerify: {email: true},
             selfSignUpEnabled: true,
             signInAliases: {email: true},
+            userVerification: {
+                emailSubject: subject,
+                emailBody: htmlContent,
+                emailStyle: VerificationEmailStyle.LINK,
+            },
+        });
+
+        userPool.addDomain(`${APP_NAME}UserPoolDomain`, {
+            cognitoDomain: {
+                domainPrefix: APP_NAME.toLowerCase(),
+            },
         });
 
         const userPoolClient = new UserPoolClient(this, `${APP_NAME}UserPoolClient`, {
