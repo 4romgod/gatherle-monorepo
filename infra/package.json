@@ -1,5 +1,5 @@
 {
-  "name": "ntlango-cdk",
+  "name": "@ntlango/cdk",
   "description": "AWS CDK Infrastructure for Dyondo muliti-user blogging platform",
   "version": "0.1.0",
   "license": "UNLICENSED",
