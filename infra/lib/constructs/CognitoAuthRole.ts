@@ -1,7 +1,7 @@
 import {Construct} from 'constructs';
 import {CfnIdentityPool, CfnIdentityPoolRoleAttachment} from 'aws-cdk-lib/aws-cognito';
 import {Role, FederatedPrincipal, PolicyStatement, Effect} from 'aws-cdk-lib/aws-iam';
-import {APP_NAME} from '../constants/appConstants';
+import {APP_NAME} from '../constants';
 
 export interface CognitoAuthRoleProps {
     identityPool: CfnIdentityPool;

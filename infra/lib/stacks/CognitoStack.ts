@@ -1,19 +1,24 @@
-import {Stack, StackProps, App} from 'aws-cdk-lib';
+import {Stack, App} from 'aws-cdk-lib';
 import {UserPool, UserPoolClient, CfnIdentityPool, AccountRecovery, StringAttribute, VerificationEmailStyle} from 'aws-cdk-lib/aws-cognito';
 import {CfnOutput} from 'aws-cdk-lib';
-import {APP_NAME} from '../constants/appConstants';
+import {APP_NAME, NtlangoStackProps} from '../constants';
 import {CognitoAuthRole} from '../constructs/CognitoAuthRole';
-import {postSignUpEmail} from '../utils';
+import {capitalize, postSignUpEmail} from '../utils';
+
+export type CognitoStackProps = NtlangoStackProps;
 
 /**
  * Inspired by https://branchv60--serverless-stack.netlify.app/chapters/configure-cognito-identity-pool-in-cdk.html
  */
 export class CognitoStack extends Stack {
-    constructor(scope: App, id: string, props?: StackProps) {
+    constructor(scope: App, id: string, props: CognitoStackProps) {
         super(scope, id, props);
 
+        const {stage} = props;
+        const capitalizedStage = capitalize(stage);
+
         const {subject, htmlContent} = postSignUpEmail();
-        const userPool = new UserPool(this, `${APP_NAME}UserPoolId`, {
+        const userPool = new UserPool(this, `${APP_NAME}${capitalizedStage}UserPoolId`, {
             standardAttributes: {
                 address: {
                     required: true,
@@ -91,13 +96,13 @@ export class CognitoStack extends Stack {
             },
         });
 
-        userPool.addDomain(`${APP_NAME}UserPoolDomainId`, {
+        userPool.addDomain(`${APP_NAME}${capitalizedStage}UserPoolDomainId`, {
             cognitoDomain: {
                 domainPrefix: APP_NAME.toLowerCase(),
             },
         });
 
-        const userPoolClient = new UserPoolClient(this, `${APP_NAME}UserPoolClientId`, {
+        const userPoolClient = new UserPoolClient(this, `${APP_NAME}${capitalizedStage}UserPoolClientId`, {
             userPool,
             generateSecret: false,
             authFlows: {
@@ -106,7 +111,7 @@ export class CognitoStack extends Stack {
             },
         });
 
-        const identityPool = new CfnIdentityPool(this, `${APP_NAME}IdentityPoolId`, {
+        const identityPool = new CfnIdentityPool(this, `${APP_NAME}${capitalizedStage}IdentityPoolId`, {
             allowUnauthenticatedIdentities: false,
             cognitoIdentityProviders: [
                 {
@@ -116,21 +121,28 @@ export class CognitoStack extends Stack {
             ],
         });
 
-        const cognitoAuthRole = new CognitoAuthRole(this, `${APP_NAME}CognitoAuthRoleId`, {
+        const cognitoAuthRole = new CognitoAuthRole(this, `${APP_NAME}${capitalizedStage}CognitoAuthRoleId`, {
             identityPool,
         });
 
-        new CfnOutput(this, `${APP_NAME}ExportedUserPoolId`, {
+        new CfnOutput(this, `${APP_NAME}${capitalizedStage}ExportedUserPoolId`, {
             value: userPool.userPoolId,
+            exportName: `${APP_NAME}${capitalizedStage}ExportedUserPool`,
         });
-        new CfnOutput(this, `${APP_NAME}ExportedUserPoolClientId`, {
+
+        new CfnOutput(this, `${APP_NAME}${capitalizedStage}ExportedUserPoolClientId`, {
             value: userPoolClient.userPoolClientId,
+            exportName: `${APP_NAME}${capitalizedStage}ExportedUserPoolClient`,
         });
-        new CfnOutput(this, `${APP_NAME}ExportedIdentityPoolId`, {
+
+        new CfnOutput(this, `${APP_NAME}${capitalizedStage}ExportedIdentityPoolId`, {
             value: identityPool.ref,
+            exportName: `${APP_NAME}${capitalizedStage}ExportedIdentityPool`,
         });
-        new CfnOutput(this, `${APP_NAME}ExportedAuthRoleName`, {
-            value: cognitoAuthRole.authRole.roleName,
+
+        new CfnOutput(this, `${APP_NAME}${capitalizedStage}ExportedAuthRoleArnId`, {
+            value: cognitoAuthRole.authRole.roleArn,
+            exportName: `${APP_NAME}${capitalizedStage}ExportedAuthRoleArn`,
         });
     }
 }

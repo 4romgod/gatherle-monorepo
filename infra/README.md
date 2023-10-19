@@ -1,13 +1,33 @@
-# Welcome to your CDK TypeScript project!
+# Ntlango AWS Infrastructure with CDK
 
-You should explore the contents of this project. It demonstrates a CDK app with an instance of a stack (`NtlangoCdkStack`)
-which contains an Amazon SQS queue that is subscribed to an Amazon SNS topic.
+This CDK project contains Ntlango infrastructure, for both the frontend and the API.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+The API will be hosted as a Fargate service.
+
+The Frontend will be hosted in ???
+
+## Ntlango API Deployment
+To deploy the infrastructure for the backend, follow these steps:
+
+### Manually Create the ECR Repository
+1. Create an ECR repository and Copy the URI
+2. Create a docker image of the `ntlango-api`
+    - Pull the `ntlango-api` GitHub repository
+    - Create a docker image of `ntlango-api` and tag it with the URI from step 1
+3. Push the image to the ECR repository
+    - [Use this link](https://jhooq.com/docker-push-image-to-ecr/)
+
+### Manually Create the Route53 Hosted Zone
+1. Go to Route53 and create a hosted zone for your domain
+2. Copy the authoritative nameserver (SOA), and tell our DNS provider to delegate requests to our Hosted Zone in AWS.
+
+### Deploying the CDK Resources
+1. Deploy the CDK resources
 
 ## Useful commands
 
- * `npm run build`   compile typescript to js
+ * `npm run build`   installs node_modules, and compile typescript to js
+ * `npm run clean`   removes all build outputs, and node_modules
  * `npm run watch`   watch for changes and compile
  * `npm run test`    perform the jest unit tests
  * `cdk deploy`      deploy this stack to your default AWS account/region
