@@ -8,7 +8,6 @@ import {FargateTaskConstruct} from '../constructs/FargateTask';
 import {API_ENDPOINTS, APP_NAME, NtlangoStackProps} from '../constants';
 import {Certificate} from 'aws-cdk-lib/aws-certificatemanager';
 import {capitalize} from '../utils';
-import 'dotenv/config';
 
 export interface FargateStackProps extends NtlangoStackProps {
     readonly disambiguator: string;

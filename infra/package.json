@@ -1,11 +1,10 @@
 {
   "name": "@ntlango/cdk",
-  "description": "AWS CDK Infrastructure for Dyondo muliti-user blogging platform",
+  "description": "AWS CDK Infrastructure for Ntlango",
   "version": "0.1.0",
   "license": "UNLICENSED",
-  "main": "dist/lib/app.js",
   "scripts": {
-    "build": "npm run clean && npm run lint && tsc",
+    "build": "npm run test && npm run cdk synth",
     "clean": "rm -rf dist && rm -rf cdk.out",
     "watch": "tsc -w",
     "test": "jest --verbose",
@@ -19,7 +18,7 @@
     "@types/prettier": "2.6.0",
     "@typescript-eslint/eslint-plugin": "^5.30.4",
     "@typescript-eslint/parser": "^5.30.4",
-    "aws-cdk": "2.7.0",
+    "aws-cdk": "^2.102.0",
     "dotenv": "^16.3.1",
     "eslint": "^8.19.0",
     "eslint-config-prettier": "^8.5.0",
@@ -28,10 +27,10 @@
     "jest": "^26.4.2",
     "ts-jest": "^26.2.0",
     "ts-node": "^9.0.0",
-    "typescript": "~3.9.7"
+    "typescript": "^3.9.7"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.7.0",
-    "constructs": "^10.0.0"
+    "aws-cdk-lib": "^2.102.0",
+    "constructs": "^10.3.0"
   }
 }

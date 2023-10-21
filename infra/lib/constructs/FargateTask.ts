@@ -1,7 +1,7 @@
+import {Construct} from 'constructs';
 import {ContainerImage, LogDrivers} from 'aws-cdk-lib/aws-ecs';
 import {FargateTaskDefinition, Protocol} from 'aws-cdk-lib/aws-ecs';
 import {LogGroup, RetentionDays} from 'aws-cdk-lib/aws-logs';
-import {Construct} from 'constructs';
 import {NtlangoEnvironmentVariables} from '../constants';
 import {API_CONTAINER_NAME, API_PORT, APP_NAME} from '../constants';
 import {ManagedPolicy} from 'aws-cdk-lib/aws-iam';
