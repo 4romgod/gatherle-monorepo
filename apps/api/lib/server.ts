@@ -1,14 +1,17 @@
 import express, {Express} from 'express';
 import bodyParser from 'body-parser';
 import morgan from 'morgan';
+import {MongoDbClient} from './clients';
 import {graphqlHTTP} from 'express-graphql';
 import graphQLSchema from './graphql/schema';
-import {API_PORT, API_DOMAIN, NODE_ENV, STAGES} from './constants';
+import {API_PORT, API_DOMAIN, NODE_ENV, STAGES, MONGO_DB_URL} from './constants';
 
 const app: Express = express();
 
 const initializeApp = async () => {
     try {
+        await MongoDbClient.connectToDatabase(MONGO_DB_URL);
+
         app.use(morgan('dev'));
         app.use(bodyParser.json({limit: '50mb'}));
         app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));

@@ -2,8 +2,7 @@ import {EventCategory, EventPrivacySetting, EventStatus, EventType, IEvent} from
 
 const events: IEvent[] = [
     {
-        _id: 'mongodbEvent001',
-        eventID: 'rockingTheDaisies2024',
+        id: 'rockingTheDaisies2024',
         title: 'Rocking The Daisies 2024',
         description: 'Rocking The Daisies 2024',
         startDate: 'a start date',
@@ -30,10 +29,11 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
     {
-        _id: 'mongodbEvent002',
-        eventID: 'rockingTheDaisies2023',
+        id: 'rockingTheDaisies2023',
         title: 'Rocking The Daisies 2023',
         description: 'Rocking The Daisies 2023',
         startDate: 'a start date',
@@ -60,10 +60,11 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
     {
-        _id: 'mongodbEvent003',
-        eventID: 'durbanJuly2023',
+        id: 'durbanJuly2023',
         title: 'Durban July 2023',
         description: 'Durban July 2023',
         startDate: 'a start date',
@@ -79,6 +80,8 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
 ];
 

@@ -53,22 +53,12 @@ export enum EventCategory {
     OTHER = 'Other',
 }
 
-/**
- *
- * @export
- * @interface IEvent
- */
 export type IEvent = {
-    /**
-     * MongoDB ObjectId
-     * @type {string}
-     */
-    _id: string;
     /**
      * The unique ID of the event.
      * @type {string}
      */
-    eventID: string;
+    id?: string;
     /**
      * The title of the event.
      * @type {string}
@@ -93,12 +83,7 @@ export type IEvent = {
      * The location where the event takes place, i.e. Can be virtual.
      * @type {string}
      */
-    location?: string;
-    /**
-     * Information about the individuals or organizations hosting the event.
-     * @type {Array<string>}
-     */
-    organizers: Array<string>;
+    location: string;
     /**
      *
      * @type {EventType}
@@ -115,10 +100,20 @@ export type IEvent = {
      */
     capacity?: number;
     /**
+     * Wheather the event has happened, or yet to happen
+     * @type {EventStatus}
+     */
+    status: EventStatus;
+    /**
+     * Information about the individuals or organizations hosting the event.
+     * @type {Array<string>}
+     */
+    organizers: Array<string>;
+    /**
      * The IDs of the people to RSVP into the event.
      * @type {Array<string>}
      */
-    rSVPs: Array<string>;
+    rSVPs?: Array<string>;
     /**
      *
      * @type {{ [key: string]: any; }}
@@ -126,16 +121,6 @@ export type IEvent = {
     tags?: {
         [key: string]: any;
     };
-    /**
-     * A link to the event\'s website or registration page.
-     * @type {string}
-     */
-    eventLink?: string;
-    /**
-     *
-     * @type {EventStatus}
-     */
-    status: EventStatus;
     /**
      *
      * @type {{ [key: string]: any; }}
@@ -161,5 +146,24 @@ export type IEvent = {
      *
      * @type {EventPrivacySetting}
      */
-    privacySetting: EventPrivacySetting;
+    privacySetting?: EventPrivacySetting;
+    /**
+     * A link to the event\'s website or registration page.
+     * @type {string}
+     */
+    eventLink?: string;
+    /**
+     * Timestamp for when a document is created
+     * @type {string}
+     */
+    createdAt: string;
+    /**
+     * Timestamp for when a document is last updated
+     * @type {string}
+     */
+    updatedAt: string;
 };
+
+export type ICreateEvent = Omit<IEvent, 'eventID'>;
+
+export type IUpdateEvent = Omit<IEvent, 'eventID'>;

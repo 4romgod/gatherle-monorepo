@@ -1,23 +1,53 @@
-import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLNonNull, GraphQLScalarType} from 'graphql';
-import {IUser} from '../../interface';
+import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLNonNull, GraphQLInputObjectType} from 'graphql';
 
-const UserType = new GraphQLObjectType<IUser>({
+export const UserType = new GraphQLObjectType({
     name: 'User',
     fields: {
-        _id: {type: new GraphQLNonNull(GraphQLID)},
-        userID: {type: new GraphQLNonNull(GraphQLID)},
-        address: {type: GraphQLString},
-        birthdate: {type: GraphQLString},
-        email: {type: GraphQLString},
-        family_name: {type: GraphQLString},
-        gender: {type: GraphQLString},
-        given_name: {type: GraphQLString},
-        password: {type: GraphQLString},
+        id: {type: GraphQLNonNull(GraphQLID)},
+        email: {type: GraphQLNonNull(GraphQLString)},
+        username: {type: GraphQLNonNull(GraphQLString)},
+        address: {type: GraphQLNonNull(GraphQLString)},
+        birthdate: {type: GraphQLNonNull(GraphQLString)},
+        given_name: {type: GraphQLNonNull(GraphQLString)},
+        family_name: {type: GraphQLNonNull(GraphQLString)},
+        gender: {type: GraphQLNonNull(GraphQLString)},
+        encrypted_password: {type: GraphQLNonNull(GraphQLString)},
         phone_number: {type: GraphQLString},
-        preferred_username: {type: GraphQLString},
         profile_picture: {type: GraphQLString},
-        website: {type: GraphQLString},
+        userType: {type: GraphQLNonNull(GraphQLString)},
     },
 });
 
-export default UserType;
+export const CreateUserInputType = new GraphQLInputObjectType({
+    name: 'CreateUserInput',
+    fields: () => ({
+        email: {type: GraphQLNonNull(GraphQLString)},
+        username: {type: GraphQLString},
+        address: {type: GraphQLNonNull(GraphQLString)},
+        birthdate: {type: GraphQLNonNull(GraphQLString)},
+        given_name: {type: GraphQLNonNull(GraphQLString)},
+        family_name: {type: GraphQLNonNull(GraphQLString)},
+        gender: {type: GraphQLNonNull(GraphQLString)},
+        password: {type: GraphQLNonNull(GraphQLString)},
+        phone_number: {type: GraphQLString},
+        profile_picture: {type: GraphQLString},
+        userType: {type: GraphQLNonNull(GraphQLString)},
+    }),
+});
+
+export const UpdateUserInputType = new GraphQLInputObjectType({
+    name: 'UpdateUserInput',
+    fields: () => ({
+        email: {type: GraphQLNonNull(GraphQLString)},
+        username: {type: GraphQLString},
+        address: {type: GraphQLNonNull(GraphQLString)},
+        birthdate: {type: GraphQLNonNull(GraphQLString)},
+        given_name: {type: GraphQLNonNull(GraphQLString)},
+        family_name: {type: GraphQLNonNull(GraphQLString)},
+        gender: {type: GraphQLNonNull(GraphQLString)},
+        password: {type: GraphQLNonNull(GraphQLString)},
+        phone_number: {type: GraphQLString},
+        profile_picture: {type: GraphQLString},
+        userType: {type: GraphQLNonNull(GraphQLString)},
+    }),
+});

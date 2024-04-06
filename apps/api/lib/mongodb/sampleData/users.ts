@@ -2,8 +2,7 @@ import {Gender, IUser, UserType} from '../../interface/users';
 
 const users: IUser[] = [
     {
-        _id: 'mongodbUser001',
-        userID: 'user001',
+        id: 'user001',
         email: 'user001@gmail.com',
         username: 'jackBaur',
         address: 'KZN, Durban, 8000',
@@ -15,10 +14,11 @@ const users: IUser[] = [
         phone_number: '',
         profile_picture: '',
         userType: UserType.USER,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
     {
-        _id: 'mongodbUser002',
-        userID: 'host001',
+        id: 'host001',
         email: 'jay@rocknation.com',
         username: 'jayz',
         address: 'USA, Brooklyn, 8000',
@@ -30,10 +30,11 @@ const users: IUser[] = [
         phone_number: '',
         profile_picture: '',
         userType: UserType.HOST,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
     {
-        _id: 'mongodbUser003',
-        userID: 'user002',
+        id: 'user002',
         email: 'celin@yahoo.com',
         username: 'celin352',
         address: 'WC, Parklands, 8000',
@@ -45,10 +46,11 @@ const users: IUser[] = [
         phone_number: '',
         profile_picture: '',
         userType: UserType.USER,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
     {
-        _id: 'mongodbUser004',
-        userID: 'host002',
+        id: 'host002',
         email: 'Jeff@amazon.com',
         username: 'jeffbez',
         address: 'USA, Seattle, 8000',
@@ -60,6 +62,8 @@ const users: IUser[] = [
         phone_number: '',
         profile_picture: '',
         userType: UserType.ADMIN,
+        createdAt: 'created time',
+        updatedAt: 'updated time',
     },
 ];
 

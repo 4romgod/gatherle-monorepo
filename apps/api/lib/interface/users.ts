@@ -11,16 +11,7 @@ export enum UserType {
 }
 
 export type IUser = {
-    /**
-     * MongoDB ObjectId
-     * @type {string}
-     */
-    _id: string;
-    /**
-     * The unique ID of the user.
-     * @type {string}
-     */
-    userID: string;
+    id?: string;
     /**
      * Represents the user\'s email address.
      * @type {string}
@@ -42,6 +33,11 @@ export type IUser = {
      */
     birthdate: string;
     /**
+     * Represents the user's given name (first name).
+     * @type {string}
+     */
+    given_name: string;
+    /**
      * Represents the user's family name (last name).
      * @type {string}
      */
@@ -51,11 +47,6 @@ export type IUser = {
      * @type {string}
      */
     gender: Gender;
-    /**
-     * Represents the user's given name (first name).
-     * @type {string}
-     */
-    given_name: string;
     /**
      * The password chosen by the user during registration. Passwords should meet the following criteria: - Minimum length: 6 characters - At least one uppercase letter - At least one lowercase letter - At least one digit - Special characters allowed but not required.
      * @type {string}
@@ -67,9 +58,29 @@ export type IUser = {
      */
     phone_number?: string;
     /**
-     *
+     * Link to the user's profile photo
      * @type {string}
      */
     profile_picture?: string;
+    /**
+     * User authZ level
+     * @type {string}
+     */
     userType: UserType;
+    /**
+     * Timestamp for when a document is created
+     * @type {string}
+     */
+    createdAt?: string;
+    /**
+     * Timestamp for when a document is last updated
+     * @type {string}
+     */
+    updatedAt?: string;
 };
+
+export type ICreateUser = Omit<IUser, 'encrypted_password'> & {password: string};
+
+export type IUpdateUser = Omit<IUser, 'encrypted_password'> & {password: string};
+
+export type UserQueryParams = Partial<Record<keyof IUser, any>> & {userIDList?: Array<string>};
