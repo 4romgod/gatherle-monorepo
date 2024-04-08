@@ -2,7 +2,7 @@ import {EventCategory, EventPrivacySetting, EventStatus, EventType, IEvent} from
 
 const events: IEvent[] = [
     {
-        id: 'rockingTheDaisies2024',
+        // id: 'rockingTheDaisies2024',
         title: 'Rocking The Daisies 2024',
         description: 'Rocking The Daisies 2024',
         startDate: 'a start date',
@@ -33,7 +33,7 @@ const events: IEvent[] = [
         updatedAt: 'updated time',
     },
     {
-        id: 'rockingTheDaisies2023',
+        // id: 'rockingTheDaisies2023',
         title: 'Rocking The Daisies 2023',
         description: 'Rocking The Daisies 2023',
         startDate: 'a start date',
@@ -64,7 +64,7 @@ const events: IEvent[] = [
         updatedAt: 'updated time',
     },
     {
-        id: 'durbanJuly2023',
+        // id: 'durbanJuly2023',
         title: 'Durban July 2023',
         description: 'Durban July 2023',
         startDate: 'a start date',

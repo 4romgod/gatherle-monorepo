@@ -1,12 +1,12 @@
 import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLInputObjectType} from 'graphql';
 import {GraphQLJSONObject} from 'graphql-type-json';
 import {UserType} from './user';
-import {usersSampleData} from '../../mongodb/sampleData';
+import {usersMockData} from '../../mongodb/mockData';
 
 export const EventType = new GraphQLObjectType({
     name: 'Event',
     fields: {
-        eventID: {type: GraphQLNonNull(GraphQLID)},
+        id: {type: GraphQLNonNull(GraphQLID)},
         title: {type: GraphQLNonNull(GraphQLString)},
         description: {type: GraphQLNonNull(GraphQLString)},
         startDate: {type: GraphQLNonNull(GraphQLString)},
@@ -19,13 +19,13 @@ export const EventType = new GraphQLObjectType({
         organizers: {
             type: GraphQLList(UserType),
             resolve(parent, args, context, resolveInfo) {
-                return usersSampleData.filter((user) => parent.organizers.includes(user.id));
+                return usersMockData.filter((user) => parent.organizers.includes(user.id)); // TODO fix
             },
         },
         rSVPs: {
             type: GraphQLList(UserType),
             resolve(parent, args, context, resolveInfo) {
-                return usersSampleData.filter((user) => parent.rSVPs.includes(user.id));
+                return usersMockData.filter((user) => parent.rSVPs.includes(user.id)); // TODO fix
             },
         },
         tags: {type: GraphQLJSONObject},

@@ -156,12 +156,12 @@ export type IEvent = {
      * Timestamp for when a document is created
      * @type {string}
      */
-    createdAt: string;
+    createdAt?: string;
     /**
      * Timestamp for when a document is last updated
      * @type {string}
      */
-    updatedAt: string;
+    updatedAt?: string;
 };
 
 export type ICreateEvent = Omit<IEvent, 'eventID'>;

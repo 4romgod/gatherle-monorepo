@@ -2,7 +2,7 @@ import {Gender, IUser, UserType} from '../../interface/users';
 
 const users: IUser[] = [
     {
-        id: 'user001',
+        // id: 'user001',
         email: 'user001@gmail.com',
         username: 'jackBaur',
         address: 'KZN, Durban, 8000',
@@ -18,7 +18,7 @@ const users: IUser[] = [
         updatedAt: 'updated time',
     },
     {
-        id: 'host001',
+        // id: 'host001',
         email: 'jay@rocknation.com',
         username: 'jayz',
         address: 'USA, Brooklyn, 8000',
@@ -34,7 +34,7 @@ const users: IUser[] = [
         updatedAt: 'updated time',
     },
     {
-        id: 'user002',
+        // id: 'user002',
         email: 'celin@yahoo.com',
         username: 'celin352',
         address: 'WC, Parklands, 8000',
@@ -50,7 +50,7 @@ const users: IUser[] = [
         updatedAt: 'updated time',
     },
     {
-        id: 'host002',
+        // id: 'host002',
         email: 'Jeff@amazon.com',
         username: 'jeffbez',
         address: 'USA, Seattle, 8000',
