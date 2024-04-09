@@ -1,8 +1,8 @@
-import NtlangoLogo from '@/app/ui/ntlango-logo';
+import NtlangoLogo from '@/components/ntlango-logo';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import Image from 'next/image';
-import { lusitana } from '@/app/ui/fonts';
+import { lusitana } from '@/components/fonts';
 
 export default function Page() {
   return (

@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import NavLinks from '@/app/ui/dashboard/nav-links';
-import NtlangoLogo from '@/app/ui/ntlango-logo';
+import NavLinks from '@/components/dashboard/nav-links';
+import NtlangoLogo from '@/components/ntlango-logo';
 import { PowerIcon } from '@heroicons/react/24/outline';
 
 export default function SideNav() {

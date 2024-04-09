@@ -1,10 +1,9 @@
-import { lusitana } from '@/app/ui/fonts';
-import { getClient } from "@/app/lib/graphql/apollo-client";
-import { readEvents, readUsers } from "../lib/graphql/queries";
-import LatestInvoices from '@/app/ui/dashboard/latest-invoices';
+import { lusitana } from '@/components/fonts';
+import { getClient } from '@/lib/graphql/apollo-client';
+import { readEvents, readUsers } from '@/lib/graphql/queries';
+import LatestInvoices from '@/components/dashboard/latest-invoices';
 
 export default async function Page() {
-  const { data: events } = await getClient().query({ query: readEvents });
   const { data: users } = await getClient().query({ query: readUsers });
 
   return (

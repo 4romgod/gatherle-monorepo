@@ -1,7 +1,9 @@
-import { gql } from "@apollo/client";
+import { gql } from '@apollo/client';
 
-export const readEvents = gql`query Events {
+export const readEvents = gql`
+  query Events {
     readEvents {
+      id
       title
       description
       startDate
@@ -11,19 +13,22 @@ export const readEvents = gql`query Events {
       capacity
       status
       tags
-      media
       additionalDetails
       comments
       privacySetting
       eventLink
+      organizers
     }
-}`;
+  }
+`;
 
-export const readUsers = gql`query Users {
+export const readUsers = gql`
+  query Users {
     readUsers {
       id
       email
       given_name
       family_name
     }
-}`;
+  }
+`;

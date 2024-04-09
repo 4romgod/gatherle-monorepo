@@ -5,6 +5,7 @@ This is the starter template for the Next.js App Router Course. It contains the 
 For more information, see the [course curriculum](https://nextjs.org/learn) on the Next.js Website.
 
 ## Make Git Commits
+
 When annotating Git commits, you can use various categories to provide context about the changes being made. Our categories include:
 
 1. **Feature**: Use this category when introducing a new feature or functionality to the codebase.
