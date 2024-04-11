@@ -1,8 +1,9 @@
-import EventLinkBox from '@/components/events/event-small-box';
+import EventSmallBox from '@/components/events/event-small-box';
+import { Event } from '@/lib/graphql/types/graphql';
 
 export type EventTileGridProps = {
   eventsByCategory: {
-    [category: string]: any[];
+    [category: string]: Event[];
   };
   hideCategories?: boolean;
 };
@@ -14,11 +15,13 @@ export default function EventTileGrid({
   return (
     <>
       {Object.keys(eventsByCategory).map((category) => (
-        <div key={category} className="space-y-8">
-          {!hideCategories && <h2 className="h2">{category}</h2>}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:max-w-none xl:grid-cols-3">
+        <div key={category}>
+          {!hideCategories && (
+            <h2 className="mb-3 mt-16 px-2 text-2xl sm:px-0">{category}</h2>
+          )}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3 lg:max-w-none xl:grid-cols-3">
             {eventsByCategory[category].map((event) => (
-              <EventLinkBox key={event.id} event={event} />
+              <EventSmallBox key={`${category}.${event.id}`} event={event} />
             ))}
           </div>
         </div>

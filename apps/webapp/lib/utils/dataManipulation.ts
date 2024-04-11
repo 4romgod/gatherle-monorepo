@@ -1,11 +1,12 @@
+import { GetAllEventsQuery } from '../graphql/types/graphql';
+
 export const groupEventsByCategory = (
-  events: any[],
+  events: GetAllEventsQuery,
 ): { [category: string]: any[] } => {
   const groupedEvents: { [category: string]: any[] } = {};
 
-  events.forEach((event) => {
-    // Iterate through each event category of the event
-    event.eventCategory.forEach((category: any) => {
+  events.readEvents?.forEach((event) => {
+    event?.eventCategory.forEach((category: string) => {
       // Check if the category exists in the groupedEvents object
       if (!groupedEvents[category]) {
         // If not, initialize it with an empty array

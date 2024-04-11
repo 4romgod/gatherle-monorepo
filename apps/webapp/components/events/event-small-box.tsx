@@ -5,45 +5,55 @@ import {
   CheckCircleIcon,
   TicketIcon,
 } from '@heroicons/react/24/outline';
+import { Event } from '@/lib/graphql/types/graphql';
 
-export default function EventSmallBox({ event }: any) {
-  const { title, organizers, startDate, endDate, rSVPs } = event;
+export default function EventSmallBox({ event }: { event: Event }) {
+  const {
+    title,
+    organizers,
+    startDate,
+    rSVPs,
+    media: { featuredImageUrl },
+  } = event;
   const organizersText =
-    organizers?.reduce((text: string, curr: string) => `${text} and ${curr}`) ??
-    '';
+    organizers?.map((user) => user.username).join(' and ') ?? '';
 
   return (
     <Link href={`/ntlango`}>
       <div
         className={`
-          bg-scale-100 dark:bg-scale-300 hover:bg-scale-200 hover:dark:bg-scale-400 group flex
-          h-full w-full
-          flex-row gap-2
-          rounded border px-6
-          py-6 shadow 
-          transition-all 
-          hover:shadow-lg
-          sm:flex-col
+          bg-scale-100 dark:bg-scale-300 hover:bg-scale-200 hover:dark:bg-scale-400
+          group flex
+          h-full w-full flex-row gap-2
+          rounded border
+          px-2 py-4
+          shadow transition-all hover:shadow-lg
+          md:flex-col 
+          md:px-0 
+          md:py-0
+          md:pb-3
         `}
       >
-        <div className="w-1/3 sm:w-full">
+        <div className="w-1/4 pt-1 md:w-full md:pt-0">
           <Image
-            src="/hero-desktop.png"
-            alt="Screenshots of the dashboard project"
+            src={featuredImageUrl}
+            alt="Event Image"
             width={500}
             height={500}
-            layout="responsive"
-            quality={65}
+            sizes="100vw"
+            style={{
+              width: '100%',
+              height: 'auto',
+            }}
+            className="rounded"
           />
         </div>
-        <div className="pt-2">
+        <div className="w-3/4 md:w-full md:px-6 md:pt-2">
           <div>
-            <h4 className="block truncate font-bold">{title}</h4>
+            <h4 className="text-xl font-bold">{title}</h4>
           </div>
           <div>
-            <p className="block truncate text-base">
-              Hosted by: {organizersText}
-            </p>
+            <p className="text-base">{organizersText}</p>
           </div>
           <div className="flex flex-row">
             <CalendarIcon className="mr-2 h-6 w-5" />
@@ -51,7 +61,7 @@ export default function EventSmallBox({ event }: any) {
           </div>
           <div className="flex flex-row">
             <CheckCircleIcon className="mr-2 h-6 w-5" />
-            <p>{rSVPs.length ?? 0} RSVP&apos;s</p>
+            <p>{rSVPs.length ?? 0} RSVP&lsquo;s</p>
           </div>
           <div className="flex flex-row">
             <TicketIcon className="mr-2 h-6 w-5" />

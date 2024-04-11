@@ -19,7 +19,7 @@ export default function Navbar() {
   ];
 
   return (
-    <div className="mx-auto flex h-24 items-center justify-between bg-black px-4 text-white">
+    <div className="mx-auto flex h-24 items-center justify-between bg-black px-3 text-white">
       <h1 className="text-3xl font-bold text-blue-500">
         <Link href={''} className="hover:cursor-pointer">
           LOGO.

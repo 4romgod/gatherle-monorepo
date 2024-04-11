@@ -1,39 +1,38 @@
 import EventAdvertBox from '@/components/events/event-advert-box';
 import EventTileGrid from '@/components/events/event-tile-grid';
 import SectionContainer from '@/components/section-container';
-import Search from '@/components/search/search-box';
 import Footer from '@/components/footer';
 import Navbar from '@/components/navigation/navbar';
+import SearchBox from '@/components/search/search-box';
 import { groupEventsByCategory } from '@/lib/utils/dataManipulation';
 import { getClient } from '@/lib/graphql/apollo-client';
-import { readEvents } from '@/lib/graphql/queries';
-import SearchBox from '@/components/search/search-box';
+import { GetAllEventsDocument } from '@/lib/graphql/types/graphql';
 
 export default async function Home() {
-  const { data: events } = await getClient().query({ query: readEvents });
+  const { data: events } = await getClient().query({
+    query: GetAllEventsDocument,
+  });
 
   const allCategories: any[] = [];
 
-  const eventsByCategory: { [category: string]: any[] } = groupEventsByCategory(
-    events.readEvents,
-  );
+  const eventsByCategory: { [category: string]: any[] } =
+    groupEventsByCategory(events);
 
   return (
     <>
       <Navbar />
       <SectionContainer className="space-y-16">
-        <div className="text-center">
+        <div className="px-2 text-center">
           <h1 className="text-5xl">Let&apos;s Go!</h1>
           <h2 className="text-2xl">Find The Events You Like</h2>
         </div>
 
-        <div className="md:hidden">
+        <div className="px-3 sm:px-0 md:hidden">
           <SearchBox placeholder="Search events..." />
         </div>
 
         <div className="grid space-y-12 md:gap-8 lg:grid-cols-12 lg:gap-16 lg:space-y-0 xl:gap-16">
-          <div className="lg:col-span-4 xl:col-span-3">
-            {/* Horizontal link menu */}
+          <div className="px-3 sm:px-0 lg:col-span-4 xl:col-span-3">
             <div className="space-y-6">
               <div className="hidden lg:block">
                 <div className="text-scale-900 mb-2 text-sm">Categories</div>
@@ -101,9 +100,8 @@ export default async function Home() {
             </div>
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
-            {/* Events Tiles */}
             <div className="grid space-y-10">
-              {events.readEvents.length ? (
+              {events?.readEvents?.length ? (
                 <EventTileGrid eventsByCategory={eventsByCategory} />
               ) : (
                 <h2 className="h2">No Partners Found</h2>
@@ -111,7 +109,6 @@ export default async function Home() {
             </div>
           </div>
         </div>
-        {/* Become a partner form */}
       </SectionContainer>
       <Footer />
     </>

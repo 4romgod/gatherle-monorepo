@@ -1,9 +1,8 @@
-import { gql } from '@apollo/client';
+import { graphql } from '@/lib/graphql/types';
 
-export const readEvents = gql`
-  query Events {
+const GetAllEventsDocument = graphql(`
+  query GetAllEvents {
     readEvents {
-      id
       title
       description
       startDate
@@ -13,23 +12,56 @@ export const readEvents = gql`
       capacity
       status
       tags
-      additionalDetails
       comments
       privacySetting
       eventLink
-      organizers
-      rSVPs
+      media {
+        featuredImageUrl
+      }
+      organizers {
+        email
+        username
+        address
+        birthdate
+        family_name
+        gender
+        given_name
+        encrypted_password
+        phone_number
+        profile_picture
+        userType
+      }
+      rSVPs {
+        email
+        username
+        address
+        birthdate
+        family_name
+        gender
+        given_name
+        encrypted_password
+        phone_number
+        profile_picture
+        userType
+      }
     }
   }
-`;
+`);
 
-export const readUsers = gql`
-  query Users {
+const GetAllUsersDocument = graphql(`
+  query GetAllUsers {
     readUsers {
-      id
       email
-      given_name
+      username
+      address
+      birthdate
       family_name
+      gender
+      given_name
+      encrypted_password
+      phone_number
+      profile_picture
+      userType
     }
   }
-`;
+`);
