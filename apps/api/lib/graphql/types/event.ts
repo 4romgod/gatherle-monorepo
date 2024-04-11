@@ -18,7 +18,17 @@ export const EventType = new GraphQLObjectType({
         organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
         rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
         tags: {type: GraphQLJSONObject},
-        media: {type: GraphQLJSONObject},
+        media: {
+            type: GraphQLNonNull(
+                new GraphQLObjectType({
+                    name: 'Media',
+                    fields: {
+                        featuredImageUrl: {type: GraphQLNonNull(GraphQLString)},
+                        otherMediaData: {type: GraphQLJSONObject},
+                    },
+                }),
+            ),
+        },
         additionalDetails: {type: GraphQLJSONObject},
         comments: {type: GraphQLJSONObject},
         privacySetting: {type: GraphQLString},

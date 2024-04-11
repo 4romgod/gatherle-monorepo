@@ -11,8 +11,7 @@ const EventSchema = new Schema<IEvent & Document>(
         location: {type: String, required: true, unique: false},
         capacity: {type: Number, required: false, unique: false},
         status: {type: String, required: true, unique: false},
-        eventType: [{type: String, required: true, unique: false}],
-        eventCategory: [{type: String, required: true, unique: false}],
+        eventCategory: [{type: Schema.Types.ObjectId, ref: 'EventCategory', required: true}],
         organizers: [
             {
                 type: Schema.Types.ObjectId,
@@ -32,8 +31,8 @@ const EventSchema = new Schema<IEvent & Document>(
             default: {},
         },
         media: {
-            type: Schema.Types.Mixed,
-            default: {},
+            featuredImageUrl: {type: String},
+            otherMediaData: {type: Schema.Types.Mixed, default: {}, required: false},
         },
         additionalDetails: {
             type: Schema.Types.Mixed,

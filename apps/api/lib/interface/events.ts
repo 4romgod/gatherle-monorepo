@@ -125,8 +125,9 @@ export type IEvent = {
      *
      * @type {{ [key: string]: any; }}
      */
-    media?: {
-        [key: string]: any;
+    media: {
+        featuredImageUrl: string;
+        otherMediaData?: any;
     };
     /**
      *
