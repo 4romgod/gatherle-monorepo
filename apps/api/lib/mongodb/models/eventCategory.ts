@@ -4,7 +4,7 @@ import {model, Schema, Document} from 'mongoose';
 const EventCategorySchema = new Schema<IEventCategory & Document>(
     {
         name: {type: String, required: true, unique: true},
-        iconName: {type: String, required: true, unique: true},
+        iconName: {type: String, required: true},
         description: {type: String, required: true},
         color: {type: String, required: true},
     },

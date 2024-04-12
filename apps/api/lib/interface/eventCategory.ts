@@ -4,4 +4,14 @@ export type IEventCategory = {
     iconName: string;
     description: string;
     color?: string;
+    /**
+     * Timestamp for when a document is created
+     * @type {string}
+     */
+    createdAt?: string;
+    /**
+     * Timestamp for when a document is last updated
+     * @type {string}
+     */
+    updatedAt?: string;
 };

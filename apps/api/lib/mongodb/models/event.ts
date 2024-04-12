@@ -11,11 +11,17 @@ const EventSchema = new Schema<IEvent & Document>(
         location: {type: String, required: true, unique: false},
         capacity: {type: Number, required: false, unique: false},
         status: {type: String, required: true, unique: false},
-        eventCategory: [{type: Schema.Types.ObjectId, ref: 'EventCategory', required: true}],
+        eventCategory: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'EventCategory',
+                required: true,
+            },
+        ],
         organizers: [
             {
                 type: Schema.Types.ObjectId,
-                ref: 'User', // Reference to the User model
+                ref: 'User',
                 required: true,
             },
         ],

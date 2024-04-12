@@ -1,4 +1,4 @@
-import {EventCategory, EventPrivacySetting, EventStatus, EventType, IEvent} from '../../interface/events';
+import {EventCategory, EventPrivacySetting, EventStatus, IEvent} from '../../interface/events';
 
 const events: IEvent[] = [
     {
@@ -9,7 +9,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventType: [EventType.CONCERT],
         eventCategory: [EventCategory.MUSIC, EventCategory.DRINKS],
         capacity: 5000,
         rSVPs: [],
@@ -43,7 +42,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Stellenbosch, 8000',
         organizers: ['user001', 'host002'],
-        eventType: [EventType.CONCERT],
         eventCategory: [EventCategory.MUSIC],
         capacity: 5000,
         rSVPs: [],
@@ -76,7 +74,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Stellenbosch, 8000',
         organizers: ['user001', 'host002'],
-        eventType: [EventType.CONCERT],
         eventCategory: [EventCategory.MUSIC],
         capacity: 5000,
         rSVPs: [],
@@ -110,7 +107,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'KZN, Durban, 8000',
         organizers: [],
-        eventType: [EventType.PARTYING],
         eventCategory: [EventCategory.DRINKS],
         capacity: 5000,
         rSVPs: [],
@@ -132,7 +128,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventType: [EventType.SPORT],
         eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
         capacity: 5000,
         rSVPs: [],
@@ -155,7 +150,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventType: [EventType.SPORT],
         eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
         capacity: 5000,
         rSVPs: [],
@@ -178,7 +172,6 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: [],
-        eventType: [EventType.SPORT],
         eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
         capacity: 5000,
         rSVPs: ['user001', 'user002', 'user003'],

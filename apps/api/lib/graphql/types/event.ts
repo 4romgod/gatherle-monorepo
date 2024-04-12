@@ -1,6 +1,7 @@
 import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLInputObjectType} from 'graphql';
 import {GraphQLJSONObject} from 'graphql-type-json';
 import {UserType} from './user';
+import {EventCategoryType} from './eventCategory';
 
 export const EventType = new GraphQLObjectType({
     name: 'Event',
@@ -13,8 +14,7 @@ export const EventType = new GraphQLObjectType({
         location: {type: GraphQLNonNull(GraphQLString)},
         status: {type: GraphQLNonNull(GraphQLString)},
         capacity: {type: GraphQLInt},
-        eventType: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
+        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(EventCategoryType)))},
         organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
         rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
         tags: {type: GraphQLJSONObject},
@@ -46,8 +46,7 @@ export const CreateEventInputType = new GraphQLInputObjectType({
         location: {type: GraphQLNonNull(GraphQLString)},
         status: {type: GraphQLNonNull(GraphQLString)},
         capacity: {type: GraphQLInt},
-        eventType: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
+        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         tags: {type: GraphQLJSONObject},
@@ -70,8 +69,7 @@ export const UpdateEventInputType = new GraphQLInputObjectType({
         location: {type: GraphQLNonNull(GraphQLString)},
         status: {type: GraphQLNonNull(GraphQLString)},
         capacity: {type: GraphQLInt},
-        eventType: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))},
+        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
         tags: {type: GraphQLJSONObject},

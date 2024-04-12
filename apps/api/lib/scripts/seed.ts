@@ -1,7 +1,7 @@
 import {MongoDbClient} from '../clients';
-import {IEvent, IUser} from '../interface';
-import {EventDAO, UserDAO} from '../mongodb/dao';
-import {usersMockData, eventsMockData} from '../mongodb/mockData';
+import {IEvent, IEventCategory, IUser} from '../interface';
+import {EventCategoryDAO, EventDAO, UserDAO} from '../mongodb/dao';
+import {usersMockData, eventsMockData, eventCategoryData} from '../mongodb/mockData';
 import {MONGO_DB_URL} from '../constants';
 
 async function seedUsers(users: Array<IUser>) {
@@ -15,17 +15,28 @@ async function seedUsers(users: Array<IUser>) {
     }
 }
 
-async function seedEvents(events: Array<IEvent>, userIds: Array<string>) {
-    for (const event of events) {
-        const randomIndex1 = Math.floor(Math.random() * 4);
-        const randomIndex2 = Math.floor(Math.random() * 4);
-        const randomIndex3 = Math.floor(Math.random() * 4);
-        const randomIndex4 = Math.floor(Math.random() * 4);
+async function seedEventCategories(categories: Array<IEventCategory>) {
+    for (const category of categories) {
+        await EventCategoryDAO.create({
+            ...category,
+            createdAt: undefined,
+            updatedAt: undefined,
+        });
+    }
+}
 
+async function seedEvents(events: Array<IEvent>, userIds: Array<string>, eventCategoryIds: Array<string>) {
+    const getRandomIndexToX = (x: number) => Math.floor(Math.random() * x);
+    for (const event of events) {
         await EventDAO.create({
             ...event,
-            organizers: [userIds.at(randomIndex1)!, userIds.at(randomIndex2)!],
-            rSVPs: [userIds.at(randomIndex3)!, userIds.at(randomIndex4)!],
+            organizers: [userIds.at(getRandomIndexToX(userIds.length))!, userIds.at(getRandomIndexToX(userIds.length))!],
+            rSVPs: [userIds.at(getRandomIndexToX(userIds.length))!, userIds.at(getRandomIndexToX(userIds.length))!],
+            eventCategory: [
+                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
+                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
+                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
+            ],
             createdAt: undefined,
             updatedAt: undefined,
         });
@@ -35,10 +46,12 @@ async function seedEvents(events: Array<IEvent>, userIds: Array<string>) {
 async function main() {
     await MongoDbClient.connectToDatabase(MONGO_DB_URL);
     await seedUsers(usersMockData);
+    await seedEventCategories(eventCategoryData);
 
     const allUserIds = (await UserDAO.readUsers()).map((user) => user.id!);
+    const allEventCategoriesIds = (await EventCategoryDAO.readEventCategories()).map((category) => category.id!);
 
-    await seedEvents(eventsMockData, allUserIds);
+    await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds);
     await MongoDbClient.disconnectFromDatabase();
 }
 

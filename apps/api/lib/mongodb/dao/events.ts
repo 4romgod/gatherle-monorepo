@@ -16,7 +16,7 @@ class EventDAO {
     }
 
     static async readEventById(id: string, projections?: Array<string>): Promise<IEvent> {
-        const query = Event.findById({id}).populate('organizers').populate('rSVPs');
+        const query = Event.findById({id}).populate('organizers').populate('rSVPs').populate('eventCategory');
         if (projections && projections.length) {
             query.select(projections.join(' '));
         }
@@ -31,7 +31,9 @@ class EventDAO {
     static async readEvents(queryParams?: EventQueryParams, projections?: Array<string>): Promise<Array<IEvent>> {
         const query = Event.find({...queryParams})
             .populate('organizers')
-            .populate('rSVPs');
+            .populate('rSVPs')
+            .populate('eventCategory');
+
         if (projections && projections.length) {
             query.select(projections.join(' '));
         }

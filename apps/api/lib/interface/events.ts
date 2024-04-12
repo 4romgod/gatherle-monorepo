@@ -21,26 +21,6 @@ export enum EventStatus {
     UPCOMING = 'Upcoming',
 }
 
-/**
- * The general nature or purpose of an event. They group events based on their fundamental characteristics and the kind of experience they offer to participants.
- * @export
- * @enum {string}
- */
-export enum EventType {
-    CONCERT = 'Concert',
-    CONFERENCE = 'Conference',
-    NETWORKING = 'Networking',
-    PARTYING = 'Partying',
-    SPORT = 'Sport',
-    WORKSHOP = 'Workshop',
-    OTHER = 'Other',
-}
-
-/**
- * More specific themes or topics that events can be associated with. They delve deeper into the subject matter or focus of an event, irrespective of the event\'s format.
- * @export
- * @enum {string}
- */
 export enum EventCategory {
     ARTS = 'Arts',
     MUSIC = 'Music',
@@ -50,6 +30,12 @@ export enum EventCategory {
     FOOD = 'Food',
     DRINKS = 'Drinks',
     TRAVEL = 'Travel',
+    CONCERT = 'Concert',
+    CONFERENCE = 'Conference',
+    NETWORKING = 'Networking',
+    PARTYING = 'Partying',
+    SPORT = 'Sport',
+    WORKSHOP = 'Workshop',
     OTHER = 'Other',
 }
 
@@ -85,15 +71,10 @@ export type IEvent = {
      */
     location: string;
     /**
-     *
-     * @type {EventType}
+     * They group events based on their fundamental characteristics and the kind of experience they offer to participants.
+     * @type {Array<string>}
      */
-    eventType: Array<EventType>;
-    /**
-     *
-     * @type {EventCategory}
-     */
-    eventCategory: Array<EventCategory>;
+    eventCategory: Array<string>;
     /**
      * The number of people that the event can occupy
      * @type {number}
