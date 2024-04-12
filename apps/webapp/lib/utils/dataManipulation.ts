@@ -1,19 +1,24 @@
-import { GetAllEventsQuery } from '../graphql/types/graphql';
+import {
+  Event,
+  EventCategory,
+  GetAllEventsQuery,
+} from '../graphql/types/graphql';
+
+type GroupedEventsByCategoryProps = {
+  [categoryName: string]: Event[];
+};
 
 export const groupEventsByCategory = (
   events: GetAllEventsQuery,
-): { [category: string]: any[] } => {
-  const groupedEvents: { [category: string]: any[] } = {};
+): GroupedEventsByCategoryProps => {
+  const groupedEvents: GroupedEventsByCategoryProps = {};
 
   events.readEvents?.forEach((event) => {
-    event?.eventCategory.forEach((category: string) => {
-      // Check if the category exists in the groupedEvents object
-      if (!groupedEvents[category]) {
-        // If not, initialize it with an empty array
-        groupedEvents[category] = [];
+    event?.eventCategory.forEach((category: EventCategory) => {
+      if (!groupedEvents[category.name]) {
+        groupedEvents[category.name] = [];
       }
-      // Push the event to the corresponding category array
-      groupedEvents[category].push(event);
+      groupedEvents[category.name].push(event);
     });
   });
 

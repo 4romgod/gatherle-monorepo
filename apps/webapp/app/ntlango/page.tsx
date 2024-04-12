@@ -1,22 +1,29 @@
 import EventAdvertBox from '@/components/events/event-advert-box';
 import EventTileGrid from '@/components/events/event-tile-grid';
 import SectionContainer from '@/components/section-container';
+import EventCategoryComponent from '@/components/events/event-category';
 import Footer from '@/components/footer';
 import Navbar from '@/components/navigation/navbar';
 import SearchBox from '@/components/search/search-box';
 import { groupEventsByCategory } from '@/lib/utils/dataManipulation';
 import { getClient } from '@/lib/graphql/apollo-client';
-import { GetAllEventsDocument } from '@/lib/graphql/types/graphql';
+import {
+  EventCategory,
+  GetAllEventCategoriesDocument,
+  GetAllEventsDocument,
+} from '@/lib/graphql/types/graphql';
 
 export default async function Home() {
   const { data: events } = await getClient().query({
     query: GetAllEventsDocument,
   });
+  const { data: eventCategories } = await getClient().query({
+    query: GetAllEventCategoriesDocument,
+  });
 
-  const allCategories: any[] = [];
+  const allCategories: EventCategory[] = eventCategories.readEventCategories;
 
-  const eventsByCategory: { [category: string]: any[] } =
-    groupEventsByCategory(events);
+  const eventsByCategory = groupEventsByCategory(events);
 
   return (
     <>
@@ -35,15 +42,13 @@ export default async function Home() {
           <div className="px-3 sm:px-0 lg:col-span-4 xl:col-span-3">
             <div className="space-y-6">
               <div className="hidden lg:block">
-                <div className="text-scale-900 mb-2 text-sm">Categories</div>
+                <h2 className="mb-3 mt-16 px-2 text-2xl sm:px-0">Categories</h2>
                 <div className="space-y-1">
                   {allCategories.map((category) => (
-                    <button
-                      key={category}
-                      className="text-scale-1100 block text-base"
-                    >
-                      {category}
-                    </button>
+                    <EventCategoryComponent
+                      key={category.id}
+                      eventCategory={category}
+                    />
                   ))}
                 </div>
               </div>
