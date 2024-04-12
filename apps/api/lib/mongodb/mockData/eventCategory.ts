@@ -3,93 +3,69 @@ import {IEventCategory} from '../../interface';
 export const eventCategories: IEventCategory[] = [
     {
         name: 'Arts',
-        iconName: 'PaletteIcon',
-        description: 'Explore various forms of art and creativity.',
-        color: '#FFD700', // Gold
+        iconName: 'PaintBrushIcon',
+        description: 'Artistic and creative events',
+        color: '#FFC0CB', // Light pink
     },
     {
         name: 'Music',
-        iconName: 'MusicNoteIcon',
-        description: 'Experience the magic of live music performances.',
-        color: '#A0522D', // Sienna
+        iconName: 'MusicalNoteIcon',
+        description: 'Music concerts, performances, and festivals',
+        color: '#FFD700', // Gold
     },
     {
         name: 'Technology',
-        iconName: 'ChipIcon',
-        description: 'Discover the latest trends in technology and innovation.',
-        color: '#4169E1', // Royal Blue
+        iconName: 'CpuChipIcon',
+        description: 'Events related to technology and innovation',
+        color: '#00BFFF', // Deep sky blue
     },
     {
         name: 'Health',
         iconName: 'HeartIcon',
-        description: 'Prioritize your well-being with health and wellness events.',
-        color: '#32CD32', // Lime Green
+        description: 'Health and wellness workshops and activities',
+        color: '#FF6347', // Tomato
     },
     {
         name: 'Fitness',
         iconName: 'DumbbellIcon',
-        description: 'Stay active and fit with various fitness activities.',
-        color: '#FF6347', // Tomato
+        description: 'Fitness classes, workouts, and challenges',
+        color: '#FFA07A', // Light salmon
     },
     {
         name: 'Food',
-        iconName: 'RestaurantIcon',
-        description: 'Indulge in culinary delights and food experiences.',
-        color: '#FFA500', // Orange
+        iconName: 'CakeIcon',
+        description: 'Food festivals, cooking classes, and culinary events',
+        color: '#8A2BE2', // Blue violet
     },
     {
         name: 'Drinks',
         iconName: 'WineGlassIcon',
-        description: 'Enjoy socializing and drinks in vibrant settings.',
-        color: '#FF69B4', // Hot Pink
+        description: 'Events focused on beverages, wine tastings, and cocktails',
+        color: '#00CED1', // Dark turquoise
     },
     {
         name: 'Travel',
-        iconName: 'AirplaneIcon',
-        description: 'Embark on exciting adventures and travel experiences.',
-        color: '#20B2AA', // Light Sea Green
+        iconName: 'GlobeAmericasIcon',
+        description: 'Travel-related events, adventure trips, and tours',
+        color: '#32CD32', // Lime green
     },
     {
         name: 'Concert',
-        iconName: 'MusicNoteIcon',
-        description: 'Immerse yourself in the electrifying atmosphere of live concerts.',
-        color: '#8A2BE2', // Blue Violet
+        iconName: 'MusicIcon',
+        description: 'Live music performances and concerts',
+        color: '#FF69B4', // Hot pink
     },
     {
         name: 'Conference',
-        iconName: 'AcademicCapIcon',
-        description: 'Expand your knowledge and network at insightful conferences.',
-        color: '#FF4500', // Orange Red
+        iconName: 'PresentationChartBarIcon',
+        description: 'Professional conferences, summits, and conventions',
+        color: '#4682B4', // Steel blue
     },
     {
         name: 'Networking',
         iconName: 'UserGroupIcon',
-        description: 'Build connections and grow your professional network.',
-        color: '#87CEEB', // Sky Blue
-    },
-    {
-        name: 'Partying',
-        iconName: 'SparklesIcon',
-        description: 'Celebrate and enjoy exciting parties and nightlife.',
-        color: '#FF1493', // Deep Pink
-    },
-    {
-        name: 'Sport',
-        iconName: 'BasketballIcon',
-        description: 'Engage in thrilling sports activities and competitions.',
-        color: '#008000', // Green
-    },
-    {
-        name: 'Workshop',
-        iconName: 'CogIcon',
-        description: 'Learn new skills and techniques in hands-on workshops.',
-        color: '#1E90FF', // Dodger Blue
-    },
-    {
-        name: 'Other',
-        iconName: 'QuestionMarkCircleIcon',
-        description: 'Explore events that do not fit into any specific category.',
-        color: '#808080', // Gray
+        description: 'Networking events, meetups, and conferences',
+        color: '#1E90FF', // Dodger blue
     },
 ];
 
