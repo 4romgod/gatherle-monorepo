@@ -2,7 +2,7 @@ import NtlangoLogo from '@/components/ntlango-logo';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import Image from 'next/image';
-import { lusitana } from '@/components/fonts';
+import { lusitana } from '@/components/theme/fonts';
 
 export default function Page() {
   return (

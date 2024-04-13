@@ -1,19 +1,18 @@
-'use client';
-
 import { EventCategory } from '@/lib/graphql/types/graphql';
-import { ICON_MAPPING } from '@/lib/constants';
+import { getEventCategoryIcon } from '@/lib/constants';
+import { Box, Typography } from '@mui/material';
 
 export default function EventCategoryComponent({
   eventCategory,
 }: {
   eventCategory: EventCategory;
 }) {
-  const IconComponent = ICON_MAPPING[eventCategory.iconName];
+  const IconComponent = getEventCategoryIcon(eventCategory.iconName);
 
   return (
-    <div className="flex items-center space-x-2">
+    <Box component="div" className="flex items-center space-x-2">
       <IconComponent className="h-6 w-6" />
-      <p>{eventCategory.name}</p>
-    </div>
+      <Typography className="p">{eventCategory.name}</Typography>
+    </Box>
   );
 }

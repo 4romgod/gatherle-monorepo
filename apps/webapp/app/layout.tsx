@@ -1,5 +1,8 @@
 import '@/components/global.css';
-import { inter } from '@/components/fonts';
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
+import { inter } from '@/components/theme/fonts';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/components/theme/theme';
 
 export default function RootLayout({
   children,
@@ -8,7 +11,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>{children}</body>
+      <AppRouterCacheProvider>
+        <ThemeProvider theme={theme}>
+          <body>{children}</body>
+        </ThemeProvider>
+      </AppRouterCacheProvider>
     </html>
   );
 }

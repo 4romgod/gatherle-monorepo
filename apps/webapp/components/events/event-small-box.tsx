@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   CheckCircleIcon,
   TicketIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { Event } from '@/lib/graphql/types/graphql';
 
@@ -52,7 +53,8 @@ export default function EventSmallBox({ event }: { event: Event }) {
           <div>
             <h4 className="text-xl font-bold">{title}</h4>
           </div>
-          <div>
+          <div className="flex flex-row">
+            <UserIcon className="mr-2 h-6 w-5" />
             <p className="text-base">{organizersText}</p>
           </div>
           <div className="flex flex-row">

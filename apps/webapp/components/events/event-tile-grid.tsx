@@ -1,3 +1,5 @@
+import React from 'react';
+import { Typography, Grid } from '@mui/material';
 import EventSmallBox from '@/components/events/event-small-box';
 import { Event } from '@/lib/graphql/types/graphql';
 
@@ -5,25 +7,32 @@ export type EventTileGridProps = {
   eventsByCategory: {
     [category: string]: Event[];
   };
-  hideCategories?: boolean;
 };
 
 export default function EventTileGrid({
   eventsByCategory,
-  hideCategories = false,
 }: EventTileGridProps) {
   return (
     <>
-      {Object.keys(eventsByCategory).map((category) => (
-        <div key={category}>
-          {!hideCategories && (
-            <h2 className="mb-3 mt-16 px-2 text-2xl sm:px-0">{category}</h2>
-          )}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3 lg:max-w-none xl:grid-cols-3">
-            {eventsByCategory[category].map((event) => (
-              <EventSmallBox key={`${category}.${event.id}`} event={event} />
+      {Object.keys(eventsByCategory).map((categoryName) => (
+        <div key={categoryName}>
+          <Typography variant="h4" gutterBottom id={categoryName}>
+            {categoryName}
+          </Typography>
+          <Grid container spacing={5}>
+            {eventsByCategory[categoryName].map((event) => (
+              <Grid
+                item
+                key={`EventTileGrid.${categoryName}.${event.id}`}
+                xs={12}
+                sm={6}
+                md={4}
+                lg={3}
+              >
+                <EventSmallBox event={event} />
+              </Grid>
             ))}
-          </div>
+          </Grid>
         </div>
       ))}
     </>

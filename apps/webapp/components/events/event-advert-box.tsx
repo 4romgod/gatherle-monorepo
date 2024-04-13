@@ -1,3 +1,4 @@
+import { Box, Typography } from '@mui/material';
 import Link from 'next/link';
 import React from 'react';
 
@@ -9,7 +10,7 @@ export type EventLinkBoxProps = {
   color?: 'amber' | 'brand' | 'blue';
 };
 
-const EventLinkBox = ({
+const EventAdvertBox = ({
   href,
   title,
   description,
@@ -26,7 +27,8 @@ const EventLinkBox = ({
 
   return (
     <Link href={href}>
-      <div
+      <Box
+        component="div"
         className={`
           hover:bg-scale-300
           bg-scale-200
@@ -34,8 +36,9 @@ const EventLinkBox = ({
           dark:border-scale-400 group cursor-pointer rounded 
           border px-5 py-4`}
       >
-        <div className="flex flex-col gap-3">
-          <div
+        <Box component="div" className="flex flex-col gap-3">
+          <Box
+            component="div"
             className={`${colors[color]}
               flex h-8 w-8
               items-center justify-center rounded-md
@@ -43,15 +46,17 @@ const EventLinkBox = ({
               group-hover:scale-110`}
           >
             {icon}
-          </div>
-          <div>
-            <h5 className="text-scale-1200 mb-2 text-base">{title}</h5>
-            <p className="p text-sm">{description}</p>
-          </div>
-        </div>
-      </div>
+          </Box>
+          <Box component="div">
+            <Typography variant="h5" className="mb-2">
+              {title}
+            </Typography>
+            <Typography className="p">{description}</Typography>
+          </Box>
+        </Box>
+      </Box>
     </Link>
   );
 };
 
-export default EventLinkBox;
+export default EventAdvertBox;

@@ -1,12 +1,12 @@
 import * as HeroIcons from '@heroicons/react/24/outline';
 
-type IconComponents = {
+export type EventCategoryIconComponents = {
   [key: string]: React.ForwardRefExoticComponent<
     React.SVGProps<SVGSVGElement> & React.RefAttributes<SVGSVGElement>
   >;
 };
 
-export const ICON_MAPPING: IconComponents = {
+export const EVENT_CATEGORY_ICON_MAPPING: EventCategoryIconComponents = {
   PaintBrushIcon: HeroIcons.PaintBrushIcon,
   MusicalNoteIcon: HeroIcons.MusicalNoteIcon,
   CpuChipIcon: HeroIcons.CpuChipIcon,
@@ -18,4 +18,11 @@ export const ICON_MAPPING: IconComponents = {
   MusicIcon: HeroIcons.MusicalNoteIcon,
   PresentationChartBarIcon: HeroIcons.PresentationChartBarIcon,
   UserGroupIcon: HeroIcons.UserGroupIcon,
+};
+
+export const getEventCategoryIcon = (iconName: string) => {
+  return (
+    EVENT_CATEGORY_ICON_MAPPING[iconName] ??
+    EVENT_CATEGORY_ICON_MAPPING.UserGroupIcon
+  );
 };
