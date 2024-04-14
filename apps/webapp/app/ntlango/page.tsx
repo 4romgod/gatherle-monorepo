@@ -1,5 +1,3 @@
-import Footer from '@/components/footer';
-import Navbar from '@/components/navigation/navbar';
 import EventTileGrid from '@/components/events/event-tile-grid';
 import DisplayCategoryList from '@/components/display-category-list';
 import { groupEventsByCategory } from '@/lib/utils/dataManipulation';
@@ -26,7 +24,7 @@ export default async function Home() {
     <>
       <Container>
         <Box component="div">
-          <Typography variant="h1">
+          <Typography variant="h3">
             Discover Your Next Adventure - Explore Exciting Events Worldwide
           </Typography>
           <Typography className="p">

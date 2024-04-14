@@ -1,22 +1,50 @@
-'use client';
+import InputBase from '@mui/material/InputBase';
+import { SxProps, Theme, alpha, styled } from '@mui/material/styles';
+import React from 'react';
+import SearchIcon from '@mui/icons-material/Search';
 
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.text.secondary, 0.15),
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.text.secondary, 0.25),
+  },
+  marginRight: theme.spacing(2),
+  marginLeft: 4,
+}));
 
-export default function SearchBox({ placeholder }: { placeholder: string }) {
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: alpha(theme.palette.primary.light, 0.15),
+  '& .MuiInputBase-input': {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create('width'),
+  },
+}));
+
+const SearchInput = ({ sx }: { sx: SxProps<Theme> }) => {
   return (
-    <div className="relative flex flex-1 flex-shrink-0">
-      <label htmlFor="search" className="sr-only">
-        Search
-      </label>
-      <div className="w-full">
-        <div>
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
-          <input
-            className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm text-black outline-2 placeholder:text-gray-500"
-            placeholder={placeholder}
-          />
-        </div>
-      </div>
-    </div>
+    <Search sx={sx}>
+      <SearchIconWrapper>
+        <SearchIcon color="primary" />
+      </SearchIconWrapper>
+      <StyledInputBase
+        placeholder="Search…"
+        inputProps={{ 'aria-label': 'search' }}
+      />
+    </Search>
   );
-}
+};
+
+export default SearchInput;

@@ -18,9 +18,9 @@ export default function ToggleThemeMode({
   return (
     <Button onClick={() => setThemeMode(isDarkTheme ? 'light' : 'dark')}>
       {isDarkTheme ? (
-        <SunIcon color="white" className="h-6 w-6" />
+        <SunIcon color="primary" className="h-6 w-6" />
       ) : (
-        <MoonIcon color="black" className="h-6 w-6" />
+        <MoonIcon color="primary" className="h-6 w-6" />
       )}
     </Button>
   );
