@@ -9,16 +9,19 @@ import { useRouter } from 'next/navigation';
 import { styled } from '@mui/material/styles';
 
 const StyledSelect = styled(Select)(({ theme }) => ({
-  '& .MuiSelect-select': {
-    backgroundColor: theme.palette.primary.main,
-  },
+  padding: 5,
+  backgroundColor:
+    theme.palette.mode === 'dark'
+      ? theme.palette.secondary.dark
+      : theme.palette.secondary.dark,
+  color: 'white',
+  borderRadius: 30,
 }));
 
 const StyledInput = styled(InputBase)(({ theme }) => ({
   '& .MuiInputBase-input': {
     borderRadius: 4,
     position: 'relative',
-    backgroundColor: theme.palette.primary.main,
     fontSize: 16,
     padding: '10px 26px 10px 12px',
   },
@@ -63,10 +66,6 @@ export default function DropDown<T extends Item>({
         onChange={onSelectChangeHandler}
         input={<StyledInput />}
         displayEmpty={true}
-        sx={{
-          backgroundColor: 'primary',
-          color: 'black',
-        }}
       >
         <MenuItem value="">
           <em>{defaultItem}</em>

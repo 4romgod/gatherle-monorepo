@@ -19,6 +19,7 @@ export default function DisplayEventFilters({
         spacing={2}
         sx={{
           display: { md: 'none' },
+          mx: 'auto',
         }}
       >
         <DropDown
@@ -39,7 +40,7 @@ export default function DisplayEventFilters({
       <Box
         id="filters-desktop"
         component="div"
-        sx={{ display: { xs: 'none', md: 'block' } }}
+        sx={{ display: { xs: 'none', md: 'block' }, width: '100%' }}
       >
         <Typography variant="h5" className="mb-3">
           Categories

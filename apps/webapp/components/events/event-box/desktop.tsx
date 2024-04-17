@@ -1,12 +1,10 @@
 'use client';
 
-import * as React from 'react';
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
-import { CardActionArea } from '@mui/material';
 import { Event } from '@/lib/graphql/types/graphql';
-import { Box } from '@mui/material';
 import Link from 'next/link';
 import {
   CalendarIcon,
@@ -29,15 +27,15 @@ export default function EventBoxDesktop({ event }: { event: Event }) {
 
   return (
     <Link href={`/ntlango`}>
-      <Card sx={{ maxWidth: 345 }}>
-        <CardActionArea>
-          <CardMedia
-            component="img"
-            height="140"
-            image={featuredImageUrl}
-            alt="green iguana"
-          />
-          <CardContent>
+      <Card sx={{ display: 'flex' }}>
+        <CardMedia
+          component="img"
+          sx={{ width: { md: 123, lg: 145, xl: 156 } }}
+          image={featuredImageUrl}
+          alt="Live from space album cover"
+        />
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <CardContent sx={{ flex: '1 0 auto' }}>
             <Box component="div">
               <h4 className="text-xl font-bold">{title}</h4>
             </Box>
@@ -58,7 +56,7 @@ export default function EventBoxDesktop({ event }: { event: Event }) {
               <p>Free</p>
             </Box>
           </CardContent>
-        </CardActionArea>
+        </Box>
       </Card>
     </Link>
   );

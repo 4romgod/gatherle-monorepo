@@ -27,7 +27,11 @@ export default async function Home() {
         <Box component="div">
           <Box component="div">
             <SearchInput
-              sx={{ display: { xs: 'flex', md: 'none' }, marginBottom: 5 }}
+              sx={{
+                display: { xs: 'flex', md: 'none' },
+                marginBottom: 5,
+                mx: 'auto',
+              }}
             />
           </Box>
           <Box component="div">
@@ -50,11 +54,11 @@ export default async function Home() {
         </Box>
         <Grid
           container
-          spacing={12}
+          spacing={3}
           justifyContent="space-between"
           className="pt-5"
         >
-          <Grid item md={3}>
+          <Grid item md={3} id="event-filters" width={'100%'}>
             <DisplayEventFilters categoryList={allCategories} />
           </Grid>
           <Grid item md={9}>
