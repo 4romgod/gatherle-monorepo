@@ -4,6 +4,24 @@ import {EventCategoryDAO, EventDAO, UserDAO} from '../mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryData} from '../mongodb/mockData';
 import {MONGO_DB_URL} from '../constants';
 
+function getRandomUniqueItems(array: Array<string>, count: number) {
+    const copyArray = [...array];
+    for (let i = copyArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copyArray[i], copyArray[j]] = [copyArray[j], copyArray[i]];
+    }
+
+    const randomItems: Array<string> = [];
+    let index = 0;
+    while (randomItems.length < count && index < copyArray.length) {
+        if (!randomItems.includes(copyArray[index])) {
+            randomItems.push(copyArray[index]);
+        }
+        index++;
+    }
+    return randomItems;
+}
+
 async function seedUsers(users: Array<IUser>) {
     for (const user of users) {
         await UserDAO.create({
@@ -26,17 +44,12 @@ async function seedEventCategories(categories: Array<IEventCategory>) {
 }
 
 async function seedEvents(events: Array<IEvent>, userIds: Array<string>, eventCategoryIds: Array<string>) {
-    const getRandomIndexToX = (x: number) => Math.floor(Math.random() * x);
     for (const event of events) {
         await EventDAO.create({
             ...event,
-            organizers: [userIds.at(getRandomIndexToX(userIds.length))!, userIds.at(getRandomIndexToX(userIds.length))!],
-            rSVPs: [userIds.at(getRandomIndexToX(userIds.length))!, userIds.at(getRandomIndexToX(userIds.length))!],
-            eventCategory: [
-                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
-                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
-                eventCategoryIds.at(getRandomIndexToX(eventCategoryIds.length))!,
-            ],
+            organizers: getRandomUniqueItems(userIds, 2),
+            rSVPs: getRandomUniqueItems(userIds, 2),
+            eventCategory: getRandomUniqueItems(eventCategoryIds, 5),
             createdAt: undefined,
             updatedAt: undefined,
         });
