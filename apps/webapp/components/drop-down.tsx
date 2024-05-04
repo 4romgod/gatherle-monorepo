@@ -62,7 +62,6 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
   };
 
   const isdefaultselected = (!selectedItem).toString();
-  console.log(isdefaultselected, selectedItem, defaultItem);
 
   return (
     <FormControl variant="standard">

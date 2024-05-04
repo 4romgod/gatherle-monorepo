@@ -4,12 +4,12 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import { CardActionArea } from '@mui/material';
-import { Event } from '@/lib/graphql/types/graphql';
+import { EventType } from '@/lib/graphql/types/graphql';
 import { Box } from '@mui/material';
 import Link from 'next/link';
 import { CalendarIcon, CheckCircleIcon, TicketIcon, UserIcon } from '@heroicons/react/24/outline';
 
-export default function EventBoxMobile({ event }: { event: Event }) {
+export default function EventBoxMobile({ event }: { event: EventType }) {
   const {
     title,
     organizers,

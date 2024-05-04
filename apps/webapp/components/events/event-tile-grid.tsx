@@ -1,12 +1,12 @@
 import React from 'react';
 import { Typography, Grid, Box } from '@mui/material';
-import { Event } from '@/lib/graphql/types/graphql';
+import { EventType } from '@/lib/graphql/types/graphql';
 import EventBoxMobile from '@/components/events/event-box/desktop';
 import EventBoxDesktop from '@/components/events/event-box/mobile';
 
 export type EventTileGridProps = {
   eventsByCategory: {
-    [category: string]: Event[];
+    [category: string]: EventType[];
   };
 };
 

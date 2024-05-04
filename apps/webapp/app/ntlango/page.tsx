@@ -3,7 +3,7 @@ import DisplayEventFilters from '@/components/events/display-event-filters';
 import { groupEventsByCategory } from '@/lib/utils/dataManipulation';
 import { getClient } from '@/lib/graphql/apollo-client';
 import { Typography, Container, Grid, Box } from '@mui/material';
-import { EventCategory, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/lib/graphql/types/graphql';
+import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/lib/graphql/types/graphql';
 import SearchInput from '@/components/search/search-box';
 
 export default async function Home() {
@@ -14,7 +14,7 @@ export default async function Home() {
     query: GetAllEventCategoriesDocument,
   });
 
-  const allCategories: EventCategory[] = eventCategories.readEventCategories;
+  const allCategories: EventCategoryType[] = eventCategories.readEventCategories;
   const eventsByCategory = groupEventsByCategory(events);
 
   return (
@@ -25,7 +25,7 @@ export default async function Home() {
             <SearchInput
               itemList={events.readEvents.map((item) => item.title)}
               sx={{
-                display: { xs: 'flex', md: 'none' },
+                // display: { xs: 'flex', md: 'none' },
                 marginBottom: 5,
                 mx: 'auto',
               }}

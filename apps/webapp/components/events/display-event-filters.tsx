@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EventCategory } from '@/lib/graphql/types/graphql';
+import { EventCategoryType } from '@/lib/graphql/types/graphql';
 import { Box, Stack, Typography } from '@mui/material';
 import DropDown from '@/components/drop-down';
 import EventCategoryComponent from '@/components/events/event-category';
 
-export default function DisplayEventFilters({ categoryList }: { categoryList: EventCategory[] }) {
+export default function DisplayEventFilters({ categoryList }: { categoryList: EventCategoryType[] }) {
   const [selectedItem, setSelectedItem] = useState<string>('');
   const router = useRouter();
 

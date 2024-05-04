@@ -32,7 +32,9 @@ export default function RootLayout({ children }: CustomRootLayoutProps) {
           <CssBaseline />
           <body>
             <PrimaryNavBar themeMode={themeMode} setThemeMode={setThemeMode} isAuthN={isAuthN} />
-            <Box component="div">{children}</Box>
+            <Box component="div" marginTop={15}>
+              {children}
+            </Box>
             <Footer setThemeMode={setThemeMode} themeMode={themeMode} />
           </body>
         </ThemeProvider>

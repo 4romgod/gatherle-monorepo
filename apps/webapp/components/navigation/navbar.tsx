@@ -62,7 +62,7 @@ export default function PrimaryNavBar({ setThemeMode, themeMode, isAuthN }: Prim
 
           <Box sx={{ flexGrow: 1 }} />
 
-          <SearchInput sx={{ display: { xs: 'none', md: 'flex' } }} />
+          {/* <SearchInput sx={{ display: { xs: 'none', md: 'flex' } }} /> */}
 
           <ToggleThemeMode setThemeMode={setThemeMode} themeMode={themeMode} />
 
