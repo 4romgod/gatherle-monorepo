@@ -1,9 +1,9 @@
-import {IUser, ICreateUser, UserQueryParams, IUpdateUser} from '../../interface';
 import {User} from '../models';
+import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams} from '../../graphql/types';
 import {ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
 
 class UserDAO {
-    static async create(userData: ICreateUser): Promise<IUser> {
+    static async create(userData: CreateUserInputType): Promise<UserType> {
         try {
             const encryptedPassword = `${userData.password}-encrypted`;
             return await User.create({
@@ -16,7 +16,7 @@ class UserDAO {
         }
     }
 
-    static async readUserById(id: string, projections?: Array<string>): Promise<IUser> {
+    static async readUserById(id: string, projections?: Array<string>): Promise<UserType> {
         const query = User.findById(id);
         if (projections && projections.length) {
             query.select(projections.join(' '));
@@ -29,7 +29,7 @@ class UserDAO {
         return user;
     }
 
-    static async readUsers(queryParams?: UserQueryParams, projections?: Array<string>): Promise<Array<IUser>> {
+    static async readUsers(queryParams?: UserQueryParams, projections?: Array<string>): Promise<Array<UserType>> {
         const query = User.find({...queryParams});
 
         if (queryParams?.userIDList && queryParams.userIDList.length > 0) {
@@ -43,15 +43,15 @@ class UserDAO {
         return await query.exec();
     }
 
-    static async updateUser(id: string, userData: IUpdateUser) {
-        const updatedUser = await User.findByIdAndUpdate(id, {...userData}, {new: true}).exec();
+    static async updateUser(user: UpdateUserInputType) {
+        const updatedUser = await User.findByIdAndUpdate(user.id, {...user}, {new: true}).exec();
         if (!updatedUser) {
             throw ResourceNotFoundException('User not found');
         }
         return updatedUser;
     }
 
-    static async deleteUser(id: string): Promise<IUser> {
+    static async deleteUser(id: string): Promise<UserType> {
         const deletedUser = await User.findByIdAndDelete(id).exec();
         if (!deletedUser) {
             throw ResourceNotFoundException('User not found');

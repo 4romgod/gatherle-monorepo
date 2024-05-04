@@ -1,6 +1,6 @@
-import {Gender, IUser, UserType} from '../../interface/users';
+import {UserRole, Gender, UserType, CreateUserInputType} from '../../graphql/types';
 
-const users: IUser[] = [
+const users: CreateUserInputType[] = [
     {
         // id: 'user001',
         email: 'user001@gmail.com',
@@ -10,12 +10,10 @@ const users: IUser[] = [
         family_name: 'Baur',
         gender: Gender.MALE,
         given_name: 'Jack',
-        encrypted_password: 'dfuyihjknbsndhj',
+        password: 'dfuyihjknbsndhj',
         phone_number: '',
         profile_picture: '',
-        userType: UserType.USER,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
+        userType: UserRole.USER,
     },
     {
         // id: 'host001',
@@ -26,12 +24,10 @@ const users: IUser[] = [
         family_name: 'Carter',
         gender: Gender.MALE,
         given_name: 'Sean',
-        encrypted_password: 'tryuik',
+        password: 'tryuik',
         phone_number: '',
         profile_picture: '',
-        userType: UserType.HOST,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
+        userType: UserRole.HOST,
     },
     {
         // id: 'user002',
@@ -42,12 +38,10 @@ const users: IUser[] = [
         family_name: 'Maluleke',
         gender: Gender.FEMALE,
         given_name: 'Celin',
-        encrypted_password: 'wreiujk22',
+        password: 'wreiujk22',
         phone_number: '',
         profile_picture: '',
-        userType: UserType.USER,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
+        userType: UserRole.USER,
     },
     {
         // id: 'host002',
@@ -58,12 +52,10 @@ const users: IUser[] = [
         family_name: 'Bezos',
         gender: Gender.MALE,
         given_name: 'Jeff',
-        encrypted_password: 'sdjhjkj34',
+        password: 'sdjhjkj34',
         phone_number: '',
         profile_picture: '',
-        userType: UserType.ADMIN,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
+        userType: UserRole.ADMIN,
     },
 ];
 

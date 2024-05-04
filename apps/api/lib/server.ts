@@ -1,10 +1,10 @@
 import express, {Express} from 'express';
 import bodyParser from 'body-parser';
 import morgan from 'morgan';
-import graphQLSchema from './graphql/schema';
 import {MongoDbClient} from './clients';
 import {graphqlHTTP} from 'express-graphql';
 import {API_PORT, API_DOMAIN, NODE_ENV, STAGES, MONGO_DB_URL} from './constants';
+import createSchema from './graphql/schema';
 
 const app: Express = express();
 
@@ -18,17 +18,9 @@ const initializeApp = async () => {
 
         app.use(
             '/api/v1/graphql',
-            graphqlHTTP((request) => {
-                const startTime = Date.now();
-                return {
-                    schema: graphQLSchema,
-                    graphiql: NODE_ENV === STAGES.DEV,
-                    extensions() {
-                        return {
-                            runTime: Date.now() - startTime,
-                        };
-                    },
-                };
+            graphqlHTTP({
+                schema: await createSchema(),
+                graphiql: NODE_ENV === STAGES.DEV,
             }),
         );
 

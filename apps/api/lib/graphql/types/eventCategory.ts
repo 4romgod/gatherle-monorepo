@@ -1,32 +1,53 @@
-import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLNonNull, GraphQLInputObjectType} from 'graphql';
+import 'reflect-metadata';
+import {Field, InputType, ObjectType} from 'type-graphql';
 
-export const EventCategoryType = new GraphQLObjectType({
-    name: 'EventCategory',
-    fields: {
-        id: {type: GraphQLNonNull(GraphQLID)},
-        name: {type: GraphQLNonNull(GraphQLString)},
-        iconName: {type: GraphQLNonNull(GraphQLString)},
-        description: {type: GraphQLNonNull(GraphQLString)},
-        color: {type: GraphQLString},
-    },
-});
+@ObjectType()
+export class EventCategoryType {
+    @Field()
+    id: string;
 
-export const CreateEventCategoryInputType = new GraphQLInputObjectType({
-    name: 'CreateEventCategoryInput',
-    fields: {
-        name: {type: GraphQLNonNull(GraphQLString)},
-        iconName: {type: GraphQLNonNull(GraphQLString)},
-        description: {type: GraphQLNonNull(GraphQLString)},
-        color: {type: GraphQLString},
-    },
-});
+    @Field()
+    name: string;
 
-export const UpdateEventCategoryInputType = new GraphQLInputObjectType({
-    name: 'UpdateEventCategoryInput',
-    fields: {
-        name: {type: GraphQLNonNull(GraphQLString)},
-        iconName: {type: GraphQLNonNull(GraphQLString)},
-        description: {type: GraphQLNonNull(GraphQLString)},
-        color: {type: GraphQLString},
-    },
-});
+    @Field()
+    iconName: string;
+
+    @Field()
+    description: string;
+
+    @Field({nullable: true})
+    color?: string;
+}
+
+@InputType()
+export class CreateEventCategoryInputType {
+    @Field()
+    name: string;
+
+    @Field()
+    iconName: string;
+
+    @Field()
+    description: string;
+
+    @Field({nullable: true})
+    color?: string;
+}
+
+@InputType()
+export class UpdateEventCategoryInputType {
+    @Field()
+    id: string;
+
+    @Field({nullable: true})
+    name?: string;
+
+    @Field({nullable: true})
+    iconName?: string;
+
+    @Field({nullable: true})
+    description?: string;
+
+    @Field({nullable: true})
+    color?: string;
+}

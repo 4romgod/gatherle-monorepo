@@ -1,8 +1,8 @@
-import {IEvent} from '../../interface';
+import {EventType} from '../../graphql/types';
 import {Document, model, Schema} from 'mongoose';
 
 // TODO use mongoose middleware to validate all params, especially arrays for unique items
-const EventSchema = new Schema<IEvent & Document>(
+const EventSchema = new Schema<EventType & Document>(
     {
         title: {type: String, required: true, unique: false},
         description: {type: String, required: true, unique: false},
@@ -53,6 +53,6 @@ const EventSchema = new Schema<IEvent & Document>(
     {timestamps: true},
 );
 
-const Event = model<IEvent & Document>('Event', EventSchema);
+const Event = model<EventType & Document>('Event', EventSchema);
 
 export default Event;

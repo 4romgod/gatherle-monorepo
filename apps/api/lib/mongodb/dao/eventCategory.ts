@@ -1,10 +1,9 @@
-import {IEventCategory} from '../../interface';
 import {EventCategory} from '../models';
 import {ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
-import {Schema} from 'mongoose';
+import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType} from '../../graphql/types';
 
 class EventDAO {
-    static async create(category: IEventCategory): Promise<IEventCategory> {
+    static async create(category: CreateEventCategoryInputType): Promise<EventCategoryType> {
         try {
             return await EventCategory.create(category);
         } catch (error) {
@@ -13,7 +12,7 @@ class EventDAO {
         }
     }
 
-    static async readEventCategoryById(id: string, projections?: Array<string>): Promise<IEventCategory> {
+    static async readEventCategoryById(id: string, projections?: Array<string>): Promise<EventCategoryType> {
         const query = EventCategory.findById({id});
         if (projections && projections.length) {
             query.select(projections.join(' '));
@@ -26,20 +25,20 @@ class EventDAO {
         return event;
     }
 
-    static async readEventCategories(): Promise<Array<IEventCategory>> {
+    static async readEventCategories(): Promise<Array<EventCategoryType>> {
         const query = EventCategory.find();
         return await query.exec();
     }
 
-    static async updateEventCategory(id: string, category: IEventCategory) {
-        const updatedEventCategory = await EventCategory.findOneAndUpdate({id}, {...category, id}, {new: true}).exec();
+    static async updateEventCategory(category: UpdateEventCategoryInputType) {
+        const updatedEventCategory = await EventCategory.findByIdAndUpdate(category.id, {...category}, {new: true}).exec();
         if (!updatedEventCategory) {
             throw ResourceNotFoundException('Event Category not found');
         }
         return updatedEventCategory;
     }
 
-    static async deleteEventCategory(id: string): Promise<IEventCategory> {
+    static async deleteEventCategory(id: string): Promise<EventCategoryType> {
         const deletedEventCategory = await EventCategory.findOneAndDelete({id}).exec();
         if (!deletedEventCategory) {
             throw ResourceNotFoundException('Event Category not found');

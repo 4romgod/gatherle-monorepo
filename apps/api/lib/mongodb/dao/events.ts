@@ -1,12 +1,9 @@
-import {IEvent, ICreateEvent, IUpdateEvent} from '../../interface';
 import {Event} from '../models';
 import {ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
-import {Schema} from 'mongoose';
-
-export type EventQueryParams = Partial<Record<keyof IEvent, any>>;
+import {EventType, UpdateEventInputType, CreateEventInputType, EventQueryParams} from '../../graphql/types';
 
 class EventDAO {
-    static async create(eventData: ICreateEvent): Promise<IEvent> {
+    static async create(eventData: CreateEventInputType): Promise<EventType> {
         try {
             return await Event.create(eventData);
         } catch (error) {
@@ -15,7 +12,7 @@ class EventDAO {
         }
     }
 
-    static async readEventById(id: string, projections?: Array<string>): Promise<IEvent> {
+    static async readEventById(id: string, projections?: Array<string>): Promise<EventType> {
         const query = Event.findById({id}).populate('organizers').populate('rSVPs').populate('eventCategory');
         if (projections && projections.length) {
             query.select(projections.join(' '));
@@ -28,7 +25,7 @@ class EventDAO {
         return event;
     }
 
-    static async readEvents(queryParams?: EventQueryParams, projections?: Array<string>): Promise<Array<IEvent>> {
+    static async readEvents(queryParams?: EventQueryParams, projections?: Array<string>): Promise<Array<EventType>> {
         const query = Event.find({...queryParams})
             .populate('organizers')
             .populate('rSVPs')
@@ -40,16 +37,16 @@ class EventDAO {
         return await query.exec();
     }
 
-    static async updateEvent(id: string, eventData: IUpdateEvent) {
-        const updatedEvent = await Event.findOneAndUpdate({id}, {...eventData, id}, {new: true}).exec();
+    static async updateEvent(event: UpdateEventInputType): Promise<EventType> {
+        const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event}, {new: true}).exec();
         if (!updatedEvent) {
             throw ResourceNotFoundException('Event not found');
         }
         return updatedEvent;
     }
 
-    static async deleteEvent(id: string): Promise<IEvent> {
-        const deletedEvent = await Event.findOneAndDelete({id}).exec();
+    static async deleteEvent(id: string): Promise<EventType> {
+        const deletedEvent = await Event.findByIdAndUpdate(id).exec();
         if (!deletedEvent) {
             throw ResourceNotFoundException('Event not found');
         }
@@ -57,13 +54,13 @@ class EventDAO {
     }
 
     //TODO look deeper into this, its very suspecious. Why not just push 1 userID
-    static async rsvp(id: string, userIDs: Array<Schema.Types.ObjectId>) {
+    static async rsvp(id: string, userIDs: Array<string>) {
         const event = await Event.findOneAndUpdate({id}, {$addToSet: {rSVPs: {$each: userIDs}}}, {new: true}).exec();
         return event;
     }
 
     //TODO look deeper into this, its very suspecious. Why not just pop 1 userID
-    static async cancelRsvp(id: string, userIDs: Array<Schema.Types.ObjectId>) {
+    static async cancelRsvp(id: string, userIDs: Array<string>) {
         const event = await Event.findOneAndUpdate({id}, {$pull: {rSVPs: {$in: userIDs}}}, {new: true}).exec();
         return event;
     }

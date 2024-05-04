@@ -1,8 +1,8 @@
 import {MongoDbClient} from '../clients';
-import {IEvent, IEventCategory, IUser} from '../interface';
 import {EventCategoryDAO, EventDAO, UserDAO} from '../mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryData} from '../mongodb/mockData';
 import {MONGO_DB_URL} from '../constants';
+import {CreateEventCategoryInputType, CreateEventInputType, CreateUserInputType} from '../graphql/types';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
     const copyArray = [...array];
@@ -22,36 +22,25 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
     return randomItems;
 }
 
-async function seedUsers(users: Array<IUser>) {
+async function seedUsers(users: Array<CreateUserInputType>) {
     for (const user of users) {
-        await UserDAO.create({
-            ...user,
-            password: 'randomPassword',
-            createdAt: undefined,
-            updatedAt: undefined,
-        });
+        await UserDAO.create(user);
     }
 }
 
-async function seedEventCategories(categories: Array<IEventCategory>) {
+async function seedEventCategories(categories: Array<CreateEventCategoryInputType>) {
     for (const category of categories) {
-        await EventCategoryDAO.create({
-            ...category,
-            createdAt: undefined,
-            updatedAt: undefined,
-        });
+        await EventCategoryDAO.create(category);
     }
 }
 
-async function seedEvents(events: Array<IEvent>, userIds: Array<string>, eventCategoryIds: Array<string>) {
+async function seedEvents(events: Array<CreateEventInputType>, userIds: Array<string>, eventCategoryIds: Array<string>) {
     for (const event of events) {
         await EventDAO.create({
             ...event,
             organizers: getRandomUniqueItems(userIds, 2),
             rSVPs: getRandomUniqueItems(userIds, 2),
             eventCategory: getRandomUniqueItems(eventCategoryIds, 5),
-            createdAt: undefined,
-            updatedAt: undefined,
         });
     }
 }

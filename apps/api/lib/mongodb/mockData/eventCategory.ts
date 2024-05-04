@@ -1,6 +1,6 @@
-import {IEventCategory} from '../../interface';
+import {CreateEventCategoryInputType} from '../../graphql/types';
 
-export const eventCategories: IEventCategory[] = [
+export const eventCategories: CreateEventCategoryInputType[] = [
     {
         name: 'Arts',
         iconName: 'PaintBrushIcon',

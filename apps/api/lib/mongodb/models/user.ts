@@ -1,7 +1,7 @@
-import {IUser} from '../../interface';
+import {UserType} from '../../graphql/types';
 import {model, Schema, Document} from 'mongoose';
 
-const UserSchema = new Schema<IUser & Document>(
+const UserSchema = new Schema<UserType & Document>(
     {
         email: {type: String, required: true, unique: true},
         username: {type: String, required: true, unique: true},
@@ -18,6 +18,6 @@ const UserSchema = new Schema<IUser & Document>(
     {timestamps: true},
 );
 
-const User = model<IUser & Document>('User', UserSchema);
+const User = model<UserType & Document>('User', UserSchema);
 
 export default User;

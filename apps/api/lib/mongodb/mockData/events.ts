@@ -1,6 +1,6 @@
-import {EventCategory, EventPrivacySetting, EventStatus, IEvent} from '../../interface/events';
+import {CreateEventInputType, EventPrivacySetting, EventStatus, UserRole} from '../../graphql/types';
 
-const events: IEvent[] = [
+const events: CreateEventInputType[] = [
     {
         // id: 'rockingTheDaisies2024',
         title: 'Rocking The Daisies 2024',
@@ -9,7 +9,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventCategory: [EventCategory.MUSIC, EventCategory.DRINKS],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         tags: {
@@ -23,7 +23,7 @@ const events: IEvent[] = [
                 camp2: 'Higher Priority',
             },
         },
-        status: EventStatus.UPCOMING,
+        status: EventStatus.ONGOING,
         media: {
             featuredImageUrl: 'https://random.imagecdn.app/500/500',
             otherMediaData: {},
@@ -31,8 +31,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         // id: 'rockingTheDaisies2023',
@@ -42,7 +40,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Stellenbosch, 8000',
         organizers: ['user001', 'host002'],
-        eventCategory: [EventCategory.MUSIC],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         tags: {
@@ -64,8 +62,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         title: 'coachella 2023',
@@ -74,7 +70,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Stellenbosch, 8000',
         organizers: ['user001', 'host002'],
-        eventCategory: [EventCategory.MUSIC],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         tags: {
@@ -96,8 +92,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         // id: 'durbanJuly2023',
@@ -107,7 +101,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'KZN, Durban, 8000',
         organizers: [],
-        eventCategory: [EventCategory.DRINKS],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         status: EventStatus.UPCOMING,
@@ -118,8 +112,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         title: 'Four Oceans Marathon 2023',
@@ -128,7 +120,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         tags: {},
@@ -140,8 +132,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         title: 'The Ring Reloaded Fight Night 2023',
@@ -150,7 +140,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
-        eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: [],
         tags: {},
@@ -162,8 +152,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
     {
         title: 'Fear Factor 2023',
@@ -172,7 +160,7 @@ const events: IEvent[] = [
         endDate: 'an end date',
         location: 'Cape Town, Winefarm, 8000',
         organizers: [],
-        eventCategory: [EventCategory.FITNESS, EventCategory.HEALTH],
+        eventCategory: [],
         capacity: 5000,
         rSVPs: ['user001', 'user002', 'user003'],
         tags: {},
@@ -184,8 +172,6 @@ const events: IEvent[] = [
         additionalDetails: {},
         comments: {},
         privacySetting: EventPrivacySetting.PUBLIC,
-        createdAt: 'created time',
-        updatedAt: 'updated time',
     },
 ];
 

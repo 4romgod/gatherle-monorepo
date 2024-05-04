@@ -1,82 +1,140 @@
-import {GraphQLObjectType, GraphQLString, GraphQLID, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLInputObjectType} from 'graphql';
-import {GraphQLJSONObject} from 'graphql-type-json';
+import 'reflect-metadata';
+import {InputType, Field, ObjectType, ID, Int} from 'type-graphql';
+import GraphQLJSON from 'graphql-type-json';
 import {UserType} from './user';
 import {EventCategoryType} from './eventCategory';
 
-export const EventType = new GraphQLObjectType({
-    name: 'Event',
-    fields: {
-        id: {type: GraphQLNonNull(GraphQLID)},
-        title: {type: GraphQLNonNull(GraphQLString)},
-        description: {type: GraphQLNonNull(GraphQLString)},
-        startDate: {type: GraphQLNonNull(GraphQLString)},
-        endDate: {type: GraphQLNonNull(GraphQLString)},
-        location: {type: GraphQLNonNull(GraphQLString)},
-        status: {type: GraphQLNonNull(GraphQLString)},
-        capacity: {type: GraphQLInt},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(EventCategoryType)))},
-        organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
-        rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(UserType)))},
-        tags: {type: GraphQLJSONObject},
-        media: {
-            type: GraphQLNonNull(
-                new GraphQLObjectType({
-                    name: 'Media',
-                    fields: {
-                        featuredImageUrl: {type: GraphQLNonNull(GraphQLString)},
-                        otherMediaData: {type: GraphQLJSONObject},
-                    },
-                }),
-            ),
-        },
-        additionalDetails: {type: GraphQLJSONObject},
-        comments: {type: GraphQLJSONObject},
-        privacySetting: {type: GraphQLString},
-        eventLink: {type: GraphQLString},
-    },
-});
+export enum EventPrivacySetting {
+    PUBLIC = 'Public',
+    PRIVATE = 'Private',
+    INVITATION = 'Invitation',
+}
 
-export const CreateEventInputType = new GraphQLInputObjectType({
-    name: 'CreateEventInput',
-    fields: {
-        title: {type: new GraphQLNonNull(GraphQLString)},
-        description: {type: new GraphQLNonNull(GraphQLString)},
-        startDate: {type: GraphQLNonNull(GraphQLString)},
-        endDate: {type: GraphQLNonNull(GraphQLString)},
-        location: {type: GraphQLNonNull(GraphQLString)},
-        status: {type: GraphQLNonNull(GraphQLString)},
-        capacity: {type: GraphQLInt},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        tags: {type: GraphQLJSONObject},
-        media: {type: GraphQLJSONObject},
-        additionalDetails: {type: GraphQLJSONObject},
-        comments: {type: GraphQLJSONObject},
-        privacySetting: {type: GraphQLString},
-        eventLink: {type: GraphQLString},
-    },
-});
+export enum EventStatus {
+    CANCELLED = 'Cancelled',
+    COMPLETED = 'Completed',
+    ONGOING = 'Ongoing',
+    UPCOMING = 'Upcoming',
+}
 
-export const UpdateEventInputType = new GraphQLInputObjectType({
-    name: 'UpdateEventInput',
-    fields: {
-        id: {type: GraphQLNonNull(GraphQLID)},
-        title: {type: new GraphQLNonNull(GraphQLString)},
-        description: {type: new GraphQLNonNull(GraphQLString)},
-        startDate: {type: GraphQLNonNull(GraphQLString)},
-        endDate: {type: GraphQLNonNull(GraphQLString)},
-        location: {type: GraphQLNonNull(GraphQLString)},
-        status: {type: GraphQLNonNull(GraphQLString)},
-        capacity: {type: GraphQLInt},
-        eventCategory: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        organizers: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        rSVPs: {type: GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLString)))}, // input is a string
-        tags: {type: GraphQLJSONObject},
-        media: {type: GraphQLJSONObject},
-        additionalDetails: {type: GraphQLJSONObject},
-        comments: {type: GraphQLJSONObject},
-        privacySetting: {type: GraphQLString},
-        eventLink: {type: GraphQLString},
-    },
-});
+@ObjectType()
+class Media {
+    @Field()
+    featuredImageUrl: string;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    otherMediaData?: Record<string, any>;
+}
+
+@ObjectType()
+export class EventType {
+    @Field(() => ID)
+    id: string;
+
+    @Field()
+    title: string;
+
+    @Field()
+    description: string;
+
+    @Field()
+    startDate: string;
+
+    @Field()
+    endDate: string;
+
+    @Field()
+    location: string;
+
+    @Field(() => EventStatus)
+    status: EventStatus;
+
+    @Field(() => Int, {nullable: true})
+    capacity?: number;
+
+    @Field(() => [EventCategoryType])
+    eventCategory: EventCategoryType[];
+
+    @Field(() => [UserType])
+    organizers: UserType[];
+
+    @Field(() => [UserType])
+    rSVPs: UserType[];
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    tags?: Record<string, any>;
+
+    @Field(() => Media)
+    media: Media;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    additionalDetails?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    comments?: Record<string, any>;
+
+    @Field(() => EventPrivacySetting, {nullable: true})
+    privacySetting?: EventPrivacySetting;
+
+    @Field(() => String, {nullable: true})
+    eventLink?: string;
+}
+
+@InputType()
+export class CreateEventInputType {
+    @Field()
+    title: string;
+
+    @Field()
+    description: string;
+
+    @Field()
+    startDate: string;
+
+    @Field()
+    endDate: string;
+
+    @Field()
+    location: string;
+
+    @Field(() => EventStatus)
+    status: EventStatus;
+
+    @Field(() => Int, {nullable: true})
+    capacity?: number;
+
+    @Field(() => [String])
+    eventCategory: string[];
+
+    @Field(() => [String])
+    organizers: string[];
+
+    @Field(() => [String])
+    rSVPs: string[];
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    tags?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    media?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    additionalDetails?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    comments?: Record<string, any>;
+
+    @Field(() => EventPrivacySetting, {nullable: true})
+    privacySetting?: EventPrivacySetting;
+
+    @Field(() => String, {nullable: true})
+    eventLink?: string;
+}
+
+@InputType()
+export class UpdateEventInputType extends CreateEventInputType {
+    @Field(() => ID)
+    id: string;
+}
+
+export type EventQueryParams = Partial<Record<keyof EventType, any>>;

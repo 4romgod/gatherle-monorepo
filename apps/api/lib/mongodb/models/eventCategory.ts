@@ -1,7 +1,7 @@
-import {IEventCategory} from '../../interface';
+import {EventCategoryType} from '../../graphql/types';
 import {model, Schema, Document} from 'mongoose';
 
-const EventCategorySchema = new Schema<IEventCategory & Document>(
+const EventCategorySchema = new Schema<EventCategoryType & Document>(
     {
         name: {type: String, required: true, unique: true},
         iconName: {type: String, required: true},
@@ -11,6 +11,6 @@ const EventCategorySchema = new Schema<IEventCategory & Document>(
     {timestamps: true},
 );
 
-const EventCategory = model<IEventCategory & Document>('EventCategory', EventCategorySchema);
+const EventCategory = model<EventCategoryType & Document>('EventCategory', EventCategorySchema);
 
 export default EventCategory;

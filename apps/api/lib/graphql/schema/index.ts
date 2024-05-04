@@ -1,30 +1,13 @@
-import {GraphQLObjectType, GraphQLSchema} from 'graphql';
-import eventQueryResolvers from './eventQueryResolvers';
-import eventMutationResolvers from './eventMutationResolvers';
-import eventCategoryQueryResolvers from './eventCategoryQueryResolvers';
-import eventCategoryMutationResolvers from './eventCategoryMutationResolvers';
-import userQueryResolvers from './userQueryResolvers';
-import userMutationResolvers from './userMutationResolvers';
+import 'reflect-metadata';
+import {buildSchema} from 'type-graphql';
+import {EventCategoryResolver, EventResolver, UserResolver} from '../resolvers';
 
-const query = new GraphQLObjectType({
-    name: 'RootQuery',
-    fields: {
-        ...eventQueryResolvers,
-        ...eventCategoryQueryResolvers,
-        ...userQueryResolvers,
-    },
-});
+const createSchema = async () => {
+    const schema = await buildSchema({
+        resolvers: [EventCategoryResolver, EventResolver, UserResolver],
+    });
 
-const mutation = new GraphQLObjectType({
-    name: 'RootMutation',
-    fields: {
-        ...eventMutationResolvers,
-        ...eventCategoryMutationResolvers,
-        ...userMutationResolvers,
-    },
-});
+    return schema;
+};
 
-export default new GraphQLSchema({
-    query,
-    mutation,
-});
+export default createSchema;
