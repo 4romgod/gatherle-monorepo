@@ -4,14 +4,25 @@ import { ReactNode, useState } from 'react';
 import InputBase from '@mui/material/InputBase';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
+import Select, { SelectProps } from '@mui/material/Select';
 import { useRouter } from 'next/navigation';
-import { styled } from '@mui/material/styles';
+import { Theme, styled } from '@mui/material/styles';
 
-const StyledSelect = styled(Select)(({ theme }) => ({
+// TODO MUIStyledCommonProps<Theme> cannot be found, using any for now
+type StyledSelectProps = (SelectProps<unknown> & any) & {
+  theme: Theme;
+  isdefaultselected: 'false';
+};
+
+const StyledSelect = styled(Select)<StyledSelectProps>(({ theme, isdefaultselected = 'true' }) => ({
   padding: 5,
-  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.secondary.dark : theme.palette.secondary.dark,
-  color: 'white',
+  backgroundColor:
+    isdefaultselected == 'true'
+      ? '#F6F7F8'
+      : theme.palette.mode === 'dark'
+      ? theme.palette.secondary.dark
+      : theme.palette.secondary.dark,
+  color: isdefaultselected == 'true' ? 'black' : 'white',
   borderRadius: 30,
 }));
 
@@ -50,12 +61,19 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
     }
   };
 
+  const isdefaultselected = (!selectedItem).toString();
+  console.log(isdefaultselected, selectedItem, defaultItem);
+
   return (
     <FormControl variant="standard">
-      <StyledSelect value={selectedItem} onChange={onSelectChangeHandler} input={<StyledInput />} displayEmpty={true}>
-        <MenuItem value="">
-          <em>{defaultItem}</em>
-        </MenuItem>
+      <StyledSelect
+        value={selectedItem}
+        onChange={onSelectChangeHandler}
+        input={<StyledInput />}
+        displayEmpty={true}
+        isdefaultselected={isdefaultselected}
+      >
+        <MenuItem value="">{defaultItem}</MenuItem>
         {itemList.map((item) => (
           <MenuItem key={item.name} value={item.name}>
             <div>{renderItem(item)}</div>

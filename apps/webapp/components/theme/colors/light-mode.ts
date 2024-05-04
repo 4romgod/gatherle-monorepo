@@ -1,6 +1,7 @@
+import { PaletteOptions } from '@mui/material';
 import { indigo as primaryColor } from '@mui/material/colors';
 
-const lightModeColors = {
+const lightModeColors: PaletteOptions = {
   primary: {
     light: primaryColor[300],
     main: primaryColor[500],

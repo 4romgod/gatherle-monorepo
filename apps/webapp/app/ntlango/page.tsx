@@ -48,7 +48,7 @@ export default async function Home() {
           </Grid>
           <Grid item md={9}>
             <Box component="div">
-              {events?.readEvents?.length ? (
+              {events.readEvents.length ? (
                 <EventTileGrid eventsByCategory={eventsByCategory} />
               ) : (
                 <Typography variant="h4">No Events Found</Typography>
