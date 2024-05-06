@@ -1,10 +1,12 @@
+'use client';
+
 import { Button, Typography, styled } from '@mui/material';
 import CustomModal from '../modal/custom-modal';
-import CustomModalContent from '../modal/custom-modal-content';
+import CustomModalContent from '@/components/modal/custom-modal-content-wrapper';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import GoogleIcon from '@mui/icons-material/Google';
 import EmailIcon from '@mui/icons-material/Email';
-import { ReactElement } from 'react';
+import { ReactElement, useState } from 'react';
 import Logo from '../logo';
 import Link from 'next/link';
 
@@ -21,9 +23,14 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }));
 
 const SignupModal = (props: SignupModalProps) => {
+  const [open, setOpen] = useState(false);
+
   return (
     <CustomModal
       triggerButton={props.triggerButton}
+      isOpen={open}
+      handleClose={() => setOpen(false)}
+      handleOpen={() => setOpen(true)}
       modalContent={
         <CustomModalContent>
           <Logo />

@@ -1,11 +1,14 @@
-import { JSXElementConstructor, ReactElement, cloneElement, useState } from 'react';
+import { ReactElement, cloneElement } from 'react';
 import { Modal } from '@mui/base/Modal';
-import CustomBackdrop from '@/components/modal/custom-backdrop';
 import { styled } from '@mui/material';
+import CustomBackdrop from '@/components/modal/custom-backdrop';
 
 export type CustomModalProps = {
   triggerButton: ReactElement;
-  modalContent: ReactElement<any, string | JSXElementConstructor<any>>;
+  modalContent: ReactElement;
+  handleClose: () => void;
+  handleOpen: () => void;
+  isOpen: boolean;
 };
 
 const StyledModal = styled(Modal)({
@@ -17,18 +20,14 @@ const StyledModal = styled(Modal)({
   justifyContent: 'center',
 });
 
-const CustomModal = ({ triggerButton, modalContent }: CustomModalProps) => {
-  const [open, setOpen] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-
+const CustomModal = ({ triggerButton, modalContent, isOpen, handleClose, handleOpen }: CustomModalProps) => {
   return (
     <div>
-      {cloneElement(triggerButton, { onClick: handleOpen })}
+      {cloneElement(triggerButton, { onClick: () => handleOpen() })}
       <StyledModal
         aria-labelledby="unstyled-modal-title"
         aria-describedby="unstyled-modal-description"
-        open={open}
+        open={isOpen}
         onClose={handleClose}
         slots={{ backdrop: CustomBackdrop }}
       >

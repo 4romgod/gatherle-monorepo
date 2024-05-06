@@ -1,24 +1,14 @@
 'use client';
 
-import {
-  Box,
-  Checkbox,
-  Container,
-  Divider,
-  FormControlLabel,
-  Grid,
-  TextField,
-  Typography,
-  styled,
-} from '@mui/material';
-import CustomModal from '../modal/custom-modal';
-import CustomModalContent from '../modal/custom-modal-content';
-import CustomModalButton from '../modal/custom-modal-button';
+import { Box, Checkbox, Container, Divider, FormControlLabel, Grid, TextField, Typography } from '@mui/material';
+import CustomModal from '@/components/modal/custom-modal';
+import CustomModalContentWrapper from '@/components/modal/custom-modal-content-wrapper';
+import CustomModalButton from '@/components/modal/custom-modal-button';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import GoogleIcon from '@mui/icons-material/Google';
 import EmailIcon from '@mui/icons-material/Email';
-import { Dispatch, ReactElement, SetStateAction } from 'react';
-import Logo from '../logo';
+import { Dispatch, ReactElement, SetStateAction, useState } from 'react';
+import Logo from '@/components/logo';
 import Link from 'next/link';
 
 export type LoginModalProps = {
@@ -26,9 +16,9 @@ export type LoginModalProps = {
   setIsAuthN: Dispatch<SetStateAction<boolean>>;
 };
 
-const StyledTextField = styled(TextField)(({ theme }) => ({}));
+const LoginModal = ({ triggerButton, setIsAuthN }: LoginModalProps) => {
+  const [open, setOpen] = useState(false);
 
-const LoginModal = (props: LoginModalProps) => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -40,9 +30,12 @@ const LoginModal = (props: LoginModalProps) => {
 
   return (
     <CustomModal
-      triggerButton={props.triggerButton}
+      triggerButton={triggerButton}
+      isOpen={open}
+      handleClose={() => setOpen(false)}
+      handleOpen={() => setOpen(true)}
       modalContent={
-        <CustomModalContent>
+        <CustomModalContentWrapper>
           <Logo />
           <Typography textAlign="center" variant="h4" fontWeight="bold">
             Log in
@@ -61,7 +54,7 @@ const LoginModal = (props: LoginModalProps) => {
               }}
             >
               <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-                <StyledTextField
+                <TextField
                   margin="normal"
                   required
                   fullWidth
@@ -71,7 +64,7 @@ const LoginModal = (props: LoginModalProps) => {
                   autoComplete="email"
                   autoFocus
                 />
-                <StyledTextField
+                <TextField
                   margin="normal"
                   required
                   fullWidth
@@ -97,7 +90,10 @@ const LoginModal = (props: LoginModalProps) => {
             color="primary"
             size="large"
             sx={{ paddingX: 10 }}
-            onClick={() => props.setIsAuthN(true)}
+            onClick={() => {
+              setIsAuthN(true);
+              setOpen(false);
+            }}
           >
             Log in
           </CustomModalButton>
@@ -119,7 +115,7 @@ const LoginModal = (props: LoginModalProps) => {
           <CustomModalButton variant="outlined" color="primary" startIcon={<EmailIcon />} size="large">
             Sign up with Email
           </CustomModalButton>
-        </CustomModalContent>
+        </CustomModalContentWrapper>
       }
     />
   );
