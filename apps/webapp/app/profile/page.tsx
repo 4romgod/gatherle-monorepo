@@ -1,6 +1,19 @@
 import CustomTabs, { CustomTabsProps } from '@/components/tabs/custom-tabs';
 import { lusitana } from '@/components/theme/fonts';
 import { Event, Interests, Message, Notifications } from '@mui/icons-material';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Ntlango',
+    template: 'Ntlango',
+  },
+  icons: {
+    icon: '/logo-img.png',
+    shortcut: '/logo-img.png',
+    apple: '/logo-img.png',
+  },
+};
 
 const tabsProps: CustomTabsProps = {
   tabsTitle: '',

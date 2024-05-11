@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import MenuIcon from '@mui/icons-material/Menu';
-import ClearIcon from '@mui/icons-material/Clear';
-import HomeIcon from '@mui/icons-material/Home';
-import LoginIcon from '@mui/icons-material/Login';
-import { Button, IconButton } from '@mui/material';
+import {
+  Box,
+  Button,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
+import { Clear, Home, Login, Menu } from '@mui/icons-material';
 
 export default function TemporaryDrawer() {
   const [open, setOpen] = useState(false);
@@ -24,16 +24,14 @@ export default function TemporaryDrawer() {
     <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
       <ListItem>
         <ListItemButton>
-          <Button sx={{ alignItems: 'center' }}>
-            <ClearIcon fontSize="large" />
-          </Button>
+          <Clear fontSize="large" />
         </ListItemButton>
       </ListItem>
       <List>
         <ListItem disablePadding>
           <ListItemButton>
             <ListItemIcon>
-              <HomeIcon />
+              <Home />
             </ListItemIcon>
             <ListItemText primary={'Home'} />
           </ListItemButton>
@@ -42,7 +40,7 @@ export default function TemporaryDrawer() {
         <ListItem disablePadding>
           <ListItemButton>
             <ListItemIcon>
-              <LoginIcon />
+              <Login />
             </ListItemIcon>
             <ListItemText primary={'Log in'} />
           </ListItemButton>
@@ -50,13 +48,9 @@ export default function TemporaryDrawer() {
 
         <Divider />
 
-        <ListItem disablePadding>
-          <ListItemButton>
-            <Button variant="contained" color="secondary" fullWidth>
-              <ListItemText primary={'Sign up'} />
-            </Button>
-          </ListItemButton>
-        </ListItem>
+        <Button variant="contained" color="secondary" fullWidth>
+          <ListItemText primary={'Sign up'} />
+        </Button>
       </List>
     </Box>
   );
@@ -75,7 +69,7 @@ export default function TemporaryDrawer() {
           ...(open && { display: 'none' }),
         }}
       >
-        <MenuIcon color="primary" />
+        <Menu color="primary" />
       </IconButton>
       <Drawer open={open} onClose={toggleDrawer(false)}>
         {DrawerList}

@@ -5,6 +5,19 @@ import { getClient } from '@/lib/graphql/apollo-client';
 import { Typography, Container, Grid, Box } from '@mui/material';
 import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/lib/graphql/types/graphql';
 import SearchInput from '@/components/search/search-box';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Ntlango',
+    template: 'Ntlango',
+  },
+  icons: {
+    icon: '/logo-img.png',
+    shortcut: '/logo-img.png',
+    apple: '/logo-img.png',
+  },
+};
 
 export default async function Home() {
   const { data: events } = await getClient().query({

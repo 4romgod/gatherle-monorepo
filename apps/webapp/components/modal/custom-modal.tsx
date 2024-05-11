@@ -1,6 +1,6 @@
 import { ReactElement, cloneElement } from 'react';
 import { Modal } from '@mui/base/Modal';
-import { styled } from '@mui/material';
+import { Box, styled } from '@mui/material';
 import CustomBackdrop from '@/components/modal/custom-backdrop';
 
 export type CustomModalProps = {
@@ -22,7 +22,7 @@ const StyledModal = styled(Modal)({
 
 const CustomModal = ({ triggerButton, modalContent, isOpen, handleClose, handleOpen }: CustomModalProps) => {
   return (
-    <div>
+    <Box component="div">
       {cloneElement(triggerButton, { onClick: () => handleOpen() })}
       <StyledModal
         aria-labelledby="unstyled-modal-title"
@@ -31,9 +31,9 @@ const CustomModal = ({ triggerButton, modalContent, isOpen, handleClose, handleO
         onClose={handleClose}
         slots={{ backdrop: CustomBackdrop }}
       >
-        {modalContent}
+        <Box component="div">{modalContent}</Box>
       </StyledModal>
-    </div>
+    </Box>
   );
 };
 
