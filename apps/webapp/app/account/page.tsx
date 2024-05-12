@@ -39,8 +39,8 @@ const tabsProps: CustomTabsProps = {
       icon: <Event fontSize="small" />,
     },
     {
-      name: 'Account Management',
-      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Account Management</h1>,
+      name: 'Account',
+      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Account</h1>,
       icon: <ManageAccounts fontSize="small" />,
     },
     {

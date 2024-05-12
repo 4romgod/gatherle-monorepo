@@ -44,7 +44,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
   const [value, setValue] = useState(0);
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const { tabsTitle, tabs } = tabsProps;
+  const { tabs } = tabsProps;
 
   const handleChange = (event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -60,6 +60,9 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         textColor="secondary"
         indicatorColor="secondary"
         sx={{ borderRight: 1, borderColor: 'divider' }}
+        TabIndicatorProps={{
+          style: { left: 0, width: 4 },
+        }}
       >
         {tabs.map(({ name, icon }, index) => (
           <Tab
@@ -69,7 +72,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
             icon={icon}
             iconPosition="start"
             aria-controls={`custom-tabpanel-${index}`}
-            sx={{ paddingX: '15px' }}
+            sx={{ justifyContent: 'flex-start' }}
           />
         ))}
       </Tabs>
