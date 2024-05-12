@@ -6,7 +6,7 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
-import { Mail, More, Notifications } from '@mui/icons-material';
+import { Mail, MoreVert, Notifications } from '@mui/icons-material';
 import Avatar from '@mui/material/Avatar';
 import NotificationsMenu from '@/components/navigation/main/navigation-notifications-items';
 import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items';
@@ -127,7 +127,7 @@ export default function MainNavigation() {
                 onClick={handleNotificationsMenuOpen}
                 color="primary"
               >
-                <More />
+                <MoreVert />
               </IconButton>
             </Box>
           </Box>
