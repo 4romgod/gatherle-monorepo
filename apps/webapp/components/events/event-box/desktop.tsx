@@ -7,6 +7,7 @@ import CardMedia from '@mui/material/CardMedia';
 import { EventType } from '@/lib/graphql/types/graphql';
 import Link from 'next/link';
 import { CalendarIcon, CheckCircleIcon, TicketIcon, UserIcon } from '@heroicons/react/24/outline';
+import { kebabCase } from 'lodash';
 
 export default function EventBoxDesktop({ event }: { event: EventType }) {
   const {
@@ -18,9 +19,10 @@ export default function EventBoxDesktop({ event }: { event: EventType }) {
   } = event;
 
   const organizersText = organizers?.map((user) => user.username).join(' and ') ?? '';
+  const eventSlug = kebabCase(title);
 
   return (
-    <Link href={`/ntlango`}>
+    <Link href={`/events/${eventSlug}`}>
       <Card sx={{ display: 'flex' }}>
         <CardMedia
           component="img"
