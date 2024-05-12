@@ -1,50 +1,52 @@
-import CustomTabs, { CustomTabsProps } from '@/components/tabs/custom-tabs';
-import { lusitana } from '@/components/theme/fonts';
-import { Event, Interests, Message, Notifications } from '@mui/icons-material';
-import { Metadata } from 'next';
+import { getClient } from '@/lib/graphql/apollo-client';
+import { GetUserByUsernameDocument } from '@/lib/graphql/types/graphql';
+import { Person } from '@mui/icons-material';
+import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Ntlango',
-    template: 'Ntlango',
-  },
-  icons: {
-    icon: '/logo-img.png',
-    shortcut: '/logo-img.png',
-    apple: '/logo-img.png',
-  },
-};
+export default async function ProfilePage() {
+  const { data: userRetrieved } = await getClient().query({
+    query: GetUserByUsernameDocument,
+    variables: { username: 'jayz' }, // stop hardcoding the username (get it from cookies)
+  });
 
-const tabsProps: CustomTabsProps = {
-  tabsTitle: '',
-  tabs: [
-    {
-      name: 'Events',
-      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Events</h1>,
-      icon: <Event fontSize="small" />,
-    },
-    {
-      name: 'Interests',
-      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Interests</h1>,
-      icon: <Interests fontSize="small" />,
-    },
-    {
-      name: 'Messages',
-      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Messages</h1>,
-      icon: <Message fontSize="small" />,
-    },
-    {
-      name: 'Notifications',
-      content: <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>Notifications</h1>,
-      icon: <Notifications fontSize="small" />,
-    },
-  ],
-};
+  const user = userRetrieved.readUserByUsername;
 
-export default async function Page() {
   return (
-    <main>
-      <CustomTabs tabsProps={tabsProps} />
-    </main>
+    <Container maxWidth="md">
+      <Box my={4}>
+        <Typography variant="h4" fontWeight="bold" align="center" paddingBottom={2}>
+          {`${user.given_name} ${user.family_name}`}
+        </Typography>
+        <Divider />
+        <Box display="flex" alignItems="center" marginTop={4}>
+          <Avatar src={user.profile_picture || '/user-icon.png'} alt={user.username} sx={{ width: 100, height: 100 }}>
+            <Person sx={{ width: 60, height: 60 }} />
+          </Avatar>
+          <Box marginLeft={4}>
+            <Typography variant="body1">
+              <b>First Name:</b> {user.given_name}
+            </Typography>
+            <Typography variant="body1">
+              <b>Second Name:</b> {user.family_name}
+            </Typography>
+            <Typography variant="body1">
+              <b>Email:</b> {user.email}
+            </Typography>
+            <Typography variant="body1">
+              <b>Gender:</b> {user.gender}
+            </Typography>
+            <Typography variant="body1">
+              <b>Birthdate:</b> {user.birthdate}
+            </Typography>
+            <Typography variant="body1">
+              <b>Address:</b> {user.address}
+            </Typography>
+            <Typography variant="body1">
+              <b>User Type:</b> {user.userType}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Container>
   );
 }

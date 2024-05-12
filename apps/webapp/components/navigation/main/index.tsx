@@ -97,12 +97,12 @@ export default function MainNavigation() {
           <Box component="div" display="flex" sx={{ display: { xs: isAuthN ? 'flex' : 'none' } }}>
             <Box sx={{ ml: 2, display: { xs: 'none', md: 'flex' } }}>
               <IconButton size="large" aria-label="mails" color="primary">
-                <Link href={'/profile/messages'}>
+                <Link href={'/messages'}>
                   <MailIcon />
                 </Link>
               </IconButton>
               <IconButton size="large" aria-label="notifications" color="primary">
-                <Link href={'/profile/notifications'}>
+                <Link href={'/notifications'}>
                   <NotificationsIcon />
                 </Link>
               </IconButton>

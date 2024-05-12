@@ -5,6 +5,7 @@ import MailIcon from '@mui/icons-material/Mail';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Link from 'next/link';
 
 type NotificationsMenuProps = {
   NotificationsMenuAnchorEl: HTMLElement | null;
@@ -39,13 +40,14 @@ export default function NotificationsMenu({
         <IconButton size="large" aria-label="new mails" color="inherit">
           <MailIcon />
         </IconButton>
-        <p>Messages</p>
+        <Link href="/messages">Messages</Link>
       </MenuItem>
       <MenuItem>
-        <IconButton size="large" aria-label="new notifications" color="inherit">
-          <NotificationsIcon />
-        </IconButton>
-        <p>Notifications</p>
+        <Link href="/notifications">
+          <IconButton size="large" aria-label="new notifications" color="inherit">
+            <NotificationsIcon />
+          </IconButton>
+        </Link>
       </MenuItem>
     </Menu>
   );
