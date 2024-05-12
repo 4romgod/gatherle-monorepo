@@ -17,16 +17,39 @@ class UserDAO {
     }
 
     static async readUserById(id: string, projections?: Array<string>): Promise<UserType> {
-        const query = User.findById(id);
-        if (projections && projections.length) {
-            query.select(projections.join(' '));
-        }
-        const user = await query.exec();
+        try {
+            const query = User.findById(id);
+            if (projections && projections.length) {
+                query.select(projections.join(' '));
+            }
+            const user = await query.exec();
 
-        if (!user) {
-            throw ResourceNotFoundException('User not found');
+            if (!user) {
+                throw ResourceNotFoundException('User not found');
+            }
+            return user;
+        } catch (error) {
+            console.error('Error reading user by id:', error);
+            throw error;
         }
-        return user;
+    }
+
+    static async readUserByUsername(username: string, projections?: Array<string>): Promise<UserType> {
+        try {
+            const query = User.findOne({username});
+            if (projections && projections.length) {
+                query.select(projections.join(' '));
+            }
+            const user = await query.exec();
+
+            if (!user) {
+                throw ResourceNotFoundException('User not found');
+            }
+            return user;
+        } catch (error) {
+            console.error('Error reading user by id:', error);
+            throw error;
+        }
     }
 
     static async readUsers(queryParams?: UserQueryParams, projections?: Array<string>): Promise<Array<UserType>> {

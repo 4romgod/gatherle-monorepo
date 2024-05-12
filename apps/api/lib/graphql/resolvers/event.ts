@@ -25,6 +25,11 @@ export class EventResolver {
         return EventDAO.readEventById(id);
     }
 
+    @Query(() => EventType)
+    async readEventBySlug(@Arg('slug') slug: string): Promise<EventType | null> {
+        return EventDAO.readEventBySlug(slug);
+    }
+
     @Query(() => [EventType])
     async readEvents(): Promise<EventType[]> {
         return EventDAO.readEvents();

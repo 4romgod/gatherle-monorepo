@@ -25,6 +25,11 @@ export class UserResolver {
         return UserDAO.readUserById(id);
     }
 
+    @Query(() => UserType)
+    async readUserByUsername(@Arg('username') username: string): Promise<UserType | null> {
+        return UserDAO.readUserByUsername(username);
+    }
+
     @Query(() => [UserType])
     async readUsers(): Promise<UserType[]> {
         return UserDAO.readUsers();

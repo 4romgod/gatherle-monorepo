@@ -36,8 +36,11 @@ class Media {
 
 @ObjectType()
 export class EventType {
-    @Field(() => ID)
+    @Field()
     id: string;
+
+    @Field()
+    slug: string;
 
     @Field()
     title: string;
@@ -90,6 +93,9 @@ export class EventType {
 
 @InputType()
 export class CreateEventInputType {
+    @Field()
+    slug: string;
+
     @Field()
     title: string;
 
