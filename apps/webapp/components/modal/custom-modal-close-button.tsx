@@ -1,7 +1,7 @@
 import { Close } from '@mui/icons-material';
 import { IconButton } from '@mui/material';
 
-export default function CustomModalCloseButton({ handleClose }: { handleClose: () => void }) {
+export default function CustomModalCloseButton({ handleClose }: { handleClose: any }) {
   return (
     <IconButton
       aria-label="close"

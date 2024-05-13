@@ -1,22 +1,33 @@
 'use client';
 
 import Logo from '@/components/logo';
-import { Dispatch, ReactElement, SetStateAction, useState } from 'react';
+import { ReactElement, cloneElement, useState } from 'react';
 import { Box, Container, TextField, Typography } from '@mui/material';
 import CustomModal from '@/components/modal/custom-modal';
 import CustomModalContentWrapper from '@/components/modal/custom-modal-content-wrapper';
 import CustomModalButton from '@/components/modal/custom-modal-button';
 import CustomModalCloseButton from '@/components/modal/custom-modal-close-button';
+import { useCustomAppContext } from '@/components/app-context';
 
 export type SignupWithEmailModalProps = {
   triggerButton: ReactElement;
-  setIsAuthN: Dispatch<SetStateAction<boolean>>;
+  onParentClose?: () => void;
 };
 
-const SignupWithEmailModal = ({ triggerButton, setIsAuthN }: SignupWithEmailModalProps) => {
+const SignupWithEmailModal = ({ triggerButton, onParentClose }: SignupWithEmailModalProps) => {
+  const { setIsAuthN } = useCustomAppContext();
+
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    onParentClose && onParentClose();
+    setOpen(false);
+  };
+
+  const handleSignup = () => {
+    setIsAuthN(true);
+    handleClose();
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,12 +39,9 @@ const SignupWithEmailModal = ({ triggerButton, setIsAuthN }: SignupWithEmailModa
   };
 
   return (
-    <CustomModal
-      triggerButton={triggerButton}
-      isOpen={open}
-      handleClose={handleClose}
-      handleOpen={handleOpen}
-      modalContent={
+    <>
+      {cloneElement(triggerButton, { onClick: handleOpen })}
+      <CustomModal open={open} onClose={handleClose}>
         <CustomModalContentWrapper>
           <CustomModalCloseButton handleClose={handleClose} />
 
@@ -107,25 +115,22 @@ const SignupWithEmailModal = ({ triggerButton, setIsAuthN }: SignupWithEmailModa
                   autoComplete="current-password"
                   color="secondary"
                 />
+
+                <CustomModalButton
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  sx={{ mt: 2 }}
+                  onClick={handleSignup}
+                >
+                  Sign up
+                </CustomModalButton>
               </Box>
             </Box>
           </Container>
-
-          <CustomModalButton
-            variant="contained"
-            color="secondary"
-            size="large"
-            sx={{ paddingX: 10 }}
-            onClick={() => {
-              setIsAuthN(true);
-              setOpen(false);
-            }}
-          >
-            Sign up
-          </CustomModalButton>
         </CustomModalContentWrapper>
-      }
-    />
+      </CustomModal>
+    </>
   );
 };
 

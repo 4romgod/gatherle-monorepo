@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import Logo from '@/components/logo';
-import { ReactElement, useState } from 'react';
+import { ReactElement, cloneElement, useState } from 'react';
 import { Button, Typography, styled } from '@mui/material';
 import CustomModal from '@/components/modal/custom-modal';
 import CustomModalContent from '@/components/modal/custom-modal-content-wrapper';
 import { Facebook, Google, Email } from '@mui/icons-material';
 import SignupWithEmailModal from '@/components/modal/auth/signup-modal-form-modal';
-import { useCustomAppContext } from '@/components/app-context';
 import CustomModalCloseButton from '@/components/modal/custom-modal-close-button';
 
 export type SignupModalProps = {
@@ -24,18 +23,14 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }));
 
 const SignupModal = ({ triggerButton }: SignupModalProps) => {
-  const { setIsAuthN } = useCustomAppContext();
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   return (
-    <CustomModal
-      triggerButton={triggerButton}
-      isOpen={open}
-      handleClose={handleClose}
-      handleOpen={handleOpen}
-      modalContent={
+    <>
+      {cloneElement(triggerButton, { onClick: () => handleOpen() })}
+      <CustomModal open={open} onClose={handleClose}>
         <CustomModalContent>
           <CustomModalCloseButton handleClose={handleClose} />
 
@@ -61,11 +56,11 @@ const SignupModal = ({ triggerButton }: SignupModalProps) => {
                 Sign up with Email
               </StyledButton>
             }
-            setIsAuthN={setIsAuthN}
+            onParentClose={handleClose}
           />
         </CustomModalContent>
-      }
-    />
+      </CustomModal>
+    </>
   );
 };
 

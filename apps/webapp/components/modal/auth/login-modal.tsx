@@ -3,22 +3,23 @@
 import Link from 'next/link';
 import Logo from '@/components/logo';
 import { Box, Checkbox, Container, Divider, FormControlLabel, Grid, TextField, Typography } from '@mui/material';
-import CustomModal from '@/components/modal/custom-modal';
-import CustomModalContentWrapper from '@/components/modal/custom-modal-content-wrapper';
 import CustomModalButton from '@/components/modal/custom-modal-button';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import GoogleIcon from '@mui/icons-material/Google';
 import EmailIcon from '@mui/icons-material/Email';
-import { Dispatch, ReactElement, SetStateAction, useState } from 'react';
+import { ReactElement, cloneElement, useState } from 'react';
+import CustomModal from '@/components/modal/custom-modal';
+import CustomModalContentWrapper from '@/components/modal/custom-modal-content-wrapper';
 import CustomModalCloseButton from '@/components/modal/custom-modal-close-button';
 import SignupWithEmailModal from '@/components/modal/auth/signup-modal-form-modal';
+import { useCustomAppContext } from '@/components/app-context';
 
 export type LoginModalProps = {
   triggerButton: ReactElement;
-  setIsAuthN: Dispatch<SetStateAction<boolean>>;
 };
 
-const LoginModal = ({ triggerButton, setIsAuthN }: LoginModalProps) => {
+const LoginModal = ({ triggerButton }: LoginModalProps) => {
+  const { setIsAuthN } = useCustomAppContext();
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -33,12 +34,9 @@ const LoginModal = ({ triggerButton, setIsAuthN }: LoginModalProps) => {
   };
 
   return (
-    <CustomModal
-      triggerButton={triggerButton}
-      isOpen={open}
-      handleClose={handleClose}
-      handleOpen={handleOpen}
-      modalContent={
+    <>
+      {cloneElement(triggerButton, { onClick: () => handleOpen() })}
+      <CustomModal open={open} onClose={handleClose}>
         <CustomModalContentWrapper>
           <CustomModalCloseButton handleClose={handleClose} />
 
@@ -90,50 +88,49 @@ const LoginModal = ({ triggerButton, setIsAuthN }: LoginModalProps) => {
                     <Link href="#">Forgot password?</Link>
                   </Grid>
                 </Grid>
+                <CustomModalButton
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  sx={{ paddingX: 10 }}
+                  onClick={() => {
+                    setIsAuthN(true);
+                    setOpen(false);
+                  }}
+                >
+                  Log in
+                </CustomModalButton>
               </Box>
+
+              <Divider>or</Divider>
+
+              <CustomModalButton variant="outlined" color="secondary" startIcon={<FacebookIcon />} size="large">
+                Continue with Facebook
+              </CustomModalButton>
+
+              <CustomModalButton
+                variant="outlined"
+                color="secondary"
+                startIcon={<GoogleIcon />}
+                size="large"
+                sx={{ paddingX: 10 }}
+              >
+                Continue with Google
+              </CustomModalButton>
+
+              <SignupWithEmailModal
+                triggerButton={
+                  <CustomModalButton variant="outlined" color="secondary" startIcon={<EmailIcon />} size="large">
+                    Sign up with Email
+                  </CustomModalButton>
+                }
+                onParentClose={handleClose}
+              />
             </Box>
           </Container>
-
-          <CustomModalButton
-            variant="contained"
-            color="secondary"
-            size="large"
-            sx={{ paddingX: 10 }}
-            onClick={() => {
-              setIsAuthN(true);
-              setOpen(false);
-            }}
-          >
-            Log in
-          </CustomModalButton>
-
-          <Divider>or</Divider>
-
-          <CustomModalButton variant="outlined" color="secondary" startIcon={<FacebookIcon />} size="large">
-            Continue with Facebook
-          </CustomModalButton>
-
-          <CustomModalButton
-            variant="outlined"
-            color="secondary"
-            startIcon={<GoogleIcon />}
-            size="large"
-            sx={{ paddingX: 10 }}
-          >
-            Continue with Google
-          </CustomModalButton>
-
-          <SignupWithEmailModal
-            triggerButton={
-              <CustomModalButton variant="outlined" color="secondary" startIcon={<EmailIcon />} size="large">
-                Sign up with Email
-              </CustomModalButton>
-            }
-            setIsAuthN={setIsAuthN}
-          />
         </CustomModalContentWrapper>
-      }
-    />
+      </CustomModal>
+    </>
   );
 };
 

@@ -55,7 +55,6 @@ export default function TemporaryDrawer() {
               </ListItemButton>
             </ListItem>
           }
-          setIsAuthN={setIsAuthN}
         />
 
         <Divider />

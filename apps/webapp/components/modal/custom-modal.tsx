@@ -19,21 +19,21 @@ const StyledModal = styled(Modal)({
   justifyContent: 'center',
 });
 
-const CustomModal = ({ triggerButton, modalContent, isOpen, handleClose, handleOpen }: CustomModalProps) => {
-  return (
-    <Box component="div">
-      {cloneElement(triggerButton, { onClick: () => handleOpen() })}
-      <StyledModal
-        aria-labelledby="unstyled-modal-title"
-        aria-describedby="unstyled-modal-description"
-        open={isOpen}
-        onClose={handleClose}
-        slots={{ backdrop: CustomBackdrop }}
-      >
-        <Box component="div">{modalContent}</Box>
-      </StyledModal>
-    </Box>
-  );
-};
+export default StyledModal;
 
-export default CustomModal;
+// const CustomModal = ({ triggerButton, modalContent, isOpen, handleClose, handleOpen }: CustomModalProps) => {
+//   return (
+//     <Box component="div">
+//       {cloneElement(triggerButton, { onClick: () => handleOpen() })}
+//       <StyledModal
+//         aria-labelledby="unstyled-modal-title"
+//         aria-describedby="unstyled-modal-description"
+//         open={isOpen}
+//         onClose={handleClose}
+//         slots={{ backdrop: CustomBackdrop }}
+//       >
+//         <Box component="div">{modalContent}</Box>
+//       </StyledModal>
+//     </Box>
+//   );
+// };
