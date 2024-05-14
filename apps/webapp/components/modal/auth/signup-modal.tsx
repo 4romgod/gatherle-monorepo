@@ -56,7 +56,7 @@ const SignupModal = ({ triggerButton }: SignupModalProps) => {
                 Sign up with Email
               </StyledButton>
             }
-            onParentClose={handleClose}
+            onParentModalClose={handleClose}
           />
         </CustomModalContent>
       </CustomModal>
