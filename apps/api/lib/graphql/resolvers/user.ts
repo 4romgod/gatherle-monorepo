@@ -1,13 +1,18 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query} from 'type-graphql';
 import {UserDAO} from '../../mongodb/dao';
-import {UserType, CreateUserInputType, UpdateUserInputType} from '../types';
+import {UserType, CreateUserInputType, UpdateUserInputType, LoginUserInputType} from '../types';
 
 @Resolver()
 export class UserResolver {
     @Mutation(() => UserType)
     async createUser(@Arg('input', () => CreateUserInputType) input: CreateUserInputType): Promise<UserType> {
         return UserDAO.create(input);
+    }
+
+    @Mutation(() => UserType)
+    async loginUser(@Arg('input', () => LoginUserInputType) input: LoginUserInputType): Promise<UserType> {
+        return UserDAO.login(input);
     }
 
     @Mutation(() => UserType)

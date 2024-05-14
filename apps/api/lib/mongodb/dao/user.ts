@@ -1,19 +1,41 @@
 import {User} from '../models';
-import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams} from '../../graphql/types';
+import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, JwtUserPayload} from '../../graphql/types';
 import {ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import {JWT_SECRET} from '../../constants';
 
 class UserDAO {
     static async create(userData: CreateUserInputType): Promise<UserType> {
         try {
-            const encryptedPassword = `${userData.password}-encrypted`;
-            return await User.create({
+            const userProps: JwtUserPayload = {
                 ...userData,
-                encrypted_password: encryptedPassword,
-            });
+                username: userData.username ?? userData.email.split('@')[0],
+                email: userData.email.toLocaleLowerCase(),
+                encrypted_password: await bcrypt.hash(userData.password, 10),
+            };
+
+            const jwtToken = jwt.sign(userProps, JWT_SECRET, {expiresIn: '2h'});
+            const newUser = new User({...userProps, token: jwtToken});
+
+            return await newUser.save();
         } catch (error) {
-            console.log(error);
+            console.log('Error when creating a new user', error);
             throw mongodbErrorHandler(error);
         }
+    }
+
+    static async login(loginData: LoginUserInputType): Promise<UserType> {
+        const user = await User.findOne({email: loginData.email});
+        if (user && (await bcrypt.compare(loginData.password, user.encrypted_password))) {
+            const jwtPayload: JwtUserPayload = {...user.toObject({getters: true}), token: undefined};
+            const jwtToken = jwt.sign(jwtPayload, JWT_SECRET, {expiresIn: '2h'});
+            user.token = jwtToken;
+
+            console.log(user);
+            return await user.save();
+        }
+        throw ResourceNotFoundException(`User with email ${loginData.email} does not exist`);
     }
 
     static async readUserById(id: string, projections?: Array<string>): Promise<UserType> {

@@ -58,6 +58,9 @@ export class UserType {
 
     @Field(() => UserRole)
     userType: UserRole;
+
+    @Field({nullable: true})
+    token?: string;
 }
 
 @InputType()
@@ -134,5 +137,16 @@ export class UpdateUserInputType {
     @Field(() => UserRole)
     userType: UserRole;
 }
+
+@InputType()
+export class LoginUserInputType {
+    @Field()
+    email: string;
+
+    @Field()
+    password: string;
+}
+
+export type JwtUserPayload = Omit<UserType, 'id'>;
 
 export type UserQueryParams = Partial<Record<keyof UserType, any>> & {userIDList?: Array<string>};

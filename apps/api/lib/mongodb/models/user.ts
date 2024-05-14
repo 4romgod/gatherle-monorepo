@@ -7,6 +7,7 @@ const UserSchema = new Schema<UserType & Document>(
             type: String,
             required: true,
             unique: true,
+            index: true,
         },
         username: {
             type: String,
@@ -49,6 +50,10 @@ const UserSchema = new Schema<UserType & Document>(
         userType: {
             type: String,
             required: true,
+        },
+        token: {
+            type: String,
+            required: false,
         },
     },
     {timestamps: true},
