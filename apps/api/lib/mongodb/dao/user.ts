@@ -1,6 +1,6 @@
 import {User} from '../models';
 import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, JwtUserPayload} from '../../graphql/types';
-import {ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
+import {InvalidArgumentException, ResourceNotFoundException, mongodbErrorHandler} from '../../utils';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {JWT_SECRET} from '../../constants';
@@ -26,16 +26,26 @@ class UserDAO {
     }
 
     static async login(loginData: LoginUserInputType): Promise<UserType> {
-        const user = await User.findOne({email: loginData.email});
-        if (user && (await bcrypt.compare(loginData.password, user.encrypted_password))) {
-            const jwtPayload: JwtUserPayload = {...user.toObject({getters: true}), token: undefined};
-            const jwtToken = jwt.sign(jwtPayload, JWT_SECRET, {expiresIn: '2h'});
-            user.token = jwtToken;
+        try {
+            const user = await User.findOne({email: loginData.email});
+            if (user) {
+                if (await bcrypt.compare(loginData.password, user.encrypted_password)) {
+                    const jwtPayload: JwtUserPayload = {...user.toObject({getters: true}), token: undefined};
+                    const jwtToken = jwt.sign(jwtPayload, JWT_SECRET, {expiresIn: '2h'});
+                    user.token = jwtToken;
 
-            console.log(user);
-            return await user.save();
+                    console.log(user);
+                    return await user.save();
+                } else {
+                    throw InvalidArgumentException(`Email and Password do not match`);
+                }
+            } else {
+                throw ResourceNotFoundException(`User with email ${loginData.email} does not exist`);
+            }
+        } catch (error) {
+            console.log('Could not login user', error);
+            throw mongodbErrorHandler(error);
         }
-        throw ResourceNotFoundException(`User with email ${loginData.email} does not exist`);
     }
 
     static async readUserById(id: string, projections?: Array<string>): Promise<UserType> {
