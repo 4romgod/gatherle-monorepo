@@ -1,17 +1,29 @@
 'use client';
 
 import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
-import { PaletteMode, Theme } from '@mui/material';
+import { AlertProps, PaletteMode, SnackbarProps, Theme } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { getDesignTokens } from '@/components/theme/design-tokens';
 
-interface CustomAppContextType {
+type ToastProps = SnackbarProps & AlertProps & { message: string };
+
+type CustomAppContextType = {
   isAuthN: boolean;
   setIsAuthN: React.Dispatch<React.SetStateAction<boolean>>;
   themeMode: PaletteMode;
   setThemeMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
   appTheme: Theme | undefined;
-}
+  toastProps: ToastProps;
+  setToastProps: React.Dispatch<React.SetStateAction<ToastProps>>;
+};
+
+const toastDefaultProps: ToastProps = {
+  open: false,
+  anchorOrigin: { vertical: 'top', horizontal: 'right' },
+  severity: 'info',
+  autoHideDuration: 4000,
+  message: '',
+};
 
 const CustomAppContext = createContext<CustomAppContextType>({
   isAuthN: false,
@@ -19,6 +31,8 @@ const CustomAppContext = createContext<CustomAppContextType>({
   themeMode: 'light',
   setThemeMode: () => {},
   appTheme: undefined,
+  toastProps: toastDefaultProps,
+  setToastProps: () => {},
 });
 
 export const useCustomAppContext = () => useContext(CustomAppContext);
@@ -27,6 +41,7 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
   const [isAuthN, setIsAuthN] = useState<boolean>(false);
   const [themeMode, setThemeMode] = useState<PaletteMode>('light');
   const theme = useMemo(() => createTheme(getDesignTokens(themeMode)), [themeMode]);
+  const [toastProps, setToastProps] = useState<ToastProps>(toastDefaultProps);
 
   return (
     <CustomAppContext.Provider
@@ -36,6 +51,8 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
         themeMode,
         setThemeMode,
         appTheme: theme,
+        toastProps,
+        setToastProps,
       }}
     >
       {children}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Logo from '@/components/logo';
-import { ReactElement, cloneElement, useState, useRef } from 'react';
+import { ReactElement, cloneElement, useState } from 'react';
 import {
   Box,
   Checkbox,
@@ -11,8 +11,6 @@ import {
   FormControl,
   FormControlLabel,
   Grid,
-  IconButton,
-  InputAdornment,
   TextField,
   Typography,
 } from '@mui/material';
@@ -25,7 +23,6 @@ import CustomModalContentWrapper from '@/components/modal/custom-modal-content-w
 import CustomModalCloseButton from '@/components/modal/custom-modal-close-button';
 import SignupWithEmailModal from '@/components/modal/auth/signup-modal-form-modal';
 import { useCustomAppContext } from '@/components/app-context';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { LoginUserDocument, LoginUserInputType } from '@/lib/graphql/types/graphql';
 import { useMutation } from '@apollo/client';
 
@@ -34,36 +31,50 @@ export type LoginModalProps = {
 };
 
 const LoginModal = ({ triggerButton }: LoginModalProps) => {
-  const { setIsAuthN } = useCustomAppContext();
-  const [loginUser, { data, loading, error }] = useMutation(LoginUserDocument);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
+  const { setIsAuthN, setToastProps, toastProps } = useCustomAppContext();
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [loginUser] = useMutation(LoginUserDocument, {
+    onError() {},
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleModalOpen = () => setIsModalOpen(true);
   const handleModalClose = () => setIsModalOpen(false);
 
-  console.log('render modal');
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const data = new FormData(event.currentTarget);
+
     const loginData: LoginUserInputType = {
-      email: emailRef.current?.value ?? '',
-      password: passwordRef.current?.value ?? '',
+      email: data.get('email')?.toString() ?? '',
+      password: data.get('password')?.toString() ?? '',
     };
 
-    const login = async () => {
-      await loginUser({ variables: { input: loginData } });
-    };
-    login();
-
-    const user = data?.loginUser;
-
-    console.log('user', user);
-    // setIsAuthN(true);
-    // setIsModalOpen(false);
+    loginUser({ variables: { input: loginData } }).then(({ data, errors }) => {
+      if (errors) {
+        const networkError = (errors as any).networkError;
+        if (networkError) {
+          setToastProps({
+            ...toastProps,
+            open: true,
+            severity: 'error',
+            message: networkError.result.errors[0].message,
+          });
+        }
+      } else {
+        console.log('You are logged in', data?.loginUser);
+        setToastProps({
+          ...toastProps,
+          open: true,
+          severity: 'success',
+          message: 'Login Successfull',
+        });
+        // setIsAuthN(true);
+        // setIsModalOpen(false);
+      }
+    });
   };
 
   return (
@@ -95,43 +106,28 @@ const LoginModal = ({ triggerButton }: LoginModalProps) => {
               <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                 <FormControl fullWidth margin="normal">
                   <TextField
-                    required
+                    required={true}
                     label="Email Address"
                     id="email"
                     name="email"
                     type="email"
-                    autoFocus
-                    inputRef={emailRef}
+                    autoComplete="email"
+                    autoFocus={true}
                   />
                 </FormControl>
                 <FormControl fullWidth margin="normal">
                   <TextField
-                    required
+                    required={true}
                     label="Password"
                     id="password"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    inputRef={passwordRef}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            aria-label="toggle password visibility"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <VisibilityOff color="error" /> : <Visibility color="error" />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
+                    type={'password'}
+                    autoComplete="current-password"
                   />
                 </FormControl>
+
                 <FormControlLabel control={<Checkbox value="remember" color="secondary" />} label="Remember me" />
-                <Grid container spacing={1} paddingTop={3}>
-                  <Grid item xs>
-                    <Link href="#">Forgot password?</Link>
-                  </Grid>
-                </Grid>
+
                 <CustomModalButton
                   variant="contained"
                   color="secondary"
@@ -141,17 +137,26 @@ const LoginModal = ({ triggerButton }: LoginModalProps) => {
                 >
                   Log in
                 </CustomModalButton>
+
+                <Grid container>
+                  <Grid item xs>
+                    <Link href="#">Forgot password?</Link>
+                  </Grid>
+                  <Grid item>
+                    <Link href="#">{"Don't have an account? Sign Up"}</Link>
+                  </Grid>
+                </Grid>
               </Box>
 
-              <Divider>or</Divider>
+              <Divider sx={{ marginY: 2 }}>or</Divider>
 
-              <CustomModalButton variant="outlined" color="secondary" startIcon={<FacebookIcon />} size="large">
+              <CustomModalButton variant="outlined" color="primary" startIcon={<FacebookIcon />} size="large">
                 Continue with Facebook
               </CustomModalButton>
 
               <CustomModalButton
                 variant="outlined"
-                color="secondary"
+                color="primary"
                 startIcon={<GoogleIcon />}
                 size="large"
                 sx={{ paddingX: 10 }}
@@ -161,7 +166,7 @@ const LoginModal = ({ triggerButton }: LoginModalProps) => {
 
               <SignupWithEmailModal
                 triggerButton={
-                  <CustomModalButton variant="outlined" color="secondary" startIcon={<EmailIcon />} size="large">
+                  <CustomModalButton variant="outlined" color="primary" startIcon={<EmailIcon />} size="large">
                     Sign up with Email
                   </CustomModalButton>
                 }

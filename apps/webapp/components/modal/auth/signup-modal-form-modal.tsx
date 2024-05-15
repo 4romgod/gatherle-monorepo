@@ -1,12 +1,13 @@
 import Logo from '@/components/logo';
-import { ReactElement, cloneElement, useState, useRef } from 'react';
-import { Box, Container, FormControl, IconButton, InputAdornment, TextField, Typography } from '@mui/material';
+import { ReactElement, cloneElement, useState } from 'react';
+import { Box, Container, FormControl, Grid, TextField, Typography } from '@mui/material';
 import CustomModal from '@/components/modal/custom-modal';
 import CustomModalContentWrapper from '@/components/modal/custom-modal-content-wrapper';
 import CustomModalButton from '@/components/modal/custom-modal-button';
 import CustomModalCloseButton from '@/components/modal/custom-modal-close-button';
 import { useCustomAppContext } from '@/components/app-context';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { CreateUserInputType, Gender } from '@/lib/graphql/types/graphql';
+import CustomDatePicker from '@/components/date-picker';
 
 export type SignupWithEmailModalProps = {
   triggerButton: ReactElement;
@@ -15,12 +16,7 @@ export type SignupWithEmailModalProps = {
 
 const SignupWithEmailModal = ({ triggerButton, onParentModalClose }: SignupWithEmailModalProps) => {
   const { setIsAuthN } = useCustomAppContext();
-  const givenNameRef = useRef<HTMLInputElement>(null);
-  const familyNameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
 
-  const [showPassword, setShowPassword] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleModalOpen = () => setIsModalOpen(true);
@@ -31,13 +27,21 @@ const SignupWithEmailModal = ({ triggerButton, onParentModalClose }: SignupWithE
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const signinData = {
-      given_name: givenNameRef.current?.value,
-      family_name: familyNameRef.current?.value,
-      email: emailRef.current?.value,
-      password: passwordRef.current?.value,
+
+    const data = new FormData(event.currentTarget);
+
+    const signinData: CreateUserInputType = {
+      given_name: data.get('given_name')?.toString() ?? '',
+      family_name: data.get('family_name')?.toString() ?? '',
+      address: data.get('address')?.toString() ?? '',
+      gender: Gender.Male,
+      phone_number: data.get('phone_number')?.toString() ?? '',
+      birthdate: data.get('birthdate')?.toString() ?? '',
+      email: data.get('email')?.toString() ?? '',
+      password: data.get('password')?.toString() ?? '',
     };
-    console.log(signinData);
+
+    console.log('signinData', signinData);
 
     // setIsAuthN(true);
     // handleModalClose();
@@ -64,49 +68,33 @@ const SignupWithEmailModal = ({ triggerButton, onParentModalClose }: SignupWithE
                 alignItems: 'center',
               }}
             >
-              <form onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={handleSubmit} noValidate>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth margin="normal">
+                      <TextField required label="First Name" name="given_name" variant="outlined" />
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth margin="normal">
+                      <TextField required label="Last Name" name="family_name" variant="outlined" />
+                    </FormControl>
+                  </Grid>
+                </Grid>
                 <FormControl fullWidth margin="normal">
-                  <TextField required label="First Name" name="given_name" variant="outlined" inputRef={givenNameRef} />
+                  <TextField required label="Email Address" name="email" variant="outlined" />
                 </FormControl>
                 <FormControl fullWidth margin="normal">
-                  <TextField
-                    required
-                    label="Last Name"
-                    name="family_name"
-                    variant="outlined"
-                    inputRef={familyNameRef}
-                  />
+                  <TextField required label="Password" name="password" variant="outlined" type={'password'} />
                 </FormControl>
                 <FormControl fullWidth margin="normal">
-                  <TextField required label="Email Address" name="email" variant="outlined" inputRef={emailRef} />
-                </FormControl>
-                <FormControl fullWidth margin="normal">
-                  <TextField
-                    required
-                    label="Password"
-                    name="password"
-                    variant="outlined"
-                    type={showPassword ? 'text' : 'password'}
-                    inputRef={passwordRef}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            aria-label="toggle password visibility"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <VisibilityOff color="error" /> : <Visibility color="error" />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+                  <CustomDatePicker label="Date of Birth" name="birthdate" />
                 </FormControl>
 
                 <CustomModalButton variant="contained" color="secondary" size="large" sx={{ mt: 2 }} type="submit">
                   Sign up
                 </CustomModalButton>
-              </form>
+              </Box>
             </Box>
           </Container>
         </CustomModalContentWrapper>
