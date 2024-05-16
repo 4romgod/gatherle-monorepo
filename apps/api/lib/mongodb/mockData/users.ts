@@ -1,4 +1,4 @@
-import {UserRole, Gender, UserType, CreateUserInputType} from '../../graphql/types';
+import {Gender, CreateUserInputType} from '../../graphql/types';
 
 const users: CreateUserInputType[] = [
     {
@@ -13,7 +13,6 @@ const users: CreateUserInputType[] = [
         password: 'dfuyihjknbsndhj',
         phone_number: '',
         profile_picture: '',
-        userType: UserRole.USER,
     },
     {
         // id: 'host001',
@@ -27,7 +26,6 @@ const users: CreateUserInputType[] = [
         password: 'tryuik',
         phone_number: '',
         profile_picture: '',
-        userType: UserRole.HOST,
     },
     {
         // id: 'user002',
@@ -41,7 +39,6 @@ const users: CreateUserInputType[] = [
         password: 'wreiujk22',
         phone_number: '',
         profile_picture: '',
-        userType: UserRole.USER,
     },
     {
         // id: 'host002',
@@ -55,7 +52,6 @@ const users: CreateUserInputType[] = [
         password: 'sdjhjkj34',
         phone_number: '',
         profile_picture: '',
-        userType: UserRole.ADMIN,
     },
 ];
 

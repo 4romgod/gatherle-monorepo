@@ -94,9 +94,6 @@ export class CreateUserInputType {
 
     @Field({nullable: true})
     profile_picture?: string;
-
-    @Field(() => UserRole)
-    userType: UserRole;
 }
 
 @InputType()
@@ -133,9 +130,6 @@ export class UpdateUserInputType {
 
     @Field({nullable: true})
     profile_picture?: string;
-
-    @Field(() => UserRole)
-    userType: UserRole;
 }
 
 @InputType()

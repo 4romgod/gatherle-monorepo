@@ -1,5 +1,14 @@
 import {User} from '../models';
-import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, JwtUserPayload} from '../../graphql/types';
+import {
+    UserType,
+    UpdateUserInputType,
+    CreateUserInputType,
+    UserQueryParams,
+    LoginUserInputType,
+    JwtUserPayload,
+    Gender,
+    UserRole,
+} from '../../graphql/types';
 import {ErrorTypes, CustomError, KnownCommonError} from '../../utils';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -11,6 +20,7 @@ class UserDAO {
         try {
             const userProps: JwtUserPayload = {
                 ...userData,
+                userType: UserRole.USER,
                 username: userData.username ?? userData.email.split('@')[0],
                 email: userData.email.toLocaleLowerCase(),
                 encrypted_password: await bcrypt.hash(userData.password, 10),
@@ -127,7 +137,7 @@ class UserDAO {
 
     static async updateUser(user: UpdateUserInputType) {
         try {
-            const updatedUser = await User.findByIdAndUpdate(user.id, {...user}, {new: true}).exec();
+            const updatedUser = await User.findByIdAndUpdate(user.id, {...user, userType: UserRole.USER}, {new: true}).exec();
             if (!updatedUser) {
                 throw CustomError('User not found', ErrorTypes.NOT_FOUND);
             }
