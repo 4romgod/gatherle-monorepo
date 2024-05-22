@@ -14,10 +14,10 @@ import {
 } from '@mui/material';
 import { Clear, Home, Login, Menu } from '@mui/icons-material';
 import { useCustomAppContext } from '@/components/app-context';
-import LoginModal from '@/components/modal/auth/login-modal';
-import SignupModal from '@/components/modal/auth/signup-modal';
+import { useRouter } from 'next/navigation';
 
 export default function TemporaryDrawer() {
+  const router = useRouter();
   const { setIsAuthN } = useCustomAppContext();
   const [open, setOpen] = useState(false);
 
@@ -44,28 +44,20 @@ export default function TemporaryDrawer() {
           </ListItem>
         </Link>
 
-        <LoginModal
-          triggerButton={
-            <ListItem disablePadding>
-              <ListItemButton>
-                <ListItemIcon>
-                  <Login />
-                </ListItemIcon>
-                <ListItemText primary={'Log in'} />
-              </ListItemButton>
-            </ListItem>
-          }
-        />
+        <ListItem disablePadding>
+          <ListItemButton>
+            <ListItemIcon>
+              <Login />
+            </ListItemIcon>
+            <ListItemText onClick={() => router.push('/auth/login')} primary={'Log in'} />
+          </ListItemButton>
+        </ListItem>
 
         <Divider />
 
-        <SignupModal
-          triggerButton={
-            <Button variant="contained" color="secondary" fullWidth>
-              <ListItemText primary={'Sign up'} />
-            </Button>
-          }
-        />
+        <Button variant="contained" color="secondary" fullWidth>
+          <ListItemText onClick={() => router.push('/auth/register')} primary={'Sign up'} />
+        </Button>
       </List>
     </Box>
   );

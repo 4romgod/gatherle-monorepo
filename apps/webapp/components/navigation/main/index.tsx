@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import React, { Dispatch, SetStateAction, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -11,17 +12,16 @@ import Avatar from '@mui/material/Avatar';
 import NotificationsMenu from '@/components/navigation/main/navigation-notifications-items';
 import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items';
 import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-drawer';
-import ToggleThemeMode, { ToggleThemeModeProps } from '@/components/theme/toggle-theme-mode';
+import ToggleThemeMode from '@/components/theme/toggle-theme-mode';
 import { Button } from '@mui/material';
 import Logo from '@/components/logo';
-import SignupModal from '@/components/modal/auth/signup-modal';
-import LoginModal from '@/components/modal/auth/login-modal';
 import { useCustomAppContext } from '@/components/app-context';
 
 /**
  * Inspired by: https://arshadalisoomro.hashnode.dev/creating-a-navigation-bar-with-mui-appbar-component-in-nextjs
  */
 export default function MainNavigation() {
+  const router = useRouter();
   const { isAuthN, themeMode, setThemeMode } = useCustomAppContext();
 
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -65,21 +65,13 @@ export default function MainNavigation() {
           <ToggleThemeMode setThemeMode={setThemeMode} themeMode={themeMode} />
 
           <Box component="div" sx={{ display: { xs: 'none', sm: isAuthN ? 'none' : 'flex' } }}>
-            <LoginModal
-              triggerButton={
-                <Button variant="outlined" color="secondary">
-                  Log In
-                </Button>
-              }
-            />
+            <Button variant="outlined" color="secondary" onClick={() => router.push('/auth/login')}>
+              Log In
+            </Button>
 
-            <SignupModal
-              triggerButton={
-                <Button variant="contained" color="secondary">
-                  Sign Up
-                </Button>
-              }
-            />
+            <Button variant="contained" color="secondary" onClick={() => router.push('/auth/register')}>
+              Sign Up
+            </Button>
           </Box>
 
           <Box component="div" display="flex" sx={{ display: { xs: isAuthN ? 'flex' : 'none' } }}>
