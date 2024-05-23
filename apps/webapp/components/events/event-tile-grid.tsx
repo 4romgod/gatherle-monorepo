@@ -1,6 +1,6 @@
 import React from 'react';
 import { Typography, Grid, Box } from '@mui/material';
-import { EventType } from '@/lib/graphql/types/graphql';
+import { EventType } from '@/data/graphql/types/graphql';
 import EventBoxMobile from '@/components/events/event-box/desktop';
 import EventBoxDesktop from '@/components/events/event-box/mobile';
 

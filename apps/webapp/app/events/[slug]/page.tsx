@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { GetEventBySlugDocument } from '@/lib/graphql/types/graphql';
-import { getClient } from '@/lib/graphql/apollo-client';
+import { GetEventBySlugDocument } from '@/data/graphql/types/graphql';
+import { getClient } from '@/data/graphql/apollo-client';
 import { Box, Typography, Grid, Avatar, CardMedia, Container, Chip, Stack } from '@mui/material';
 import { getEventCategoryIcon } from '@/lib/constants';
 

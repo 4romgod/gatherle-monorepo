@@ -22,7 +22,7 @@ import FacebookIcon from '@mui/icons-material/Facebook';
 import GoogleIcon from '@mui/icons-material/Google';
 import EmailIcon from '@mui/icons-material/Email';
 import { useCustomAppContext } from '@/components/app-context';
-import { LoginUserDocument, LoginUserInputType } from '@/lib/graphql/types/graphql';
+import { LoginUserDocument, LoginUserInputType } from '@/data/graphql/types/graphql';
 import { useMutation } from '@apollo/client';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 

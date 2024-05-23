@@ -1,5 +1,5 @@
-import { getClient } from '@/lib/graphql/apollo-client';
-import { GetUserByUsernameDocument } from '@/lib/graphql/types/graphql';
+import { getClient } from '@/data/graphql/apollo-client';
+import { GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
 import { Person } from '@mui/icons-material';
 import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
 

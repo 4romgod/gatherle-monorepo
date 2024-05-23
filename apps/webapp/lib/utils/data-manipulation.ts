@@ -1,4 +1,4 @@
-import { EventType, EventCategoryType, GetAllEventsQuery } from '../graphql/types/graphql';
+import { EventType, EventCategoryType, GetAllEventsQuery } from '../../data/graphql/types/graphql';
 
 type GroupedEventsByCategoryProps = {
   [categoryName: string]: EventType[];

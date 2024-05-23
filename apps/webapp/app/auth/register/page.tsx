@@ -3,33 +3,49 @@
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/logo';
 import { Box, Button, Container, Divider, FormControl, Grid, TextField, Typography } from '@mui/material';
-import { Facebook, Google, Email } from '@mui/icons-material';
-import CustomDatePicker from '@/components/date-picker';
-import { CreateUserInputType, Gender } from '@/lib/graphql/types/graphql';
+import { Facebook, Google } from '@mui/icons-material';
+import { registerUserAction } from '@/data/actions/auth-actions';
+import { useFormState } from 'react-dom';
+import { ZodErrors } from '@/components/zod-errors';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { useCustomAppContext } from '@/components/app-context';
+
+const INITIAL_STATE = {
+  data: null,
+  zodErrors: null,
+  message: null,
+};
 
 const RegisterPage = () => {
   const router = useRouter();
+  const { setIsAuthN, setToastProps, toastProps } = useCustomAppContext();
+  const [formState, formAction] = useFormState(registerUserAction, INITIAL_STATE);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  console.log('formState', formState);
 
-    const data = new FormData(event.currentTarget);
+  // const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
 
-    const signinData: CreateUserInputType = {
-      given_name: data.get('given_name')?.toString() ?? '',
-      family_name: data.get('family_name')?.toString() ?? '',
-      address: data.get('address')?.toString() ?? '',
-      gender: Gender.Male,
-      phone_number: data.get('phone_number')?.toString() ?? '',
-      birthdate: data.get('birthdate')?.toString() ?? '',
-      email: data.get('email')?.toString() ?? '',
-      password: data.get('password')?.toString() ?? '',
-    };
+  //   const data = new FormData(event.currentTarget);
 
-    console.log('signinData', signinData);
+  //   const signinData: CreateUserInputType = {
+  //     given_name: data.get('given_name')?.toString() ?? '',
+  //     family_name: data.get('family_name')?.toString() ?? '',
+  //     address: data.get('address')?.toString() ?? '',
+  //     gender: Gender.Male,
+  //     phone_number: data.get('phone_number')?.toString() ?? '',
+  //     birthdate: data.get('birthdate')?.toString() ?? '',
+  //     email: data.get('email')?.toString() ?? '',
+  //     password: data.get('password')?.toString() ?? '',
+  //   };
 
-    // setIsAuthN(true);
-  };
+  //   const validatedFilds = CreateUserInputTypeSchema.safeParse(signinData);
+
+  //   console.log('validatedFilds', validatedFilds.error?.flatten());
+
+  //   // setIsAuthN(true);
+  // };
 
   return (
     <Container maxWidth="xs">
@@ -46,27 +62,34 @@ const RegisterPage = () => {
         </a>
       </Typography>
 
-      <Box component="form" onSubmit={handleSubmit} noValidate>
+      <Box component="form" action={formAction} noValidate>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth margin="normal">
               <TextField required label="First Name" name="given_name" variant="outlined" />
+              <ZodErrors error={formState?.zodErrors?.given_name} />
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth margin="normal">
               <TextField required label="Last Name" name="family_name" variant="outlined" />
+              <ZodErrors error={formState?.zodErrors?.family_name} />
             </FormControl>
           </Grid>
         </Grid>
         <FormControl fullWidth margin="normal">
           <TextField required label="Email Address" name="email" variant="outlined" />
+          <ZodErrors error={formState?.zodErrors?.email} />
         </FormControl>
         <FormControl fullWidth margin="normal">
           <TextField required label="Password" name="password" variant="outlined" type={'password'} />
+          <ZodErrors error={formState?.zodErrors?.password} />
         </FormControl>
         <FormControl fullWidth margin="normal">
-          <CustomDatePicker label="Date of Birth" name="birthdate" />
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
+            <DatePicker label="Date of Birth" format="D/M/YYYY" name="birthdate" />
+          </LocalizationProvider>
+          <ZodErrors error={formState?.zodErrors?.birthdate} />
         </FormControl>
 
         <Button variant="contained" color="secondary" fullWidth={true} sx={{ mt: 2 }} type="submit">

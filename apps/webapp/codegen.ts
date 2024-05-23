@@ -11,9 +11,9 @@ const config: CodegenConfig = {
       },
     },
   ],
-  documents: ['./lib/**/*.{js,ts,jsx,tsx,mdx}'],
+  documents: ['./data/**/*.{js,ts,jsx,tsx,mdx}'],
   generates: {
-    './lib/graphql/types/': {
+    './data/graphql/types/': {
       preset: 'client',
       plugins: [],
     },

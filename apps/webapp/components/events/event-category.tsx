@@ -1,4 +1,4 @@
-import { EventCategoryType } from '@/lib/graphql/types/graphql';
+import { EventCategoryType } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { Box, Typography } from '@mui/material';
 import { MouseEventHandler } from 'react';

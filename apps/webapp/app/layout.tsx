@@ -7,7 +7,7 @@ import { Box, CssBaseline, IconButton, ThemeProvider } from '@mui/material';
 import { useCustomAppContext, CustomAppContextProvider } from '@/components/app-context';
 import MainNavigation from '@/components/navigation/main';
 import Footer from '@/components/footer';
-import { ApolloWrapper } from '@/lib/graphql/apollo-provider';
+import { ApolloWrapper } from '@/data/graphql/apollo-provider';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import { Close } from '@mui/icons-material';

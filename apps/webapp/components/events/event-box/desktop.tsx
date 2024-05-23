@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
-import { EventType } from '@/lib/graphql/types/graphql';
+import { EventType } from '@/data/graphql/types/graphql';
 import Link from 'next/link';
 import { CalendarIcon, CheckCircleIcon, TicketIcon, UserIcon } from '@heroicons/react/24/outline';
 import { kebabCase } from 'lodash';

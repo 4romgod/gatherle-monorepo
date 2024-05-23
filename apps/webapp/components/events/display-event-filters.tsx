@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EventCategoryType } from '@/lib/graphql/types/graphql';
+import { EventCategoryType } from '@/data/graphql/types/graphql';
 import { Box, Stack, Typography } from '@mui/material';
 import DropDown from '@/components/drop-down';
 import EventCategoryComponent from '@/components/events/event-category';

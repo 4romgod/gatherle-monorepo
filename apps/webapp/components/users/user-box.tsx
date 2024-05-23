@@ -1,6 +1,6 @@
 import { Typography, Grid, Avatar, Box } from '@mui/material';
 import { Person } from '@mui/icons-material';
-import { UserType } from '@/lib/graphql/types/graphql';
+import { UserType } from '@/data/graphql/types/graphql';
 import Link from 'next/link';
 
 export default function UserBox({ user }: { user: UserType }) {

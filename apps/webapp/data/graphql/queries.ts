@@ -1,4 +1,23 @@
-import { graphql } from '@/lib/graphql/types';
+import { graphql } from '@/data/graphql/types';
+
+const RegisterUserDocument = graphql(`
+  mutation RegisterUser($input: CreateUserInputType!) {
+    createUser(input: $input) {
+      id
+      email
+      username
+      address
+      birthdate
+      given_name
+      family_name
+      gender
+      encrypted_password
+      phone_number
+      profile_picture
+      userType
+    }
+  }
+`);
 
 const LoginUserDocument = graphql(`
   mutation LoginUser($input: LoginUserInputType!) {

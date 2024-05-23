@@ -1,9 +1,9 @@
 import EventTileGrid from '@/components/events/event-tile-grid';
 import DisplayEventFilters from '@/components/events/display-event-filters';
 import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
-import { getClient } from '@/lib/graphql/apollo-client';
+import { getClient } from '@/data/graphql/apollo-client';
 import { Typography, Container, Grid, Box } from '@mui/material';
-import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/lib/graphql/types/graphql';
+import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import SearchInput from '@/components/search/search-box';
 import { Metadata } from 'next';
 
