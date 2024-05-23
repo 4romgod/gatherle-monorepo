@@ -10,11 +10,12 @@ import { ZodErrors } from '@/components/zod-errors';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useCustomAppContext } from '@/components/app-context';
+import { useEffect } from 'react';
 
 const INITIAL_STATE = {
   data: null,
+  apiError: null,
   zodErrors: null,
-  message: null,
 };
 
 const RegisterPage = () => {
@@ -24,28 +25,17 @@ const RegisterPage = () => {
 
   console.log('formState', formState);
 
-  // const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-  //   event.preventDefault();
-
-  //   const data = new FormData(event.currentTarget);
-
-  //   const signinData: CreateUserInputType = {
-  //     given_name: data.get('given_name')?.toString() ?? '',
-  //     family_name: data.get('family_name')?.toString() ?? '',
-  //     address: data.get('address')?.toString() ?? '',
-  //     gender: Gender.Male,
-  //     phone_number: data.get('phone_number')?.toString() ?? '',
-  //     birthdate: data.get('birthdate')?.toString() ?? '',
-  //     email: data.get('email')?.toString() ?? '',
-  //     password: data.get('password')?.toString() ?? '',
-  //   };
-
-  //   const validatedFilds = CreateUserInputTypeSchema.safeParse(signinData);
-
-  //   console.log('validatedFilds', validatedFilds.error?.flatten());
-
-  //   // setIsAuthN(true);
-  // };
+  useEffect(() => {
+    if (formState.apiError) {
+      console.log(formState.apiError);
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'error',
+        message: formState.apiError,
+      });
+    }
+  }, [formState]);
 
   return (
     <Container maxWidth="xs">

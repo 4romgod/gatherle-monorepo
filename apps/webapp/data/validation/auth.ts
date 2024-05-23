@@ -13,3 +13,8 @@ export const CreateUserInputTypeSchema = z.object({
   profile_picture: InputMaybe,
   username: InputMaybe,
 });
+
+export const LoginUserInputTypeSchema = z.object({
+  email: z.string().email({ message: 'Invalid email format' }),
+  password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
+});
