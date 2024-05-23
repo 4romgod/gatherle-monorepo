@@ -6,7 +6,12 @@ import {
   LoginUserInputType,
   RegisterUserDocument,
 } from '@/data/graphql/types/graphql';
-import { CreateUserInputTypeSchema, LoginUserInputTypeSchema } from '../validation';
+import {
+  CreateUserInputTypeSchema,
+  ForgotPasswordInputTypeSchema,
+  LoginUserInputTypeSchema,
+  ResetPasswordInputTypeSchema,
+} from '../validation';
 import { getClient } from '@/data/graphql/apollo-client';
 
 export async function registerUserAction(prevState: any, formData: FormData) {
@@ -19,6 +24,7 @@ export async function registerUserAction(prevState: any, formData: FormData) {
     email: formData.get('email')?.toString() ?? '',
     password: formData.get('password')?.toString() ?? '',
   };
+  console.debug('inputData', inputData);
 
   const validatedFields = CreateUserInputTypeSchema.safeParse(inputData);
   if (!validatedFields.success) {
@@ -55,6 +61,7 @@ export async function loginUserAction(prevState: any, formData: FormData) {
     email: formData.get('email')?.toString() ?? '',
     password: formData.get('password')?.toString() ?? '',
   };
+  console.debug('inputData', inputData);
 
   const validatedFields = LoginUserInputTypeSchema.safeParse(inputData);
   if (!validatedFields.success) {
@@ -71,6 +78,13 @@ export async function loginUserAction(prevState: any, formData: FormData) {
       variables: { input: inputData },
     });
     console.log('loginResponse', loginResponse);
+
+    return {
+      ...prevState,
+      data: loginResponse.data,
+      apiError: null,
+      zodErrors: null,
+    };
   } catch (error) {
     console.error('Failed when calling Login User Mutation', error);
     const networkError = (error as any).networkError;
@@ -83,4 +97,43 @@ export async function loginUserAction(prevState: any, formData: FormData) {
       };
     }
   }
+}
+
+export async function forgotPasswordAction(prevState: any, formData: FormData) {
+  const inputData = {
+    email: formData.get('email')?.toString() ?? '',
+  };
+  console.debug('inputData', inputData);
+
+  const validatedFields = ForgotPasswordInputTypeSchema.safeParse(inputData);
+  if (!validatedFields.success) {
+    return {
+      ...prevState,
+      apiError: null,
+      zodErrors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+
+  // TODO Call the API
+}
+
+export async function resetPasswordAction(prevState: any, formData: FormData) {
+  const password = formData.get('password')?.toString() ?? '';
+  const confirmPassword = formData.get('confirm-password')?.toString() ?? '';
+
+  const inputData = {
+    password: password,
+    'confirm-password': confirmPassword,
+  };
+
+  const validatedFields = ResetPasswordInputTypeSchema.safeParse(inputData);
+  if (!validatedFields.success) {
+    return {
+      ...prevState,
+      apiError: null,
+      zodErrors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+
+  // TODO Call the API
 }

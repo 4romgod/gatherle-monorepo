@@ -18,3 +18,12 @@ export const LoginUserInputTypeSchema = z.object({
   email: z.string().email({ message: 'Invalid email format' }),
   password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
 });
+
+export const ForgotPasswordInputTypeSchema = z.object({
+  email: z.string().email({ message: 'Invalid email format' }),
+});
+
+export const ResetPasswordInputTypeSchema = z.object({
+  password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
+  'confirm-password': z.string().min(8, { message: 'Password should be at least 8 characters long' }),
+});

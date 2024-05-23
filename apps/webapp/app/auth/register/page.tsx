@@ -2,26 +2,41 @@
 
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/logo';
-import { Box, Button, Container, Divider, FormControl, Grid, TextField, Typography } from '@mui/material';
-import { Facebook, Google } from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  Container,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  OutlinedInput,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { Facebook, Google, Visibility, VisibilityOff } from '@mui/icons-material';
 import { registerUserAction } from '@/data/actions/auth-actions';
 import { useFormState } from 'react-dom';
 import { ZodErrors } from '@/components/zod-errors';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useCustomAppContext } from '@/components/app-context';
-import { useEffect } from 'react';
-
-const INITIAL_STATE = {
-  data: null,
-  apiError: null,
-  zodErrors: null,
-};
+import { useEffect, useState } from 'react';
+import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 
 const RegisterPage = () => {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
   const { setIsAuthN, setToastProps, toastProps } = useCustomAppContext();
-  const [formState, formAction] = useFormState(registerUserAction, INITIAL_STATE);
+  const [formState, formAction] = useFormState(registerUserAction, SERVER_ACTION_INITIAL_STATE);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   console.log('formState', formState);
 
@@ -34,6 +49,17 @@ const RegisterPage = () => {
         severity: 'error',
         message: formState.apiError,
       });
+    }
+
+    if (formState.data) {
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'success',
+        message: 'You have successfully registered!',
+      });
+
+      // TODO Store token, Move to next page
     }
   }, [formState]);
 
@@ -72,7 +98,26 @@ const RegisterPage = () => {
           <ZodErrors error={formState?.zodErrors?.email} />
         </FormControl>
         <FormControl fullWidth margin="normal">
-          <TextField required label="Password" name="password" variant="outlined" type={'password'} />
+          <InputLabel htmlFor="password">Password</InputLabel>
+          <OutlinedInput
+            id="password"
+            label="Password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            endAdornment={
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={handleClickShowPassword}
+                  onMouseDown={handleMouseDownPassword}
+                  edge="end"
+                >
+                  {showPassword ? <Visibility /> : <VisibilityOff />}
+                </IconButton>
+              </InputAdornment>
+            }
+          />
           <ZodErrors error={formState?.zodErrors?.password} />
         </FormControl>
         <FormControl fullWidth margin="normal">
