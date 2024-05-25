@@ -60,6 +60,12 @@ To get started with this project, follow these steps:
    npm run dev
    ```
 
+   when developing, you might want some data to seed your database, run:
+
+   ```bash
+   npm run seed
+   ```
+
 6. **Access the GraphQL Playground:**
 
    Once the server is running, you can access the GraphQL Playground by navigating to `http://localhost:9000/api/v1/graphql` in your web browser.
@@ -109,6 +115,16 @@ To run tests for this project, you can use the following npm scripts:
   ```bash
   npm run test:canary
   ```
+
+## Chores and Operations
+
+These are things we do every now and then to keep this repository clean.
+
+- **Run depchecks to check unused dependencies**
+
+   ```bash
+   npx depcheck
+   ```
 
 ## Contributing
 
