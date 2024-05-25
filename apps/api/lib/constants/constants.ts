@@ -14,3 +14,5 @@ export enum STAGES {
     GAMMA = 'gamma',
     PROD = 'prod',
 }
+
+export const API_PATH = '/v1/graphql';
