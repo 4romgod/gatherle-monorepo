@@ -15,7 +15,7 @@ export interface ServerContext {
     token?: string;
 }
 
-const createServer = async (listenOptions: ListenOptions) => {
+export const createServer = async (listenOptions: ListenOptions) => {
     await MongoDbClient.connectToDatabase(MONGO_DB_URL);
 
     const expressApp: Express = express();

@@ -11,7 +11,7 @@ class UserDAO {
         try {
             const userProps: JwtUserPayload = {
                 ...userData,
-                userType: UserRole.USER,
+                userType: UserRole.User,
                 username: userData.username ?? userData.email.split('@')[0],
                 email: userData.email.toLocaleLowerCase(),
                 encrypted_password: await bcrypt.hash(userData.password, 10),
@@ -128,7 +128,7 @@ class UserDAO {
 
     static async updateUser(user: UpdateUserInputType) {
         try {
-            const updatedUser = await User.findByIdAndUpdate(user.id, {...user, userType: UserRole.USER}, {new: true}).exec();
+            const updatedUser = await User.findByIdAndUpdate(user.id, {...user, userType: UserRole.User}, {new: true}).exec();
             if (!updatedUser) {
                 throw CustomError('User not found', ErrorTypes.NOT_FOUND);
             }

@@ -2,15 +2,15 @@ import 'reflect-metadata';
 import {ObjectType, InputType, Field, registerEnumType} from 'type-graphql';
 
 export enum Gender {
-    MALE = 'Male',
-    FEMALE = 'Female',
-    OTHER = 'Other',
+    Male = 'Male',
+    Female = 'Female',
+    Other = 'Other',
 }
 
 export enum UserRole {
-    ADMIN = 'Admin',
-    USER = 'User',
-    HOST = 'Host',
+    Admin = 'Admin',
+    User = 'User',
+    Host = 'Host',
 }
 
 registerEnumType(Gender, {

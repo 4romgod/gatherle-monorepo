@@ -6,16 +6,16 @@ import {EventCategoryType} from './eventCategory';
 import {QueryParams} from '../../utils/queries/events';
 
 export enum EventPrivacySetting {
-    PUBLIC = 'Public',
-    PRIVATE = 'Private',
-    INVITATION = 'Invitation',
+    Public = 'Public',
+    Private = 'Private',
+    Invitation = 'Invitation',
 }
 
 export enum EventStatus {
-    CANCELLED = 'Cancelled',
-    COMPLETED = 'Completed',
-    ONGOING = 'Ongoing',
-    UPCOMING = 'Upcoming',
+    Cancelled = 'Cancelled',
+    Completed = 'Completed',
+    Ongoing = 'Ongoing',
+    Upcoming = 'Upcoming',
 }
 
 registerEnumType(EventPrivacySetting, {

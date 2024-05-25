@@ -1,4 +1,4 @@
-import {CreateEventInputType, EventPrivacySetting, EventStatus, UserRole} from '../../graphql/types';
+import {CreateEventInputType, EventPrivacySetting, EventStatus} from '../../graphql/types';
 
 const events: CreateEventInputType[] = [
     {
@@ -22,14 +22,14 @@ const events: CreateEventInputType[] = [
                 camp2: 'Higher Priority',
             },
         },
-        status: EventStatus.ONGOING,
+        status: EventStatus.Ongoing,
         media: {
             featuredImageUrl: 'https://random.imagecdn.app/500/500',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'Rocking The Daisies 2023',
@@ -52,14 +52,14 @@ const events: CreateEventInputType[] = [
                 camp2: 'Higher Priority',
             },
         },
-        status: EventStatus.COMPLETED,
+        status: EventStatus.Completed,
         media: {
             featuredImageUrl: 'https://random.imagecdn.app/400/400',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'coachella 2023',
@@ -82,14 +82,14 @@ const events: CreateEventInputType[] = [
                 camp2: 'Higher Priority',
             },
         },
-        status: EventStatus.COMPLETED,
+        status: EventStatus.Completed,
         media: {
             featuredImageUrl: 'https://random.imagecdn.app/550/550',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'Durban July 2023',
@@ -101,14 +101,14 @@ const events: CreateEventInputType[] = [
         eventCategory: [],
         capacity: 5000,
         rSVPs: [],
-        status: EventStatus.UPCOMING,
+        status: EventStatus.Upcoming,
         media: {
             featuredImageUrl: 'https://random.imagecdn.app/500/550',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'Four Oceans Marathon 2023',
@@ -121,14 +121,14 @@ const events: CreateEventInputType[] = [
         capacity: 5000,
         rSVPs: [],
         tags: {},
-        status: EventStatus.COMPLETED,
+        status: EventStatus.Completed,
         media: {
             featuredImageUrl: 'https://picsum.photos/400',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'The Ring Reloaded Fight Night 2023',
@@ -141,14 +141,14 @@ const events: CreateEventInputType[] = [
         capacity: 5000,
         rSVPs: [],
         tags: {},
-        status: EventStatus.COMPLETED,
+        status: EventStatus.Completed,
         media: {
             featuredImageUrl: 'https://picsum.photos/300',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
     {
         title: 'Fear Factor 2023',
@@ -161,14 +161,14 @@ const events: CreateEventInputType[] = [
         capacity: 5000,
         rSVPs: ['user001', 'user002', 'user003'],
         tags: {},
-        status: EventStatus.COMPLETED,
+        status: EventStatus.Completed,
         media: {
             featuredImageUrl: 'https://picsum.photos/200',
             otherMediaData: {},
         },
         additionalDetails: {},
         comments: {},
-        privacySetting: EventPrivacySetting.PUBLIC,
+        privacySetting: EventPrivacySetting.Public,
     },
 ];
 
