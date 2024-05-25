@@ -5,7 +5,7 @@
   "main": "dist/lib/server.js",
   "types": "dist/types/lib/server.d.ts",
   "scripts": {
-    "build": "tsc --pretty",
+    "build": "npm run format && echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "dev": "nodemon ./lib/server.ts",
     "start": "npm run build && node --trace-warnings dist/lib/server.js",
     "format": "prettier --no-error-on-unmatched-pattern --config .prettierrc.json 'lib/**/*.{js,ts}' 'test/**/*.{js,ts}' --write",
@@ -33,6 +33,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/lodash": "^4.17.4",
     "@types/morgan": "^1.9.9",
     "@types/sinon": "^17.0.3",
     "@types/uuid": "^9.0.8",

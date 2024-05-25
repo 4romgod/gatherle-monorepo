@@ -25,9 +25,6 @@ export class EventCategoryType {
 @InputType()
 export class CreateEventCategoryInputType {
     @Field()
-    slug: string;
-
-    @Field()
     name: string;
 
     @Field()
@@ -44,9 +41,6 @@ export class CreateEventCategoryInputType {
 export class UpdateEventCategoryInputType {
     @Field()
     id: string;
-
-    @Field()
-    slug?: string;
 
     @Field({nullable: true})
     name?: string;

@@ -1,13 +1,5 @@
 import {User} from '../models';
-import {
-    UserType,
-    UpdateUserInputType,
-    CreateUserInputType,
-    UserQueryParams,
-    LoginUserInputType,
-    JwtUserPayload,
-    UserRole,
-} from '../../graphql/types';
+import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, JwtUserPayload, UserRole} from '../../graphql/types';
 import {ErrorTypes, CustomError, KnownCommonError} from '../../utils';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';

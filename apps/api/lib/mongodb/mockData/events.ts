@@ -2,7 +2,6 @@ import {CreateEventInputType, EventPrivacySetting, EventStatus, UserRole} from '
 
 const events: CreateEventInputType[] = [
     {
-        slug: 'rocking-the-daisies-2024',
         title: 'Rocking The Daisies 2024',
         description: 'Rocking The Daisies 2024',
         startDate: 'a start date',
@@ -33,7 +32,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'rocking-the-daisies-2023',
         title: 'Rocking The Daisies 2023',
         description: 'Rocking The Daisies 2023',
         startDate: 'a start date',
@@ -64,7 +62,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'coachella-2023',
         title: 'coachella 2023',
         description: 'coachella 2023',
         startDate: 'a start date',
@@ -95,7 +92,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'durban-july-2023',
         title: 'Durban July 2023',
         description: 'Durban July 2023',
         startDate: 'a start date',
@@ -115,7 +111,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'four-oceans-marathon-2023',
         title: 'Four Oceans Marathon 2023',
         description: 'Four Oceans Marathon 2023',
         startDate: 'a start date',
@@ -136,7 +131,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'the-ring-reloaded-fight-night-2023',
         title: 'The Ring Reloaded Fight Night 2023',
         description: 'The Ring Reloaded Fight Night 2023',
         startDate: 'a start date',
@@ -157,7 +151,6 @@ const events: CreateEventInputType[] = [
         privacySetting: EventPrivacySetting.PUBLIC,
     },
     {
-        slug: 'fear-factor-2023',
         title: 'Fear Factor 2023',
         description: 'Fear Factor 2023',
         startDate: 'a start date',

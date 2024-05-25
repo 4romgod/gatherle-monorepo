@@ -2,11 +2,13 @@ import {EventCategory} from '../models';
 import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType} from '../../graphql/types';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError} from '../../utils';
+import {kebabCase} from 'lodash';
 
 class EventDAO {
     static async create(category: CreateEventCategoryInputType): Promise<EventCategoryType> {
         try {
-            return await EventCategory.create(category);
+            const slug = kebabCase(category.name);
+            return await EventCategory.create({...category, slug});
         } catch (error) {
             if (error instanceof GraphQLError) {
                 throw error;
@@ -77,7 +79,8 @@ class EventDAO {
 
     static async updateEventCategory(category: UpdateEventCategoryInputType) {
         try {
-            const updatedEventCategory = await EventCategory.findByIdAndUpdate(category.id, {...category}, {new: true}).exec();
+            const slug = kebabCase(category.name);
+            const updatedEventCategory = await EventCategory.findByIdAndUpdate(category.id, {...category, slug}, {new: true}).exec();
             if (!updatedEventCategory) {
                 throw CustomError('Event Category not found', ErrorTypes.NOT_FOUND);
             }

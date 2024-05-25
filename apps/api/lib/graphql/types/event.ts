@@ -95,9 +95,6 @@ export class EventType {
 @InputType()
 export class CreateEventInputType {
     @Field()
-    slug: string;
-
-    @Field()
     title: string;
 
     @Field()

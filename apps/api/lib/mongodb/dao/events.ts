@@ -3,11 +3,13 @@ import {EventType, UpdateEventInputType, CreateEventInputType, EventQueryParams}
 import {transformReadEventsQueryParams} from '../../utils/queries/events';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError} from '../../utils';
+import {kebabCase} from 'lodash';
 
 class EventDAO {
-    static async create(eventData: CreateEventInputType): Promise<EventType> {
+    static async create(event: CreateEventInputType): Promise<EventType> {
         try {
-            return await Event.create(eventData);
+            const slug = kebabCase(event.title);
+            return await Event.create({...event, slug});
         } catch (error) {
             if (error instanceof GraphQLError) {
                 throw error;
@@ -86,7 +88,8 @@ class EventDAO {
 
     static async updateEvent(event: UpdateEventInputType): Promise<EventType> {
         try {
-            const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event}, {new: true}).exec();
+            const slug = kebabCase(event.title);
+            const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event, slug}, {new: true}).exec();
             if (!updatedEvent) {
                 throw CustomError(`Event with ID ${event.id} not found`, ErrorTypes.NOT_FOUND);
             }

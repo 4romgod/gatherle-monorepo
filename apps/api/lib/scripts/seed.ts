@@ -23,29 +23,39 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
 }
 
 async function seedUsers(users: Array<CreateUserInputType>) {
+    console.log('Starting to seed user data...');
     for (const user of users) {
-        await UserDAO.create(user);
+        const userResponse = await UserDAO.create(user);
+        console.log(`   Created User item with id: ${userResponse.id}`);
     }
+    console.log('Completed seeding user data.');
 }
 
 async function seedEventCategories(categories: Array<CreateEventCategoryInputType>) {
+    console.log('Starting to seed event category data...');
     for (const category of categories) {
-        await EventCategoryDAO.create(category);
+        const eventCategoryResponse = await EventCategoryDAO.create(category);
+        console.log(`   Created Event Category item with id: ${eventCategoryResponse.id}`);
     }
+    console.log('Completed seeding event category data.');
 }
 
 async function seedEvents(events: Array<CreateEventInputType>, userIds: Array<string>, eventCategoryIds: Array<string>) {
+    console.log('Starting to seed event data...');
     for (const event of events) {
-        await EventDAO.create({
+        const eventResponse = await EventDAO.create({
             ...event,
             organizers: getRandomUniqueItems(userIds, 2),
             rSVPs: getRandomUniqueItems(userIds, 2),
             eventCategory: getRandomUniqueItems(eventCategoryIds, 5),
         });
+        console.log(`   Created Event item with id: ${eventResponse.id}`);
     }
+    console.log('Completed seeding event data.');
 }
 
 async function main() {
+    console.log('Starting to seed data into the database...');
     await MongoDbClient.connectToDatabase(MONGO_DB_URL);
     await seedUsers(usersMockData);
     await seedEventCategories(eventCategoryData);
@@ -54,6 +64,7 @@ async function main() {
     const allEventCategoriesIds = (await EventCategoryDAO.readEventCategories()).map((category) => category.id!);
 
     await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds);
+    console.log('Completed seeding data into the database.');
     await MongoDbClient.disconnectFromDatabase();
 }
 
