@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {REGEX_DATE} from '../../../constants';
-import {EventPrivacySetting, EventStatus} from '../../../graphql/types';
-import {ERROR_MESSAGES, validateMongodbId} from '../common';
+import {EventPrivacySetting, EventStatus} from '../../../utils/validators/../../graphql/types';
+import {ERROR_MESSAGES, validateMongodbId} from '../../../utils/validators';
 
 export const CreateEventInputTypeSchema = z.object({
     title: z.string().min(2, {message: `Title ${ERROR_MESSAGES.REQUIRED}`}),

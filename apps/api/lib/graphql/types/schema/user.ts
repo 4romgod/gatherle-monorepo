@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {REGEX_DATE, REGEX_PHONE_NUMBER} from '../../../constants';
-import {Gender} from '../../../graphql/types';
-import {ERROR_MESSAGES, validateMongodbId} from '../common';
+import {Gender} from '..';
+import {ERROR_MESSAGES, validateMongodbId} from '../../../utils/validators/common';
 
 export const CreateUserInputTypeSchema = z.object({
     address: z

@@ -3,7 +3,7 @@ import {Arg, Mutation, Resolver, Query} from 'type-graphql';
 import {UserDAO} from '../../mongodb/dao';
 import {UserType, CreateUserInputType, UpdateUserInputType, LoginUserInputType} from '../types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '../../utils/validators';
-import {CreateUserInputTypeSchema, LoginUserInputTypeSchema, UpdateUserInputTypeSchema} from '../../utils/validators/schema';
+import {CreateUserInputTypeSchema, LoginUserInputTypeSchema, UpdateUserInputTypeSchema} from '../types/schema';
 
 @Resolver()
 export class UserResolver {
