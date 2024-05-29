@@ -61,7 +61,9 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
         cors<cors.CorsRequest>(),
         express.json(),
         expressMiddleware(apolloServer, {
-            context: async ({req}) => ({token: req.headers.token}),
+            context: async ({req}) => {
+                return {token: req.headers.token};
+            },
         }),
     );
 

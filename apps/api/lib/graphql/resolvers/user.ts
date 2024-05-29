@@ -1,25 +1,26 @@
 import 'reflect-metadata';
-import {Arg, Mutation, Resolver, Query} from 'type-graphql';
+import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
 import {UserDAO} from '@/mongodb/dao';
-import {UserType, CreateUserInputType, UpdateUserInputType, LoginUserInputType} from '@/graphql/types';
+import {UserType, CreateUserInputType, UpdateUserInputType, LoginUserInputType, UserRole, UserWithTokenType} from '@/graphql/types';
 import {CreateUserInputTypeSchema, LoginUserInputTypeSchema, UpdateUserInputTypeSchema} from '@/graphql/types/schema';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/utils/validators';
 
 @Resolver()
 export class UserResolver {
-    @Mutation(() => UserType)
-    async createUser(@Arg('input', () => CreateUserInputType) input: CreateUserInputType): Promise<UserType> {
+    @Mutation(() => UserWithTokenType)
+    async createUser(@Arg('input', () => CreateUserInputType) input: CreateUserInputType): Promise<UserWithTokenType> {
         validateInput<CreateUserInputType>(CreateUserInputTypeSchema, input);
         return UserDAO.create(input);
     }
 
     // TODO https://hygraph.com/learn/graphql/authentication-and-authorization
-    @Mutation(() => UserType)
-    async loginUser(@Arg('input', () => LoginUserInputType) input: LoginUserInputType): Promise<UserType> {
+    @Mutation(() => String)
+    async loginUser(@Arg('input', () => LoginUserInputType) input: LoginUserInputType): Promise<string> {
         validateInput<LoginUserInputType>(LoginUserInputTypeSchema, input);
         return UserDAO.login(input);
     }
 
+    @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
     @Mutation(() => UserType)
     async updateUser(@Arg('input', () => UpdateUserInputType) input: UpdateUserInputType): Promise<UserType> {
         validateMongodbId(input.id, ERROR_MESSAGES.NOT_FOUND('User', 'ID', input.id));

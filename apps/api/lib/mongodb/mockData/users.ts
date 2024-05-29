@@ -49,7 +49,7 @@ const users: CreateUserInputType[] = [
         family_name: 'Bezos',
         gender: Gender.Male,
         given_name: 'Jeff',
-        password: 'sdjhjkj34',
+        password: '123456789',
         phone_number: '+12345678990',
         profile_picture: '',
     },

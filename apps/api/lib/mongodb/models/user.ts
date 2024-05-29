@@ -47,13 +47,9 @@ const UserSchema = new Schema<UserType & Document>(
             type: String,
             required: false,
         },
-        userType: {
+        userRole: {
             type: String,
             required: true,
-        },
-        token: {
-            type: String,
-            required: false,
         },
     },
     {timestamps: true},

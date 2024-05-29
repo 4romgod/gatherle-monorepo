@@ -5,10 +5,11 @@ import request from 'supertest';
 import {usersMockData} from '@/mongodb/mockData';
 import {API_DOMAIN, API_PATH} from '@/constants';
 import {Server} from 'http';
-import {getCreateUserMutation, getUpdateUserMutation} from '@/utils';
+import {getCreateUserMutation, getLoginUserMutation, getUpdateUserMutation} from '@/utils';
 import {UserDAO} from '@/mongodb/dao';
-import {CreateUserInputType, UpdateUserInputType, UserType} from '@/graphql/types';
+import {CreateUserInputType, LoginUserInputType, UpdateUserInputType, UserType, UserWithTokenType} from '@/graphql/types';
 import {ERROR_MESSAGES} from '@/utils/validators';
+import {verifyToken} from '@/utils/auth';
 
 describe('User Resolver', () => {
     let expressApp: Express;
@@ -18,11 +19,13 @@ describe('User Resolver', () => {
     const url = `${API_DOMAIN}:${TEST_PORT}${API_PATH}`;
     const testUserEmail = 'test@example.com';
     const testUsername = 'testUsername';
+    const testPassword = 'testPassword';
 
     const createUserInput: CreateUserInputType = {
         ...usersMockData.at(0)!,
         email: testUserEmail,
         username: testUsername,
+        password: testPassword,
     };
 
     beforeAll(() => {
@@ -64,27 +67,57 @@ describe('User Resolver', () => {
         });
 
         describe('updateUser Mutation', () => {
-            it('should update a user when valid input is provided', async () => {
-                const createdUser = await UserDAO.create(createUserInput);
+            const updatedEmail = 'updated@email.com';
+            let createdUser: UserWithTokenType;
 
-                const newEmail = 'updated@email.com';
-                const updateUserInput = getUpdateUserMutation({
+            beforeEach(async () => {
+                createdUser = await UserDAO.create(createUserInput);
+            });
+
+            afterEach(async () => {
+                await UserDAO.deleteUserByEmail(updatedEmail);
+            });
+
+            it('should update a user when valid input is provided', async () => {
+                const updateUserMutation = getUpdateUserMutation({
                     ...createUserInput,
                     id: createdUser.id,
-                    email: newEmail,
+                    email: updatedEmail,
                 });
 
-                const updateUserResponse = await request(url).post('').send(updateUserInput);
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.status).toBe(200);
                 expect(updateUserResponse.error).toBeFalsy();
 
                 const updatedUser = updateUserResponse.body.data.updateUser;
 
                 expect(updatedUser).toHaveProperty('id');
-                expect(updatedUser.email).toBe(newEmail);
+                expect(updatedUser.email).toBe(updatedEmail);
+            });
+        });
 
-                // cleanup
-                await UserDAO.deleteUserByEmail(newEmail);
+        describe('loginUser Mutation', () => {
+            let createdUser: UserWithTokenType;
+            beforeEach(async () => {
+                createdUser = await UserDAO.create(createUserInput);
+            });
+
+            afterEach(async () => {
+                await UserDAO.deleteUserByEmail(testUserEmail);
+            });
+
+            it('should login a user when valid input is provided', async () => {
+                const loginUserMutation = getLoginUserMutation({
+                    email: testUserEmail,
+                    password: testPassword,
+                });
+                const loginUserResponse = await request(url).post('').send(loginUserMutation);
+                expect(loginUserResponse.status).toBe(200);
+                expect(loginUserResponse.error).toBeFalsy();
+
+                const tokenData = loginUserResponse.body.data.loginUser;
+                const decodedUser = verifyToken(tokenData) as UserType;
+                expect(decodedUser.id).toBe(createdUser.id);
             });
         });
     });
@@ -148,7 +181,7 @@ describe('User Resolver', () => {
          *
          */
         describe('updateUser Mutation', () => {
-            let createdUser: UserType;
+            let createdUser: UserWithTokenType;
             beforeEach(async () => {
                 createdUser = await UserDAO.create(createUserInput);
             });
@@ -159,33 +192,33 @@ describe('User Resolver', () => {
 
             it('should throw CONFLICT error when unique attribute already exists', async () => {
                 let anotherCreatedUser: UserType;
-                const anotherTestEmail = 'updated@email.net';
+                const anotherUsername = 'updatedUser';
                 try {
-                    anotherCreatedUser = await UserDAO.create({...createUserInput, email: anotherTestEmail, username: 'updatedUser'}); // another user for conflict
+                    anotherCreatedUser = await UserDAO.create({...createUserInput, email: 'updated@email.net', username: anotherUsername}); // another user for conflict
                 } catch (error) {
                     fail('it should not reach here');
                 }
 
-                const updateUserInput: UpdateUserInputType = {
+                const updateUserMutation = getUpdateUserMutation({
                     id: anotherCreatedUser.id,
-                    email: testUserEmail,
-                };
-                const updateUserResponse = await request(url).post('').send(getUpdateUserMutation(updateUserInput));
+                    username: 'jackBaur',
+                });
+
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
                 expect(updateUserResponse.status).toBe(409);
 
-                // cleanup
-                await UserDAO.deleteUserByEmail(anotherTestEmail);
+                await UserDAO.deleteUserByEmail('updated@email.net');
             });
 
             it('should throw BAD_USER_INPUT error when invalid input is provided, but the input type schema is valid', async () => {
                 const invalidPhoneNumber = 'mockPhoneNumber';
-                const updateUserInput: UpdateUserInputType = {
+                const updateUserMutation = getUpdateUserMutation({
                     id: createdUser.id,
                     phone_number: invalidPhoneNumber,
-                };
+                });
 
-                const updateUserResponse = await request(url).post('').send(getUpdateUserMutation(updateUserInput));
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
                 expect(updateUserResponse.status).toBe(400);
                 expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PHONE_NUMBER);
@@ -193,12 +226,12 @@ describe('User Resolver', () => {
 
             it('should throw NOT_FOUND error when valid input is provided, but the user does not exist', async () => {
                 const mockId = '62a23958e5a9e9b88f853a67';
-                const updateUserInput: UpdateUserInputType = {
+                const updateUserMutation = getUpdateUserMutation({
                     id: mockId,
                     given_name: 'updatedName',
-                };
+                });
 
-                const updateUserResponse = await request(url).post('').send(getUpdateUserMutation(updateUserInput));
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
                 expect(updateUserResponse.status).toBe(404);
                 expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.NOT_FOUND('User', 'ID', mockId));
@@ -206,27 +239,84 @@ describe('User Resolver', () => {
 
             it('should throw NOT_FOUND error when an invalid mongodb id is entered', async () => {
                 const mockId = 'mockId';
-                const updateUserInput: UpdateUserInputType = {
+                const updateUserMutation = getUpdateUserMutation({
                     id: mockId,
                     given_name: 'updatedName',
-                };
+                });
 
-                const updateUserResponse = await request(url).post('').send(getUpdateUserMutation(updateUserInput));
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
                 expect(updateUserResponse.status).toBe(404);
                 expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.NOT_FOUND('User', 'ID', mockId));
             });
 
             it('should throw BAD_USER_INPUT error when invalid input type is provided', async () => {
-                const updateUserInput = {
+                const updateUserMutation = getUpdateUserMutation({
                     id: createdUser.id,
                     non_existing_param: 'mockParam',
-                };
+                });
 
-                const updateUserResponse = await request(url).post('').send(getUpdateUserMutation(updateUserInput));
+                const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
                 expect(updateUserResponse.status).toBe(400);
                 expect(updateUserResponse.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+            });
+        });
+
+        describe('loginUser Mutation', () => {
+            beforeEach(async () => {
+                await UserDAO.create(createUserInput);
+            });
+
+            afterEach(async () => {
+                await UserDAO.deleteUserByEmail(testUserEmail);
+            });
+
+            it('should throw UNAUTHORIZED error when invalid email is provided', async () => {
+                const fakeEmail = 'invalid_email@example.com';
+                const invalidLoginMutation = getLoginUserMutation({
+                    email: fakeEmail,
+                    password: testPassword,
+                });
+
+                const loginUserResponse = await request(url).post('').send(invalidLoginMutation);
+                expect(loginUserResponse.status).toBe(401);
+                expect(loginUserResponse.error).toBeTruthy();
+                expect(loginUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISSMATCH);
+            });
+
+            it('should throw UNAUTHORIZED error when invalid password is provided', async () => {
+                const invalidLoginMutation = getLoginUserMutation({
+                    email: testUserEmail,
+                    password: 'incorrect_password',
+                });
+
+                const loginUserResponse = await request(url).post('').send(invalidLoginMutation);
+                expect(loginUserResponse.status).toBe(401);
+                expect(loginUserResponse.error).toBeTruthy();
+                expect(loginUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISSMATCH);
+            });
+
+            it('should throw BAD_REQUEST error when empty email or password is provided', async () => {
+                const emptyEmailLoginMutation = getLoginUserMutation({
+                    email: '',
+                    password: testPassword,
+                });
+
+                let loginUserResponse = await request(url).post('').send(emptyEmailLoginMutation);
+                expect(loginUserResponse.status).toBe(400);
+                expect(loginUserResponse.error).toBeTruthy();
+                expect(loginUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_EMAIL);
+
+                const emptyPasswordLoginMutation = getLoginUserMutation({
+                    email: testUserEmail,
+                    password: '',
+                });
+
+                loginUserResponse = await request(url).post('').send(emptyPasswordLoginMutation);
+                expect(loginUserResponse.status).toBe(400);
+                expect(loginUserResponse.error).toBeTruthy();
+                expect(loginUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PASSWORD);
             });
         });
     });

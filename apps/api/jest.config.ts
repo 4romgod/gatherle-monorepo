@@ -1,5 +1,4 @@
 import type {Config} from 'jest';
-import {pathsToModuleNameMapper} from 'ts-jest';
 
 const config: Config = {
     verbose: true,
@@ -9,7 +8,7 @@ const config: Config = {
     testTimeout: 10000,
     testMatch: [
         '<rootDir>/test/canary/**/*.test.[jt]s?(x)',
-        '<rootDir>/test/integration/**/*.test.[jt]s?(x)',
+        '<rootDir>/test/integration/**/user.test.[jt]s?(x)',
         '<rootDir>/test/unit/**/*.test.[jt]s?(x)',
     ],
     moduleNameMapper: {

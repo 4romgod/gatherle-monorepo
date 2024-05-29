@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import {ObjectType, InputType, Field, registerEnumType} from 'type-graphql';
+import {ObjectType, InputType, Field, registerEnumType, Authorized} from 'type-graphql';
 
 export enum Gender {
     Male = 'Male',
@@ -11,6 +11,7 @@ export enum UserRole {
     Admin = 'Admin',
     User = 'User',
     Host = 'Host',
+    Guest = 'Guest',
 }
 
 registerEnumType(Gender, {
@@ -57,10 +58,13 @@ export class UserType {
     profile_picture?: string;
 
     @Field(() => UserRole)
-    userType: UserRole;
+    userRole: UserRole;
+}
 
-    @Field({nullable: true})
-    token?: string;
+@ObjectType()
+export class UserWithTokenType extends UserType {
+    @Field()
+    token: string;
 }
 
 @InputType()
@@ -130,6 +134,10 @@ export class UpdateUserInputType {
 
     @Field({nullable: true})
     profile_picture?: string;
+
+    @Authorized([UserRole.Admin])
+    @Field(() => UserRole, {nullable: true})
+    userRole?: string;
 }
 
 @InputType()
@@ -140,7 +148,5 @@ export class LoginUserInputType {
     @Field()
     password: string;
 }
-
-export type JwtUserPayload = Omit<UserType, 'id'>;
 
 export type UserQueryParams = Partial<Record<keyof UserType, any>> & {userIDList?: Array<string>};

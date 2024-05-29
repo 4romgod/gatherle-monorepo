@@ -35,6 +35,9 @@ export const ERROR_MESSAGES = {
     INVALID_QUERY: "Your query doesn't match the schema. Try double-checking it!",
     NOT_FOUND: (searchedItemType: string, searchParamType: string, searchParamValue: string) =>
         `${searchedItemType} with ${searchParamType} ${searchParamValue} does not exist`,
+    PASSWORD_MISSMATCH: 'Email and Password do not match',
     REQUIRED: 'is required',
     TOO_SHORT: 'is too short',
+    UNAUTHENTICATED: 'You must be logged in to access this resource.',
+    UNAUTHORIZED: "You don't have permission to access this resource.",
 };

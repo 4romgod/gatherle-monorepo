@@ -1,27 +1,30 @@
 import {User} from '@/mongodb/models';
-import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, JwtUserPayload, UserRole} from '@/graphql/types';
+import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, UserRole, UserWithTokenType} from '@/graphql/types';
 import {ErrorTypes, CustomError, KnownCommonError} from '@/utils';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {JWT_SECRET} from '@/constants';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/utils/validators';
+import {generateToken} from '@/utils/auth';
 
 class UserDAO {
-    static async create(userData: CreateUserInputType): Promise<UserType> {
+    static async create(userData: CreateUserInputType): Promise<UserWithTokenType> {
         try {
-            const userProps: JwtUserPayload = {
+            const userProps = {
                 ...userData,
-                userType: UserRole.User,
+                userRole: UserRole.User, // TODO default userRole, do better
                 username: userData.username ?? userData.email.split('@')[0],
                 email: userData.email.toLocaleLowerCase(),
                 encrypted_password: await bcrypt.hash(userData.password, 10),
             };
 
-            const jwtToken = jwt.sign(userProps, JWT_SECRET, {expiresIn: '2h'});
-            const newUser = new User({...userProps, token: jwtToken});
+            const newUser = new User(userProps);
+            const tokenPayload = newUser.toObject({getters: true});
+            const token = generateToken(tokenPayload);
 
-            return await newUser.save();
+            const savedUser = await newUser.save();
+            return {...savedUser.toObject({getters: true}), token};
         } catch (error) {
             if (error instanceof GraphQLError) {
                 throw error;
@@ -32,22 +35,19 @@ class UserDAO {
         }
     }
 
-    static async login(loginData: LoginUserInputType): Promise<UserType> {
+    static async login(loginData: LoginUserInputType): Promise<string> {
         try {
             const user = await User.findOne({email: loginData.email});
             if (user) {
                 if (await bcrypt.compare(loginData.password, user.encrypted_password)) {
-                    const jwtPayload: JwtUserPayload = {...user.toObject({getters: true}), token: undefined};
-                    const jwtToken = jwt.sign(jwtPayload, JWT_SECRET, {expiresIn: '2h'});
-                    user.token = jwtToken;
-
-                    console.log(user);
-                    return await user.save();
+                    const jwtPayload = {...user.toObject({getters: true})};
+                    const jwtToken = generateToken(jwtPayload);
+                    return jwtToken;
                 } else {
-                    throw CustomError(`Email and Password do not match`, ErrorTypes.BAD_USER_INPUT);
+                    throw CustomError(ERROR_MESSAGES.PASSWORD_MISSMATCH, ErrorTypes.UNAUTHENTICATED);
                 }
             } else {
-                throw CustomError(`User with email ${loginData.email} does not exist`, ErrorTypes.NOT_FOUND);
+                throw CustomError(ERROR_MESSAGES.PASSWORD_MISSMATCH, ErrorTypes.UNAUTHENTICATED);
             }
         } catch (error) {
             if (error instanceof GraphQLError) {
