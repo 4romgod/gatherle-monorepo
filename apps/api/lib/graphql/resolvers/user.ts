@@ -28,6 +28,7 @@ export class UserResolver {
         return UserDAO.updateUser(input);
     }
 
+    @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
     @Mutation(() => UserType)
     async deleteUserById(@Arg('id') id: string): Promise<UserType> {
         validateMongodbId(id, ERROR_MESSAGES.NOT_FOUND('User', 'ID', id));

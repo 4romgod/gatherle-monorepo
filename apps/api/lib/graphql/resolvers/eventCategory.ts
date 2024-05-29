@@ -1,23 +1,26 @@
 import 'reflect-metadata';
-import {Arg, Mutation, Resolver, Query} from 'type-graphql';
-import {CreateEventCategoryInputType, EventCategoryType, UpdateEventCategoryInputType} from '@/graphql/types';
+import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
+import {CreateEventCategoryInputType, EventCategoryType, UpdateEventCategoryInputType, UserRole} from '@/graphql/types';
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/utils/validators';
 
 @Resolver()
 export class EventCategoryResolver {
+    @Authorized([UserRole.Admin])
     @Mutation(() => EventCategoryType)
     async createEventCategory(@Arg('input', () => CreateEventCategoryInputType) input: CreateEventCategoryInputType): Promise<EventCategoryType> {
         return EventCategoryDAO.create(input);
     }
 
+    @Authorized([UserRole.Admin])
     @Mutation(() => EventCategoryType)
     async updateEventCategory(@Arg('input', () => UpdateEventCategoryInputType) input: UpdateEventCategoryInputType): Promise<EventCategoryType> {
         return EventCategoryDAO.updateEventCategory(input);
     }
 
+    @Authorized([UserRole.Admin])
     @Mutation(() => EventCategoryType)
-    async deleteEvent(@Arg('id') id: string): Promise<EventCategoryType> {
+    async deleteEventCategory(@Arg('id') id: string): Promise<EventCategoryType> {
         validateMongodbId(id);
         return EventCategoryDAO.deleteEventCategory(id);
     }

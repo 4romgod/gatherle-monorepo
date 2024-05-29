@@ -8,7 +8,7 @@ export type CustomErrorType = {
     errorStatus: number;
 };
 
-export const ErrorTypes: {[key: string]: CustomErrorType} = {
+export const ErrorTypes = {
     BAD_USER_INPUT: {
         errorCode: ApolloServerErrorCode.BAD_USER_INPUT,
         errorStatus: HttpStatusCode.BAD_REQUEST,
