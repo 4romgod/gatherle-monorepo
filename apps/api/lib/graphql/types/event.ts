@@ -143,9 +143,57 @@ export class CreateEventInputType {
 }
 
 @InputType()
-export class UpdateEventInputType extends CreateEventInputType {
-    @Field(() => ID)
+export class UpdateEventInputType {
+    @Field()
     id: string;
+
+    @Field({nullable: true})
+    title?: string;
+
+    @Field({nullable: true})
+    description?: string;
+
+    @Field({nullable: true})
+    startDate?: string;
+
+    @Field({nullable: true})
+    endDate?: string;
+
+    @Field({nullable: true})
+    location?: string;
+
+    @Field(() => EventStatus, {nullable: true})
+    status?: EventStatus;
+
+    @Field(() => Int, {nullable: true})
+    capacity?: number;
+
+    @Field(() => [String], {nullable: true})
+    eventCategory?: string[];
+
+    @Field(() => [String], {nullable: true})
+    organizers?: string[];
+
+    @Field(() => [String], {nullable: true})
+    rSVPs?: string[];
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    tags?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    media?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    additionalDetails?: Record<string, any>;
+
+    @Field(() => GraphQLJSON, {nullable: true})
+    comments?: Record<string, any>;
+
+    @Field(() => EventPrivacySetting, {nullable: true})
+    privacySetting?: EventPrivacySetting;
+
+    @Field(() => String, {nullable: true})
+    eventLink?: string;
 }
 
 @InputType()

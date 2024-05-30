@@ -22,7 +22,7 @@ class EventDAO {
 
     static async readEventById(eventId: string, projections?: Array<string>): Promise<EventType> {
         try {
-            const query = Event.findById(eventId).populate('organizers').populate('rSVPs').populate('eventCategory');
+            const query = Event.findById(eventId).populate('organizers rSVPs eventCategory');
             if (projections && projections.length) {
                 query.select(projections.join(' '));
             }
@@ -44,7 +44,7 @@ class EventDAO {
 
     static async readEventBySlug(slug: string, projections?: Array<string>): Promise<EventType> {
         try {
-            const query = Event.findOne({slug: slug}).populate('organizers').populate('rSVPs').populate('eventCategory');
+            const query = Event.findOne({slug: slug}).populate('organizers rSVPs eventCategory');
             if (projections && projections.length) {
                 query.select(projections.join(' '));
             }
@@ -67,10 +67,7 @@ class EventDAO {
     static async readEvents(queryParams?: EventQueryParams, projections?: Array<string>): Promise<Array<EventType>> {
         try {
             const queryConditions = transformReadEventsQueryParams(queryParams);
-            const query = Event.find({...queryConditions})
-                .populate('organizers')
-                .populate('rSVPs')
-                .populate('eventCategory');
+            const query = Event.find({...queryConditions}).populate('organizers rSVPs eventCategory');
 
             if (projections && projections.length) {
                 query.select(projections.join(' '));
@@ -89,7 +86,9 @@ class EventDAO {
     static async updateEvent(event: UpdateEventInputType): Promise<EventType> {
         try {
             const slug = kebabCase(event.title);
-            const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event, slug}, {new: true}).exec();
+            const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event, slug}, {new: true})
+                .populate('organizers rSVPs eventCategory')
+                .exec();
             if (!updatedEvent) {
                 throw CustomError(`Event with ID ${event.id} not found`, ErrorTypes.NOT_FOUND);
             }
@@ -106,7 +105,7 @@ class EventDAO {
 
     static async deleteEvent(eventId: string): Promise<EventType> {
         try {
-            const deletedEvent = await Event.findByIdAndDelete(eventId).exec();
+            const deletedEvent = await Event.findByIdAndDelete(eventId).populate('organizers rSVPs eventCategory').exec();
             if (!deletedEvent) {
                 throw CustomError(`Event with ID ${eventId} not found`, ErrorTypes.NOT_FOUND);
             }
@@ -124,7 +123,9 @@ class EventDAO {
     //TODO look deeper into this, its very suspecious. Why not just push 1 userID
     static async rsvp(eventId: string, userIDs: Array<string>) {
         try {
-            const event = await Event.findOneAndUpdate({_id: eventId}, {$addToSet: {rSVPs: {$each: userIDs}}}, {new: true}).exec();
+            const event = await Event.findOneAndUpdate({_id: eventId}, {$addToSet: {rSVPs: {$each: userIDs}}}, {new: true})
+                .populate('organizers rSVPs eventCategory')
+                .exec();
             return event;
         } catch (error) {
             console.error("Error updating event RSVP's", error);
@@ -139,7 +140,9 @@ class EventDAO {
     //TODO look deeper into this, its very suspecious. Why not just pop 1 userID
     static async cancelRsvp(eventId: string, userIDs: Array<string>) {
         try {
-            const event = await Event.findOneAndUpdate({_id: eventId}, {$pull: {rSVPs: {$in: userIDs}}}, {new: true}).exec();
+            const event = await Event.findOneAndUpdate({_id: eventId}, {$pull: {rSVPs: {$in: userIDs}}}, {new: true})
+                .populate('organizers rSVPs eventCategory')
+                .exec();
             return event;
         } catch (error) {
             console.error("Error cancelling event RSVP's", error);

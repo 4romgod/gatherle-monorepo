@@ -5,8 +5,9 @@ import {ERROR_MESSAGES} from '@/utils/validators';
 import {JWT_SECRET, OPERATION_NAMES} from '@/constants';
 import {UserRole, UserType} from '@/graphql/types';
 import jwt from 'jsonwebtoken';
+import {EventDAO} from '@/mongodb/dao';
 
-export const authChecker: AuthChecker<ServerContext> = ({context, args, info}, roles) => {
+export const authChecker: AuthChecker<ServerContext> = async ({context, args, info}, roles) => {
     const token = context.token;
 
     if (token) {
@@ -27,7 +28,8 @@ export const authChecker: AuthChecker<ServerContext> = ({context, args, info}, r
             return true;
         }
 
-        if (isAuthorizedByOperation(info.fieldName, args, user)) {
+        const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
+        if (isAuthorized) {
             console.log(
                 `${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName} and resource:`,
             );
@@ -55,13 +57,23 @@ export const verifyToken = (token: string) => {
     }
 };
 
-export const isAuthorizedByOperation = (operationName: string, args: ArgsDictionary, user: UserType) => {
+export const isAuthorizedByOperation = async (operationName: string, args: ArgsDictionary, user: UserType) => {
     switch (operationName) {
         case OPERATION_NAMES.UPDATE_USER:
             return args.input.id == user.id;
         case OPERATION_NAMES.DELETE_USER_BY_ID:
             return args.id == user.id;
+        case OPERATION_NAMES.UPDATE_EVENT:
+        case OPERATION_NAMES.DELETE_EVENT:
+            return await isAuthorizedToUpdateEvent(args.input.id, user);
+        case OPERATION_NAMES.CREATE_EVENT:
+            return true; // allows all role based users
         default:
             return false;
     }
+};
+
+const isAuthorizedToUpdateEvent = async (eventId: string, user: UserType) => {
+    const event = await EventDAO.readEventById(eventId);
+    return event.organizers.map((organizer) => organizer.id.toString()).includes(user.id);
 };
