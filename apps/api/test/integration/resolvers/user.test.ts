@@ -7,7 +7,7 @@ import {API_DOMAIN, API_PATH} from '@/constants';
 import {Server} from 'http';
 import {getCreateUserMutation, getLoginUserMutation, getUpdateUserMutation} from '@/utils';
 import {UserDAO} from '@/mongodb/dao';
-import {CreateUserInputType, LoginUserInputType, UpdateUserInputType, UserType, UserWithTokenType} from '@/graphql/types';
+import {CreateUserInputType, UserType, UserWithTokenType} from '@/graphql/types';
 import {ERROR_MESSAGES} from '@/utils/validators';
 import {verifyToken} from '@/utils/auth';
 
@@ -191,17 +191,17 @@ describe('User Resolver', () => {
             });
 
             it('should throw CONFLICT error when unique attribute already exists', async () => {
-                let anotherCreatedUser: UserType;
                 const anotherUsername = 'updatedUser';
                 try {
-                    anotherCreatedUser = await UserDAO.create({...createUserInput, email: 'updated@email.net', username: anotherUsername}); // another user for conflict
+                    await UserDAO.create({...createUserInput, email: 'updated@email.net', username: anotherUsername}); // another user for conflict
                 } catch (error) {
+                    console.log(error);
                     fail('it should not reach here');
                 }
 
                 const updateUserMutation = getUpdateUserMutation({
-                    id: anotherCreatedUser.id,
-                    username: 'jackBaur',
+                    id: createdUser.id,
+                    username: anotherUsername,
                 });
 
                 const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
@@ -224,7 +224,7 @@ describe('User Resolver', () => {
                 expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PHONE_NUMBER);
             });
 
-            it('should throw NOT_FOUND error when valid input is provided, but the user does not exist', async () => {
+            it('should throw UNAUTHORIZED error when valid input is provided, but the user is updating another user', async () => {
                 const mockId = '62a23958e5a9e9b88f853a67';
                 const updateUserMutation = getUpdateUserMutation({
                     id: mockId,
@@ -233,11 +233,11 @@ describe('User Resolver', () => {
 
                 const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
-                expect(updateUserResponse.status).toBe(404);
-                expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.NOT_FOUND('User', 'ID', mockId));
+                expect(updateUserResponse.status).toBe(403);
+                expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.UNAUTHORIZED);
             });
 
-            it('should throw NOT_FOUND error when an invalid mongodb id is entered', async () => {
+            it('should throw UNAUTHORIZED error even when an invalid mongodb id is entered', async () => {
                 const mockId = 'mockId';
                 const updateUserMutation = getUpdateUserMutation({
                     id: mockId,
@@ -246,8 +246,8 @@ describe('User Resolver', () => {
 
                 const updateUserResponse = await request(url).post('').set('token', createdUser.token).send(updateUserMutation);
                 expect(updateUserResponse.error).toBeTruthy();
-                expect(updateUserResponse.status).toBe(404);
-                expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.NOT_FOUND('User', 'ID', mockId));
+                expect(updateUserResponse.status).toBe(403);
+                expect(updateUserResponse.body.errors[0].message).toBe(ERROR_MESSAGES.UNAUTHORIZED);
             });
 
             it('should throw BAD_USER_INPUT error when invalid input type is provided', async () => {
