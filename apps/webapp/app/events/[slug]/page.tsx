@@ -22,10 +22,10 @@ export default async function Page({ params }: { params: { slug: string } }) {
           {event.description}
         </Typography>
         <Typography variant="body2" gutterBottom>
-          <b>Start Date:</b> {event.startDate}
+          <b>Start Date:</b> {event.startDateTime}
         </Typography>
         <Typography variant="body2" gutterBottom>
-          <b>End Date:</b> {event.endDate}
+          <b>End Date:</b> {event.endDateTime}
         </Typography>
         <Typography variant="body2" gutterBottom>
           <b>Location:</b> {event.location}

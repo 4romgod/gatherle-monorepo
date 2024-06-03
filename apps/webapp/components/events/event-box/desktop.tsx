@@ -10,13 +10,7 @@ import { CalendarIcon, CheckCircleIcon, TicketIcon, UserIcon } from '@heroicons/
 import { kebabCase } from 'lodash';
 
 export default function EventBoxDesktop({ event }: { event: EventType }) {
-  const {
-    title,
-    organizers,
-    startDate,
-    rSVPs,
-    media: { featuredImageUrl },
-  } = event;
+  const { title, organizers, startDateTime, rSVPs, media } = event;
 
   const organizersText = organizers?.map((user) => user.username).join(' and ') ?? '';
   const eventSlug = kebabCase(title); // TODO get from the DB
@@ -24,12 +18,14 @@ export default function EventBoxDesktop({ event }: { event: EventType }) {
   return (
     <Link href={`/events/${eventSlug}`}>
       <Card sx={{ display: 'flex' }}>
-        <CardMedia
-          component="img"
-          sx={{ width: { md: 123, lg: 145, xl: 156 } }}
-          image={featuredImageUrl}
-          alt="Live from space album cover"
-        />
+        {media && media.featuredImageUrl && (
+          <CardMedia
+            component="img"
+            sx={{ width: { md: 123, lg: 145, xl: 156 } }}
+            image={media.featuredImageUrl}
+            alt="Live from space album cover"
+          />
+        )}
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ flex: '1 0 auto' }}>
             <Box component="div">
@@ -41,7 +37,7 @@ export default function EventBoxDesktop({ event }: { event: EventType }) {
             </Box>
             <Box component="div" className="flex flex-row">
               <CalendarIcon className="mr-2 h-6 w-5" />
-              <p>{startDate}</p>
+              <p>{startDateTime}</p>
             </Box>
             <Box component="div" className="flex flex-row">
               <CheckCircleIcon className="mr-2 h-6 w-5" />

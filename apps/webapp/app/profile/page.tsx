@@ -6,7 +6,7 @@ import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
 export default async function ProfilePage() {
   const { data: userRetrieved } = await getClient().query({
     query: GetUserByUsernameDocument,
-    variables: { username: 'jayz' }, // stop hardcoding the username (get it from cookies)
+    variables: { username: 'jayz' }, // TODO stop hardcoding the username (get it from cookies)
   });
 
   const user = userRetrieved.readUserByUsername;
@@ -42,7 +42,7 @@ export default async function ProfilePage() {
               <b>Address:</b> {user.address}
             </Typography>
             <Typography variant="body1">
-              <b>User Type:</b> {user.userType}
+              <b>User Type:</b> {user.userRole}
             </Typography>
           </Box>
         </Box>

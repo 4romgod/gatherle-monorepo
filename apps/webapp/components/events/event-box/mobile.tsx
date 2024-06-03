@@ -11,13 +11,7 @@ import { CalendarIcon, CheckCircleIcon, TicketIcon, UserIcon } from '@heroicons/
 import { kebabCase } from 'lodash';
 
 export default function EventBoxMobile({ event }: { event: EventType }) {
-  const {
-    title,
-    organizers,
-    startDate,
-    rSVPs,
-    media: { featuredImageUrl },
-  } = event;
+  const { title, organizers, startDateTime, rSVPs, media } = event;
 
   const organizersText = organizers?.map((user) => user.username).join(' and ') ?? '';
   const eventSlug = kebabCase(title);
@@ -26,7 +20,15 @@ export default function EventBoxMobile({ event }: { event: EventType }) {
     <Link href={`/events/${eventSlug}`}>
       <Card>
         <CardActionArea>
-          <CardMedia component="img" height="40" sx={{ height: 220 }} image={featuredImageUrl} alt="green iguana" />
+          {media && media.featuredImageUrl && (
+            <CardMedia
+              component="img"
+              height="40"
+              sx={{ height: 220 }}
+              image={media.featuredImageUrl}
+              alt="green iguana"
+            />
+          )}
           <CardContent>
             <Box component="div">
               <h4 className="text-xl font-bold">{title}</h4>
@@ -37,7 +39,7 @@ export default function EventBoxMobile({ event }: { event: EventType }) {
             </Box>
             <Box component="div" className="flex flex-row">
               <CalendarIcon className="mr-2 h-6 w-5" />
-              <p>{startDate}</p>
+              <p>{startDateTime}</p>
             </Box>
             <Box component="div" className="flex flex-row">
               <CheckCircleIcon className="mr-2 h-6 w-5" />

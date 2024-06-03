@@ -14,7 +14,8 @@ const RegisterUserDocument = graphql(`
       encrypted_password
       phone_number
       profile_picture
-      userType
+      userRole
+      token
     }
   }
 `);
@@ -33,7 +34,7 @@ const LoginUserDocument = graphql(`
       encrypted_password
       phone_number
       profile_picture
-      userType
+      userRole
       token
     }
   }
@@ -46,8 +47,8 @@ const GetAllEventsDocument = graphql(`
       slug
       title
       description
-      startDate
-      endDate
+      startDateTime
+      endDateTime
       eventCategory {
         id
         slug
@@ -78,7 +79,7 @@ const GetAllEventsDocument = graphql(`
         encrypted_password
         phone_number
         profile_picture
-        userType
+        userRole
       }
       rSVPs {
         id
@@ -92,7 +93,7 @@ const GetAllEventsDocument = graphql(`
         encrypted_password
         phone_number
         profile_picture
-        userType
+        userRole
       }
     }
   }
@@ -105,8 +106,8 @@ const GetEventBySlugDocument = graphql(`
       slug
       title
       description
-      startDate
-      endDate
+      startDateTime
+      endDateTime
       eventCategory {
         id
         slug
@@ -137,7 +138,7 @@ const GetEventBySlugDocument = graphql(`
         encrypted_password
         phone_number
         profile_picture
-        userType
+        userRole
       }
       rSVPs {
         id
@@ -151,7 +152,7 @@ const GetEventBySlugDocument = graphql(`
         encrypted_password
         phone_number
         profile_picture
-        userType
+        userRole
       }
     }
   }
@@ -171,7 +172,7 @@ const GetAllUsersDocument = graphql(`
       encrypted_password
       phone_number
       profile_picture
-      userType
+      userRole
     }
   }
 `);
@@ -190,7 +191,7 @@ const GetUserByUsernameDocument = graphql(`
       encrypted_password
       phone_number
       profile_picture
-      userType
+      userRole
     }
   }
 `);

@@ -50,7 +50,7 @@ export default async function UserPage({ params }: { params: { username: string 
               <b>Address:</b> {user.address}
             </Typography>
             <Typography variant="body1">
-              <b>User Type:</b> {user.userType}
+              <b>User Type:</b> {user.userRole}
             </Typography>
           </Box>
         </Box>
