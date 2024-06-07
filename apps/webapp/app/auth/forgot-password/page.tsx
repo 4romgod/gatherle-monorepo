@@ -10,8 +10,6 @@ import { useFormState } from 'react-dom';
 const ForgotPasswordPage = () => {
   const [formState, formAction] = useFormState(forgotPasswordAction, SERVER_ACTION_INITIAL_STATE);
 
-  console.log('formState', formState);
-
   return (
     <Container maxWidth="xs">
       <Logo />

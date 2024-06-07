@@ -31,7 +31,7 @@ import { FaFacebookF } from 'react-icons/fa';
 const RegisterPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const { setIsAuthN, setToastProps, toastProps } = useCustomAppContext();
+  const { setToastProps, toastProps } = useCustomAppContext();
   const [formState, formAction] = useFormState(registerUserAction, SERVER_ACTION_INITIAL_STATE);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -39,8 +39,6 @@ const RegisterPage = () => {
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
-
-  console.log('formState', formState);
 
   useEffect(() => {
     if (formState.apiError) {

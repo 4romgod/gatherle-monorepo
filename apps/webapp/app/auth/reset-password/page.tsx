@@ -30,11 +30,10 @@ const ResetPasswordPage = () => {
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
+
   const handleMouseDownConfirmPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
-
-  console.log('formState', formState);
 
   return (
     <Container maxWidth="xs">

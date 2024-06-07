@@ -28,13 +28,22 @@ export async function registerUserAction(prevState: any, formData: FormData) {
   try {
     const registerResponse = await getClient().mutate({
       mutation: RegisterUserDocument,
-      variables: { input: inputData },
+      variables: {
+        input: inputData,
+      },
     });
 
     const responseData = registerResponse.data?.createUser;
     if (responseData) {
       authenticateServerSide(responseData);
     }
+
+    return {
+      ...prevState,
+      data: responseData,
+      apiError: null,
+      zodErrors: null,
+    };
   } catch (error) {
     console.error('Failed when calling Register User Mutation', error);
     const networkError = (error as any).networkError;

@@ -27,12 +27,11 @@ import { FormErrors } from '@/components/form-errors';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF } from 'react-icons/fa';
 import { MdEmail } from 'react-icons/md';
-import { decode } from 'jsonwebtoken';
 
 const LoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const { setIsAuthN, setToastProps, toastProps } = useCustomAppContext();
+  const { setToastProps, toastProps } = useCustomAppContext();
   const [formState, formAction] = useFormState(loginUserAction, SERVER_ACTION_INITIAL_STATE);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -57,16 +56,6 @@ const LoginPage = () => {
         open: true,
         severity: 'success',
         message: 'You have successfully logged in!',
-      });
-
-      const user = decode(formState.data.token);
-      setIsAuthN(() => {
-        console.log(user);
-        if (user) {
-          // TODO do more to validate token
-          return true;
-        }
-        return false;
       });
     }
   }, [formState]);

@@ -6,7 +6,6 @@ export async function forgotPasswordAction(prevState: any, formData: FormData) {
   const inputData = {
     email: formData.get('email')?.toString().toLowerCase() ?? '',
   };
-  console.debug('inputData', inputData);
 
   const validatedFields = ForgotPasswordInputTypeSchema.safeParse(inputData);
   if (!validatedFields.success) {

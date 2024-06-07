@@ -23,7 +23,9 @@ export async function loginUserAction(prevState: any, formData: FormData) {
   try {
     const loginResponse = await getClient().mutate({
       mutation: LoginUserDocument,
-      variables: { input: inputData },
+      variables: {
+        input: inputData,
+      },
     });
 
     const responseData = loginResponse.data?.loginUser;
