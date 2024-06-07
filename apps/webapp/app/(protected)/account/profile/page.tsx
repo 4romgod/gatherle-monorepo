@@ -1,9 +1,13 @@
 import { getClient } from '@/data/graphql/apollo-client';
 import { GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
-import { Person } from '@mui/icons-material';
 import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
+import { Person } from '@mui/icons-material';
+import { auth } from '@/auth';
 
 export default async function ProfilePage() {
+  const session = await auth();
+  console.log('session', session);
+
   const { data: userRetrieved } = await getClient().query({
     query: GetUserByUsernameDocument,
     variables: { username: 'jayz' }, // TODO stop hardcoding the username (get it from cookies)

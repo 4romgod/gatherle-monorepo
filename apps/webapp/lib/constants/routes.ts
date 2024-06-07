@@ -5,6 +5,7 @@ export const ROUTES = {
     PROFILE: '/account/profile',
     ROOT: '/account',
   },
+  API_AUTH_PREFIX: '/api/auth',
   AUTH: {
     FORGOT_PASSWORD: '/auth/forgot-password',
     LOGIN: '/auth/login',
