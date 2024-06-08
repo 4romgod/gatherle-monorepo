@@ -17,11 +17,13 @@ export default async function ProfilePage() {
   return (
     <Container maxWidth="md">
       <div>{JSON.stringify(session)}</div>
-      <form action={async () => {
-        'use server';
-        await signOut();
-      }}>
-        <button type='submit'>Sign Out</button>
+      <form
+        action={async () => {
+          'use server';
+          await signOut();
+        }}
+      >
+        <button type="submit">Sign Out</button>
       </form>
       <Box my={4}>
         <Typography variant="h4" fontWeight="bold" align="center" paddingBottom={2}>

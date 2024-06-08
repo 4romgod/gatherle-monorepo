@@ -1,9 +1,10 @@
 import { registerApolloClient } from '@apollo/experimental-nextjs-app-support/rsc';
 import { getInstanceOfApolloClient } from '@/data/graphql/apollo-client';
+import { GRAPHQL_URL } from '@/lib/constants';
 
 /**
  * https://www.apollographql.com/blog/using-apollo-client-with-next-js-13-releasing-an-official-library-to-support-the-app-router
  */
 export const { getClient } = registerApolloClient(() => {
-  return getInstanceOfApolloClient();
+  return getInstanceOfApolloClient(GRAPHQL_URL, true);
 });
