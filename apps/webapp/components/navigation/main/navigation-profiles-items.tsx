@@ -7,6 +7,7 @@ import { Divider, ListItemIcon } from '@mui/material';
 import { AccountCircle, Logout, Settings } from '@mui/icons-material';
 import { useCustomAppContext } from '@/components/app-context';
 import { ROUTES } from '@/lib/constants';
+import { logoutUserAction } from '@/data/actions/server/auth/logout';
 
 type ProfilesMenuProps = {
   ProfilesMenuAnchorEl: HTMLElement | null;
@@ -21,8 +22,6 @@ export default function ProfilesMenu({
   handleProfilesMenuClose,
   isProfilesMenuOpen,
 }: ProfilesMenuProps) {
-  const { setIsAuthN } = useCustomAppContext();
-
   return (
     <Menu
       anchorEl={ProfilesMenuAnchorEl}
@@ -54,7 +53,7 @@ export default function ProfilesMenu({
       </MenuItem>
       <MenuItem
         onClick={() => {
-          setIsAuthN(false);
+          logoutUserAction();
           handleProfilesMenuClose();
         }}
       >

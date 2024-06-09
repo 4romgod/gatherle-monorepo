@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, ReactNode, useEffect } from 'react';
 import { AlertProps, PaletteMode, SnackbarProps, Theme } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { getDesignTokens } from '@/components/theme/design-tokens';
@@ -8,8 +8,6 @@ import { getDesignTokens } from '@/components/theme/design-tokens';
 type ToastProps = SnackbarProps & AlertProps & { message: string };
 
 type CustomAppContextType = {
-  isAuthN: boolean;
-  setIsAuthN: React.Dispatch<React.SetStateAction<boolean>>;
   themeMode: PaletteMode;
   setThemeMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
   appTheme: Theme | undefined;
@@ -26,8 +24,6 @@ const toastDefaultProps: ToastProps = {
 };
 
 const CustomAppContext = createContext<CustomAppContextType>({
-  isAuthN: false,
-  setIsAuthN: () => {},
   themeMode: 'light',
   setThemeMode: () => {},
   appTheme: undefined,
@@ -38,7 +34,6 @@ const CustomAppContext = createContext<CustomAppContextType>({
 export const useCustomAppContext = () => useContext(CustomAppContext);
 
 export const CustomAppContextProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthN, setIsAuthN] = useState<boolean>(false);
   const [themeMode, setThemeMode] = useState<PaletteMode>('light');
   const theme = useMemo(() => createTheme(getDesignTokens(themeMode)), [themeMode]);
   const [toastProps, setToastProps] = useState<ToastProps>(toastDefaultProps);
@@ -46,8 +41,6 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
   return (
     <CustomAppContext.Provider
       value={{
-        isAuthN,
-        setIsAuthN,
         themeMode,
         setThemeMode,
         appTheme: theme,

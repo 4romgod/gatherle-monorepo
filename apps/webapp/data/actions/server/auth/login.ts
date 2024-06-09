@@ -33,7 +33,7 @@ export async function loginUserAction(prevState: any, formData: FormData) {
 
     return {
       ...prevState,
-      data: {},
+      data: { message: 'Signed in' },
       apiError: null,
       zodErrors: null,
     };

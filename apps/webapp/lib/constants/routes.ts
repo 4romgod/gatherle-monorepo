@@ -14,11 +14,11 @@ export const ROUTES = {
   },
   EVENTS: {
     EVENT: (slug: string) => `/events/${slug}`,
-    ROOT: '/events/',
+    ROOT: '/events',
   },
   USERS: {
     USER: (username: string) => `/users/${username}`,
-    ROOT: 'users/',
+    ROOT: '/users',
   },
   ROOT: '/',
 };

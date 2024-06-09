@@ -1,5 +1,3 @@
-import { getClient } from '@/data/graphql';
-import { GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
 import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
 import { Person } from '@mui/icons-material';
 import { auth, signOut } from '@/auth';
@@ -7,12 +5,11 @@ import { auth, signOut } from '@/auth';
 export default async function ProfilePage() {
   const session = await auth();
 
-  const { data: userRetrieved } = await getClient().query({
-    query: GetUserByUsernameDocument,
-    variables: { username: 'jayz' }, // TODO stop hardcoding the username (get it from cookies)
-  });
+  if (!session) {
+    return;
+  }
 
-  const user = userRetrieved.readUserByUsername;
+  const user = session.user;
 
   return (
     <Container maxWidth="md">

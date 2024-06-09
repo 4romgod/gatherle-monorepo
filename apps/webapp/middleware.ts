@@ -1,7 +1,7 @@
 // Inspired by https://www.youtube.com/watch?v=1MTyCvS05V4
 import NextAuth from 'next-auth';
 import authConfig from '@/auth.config';
-import { apiAuthPrefix, authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from '@/routes';
+import { apiAuthPrefix, authRoutes, DEFAULT_LOGIN_REDIRECT, isPublicDynamicRoute, publicRoutes } from '@/routes';
 import { ROUTES } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 
@@ -12,7 +12,7 @@ export default auth((req) => {
 
   const isLoggedIn = Boolean(req.auth);
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
-  const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
+  const isPublicRoute = publicRoutes.includes(nextUrl.pathname) || isPublicDynamicRoute(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
   // 1. Allow all API aut routes

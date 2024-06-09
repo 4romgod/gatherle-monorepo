@@ -31,8 +31,8 @@ import { MdEmail } from 'react-icons/md';
 const LoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const { setToastProps, toastProps } = useCustomAppContext();
   const [formState, formAction] = useFormState(loginUserAction, SERVER_ACTION_INITIAL_STATE);
+  const { setToastProps, toastProps } = useCustomAppContext();
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 

@@ -14,16 +14,16 @@ import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items
 import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-drawer';
 import ToggleThemeMode from '@/components/theme/toggle-theme-mode';
 import { Button } from '@mui/material';
-import Logo from '@/components/logo';
 import { useCustomAppContext } from '@/components/app-context';
 import { ROUTES } from '@/lib/constants';
+import Logo from '@/components/logo';
 
 /**
  * Inspired by: https://arshadalisoomro.hashnode.dev/creating-a-navigation-bar-with-mui-appbar-component-in-nextjs
  */
-export default function MainNavigation() {
+export default function MainNavigation({ isAuthN }: { isAuthN: boolean }) {
   const router = useRouter();
-  const { isAuthN, themeMode, setThemeMode } = useCustomAppContext();
+  const { themeMode, setThemeMode } = useCustomAppContext();
 
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationsMenuAnchorEl, setNotificationsMenuAnchorEl] = useState<null | HTMLElement>(null);
