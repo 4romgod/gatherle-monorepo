@@ -104,6 +104,28 @@ class UserDAO {
         }
     }
 
+    static async readUserByEmail(email: string, projections?: Array<string>): Promise<UserType> {
+        try {
+            const query = User.findOne({email});
+            if (projections && projections.length) {
+                query.select(projections.join(' '));
+            }
+            const user = await query.exec();
+
+            if (!user) {
+                throw CustomError(`User with email ${email} does not exist`, ErrorTypes.NOT_FOUND);
+            }
+            return user;
+        } catch (error) {
+            if (error instanceof GraphQLError) {
+                throw error;
+            } else {
+                console.log('Error reading user by email', error);
+                throw KnownCommonError(error);
+            }
+        }
+    }
+
     static async readUsers(queryParams?: UserQueryParams, projections?: Array<string>): Promise<Array<UserType>> {
         try {
             const query = User.find({...queryParams});

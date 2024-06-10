@@ -46,6 +46,11 @@ export class UserResolver {
         return UserDAO.readUserByUsername(username);
     }
 
+    @Query(() => UserType)
+    async readUserByEmail(@Arg('email') email: string): Promise<UserType | null> {
+        return UserDAO.readUserByEmail(email);
+    }
+
     @Query(() => [UserType])
     async readUsers(): Promise<UserType[]> {
         return UserDAO.readUsers();

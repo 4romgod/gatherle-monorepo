@@ -4,7 +4,7 @@ import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/utils/validators';
 import {JWT_SECRET, OPERATION_NAMES} from '@/constants';
 import {UserRole, UserType} from '@/graphql/types';
-import jwt, {JwtPayload} from 'jsonwebtoken';
+import {verify, sign, JwtPayload} from 'jsonwebtoken';
 import {EventDAO} from '@/mongodb/dao';
 
 export const authChecker: AuthChecker<ServerContext> = async ({context, args, info}, roles) => {
@@ -47,7 +47,7 @@ export const authChecker: AuthChecker<ServerContext> = async ({context, args, in
  * @returns A JWT token as a string
  */
 export const generateToken = (user: UserType, secret?: string, expiresIn?: string | number) => {
-    return jwt.sign(user, secret ?? JWT_SECRET, {expiresIn: expiresIn ?? '1h'});
+    return sign(user, secret ?? JWT_SECRET, {expiresIn: expiresIn ?? '1h'});
 };
 
 /**
@@ -57,7 +57,7 @@ export const generateToken = (user: UserType, secret?: string, expiresIn?: strin
  */
 export const verifyToken = (token: string, secret?: string) => {
     try {
-        const {iat, exp, ...user} = jwt.verify(token, secret ?? JWT_SECRET) as JwtPayload;
+        const {iat, exp, ...user} = verify(token, secret ?? JWT_SECRET) as JwtPayload;
         return user as UserType;
     } catch (err) {
         throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -72,7 +72,7 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
             return args.id == user.id;
         case OPERATION_NAMES.UPDATE_EVENT:
         case OPERATION_NAMES.DELETE_EVENT:
-            return await isAuthorizedToUpdateEvent(args.input.id, user);
+            return await isAuthorizedToUpdateEvent(args.eventId, user);
         case OPERATION_NAMES.CREATE_EVENT:
             return true; // allows all role based users
         default:

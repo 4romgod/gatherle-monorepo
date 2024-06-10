@@ -220,16 +220,10 @@ export class EventQueryParams {
     description?: string;
 
     @Field({nullable: true})
-    startDate?: string;
+    startDateTime?: string;
 
     @Field({nullable: true})
-    endDate?: string;
-
-    @Field({nullable: true})
-    startTime?: string;
-
-    @Field({nullable: true})
-    endTime?: string;
+    endDateTime?: string;
 
     @Field({nullable: true})
     recurrenceRule?: string;

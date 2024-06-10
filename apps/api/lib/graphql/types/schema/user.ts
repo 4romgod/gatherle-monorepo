@@ -8,7 +8,7 @@ export const CreateUserInputTypeSchema = z.object({
         .string()
         .min(3, {message: `Address ${ERROR_MESSAGES.TOO_SHORT}`})
         .optional(),
-    birthdate: z.string().refine(validateDate, {message: `Birth date ${ERROR_MESSAGES.INVALID}`}), // TODO Should be greater than Date.now()
+    birthdate: z.string().refine(validateDate, {message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}`}), // TODO Should be greater than Date.now()
     email: z.string().email({message: ERROR_MESSAGES.INVALID_EMAIL}),
     family_name: z.string().min(1, {message: `Last name ${ERROR_MESSAGES.REQUIRED}`}),
     gender: z.nativeEnum(Gender, {message: ERROR_MESSAGES.INVALID_GENDER}),

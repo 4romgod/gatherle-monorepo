@@ -33,7 +33,7 @@ export const OPERATION_NAMES = {
     QUERY_USERS: 'queryUsers',
     CREATE_EVENT: 'createEvent',
     UPDATE_EVENT: 'updateEvent',
-    DELETE_EVENT: 'deleteEvent',
+    DELETE_EVENT: 'deleteEventById',
     READ_EVENT_BY_ID: 'readEventById',
     READ_EVENT_BY_SLUG: 'readEventBySlug',
     READ_EVENTS: 'readEvents',

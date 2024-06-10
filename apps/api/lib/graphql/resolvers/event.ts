@@ -23,7 +23,7 @@ export class EventResolver {
 
     @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
     @Mutation(() => EventType)
-    async deleteEvent(@Arg('eventId') eventId: string): Promise<EventType> {
+    async deleteEventById(@Arg('eventId') eventId: string): Promise<EventType> {
         validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId));
         return EventDAO.deleteEventById(eventId);
     }
