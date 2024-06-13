@@ -12,7 +12,7 @@ import createSchema from '@/graphql/schema';
 import {createServer, Server} from 'http';
 import {GraphQLFormattedError} from 'graphql';
 import {ApolloServerErrorCode} from '@apollo/server/errors';
-import {ERROR_MESSAGES} from '@/utils/validators';
+import {ERROR_MESSAGES} from '@/validation';
 import {reject} from 'lodash';
 
 export interface ServerContext {
@@ -42,8 +42,8 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
         includeStacktraceInErrorResponses: true, // TODO turn this off in prod
         status400ForVariableCoercionErrors: true,
         formatError: (formattedError: GraphQLFormattedError, error: any) => {
-            console.error('Failed to process request. Returning formatted Error\n', error);
             if (formattedError.extensions?.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
+                console.error('Failed to process request. Returning formatted Error\n', error);
                 return {
                     ...formattedError,
                     message: ERROR_MESSAGES.INVALID_QUERY,

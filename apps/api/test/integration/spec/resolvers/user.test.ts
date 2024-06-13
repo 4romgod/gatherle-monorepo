@@ -8,7 +8,7 @@ import {Server} from 'http';
 import {getCreateUserMutation, getLoginUserMutation, getUpdateUserMutation} from '@/utils';
 import {UserDAO} from '@/mongodb/dao';
 import {CreateUserInputType, UserType, UserWithTokenType} from '@/graphql/types';
-import {ERROR_MESSAGES} from '@/utils/validators';
+import {ERROR_MESSAGES} from '@/validation';
 import {verifyToken} from '@/utils/auth';
 
 describe('User Resolver', () => {

@@ -1,7 +1,7 @@
 import {ServerContext} from '@/server';
 import {ArgsDictionary, AuthChecker} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
-import {ERROR_MESSAGES} from '@/utils/validators';
+import {ERROR_MESSAGES} from '@/validation';
 import {JWT_SECRET, OPERATION_NAMES} from '@/constants';
 import {UserRole, UserType} from '@/graphql/types';
 import {verify, sign, JwtPayload} from 'jsonwebtoken';

@@ -6,7 +6,7 @@ import {API_DOMAIN, API_PATH} from '@/constants';
 import {Server} from 'http';
 import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {CreateEventInputType, EventCategoryType, EventType, UserWithTokenType} from '@/graphql/types';
-import {ERROR_MESSAGES} from '@/utils/validators';
+import {ERROR_MESSAGES} from '@/validation';
 import {kebabCase} from 'lodash';
 import request from 'supertest';
 import {getCreateEventMutation} from '@/utils/testing/queries/eventResolverQueries';

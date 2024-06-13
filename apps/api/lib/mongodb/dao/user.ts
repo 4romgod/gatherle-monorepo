@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {JWT_SECRET} from '@/constants';
 import {GraphQLError} from 'graphql';
-import {ERROR_MESSAGES} from '@/utils/validators';
+import {ERROR_MESSAGES} from '@/validation';
 import {generateToken} from '@/utils/auth';
 
 class UserDAO {

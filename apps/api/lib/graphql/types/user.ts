@@ -45,7 +45,7 @@ export class UserType {
     @Field()
     family_name: string;
 
-    @Field(() => Gender)
+    @Field(() => Gender, {nullable: true})
     gender?: Gender;
 
     @Field()
