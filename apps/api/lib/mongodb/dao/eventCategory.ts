@@ -1,8 +1,9 @@
 import {EventCategory} from '@/mongodb/models';
 import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType} from '@/graphql/types';
 import {GraphQLError} from 'graphql';
-import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {kebabCase} from 'lodash';
+import {QueryOptionsInput} from '@/graphql/types/query';
 
 class EventCategoryDAO {
     static async create(category: CreateEventCategoryInputType): Promise<EventCategoryType> {
@@ -63,9 +64,9 @@ class EventCategoryDAO {
         }
     }
 
-    static async readEventCategories(): Promise<Array<EventCategoryType>> {
+    static async readEventCategories(options?: QueryOptionsInput): Promise<EventCategoryType[]> {
         try {
-            const query = EventCategory.find();
+            const query = options ? transformOptionsToQuery(EventCategory, options) : EventCategory.find({});
             return await query.exec();
         } catch (error) {
             if (error instanceof GraphQLError) {

@@ -1,9 +1,9 @@
 import {GraphQLError} from 'graphql';
 import {Event} from '@/mongodb/models';
 import {EventType, UpdateEventInputType, CreateEventInputType, EventQueryParams} from '@/graphql/types';
-import {transformReadEventsQueryParams} from '@/utils/queries/events';
-import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {kebabCase} from 'lodash';
+import {QueryOptionsInput} from '@/graphql/types/query';
 
 class EventDAO {
     static async create(event: CreateEventInputType): Promise<EventType> {
@@ -64,14 +64,9 @@ class EventDAO {
         }
     }
 
-    static async readEvents(queryParams?: EventQueryParams, projections?: Array<string>): Promise<Array<EventType>> {
+    static async readEvents(options?: QueryOptionsInput): Promise<EventType[]> {
         try {
-            const queryConditions = transformReadEventsQueryParams(queryParams);
-            const query = Event.find({...queryConditions}).populate('organizers rSVPs eventCategory');
-
-            if (projections && projections.length) {
-                query.select(projections.join(' '));
-            }
+            const query = (options ? transformOptionsToQuery(Event, options) : Event.find({})).populate('organizers rSVPs eventCategory');
             return await query.exec();
         } catch (error) {
             if (error instanceof GraphQLError) {

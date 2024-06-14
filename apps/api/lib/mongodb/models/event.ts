@@ -24,13 +24,11 @@ const EventSchema = new Schema<EventType & Document>(
             type: Date,
             required: true,
             unique: false,
-            min: Date.now(),
         },
         endDateTime: {
             type: Date,
             required: true,
             unique: false,
-            min: Date.now(),
         },
         recurrenceRule: {
             type: String,

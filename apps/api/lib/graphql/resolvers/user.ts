@@ -4,6 +4,7 @@ import {UserDAO} from '@/mongodb/dao';
 import {UserType, CreateUserInputType, UpdateUserInputType, LoginUserInputType, UserRole, UserWithTokenType} from '@/graphql/types';
 import {CreateUserInputTypeSchema, LoginUserInputTypeSchema, UpdateUserInputTypeSchema} from '@/validation/zod';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
+import {QueryOptionsInput} from '../types/query';
 
 @Resolver()
 export class UserResolver {
@@ -52,12 +53,7 @@ export class UserResolver {
     }
 
     @Query(() => [UserType])
-    async readUsers(): Promise<UserType[]> {
-        return UserDAO.readUsers();
-    }
-
-    @Query(() => [UserType])
-    async queryUsers(@Arg('gender') gender: string): Promise<UserType[]> {
-        return UserDAO.readUsers({gender});
+    async readUsers(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<UserType[]> {
+        return UserDAO.readUsers(options);
     }
 }

@@ -1,12 +1,13 @@
 import {User} from '@/mongodb/models';
 import {UserType, UpdateUserInputType, CreateUserInputType, UserQueryParams, LoginUserInputType, UserRole, UserWithTokenType} from '@/graphql/types';
-import {ErrorTypes, CustomError, KnownCommonError} from '@/utils';
+import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {JWT_SECRET} from '@/constants';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
 import {generateToken} from '@/utils/auth';
+import {QueryOptionsInput} from '@/graphql/types/query';
 
 class UserDAO {
     static async create(userData: CreateUserInputType): Promise<UserWithTokenType> {
@@ -126,18 +127,9 @@ class UserDAO {
         }
     }
 
-    static async readUsers(queryParams?: UserQueryParams, projections?: Array<string>): Promise<Array<UserType>> {
+    static async readUsers(options?: QueryOptionsInput): Promise<UserType[]> {
         try {
-            const query = User.find({...queryParams});
-
-            if (queryParams?.userIDList && queryParams.userIDList.length > 0) {
-                query.where('id').in(queryParams.userIDList);
-            }
-
-            if (projections && projections.length) {
-                query.select(projections.join(' '));
-            }
-
+            const query = options ? transformOptionsToQuery(User, options) : User.find({});
             return await query.exec();
         } catch (error) {
             if (error instanceof GraphQLError) {

@@ -3,6 +3,7 @@ import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
 import {CreateEventCategoryInputType, EventCategoryType, UpdateEventCategoryInputType, UserRole} from '@/graphql/types';
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/validation';
+import {QueryOptionsInput} from '../types/query';
 
 @Resolver()
 export class EventCategoryResolver {
@@ -36,7 +37,7 @@ export class EventCategoryResolver {
     }
 
     @Query(() => [EventCategoryType])
-    async readEventCategories(): Promise<EventCategoryType[]> {
-        return EventCategoryDAO.readEventCategories();
+    async readEventCategories(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<EventCategoryType[]> {
+        return EventCategoryDAO.readEventCategories(options);
     }
 }

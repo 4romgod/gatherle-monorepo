@@ -4,6 +4,7 @@ import {EventDAO} from '@/mongodb/dao';
 import {CreateEventInputType, EventQueryParams, EventType, UpdateEventInputType, UserRole} from '@/graphql/types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
 import {CreateEventInputTypeSchema} from '@/validation/zod';
+import {QueryOptionsInput} from '../types/query';
 
 @Resolver()
 export class EventResolver {
@@ -40,7 +41,7 @@ export class EventResolver {
     }
 
     @Query(() => [EventType])
-    async readEvents(@Arg('queryParams', {nullable: true}) queryParams?: EventQueryParams): Promise<EventType[]> {
-        return EventDAO.readEvents(queryParams);
+    async readEvents(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<EventType[]> {
+        return EventDAO.readEvents(options);
     }
 }

@@ -9,7 +9,7 @@ const events: CreateEventInputType[] = [
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 4500,
         rSVPs: [],
         tags: {
             stages: {
@@ -69,7 +69,7 @@ const events: CreateEventInputType[] = [
         location: 'Cape Town, Stellenbosch, 8000',
         organizers: ['user001', 'host002'],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 1000,
         rSVPs: [],
         tags: {
             stages: {
@@ -99,7 +99,7 @@ const events: CreateEventInputType[] = [
         location: 'KZN, Durban, 8000',
         organizers: [],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 10000,
         rSVPs: [],
         status: EventStatus.Upcoming,
         media: {
@@ -118,7 +118,7 @@ const events: CreateEventInputType[] = [
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 200,
         rSVPs: [],
         tags: {},
         status: EventStatus.Completed,
@@ -138,7 +138,7 @@ const events: CreateEventInputType[] = [
         location: 'Cape Town, Winefarm, 8000',
         organizers: ['user002', 'host001'],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 150,
         rSVPs: [],
         tags: {},
         status: EventStatus.Completed,
@@ -158,7 +158,7 @@ const events: CreateEventInputType[] = [
         location: 'Cape Town, Winefarm, 8000',
         organizers: [],
         eventCategory: [],
-        capacity: 5000,
+        capacity: 80,
         rSVPs: ['user001', 'user002', 'user003'],
         tags: {},
         status: EventStatus.Completed,
