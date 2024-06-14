@@ -18,7 +18,7 @@ const addPaginationToQuery = <ResultType, DocType>(query: Query<ResultType, DocT
     }
 };
 
-// TODO fix this and make it filter for nested fields, filter event based on gender of organizers
+// TODO fix this and make it filter for nested fields, filter event based on gender of organizerList
 const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, filters: FilterInput[]) => {
     filters.forEach(({field, value, operator}) => {
         const fieldParts = field.split('.');

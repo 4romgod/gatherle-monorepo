@@ -9,7 +9,7 @@ class EventDAO {
     static async create(event: CreateEventInputType): Promise<EventType> {
         try {
             const slug = kebabCase(event.title);
-            return (await Event.create({...event, slug})).populate('organizers rSVPs eventCategory');
+            return (await Event.create({...event, slug})).populate('organizerList rSVPList eventCategoryList');
         } catch (error) {
             if (error instanceof GraphQLError) {
                 throw error;
@@ -22,7 +22,7 @@ class EventDAO {
 
     static async readEventById(eventId: string, projections?: Array<string>): Promise<EventType> {
         try {
-            const query = Event.findById(eventId).populate('organizers rSVPs eventCategory');
+            const query = Event.findById(eventId).populate('organizerList rSVPList eventCategoryList');
             if (projections && projections.length) {
                 query.select(projections.join(' '));
             }
@@ -44,7 +44,7 @@ class EventDAO {
 
     static async readEventBySlug(slug: string, projections?: Array<string>): Promise<EventType> {
         try {
-            const query = Event.findOne({slug: slug}).populate('organizers rSVPs eventCategory');
+            const query = Event.findOne({slug: slug}).populate('organizerList rSVPList eventCategoryList');
             if (projections && projections.length) {
                 query.select(projections.join(' '));
             }
@@ -76,25 +76,25 @@ class EventDAO {
                 {
                     $lookup: {
                         from: 'users',
-                        localField: 'organizers',
+                        localField: 'organizerList',
                         foreignField: '_id',
-                        as: 'organizers',
+                        as: 'organizerList',
                     },
                 },
                 {
                     $lookup: {
                         from: 'users',
-                        localField: 'rSVPs',
+                        localField: 'rSVPList',
                         foreignField: '_id',
-                        as: 'rSVPs',
+                        as: 'rSVPList',
                     },
                 },
                 {
                     $lookup: {
                         from: 'eventcategories',
-                        localField: 'eventCategory',
+                        localField: 'eventCategoryList',
                         foreignField: '_id',
-                        as: 'eventCategory',
+                        as: 'eventCategoryList',
                     },
                 },
             );
@@ -117,7 +117,7 @@ class EventDAO {
         try {
             const slug = kebabCase(event.title);
             const updatedEvent = await Event.findByIdAndUpdate(event.id, {...event, ...(slug && {slug})}, {new: true})
-                .populate('organizers rSVPs eventCategory')
+                .populate('organizerList rSVPList eventCategoryList')
                 .exec();
             if (!updatedEvent) {
                 throw CustomError(`Event with ID ${event.id} not found`, ErrorTypes.NOT_FOUND);
@@ -135,7 +135,7 @@ class EventDAO {
 
     static async deleteEventById(eventId: string): Promise<EventType> {
         try {
-            const deletedEvent = await Event.findByIdAndDelete(eventId).populate('organizers rSVPs eventCategory').exec();
+            const deletedEvent = await Event.findByIdAndDelete(eventId).populate('organizerList rSVPList eventCategoryList').exec();
             if (!deletedEvent) {
                 throw CustomError(`Event with ID ${eventId} not found`, ErrorTypes.NOT_FOUND);
             }
@@ -152,7 +152,7 @@ class EventDAO {
 
     static async deleteEventBySlug(slug: string): Promise<EventType> {
         try {
-            const deletedEvent = await Event.findOneAndDelete({slug}).populate('organizers rSVPs eventCategory').exec();
+            const deletedEvent = await Event.findOneAndDelete({slug}).populate('organizerList rSVPList eventCategoryList').exec();
             if (!deletedEvent) {
                 throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
             }
@@ -170,8 +170,8 @@ class EventDAO {
     //TODO look deeper into this, its very suspecious. Why not just push 1 userID
     static async rsvp(eventId: string, userIDs: Array<string>) {
         try {
-            const event = await Event.findOneAndUpdate({_id: eventId}, {$addToSet: {rSVPs: {$each: userIDs}}}, {new: true})
-                .populate('organizers rSVPs eventCategory')
+            const event = await Event.findOneAndUpdate({_id: eventId}, {$addToSet: {rSVPList: {$each: userIDs}}}, {new: true})
+                .populate('organizerList rSVPList eventCategoryList')
                 .exec();
             return event;
         } catch (error) {
@@ -187,8 +187,8 @@ class EventDAO {
     //TODO look deeper into this, its very suspecious. Why not just pop 1 userID
     static async cancelRsvp(eventId: string, userIDs: Array<string>) {
         try {
-            const event = await Event.findOneAndUpdate({_id: eventId}, {$pull: {rSVPs: {$in: userIDs}}}, {new: true})
-                .populate('organizers rSVPs eventCategory')
+            const event = await Event.findOneAndUpdate({_id: eventId}, {$pull: {rSVPList: {$in: userIDs}}}, {new: true})
+                .populate('organizerList rSVPList eventCategoryList')
                 .exec();
             return event;
         } catch (error) {

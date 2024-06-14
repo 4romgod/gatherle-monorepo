@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {EventPrivacySetting, EventStatus} from '@/graphql/types';
+import {CreateEventInputType, EventPrivacySetting, EventStatus} from '@/graphql/types';
 import {ERROR_MESSAGES, validateDate, validateMongodbId} from '@/validation';
 
 const validateEventInput = (input: any) => {
@@ -56,17 +56,17 @@ export const EventTypeSchema = z.object({
 
     capacity: z.number().int().positive().optional().describe('The maximum number of attendees allowed for the event.'),
 
-    eventCategory: z
+    eventCategoryList: z
         .array(z.string())
         .min(1, {message: ERROR_MESSAGES.ATLEAST_ONE('event category')})
         .describe('The categories associated with the event.'),
 
-    organizers: z
+    organizerList: z
         .array(z.string().refine(validateMongodbId, {message: `Event ID ${ERROR_MESSAGES.INVALID}`}))
         .min(1, {message: 'At least one organizer is required'})
         .describe('The list of organizers for the event, identified by their IDs.'),
 
-    rSVPs: z
+    rSVPList: z
         .array(z.string().refine(validateMongodbId, {message: `Event ID ${ERROR_MESSAGES.INVALID}`}))
         .describe('The list of RSVPs for the event, identified by their IDs.'),
 

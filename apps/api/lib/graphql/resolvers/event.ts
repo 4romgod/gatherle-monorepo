@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
 import {EventDAO} from '@/mongodb/dao';
-import {CreateEventInputType, EventQueryParams, EventType, UpdateEventInputType, UserRole} from '@/graphql/types';
+import {CreateEventInputType, EventType, UpdateEventInputType, UserRole} from '@/graphql/types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
 import {CreateEventInputTypeSchema} from '@/validation/zod';
 import {QueryOptionsInput} from '../types/query';

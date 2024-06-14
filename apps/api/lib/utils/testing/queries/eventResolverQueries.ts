@@ -6,12 +6,12 @@ export const getCreateEventMutation = (event: any) => {
               slug
               title
               description
-              organizers {
+              organizerList {
                 id
                 given_name
                 username
               }
-              eventCategory {
+              eventCategoryList {
                 id
                 slug
                 name

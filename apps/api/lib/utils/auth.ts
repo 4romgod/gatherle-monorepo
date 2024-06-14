@@ -82,5 +82,5 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
 
 const isAuthorizedToUpdateEvent = async (eventId: string, user: UserType) => {
     const event = await EventDAO.readEventById(eventId);
-    return event.organizers.map((organizer) => organizer.id.toString()).includes(user.id);
+    return event.organizerList.map((organizer) => organizer.id.toString()).includes(user.id);
 };

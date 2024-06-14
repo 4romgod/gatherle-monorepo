@@ -69,11 +69,10 @@ describe('Event Resolver', () => {
             });
 
             it('should create a new event when valid input is provided', async () => {
-                console.log('createEvent Mutation');
                 const createEventMutation = getCreateEventMutation({
                     ...createEventInput,
-                    organizers: [testUser.id],
-                    eventCategory: [testEventCategory.id],
+                    organizerList: [testUser.id],
+                    eventCategoryList: [testEventCategory.id],
                 });
 
                 const createEventResponse = await request(url).post('').set('token', testUser.token).send(createEventMutation);
@@ -93,14 +92,14 @@ describe('Event Resolver', () => {
             it('should throw CONFLICT error when an event with the same title already exists', async () => {
                 await EventDAO.create({
                     ...createEventInput,
-                    organizers: [testUser.id],
-                    eventCategory: [testEventCategory.id],
+                    organizerList: [testUser.id],
+                    eventCategoryList: [testEventCategory.id],
                 });
 
                 const createEventMutation = getCreateEventMutation({
                     ...createEventInput,
-                    organizers: [testUser.id],
-                    eventCategory: [testEventCategory.id],
+                    organizerList: [testUser.id],
+                    eventCategoryList: [testEventCategory.id],
                 });
 
                 const createEventResponse = await request(url).post('').set('token', testUser.token).send(createEventMutation);
@@ -114,8 +113,8 @@ describe('Event Resolver', () => {
             it('should throw BAD_USER_INPUT error when invalid input is provided, but the input type schema is valid', async () => {
                 const createEventMutation = getCreateEventMutation({
                     ...createEventInput,
-                    organizers: [testUser.id],
-                    eventCategory: [testEventCategory.id],
+                    organizerList: [testUser.id],
+                    eventCategoryList: [testEventCategory.id],
                     startDateTime: 'invalid date',
                 });
 
@@ -128,8 +127,8 @@ describe('Event Resolver', () => {
             it('should throw BAD_USER_INPUT error when invalid input schema is provided', async () => {
                 const createEventMutation = getCreateEventMutation({
                     ...createEventInput,
-                    organizers: undefined,
-                    eventCategory: [testEventCategory.id],
+                    organizerList: undefined,
+                    eventCategoryList: [testEventCategory.id],
                 });
 
                 const createEventResponse = await request(url).post('').set('token', testUser.token).send(createEventMutation);
@@ -141,8 +140,8 @@ describe('Event Resolver', () => {
             it('should throw UNAUTHENTICATED error when auth token is NOT provided', async () => {
                 const createEventMutation = getCreateEventMutation({
                     ...createEventInput,
-                    organizers: [testUser.id],
-                    eventCategory: [testEventCategory.id],
+                    organizerList: [testUser.id],
+                    eventCategoryList: [testEventCategory.id],
                 });
 
                 const createEventResponse = await request(url).post('').send(createEventMutation);

@@ -67,13 +67,13 @@ export class EventType {
     capacity?: number;
 
     @Field(() => [EventCategoryType])
-    eventCategory: EventCategoryType[];
+    eventCategoryList: EventCategoryType[];
 
     @Field(() => [UserType])
-    organizers: UserType[];
+    organizerList: UserType[];
 
     @Field(() => [UserType])
-    rSVPs: UserType[];
+    rSVPList: UserType[];
 
     @Field(() => GraphQLJSON, {nullable: true})
     tags?: Record<string, any>;
@@ -121,13 +121,13 @@ export class CreateEventInputType {
     capacity?: number;
 
     @Field(() => [String])
-    eventCategory: string[];
+    eventCategoryList: string[];
 
     @Field(() => [String])
-    organizers: string[];
+    organizerList: string[];
 
     @Field(() => [String])
-    rSVPs: string[];
+    rSVPList: string[];
 
     @Field(() => GraphQLJSON, {nullable: true})
     tags?: Record<string, any>;
@@ -178,13 +178,13 @@ export class UpdateEventInputType {
     capacity?: number;
 
     @Field(() => [String], {nullable: true})
-    eventCategory?: string[];
+    eventCategoryList?: string[];
 
     @Field(() => [String], {nullable: true})
-    organizers?: string[];
+    organizerList?: string[];
 
     @Field(() => [String], {nullable: true})
-    rSVPs?: string[];
+    rSVPList?: string[];
 
     @Field(() => GraphQLJSON, {nullable: true})
     tags?: Record<string, any>;
@@ -203,40 +203,4 @@ export class UpdateEventInputType {
 
     @Field(() => String, {nullable: true})
     eventLink?: string;
-}
-
-@InputType()
-export class EventQueryParams {
-    @Field({nullable: true})
-    id?: string;
-
-    @Field({nullable: true})
-    slug?: string;
-
-    @Field({nullable: true})
-    title?: string;
-
-    @Field({nullable: true})
-    description?: string;
-
-    @Field({nullable: true})
-    startDateTime?: string;
-
-    @Field({nullable: true})
-    endDateTime?: string;
-
-    @Field({nullable: true})
-    recurrenceRule?: string;
-
-    @Field({nullable: true})
-    location?: string;
-
-    @Field({nullable: true})
-    status?: string;
-
-    @Field(() => [String], {nullable: true})
-    organizers?: string[];
-
-    @Field(() => [String], {nullable: true})
-    rSVPs?: string[];
 }

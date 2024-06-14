@@ -51,7 +51,7 @@ const EventSchema = new Schema<EventType & Document>(
             unique: false,
             index: true,
         },
-        eventCategory: [
+        eventCategoryList: [
             {
                 type: Schema.Types.ObjectId,
                 ref: 'EventCategory',
@@ -59,7 +59,7 @@ const EventSchema = new Schema<EventType & Document>(
                 index: true,
             },
         ],
-        organizers: [
+        organizerList: [
             {
                 type: Schema.Types.ObjectId,
                 ref: 'User',
@@ -67,7 +67,7 @@ const EventSchema = new Schema<EventType & Document>(
                 index: true,
             },
         ],
-        rSVPs: [
+        rSVPList: [
             {
                 type: Schema.Types.ObjectId,
                 ref: 'User', // Reference to the User model

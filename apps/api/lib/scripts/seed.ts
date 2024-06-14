@@ -45,9 +45,9 @@ async function seedEvents(events: Array<CreateEventInputType>, userIds: Array<st
     for (const event of events) {
         const eventResponse = await EventDAO.create({
             ...event,
-            organizers: getRandomUniqueItems(userIds, 2),
-            rSVPs: getRandomUniqueItems(userIds, 2),
-            eventCategory: getRandomUniqueItems(eventCategoryIds, 5),
+            organizerList: getRandomUniqueItems(userIds, 2),
+            rSVPList: getRandomUniqueItems(userIds, 2),
+            eventCategoryList: getRandomUniqueItems(eventCategoryIds, 5),
         });
         console.log(`   Created Event item with id: ${eventResponse.id}`);
     }
