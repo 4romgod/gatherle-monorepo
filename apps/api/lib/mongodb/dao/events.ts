@@ -1,9 +1,9 @@
 import {GraphQLError} from 'graphql';
 import {Event} from '@/mongodb/models';
-import {EventType, UpdateEventInputType, CreateEventInputType, EventQueryParams} from '@/graphql/types';
-import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
+import {EventType, UpdateEventInputType, CreateEventInputType, QueryOptionsInput} from '@/graphql/types';
+import {CustomError, ErrorTypes, KnownCommonError, transformIdFields, transformOptionsToPipeline, transformOptionsToQuery} from '@/utils';
 import {kebabCase} from 'lodash';
-import {QueryOptionsInput} from '@/graphql/types/query';
+import {PipelineStage} from 'mongoose';
 
 class EventDAO {
     static async create(event: CreateEventInputType): Promise<EventType> {
@@ -66,8 +66,43 @@ class EventDAO {
 
     static async readEvents(options?: QueryOptionsInput): Promise<EventType[]> {
         try {
-            const query = (options ? transformOptionsToQuery(Event, options) : Event.find({})).populate('organizers rSVPs eventCategory');
-            return await query.exec();
+            const pipeline: PipelineStage[] = [];
+
+            if (options) {
+                pipeline.push(...transformOptionsToPipeline(options));
+            }
+
+            pipeline.push(
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'organizers',
+                        foreignField: '_id',
+                        as: 'organizers',
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'rSVPs',
+                        foreignField: '_id',
+                        as: 'rSVPs',
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'eventcategories',
+                        localField: 'eventCategory',
+                        foreignField: '_id',
+                        as: 'eventCategory',
+                    },
+                },
+            );
+
+            console.log(JSON.stringify(pipeline));
+
+            const events = await Event.aggregate<EventType>(pipeline).exec();
+            return transformIdFields(events);
         } catch (error) {
             if (error instanceof GraphQLError) {
                 throw error;

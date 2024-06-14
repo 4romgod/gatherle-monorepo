@@ -1,4 +1,5 @@
 import {InputType, Field, Int} from 'type-graphql';
+import {AnyType} from './customTypes';
 
 @InputType({description: 'Pagination options for limiting and skipping results'})
 export class PaginationInput {
@@ -27,8 +28,8 @@ export class FilterInput {
     @Field({description: 'The field to filter by'})
     field: string;
 
-    @Field({description: 'The value to filter the field by'})
-    value: string;
+    @Field((type) => AnyType, {description: 'The value to filter the field by'})
+    value: string | number | boolean;
 
     @Field(() => String, {nullable: true, description: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte')"})
     operator?: FilterOperatorInput;

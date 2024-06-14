@@ -1,9 +1,8 @@
 import {EventCategory} from '@/mongodb/models';
-import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType} from '@/graphql/types';
+import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType, QueryOptionsInput} from '@/graphql/types';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {kebabCase} from 'lodash';
-import {QueryOptionsInput} from '@/graphql/types/query';
 
 class EventCategoryDAO {
     static async create(category: CreateEventCategoryInputType): Promise<EventCategoryType> {
