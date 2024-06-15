@@ -48,11 +48,11 @@ export class EventType {
     @Field()
     description: string;
 
-    @Field(() => Date)
-    startDateTime: Date;
+    @Field(() => String)
+    startDateTime: string;
 
-    @Field(() => Date)
-    endDateTime: Date;
+    @Field(() => String)
+    endDateTime: string;
 
     @Field({nullable: true})
     recurrenceRule?: string;

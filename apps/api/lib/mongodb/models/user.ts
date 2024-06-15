@@ -1,7 +1,7 @@
 import {UserType} from '@/graphql/types';
 import {model, Schema, Document} from 'mongoose';
 
-const UserSchema = new Schema<UserType & Document>(
+export const UserSchema = new Schema<UserType & Document>(
     {
         email: {
             type: String,

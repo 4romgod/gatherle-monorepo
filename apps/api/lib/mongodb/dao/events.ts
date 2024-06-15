@@ -1,9 +1,9 @@
 import {GraphQLError} from 'graphql';
 import {Event} from '@/mongodb/models';
 import {EventType, UpdateEventInputType, CreateEventInputType, QueryOptionsInput} from '@/graphql/types';
-import {CustomError, ErrorTypes, KnownCommonError, transformIdFields, transformOptionsToPipeline, transformOptionsToQuery} from '@/utils';
+import {CustomError, ErrorTypes, KnownCommonError, transformIdFields, transformOptionsToQuery} from '@/utils';
 import {kebabCase} from 'lodash';
-import {PipelineStage} from 'mongoose';
+import {transformOptionsToPipeline} from '@/utils/queries/aggregate/eventsPipeline';
 
 class EventDAO {
     static async create(event: CreateEventInputType): Promise<EventType> {
@@ -64,43 +64,24 @@ class EventDAO {
         }
     }
 
+    static async queryEvents(options?: QueryOptionsInput): Promise<EventType[]> {
+        try {
+            const query = options ? transformOptionsToQuery(Event, options) : Event.find({});
+            const events = await query.populate('organizerList rSVPList eventCategoryList').exec();
+            return events;
+        } catch (error) {
+            if (error instanceof GraphQLError) {
+                throw error;
+            } else {
+                console.error('Error reading events', error);
+                throw KnownCommonError(error);
+            }
+        }
+    }
+
     static async readEvents(options?: QueryOptionsInput): Promise<EventType[]> {
         try {
-            const pipeline: PipelineStage[] = [];
-
-            if (options) {
-                pipeline.push(...transformOptionsToPipeline(options));
-            }
-
-            pipeline.push(
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'organizerList',
-                        foreignField: '_id',
-                        as: 'organizerList',
-                    },
-                },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'rSVPList',
-                        foreignField: '_id',
-                        as: 'rSVPList',
-                    },
-                },
-                {
-                    $lookup: {
-                        from: 'eventcategories',
-                        localField: 'eventCategoryList',
-                        foreignField: '_id',
-                        as: 'eventCategoryList',
-                    },
-                },
-            );
-
-            console.log(JSON.stringify(pipeline));
-
+            const pipeline = transformOptionsToPipeline(options);
             const events = await Event.aggregate<EventType>(pipeline).exec();
             return transformIdFields(events);
         } catch (error) {

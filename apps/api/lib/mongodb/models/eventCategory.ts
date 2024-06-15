@@ -1,7 +1,7 @@
 import {EventCategoryType} from '@/graphql/types';
 import {model, Schema, Document} from 'mongoose';
 
-const EventCategorySchema = new Schema<EventCategoryType & Document>(
+export const EventCategorySchema = new Schema<EventCategoryType & Document>(
     {
         slug: {type: String, required: true, unique: true, index: true},
         name: {type: String, required: true, unique: true},

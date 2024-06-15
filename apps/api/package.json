@@ -5,7 +5,7 @@
   "main": "dist/lib/scripts/startServer.ts.js",
   "types": "dist/types/lib/server.d.ts",
   "scripts": {
-    "build": "npm-run-all format test:unit build:ts",
+    "build": "npm-run-all format build:ts test:unit",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "dev": "nodemon lib/scripts/startServer.ts",
     "start": "npm-run-all start:ts",

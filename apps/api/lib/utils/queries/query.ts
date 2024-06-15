@@ -22,37 +22,7 @@ const addPaginationToQuery = <ResultType, DocType>(query: Query<ResultType, DocT
 const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, filters: FilterInput[]) => {
     filters.forEach(({field, value, operator}) => {
         const fieldParts = field.split('.');
-        if (fieldParts.length > 1) {
-            // Nested fields or arrays
-            const [root, ...nested] = fieldParts;
-            const nestedField = nested.join('.');
-
-            switch (operator || 'eq') {
-                case 'eq':
-                    query = query.where(root).elemMatch({[nestedField]: value});
-                    break;
-                case 'ne':
-                    query = query.where(root).elemMatch({[nestedField]: {$ne: value}});
-                    break;
-                case 'gt':
-                    query = query.where(root).elemMatch({[nestedField]: {$gt: value}});
-                    break;
-                case 'lt':
-                    query = query.where(root).elemMatch({[nestedField]: {$lt: value}});
-                    break;
-                case 'gte':
-                    query = query.where(root).elemMatch({[nestedField]: {$gte: value}});
-                    break;
-                case 'lte':
-                    query = query.where(root).elemMatch({[nestedField]: {$lte: value}});
-                    break;
-                // Add more operators as needed
-                default:
-                    query = query.where(root).elemMatch({[nestedField]: value});
-                    break;
-            }
-        } else {
-            // Simple fields
+        if (fieldParts.length === 1) {
             switch (operator || 'eq') {
                 case 'eq':
                     query = query.where(field).equals(value);
@@ -72,7 +42,6 @@ const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, DocType
                 case 'lte':
                     query = query.lte(field, value);
                     break;
-                // Add more operators as needed
                 default:
                     query = query.where(field).equals(value);
                     break;

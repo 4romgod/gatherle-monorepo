@@ -1,5 +1,42 @@
-import {InputType, Field, Int} from 'type-graphql';
+import {InputType, Field, Int, registerEnumType} from 'type-graphql';
 import {AnyType} from './customTypes';
+
+export enum SortOrderInput {
+    asc = 'asc',
+    desc = 'desc',
+}
+
+export enum FilterOperatorInput {
+    eq = 'eq',
+    ne = 'ne',
+    gt = 'gt',
+    lt = 'lt',
+    gte = 'gte',
+    lte = 'lte',
+}
+
+export enum SelectorOperatorInput {
+    and = 'and',
+    nor = 'nor',
+    or = 'or',
+    search = 'search',
+    caseSensitive = 'caseSensitive',
+}
+
+registerEnumType(SortOrderInput, {
+    name: 'SortOrderInput',
+    description: 'The order to sort the results ("asc" or "desc")',
+});
+
+registerEnumType(FilterOperatorInput, {
+    name: 'FilterOperatorInput',
+    description: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte')",
+});
+
+registerEnumType(SelectorOperatorInput, {
+    name: 'SelectorOperatorInput',
+    description: "The selector operator to apply ('and', 'nor', 'or', 'search', 'caseSensitive')",
+});
 
 @InputType({description: 'Pagination options for limiting and skipping results'})
 export class PaginationInput {
@@ -10,18 +47,14 @@ export class PaginationInput {
     skip?: number;
 }
 
-export type SortOrderInput = 'asc' | 'desc';
-
 @InputType({description: 'Sorting options for ordering results'})
 export class SortInput {
     @Field({description: 'The field to sort by'})
     field: string;
 
-    @Field({description: "The order to sort the results ('asc' or 'desc')"})
+    @Field(() => SortOrderInput, {defaultValue: SortOrderInput.asc, description: "The order to sort the results ('asc' or 'desc')"})
     order: SortOrderInput;
 }
-
-export type FilterOperatorInput = 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte';
 
 @InputType({description: 'Filter options for querying specific fields'})
 export class FilterInput {
@@ -31,7 +64,11 @@ export class FilterInput {
     @Field((type) => AnyType, {description: 'The value to filter the field by'})
     value: string | number | boolean;
 
-    @Field(() => String, {nullable: true, description: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte')"})
+    @Field(() => FilterOperatorInput, {
+        nullable: true,
+        defaultValue: FilterOperatorInput.eq,
+        description: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte')",
+    })
     operator?: FilterOperatorInput;
 }
 

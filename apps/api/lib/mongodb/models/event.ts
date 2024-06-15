@@ -2,7 +2,7 @@ import {EventType} from '@/graphql/types';
 import {Document, model, Schema} from 'mongoose';
 
 // TODO use mongoose middleware to validate all params, especially arrays for unique items
-const EventSchema = new Schema<EventType & Document>(
+export const EventSchema = new Schema<EventType & Document>(
     {
         slug: {
             type: String,
@@ -21,12 +21,12 @@ const EventSchema = new Schema<EventType & Document>(
             unique: false,
         },
         startDateTime: {
-            type: Date,
+            type: String,
             required: true,
             unique: false,
         },
         endDateTime: {
-            type: Date,
+            type: String,
             required: true,
             unique: false,
         },
