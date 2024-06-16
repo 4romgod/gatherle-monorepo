@@ -68,6 +68,37 @@ export const USER_DESCRIPTIONS = {
     USERNAME: "User's unique chosen or auto generated username (e.g., 'deku123')",
 };
 
+export const RESOLVER_DESCRIPTIONS = {
+    EVENT: {
+        createEvent: 'Create a new event. Requires input data for creating a new event and returns the created event.',
+        updateEvent: 'Update an existing event. Requires input data for updating the event and returns the updated event.',
+        deleteEventById: 'Delete an event by its ID. Requires the event ID and returns the deleted event or a 404 Error if not found.',
+        readEventById: 'Read an event by its ID. Requires the event ID and returns the event or a 404 Error if not found.',
+        readEventBySlug: 'Read an event by its slug. Requires the slug and returns the event or a 404 Error if not found.',
+        readEvents: 'Read a list of events. Accepts optional query options for pagination, sorting, and filtering and returns a list of events.',
+    },
+    EVENT_CATEGORY: {
+        createEventCategory: 'Create a new event category. Requires input data for creating a new category and returns the created category.',
+        updateEventCategory: 'Update an existing event category. Requires input data for updating the category and returns the updated category.',
+        deleteEventCategoryById:
+            'Delete an event category by its ID. Requires the category ID and returns the deleted category or 404 Error if not found.',
+        readEventCategoryById: 'Read an event category by its ID. Requires the category ID and returns the category or 404 Error if not found.',
+        readEventCategoryBySlug: 'Read an event category by its slug. Requires the slug and returns the category or 404 Error if not found.',
+        readEventCategories:
+            'Read a list of event categories. Accepts optional query options for pagination and filtering and returns a list of categories.',
+    },
+    USER: {
+        createUser: 'Create a new user. Requires input data for creating a new user and returns the created user along with an authentication token.',
+        loginUser: 'Log in a user. Requires input data for logging in and returns the user along with an authentication token.',
+        updateUser: 'Update an existing user. Requires input data for updating the user and returns the updated user.',
+        deleteUserById: 'Delete a user by their ID. Requires the user ID and returns the deleted user or 404 Error if not found.',
+        readUserById: 'Read a user by their ID. Requires the user ID and returns the user or 404 Error if not found.',
+        readUserByUsername: 'Read a user by their username. Requires the username and returns the user or 404 Error if not found.',
+        readUserByEmail: 'Read a user by their email. Requires the email and returns the user or 404 Error if not found.',
+        readUsers: 'Read a list of users. Accepts optional query options for pagination and filtering and returns a list of users.',
+    },
+};
+
 export const QUERY_DESCRIPTIONS = {
     QUERY: {
         INPUT: 'Options for querying a model, including pagination, sorting, and filtering',

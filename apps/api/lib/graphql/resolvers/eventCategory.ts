@@ -4,39 +4,40 @@ import {CreateEventCategoryInputType, EventCategoryType, UpdateEventCategoryInpu
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/validation';
 import {QueryOptionsInput} from '../types/query';
+import {RESOLVER_DESCRIPTIONS} from '@/constants';
 
 @Resolver()
 export class EventCategoryResolver {
     @Authorized([UserRole.Admin])
-    @Mutation(() => EventCategoryType)
+    @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.createEventCategory})
     async createEventCategory(@Arg('input', () => CreateEventCategoryInputType) input: CreateEventCategoryInputType): Promise<EventCategoryType> {
         return EventCategoryDAO.create(input);
     }
 
     @Authorized([UserRole.Admin])
-    @Mutation(() => EventCategoryType)
+    @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.updateEventCategory})
     async updateEventCategory(@Arg('input', () => UpdateEventCategoryInputType) input: UpdateEventCategoryInputType): Promise<EventCategoryType> {
         return EventCategoryDAO.updateEventCategory(input);
     }
 
     @Authorized([UserRole.Admin])
-    @Mutation(() => EventCategoryType)
-    async deleteEventCategory(@Arg('id') id: string): Promise<EventCategoryType> {
-        validateMongodbId(id);
-        return EventCategoryDAO.deleteEventCategoryById(id);
+    @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryById})
+    async deleteEventCategoryById(@Arg('eventCategoryId') eventCategoryId: string): Promise<EventCategoryType> {
+        validateMongodbId(eventCategoryId);
+        return EventCategoryDAO.deleteEventCategoryById(eventCategoryId);
     }
 
-    @Query(() => EventCategoryType)
+    @Query(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryById})
     async readEventCategoryById(@Arg('eventCategoryId') eventCategoryId: string): Promise<EventCategoryType | null> {
         return EventCategoryDAO.readEventCategoryById(eventCategoryId);
     }
 
-    @Query(() => EventCategoryType)
+    @Query(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryBySlug})
     async readEventCategoryBySlug(@Arg('slug') slug: string): Promise<EventCategoryType | null> {
         return EventCategoryDAO.readEventCategoryBySlug(slug);
     }
 
-    @Query(() => [EventCategoryType])
+    @Query(() => [EventCategoryType], {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategories})
     async readEventCategories(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<EventCategoryType[]> {
         return EventCategoryDAO.readEventCategories(options);
     }
