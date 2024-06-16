@@ -1,6 +1,6 @@
 import {EventDAO} from '@/mongodb/dao';
 import {Event} from '@/mongodb/models';
-import {EventType, SortOrderInput, UpdateEventInputType} from '@/graphql/types';
+import {EventType, SortOrderInput} from '@/graphql/types';
 import {CustomError, ErrorTypes, MockMongoError, transformOptionsToPipeline} from '@/utils';
 import {QueryOptionsInput, CreateEventInputType, EventStatus} from '@/graphql/types';
 import {GraphQLError} from 'graphql';

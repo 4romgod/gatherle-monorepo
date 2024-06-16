@@ -10,7 +10,9 @@ import {RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS} from '@/constants';
 @Resolver()
 export class UserResolver {
     @Mutation(() => UserWithTokenType, {description: RESOLVER_DESCRIPTIONS.USER.createUser})
-    async createUser(@Arg('input', () => CreateUserInputType, {description: USER_DESCRIPTIONS.CREATE_INPUT}) input: CreateUserInputType): Promise<UserWithTokenType> {
+    async createUser(
+        @Arg('input', () => CreateUserInputType, {description: USER_DESCRIPTIONS.CREATE_INPUT}) input: CreateUserInputType,
+    ): Promise<UserWithTokenType> {
         validateInput<CreateUserInputType>(CreateUserInputTypeSchema, input);
         return UserDAO.create(input);
     }

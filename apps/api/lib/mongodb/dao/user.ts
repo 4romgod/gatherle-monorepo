@@ -24,26 +24,24 @@ class UserDAO {
                 email: userData.email.toLocaleLowerCase(),
                 encrypted_password: await bcrypt.hash(userData.password, 10),
             };
-
-            const newUser = new User(userProps);
-            const tokenPayload = newUser.toObject({getters: true});
+            const savedUser = await User.create(userProps);
+            const tokenPayload = savedUser.toObject({getters: true});
             const token = generateToken(tokenPayload);
 
-            const savedUser = await newUser.save();
-            return {...savedUser.toObject({getters: true}), token};
+            return {...tokenPayload, token};
         } catch (error) {
+            console.log('Error when creating a new user', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error when creating a new user', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
     static async login(loginData: LoginUserInputType): Promise<UserWithTokenType> {
         try {
-            const user = await User.findOne({email: loginData.email});
+            const query = User.findOne({email: loginData.email});
+            const user = await query.exec();
             if (user) {
                 if (await bcrypt.compare(loginData.password, user.encrypted_password)) {
                     const jwtPayload = {...user.toObject({getters: true})};
@@ -56,79 +54,62 @@ class UserDAO {
                 throw CustomError(ERROR_MESSAGES.PASSWORD_MISSMATCH, ErrorTypes.UNAUTHENTICATED);
             }
         } catch (error) {
+            console.log('Error when user logging in', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error when user logging in', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
-    static async readUserById(userId: string, projections?: Array<string>): Promise<UserType> {
+    static async readUserById(userId: string): Promise<UserType> {
         try {
             const query = User.findById(userId);
-            if (projections && projections.length) {
-                query.select(projections.join(' '));
-            }
             const user = await query.exec();
-
             if (!user) {
                 throw CustomError(`User with id ${userId} does not exist`, ErrorTypes.NOT_FOUND);
             }
-
             return user;
         } catch (error) {
+            console.log('Error reading user by id', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error reading user by id', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
-    static async readUserByUsername(username: string, projections?: Array<string>): Promise<UserType> {
+    static async readUserByUsername(username: string): Promise<UserType> {
         try {
             const query = User.findOne({username});
-            if (projections && projections.length) {
-                query.select(projections.join(' '));
-            }
             const user = await query.exec();
-
             if (!user) {
                 throw CustomError(`User with username ${username} does not exist`, ErrorTypes.NOT_FOUND);
             }
             return user;
         } catch (error) {
+            console.log('Error reading user by username', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error reading user by username', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
-    static async readUserByEmail(email: string, projections?: Array<string>): Promise<UserType> {
+    static async readUserByEmail(email: string): Promise<UserType> {
         try {
             const query = User.findOne({email});
-            if (projections && projections.length) {
-                query.select(projections.join(' '));
-            }
             const user = await query.exec();
-
             if (!user) {
                 throw CustomError(`User with email ${email} does not exist`, ErrorTypes.NOT_FOUND);
             }
             return user;
         } catch (error) {
+            console.log('Error reading user by email', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error reading user by email', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
@@ -137,12 +118,11 @@ class UserDAO {
             const query = options ? transformOptionsToQuery(User, options) : User.find({});
             return await query.exec();
         } catch (error) {
+            console.log('Error querying users', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error querying users', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
@@ -151,54 +131,55 @@ class UserDAO {
             let encrypted_password: string | undefined;
             if (user.password) {
                 encrypted_password = await bcrypt.hash(user.password, 10);
+                delete user.password;
             }
             const {id, ...updatableFields} = user;
-            const updatedUser = await User.findByIdAndUpdate(user.id, {...updatableFields, encrypted_password}, {new: true}).exec();
+            const query = User.findByIdAndUpdate(user.id, {...updatableFields, encrypted_password}, {new: true});
+            const updatedUser = await query.exec();
             if (!updatedUser) {
                 throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', id), ErrorTypes.NOT_FOUND);
             }
             return updatedUser;
         } catch (error) {
+            console.log('Error updating users', error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log('Error updating users', error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
     static async deleteUserById(userId: string): Promise<UserType> {
         try {
-            const deletedUser = await User.findByIdAndDelete(userId).exec();
+            const query = User.findByIdAndDelete(userId);
+            const deletedUser = await query.exec();
             if (!deletedUser) {
                 throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
             }
             return deletedUser;
         } catch (error) {
+            console.log(`Error deleting user with id ${userId}`, error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log(`Error deleting user with id ${userId}`, error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
     static async deleteUserByEmail(email: string): Promise<UserType> {
         try {
-            const deletedUser = await User.findOneAndDelete({email}).exec();
+            const query = User.findOneAndDelete({email});
+            const deletedUser = await query.exec();
             if (!deletedUser) {
                 throw CustomError('User not found', ErrorTypes.NOT_FOUND);
             }
             return deletedUser;
         } catch (error) {
+            console.log(`Error deleting user with email ${email}`, error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                console.log(`Error deleting user with email ${email}`, error);
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 }
