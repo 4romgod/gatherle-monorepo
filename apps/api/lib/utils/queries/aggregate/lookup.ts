@@ -1,6 +1,6 @@
 import {PipelineStage} from 'mongoose';
 
-export const createEventLookupStages = (): PipelineStage[] => {
+export const createEventLookupStages = (): PipelineStage.Lookup[] => {
     return [
         {
             $lookup: {

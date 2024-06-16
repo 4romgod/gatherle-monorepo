@@ -1,7 +1,7 @@
 import {SortInput} from '@/graphql/types';
 import {PipelineStage} from 'mongoose';
 
-export const createSortStages = (sortInput: SortInput[]): PipelineStage[] => {
+export const createSortStages = (sortInput: SortInput[]): PipelineStage.Sort[] => {
     const sortOptions: PipelineStage.Sort = {
         $sort: {},
     };

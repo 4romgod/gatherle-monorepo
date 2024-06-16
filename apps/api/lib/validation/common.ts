@@ -30,6 +30,8 @@ const transforomEnumToErrorMessage = (enumType: any) => {
 
 export const ERROR_MESSAGES = {
     ATLEAST_ONE: (type: string) => `Atleast one ${type} is required`,
+    CONTENT_TOO_LARGE: 'Your Content is Too Large, Max size is 15MB',
+    INTERNAL_SERVER_ERROR: 'Oops, something is broken',
     INVALID: 'is invalid',
     INVALID_DATE: 'should be in YYYY-MM-DD format',
     INVALID_EMAIL: 'Invalid email format',

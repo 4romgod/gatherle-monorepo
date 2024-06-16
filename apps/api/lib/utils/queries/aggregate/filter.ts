@@ -1,5 +1,5 @@
 import {FilterInput, FilterOperatorInput} from '@/graphql/types';
-import {PipelineStage, RootQuerySelector} from 'mongoose';
+import {PipelineStage} from 'mongoose';
 
 // TODO 1. Functionality for RootQuerySelector like ($and, $or, $text)
 export const createEventPipelineStages = (filters: FilterInput[]): PipelineStage[] => {

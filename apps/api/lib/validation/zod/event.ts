@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {CreateEventInputType, EventPrivacySetting, EventStatus} from '@/graphql/types';
+import {EventPrivacySetting, EventStatus, EventType} from '@/graphql/types';
 import {ERROR_MESSAGES, validateDate, validateMongodbId} from '@/validation';
 
 const validateEventInput = (input: any) => {

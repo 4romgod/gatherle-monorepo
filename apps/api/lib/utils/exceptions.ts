@@ -2,6 +2,7 @@ import {GraphQLError, GraphQLErrorExtensions} from 'graphql';
 import {HttpStatusCode} from '@/constants';
 import {ApolloServerErrorCode} from '@apollo/server/errors';
 import {capitalize} from 'lodash';
+import {ERROR_MESSAGES} from '@/validation';
 
 export type CustomErrorType = {
     errorCode: string;
@@ -56,21 +57,20 @@ export const CustomError = (errorMessage: string, errorType: CustomErrorType, ex
  * //TODO Maybe use this in a middleware https://mongoosejs.com/docs/middleware.html
  */
 export const KnownCommonError = (error: any): GraphQLError => {
-    let message = 'Oops, something is broken';
+    let message = ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
 
     const {code, keyValue} = error;
     if (code) {
         switch (code) {
-            case 11000: {
+            case 11000:
                 const key = Object.keys(keyValue)[0];
                 message = `${capitalize(key)} ${keyValue[key]} already exists`;
                 return CustomError(message, ErrorTypes.CONFLICT);
-            }
             case 11001:
                 message = uniqueMessage(error);
                 return CustomError(message, ErrorTypes.CONFLICT);
             case 10334:
-                message = 'Your Content is Too Large, Max size is 15MB';
+                message = ERROR_MESSAGES.CONTENT_TOO_LARGE;
                 return CustomError(message, ErrorTypes.BAD_USER_INPUT);
         }
     }
