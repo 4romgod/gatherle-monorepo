@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Run npm test
+npm run test:unit
+
+# Check the exit status of npm test
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Aborting push."
+  exit 1
+fi
+
+echo "Tests passed. Proceeding with push..."
+exit 0

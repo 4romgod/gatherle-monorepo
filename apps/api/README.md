@@ -70,9 +70,18 @@ To get started with this project, follow these steps:
 
    Once the server is running, you can access the GraphQL Playground by navigating to `http://localhost:9000/api/v1/graphql` in your web browser.
 
+7. **Set up Git hooks (optional):**
+
+   To ensure unit tests run before pushing code to the remote repository, set up the Git hooks by running the following npm script:
+
+   ```bash
+   npm run install-hooks
+
 ## Project Structure
 
 - `lib/`: Contains the source code for the GraphQL server.
+   - `clients` - contains source code to instantiate clients like mongodb client that handles DB connections
+   - `constants` - Self explanatory. However, we also create constants that maps to our environment variables for easier access.
    - `graphql` - contains the graphql related source code
       - `resolvers/` - GraphQL resolver functions.
       - `schema/` - GraphQL schema definition.
@@ -82,15 +91,17 @@ To get started with this project, follow these steps:
       - `mockData/` - Seed data for starting up the development server.
       - `models/` - Organization of data within the database and the links between related entities.
    - `scripts/`: Scripts for commonly used operations.
+   - `utils` - contains our utility functions.
+   - `validation` - we use 'zod' for input validation
    - `server.ts`: Entry point for the server.
 - `test/`: Contains unit, integration, and canary tests.
    - `canary/`
    - `integration/`
    - `unit/`
-- `dist/`: Contains the compiled TypeScript code.
+- `dist/`: Contains the compiled TypeScript code (this stays on your local machine only!)
 - `package.json`: Defines project dependencies and scripts.
 - `tsconfig.json`: TypeScript configuration file.
-- `.env.example`: Example environment variables file.
+- `.env`: Environment variables file.
 
 > Let's keep this README.md file alive by adding any new features, files/folders, Thank You.
 
@@ -101,20 +112,34 @@ To run tests for this project, you can use the following npm scripts:
 - **Run unit tests:**
 
   ```bash
-  npm test
+  npm test:unit
   ```
 
+---
 - **Run integration tests:**
+
+   To run these, you will need to have all the necessary environment variables setup as explained on the [Get Started](#getting-started)
 
   ```bash
   npm run test:integration
   ```
 
+---
 - **Run canary tests:**
+
+   To run these, you will need to have all the necessary environment variables setup as explained on the [Get Started](#getting-started)
 
   ```bash
   npm run test:canary
   ```
+
+---
+- **Run all tests**
+
+   To run all tests, run the command
+   ```
+   npm run test
+   ```
 
 ## Chores and Operations
 

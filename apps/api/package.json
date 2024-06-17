@@ -16,7 +16,8 @@
     "test": "npm-run-all test:*",
     "test:canary": "jest --config=test/canary/jest.config.ts",
     "test:integration": "jest --config=test/integration/jest.config.ts",
-    "test:unit": "jest --config=test/unit/jest.config.ts"
+    "test:unit": "jest --config=test/unit/jest.config.ts",
+    "install-hooks": "sh ./lib/scripts/hooks/install-hooks.sh"
   },
   "author": "",
   "license": "ISC",
