@@ -5,7 +5,7 @@ import request from 'supertest';
 import {usersMockData} from '@/mongodb/mockData';
 import {API_DOMAIN, API_PATH} from '@/constants';
 import {Server} from 'http';
-import {getCreateUserMutation, getLoginUserMutation, getUpdateUserMutation} from '@/utils';
+import {getCreateUserMutation, getLoginUserMutation, getUpdateUserMutation} from '@/test/utils';
 import {UserDAO} from '@/mongodb/dao';
 import {CreateUserInputType, UserType, UserWithTokenType} from '@/graphql/types';
 import {ERROR_MESSAGES} from '@/validation';

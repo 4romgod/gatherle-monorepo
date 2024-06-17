@@ -8,6 +8,7 @@ const config: Config = {
     testTimeout: 10000,
     testMatch: ['<rootDir>/**/*.test.[jt]s?(x)'],
     moduleNameMapper: {
+        '^@/test/(.*)$': '<rootDir>/test/$1',
         '^@/(.*)$': '<rootDir>/../../lib/$1',
     },
     globalSetup: '<rootDir>/setup.ts',

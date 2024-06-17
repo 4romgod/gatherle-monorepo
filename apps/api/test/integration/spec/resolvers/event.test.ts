@@ -9,7 +9,7 @@ import {CreateEventInputType, EventCategoryType, EventType, UserWithTokenType} f
 import {ERROR_MESSAGES} from '@/validation';
 import {kebabCase} from 'lodash';
 import request from 'supertest';
-import {getCreateEventMutation} from '@/utils/testing/queries/eventResolverQueries';
+import {getCreateEventMutation} from '@/test/utils/queries/eventResolverQueries';
 
 describe('Event Resolver', () => {
     let expressApp: Express;
