@@ -322,3 +322,9 @@ Enhancing your GraphQL API with advanced features and best practices.
 
 ### Look into Subscriptions
 * https://typegraphql.com/docs/subscriptions.html#triggering-subscription-topics
+
+### Look into custom decorators
+* https://typegraphql.com/docs/custom-decorators.html
+
+## References and Good Reads
+* [type-graphql GitHub repo](https://github.com/MichalLytek/type-graphql)

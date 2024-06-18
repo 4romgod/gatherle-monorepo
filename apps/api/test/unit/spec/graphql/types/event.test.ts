@@ -1,0 +1,171 @@
+import 'reflect-metadata';
+import {
+    EventPrivacySetting,
+    EventStatus,
+    Media,
+    EventType,
+    CreateEventInputType,
+    UpdateEventInputType,
+    RSVPInputType,
+    CancelRSVPInputType,
+} from '@/graphql/types';
+
+describe('Enums', () => {
+    it('should ensure that EventPrivacySetting enum have the correct values', () => {
+        expect(EventPrivacySetting.Public).toBe('Public');
+        expect(EventPrivacySetting.Private).toBe('Private');
+        expect(EventPrivacySetting.Invitation).toBe('Invitation');
+    });
+
+    it('should ensure that EventStatus enum have the correct values', () => {
+        expect(EventStatus.Cancelled).toBe('Cancelled');
+        expect(EventStatus.Completed).toBe('Completed');
+        expect(EventStatus.Ongoing).toBe('Ongoing');
+        expect(EventStatus.Upcoming).toBe('Upcoming');
+    });
+});
+
+describe('Media ObjectType', () => {
+    it('should create an empty media type object', () => {
+        const media = new Media();
+        expect(media.featuredImageUrl).toBeUndefined();
+        expect(media.otherMediaData).toBeUndefined();
+    });
+
+    it('should add properties to empty media type object', () => {
+        const media = new Media();
+        media.featuredImageUrl = 'mock image URL';
+        media.otherMediaData = {
+            mockKey: 'MockValue',
+        };
+        expect(media instanceof Media).toBeTruthy();
+        expect(media).toEqual({
+            featuredImageUrl: 'mock image URL',
+            otherMediaData: {
+                mockKey: 'MockValue',
+            },
+        });
+    });
+});
+
+describe('EventType', () => {
+    it('should define ObjectType correctly', () => {
+        const eventType = new EventType();
+        expect(eventType).toBeDefined();
+    });
+
+    it('should have fields with correct decorators', () => {
+        const eventType = new EventType();
+
+        expect(eventType.id).toBeUndefined(); // Because we are testing default values
+        expect(eventType.slug).toBeUndefined();
+        expect(eventType.title).toBeUndefined();
+        expect(eventType.description).toBeUndefined();
+        expect(eventType.startDateTime).toBeUndefined();
+        expect(eventType.endDateTime).toBeUndefined();
+        expect(eventType.recurrenceRule).toBeUndefined();
+        expect(eventType.location).toBeUndefined();
+        expect(eventType.status).toBeUndefined();
+        expect(eventType.capacity).toBeUndefined();
+        expect(eventType.eventCategoryList).toBeUndefined();
+        expect(eventType.organizerList).toBeUndefined();
+        expect(eventType.rSVPList).toBeUndefined();
+        expect(eventType.tags).toBeUndefined();
+        expect(eventType.media).toBeUndefined();
+        expect(eventType.additionalDetails).toBeUndefined();
+        expect(eventType.comments).toBeUndefined();
+        expect(eventType.privacySetting).toBeUndefined();
+        expect(eventType.eventLink).toBeUndefined();
+    });
+});
+
+describe('CreateEventInputType', () => {
+    it('should define InputType correctly', () => {
+        const createEventInputType = new CreateEventInputType();
+        expect(createEventInputType).toBeDefined();
+    });
+
+    it('should have fields with correct decorators', () => {
+        const createEventInputType = new CreateEventInputType();
+
+        expect(createEventInputType.title).toBeUndefined();
+        expect(createEventInputType.description).toBeUndefined();
+        expect(createEventInputType.startDateTime).toBeUndefined();
+        expect(createEventInputType.endDateTime).toBeUndefined();
+        expect(createEventInputType.recurrenceRule).toBeUndefined();
+        expect(createEventInputType.location).toBeUndefined();
+        expect(createEventInputType.status).toBeUndefined();
+        expect(createEventInputType.capacity).toBeUndefined();
+        expect(createEventInputType.eventCategoryList).toBeUndefined();
+        expect(createEventInputType.organizerList).toBeUndefined();
+        expect(createEventInputType.rSVPList).toBeUndefined();
+        expect(createEventInputType.tags).toBeUndefined();
+        expect(createEventInputType.media).toBeUndefined();
+        expect(createEventInputType.additionalDetails).toBeUndefined();
+        expect(createEventInputType.comments).toBeUndefined();
+        expect(createEventInputType.privacySetting).toBeUndefined();
+        expect(createEventInputType.eventLink).toBeUndefined();
+    });
+});
+
+describe('UpdateEventInputType', () => {
+    it('should define InputType correctly', () => {
+        const updateEventInputType = new UpdateEventInputType();
+        expect(updateEventInputType).toBeDefined();
+    });
+
+    it('should have fields with correct decorators', () => {
+        const updateEventInputType = new UpdateEventInputType();
+
+        expect(updateEventInputType.id).toBeUndefined();
+        expect(updateEventInputType.title).toBeUndefined();
+        expect(updateEventInputType.description).toBeUndefined();
+        expect(updateEventInputType.startDateTime).toBeUndefined();
+        expect(updateEventInputType.endDateTime).toBeUndefined();
+        expect(updateEventInputType.recurrenceRule).toBeUndefined();
+        expect(updateEventInputType.location).toBeUndefined();
+        expect(updateEventInputType.status).toBeUndefined();
+        expect(updateEventInputType.capacity).toBeUndefined();
+        expect(updateEventInputType.eventCategoryList).toBeUndefined();
+        expect(updateEventInputType.organizerList).toBeUndefined();
+        expect(updateEventInputType.rSVPList).toBeUndefined();
+        expect(updateEventInputType.tags).toBeUndefined();
+        expect(updateEventInputType.media).toBeUndefined();
+        expect(updateEventInputType.additionalDetails).toBeUndefined();
+        expect(updateEventInputType.comments).toBeUndefined();
+        expect(updateEventInputType.privacySetting).toBeUndefined();
+        expect(updateEventInputType.eventLink).toBeUndefined();
+    });
+});
+
+describe('RSVPInputType', () => {
+    it('should define InputType correctly', () => {
+        const rsvpInputType = new RSVPInputType();
+        expect(rsvpInputType).toBeDefined();
+    });
+
+    it('should have fields with correct decorators', () => {
+        const rsvpInputType = new RSVPInputType();
+
+        expect(rsvpInputType.eventId).toBeUndefined();
+        expect(rsvpInputType.userIdList).toBeUndefined();
+        expect(rsvpInputType.usernameList).toBeUndefined();
+        expect(rsvpInputType.emailList).toBeUndefined();
+    });
+});
+
+describe('CancelRSVPInputType', () => {
+    it('should define InputType correctly', () => {
+        const cancelRsvpInputType = new CancelRSVPInputType();
+        expect(cancelRsvpInputType).toBeDefined();
+    });
+
+    it('should have fields with correct decorators', () => {
+        const cancelRsvpInputType = new CancelRSVPInputType();
+
+        expect(cancelRsvpInputType.eventId).toBeUndefined();
+        expect(cancelRsvpInputType.userIdList).toBeUndefined();
+        expect(cancelRsvpInputType.usernameList).toBeUndefined();
+        expect(cancelRsvpInputType.emailList).toBeUndefined();
+    });
+});
