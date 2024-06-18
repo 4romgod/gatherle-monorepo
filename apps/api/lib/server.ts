@@ -1,10 +1,9 @@
 import cors from 'cors';
-import morgan from 'morgan';
 import {ListenOptions} from 'net';
 import express, {Express} from 'express';
 import bodyParser from 'body-parser';
 import {MongoDbClient} from '@/clients';
-import {API_DOMAIN, MONGO_DB_URL, API_PATH, HttpStatusCode} from '@/constants';
+import {API_DOMAIN, MONGO_DB_URL, GRAPHQL_API_PATH, HttpStatusCode} from '@/constants';
 import {ApolloServer} from '@apollo/server';
 import {expressMiddleware} from '@apollo/server/express4';
 import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttpServer';
@@ -13,10 +12,11 @@ import {createServer, Server} from 'http';
 import {GraphQLFormattedError} from 'graphql';
 import {ApolloServerErrorCode} from '@apollo/server/errors';
 import {ERROR_MESSAGES} from '@/validation';
-import {reject} from 'lodash';
 
 export interface ServerContext {
     token?: string;
+    req?: express.Request;
+    res?: express.Response;
 }
 
 const serverStartTimeLabel = 'Server started after';
@@ -28,7 +28,6 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
     await MongoDbClient.connectToDatabase(MONGO_DB_URL);
 
     const expressApp: Express = express();
-    expressApp.use(morgan('dev'));
     expressApp.use(bodyParser.json({limit: '50mb'}));
     expressApp.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 
@@ -58,12 +57,16 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
 
     console.log('Adding express middleware to apollo server...');
     expressApp.use(
-        API_PATH,
+        GRAPHQL_API_PATH,
         cors<cors.CorsRequest>(),
         express.json(),
         expressMiddleware(apolloServer, {
-            context: async ({req}) => {
-                return {token: req.headers.token};
+            context: async ({req, res}) => {
+                return {
+                    token: req.headers.token,
+                    req,
+                    res,
+                };
             },
         }),
     );
@@ -72,10 +75,10 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
         res.status(HttpStatusCode.OK).send('Okay!');
     });
 
-    const url = `${API_DOMAIN}:${listenOptions.port}${API_PATH}`;
+    const url = `${API_DOMAIN}:${listenOptions.port}${GRAPHQL_API_PATH}`;
 
     const listenForConnections = () => {
-        return new Promise<Server>((resolve) => {
+        return new Promise<Server>((resolve, reject) => {
             const httpServer = expressApp.listen(listenOptions.port);
             httpServer
                 .once('listening', () => {

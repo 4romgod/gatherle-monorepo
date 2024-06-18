@@ -2,7 +2,7 @@ import {Express} from 'express';
 import {ServerContext, createGraphQlServer} from '@/server';
 import {ApolloServer} from '@apollo/server';
 import {eventsMockData, usersMockData} from '@/mongodb/mockData';
-import {API_DOMAIN, API_PATH} from '@/constants';
+import {API_DOMAIN, GRAPHQL_API_PATH} from '@/constants';
 import {Server} from 'http';
 import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {CreateEventInputType, EventCategoryType, EventType, UserWithTokenType} from '@/graphql/types';
@@ -16,7 +16,7 @@ describe('Event Resolver', () => {
     let apolloServer: ApolloServer<ServerContext>;
     let httpServer: Server;
     const TEST_PORT = 1000;
-    const url = `${API_DOMAIN}:${TEST_PORT}${API_PATH}`;
+    const url = `${API_DOMAIN}:${TEST_PORT}${GRAPHQL_API_PATH}`;
     const testEventTitle = 'Test Event Title';
     const testEventSlug = kebabCase(testEventTitle);
     const testEventDescription = 'Test Event Description';
