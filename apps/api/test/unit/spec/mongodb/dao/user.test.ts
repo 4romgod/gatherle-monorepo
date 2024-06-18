@@ -1,11 +1,10 @@
 import bcrypt from 'bcrypt';
+import {UserDAO} from '@/mongodb/dao';
 import {User} from '@/mongodb/models';
 import {CreateUserInputType, UpdateUserInputType, QueryOptionsInput, Gender, UserRole, SortOrderInput} from '@/graphql/types';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
-import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
 import {generateToken} from '@/utils/auth';
-import {UserDAO} from '@/mongodb/dao';
 
 jest.mock('@/mongodb/models', () => ({
     User: {
@@ -71,8 +70,6 @@ describe('UserDAO', () => {
         encrypted_password: 'encrypted_password',
         userRole: UserRole.User,
     };
-    const toObject = jest.fn().mockReturnValue(mockUser);
-    mockUser.toObject = toObject;
 
     describe('create', () => {
         afterEach(() => {
@@ -80,15 +77,36 @@ describe('UserDAO', () => {
         });
 
         it('should create a user and return the user object with token', async () => {
+            const toObject = jest.fn().mockReturnValue(mockUser);
+            mockUser.toObject = toObject;
             (bcrypt.hash as jest.Mock).mockResolvedValue('encrypted_password');
             (generateToken as jest.Mock).mockReturnValue('mockToken');
-            (User.create as jest.Mock).mockResolvedValue(mockUser);
+            (User.create as jest.Mock).mockResolvedValue({
+                mockUser,
+                toObject: jest.fn().mockReturnValue(mockUser),
+            });
 
             const result = await UserDAO.create(mockCreateUserInput);
 
             expect(result).toEqual({...mockUser, token: 'mockToken'});
             expect(bcrypt.hash).toHaveBeenCalledWith('password', 10);
             expect(generateToken).toHaveBeenCalledWith(mockUser);
+        });
+
+        it('should create a user (with default username) and return the user object with token', async () => {
+            (bcrypt.hash as jest.Mock).mockResolvedValue('encrypted_password');
+            (generateToken as jest.Mock).mockReturnValue('mockToken');
+            (User.create as jest.Mock).mockResolvedValue({
+                ...mockUser,
+                username: 'test',
+                toObject: jest.fn().mockReturnValue({...mockUser, username: 'test'}),
+            });
+
+            const result = await UserDAO.create({...mockCreateUserInput, username: undefined});
+
+            expect(result).toEqual({...mockUser, username: 'test', token: 'mockToken'});
+            expect(bcrypt.hash).toHaveBeenCalledWith('password', 10);
+            expect(generateToken).toHaveBeenCalledWith({...mockUser, username: 'test'});
         });
 
         it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {

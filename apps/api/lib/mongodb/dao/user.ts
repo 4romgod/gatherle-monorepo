@@ -24,6 +24,7 @@ class UserDAO {
                 email: userData.email.toLocaleLowerCase(),
                 encrypted_password: await bcrypt.hash(userData.password, 10),
             };
+            console.log('userProps', userProps);
             const savedUser = await User.create(userProps);
             const tokenPayload = savedUser.toObject({getters: true});
             const token = generateToken(tokenPayload);
@@ -31,9 +32,6 @@ class UserDAO {
             return {...tokenPayload, token};
         } catch (error) {
             console.log('Error when creating a new user', error);
-            if (error instanceof GraphQLError) {
-                throw error;
-            }
             throw KnownCommonError(error);
         }
     }
@@ -119,9 +117,6 @@ class UserDAO {
             return await query.exec();
         } catch (error) {
             console.log('Error querying users', error);
-            if (error instanceof GraphQLError) {
-                throw error;
-            }
             throw KnownCommonError(error);
         }
     }

@@ -34,7 +34,7 @@ describe('Query', () => {
     });
 
     describe('addFiltersToQuery', () => {
-        it('should add equality filter to the query', () => {
+        it('should add "equality" filter to the query', () => {
             const mockQuery = {where: jest.fn().mockReturnThis(), equals: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
             const filters: FilterInput[] = [
                 {
@@ -48,7 +48,21 @@ describe('Query', () => {
             expect(mockQuery.equals).toHaveBeenCalledWith('Completed');
         });
 
-        it('should add greater than filter to the query', () => {
+        it('should add "not equal" than filter to the query', () => {
+            const mockQuery = {where: jest.fn().mockReturnThis(), ne: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
+            const filters: FilterInput[] = [
+                {
+                    field: 'capacity',
+                    value: 50,
+                    operator: FilterOperatorInput.ne,
+                },
+            ];
+            addFiltersToQuery(mockQuery, filters);
+            expect(mockQuery.where).toHaveBeenCalledWith('capacity');
+            expect(mockQuery.ne).toHaveBeenCalledWith(50);
+        });
+
+        it('should add "greater than" filter to the query', () => {
             const mockQuery = {gt: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
             const filters: FilterInput[] = [
                 {
@@ -59,6 +73,58 @@ describe('Query', () => {
             ];
             addFiltersToQuery(mockQuery, filters);
             expect(mockQuery.gt).toHaveBeenCalledWith('capacity', 50);
+        });
+
+        it('should add "greater than or equal" filter to the query', () => {
+            const mockQuery = {gte: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
+            const filters: FilterInput[] = [
+                {
+                    field: 'capacity',
+                    value: 50,
+                    operator: FilterOperatorInput.gte,
+                },
+            ];
+            addFiltersToQuery(mockQuery, filters);
+            expect(mockQuery.gte).toHaveBeenCalledWith('capacity', 50);
+        });
+
+        it('should add "less than" filter to the query', () => {
+            const mockQuery = {lt: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
+            const filters: FilterInput[] = [
+                {
+                    field: 'capacity',
+                    value: 50,
+                    operator: FilterOperatorInput.lt,
+                },
+            ];
+            addFiltersToQuery(mockQuery, filters);
+            expect(mockQuery.lt).toHaveBeenCalledWith('capacity', 50);
+        });
+
+        it('should add "less than or equal" filter to the query', () => {
+            const mockQuery = {lte: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
+            const filters: FilterInput[] = [
+                {
+                    field: 'capacity',
+                    value: 50,
+                    operator: FilterOperatorInput.lte,
+                },
+            ];
+            addFiltersToQuery(mockQuery, filters);
+            expect(mockQuery.lte).toHaveBeenCalledWith('capacity', 50);
+        });
+
+        it('should add "default (equality)" filter to the query', () => {
+            const mockQuery = {where: jest.fn().mockReturnThis(), equals: jest.fn().mockReturnThis()} as unknown as Query<any, any>;
+            const filters: FilterInput[] = [
+                {
+                    field: 'status',
+                    value: 'Completed',
+                },
+            ];
+            addFiltersToQuery(mockQuery, filters);
+            expect(mockQuery.where).toHaveBeenCalledWith('status');
+            expect(mockQuery.equals).toHaveBeenCalledWith('Completed');
         });
     });
 

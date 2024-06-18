@@ -1,8 +1,9 @@
-import EventCategoryDAO from '@/mongodb/dao/eventCategory';
+import {EventCategoryDAO} from '@/mongodb/dao';
 import {EventCategory} from '@/mongodb/models';
 import {EventCategoryType, CreateEventCategoryInputType, UpdateEventCategoryInputType, QueryOptionsInput} from '@/graphql/types';
 import {CustomError, ErrorTypes, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
+import {MockMongoError} from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({
     EventCategory: {
@@ -24,8 +25,6 @@ const createMockSuccessMongooseQuery = <T>(result?: T) => ({
     populate: jest.fn().mockReturnThis(),
     exec: jest.fn().mockResolvedValue(result),
     select: jest.fn().mockReturnThis(),
-    // skip: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
 });
 
 const createMockFailedMongooseQuery = <T>(error: T) => ({
@@ -91,7 +90,7 @@ describe('EventCategoryDAO', () => {
 
             const result = await EventCategoryDAO.readEventCategoryById('1');
 
-            expect(EventCategory.findById).toHaveBeenCalledWith({id: '1'});
+            expect(EventCategory.findById).toHaveBeenCalledWith('1');
             expect(result).toEqual(mockEventCategory);
         });
 
@@ -100,7 +99,17 @@ describe('EventCategoryDAO', () => {
             await expect(EventCategoryDAO.readEventCategoryById('1')).rejects.toThrow(
                 CustomError(`Event Category with id 1 does not exist`, ErrorTypes.NOT_FOUND),
             );
-            expect(EventCategory.findById).toHaveBeenCalledWith({id: '1'});
+            expect(EventCategory.findById).toHaveBeenCalledWith('1');
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventCategory.findById throws an UNKNOWN error', async () => {
+            (EventCategory.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const eventCategoryId = 'mockEventCategoryId';
+
+            await expect(EventCategoryDAO.readEventCategoryById(eventCategoryId)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+            );
+            expect(EventCategory.findById).toHaveBeenCalledWith(eventCategoryId);
         });
     });
 
@@ -124,6 +133,16 @@ describe('EventCategoryDAO', () => {
                 CustomError(`Event Category with slug test-category not found`, ErrorTypes.NOT_FOUND),
             );
             expect(EventCategory.findOne).toHaveBeenCalledWith({slug: 'test-category'});
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventCategory.findOne throws an UNKNOWN error', async () => {
+            (EventCategory.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const eventCategorySlug = 'mockEventCategorySlug';
+
+            await expect(EventCategoryDAO.readEventCategoryBySlug(eventCategorySlug)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+            );
+            expect(EventCategory.findOne).toHaveBeenCalledWith({slug: eventCategorySlug});
         });
     });
 
@@ -213,6 +232,16 @@ describe('EventCategoryDAO', () => {
                 CustomError(`Event Category with id 1 not found`, ErrorTypes.NOT_FOUND),
             );
             expect(EventCategory.findByIdAndDelete).toHaveBeenCalledWith('1');
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventCategory.findByIdAndDelete throws an UNKNOWN error', async () => {
+            (EventCategory.findByIdAndDelete as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const eventCategoryId = 'mockEventCategoryId';
+
+            await expect(EventCategoryDAO.deleteEventCategoryById(eventCategoryId)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+            );
+            expect(EventCategory.findByIdAndDelete).toHaveBeenCalledWith(eventCategoryId);
         });
     });
 });

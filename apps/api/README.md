@@ -222,36 +222,27 @@ After configuring TypeScript path aliases (`paths`) in `tsconfig.json`, the proj
 
 Unit testing ensures that individual units or components of our code are working correctly. It's crucial for maintaining code quality and catching bugs early.
 
------------------------------|---------|----------|---------|---------|--------------------------------------------
-File                         | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                          
------------------------------|---------|----------|---------|---------|--------------------------------------------
-All files                    |   81.41 |    71.51 |    45.8 |   79.87 |                                            
- lib/graphql/types           |   82.73 |      100 |   15.87 |   80.44 |                                            
-  event.ts                   |    70.8 |      100 |    4.76 |      68 | ...192,195,198,201,204,207,216,219,228,231 
-  query.ts                   |   84.61 |      100 |   27.27 |   81.81 | 44,47,56,65,68,78,81,84                    
-  user.ts                    |   92.95 |      100 |   28.57 |    91.8 | 51,63,93,129,142                           
- lib/mongodb/dao             |   67.04 |    46.37 |   67.85 |   66.66 |                                            
-  eventCategory.ts           |    8.06 |        0 |       0 |    8.06 | 9-110                                      
-  events.ts                  |   69.89 |    52.38 |      70 |   69.89 | 54-60,131-182                              
-  index.ts                   |     100 |      100 |     100 |     100 |                                            
-  user.ts                    |   98.05 |     87.5 |     100 |   98.05 | 35,123                                     
- lib/mongodb/models          |     100 |      100 |       0 |     100 |                                            
-  index.ts                   |     100 |      100 |       0 |     100 |                                            
- lib/utils                   |   88.42 |     86.2 |      90 |    87.2 |                                            
-  auth.ts                    |   97.95 |    93.75 |     100 |   97.72 | 91                                         
-  exceptions.ts              |   66.66 |       50 |   66.66 |   62.96 | 66-71,86-93                                
-  index.ts                   |     100 |      100 |     100 |     100 |                                            
- lib/utils/queries           |   77.77 |     64.7 |     100 |    75.6 |                                            
-  index.ts                   |     100 |      100 |     100 |     100 |                                            
-  query.ts                   |   76.74 |     64.7 |     100 |   74.35 | 31-32,37-47                                
- test/utils/queries          |   70.58 |      100 |       0 |   58.33 |                                            
-  invalidQueries.ts          |   66.66 |      100 |       0 |      50 | 2                                          
-  userResolverQueries.ts     |   66.66 |      100 |       0 |      50 | 2,18,36,51                                 
------------------------------|---------|----------|---------|---------|--------------------------------------------
-Test Suites: 14 passed, 14 total
-Tests:       156 passed, 156 total
+Here is a preview of our current test coverage (We removed tests that have 100% coverage).
+
+```
+--------------------------|---------|----------|---------|---------|----------------------------------------------------------------------
+File                      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                    
+--------------------------|---------|----------|---------|---------|----------------------------------------------------------------------
+All files                 |   89.41 |    91.09 |    54.4 |   88.58 |                                                                      
+ graphql/types            |   82.73 |      100 |   15.87 |   80.44 |                                                                      
+  event.ts                |    70.8 |      100 |    4.76 |      68 | ...7,150,177,180,183,186,189,192,195,198,201,204,207,216,219,228,231 
+  query.ts                |   84.61 |      100 |   27.27 |   81.81 | 44,47,56,65,68,78,81,84                                              
+  user.ts                 |   92.95 |      100 |   28.57 |    91.8 | 51,63,93,129,142                                                     
+ mongodb/dao              |   86.82 |       75 |   89.28 |   86.66 |                                                                      
+  events.ts               |   69.89 |    52.38 |      70 |   69.89 | 54-60,131-182                                                        
+ utils                    |   88.42 |     86.2 |      90 |    87.2 |                                                                      
+  exceptions.ts           |   66.66 |       50 |   66.66 |   62.96 | 66-71,86-93                                                          
+--------------------------|---------|----------|---------|---------|----------------------------------------------------------------------
+Test Suites: 17 passed, 17 total
+Tests:       176 passed, 176 total
 Snapshots:   0 total
-Time:        23.149 s, estimated 53 s
+Time:        28.04 s
+```
 
 ### Integration Testing
 
@@ -332,3 +323,6 @@ Enhancing your GraphQL API with advanced features and best practices.
 
 ### Some resources for nested filters
 * https://dev.to/riyadhossain/mastering-mongodb-aggregation-framework-unraveling-the-power-of-pipelines-4oa0
+
+### Look into Subscriptions
+* https://typegraphql.com/docs/subscriptions.html#triggering-subscription-topics

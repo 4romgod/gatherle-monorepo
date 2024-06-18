@@ -23,7 +23,7 @@ export const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, 
     filters.forEach(({field, value, operator}) => {
         const fieldParts = field.split('.');
         if (fieldParts.length === 1) {
-            switch (operator || 'eq') {
+            switch (operator) {
                 case 'eq':
                     query.where(field).equals(value);
                     break;

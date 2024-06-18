@@ -17,7 +17,7 @@ class EventCategoryDAO {
 
     static async readEventCategoryById(eventId: string): Promise<EventCategoryType> {
         try {
-            const query = EventCategory.findById({id: eventId});
+            const query = EventCategory.findById(eventId);
             const event = await query.exec();
             if (!event) {
                 throw CustomError(`Event Category with id ${eventId} does not exist`, ErrorTypes.NOT_FOUND);
@@ -55,9 +55,6 @@ class EventCategoryDAO {
             return await query.exec();
         } catch (error) {
             console.error('Error reading event categories:', error);
-            if (error instanceof GraphQLError) {
-                throw error;
-            }
             throw KnownCommonError(error);
         }
     }
