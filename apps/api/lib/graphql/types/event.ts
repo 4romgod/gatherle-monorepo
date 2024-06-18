@@ -216,8 +216,13 @@ export class RSVPInputType {
     @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.USER_ID_LIST})
     userIdList?: string[];
 
+    // TODO write logic to RSVP users by their usernames
     @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.USERNAME_LIST})
     usernameList?: string[];
+
+    // TODO write logic to RSVP users by their emails
+    @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.EMAIL_LIST})
+    emailList?: string[];
 }
 
 @InputType({description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE})
@@ -228,6 +233,11 @@ export class CancelRSVPInputType {
     @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.USER_ID_LIST})
     userIdList?: string[];
 
+    // TODO write logic to cancel RSVP for users by their usernames
     @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.USERNAME_LIST})
     usernameList?: string[];
+
+    // TODO write logic to cancel RSVP for users by their emails
+    @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.RSVP.EMAIL_LIST})
+    emailList?: string[];
 }

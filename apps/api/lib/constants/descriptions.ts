@@ -2,6 +2,7 @@ export const EVENT_DESCRIPTIONS = {
     RSVP: {
         USER_ID_LIST: 'A unique list (set) of user IDs, (e.g. userIdList: ["userId001", "userId254"])',
         USERNAME_LIST: 'A unique list (set) of usernames, (e.g. usernameList: ["allmight001", "jack254"])',
+        EMAIL_LIST: 'A unique list (set) of emails, (e.g. emailList: ["allmight001@email.com", "jack254@email.com"])',
     },
     EVENT: {
         TYPE: 'Represents an event with details such as title, description, location, and associated metadata.',

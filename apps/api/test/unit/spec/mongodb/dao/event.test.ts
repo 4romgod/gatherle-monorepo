@@ -1,12 +1,13 @@
 import {EventDAO} from '@/mongodb/dao';
-import {Event} from '@/mongodb/models';
-import {EventType, SortOrderInput} from '@/graphql/types';
-import {CustomError, ErrorTypes, transformOptionsToPipeline} from '@/utils';
+import {Event, User} from '@/mongodb/models';
+import {CancelRSVPInputType, EventType, RSVPInputType, SortOrderInput} from '@/graphql/types';
+import {CustomError, ErrorTypes, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {QueryOptionsInput, CreateEventInputType, EventStatus} from '@/graphql/types';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
 import {PipelineStage} from 'mongoose';
 import {MockMongoError} from '@/test/utils';
+import * as validationUtil from '@/utils/validateUserIdentifiers';
 
 jest.mock('@/mongodb/models', () => ({
     Event: {
@@ -317,6 +318,162 @@ describe('EventDAO', () => {
             expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(id, expect.objectContaining({...calledWithInput, slug: 'updated-event-title'}), {
                 new: true,
             });
+        });
+    });
+
+    describe('RSVP', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should RSVP users successfully', async () => {
+            const input: RSVPInputType = {
+                eventId: 'event123',
+                userIdList: ['user1', 'user2'],
+                usernameList: ['username1', 'username2'],
+                emailList: ['email1@example.com'],
+            };
+
+            const validatedUserIds = ['user1', 'user2', 'username1', 'username2', 'email1'];
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+
+            const updatedEventMock = {
+                id: 'event123',
+                rSVPList: validatedUserIds,
+            };
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(updatedEventMock));
+
+            const result = await EventDAO.RSVP(input);
+
+            expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(
+                'event123',
+                {
+                    $addToSet: {
+                        rSVPList: {$each: validatedUserIds},
+                    },
+                },
+                {new: true},
+            );
+
+            expect(result).toEqual(updatedEventMock);
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+        });
+
+        it('should throw NOT_FOUND GraphQLError when the event to RSVP users for is not found', async () => {
+            const input: RSVPInputType = {
+                eventId: 'nonexistentEvent',
+                userIdList: ['user1'],
+            };
+            const validatedUserIds = ['user1'];
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+            await expect(EventDAO.RSVP(input)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', 'nonexistentEvent'), ErrorTypes.NOT_FOUND),
+            );
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when Event.findByIdAndUpdate throws an UNKNOWN error', async () => {
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(['user1']);
+            const input: RSVPInputType = {
+                eventId: 'nonexistentEvent',
+                userIdList: ['user1'],
+            };
+
+            const updateQuery = {
+                $addToSet: {
+                    rSVPList: {
+                        $each: ['user1'],
+                    },
+                },
+            };
+
+            await expect(EventDAO.RSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
+            expect(Event.findByIdAndUpdate).toHaveBeenCalledWith('nonexistentEvent', updateQuery, {new: true});
+
+            await expect(EventDAO.RSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+        });
+    });
+
+    describe('cancelRSVP', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should cancelRSVP users successfully', async () => {
+            const input: RSVPInputType = {
+                eventId: 'event123',
+                userIdList: ['user1', 'user2'],
+                usernameList: ['username1', 'username2'],
+                emailList: ['email1@example.com'],
+            };
+
+            const validatedUserIds = ['user1', 'user2', 'username1', 'username2', 'email1'];
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+
+            const updatedEventMock = {
+                id: 'event123',
+                rSVPList: [],
+            };
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(updatedEventMock));
+
+            const result = await EventDAO.cancelRSVP(input);
+
+            expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(
+                'event123',
+                {
+                    $pull: {
+                        rSVPList: {$in: validatedUserIds},
+                    },
+                },
+                {new: true},
+            );
+
+            expect(result).toEqual(updatedEventMock);
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+        });
+
+        it('should throw NOT_FOUND GraphQLError when the event to cancel RSVP users is not found', async () => {
+            const input: RSVPInputType = {
+                eventId: 'nonexistentEvent',
+                userIdList: ['user1'],
+            };
+            const validatedUserIds = ['user1'];
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+            await expect(EventDAO.cancelRSVP(input)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', 'nonexistentEvent'), ErrorTypes.NOT_FOUND),
+            );
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when Event.findByIdAndUpdate throws an UNKNOWN error', async () => {
+            (Event.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(['user1']);
+            const input: RSVPInputType = {
+                eventId: 'nonexistentEvent',
+                userIdList: ['user1'],
+            };
+
+            const updateQuery = {
+                $pull: {
+                    rSVPList: {
+                        $in: ['user1'],
+                    },
+                },
+            };
+
+            await expect(EventDAO.cancelRSVP(input)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+            );
+            expect(Event.findByIdAndUpdate).toHaveBeenCalledWith('nonexistentEvent', updateQuery, {new: true});
+
+            await expect(EventDAO.RSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
+            expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
         });
     });
 });

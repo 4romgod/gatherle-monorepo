@@ -1,9 +1,10 @@
 import {GraphQLError} from 'graphql';
 import {Event} from '@/mongodb/models';
 import {EventType, UpdateEventInputType, CreateEventInputType, QueryOptionsInput, RSVPInputType, CancelRSVPInputType} from '@/graphql/types';
-import {CustomError, ErrorTypes, KnownCommonError, transformIdFields, transformOptionsToQuery, transformOptionsToPipeline} from '@/utils';
+import {CustomError, ErrorTypes, KnownCommonError, transformIdFields, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {kebabCase} from 'lodash';
 import {UpdateQuery} from 'mongoose';
+import {ERROR_MESSAGES} from '@/validation';
 
 class EventDAO {
     static async create(event: CreateEventInputType): Promise<EventType> {
@@ -46,17 +47,6 @@ class EventDAO {
             if (error instanceof GraphQLError) {
                 throw error;
             }
-            throw KnownCommonError(error);
-        }
-    }
-
-    static async queryEvents(options?: QueryOptionsInput): Promise<EventType[]> {
-        try {
-            const query = options ? transformOptionsToQuery(Event, options) : Event.find({});
-            const events = await query.populate('organizerList rSVPList eventCategoryList').exec();
-            return events;
-        } catch (error) {
-            console.error('Error reading events', error);
             throw KnownCommonError(error);
         }
     }
@@ -126,61 +116,62 @@ class EventDAO {
         }
     }
 
-    //TODO look deeper into this, its very suspecious. Why not just push 1 userID
     static async RSVP(input: RSVPInputType) {
-        const {eventId, userIdList = []} = input;
+        const {eventId} = input;
+
         try {
+            const validUserIds = await validateUserIdentifiers(input);
             const updateQuery: UpdateQuery<EventType> = {
                 $addToSet: {
                     rSVPList: {
-                        $each: userIdList,
+                        $each: validUserIds,
                     },
                 },
             };
-            const event = await Event.findOneAndUpdate({id: eventId}, updateQuery, {new: true})
+
+            const event = await Event.findByIdAndUpdate(eventId, updateQuery, {new: true})
                 .populate('organizerList rSVPList eventCategoryList')
                 .exec();
 
             if (!event) {
-                throw CustomError(`Event with id ${eventId} not found`, ErrorTypes.NOT_FOUND);
+                throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
             }
             return event;
         } catch (error) {
             console.error("Error updating event RSVP's", error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 
-    //TODO look deeper into this, its very suspecious. Why not just pop 1 userID
     static async cancelRSVP(input: CancelRSVPInputType) {
-        const {eventId, userIdList = []} = input;
+        const {eventId} = input;
+
         try {
+            const validUserIds = await validateUserIdentifiers(input);
             const updateQuery: UpdateQuery<EventType> = {
                 $pull: {
                     rSVPList: {
-                        $in: userIdList,
+                        $in: validUserIds,
                     },
                 },
             };
-            const event = await Event.findOneAndUpdate({id: eventId}, updateQuery, {new: true})
+            const event = await Event.findByIdAndUpdate(eventId, updateQuery, {new: true})
                 .populate('organizerList rSVPList eventCategoryList')
                 .exec();
 
             if (!event) {
-                throw CustomError(`Event with id ${eventId} not found`, ErrorTypes.NOT_FOUND);
+                throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
             }
             return event;
         } catch (error) {
             console.error("Error cancelling event RSVP's", error);
             if (error instanceof GraphQLError) {
                 throw error;
-            } else {
-                throw KnownCommonError(error);
             }
+            throw KnownCommonError(error);
         }
     }
 }
