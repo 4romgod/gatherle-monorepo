@@ -1,0 +1,8 @@
+dist
+.DS_Store
+.env
+.git
+.ntlango-env
+.vscode
+build
+ntlango.egg-info
