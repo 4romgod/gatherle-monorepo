@@ -320,6 +320,11 @@ type Mutation {
   deleteEventCategoryById(eventCategoryId: String!): EventCategoryType!
 
   """
+  Delete an event category by its Slug. Requires the category slug and returns the deleted category or 404 Error if not found.
+  """
+  deleteEventCategoryBySlug(slug: String!): EventCategoryType!
+
+  """
   Delete a user by their Email. Requires the user email and returns the deleted user or 404 Error if not found.
   """
   deleteUserByEmail(email: String!): UserType!

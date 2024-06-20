@@ -83,6 +83,8 @@ export const RESOLVER_DESCRIPTIONS = {
         updateEventCategory: 'Update an existing event category. Requires input data for updating the category and returns the updated category.',
         deleteEventCategoryById:
             'Delete an event category by its ID. Requires the category ID and returns the deleted category or 404 Error if not found.',
+        deleteEventCategoryBySlug:
+            'Delete an event category by its Slug. Requires the category slug and returns the deleted category or 404 Error if not found.',
         readEventCategoryById: 'Read an event category by its ID. Requires the category ID and returns the category or 404 Error if not found.',
         readEventCategoryBySlug: 'Read an event category by its slug. Requires the slug and returns the category or 404 Error if not found.',
         readEventCategories:

@@ -32,7 +32,7 @@ export const EventCategoryTypeSchema = z.object({
 });
 
 export const CreateEventCategoryTypeSchema = EventCategoryTypeSchema.extend({})
-    .omit({eventCategoryId: true})
+    .omit({eventCategoryId: true, slug: true})
     .describe('Schema for creating a new Event Category. All fields except ID are required.');
 
 export const UpdateEventCategoryTypeSchema = EventCategoryTypeSchema.partial()

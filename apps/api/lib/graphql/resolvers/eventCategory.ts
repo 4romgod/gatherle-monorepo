@@ -29,6 +29,12 @@ export class EventCategoryResolver {
         return EventCategoryDAO.deleteEventCategoryById(eventCategoryId);
     }
 
+    @Authorized([UserRole.Admin])
+    @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryBySlug})
+    async deleteEventCategoryBySlug(@Arg('slug') slug: string): Promise<EventCategoryType> {
+        return EventCategoryDAO.deleteEventCategoryBySlug(slug);
+    }
+
     @Query(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryById})
     async readEventCategoryById(@Arg('eventCategoryId') eventCategoryId: string): Promise<EventCategoryType | null> {
         validateMongodbId(eventCategoryId);

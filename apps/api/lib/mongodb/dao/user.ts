@@ -1,5 +1,13 @@
 import {User} from '@/mongodb/models';
-import {UserType, UpdateUserInputType, CreateUserInputType, QueryOptionsInput, LoginUserInputType, UserWithTokenType} from '@/graphql/types';
+import {
+    UserType,
+    UpdateUserInputType,
+    CreateUserInputType,
+    QueryOptionsInput,
+    LoginUserInputType,
+    UserWithTokenType,
+    UserRole,
+} from '@/graphql/types';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
@@ -166,6 +174,23 @@ class UserDAO {
             return deletedUser.toObject();
         } catch (error) {
             console.log(`Error deleting user with username ${username}`, error);
+            if (error instanceof GraphQLError) {
+                throw error;
+            }
+            throw KnownCommonError(error);
+        }
+    }
+
+    static async promoteUserToAdmin(userId: string): Promise<UserType> {
+        try {
+            const query = User.findByIdAndUpdate(userId, {userRole: UserRole.Admin}, {new: true});
+            const updatedUser = await query.exec();
+            if (!updatedUser) {
+                throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+            }
+            return updatedUser.toObject();
+        } catch (error) {
+            console.log(`Error promoting user to Admin with userId ${userId}`, error);
             if (error instanceof GraphQLError) {
                 throw error;
             }

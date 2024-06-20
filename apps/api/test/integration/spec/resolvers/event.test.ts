@@ -1,3 +1,4 @@
+import request from 'supertest';
 import {Express} from 'express';
 import {ServerContext, createGraphQlServer} from '@/server';
 import {ApolloServer} from '@apollo/server';
@@ -5,11 +6,12 @@ import {eventsMockData, usersMockData} from '@/mongodb/mockData';
 import {API_DOMAIN, GRAPHQL_API_PATH} from '@/constants';
 import {Server} from 'http';
 import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
-import {CreateEventInputType, EventCategoryType, EventType, UserWithTokenType} from '@/graphql/types';
+import {CreateEventInputType, EventCategoryType, EventType, UserRole, UserType, UserWithTokenType} from '@/graphql/types';
 import {ERROR_MESSAGES} from '@/validation';
 import {kebabCase} from 'lodash';
-import request from 'supertest';
-import {getCreateEventMutation} from '@/test/utils/queries/eventResolverQueries';
+import {getCreateEventMutation} from '@/test/utils';
+import {Types} from 'mongoose';
+import {generateToken} from '@/utils';
 
 describe('Event Resolver', () => {
     let expressApp: Express;
@@ -37,11 +39,18 @@ describe('Event Resolver', () => {
             apolloServer = createServerResults.apolloServer;
             httpServer = createServerResults.httpServer;
 
-            testUser = await UserDAO.create({
+            const user: UserType = {
                 ...usersMockData.at(0)!,
+                userId: new Types.ObjectId().toString(),
+                userRole: UserRole.User,
                 email: 'test@example.com',
                 username: 'testUser',
-            });
+            };
+            testUser = {
+                ...user,
+                token: generateToken(user),
+            };
+
             testEventCategory = await EventCategoryDAO.create({
                 name: 'TestEventCategory',
                 iconName: 'testIcon',
@@ -56,7 +65,6 @@ describe('Event Resolver', () => {
             apolloServer.stop();
             httpServer.close();
 
-            await UserDAO.deleteUserById(testUser.userId);
             await EventCategoryDAO.deleteEventCategoryById(testEventCategory.eventCategoryId);
         };
         return cleanup();

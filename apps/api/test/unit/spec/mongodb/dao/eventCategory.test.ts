@@ -12,6 +12,7 @@ jest.mock('@/mongodb/models', () => ({
         findOne: jest.fn(),
         findByIdAndUpdate: jest.fn(),
         findByIdAndDelete: jest.fn(),
+        findOneAndDelete: jest.fn(),
         find: jest.fn(),
     },
 }));
@@ -272,6 +273,39 @@ describe('EventCategoryDAO', () => {
                 CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
             );
             expect(EventCategory.findByIdAndDelete).toHaveBeenCalledWith(eventCategoryId);
+        });
+    });
+
+    describe('deleteEventCategoryBySlug', () => {
+        it('should delete an event category by eventCategoryId', async () => {
+            (EventCategory.findOneAndDelete as jest.Mock).mockReturnValue(
+                createMockSuccessMongooseQuery({
+                    toObject: () => mockEventCategory,
+                }),
+            );
+            const result = await EventCategoryDAO.deleteEventCategoryBySlug('mockSlug');
+
+            expect(EventCategory.findOneAndDelete).toHaveBeenCalledWith({slug: 'mockSlug'});
+            expect(result).toEqual(mockEventCategory);
+        });
+
+        it('should throw NOT_FOUND GraphQLError if event category to be deleted does not exist', async () => {
+            (EventCategory.findOneAndDelete as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+            await expect(EventCategoryDAO.deleteEventCategoryBySlug('mockSlug')).rejects.toThrow(
+                CustomError(`Event Category with slug mockSlug not found`, ErrorTypes.NOT_FOUND),
+            );
+            expect(EventCategory.findOneAndDelete).toHaveBeenCalledWith({slug: 'mockSlug'});
+        });
+
+        it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventCategory.findOneAndDelete throws an UNKNOWN error', async () => {
+            (EventCategory.findOneAndDelete as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+            const eventCategoryId = 'mockEventCategoryId';
+
+            await expect(EventCategoryDAO.deleteEventCategoryBySlug(eventCategoryId)).rejects.toThrow(
+                CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+            );
+            expect(EventCategory.findOneAndDelete).toHaveBeenCalledWith({slug: eventCategoryId});
         });
     });
 });

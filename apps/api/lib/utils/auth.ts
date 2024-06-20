@@ -35,7 +35,6 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
 
         if (user.userRole === UserRole.Admin) {
             console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName} and resource`);
-            console.log(args);
             return true;
         }
 

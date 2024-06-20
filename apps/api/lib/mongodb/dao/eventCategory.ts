@@ -90,6 +90,22 @@ class EventCategoryDAO {
             throw KnownCommonError(error);
         }
     }
+
+    static async deleteEventCategoryBySlug(slug: string): Promise<EventCategoryType> {
+        try {
+            const deletedEventCategory = await EventCategory.findOneAndDelete({slug}).exec();
+            if (!deletedEventCategory) {
+                throw CustomError(`Event Category with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+            }
+            return deletedEventCategory.toObject();
+        } catch (error) {
+            console.error('Error deleting event category by slug:', error);
+            if (error instanceof GraphQLError) {
+                throw error;
+            }
+            throw KnownCommonError(error);
+        }
+    }
 }
 
 export default EventCategoryDAO;
