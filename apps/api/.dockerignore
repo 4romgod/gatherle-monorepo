@@ -1,0 +1,7 @@
+.DS_Store
+.gitignore
+*.md
+coverage/
+dist/
+node_modules/
+nodemon.json

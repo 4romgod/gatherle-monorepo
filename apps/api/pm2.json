@@ -1,0 +1,5 @@
+{
+    "name": "ntlango-backend",
+    "node_args": "-r ts-node/register",
+    "script": "./dist/lib/scripts/startServer.js"
+}

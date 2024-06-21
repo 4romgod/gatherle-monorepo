@@ -3,7 +3,7 @@ import {ListenOptions} from 'net';
 import express, {Express} from 'express';
 import bodyParser from 'body-parser';
 import {MongoDbClient} from '@/clients';
-import {API_DOMAIN, MONGO_DB_URL, GRAPHQL_API_PATH, HttpStatusCode} from '@/constants';
+import {API_DOMAIN, MONGO_DB_URL, GRAPHQL_API_PATH, HttpStatusCode, NODE_ENV, STAGES} from '@/constants';
 import {ApolloServer} from '@apollo/server';
 import {expressMiddleware} from '@apollo/server/express4';
 import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttpServer';
@@ -38,16 +38,9 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
                 httpServer: createServer(expressApp),
             }),
         ],
-        includeStacktraceInErrorResponses: true, // TODO turn this off in prod
+        includeStacktraceInErrorResponses: NODE_ENV === STAGES.PROD,
         status400ForVariableCoercionErrors: true,
         formatError: (formattedError: GraphQLFormattedError, error: any) => {
-            if (formattedError.extensions?.code === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED) {
-                console.error('Failed to process request. Returning formatted Error\n', error);
-                return {
-                    ...formattedError,
-                    message: ERROR_MESSAGES.INVALID_QUERY,
-                };
-            }
             return formattedError;
         },
     });

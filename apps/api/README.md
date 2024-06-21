@@ -330,5 +330,8 @@ Enhancing your GraphQL API with advanced features and best practices.
 ### Look into custom decorators
 * https://typegraphql.com/docs/custom-decorators.html
 
+### Look into rate limitting/throttling
+* https://www.npmjs.com/package/express-rate-limit
+
 ## References and Good Reads
 * [type-graphql GitHub repo](https://github.com/MichalLytek/type-graphql)
