@@ -25,25 +25,25 @@ export class EventResolver {
 
     @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
     @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventById})
-    async deleteEventById(@Arg('eventId') eventId: string): Promise<EventType> {
+    async deleteEventById(@Arg('eventId', () => String) eventId: string): Promise<EventType> {
         validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId));
         return EventDAO.deleteEventById(eventId);
     }
 
     @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
     @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventBySlug})
-    async deleteEventBySlug(@Arg('slug') slug: string): Promise<EventType> {
+    async deleteEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventType> {
         return EventDAO.deleteEventBySlug(slug);
     }
 
     @Query(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventById})
-    async readEventById(@Arg('eventId') eventId: string): Promise<EventType | null> {
+    async readEventById(@Arg('eventId', () => String) eventId: string): Promise<EventType | null> {
         validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId));
         return EventDAO.readEventById(eventId);
     }
 
     @Query(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventBySlug})
-    async readEventBySlug(@Arg('slug') slug: string): Promise<EventType | null> {
+    async readEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventType | null> {
         return EventDAO.readEventBySlug(slug);
     }
 

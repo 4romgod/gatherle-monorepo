@@ -1,11 +1,15 @@
 {
   "name": "@ntlango/cdk",
   "version": "1.0.0",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:ts": "echo '\nTranspilling ts CDK code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
+    "cdk": "npx aws-cdk"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "aws-cdk-lib": "^2.147.0"
+  }
 }

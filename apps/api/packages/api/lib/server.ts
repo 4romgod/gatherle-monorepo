@@ -9,6 +9,7 @@ import {expressMiddleware} from '@apollo/server/express4';
 import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttpServer';
 import {createServer, Server} from 'http';
 import {GraphQLFormattedError} from 'graphql';
+import {startServerAndCreateLambdaHandler, handlers} from '@as-integrations/aws-lambda';
 import createSchema from '@/graphql/schema';
 
 export interface ServerContext {
@@ -19,7 +20,37 @@ export interface ServerContext {
 
 const serverStartTimeLabel = 'Server started after';
 
-export const createGraphQlServer = async (listenOptions: ListenOptions) => {
+const createApolloServer = (expressApp?: Express) => {
+    const apolloServer = new ApolloServer<ServerContext>({
+        schema: createSchema(),
+        includeStacktraceInErrorResponses: NODE_ENV === STAGES.PROD,
+        status400ForVariableCoercionErrors: true,
+        formatError: (formattedError: GraphQLFormattedError, error: any) => {
+            return formattedError;
+        },
+        ...(expressApp && {
+            plugins: [
+                ApolloServerPluginDrainHttpServer({
+                    httpServer: createServer(expressApp),
+                }),
+            ],
+        }),
+    });
+
+    return apolloServer;
+};
+
+export const graphqlLambdaHandler = async (event: any, context: any, callback: any) => {
+    console.log('Creating Apollo Server with Lambda Integration...');
+
+    await MongoDbClient.connectToDatabase(MONGO_DB_URL);
+
+    const apolloServer = createApolloServer();
+    const lambdaHandler = startServerAndCreateLambdaHandler(apolloServer, handlers.createAPIGatewayProxyEventV2RequestHandler());
+    return lambdaHandler(event, context, callback);
+};
+
+export const startExpressApolloServer = async (listenOptions: ListenOptions = {port: 2000}) => {
     console.time(serverStartTimeLabel);
     console.log('Creating Apollo with Express middleware server...');
 
@@ -29,19 +60,7 @@ export const createGraphQlServer = async (listenOptions: ListenOptions) => {
     expressApp.use(bodyParser.json({limit: '50mb'}));
     expressApp.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 
-    const apolloServer = new ApolloServer<ServerContext>({
-        schema: await createSchema(),
-        plugins: [
-            ApolloServerPluginDrainHttpServer({
-                httpServer: createServer(expressApp),
-            }),
-        ],
-        includeStacktraceInErrorResponses: NODE_ENV === STAGES.PROD,
-        status400ForVariableCoercionErrors: true,
-        formatError: (formattedError: GraphQLFormattedError, error: any) => {
-            return formattedError;
-        },
-    });
+    const apolloServer = createApolloServer(expressApp);
 
     console.log('Starting the apollo server...');
     await apolloServer.start();

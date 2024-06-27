@@ -7,34 +7,34 @@ export class EventCategoryType {
     @Field((type) => ID, {description: EVENT_CATEGORY_DESCRIPTIONS.ID})
     eventCategoryId: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.SLUG})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.SLUG})
     slug: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
     name: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
     iconName: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
     description: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
     color?: string;
 }
 
 @InputType({description: EVENT_CATEGORY_DESCRIPTIONS.CREATE_INPUT})
 export class CreateEventCategoryInputType {
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
     name: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
     iconName: string;
 
-    @Field({description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
+    @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
     description: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
     color?: string;
 }
 
@@ -43,15 +43,15 @@ export class UpdateEventCategoryInputType {
     @Field((type) => ID, {description: EVENT_CATEGORY_DESCRIPTIONS.ID})
     eventCategoryId: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
     name?: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.ICON_NAME})
     iconName?: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.DESCRIPTION})
     description?: string;
 
-    @Field({nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
+    @Field((type) => String, {nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR})
     color?: string;
 }

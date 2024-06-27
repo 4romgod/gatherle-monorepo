@@ -1,14 +1,14 @@
 import 'reflect-metadata';
-import {buildSchema} from 'type-graphql';
+import {buildSchemaSync} from 'type-graphql';
 import {EventCategoryResolver, EventResolver, UserResolver} from '@/graphql/resolvers';
 import {authChecker} from '@/utils/auth';
 import {ResolveTime} from '@/utils';
 
-const createSchema = async () => {
-    const schema = await buildSchema({
+const createSchema = () => {
+    const schema = buildSchemaSync({
         resolvers: [EventCategoryResolver, EventResolver, UserResolver],
         validate: true,
-        emitSchemaFile: true,
+        emitSchemaFile: false,
         globalMiddlewares: [ResolveTime],
         authChecker,
     });

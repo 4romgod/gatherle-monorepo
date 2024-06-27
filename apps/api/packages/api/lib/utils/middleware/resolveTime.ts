@@ -3,6 +3,7 @@ import {HTTP_METHOD_COLOR_MAP, RESOLVE_TIME_COLOR_MAP, GRAPHQL_API_PATH, ANSI_CO
 import {getStatusCodeColor} from '@/utils';
 import {ServerContext} from '@/server';
 
+// TODO make it work with AWS Lambda
 export const ResolveTime = async ({context, info}: ResolverData<ServerContext>, next: NextFn) => {
     const start = Date.now();
     await next();

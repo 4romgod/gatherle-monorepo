@@ -1,5 +1,9 @@
 {
     "name": "ntlango-backend",
     "node_args": "-r ts-node/register",
-    "script": "./dist/lib/scripts/startServer.js"
+    "script": "./dist/lib/scripts/startServer.js",
+    "error_file": "/tmp/ntlango-backend.err.log",
+    "out_file": "/tmp/ntlango-backend.out.log",
+    "log_file": "/tmp/ntlango-backend.log",
+    "merge_logs": true
 }

@@ -24,25 +24,25 @@ export class EventCategoryResolver {
 
     @Authorized([UserRole.Admin])
     @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryById})
-    async deleteEventCategoryById(@Arg('eventCategoryId') eventCategoryId: string): Promise<EventCategoryType> {
+    async deleteEventCategoryById(@Arg('eventCategoryId', () => String) eventCategoryId: string): Promise<EventCategoryType> {
         validateMongodbId(eventCategoryId);
         return EventCategoryDAO.deleteEventCategoryById(eventCategoryId);
     }
 
     @Authorized([UserRole.Admin])
     @Mutation(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryBySlug})
-    async deleteEventCategoryBySlug(@Arg('slug') slug: string): Promise<EventCategoryType> {
+    async deleteEventCategoryBySlug(@Arg('slug', () => String) slug: string): Promise<EventCategoryType> {
         return EventCategoryDAO.deleteEventCategoryBySlug(slug);
     }
 
     @Query(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryById})
-    async readEventCategoryById(@Arg('eventCategoryId') eventCategoryId: string): Promise<EventCategoryType | null> {
+    async readEventCategoryById(@Arg('eventCategoryId', () => String) eventCategoryId: string): Promise<EventCategoryType | null> {
         validateMongodbId(eventCategoryId);
         return EventCategoryDAO.readEventCategoryById(eventCategoryId);
     }
 
     @Query(() => EventCategoryType, {description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryBySlug})
-    async readEventCategoryBySlug(@Arg('slug') slug: string): Promise<EventCategoryType | null> {
+    async readEventCategoryBySlug(@Arg('slug', () => String) slug: string): Promise<EventCategoryType | null> {
         return EventCategoryDAO.readEventCategoryBySlug(slug);
     }
 

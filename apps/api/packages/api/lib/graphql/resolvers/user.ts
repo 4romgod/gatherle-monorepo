@@ -33,38 +33,38 @@ export class UserResolver {
 
     @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
     @Mutation(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.deleteUserById})
-    async deleteUserById(@Arg('userId') userId: string): Promise<UserType> {
+    async deleteUserById(@Arg('userId', () => String) userId: string): Promise<UserType> {
         validateMongodbId(userId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId));
         return UserDAO.deleteUserById(userId);
     }
 
     @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
     @Mutation(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.deleteUserByEmail})
-    async deleteUserByEmail(@Arg('email') email: string): Promise<UserType> {
+    async deleteUserByEmail(@Arg('email', () => String) email: string): Promise<UserType> {
         validateEmail(email);
         return UserDAO.deleteUserByEmail(email);
     }
 
     @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
     @Mutation(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.deleteUserByUsername})
-    async deleteUserByUsername(@Arg('username') username: string): Promise<UserType> {
+    async deleteUserByUsername(@Arg('username', () => String) username: string): Promise<UserType> {
         validateUsername(username);
         return UserDAO.deleteUserByUsername(username);
     }
 
     @Query(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.readUserById})
-    async readUserById(@Arg('userId') userId: string): Promise<UserType | null> {
+    async readUserById(@Arg('userId', () => String) userId: string): Promise<UserType | null> {
         validateMongodbId(userId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId));
         return UserDAO.readUserById(userId);
     }
 
     @Query(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.readUserByUsername})
-    async readUserByUsername(@Arg('username') username: string): Promise<UserType | null> {
+    async readUserByUsername(@Arg('username', () => String) username: string): Promise<UserType | null> {
         return UserDAO.readUserByUsername(username);
     }
 
     @Query(() => UserType, {description: RESOLVER_DESCRIPTIONS.USER.readUserByEmail})
-    async readUserByEmail(@Arg('email') email: string): Promise<UserType | null> {
+    async readUserByEmail(@Arg('email', () => String) email: string): Promise<UserType | null> {
         return UserDAO.readUserByEmail(email);
     }
 

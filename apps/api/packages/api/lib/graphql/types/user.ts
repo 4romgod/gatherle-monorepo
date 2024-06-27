@@ -31,40 +31,40 @@ export class UserType {
     @Field((type) => ID, {description: USER_DESCRIPTIONS.ID})
     userId: string;
 
-    @Field({description: USER_DESCRIPTIONS.EMAIL})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
-    @Field({description: USER_DESCRIPTIONS.USERNAME})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.USERNAME})
     username: string;
 
-    @Field({description: USER_DESCRIPTIONS.ADDRESS})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.ADDRESS})
     address: string;
 
-    @Field({description: USER_DESCRIPTIONS.BIRTHDATE})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.BIRTHDATE})
     birthdate: string;
 
-    @Field({description: USER_DESCRIPTIONS.GIVEN_NAME})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.GIVEN_NAME})
     given_name: string;
 
-    @Field({description: USER_DESCRIPTIONS.FAMILY_NAME})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.FAMILY_NAME})
     family_name: string;
 
-    @Field(() => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
+    @Field((type) => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
     gender?: Gender;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
     phone_number?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
     profile_picture?: string;
 
-    @Field(() => UserRole, {description: USER_DESCRIPTIONS.USER_ROLE})
+    @Field((type) => UserRole, {description: USER_DESCRIPTIONS.USER_ROLE})
     userRole: UserRole;
 }
 
 @ObjectType({description: USER_DESCRIPTIONS.WITH_TOKEN})
 export class UserWithTokenType extends UserType {
-    @Field({description: USER_DESCRIPTIONS.TOKEN})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.TOKEN})
     token: string;
 }
 
@@ -75,34 +75,34 @@ export interface UserTypeDocument extends UserType, Document {
 
 @InputType({description: USER_DESCRIPTIONS.CREATE_INPUT})
 export class CreateUserInputType {
-    @Field({description: USER_DESCRIPTIONS.EMAIL})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.USERNAME})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.USERNAME})
     username?: string;
 
-    @Field({description: USER_DESCRIPTIONS.ADDRESS})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.ADDRESS})
     address: string;
 
-    @Field({description: USER_DESCRIPTIONS.BIRTHDATE})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.BIRTHDATE})
     birthdate: string;
 
-    @Field({description: USER_DESCRIPTIONS.GIVEN_NAME})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.GIVEN_NAME})
     given_name: string;
 
-    @Field({description: USER_DESCRIPTIONS.FAMILY_NAME})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.FAMILY_NAME})
     family_name: string;
 
-    @Field(() => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
+    @Field((type) => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
     gender?: Gender;
 
-    @Field({description: USER_DESCRIPTIONS.PASSWORD})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.PASSWORD})
     password: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
     phone_number?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
     profile_picture?: string;
 }
 
@@ -111,47 +111,47 @@ export class UpdateUserInputType {
     @Field((type) => ID, {description: USER_DESCRIPTIONS.ID})
     userId: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.EMAIL})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.EMAIL})
     email?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.USERNAME})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.USERNAME})
     username?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.ADDRESS})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.ADDRESS})
     address?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.BIRTHDATE})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.BIRTHDATE})
     birthdate?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.GIVEN_NAME})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.GIVEN_NAME})
     given_name?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.FAMILY_NAME})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.FAMILY_NAME})
     family_name?: string;
 
-    @Field(() => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
+    @Field((type) => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
     gender?: Gender;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PASSWORD})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PASSWORD})
     password?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
     phone_number?: string;
 
-    @Field({nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
+    @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
     profile_picture?: string;
 
     @Authorized([UserRole.Admin])
     @Field(() => UserRole, {nullable: true, description: USER_DESCRIPTIONS.USER_ROLE})
-    userRole?: string;
+    userRole?: UserRole;
 }
 
 // TODO make this also work with username
 @InputType({description: USER_DESCRIPTIONS.LOGIN_INPUT})
 export class LoginUserInputType {
-    @Field({description: USER_DESCRIPTIONS.EMAIL})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
-    @Field({description: USER_DESCRIPTIONS.PASSWORD})
+    @Field((type) => String, {description: USER_DESCRIPTIONS.PASSWORD})
     password: string;
 }

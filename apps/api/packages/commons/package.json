@@ -1,10 +1,12 @@
 {
   "name": "@ntlango/commons",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:ts": "echo '\nTranspilling ts Commons code...' && tsc --build --pretty --verbose && echo 'All done with the build!'"
   },
   "author": "",
   "license": "ISC",

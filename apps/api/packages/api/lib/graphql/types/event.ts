@@ -30,7 +30,7 @@ registerEnumType(EventStatus, {
 
 @ObjectType({description: EVENT_DESCRIPTIONS.EVENT.MEDIA_TYPE})
 export class Media {
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.FEATURED_IMAGE})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.FEATURED_IMAGE})
     featuredImageUrl?: string;
 
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.OTHER_MEDIA_DATA})
@@ -42,13 +42,13 @@ export class EventType {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.SLUG})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.SLUG})
     slug: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.TITLE})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.TITLE})
     title: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
     description: string;
 
     @Field(() => String, {description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME})
@@ -57,10 +57,10 @@ export class EventType {
     @Field(() => String, {description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME})
     endDateTime: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
     recurrenceRule?: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
     location: string;
 
     @Field(() => EventStatus, {description: EVENT_DESCRIPTIONS.EVENT.STATUS})
@@ -99,22 +99,22 @@ export class EventType {
 
 @InputType({description: EVENT_DESCRIPTIONS.EVENT.CREATE_INPUT})
 export class CreateEventInputType {
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.TITLE})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.TITLE})
     title: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
     description: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME})
     startDateTime: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME})
     endDateTime: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
     recurrenceRule?: string;
 
-    @Field({description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
+    @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
     location: string;
 
     @Field(() => EventStatus, {description: EVENT_DESCRIPTIONS.EVENT.STATUS})
@@ -156,22 +156,22 @@ export class UpdateEventInputType {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TITLE})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TITLE})
     title?: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
     description?: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME})
     startDateTime?: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME})
     endDateTime?: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
     recurrenceRule?: string;
 
-    @Field({nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
+    @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
     location?: string;
 
     @Field(() => EventStatus, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.STATUS})

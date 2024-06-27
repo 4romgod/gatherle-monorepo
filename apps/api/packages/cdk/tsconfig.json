@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "target": "es2022",
+    "module": "commonjs",
+    "strict": true,
+    "noImplicitAny": false,
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "preserveSymlinks": true,
+  }
+}

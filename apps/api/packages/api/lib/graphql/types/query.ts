@@ -41,25 +41,25 @@ registerEnumType(SelectorOperatorInput, {
 
 @InputType({description: QUERY_DESCRIPTIONS.PAGINATION.INPUT})
 export class PaginationInput {
-    @Field(() => Int, {nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.LIMIT})
+    @Field((type) => Int, {nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.LIMIT})
     limit?: number;
 
-    @Field(() => Int, {nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.SKIP})
+    @Field((type) => Int, {nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.SKIP})
     skip?: number;
 }
 
 @InputType({description: QUERY_DESCRIPTIONS.SORT.INPUT})
 export class SortInput {
-    @Field({description: QUERY_DESCRIPTIONS.SORT.FIELD})
+    @Field((type) => String, {description: QUERY_DESCRIPTIONS.SORT.FIELD})
     field: string;
 
-    @Field(() => SortOrderInput, {defaultValue: SortOrderInput.asc, description: QUERY_DESCRIPTIONS.SORT.ORDER})
+    @Field((type) => SortOrderInput, {defaultValue: SortOrderInput.asc, description: QUERY_DESCRIPTIONS.SORT.ORDER})
     order: SortOrderInput;
 }
 
 @InputType({description: QUERY_DESCRIPTIONS.FILTER.INPUT})
 export class FilterInput {
-    @Field({description: QUERY_DESCRIPTIONS.FILTER.FIELD})
+    @Field((type) => String, {description: QUERY_DESCRIPTIONS.FILTER.FIELD})
     field: string;
 
     @Field((type) => AnyType, {description: QUERY_DESCRIPTIONS.FILTER.VALUE})

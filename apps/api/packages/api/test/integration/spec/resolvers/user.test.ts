@@ -17,7 +17,7 @@ import {
 import {CreateUserInputType, Gender, QueryOptionsInput, UserRole, UserType, UserWithTokenType} from '@/graphql/types';
 import {ERROR_MESSAGES} from '@/validation';
 import {generateToken, verifyToken} from '@/utils/auth';
-import { Types } from 'mongoose';
+import {Types} from 'mongoose';
 
 describe('User Resolver', () => {
     const url = `${API_DOMAIN}:${API_PORT}${GRAPHQL_API_PATH}`;
@@ -308,7 +308,7 @@ describe('User Resolver', () => {
         describe('loginUser Mutation', () => {
             beforeEach(async () => {
                 const createUserMutation = getCreateUserMutation(createUserInput);
-                await request(url).post('').send(createUserMutation)
+                await request(url).post('').send(createUserMutation);
             });
 
             afterEach(async () => {
@@ -376,7 +376,7 @@ describe('User Resolver', () => {
 
             it('should throw CONFLICT error when unique attribute already exists', async () => {
                 const anotherUsername = 'updatedUser';
-                try {                    
+                try {
                     const createUserMutation = getCreateUserMutation({
                         ...createUserInput,
                         email: 'updated@email.net',
