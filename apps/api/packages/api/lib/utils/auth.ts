@@ -1,4 +1,4 @@
-import {ServerContext} from '@/server';
+import {ServerContext} from '@/graphql';
 import {ArgsDictionary, ResolverData} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';

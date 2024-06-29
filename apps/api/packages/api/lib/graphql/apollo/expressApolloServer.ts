@@ -3,52 +3,12 @@ import express, {Express} from 'express';
 import bodyParser from 'body-parser';
 import {ListenOptions} from 'net';
 import {MongoDbClient} from '@/clients';
-import {API_DOMAIN, MONGO_DB_URL, GRAPHQL_API_PATH, HttpStatusCode, NODE_ENV, STAGES} from '@/constants';
-import {ApolloServer} from '@apollo/server';
+import {API_DOMAIN, MONGO_DB_URL, GRAPHQL_API_PATH, HttpStatusCode} from '@/constants';
+import {createApolloServer} from './server';
 import {expressMiddleware} from '@apollo/server/express4';
-import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttpServer';
-import {createServer, Server} from 'http';
-import {GraphQLFormattedError} from 'graphql';
-import {startServerAndCreateLambdaHandler, handlers} from '@as-integrations/aws-lambda';
-import createSchema from '@/graphql/schema';
-
-export interface ServerContext {
-    token?: string;
-    req?: express.Request;
-    res?: express.Response;
-}
+import {Server} from 'http';
 
 const serverStartTimeLabel = 'Server started after';
-
-const createApolloServer = (expressApp?: Express) => {
-    const apolloServer = new ApolloServer<ServerContext>({
-        schema: createSchema(),
-        includeStacktraceInErrorResponses: NODE_ENV === STAGES.PROD,
-        status400ForVariableCoercionErrors: true,
-        formatError: (formattedError: GraphQLFormattedError, error: any) => {
-            return formattedError;
-        },
-        ...(expressApp && {
-            plugins: [
-                ApolloServerPluginDrainHttpServer({
-                    httpServer: createServer(expressApp),
-                }),
-            ],
-        }),
-    });
-
-    return apolloServer;
-};
-
-export const graphqlLambdaHandler = async (event: any, context: any, callback: any) => {
-    console.log('Creating Apollo Server with Lambda Integration...');
-
-    await MongoDbClient.connectToDatabase(MONGO_DB_URL);
-
-    const apolloServer = createApolloServer();
-    const lambdaHandler = startServerAndCreateLambdaHandler(apolloServer, handlers.createAPIGatewayProxyEventV2RequestHandler());
-    return lambdaHandler(event, context, callback);
-};
 
 export const startExpressApolloServer = async (listenOptions: ListenOptions = {port: 2000}) => {
     console.time(serverStartTimeLabel);

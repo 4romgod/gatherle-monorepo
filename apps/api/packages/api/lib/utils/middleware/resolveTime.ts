@@ -1,7 +1,7 @@
 import {NextFn, ResolverData} from 'type-graphql';
 import {HTTP_METHOD_COLOR_MAP, RESOLVE_TIME_COLOR_MAP, GRAPHQL_API_PATH, ANSI_COLOR_CODES} from '@/constants';
 import {getStatusCodeColor} from '@/utils';
-import {ServerContext} from '@/server';
+import {ServerContext} from '@/graphql';
 
 // TODO make it work with AWS Lambda
 export const ResolveTime = async ({context, info}: ResolverData<ServerContext>, next: NextFn) => {

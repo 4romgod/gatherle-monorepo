@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier './**/*.{js,ts}' --write",
     "install-hooks": "sh ./packages/commons/scripts/hooks/install-hooks.sh",
     "build": "npm run build --workspaces --if-present",
     "build:ts": "npm run build:ts --workspaces --if-present",
+    "build:cdk": "npm run build:cdk -w @ntlango/cdk",
     "build:image": "npm run build:image --workspaces --if-present",
-    "build:esbuild": "npm run build:esbuild --workspaces --if-present",
-    "dev": "npm run dev --workspaces --if-present",
-    "test:integration": "npm run test:integration --workspaces --if-present",
-    "test:unit": "npm run test:unit --workspaces --if-present"
+    "dev": "npm run dev -w @ntlango/api",
+    "test:integration": "npm run test:integration -w @ntlango/api",
+    "test:unit": "npm run test:unit -w @ntlango/api",
+    "cdk": "npm run cdk -w @ntlango/cdk"
   },
   "devDependencies": {
     "prettier": "^3.2.5"
@@ -24,5 +24,8 @@
     "packages/cdk",
     "packages/api",
     "packages/commons"
-  ]
+  ],
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
 }

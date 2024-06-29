@@ -2,7 +2,7 @@
   "name": "@ntlango/cdk",
   "version": "1.0.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:cdk": "npm run cdk synthesize",
     "build:ts": "echo '\nTranspilling ts CDK code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "cdk": "npx aws-cdk"
   },

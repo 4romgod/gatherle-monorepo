@@ -1,7 +1,7 @@
 import {ResolverData} from 'type-graphql';
 import {HTTP_METHOD_COLOR_MAP, RESOLVE_TIME_COLOR_MAP, GRAPHQL_API_PATH, ANSI_COLOR_CODES} from '@/constants';
 import {getStatusCodeColor} from '@/utils';
-import {ServerContext} from '@/server';
+import {ServerContext} from '@/graphql';
 import {ResolveTime} from '@/utils/middleware';
 
 jest.mock('@/constants', () => ({

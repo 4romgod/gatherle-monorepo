@@ -5,7 +5,7 @@ import {UserRole, UserType} from '@/graphql/types';
 import {OPERATION_NAMES} from '@/constants';
 import {verify, sign} from 'jsonwebtoken';
 import {EventDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/server';
+import {ServerContext} from '@/graphql';
 import {ArgsDictionary} from 'type-graphql';
 import {GraphQLResolveInfo} from 'graphql';
 
