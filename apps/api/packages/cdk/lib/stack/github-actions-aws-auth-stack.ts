@@ -29,9 +29,6 @@ export class GitHubActionsAwsAuthStack extends Stack {
         const conditions: Conditions = {
             StringLike: {
                 [`${githubDomain}:sub`]: iamRepoDeployAccess,
-            },
-            ForAllValuesStringEquals: {
-                [`${githubDomain}:iss`]: `https://${githubDomain}`,
                 [`${githubDomain}:aud`]: stsService,
             },
         };
