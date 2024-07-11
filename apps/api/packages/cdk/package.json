@@ -2,7 +2,7 @@
   "name": "@ntlango/cdk",
   "version": "1.0.0",
   "scripts": {
-    "build:cdk": "npm run cdk synthesize",
+    "build:cdk": "npm run cdk synth",
     "cdk": "npx aws-cdk"
   },
   "author": "",

@@ -50,4 +50,4 @@ jobs:
         aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Deploy CDK
-      run: npm run cdk deploy --require-approval never
+      run: npm run cdk deploy GitHubActionsAwsAuthStackId GraphqlStackId --require-approval never  --verbose

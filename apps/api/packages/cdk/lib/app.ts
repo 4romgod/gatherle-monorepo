@@ -23,3 +23,5 @@ const graphqlStack = new GraphQLStack(app, 'GraphqlStackId', {
         region: BETA.awsRegion,
     },
 });
+
+app.synth();
