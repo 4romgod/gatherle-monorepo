@@ -5,10 +5,11 @@
   "scripts": {
     "format": "prettier './**/*.{js,ts}' --write",
     "install-hooks": "sh ./packages/commons/scripts/hooks/install-hooks.sh",
-    "build:ts": "npm run build:ts --workspaces --if-present",
+    "build:ts": "npm run build:ts -w @ntlango/commons && npm run build:ts -w @ntlango/api",
     "build:cdk": "npm run build:cdk -w @ntlango/cdk",
     "build:image": "npm run build:image --workspaces --if-present",
     "dev": "npm run dev -w @ntlango/api",
+    "seed": "npm run seed -w @ntlango/api",
     "test:integration": "npm run test:integration -w @ntlango/api",
     "test:unit": "npm run test:unit -w @ntlango/api",
     "cdk": "npm run cdk -w @ntlango/cdk"

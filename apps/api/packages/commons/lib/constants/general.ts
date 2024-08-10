@@ -1,4 +1,5 @@
 export const APPLICATION_STAGES = {
+    DEV: 'Dev',
     BETA: 'Beta',
     GAMMA: 'Gamma',
     PROD: 'Prod',

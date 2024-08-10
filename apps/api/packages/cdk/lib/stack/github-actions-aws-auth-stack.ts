@@ -38,7 +38,7 @@ export class GitHubActionsAwsAuthStack extends Stack {
             assumedBy: new WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, conditions),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')],
             description: 'This role is used via GitHub Actions to deploy with AWS CDK or Terraform on the target AWS account',
-            maxSessionDuration: Duration.hours(12),
+            maxSessionDuration: Duration.hours(1),
         });
 
         new CfnOutput(this, 'GithubActionOidcIamRoleArn', {

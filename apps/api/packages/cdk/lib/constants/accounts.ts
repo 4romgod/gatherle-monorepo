@@ -6,7 +6,7 @@ export type ServiceAccount = {
     applicationStage: string;
 };
 
-export const BETA: ServiceAccount = {
+export const BETA_ACCOUNT: ServiceAccount = {
     accountNumber: '471112776816',
     awsRegion: AWS_REGIONS.Ireland,
     applicationStage: APPLICATION_STAGES.BETA,

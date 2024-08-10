@@ -9,13 +9,6 @@ export enum HttpStatusCode {
     INTERNAL_SERVER_ERROR = 500,
 }
 
-export enum STAGES {
-    DEV = 'dev',
-    BETA = 'beta',
-    GAMMA = 'gamma',
-    PROD = 'prod',
-}
-
 export const GRAPHQL_API_PATH = '/v1/graphql';
 
 export const REGEX_PHONE_NUMBER = /^\+\d{1,3}\d{3,14}$/;
@@ -82,3 +75,8 @@ export const STATUS_CODE_COLOR_MAP = [
     {range: /^4\d{2}$/, color: ANSI_COLOR_CODES.YELLOW},
     {range: /^5\d{2}$/, color: ANSI_COLOR_CODES.RED},
 ];
+
+export const SECRET_KEYS = {
+    MONGO_DB_URL: 'MONGO_DB_URL',
+    JWT_SECRET: 'JWT_SECRET',
+};

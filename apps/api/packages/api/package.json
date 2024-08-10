@@ -23,6 +23,7 @@
   "dependencies": {
     "@apollo/server": "^4.10.4",
     "@as-integrations/aws-lambda": "^3.1.0",
+    "@aws-sdk/client-secrets-manager": "^3.621.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
     "class-validator": "^0.14.1",

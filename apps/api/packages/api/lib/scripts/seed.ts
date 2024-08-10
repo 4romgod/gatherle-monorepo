@@ -1,8 +1,9 @@
-import {MongoDbClient} from '@/clients';
+import {getSecret, MongoDbClient} from '@/clients';
 import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryData} from '@/mongodb/mockData';
-import {MONGO_DB_URL} from '@/constants';
+import {MONGO_DB_URL, NODE_ENV, SECRET_KEYS} from '@/constants';
 import {CreateEventCategoryInputType, CreateEventInputType, CreateUserInputType} from '@/graphql/types';
+import {APPLICATION_STAGES} from '@ntlango/commons';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
     const copyArray = [...array];
@@ -56,7 +57,14 @@ async function seedEvents(events: Array<CreateEventInputType>, userIds: Array<st
 
 async function main() {
     console.log('Starting to seed data into the database...');
-    await MongoDbClient.connectToDatabase(MONGO_DB_URL);
+
+    if (NODE_ENV == APPLICATION_STAGES.DEV) {
+        await MongoDbClient.connectToDatabase(MONGO_DB_URL);
+    } else {
+        const secret = await getSecret(SECRET_KEYS.MONGO_DB_URL);
+        await MongoDbClient.connectToDatabase(secret);
+    }
+
     await seedUsers(usersMockData);
     await seedEventCategories(eventCategoryData);
 

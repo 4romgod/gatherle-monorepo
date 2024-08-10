@@ -35,6 +35,7 @@ describe('Auth Utilities', () => {
 
     describe('generateToken', () => {
         it('should generate a token', () => {
+            console.log('env', process.env);
             (sign as jest.Mock).mockReturnValue('token');
             const token = generateToken(mockUser);
             expect(token).toBe('token');

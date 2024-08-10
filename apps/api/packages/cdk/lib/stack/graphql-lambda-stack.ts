@@ -6,6 +6,7 @@ import {Construct} from 'constructs';
 import {LogGroup} from 'aws-cdk-lib/aws-logs';
 import {Runtime} from 'aws-cdk-lib/aws-lambda';
 import {join} from 'path';
+import {SecretsManagementStack} from './secrets-management-stack';
 
 const pathRoot = join(__dirname, '../../../../');
 const pathPackages = join(pathRoot, 'packages');
@@ -14,14 +15,20 @@ const pathHandlerFile = join(pathApi, 'lib', 'index.ts');
 
 configDotenv({path: join(pathRoot, '.env')});
 
+interface GraphQLStackProps extends StackProps {
+    secretsStack: SecretsManagementStack;
+}
+
 export class GraphQLStack extends Stack {
     readonly graphqlLambda: NodejsFunction;
     readonly graphqlApi: RestApi;
     readonly graphql: ResourceBase;
     readonly graphqlApiPathOutput: CfnOutput;
 
-    constructor(scope: Construct, id: string, props: StackProps) {
+    constructor(scope: Construct, id: string, props: GraphQLStackProps) {
         super(scope, id, props);
+
+        const {secretsStack} = props;
 
         this.graphqlLambda = new NodejsFunction(this, 'GraphqlLambdaFunctionId', {
             functionName: 'GraphqlLambdaFunction',
@@ -41,14 +48,12 @@ export class GraphQLStack extends Stack {
                 nodeModules: ['bcrypt'],
             },
             environment: {
-                API_DOMAIN: `${process.env.API_DOMAIN}`,
-                API_PORT: `${process.env.API_PORT}`,
-                MONGO_DB_URL: `${process.env.MONGO_DB_URL}`,
                 NODE_ENV: `${process.env.NODE_ENV}`,
-                JWT_SECRET: `${process.env.JWT_SECRET}`,
-                BCRYPT_SALT: `${process.env.BCRYPT_SALT}`,
+                NTLANGO_SECRET_ARN: secretsStack.ntlangoSecret.secretArn,
             },
         });
+
+        secretsStack.ntlangoSecret.grantRead(this.graphqlLambda);
 
         this.graphqlApi = new LambdaRestApi(this, 'GraphqlRestApiId', {
             handler: this.graphqlLambda,

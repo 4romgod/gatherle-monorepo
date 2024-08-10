@@ -50,4 +50,7 @@ jobs:
         aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Deploy CDK
+      env:
+        NODE_ENV: ${{ vars.NODE_ENV }}
+        NTLANGO_SECRET_ARN: ${{ vars.NODE_ENV }}/ntlango/graphql-api
       run: npm run cdk deploy GitHubActionsAwsAuthStackId GraphqlStackId --verbose
