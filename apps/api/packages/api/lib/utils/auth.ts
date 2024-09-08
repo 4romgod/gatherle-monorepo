@@ -21,34 +21,34 @@ import {getConfigValue} from '@/clients';
  * @returns Returns true if the user is authorized, throws error otherwise.
  */
 export const authChecker = async (resolverData: ResolverData<ServerContext>, roles: string[]) => {
-    const {context, args, info} = resolverData;
-    const token = context.token;
+  const {context, args, info} = resolverData;
+  const token = context.token;
 
-    if (token) {
-        const user = await verifyToken(token);
-        const userRole = user.userRole;
-        const operationName = info.fieldName;
+  if (token) {
+    const user = await verifyToken(token);
+    const userRole = user.userRole;
+    const operationName = info.fieldName;
 
-        if (!roles.includes(userRole)) {
-            console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName} and resource:`);
-            throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
-        }
-
-        if (user.userRole === UserRole.Admin) {
-            console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName} and resource`);
-            return true;
-        }
-
-        const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
-        if (isAuthorized) {
-            console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
-            return true;
-        }
-
-        throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
+    if (!roles.includes(userRole)) {
+      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName} and resource:`);
+      throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
-    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+    if (user.userRole === UserRole.Admin) {
+      console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName} and resource`);
+      return true;
+    }
+
+    const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
+    if (isAuthorized) {
+      console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
+      return true;
+    }
+
+    throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
+  }
+
+  throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
 };
 
 /**
@@ -58,8 +58,8 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
  * @returns A JWT token as a string
  */
 export const generateToken = async (user: UserType, secret?: string, expiresIn?: string | number) => {
-    const jwtSecret = secret || (await getConfigValue(SECRET_KEYS.JWT_SECRET));
-    return sign(user, jwtSecret, {expiresIn: expiresIn ?? '1h'});
+  const jwtSecret = secret || (await getConfigValue(SECRET_KEYS.JWT_SECRET));
+  return sign(user, jwtSecret, {expiresIn: expiresIn ?? '1h'});
 };
 
 /**
@@ -68,37 +68,37 @@ export const generateToken = async (user: UserType, secret?: string, expiresIn?:
  * @returns The user decoded from the JWT token
  */
 export const verifyToken = async (token: string, secret?: string) => {
-    try {
-        const jwtSecret = secret || (await getConfigValue(SECRET_KEYS.JWT_SECRET));
-        const {iat, exp, ...user} = verify(token, jwtSecret) as JwtPayload;
-        return user as UserType;
-    } catch (err) {
-        console.log('Error when verifying token', err);
-        throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
-    }
+  try {
+    const jwtSecret = secret || (await getConfigValue(SECRET_KEYS.JWT_SECRET));
+    const {iat, exp, ...user} = verify(token, jwtSecret) as JwtPayload;
+    return user as UserType;
+  } catch (err) {
+    console.log('Error when verifying token', err);
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
 };
 
 export const isAuthorizedByOperation = async (operationName: string, args: ArgsDictionary, user: UserType): Promise<boolean> => {
-    switch (operationName) {
-        case OPERATION_NAMES.UPDATE_USER:
-            return args.input.userId == user.userId;
-        case OPERATION_NAMES.DELETE_USER_BY_ID:
-            return args.userId == user.userId;
-        case OPERATION_NAMES.DELETE_USER_BY_EMAIL:
-            return args.email == user.email;
-        case OPERATION_NAMES.DELETE_USER_BY_USERNAME:
-            return args.username == user.username;
-        case OPERATION_NAMES.UPDATE_EVENT:
-        case OPERATION_NAMES.DELETE_EVENT:
-            return await isAuthorizedToUpdateEvent(args.eventId, user);
-        case OPERATION_NAMES.CREATE_EVENT:
-            return true;
-        default:
-            return false;
-    }
+  switch (operationName) {
+    case OPERATION_NAMES.UPDATE_USER:
+      return args.input.userId == user.userId;
+    case OPERATION_NAMES.DELETE_USER_BY_ID:
+      return args.userId == user.userId;
+    case OPERATION_NAMES.DELETE_USER_BY_EMAIL:
+      return args.email == user.email;
+    case OPERATION_NAMES.DELETE_USER_BY_USERNAME:
+      return args.username == user.username;
+    case OPERATION_NAMES.UPDATE_EVENT:
+    case OPERATION_NAMES.DELETE_EVENT:
+      return await isAuthorizedToUpdateEvent(args.eventId, user);
+    case OPERATION_NAMES.CREATE_EVENT:
+      return true;
+    default:
+      return false;
+  }
 };
 
 const isAuthorizedToUpdateEvent = async (eventId: string, user: UserType) => {
-    const event = await EventDAO.readEventById(eventId);
-    return event.organizerList.map((organizer) => organizer.userId).includes(user.userId);
+  const event = await EventDAO.readEventById(eventId);
+  return event.organizerList.map((organizer) => organizer.userId).includes(user.userId);
 };

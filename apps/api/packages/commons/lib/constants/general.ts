@@ -1,12 +1,12 @@
 export const APPLICATION_STAGES = {
-    DEV: 'Dev',
-    BETA: 'Beta',
-    GAMMA: 'Gamma',
-    PROD: 'Prod',
+  DEV: 'Dev',
+  BETA: 'Beta',
+  GAMMA: 'Gamma',
+  PROD: 'Prod',
 };
 
 export const AWS_REGIONS = {
-    Ireland: 'eu-west-1',
-    N_Virginia: 'us-east-1',
-    Ohio: 'us-east-2',
+  Ireland: 'eu-west-1',
+  N_Virginia: 'us-east-1',
+  Ohio: 'us-east-2',
 };

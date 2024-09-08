@@ -6,14 +6,14 @@ import {configDotenv} from 'dotenv';
 configDotenv();
 
 export class SecretsManagementStack extends Stack {
-    public readonly ntlangoSecret: ISecret;
+  public readonly ntlangoSecret: ISecret;
 
-    constructor(scope: Construct, id: string, props: StackProps) {
-        super(scope, id, props);
+  constructor(scope: Construct, id: string, props: StackProps) {
+    super(scope, id, props);
 
-        this.ntlangoSecret = new Secret(this, 'ntlangoSecret', {
-            secretName: `${process.env.STAGE}/ntlango/graphql-api`,
-            description: 'Ntlango Secrets',
-        });
-    }
+    this.ntlangoSecret = new Secret(this, 'ntlangoSecret', {
+      secretName: `${process.env.STAGE}/ntlango/graphql-api`,
+      description: 'Ntlango Secrets',
+    });
+  }
 }

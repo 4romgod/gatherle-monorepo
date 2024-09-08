@@ -1,6 +1,6 @@
 export const getCreateEventCategoryMutation = (createEventCategoryInput: any) => {
-    return {
-        query: `mutation CreateEventCategory($input: CreateEventCategoryInputType!) {
+  return {
+    query: `mutation CreateEventCategory($input: CreateEventCategoryInputType!) {
             createEventCategory(input: $input) {
                 eventCategoryId
                 name
@@ -8,15 +8,15 @@ export const getCreateEventCategoryMutation = (createEventCategoryInput: any) =>
                 slug
             }
         }`,
-        variables: {
-            input: createEventCategoryInput,
-        },
-    };
+    variables: {
+      input: createEventCategoryInput,
+    },
+  };
 };
 
 export const getUpdateEventCategoryMutation = (updateEventCategoryInput: any) => {
-    return {
-        query: `mutation UpdateEventCategory($input: UpdateEventCategoryInputType!) {
+  return {
+    query: `mutation UpdateEventCategory($input: UpdateEventCategoryInputType!) {
             updateEventCategory(input: $input) {
                 eventCategoryId
                 name
@@ -25,15 +25,15 @@ export const getUpdateEventCategoryMutation = (updateEventCategoryInput: any) =>
                 iconName
             }
         }`,
-        variables: {
-            input: updateEventCategoryInput,
-        },
-    };
+    variables: {
+      input: updateEventCategoryInput,
+    },
+  };
 };
 
 export const getDeleteEventCategoryByIdMutation = (eventCategoryId: string) => {
-    return {
-        query: `mutation DeleteEventCategoryById($eventCategoryId: String!) {
+  return {
+    query: `mutation DeleteEventCategoryById($eventCategoryId: String!) {
             deleteEventCategoryById(eventCategoryId: $eventCategoryId) {
                 eventCategoryId
                 name
@@ -41,15 +41,15 @@ export const getDeleteEventCategoryByIdMutation = (eventCategoryId: string) => {
                 slug
             }
         }`,
-        variables: {
-            eventCategoryId: eventCategoryId,
-        },
-    };
+    variables: {
+      eventCategoryId: eventCategoryId,
+    },
+  };
 };
 
 export const getDeleteEventCategoryBySlugMutation = (slug: string) => {
-    return {
-        query: `mutation DeleteEventCategoryBySlug($slug: String!) {
+  return {
+    query: `mutation DeleteEventCategoryBySlug($slug: String!) {
             deleteEventCategoryBySlug(slug: $slug) {
                 eventCategoryId
                 name
@@ -57,8 +57,8 @@ export const getDeleteEventCategoryBySlugMutation = (slug: string) => {
                 slug
             }
         }`,
-        variables: {
-            slug: slug,
-        },
-    };
+    variables: {
+      slug: slug,
+    },
+  };
 };

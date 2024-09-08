@@ -1,8 +1,8 @@
 import {QueryOptionsInput} from '@/graphql/types';
 
 export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
-    return {
-        query: `query ReadEventCategoryById($eventCategoryId: String!) {
+  return {
+    query: `query ReadEventCategoryById($eventCategoryId: String!) {
             readEventCategoryById(eventCategoryId: $eventCategoryId) {
                 eventCategoryId
                 name
@@ -10,15 +10,15 @@ export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
                 slug
             }
         }`,
-        variables: {
-            eventCategoryId: eventCategoryId,
-        },
-    };
+    variables: {
+      eventCategoryId: eventCategoryId,
+    },
+  };
 };
 
 export const getReadEventCategoryBySlugQuery = (slug: string) => {
-    return {
-        query: `query ReadEventCategoryBySlug($slug: String!) {
+  return {
+    query: `query ReadEventCategoryBySlug($slug: String!) {
             readEventCategoryBySlug(slug: $slug) {
                 eventCategoryId
                 name
@@ -26,15 +26,15 @@ export const getReadEventCategoryBySlugQuery = (slug: string) => {
                 slug
             }
         }`,
-        variables: {
-            slug: slug,
-        },
-    };
+    variables: {
+      slug: slug,
+    },
+  };
 };
 
 export const getReadEventCategoriesQuery = () => {
-    return {
-        query: `query ReadEventCategories {
+  return {
+    query: `query ReadEventCategories {
             readEventCategories {
                 eventCategoryId
                 name
@@ -42,12 +42,12 @@ export const getReadEventCategoriesQuery = () => {
                 slug
             }
         }`,
-    };
+  };
 };
 
 export const getReadEventCategoriesWithOptionsQuery = (options: QueryOptionsInput) => {
-    return {
-        query: `query ReadEventCategories($options: QueryOptionsInput) {
+  return {
+    query: `query ReadEventCategories($options: QueryOptionsInput) {
             readEventCategories(options: $options) {
                 eventCategoryId
                 name
@@ -55,8 +55,8 @@ export const getReadEventCategoriesWithOptionsQuery = (options: QueryOptionsInpu
                 slug
             }
         }`,
-        variables: {
-            options,
-        },
-    };
+    variables: {
+      options,
+    },
+  };
 };

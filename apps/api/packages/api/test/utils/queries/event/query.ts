@@ -1,6 +1,6 @@
 export const getReadEventByIdQuery = (eventId: string) => {
-    return {
-        query: `query ReadEventById($eventId: String!) {
+  return {
+    query: `query ReadEventById($eventId: String!) {
             readEventById(eventId: $eventId) {
                 eventId
                 slug
@@ -8,15 +8,15 @@ export const getReadEventByIdQuery = (eventId: string) => {
                 description
             }
         }`,
-        variables: {
-            eventId: eventId,
-        },
-    };
+    variables: {
+      eventId: eventId,
+    },
+  };
 };
 
 export const getReadEventBySlugQuery = (slug: string) => {
-    return {
-        query: `query ReadEventBySlug($slug: String!) {
+  return {
+    query: `query ReadEventBySlug($slug: String!) {
             readEventBySlug(slug: $slug) {
                 eventId
                 slug
@@ -24,8 +24,8 @@ export const getReadEventBySlugQuery = (slug: string) => {
                 description
             }
         }`,
-        variables: {
-            slug: slug,
-        },
-    };
+    variables: {
+      slug: slug,
+    },
+  };
 };

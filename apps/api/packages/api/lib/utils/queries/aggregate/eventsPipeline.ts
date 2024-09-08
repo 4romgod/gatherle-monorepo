@@ -6,24 +6,24 @@ import {createSortStages} from './sort';
 import {createPaginationStages} from './pagination';
 
 export const transformOptionsToPipeline = (options?: QueryOptionsInput): PipelineStage[] => {
-    const pipeline: PipelineStage[] = [];
-    pipeline.push(...createEventLookupStages());
+  const pipeline: PipelineStage[] = [];
+  pipeline.push(...createEventLookupStages());
 
-    if (options) {
-        const {filters, sort, pagination} = options;
+  if (options) {
+    const {filters, sort, pagination} = options;
 
-        if (sort) {
-            pipeline.push(...createSortStages(sort));
-        }
-
-        if (pagination) {
-            pipeline.push(...createPaginationStages(pagination));
-        }
-
-        if (filters) {
-            pipeline.push(...createEventPipelineStages(filters));
-        }
+    if (sort) {
+      pipeline.push(...createSortStages(sort));
     }
 
-    return pipeline;
+    if (pagination) {
+      pipeline.push(...createPaginationStages(pagination));
+    }
+
+    if (filters) {
+      pipeline.push(...createEventPipelineStages(filters));
+    }
+  }
+
+  return pipeline;
 };

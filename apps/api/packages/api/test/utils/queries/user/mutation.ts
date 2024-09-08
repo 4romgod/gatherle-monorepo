@@ -1,6 +1,6 @@
 export const getCreateUserMutation = (user: any) => {
-    return {
-        query: `mutation CreateUser($input: CreateUserInputType!) {
+  return {
+    query: `mutation CreateUser($input: CreateUserInputType!) {
             createUser(input: $input) {
               userId
               email
@@ -9,15 +9,15 @@ export const getCreateUserMutation = (user: any) => {
               token
             }
         }`,
-        variables: {
-            input: user,
-        },
-    };
+    variables: {
+      input: user,
+    },
+  };
 };
 
 export const getUpdateUserMutation = (user: any) => {
-    return {
-        query: `mutation UpdateUser($input: UpdateUserInputType!) {
+  return {
+    query: `mutation UpdateUser($input: UpdateUserInputType!) {
             updateUser(input: $input) {
               userId
               email
@@ -27,68 +27,68 @@ export const getUpdateUserMutation = (user: any) => {
               userRole
             }
         }`,
-        variables: {
-            input: user,
-        },
-    };
+    variables: {
+      input: user,
+    },
+  };
 };
 
 export const getLoginUserMutation = (loginData: any) => {
-    return {
-        query: `mutation LoginUser($input: LoginUserInputType!) {
+  return {
+    query: `mutation LoginUser($input: LoginUserInputType!) {
             loginUser(input: $input) {
                 userId
                 email
                 token
             }
         }`,
-        variables: {
-            input: loginData,
-        },
-    };
+    variables: {
+      input: loginData,
+    },
+  };
 };
 
 export const getDeleteUserByIdMutation = (userId: string) => {
-    return {
-        query: `mutation DeleteUserById($userId: String!) {
+  return {
+    query: `mutation DeleteUserById($userId: String!) {
             deleteUserById(userId: $userId) {
               userId
               email
               username
             }
         }`,
-        variables: {
-            userId: userId,
-        },
-    };
+    variables: {
+      userId: userId,
+    },
+  };
 };
 
 export const getDeleteUserByEmailMutation = (email: string) => {
-    return {
-        query: `mutation DeleteUserByEmail($email: String!) {
+  return {
+    query: `mutation DeleteUserByEmail($email: String!) {
             deleteUserByEmail(email: $email) {
               userId
               email
               username
             }
         }`,
-        variables: {
-            email: email,
-        },
-    };
+    variables: {
+      email: email,
+    },
+  };
 };
 
 export const getDeleteUserByUsernameMutation = (username: string) => {
-    return {
-        query: `mutation DeleteUserByUsername($username: String!) {
+  return {
+    query: `mutation DeleteUserByUsername($username: String!) {
             deleteUserByUsername(username: $username) {
               userId
               email
               username
             }
         }`,
-        variables: {
-            username: username,
-        },
-    };
+    variables: {
+      username: username,
+    },
+  };
 };

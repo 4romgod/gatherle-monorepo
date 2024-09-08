@@ -1,6 +1,6 @@
 export const getCreateEventMutation = (event: any) => {
-    return {
-        query: `mutation CreateEvent($input: CreateEventInputType!) {
+  return {
+    query: `mutation CreateEvent($input: CreateEventInputType!) {
             createEvent(input: $input) {
               eventId
               slug
@@ -18,15 +18,15 @@ export const getCreateEventMutation = (event: any) => {
               }
             }
         }`,
-        variables: {
-            input: event,
-        },
-    };
+    variables: {
+      input: event,
+    },
+  };
 };
 
 export const getDeleteEventBySlugMutation = (slug: string) => {
-    return {
-        query: `mutation DeleteEventBySlug($slug: String!) {
+  return {
+    query: `mutation DeleteEventBySlug($slug: String!) {
       deleteEventBySlug(slug: $slug) {
         eventId
           slug
@@ -34,8 +34,8 @@ export const getDeleteEventBySlugMutation = (slug: string) => {
           description
         }
       }`,
-        variables: {
-            slug: slug,
-        },
-    };
+    variables: {
+      slug: slug,
+    },
+  };
 };

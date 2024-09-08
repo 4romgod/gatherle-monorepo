@@ -9,26 +9,26 @@ import {APPLICATION_STAGES} from '@ntlango/commons';
 import createSchema from '@/graphql/schema';
 
 export interface ServerContext {
-    token?: string;
-    req?: Request;
-    res?: Response;
+  token?: string;
+  req?: Request;
+  res?: Response;
 }
 
 export const createApolloServer = async (expressApp?: Express) => {
-    console.log('Creating Apollo Server...');
-    const apolloServer = new ApolloServer<ServerContext>({
-        schema: createSchema(),
-        includeStacktraceInErrorResponses: STAGE === APPLICATION_STAGES.PROD,
-        status400ForVariableCoercionErrors: true,
-        formatError: (formattedError: GraphQLFormattedError, error: any) => {
-            // TODO transform the different error types
-            return formattedError;
-        },
-        plugins: [
-            ApolloServerPluginLandingPageLocalDefault(),
-            ...(expressApp ? [ApolloServerPluginDrainHttpServer({httpServer: createServer(expressApp)})] : []),
-        ],
-    });
+  console.log('Creating Apollo Server...');
+  const apolloServer = new ApolloServer<ServerContext>({
+    schema: createSchema(),
+    includeStacktraceInErrorResponses: STAGE === APPLICATION_STAGES.PROD,
+    status400ForVariableCoercionErrors: true,
+    formatError: (formattedError: GraphQLFormattedError, error: any) => {
+      // TODO transform the different error types
+      return formattedError;
+    },
+    plugins: [
+      ApolloServerPluginLandingPageLocalDefault(),
+      ...(expressApp ? [ApolloServerPluginDrainHttpServer({httpServer: createServer(expressApp)})] : []),
+    ],
+  });
 
-    return apolloServer;
+  return apolloServer;
 };
