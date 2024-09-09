@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Grid, Box, Divider } from '@mui/material';
+import { Typography, Grid, Box } from '@mui/material';
 import { EventType } from '@/data/graphql/types/graphql';
 import EventBox from '@/components/events/event-box';
 import Link from 'next/link';

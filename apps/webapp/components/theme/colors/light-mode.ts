@@ -1,5 +1,5 @@
 import { PaletteOptions } from '@mui/material';
-import { cyan, lime, deepOrange, grey } from '@mui/material/colors';
+import { cyan, lightGreen, deepOrange } from '@mui/material/colors';
 
 const lightModeColors: PaletteOptions = {
   primary: {
@@ -9,9 +9,9 @@ const lightModeColors: PaletteOptions = {
     contrastText: '#FFFFFF',
   },
   secondary: {
-    light: lime[500],
-    main: lime[700],
-    dark: lime[900],
+    light: lightGreen[500],
+    main: lightGreen[700],
+    dark: lightGreen[900],
     contrastText: '#FFFFFF',
   },
   error: {

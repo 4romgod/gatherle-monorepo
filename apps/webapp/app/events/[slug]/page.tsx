@@ -1,12 +1,23 @@
-import Link from 'next/link';
-import { GetEventBySlugDocument } from '@/data/graphql/types/graphql';
+import { Metadata } from 'next';
+import { GetEventBySlugDocument, Location } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
-import { Box, Typography, Grid, Avatar, CardMedia, Container, Chip, Stack } from '@mui/material';
-import { getEventCategoryIcon } from '@/lib/constants';
-import { getFormattedDate } from '@/lib/utils';
+import { Box, Typography, Grid, CardMedia, Container, Stack } from '@mui/material';
 import PurchaseCard from '@/components/purchase-card';
 import EventCategoryChip from '@/components/events/category/chip';
 import UserChip from '@/components/users/user-chip';
+import { RRule } from 'rrule';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Ntlango',
+    template: 'Ntlango',
+  },
+  icons: {
+    icon: '/logo-img.png',
+    shortcut: '/logo-img.png',
+    apple: '/logo-img.png',
+  },
+};
 
 export default async function Page({ params }: { params: { slug: string } }) {
   const { data: eventRetrieved } = await getClient().query({
@@ -14,6 +25,35 @@ export default async function Page({ params }: { params: { slug: string } }) {
     variables: { slug: params.slug },
   });
   const event = eventRetrieved.readEventBySlug;
+
+  const renderLocation = (location: Location) => {
+    switch (location.locationType) {
+      case 'venue':
+        return (
+          <Typography variant="body2" gutterBottom>
+            {location.address?.street && `${location.address.street}, `}
+            {location.address?.city && `${location.address.city}, `}
+            {location.address?.state && `${location.address.state}, `}
+            {location.address?.zipCode && `${location.address.zipCode}, `}
+            {location.address?.country}
+          </Typography>
+        );
+      case 'online':
+        return (
+          <Typography variant="body2" gutterBottom>
+            This event will be held online.
+          </Typography>
+        );
+      case 'tba':
+        return (
+          <Typography variant="body2" gutterBottom>
+            The location will be announced soon.
+          </Typography>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <Container>
@@ -44,10 +84,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
                 Date and Time
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <b>Start Date:</b> {getFormattedDate(event.startDateTime)}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <b>End Date:</b> {getFormattedDate(event.endDateTime)}
+                {RRule.fromString(event.recurrenceRule).toText()}
               </Typography>
             </Box>
 
@@ -55,9 +92,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
               <Typography variant="h5" gutterBottom>
                 Location
               </Typography>
-              <Typography variant="body2" gutterBottom>
-                {event.location}
-              </Typography>
+              {renderLocation(event.location)}
             </Box>
 
             <Box component="div" mt={5}>
@@ -75,7 +110,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
               </Typography>
               <Stack direction="row" spacing={1} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
                 {(event.eventCategoryList.length > 0) ? event.eventCategoryList.map((category, index) => (
-                 <EventCategoryChip key={`${category.name}.${index}`} category={category} />
+                  <EventCategoryChip key={`${category.name}.${index}`} category={category} />
                 )) : (
                   <Typography variant='body2'>
                     No available categories

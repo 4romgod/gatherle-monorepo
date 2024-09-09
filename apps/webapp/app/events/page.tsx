@@ -1,11 +1,13 @@
 import { Metadata } from 'next';
 import EventTileGrid from '@/components/events/event-tile-grid';
-import DisplayEventFilters from '@/components/events/display-event-filters';
 import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
 import { getClient } from '@/data/graphql';
-import { Typography, Container, Grid, Box } from '@mui/material';
+import { Typography, Grid, Box, Paper } from '@mui/material';
 import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import SearchInput from '@/components/search/search-box';
+import DesktopEventFilters from '@/components/events/filters/desktop/display-desktop-filters';
+import MobileEventFilters from '@/components/events/filters/mobile/display-mobile-filters';
+import CustomContainer from '@/components/custom-container';
 
 export const metadata: Metadata = {
   title: {
@@ -31,8 +33,8 @@ export default async function Home() {
   const eventsByCategory = groupEventsByCategory(events);
 
   return (
-    <main>
-      <Container>
+    <Box component="main">
+      <CustomContainer>
         <Box component="div">
           <Box component="div">
             <SearchInput
@@ -44,21 +46,25 @@ export default async function Home() {
             />
           </Box>
         </Box>
-        <Grid container spacing={3} justifyContent="space-between">
-          <Grid item md={3} id="event-filters" width={'100%'}>
-            <DisplayEventFilters categoryList={allCategories} />
+
+        <Box component="div">
+          <Grid container mt={10}>
+            <Grid item md={4} id="event-filters" width={'100%'} p={2}>
+              <DesktopEventFilters categoryList={allCategories} />
+            </Grid>
+            <Grid item md={8} p={2} id="events">
+              <Paper sx={{ backgroundColor: 'background.default', p: 2 }}>
+                {events.readEvents.length ? (
+                  <EventTileGrid eventsByCategory={eventsByCategory} />
+                ) : (
+                  <Typography variant="h4">No Events Found</Typography>
+                )}
+              </Paper>
+            </Grid>
           </Grid>
-          <Grid item md={9}>
-            <Box component="div">
-              {events.readEvents.length ? (
-                <EventTileGrid eventsByCategory={eventsByCategory} />
-              ) : (
-                <Typography variant="h4">No Events Found</Typography>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
-      </Container>
-    </main>
+          <MobileEventFilters categoryList={allCategories} />
+        </Box>
+      </CustomContainer>
+    </Box>
   );
 }

@@ -7,9 +7,10 @@ import { EventType } from '@/data/graphql/types/graphql';
 import { Box } from '@mui/material';
 import { CalendarIcon, CheckCircleIcon, TicketIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { ShareRounded, ThumbUpOffAltOutlined } from '@mui/icons-material';
+import { RRule } from 'rrule';
 
 export default function EventBox({ event }: { event: EventType }) {
-    const { title, startDateTime, rSVPList, media } = event;
+    const { title, recurrenceRule, rSVPList, media } = event;
 
     return (
         <Card
@@ -46,7 +47,7 @@ export default function EventBox({ event }: { event: EventType }) {
 
                     <Box component="div" sx={{ display: 'flex', flexDirection: 'row', marginTop: 1 }}>
                         <CalendarIcon height={20} width={20} />
-                        <Typography variant='subtitle2' paddingLeft={1}>{startDateTime}</Typography>
+                        <Typography variant='subtitle2' paddingLeft={1}>{RRule.fromString(recurrenceRule).toText()}</Typography>
                     </Box>
 
                     <Box component="div" sx={{ display: 'flex', flexDirection: 'row', marginTop: 1 }}>

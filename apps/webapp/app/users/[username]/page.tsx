@@ -2,9 +2,7 @@ import CustomContainer from '@/components/custom-container';
 import EventBox from '@/components/events/event-box';
 import { getClient } from '@/data/graphql';
 import { EventCategoryType, EventType, FilterOperatorInput, GetAllEventsDocument, GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
-import { getEventCategoryIcon } from '@/lib/constants';
-import { Typography, Avatar, Box, Grid, Paper, Chip } from '@mui/material';
-import Link from 'next/link';
+import { Typography, Box, Grid, Paper } from '@mui/material';
 import UserDetails from '@/components/users/user-details';
 import EventCategoryChip from '@/components/events/category/chip';
 

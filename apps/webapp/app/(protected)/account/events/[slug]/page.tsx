@@ -4,6 +4,7 @@ import { getClient } from '@/data/graphql';
 import { Box, Typography, Grid, Avatar, CardMedia, Container, Chip, Stack } from '@mui/material';
 import { getEventCategoryIcon } from '@/lib/constants';
 import EventOperationsModal from '@/components/modal/event-operations';
+import {RRule} from 'rrule';
 
 export default async function Page({ params }: { params: { slug: string } }) {
   // TODO this page should be accessible only to the event organizer
@@ -25,13 +26,10 @@ export default async function Page({ params }: { params: { slug: string } }) {
           {event.description}
         </Typography>
         <Typography variant="body2" gutterBottom>
-          <b>Start Date:</b> {event.startDateTime}
+          <b>Reccurrence rule</b> {RRule.fromString(event.recurrenceRule).toText()}
         </Typography>
         <Typography variant="body2" gutterBottom>
-          <b>End Date:</b> {event.endDateTime}
-        </Typography>
-        <Typography variant="body2" gutterBottom>
-          <b>Location:</b> {event.location}
+          <b>Location:</b> {JSON.stringify(event.location)}
         </Typography>
 
         <Box mt={2}>

@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Drawer, Button, styled, Box, Typography, Theme, useMediaQuery } from '@mui/material';
 import { Tune as TuneIcon } from '@mui/icons-material';
-import PriceFilter from '../desktop/price';
-import CategoryFilter from '../desktop/category';
-import DateFilter from '../desktop/date';
+import PriceFilter from '../price';
+import CategoryFilter from '../category';
+import DateFilter from '../date';
 import { DisplayEventFiltersProps } from '@/lib/constants';
+import StatusFilter from '../status';
 
 const FloatingButton = styled(Button)({
   position: 'fixed',
@@ -57,9 +58,25 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
         anchor="bottom"
         open={isBottomSheetOpen}
         onClose={toggleBottomSheet(false)}
+        PaperProps={{
+          sx: {
+            maxHeight: '80%',
+            borderRadius: '8px 8px 0 0',
+            backgroundColor: '#ffffffb'
+          }
+        }}
       >
         <Box component="div">
           <Typography variant='h6' p={2}>Filters</Typography>
+        </Box>
+        <Box component="div">
+          <Typography
+            variant='h6'
+            p={2}
+            onClick={toggleBottomSheet(false)}
+          >
+            X
+          </Typography>
         </Box>
         <Box component="div" sx={{ p: 2 }}>
           <Box component="div">
@@ -69,7 +86,21 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
             <CategoryFilter categoryList={categoryList} />
           </Box>
           <Box component="div" pt={1}>
+            <StatusFilter />
+          </Box>
+          <Box component="div" pt={1}>
             <DateFilter />
+          </Box>
+          <Box component="div" pt={1}>
+            <Button
+              variant="contained"
+              size="large"
+              color="secondary"
+              fullWidth={true}
+              sx={{ mt: 1, mb: 1 }}
+            >
+              Filter Events
+            </Button>
           </Box>
         </Box>
       </Drawer>

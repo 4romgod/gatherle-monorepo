@@ -6,7 +6,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 export default function DateFilter() {
     return (
-        <Paper sx={{ backgroundColor: 'background.default' }}>
+        <Paper sx={{ backgroundColor: 'background.paper' }}>
             <LocalizationProvider
                 dateAdapter={AdapterDayjs}
                 adapterLocale="en"

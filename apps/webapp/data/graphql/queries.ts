@@ -45,8 +45,6 @@ const GetAllEventsDocument = graphql(`
       slug
       title
       description
-      startDateTime
-      endDateTime
       eventCategoryList {
         eventCategoryId
         slug
@@ -61,7 +59,22 @@ const GetAllEventsDocument = graphql(`
       comments
       privacySetting
       eventLink
-      location
+      location {
+        locationType
+        coordinates {
+          latitude
+          longitude
+        }
+        address {
+          street
+          city
+          state
+          zipCode
+          country
+        }
+        details
+      }
+      recurrenceRule
       media {
         featuredImageUrl
       }
@@ -102,8 +115,6 @@ const GetEventBySlugDocument = graphql(`
       slug
       title
       description
-      startDateTime
-      endDateTime
       eventCategoryList {
         eventCategoryId
         slug
@@ -118,7 +129,22 @@ const GetEventBySlugDocument = graphql(`
       comments
       privacySetting
       eventLink
-      location
+      location {
+        locationType
+        coordinates {
+          latitude
+          longitude
+        }
+        address {
+          street
+          city
+          state
+          zipCode
+          country
+        }
+        details
+      }
+      recurrenceRule
       media {
         featuredImageUrl
       }
@@ -159,9 +185,22 @@ const DeleteEventByIdDocument = graphql(`
       slug
       title
       description
-      startDateTime
-      endDateTime
-      location
+      recurrenceRule
+      location {
+        locationType
+        coordinates {
+          latitude
+          longitude
+        }
+        address {
+          street
+          city
+          state
+          zipCode
+          country
+        }
+        details
+      }
       organizerList {
         userId
         email

@@ -1,17 +1,33 @@
 import { Box, SxProps, Theme } from "@mui/material";
 import { ReactNode } from "react";
 
-export default function CustomContainer({ children, sx }: { children: ReactNode; sx?: SxProps<Theme> }) {
-    return (
-        <Box
-            component="div"
-            sx={{
-                ...sx,
-                maxWidth: { xs: '95%', sm: '90%', md: '90%', lg: '80%' },
-                mx: 'auto',
-            }}
-        >
-            {children}
-        </Box>
-    )
-};
+interface CustomContainerProps {
+  children: ReactNode;
+  sx?: SxProps<Theme>;
+  maxWidthOverrides?: {
+    xs?: string;
+    sm?: string;
+    md?: string;
+    lg?: string;
+  };
+}
+
+export default function CustomContainer({ children, sx, maxWidthOverrides }: CustomContainerProps) {
+  return (
+    <Box
+      component="div"
+      sx={{
+        ...sx,
+        maxWidth: {
+          xs: maxWidthOverrides?.xs ?? '97%',
+          sm: maxWidthOverrides?.sm ?? '94%',
+          md: maxWidthOverrides?.md ?? '90%',
+          lg: maxWidthOverrides?.lg ?? '80%',
+        },
+        mx: 'auto',
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
