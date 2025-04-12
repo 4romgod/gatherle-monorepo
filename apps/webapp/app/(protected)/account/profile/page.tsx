@@ -1,6 +1,11 @@
-import { Container, Typography, Avatar, Box, Divider } from '@mui/material';
-import { Person } from '@mui/icons-material';
 import { auth } from '@/auth';
+import CustomContainer from '@/components/custom-container';
+import EventBox from '@/components/events/event-box';
+import { getClient } from '@/data/graphql';
+import { EventCategoryType, EventType, FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { Typography, Box, Grid, Paper } from '@mui/material';
+import UserDetails from '@/components/users/user-details';
+import EventCategoryChip from '@/components/events/category/chip';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -11,46 +16,64 @@ export default async function ProfilePage() {
 
   const user = session.user;
 
+  const { data: eventsRetrieved } = await getClient().query({
+    query: GetAllEventsDocument,
+    variables: {
+      options: {
+        filters: [
+          {
+            field: 'organizerList.userId',
+            operator: FilterOperatorInput.Eq,
+            value: user.userId,
+          }
+        ],
+      },
+    },
+  });
+  const events = eventsRetrieved.readEvents;
+
+  // TODO get this from user registration
+  const categories = events.reduce((accum: EventCategoryType[], curr: EventType) => accum.concat(curr.eventCategoryList), []);
+
   return (
-    <Container>
-      <Box my={4}>
-        <Typography variant="h4" fontWeight="bold" align="center" paddingBottom={2}>
-          {`${user.given_name} ${user.family_name}`}
-        </Typography>
-        <Divider />
-        <Box display="flex" alignItems="center" marginTop={4}>
-          <Avatar
-            src={user.profile_picture || ''}
-            alt={user.username}
-            sx={{ width: 100, height: 100 }}
-          >
-            <Person sx={{ width: 60, height: 60 }} />
-          </Avatar>
-          <Box marginLeft={4}>
-            <Typography variant="body1">
-              <b>First Name:</b> {user.given_name}
-            </Typography>
-            <Typography variant="body1">
-              <b>Second Name:</b> {user.family_name}
-            </Typography>
-            <Typography variant="body1">
-              <b>Email:</b> {user.email}
-            </Typography>
-            <Typography variant="body1">
-              <b>Gender:</b> {user.gender}
-            </Typography>
-            <Typography variant="body1">
-              <b>Birthdate:</b> {user.birthdate}
-            </Typography>
-            <Typography variant="body1">
-              <b>Address:</b> {user.address}
-            </Typography>
-            <Typography variant="body1">
-              <b>User Type:</b> {user.userRole}
-            </Typography>
-          </Box>
+    <Box component="main">
+      <CustomContainer>
+        <Box component="div">
+          <Grid container>
+            <Grid item md={4} width={'100%'} p={2}>
+              <UserDetails user={user} />
+            </Grid>
+            <Grid item md={8} width={'100%'} p={2}>
+              <Paper sx={{ backgroundColor: 'secondary.main', borderRadius: '12px', p: 5 }}>
+                <Typography variant="h5">Lorem</Typography>
+                <Typography variant="body1">
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Non, dolores obcaecati? Ea dolore, numquam laboriosam in eum beatae blanditiis veniam culpa aliquid consectetur repellat possimus impedit reprehenderit atque? Pariatur, maxime?
+                </Typography>
+              </Paper>
+              <Paper elevation={3} sx={{ p: 3, mt: 3, backgroundColor: 'background.default', borderRadius: '12px' }}>
+                <Typography variant="h5" gutterBottom>Interests</Typography>
+                {categories.map((category, index) => (
+                  <EventCategoryChip key={`${category.name}.${index}`} category={category} />
+                ))}
+              </Paper>
+
+              <Box component="div" pt={5}>
+                <Grid container spacing={2}>
+                  {events.map((event) => {
+                    return (
+                      <Grid item key={`EventTileGrid.${event.eventId}`} xs={12}>
+                        <Box component="div">
+                          <EventBox event={event} />
+                        </Box>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
-      </Box>
-    </Container>
+      </CustomContainer>
+    </Box>
   );
 }

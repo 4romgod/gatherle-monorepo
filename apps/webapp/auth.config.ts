@@ -4,8 +4,10 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { LoginUserInputTypeSchema } from './data/validation';
 import { loginUserGlobalAction } from './data/actions/global/auth/login';
 import type { NextAuthConfig } from 'next-auth';
+import { JWT_SECRET } from '@/lib/constants';
 
 export default {
+  secret: JWT_SECRET,
   providers: [
     GitHubProvider,
     GoogleProvider,
