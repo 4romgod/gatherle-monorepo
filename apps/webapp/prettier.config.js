@@ -1,10 +1,20 @@
 const styleguide = require('@vercel/style-guide/prettier');
 
 module.exports = {
-  ...styleguide,
-  plugins: [...styleguide.plugins],
+  arrowParens: 'avoid',
+  bracketSameLine: false,
+  bracketSpacing: true,
+  htmlWhitespaceSensitivity: 'css',
+  insertPragma: false,
+  jsxSingleQuote: false,
+  plugins: ['prettier-plugin-tailwindcss'],
   printWidth: 120,
-  trailingComma: 'all',
-  arrowParens: 'always',
+  proseWrap: 'always',
+  quoteProps: 'as-needed',
+  requirePragma: false,
   semi: true,
+  singleQuote: true,
+  tabWidth: 2,
+  trailingComma: 'all',
+  useTabs: false,
 };
