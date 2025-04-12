@@ -31,7 +31,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   <Box component="div" sx={{ minHeight: '100vh', pt: 15 }}>
                     {children}
                   </Box>
-                  <Footer />
+                  <Box
+                    component="div"
+                    sx={{
+                      marginTop: 10,
+                    }}
+                  >
+                    <Footer />
+                  </Box>
                 </body>
               </CustomThemeProvider>
             </CustomAppContextProvider>
