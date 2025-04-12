@@ -48,6 +48,7 @@ export class GraphQLStack extends Stack {
       environment: {
         STAGE: `${process.env.STAGE}`,
         NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
+        NODE_OPTIONS: '--enable-source-maps',
       },
     });
 
