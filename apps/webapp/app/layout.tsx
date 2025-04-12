@@ -10,6 +10,9 @@ import MainNavigation from '@/components/navigation/main';
 import Footer from '@/components/footer';
 import { Box } from '@mui/material';
 import { auth } from '@/auth';
+import dynamic from 'next/dynamic';
+
+const TopProgressBar = dynamic(() => import('@/components/progress-bar'), { ssr: false });
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -23,6 +26,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <CustomThemeProvider>
                 <body>
                   <ToastProvider />
+                  <TopProgressBar />
                   <MainNavigation isAuthN={Boolean(session)} />
                   <Box component="div" sx={{ minHeight: '100vh', pt: 15 }}>
                     {children}

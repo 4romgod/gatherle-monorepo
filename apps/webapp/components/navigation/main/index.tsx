@@ -53,7 +53,7 @@ export default function MainNavigation({ isAuthN }: { isAuthN: boolean }) {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="fixed">
+      <AppBar position="fixed" sx={{ boxShadow: 'none', zIndex: 1000 }}>
         <Toolbar disableGutters>
           <Box component="div" sx={{ display: { xs: isAuthN ? 'none' : 'flex', md: 'none' } }}>
             <TemporaryDrawer />
@@ -63,14 +63,32 @@ export default function MainNavigation({ isAuthN }: { isAuthN: boolean }) {
 
           <Box sx={{ flexGrow: 1 }} />
 
-          <ToggleThemeMode setThemeMode={setThemeMode} themeMode={themeMode} />
+          <Box component="div" sx={{}}>
+            <ToggleThemeMode setThemeMode={setThemeMode} themeMode={themeMode} />
+          </Box>
 
-          <Box component="div" sx={{ display: { xs: 'none', sm: isAuthN ? 'none' : 'flex' } }}>
-            <Button variant="outlined" color="secondary" onClick={() => router.push(ROUTES.AUTH.LOGIN)}>
+          <Box
+            component="div"
+            sx={{
+              display: { xs: 'none', sm: isAuthN ? 'none' : 'flex' },
+              marginX: 2,
+            }}
+          >
+            <Button
+              variant="text"
+              color="secondary"
+              onClick={() => router.push(ROUTES.AUTH.LOGIN)}
+              sx={{
+                marginX: 2,
+              }}
+            >
               Log In
             </Button>
 
-            <Button variant="contained" color="secondary" onClick={() => router.push(ROUTES.AUTH.REGISTER)}>
+            <Button
+              variant="contained"
+              color="secondary" onClick={() => router.push(ROUTES.AUTH.REGISTER)}
+            >
               Sign Up
             </Button>
           </Box>
