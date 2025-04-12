@@ -28,7 +28,7 @@ export default function EventBox({ event }: { event: EventType }) {
                 position: 'relative',
             }}
         >
-            {media && media.featuredImageUrl && (
+            {media && media.featuredImageUrl && (    // TODO handle undefined image (use a default image)
                 <CardMedia
                     component="img"
                     image={media.featuredImageUrl}
