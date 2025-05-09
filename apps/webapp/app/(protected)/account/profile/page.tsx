@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import CustomContainer from '@/components/custom-container';
 import EventBox from '@/components/events/event-box';
 import { getClient } from '@/data/graphql';
-import { EventCategoryType, EventType, FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { EventCategoryType, FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { Typography, Box, Grid, Paper } from '@mui/material';
 import UserDetails from '@/components/users/user-details';
 import EventCategoryChip from '@/components/events/category/chip';
@@ -14,7 +14,7 @@ export default async function ProfilePage() {
     return;
   }
 
-  const user = session.user;
+  const {token, __typename, ...user} = session.user;
 
   const { data: eventsRetrieved } = await getClient().query({
     query: GetAllEventsDocument,
@@ -33,7 +33,14 @@ export default async function ProfilePage() {
   const events = eventsRetrieved.readEvents;
 
   // TODO get this from user registration
-  const categories = events.reduce((accum: EventCategoryType[], curr: EventType) => accum.concat(curr.eventCategoryList), []);
+  const categories = Array.from(
+    events.reduce((accum, curr) => {
+      curr.eventCategoryList.forEach((category) => {
+        accum.set(category.eventCategoryId, category);
+      });
+      return accum;
+    }, new Map<string, EventCategoryType>())
+  ).map(([_, category]) => category);
 
   return (
     <Box component="main">

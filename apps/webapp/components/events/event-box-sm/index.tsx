@@ -5,10 +5,13 @@ import CardMedia from '@mui/material/CardMedia';
 import { Avatar, CardContent, Typography } from '@mui/material';
 import { EventType } from '@/data/graphql/types/graphql';
 import { Box } from '@mui/material';
-import { CalendarToday, Groups, LocationOn } from '@mui/icons-material';
-
+import { CalendarToday, Groups, LocationOn, CheckBoxRounded } from '@mui/icons-material';
+import { RRule } from 'rrule';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export default function EventBoxSm({ event }: { event: EventType }) {
+  const { title, recurrenceRule, rSVPList, location } = event;
+
   return (
     <Card
       sx={{
@@ -27,7 +30,7 @@ export default function EventBoxSm({ event }: { event: EventType }) {
       <Box sx={{ position: 'relative', paddingTop: '56.25%', overflow: 'hidden' }}>
         <CardMedia
           component="img"
-          image={event.media?.featuredImageUrl || ''} // TODO handle undefined image (use a default image)
+          image={event?.media?.featuredImageUrl || ''} // TODO handle undefined image (use a default image)
           alt={event.title}
           sx={{
             position: 'absolute',
@@ -58,34 +61,22 @@ export default function EventBoxSm({ event }: { event: EventType }) {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <CalendarToday fontSize="small" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }} />
           <Typography variant="body2" color="text.secondary">
-            {'Date goes here'} • {"Time goes here"}
+            {RRule.fromString(recurrenceRule).toText()}
           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <LocationOn fontSize="small" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }} />
           <Typography variant="body2" color="text.secondary">
-            {"Location goes here"}
+            {location.address?.country}, {location.address?.city}
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src={"organizer-image-url"} // TODO handle undefined image (use a default image)
-              alt={"organizer-name"}
-              sx={{ width: 24, height: 24, mr: 1 }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              {"event.organizer.name"}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Groups fontSize="small" sx={{ color: 'text.secondary', mr: 0.5, fontSize: '0.875rem' }} />
-            <Typography variant="body2" color="text.secondary">
-              {"event.rsvps"}
-            </Typography>
-          </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <CheckBoxRounded fontSize="small" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.875rem' }} />
+          <Typography variant="body2" color="text.secondary">
+            {rSVPList.length ?? 0} RSVP&lsquo;s
+          </Typography>
         </Box>
       </CardContent>
     </Card>
