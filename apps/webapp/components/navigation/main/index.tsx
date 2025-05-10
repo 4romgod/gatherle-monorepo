@@ -7,14 +7,12 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
-import { Mail, MoreVert, Notifications } from '@mui/icons-material';
+import { MailOutline, MoreVert, NotificationsOutlined } from '@mui/icons-material';
 import Avatar from '@mui/material/Avatar';
 import NotificationsMenu from '@/components/navigation/main/navigation-notifications-items';
 import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items';
 import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-drawer';
-import ToggleThemeMode from '@/components/theme/toggle-theme-mode';
-import { Button } from '@mui/material';
-import { useCustomAppContext } from '@/components/app-context';
+import { Button, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import Logo from '@/components/logo';
 
@@ -29,7 +27,6 @@ type MainNavigationProps = {
 export default function MainNavigation({ isAuthN, onHeightChange }: MainNavigationProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { themeMode, setThemeMode } = useCustomAppContext();
 
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationsMenuAnchorEl, setNotificationsMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -68,8 +65,13 @@ export default function MainNavigation({ isAuthN, onHeightChange }: MainNavigati
 
   return (
     <Box sx={{ flexGrow: 1 }} ref={appBarRef}>
-      <AppBar position="fixed" sx={{ boxShadow: 'none', zIndex: 1000 }}>
-        <Toolbar disableGutters>
+      <AppBar
+        position="fixed"
+        sx={{ boxShadow: 'none', zIndex: 1000 }}
+        color="primary"
+        enableColorOnDark
+      >
+        <Toolbar disableGutters color="primary">
           <Box component="div" sx={{ display: { xs: isAuthN ? 'none' : 'flex', md: 'none' } }}>
             <TemporaryDrawer />
           </Box>
@@ -78,10 +80,7 @@ export default function MainNavigation({ isAuthN, onHeightChange }: MainNavigati
 
           <Box sx={{ flexGrow: 1 }} />
 
-          <Box component="div" sx={{}}>
-            <ToggleThemeMode setThemeMode={setThemeMode} themeMode={themeMode} />
-          </Box>
-
+          {/* Auth Buttons */}
           <Box
             component="div"
             sx={{
@@ -108,35 +107,105 @@ export default function MainNavigation({ isAuthN, onHeightChange }: MainNavigati
             </Button>
           </Box>
 
-          <Box component="div" display="flex" sx={{ display: { xs: isAuthN ? 'flex' : 'none' } }}>
-            <Box sx={{ ml: 2, display: { xs: 'none', md: 'flex' } }}>
-              <IconButton size="large" aria-label="mails" color="primary">
-                <Link href={ROUTES.ACCOUNT.MESSAGES}>
-                  <Mail />
-                </Link>
-              </IconButton>
-              <IconButton size="large" aria-label="notifications" color="primary">
-                <Link href={ROUTES.ACCOUNT.NOTIFICATIONS}>
-                  <Notifications />
-                </Link>
+          {/* Logged in user Buttons */}
+          <Box
+            component="div"
+            display="flex"
+            sx={{
+              display: { xs: isAuthN ? 'flex' : 'none' },
+            }}
+          >
+            {/* Show only on large screens */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+              <Link href={ROUTES.ACCOUNT.MESSAGES}>
+                <IconButton
+                  size="large"
+                  aria-label="mails"
+                  disableRipple
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'text.primary',
+                      '&:hover': {
+                        color: 'secondary.main'
+                      }
+                    }}
+                  >
+                    <MailOutline />
+                    Messages
+                  </Typography>
+                </IconButton>
+              </Link>
+
+              <Link href={ROUTES.ACCOUNT.NOTIFICATIONS}>
+                <IconButton
+                  size="large"
+                  aria-label="mails"
+                  disableRipple
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'text.primary',
+                      '&:hover': {
+                        color: 'secondary.main'
+                      }
+                    }}
+                  >
+                    <NotificationsOutlined />
+                    Notifications
+                  </Typography>
+                </IconButton>
+              </Link>
+            </Box>
+
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mr: 2,
+              height: '100%',
+            }}>
+              <IconButton
+                size="large"
+                edge="end"
+                aria-label="account of current user"
+                aria-controls={profilesMenuId}
+                aria-haspopup="true"
+                onClick={handleProfilesMenuOpen}
+                disableRipple
+                sx={{
+                  '&:hover': {
+                    color: 'secondary.main'
+                  }
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    color: 'black',
+                    '&:hover': {
+                      backgroundColor: 'secondary.main'
+                    }
+                  }}
+                >
+                  A
+                </Avatar>
               </IconButton>
             </Box>
 
-            <IconButton
-              size="large"
-              edge="end"
-              aria-label="account of current user"
-              aria-controls={profilesMenuId}
-              aria-haspopup="true"
-              onClick={handleProfilesMenuOpen}
-              color="primary"
-              sx={{ mr: 1 }}
-            >
-              <Avatar color={'primary'} sx={{ width: 32, height: 32 }}>
-                A
-              </Avatar>
-            </IconButton>
-
+            {/* Show only on smaller screens */}
             <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
               <IconButton
                 size="large"

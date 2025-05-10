@@ -200,10 +200,10 @@ export default function Carousel({
 
         <Button
           endIcon={<ArrowForward />}
-          color="primary"
+          color="secondary"
           component={Link}
           href="/events"
-        >
+        >primary
           View all events
         </Button>
 

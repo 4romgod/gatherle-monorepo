@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { Divider, ListItemIcon } from '@mui/material';
+import { Divider, ListItemIcon, ListItemText, ListItem } from '@mui/material';
 import { AccountCircle, Logout, Settings } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
@@ -38,17 +38,25 @@ export default function ProfilesMenu({
       onClose={handleProfilesMenuClose}
     >
       <MenuItem onClick={handleProfilesMenuClose}>
-        <ListItemIcon>
-          <AccountCircle fontSize="small" />
-        </ListItemIcon>
-        <Link href={ROUTES.ACCOUNT.PROFILE}>Profile</Link>
+        <Link href={ROUTES.ACCOUNT.PROFILE}>
+          <ListItem>
+            <ListItemIcon>
+              <AccountCircle fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Profile</ListItemText>
+          </ListItem>
+        </Link>
       </MenuItem>
       <Divider />
       <MenuItem onClick={handleProfilesMenuClose}>
-        <ListItemIcon>
-          <Settings fontSize="small" />
-        </ListItemIcon>
-        <Link href={ROUTES.ACCOUNT.ROOT}>Settings</Link>
+        <Link href={ROUTES.ACCOUNT.ROOT}>
+          <ListItem>
+            <ListItemIcon>
+              <Settings fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Settings</ListItemText>
+          </ListItem>
+        </Link>
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -56,10 +64,12 @@ export default function ProfilesMenu({
           handleProfilesMenuClose();
         }}
       >
-        <ListItemIcon>
-          <Logout fontSize="small" />
-        </ListItemIcon>
-        Logout
+        <ListItem>
+          <ListItemIcon>
+            <Logout fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Logout</ListItemText>
+        </ListItem>
       </MenuItem>
     </Menu>
   );
