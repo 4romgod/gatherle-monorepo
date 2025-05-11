@@ -41,7 +41,7 @@ export default function Carousel({
 }: CarouselProps) {
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
- const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -345,7 +345,9 @@ export default function Carousel({
                 overflow: 'hidden',
               }}
             >
-              <EventBoxSm event={event} />
+              <Link href={`/events/${event.slug}`}>
+                <EventBoxSm event={event} />
+              </Link>
             </Paper>
           ))}
         </Box>

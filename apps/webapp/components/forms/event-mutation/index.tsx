@@ -43,6 +43,10 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
     setEventData({ ...eventData, status: selectedStatus });
   };
 
+  const handleEventCategoryListChange = (eventCategoryList: string[]) => {
+    setEventData({ ...eventData, eventCategoryList });
+  }
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setEventData({ ...eventData, [name]: value });
@@ -141,7 +145,7 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
             </Box>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Box
               sx={{
                 backgroundColor: 'background.paper',
@@ -160,6 +164,7 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
                 <Typography variant="h6">What categories does your event fall under?</Typography>
                 <CategoryFilter
                   categoryList={categoryList}
+                  onChange={handleEventCategoryListChange}
                 />
               </Box>
               <Box

@@ -1,12 +1,16 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, Chip, Typography, SelectChangeEvent } from '@mui/material';
 import { CategoryFilterProps, getEventCategoryIcon } from '@/lib/constants';
 
-export default function CategoryFilter({ categoryList, sxProps }: CategoryFilterProps) {
+export default function CategoryFilter({ categoryList, sxProps, onChange }: CategoryFilterProps) {
   const [categories, setCategories] = useState<string[]>([]);
 
+    useEffect(() => {
+      onChange && onChange(categories); // TODO make this function mandatory
+    }, [categories]);
+  
   const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
     const selectedCategories = event.target.value as string[];
     setCategories(selectedCategories);

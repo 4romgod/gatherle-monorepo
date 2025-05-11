@@ -1,11 +1,12 @@
 import { Metadata } from 'next';
 import { GetEventBySlugDocument, Location } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
-import { Box, Typography, Grid, CardMedia, Container, Stack } from '@mui/material';
+import { Box, Typography, Grid, CardMedia, Container, Stack, Avatar } from '@mui/material';
 import PurchaseCard from '@/components/purchase-card';
 import EventCategoryChip from '@/components/events/category/chip';
-import UserChip from '@/components/users/user-chip';
 import { RRule } from 'rrule';
+import { upperFirst } from 'lodash';
+import { CalendarToday, PeopleAltOutlined, Place } from '@mui/icons-material';
 
 export const metadata: Metadata = {
   title: {
@@ -24,34 +25,25 @@ export default async function Page({ params }: { params: { slug: string } }) {
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
   });
-  const event = eventRetrieved.readEventBySlug;
+  const { title, organizerList, description, media, recurrenceRule, location, eventCategoryList, rSVPList, comments } = eventRetrieved.readEventBySlug;
 
-  const renderLocation = (location: Location) => {
+  const getLocationText = (location: Location): string => {
     switch (location.locationType) {
       case 'venue':
-        return (
-          <Typography variant="body2" gutterBottom>
-            {location.address?.street && `${location.address.street}, `}
-            {location.address?.city && `${location.address.city}, `}
-            {location.address?.state && `${location.address.state}, `}
-            {location.address?.zipCode && `${location.address.zipCode}, `}
-            {location.address?.country}
-          </Typography>
-        );
+        const parts = [
+          location.address?.street,
+          location.address?.city,
+          location.address?.state,
+          location.address?.zipCode,
+          location.address?.country,
+        ].filter(Boolean);
+        return parts.join(', ');
       case 'online':
-        return (
-          <Typography variant="body2" gutterBottom>
-            This event will be held online.
-          </Typography>
-        );
+        return 'This event will be held online.';
       case 'tba':
-        return (
-          <Typography variant="body2" gutterBottom>
-            The location will be announced soon.
-          </Typography>
-        );
+        return 'The location will be announced soon.';
       default:
-        return null;
+        return '';
     }
   };
 
@@ -61,8 +53,8 @@ export default async function Page({ params }: { params: { slug: string } }) {
         <Box mt={2}>
           <CardMedia
             component="img"
-            image={event.media?.featuredImageUrl || ''} // TODO default this image
-            alt={event.title}
+            image={media?.featuredImageUrl || ''} // TODO default this image
+            alt={title}
             sx={{
               width: '100%',
               height: { xs: 230, sm: 300, md: 350, lg: 420, xl: 470 },
@@ -74,42 +66,78 @@ export default async function Page({ params }: { params: { slug: string } }) {
         <Grid container spacing={5}>
           <Grid item md={9} width={'100%'} mt={2}>
             <Box component="div">
-              <Typography variant="h3" gutterBottom>
-                {event.title}
+              <Typography fontWeight='bold' variant="h3" gutterBottom>
+                {title}
               </Typography>
             </Box>
 
-            <Box component="div" mt={5}>
+            <Box component="div" mt={8}>
               <Typography variant="h5" gutterBottom>
                 Date and Time
               </Typography>
-              <Typography variant="body2" gutterBottom>
-                {RRule.fromString(event.recurrenceRule).toText()}
+              <Typography fontWeight='bold' variant="body2" gutterBottom>
+                <CalendarToday sx={{ mr: 1 }} />
+                {upperFirst(RRule.fromString(recurrenceRule).toText())}
               </Typography>
             </Box>
 
-            <Box component="div" mt={5}>
+            <Box component="div" mt={8}>
               <Typography variant="h5" gutterBottom>
                 Location
               </Typography>
-              {renderLocation(event.location)}
+              <Typography fontWeight='bold' variant="body2" gutterBottom>
+                <Place sx={{ mr: 1 }} />
+                {getLocationText(location)}
+              </Typography>
             </Box>
 
-            <Box component="div" mt={5}>
+            <Box component="div" mt={8}>
               <Typography variant="h5" gutterBottom>
                 About this event
               </Typography>
               <Typography variant="body2" gutterBottom>
-                {event.description}
+                {description}
               </Typography>
             </Box>
 
-            <Box component="div" mt={5}>
+            <Box component="section" mt={8}>
+              <Typography variant="h5" gutterBottom>
+                Organized By
+              </Typography>
+
+              {organizerList.length === 0 ? (
+                <Typography color="text.secondary">No organizers listed.</Typography>
+              ) : (
+                <Grid container spacing={5}>
+                  {organizerList.map((organizer) => (
+                    <Grid item key={organizer.userId}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar
+                          src={organizer.profile_picture || undefined}
+                          alt={`${organizer.given_name} ${organizer.family_name}`}
+                          sx={{ width: 64, height: 64 }}
+                        />
+                        <Box>
+                          <Typography variant="h6">
+                            {organizer.given_name} {organizer.family_name}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            {`Email: ${organizer.email}`}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+
+            <Box component="div" mt={8}>
               <Typography variant="h5" gutterBottom>
                 Categories
               </Typography>
               <Stack direction="row" spacing={1} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                {(event.eventCategoryList.length > 0) ? event.eventCategoryList.map((category, index) => (
+                {(eventCategoryList.length > 0) ? eventCategoryList.map((category, index) => (
                   <EventCategoryChip key={`${category.name}.${index}`} category={category} />
                 )) : (
                   <Typography variant='body2'>
@@ -119,39 +147,13 @@ export default async function Page({ params }: { params: { slug: string } }) {
               </Stack>
             </Box>
 
-            <Box component="div" mt={5}>
-              <Typography variant="h5" gutterBottom>
-                Organizers
-              </Typography>
-              <Grid container spacing={2}>
-                {event.organizerList.map((organizer) => (
-                  <Grid item key={organizer.userId}>
-                    <UserChip user={organizer} />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-
-            <Box component="div" mt={5}>
-              <Typography variant="h5" gutterBottom>
-                RSVPs
-              </Typography>
-              <Grid container spacing={2}>
-                {event.rSVPList.map((rsvp) => (
-                  <Grid item key={rsvp.userId}>
-                    <UserChip user={rsvp} />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-
-            <Box component="div" mt={5}>
+            <Box component="div" mt={8}>
               <Typography variant="h5" gutterBottom>
                 Comments
               </Typography>
-              {event.comments ? (
+              {comments ? (
                 <Grid container spacing={2}>
-                  {Object.entries(event.comments).map(([key, comment]) => (
+                  {Object.entries(comments).map(([key, comment]) => (
                     <Grid item key={key}>
                       <Typography variant="body2" gutterBottom>
                         {String(comment)}
