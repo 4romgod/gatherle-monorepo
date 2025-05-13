@@ -13,6 +13,7 @@ import { Metadata } from 'next';
 import { getEventCategoryIcon } from '@/lib/constants';
 import EventsCarousel from '@/components/events/carousel';
 import { ROUTES } from '@/lib/constants';
+import EventCategoryBox from '@/components/events/category/box';
 
 export const metadata: Metadata = {
   title: {
@@ -102,62 +103,9 @@ export default async function HomePage() {
 
           <Grid container spacing={3} justifyContent="center">
             {eventCategories.readEventCategories.map((category, index) => {
-              const IconComponent = getEventCategoryIcon(category.iconName);
               return (
                 <Grid item xs={6} sm={4} md={2} key={index}>
-                  <Button
-                    component={Link}
-                    href={`/events#${category.name}`}
-                    sx={{
-                      width: '100%',
-                      height: '100%',
-                      minHeight: 140,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      backgroundColor: 'background.paper',
-                      borderRadius: 2,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                      transition: 'transform 0.3s, box-shadow 0.3s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
-                        backgroundColor: 'secondary.light'
-                      },
-                      p: 2
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        fontSize: '2rem',
-                        mb: 1,
-                        width: 50,
-                        height: 50,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(0,0,0,0.04)',
-                        marginBottom: 2
-                      }}
-                    >
-                      <IconComponent
-                        color={category.color || ''}
-                        height={24}
-                        width={24}
-                      />
-                    </Box>
-                    <Typography
-                      variant="subtitle1"
-                      component="span"
-                      fontWeight="medium"
-                      color="text.primary"
-                    >
-                      {category.name}
-                    </Typography>
-                  </Button>
+                  <EventCategoryBox eventCategory={category} />
                 </Grid>
               )
             })}

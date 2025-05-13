@@ -2,12 +2,11 @@
 
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
-import { Avatar, CardContent, Typography } from '@mui/material';
+import { CardContent, Typography } from '@mui/material';
 import { EventType } from '@/data/graphql/types/graphql';
 import { Box } from '@mui/material';
-import { CalendarToday, Groups, LocationOn, CheckBoxRounded } from '@mui/icons-material';
+import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
 import { RRule } from 'rrule';
-import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export default function EventBoxSm({ event }: { event: EventType }) {
   const { title, recurrenceRule, rSVPList, location } = event;
@@ -30,7 +29,7 @@ export default function EventBoxSm({ event }: { event: EventType }) {
       <Box sx={{ position: 'relative', paddingTop: '56.25%', overflow: 'hidden' }}>
         <CardMedia
           component="img"
-          image={event?.media?.featuredImageUrl || ''} // TODO handle undefined image (use a default image)
+          image={'https://picsum.photos/300'} // TODO handle undefined image (use a default image)
           alt={event.title}
           sx={{
             position: 'absolute',

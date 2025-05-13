@@ -29,6 +29,7 @@ interface CarouselProps {
   autoplayInterval?: number;
   itemWidth?: number;
   showIndicators?: boolean;
+  viewAllEventsButton: boolean;
 }
 
 export default function Carousel({
@@ -37,7 +38,8 @@ export default function Carousel({
   autoplay = true,
   autoplayInterval = 5000,
   itemWidth = 320,
-  showIndicators = true
+  showIndicators = true,
+  viewAllEventsButton = true
 }: CarouselProps) {
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
@@ -194,18 +196,22 @@ export default function Carousel({
       onMouseLeave={() => setIsHovering(false)}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
-        <Typography variant="h5" fontWeight="bold">
-          {title}
-        </Typography>
+        {title && (
+          <Typography variant="h5" fontWeight="bold">
+            {title}
+          </Typography>
+        )}
 
-        <Button
-          endIcon={<ArrowForward />}
-          color="secondary"
-          component={Link}
-          href="/events"
-        >primary
-          View all events
-        </Button>
+        {viewAllEventsButton && (
+          <Button
+            endIcon={<ArrowForward />}
+            color="secondary"
+            component={Link}
+            href="/events"
+          >
+            View all events
+          </Button>
+        )}
 
         {/* Desktop Navigation Controls */}
         {isLargeScreen && events.length > itemsPerView && (
@@ -213,13 +219,13 @@ export default function Carousel({
             <IconButton
               onClick={handleBack}
               disabled={activeItemIndex <= 0}
-              color="primary"
+              color="secondary"
               sx={{
                 borderRadius: '50%',
                 backgroundColor: theme => theme.palette.background.paper,
                 boxShadow: 1,
                 '&:hover': {
-                  backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
                 }
               }}
             >
@@ -228,13 +234,13 @@ export default function Carousel({
             <IconButton
               onClick={handleNext}
               disabled={activeItemIndex >= totalScrollableItems}
-              color="primary"
+              color="secondary"
               sx={{
                 borderRadius: '50%',
                 backgroundColor: theme => theme.palette.background.paper,
                 boxShadow: 1,
                 '&:hover': {
-                  backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
                 }
               }}
             >
@@ -267,7 +273,7 @@ export default function Carousel({
               zIndex: 10,
               backgroundColor: theme => alpha(theme.palette.background.paper, 0.8),
               boxShadow: 2,
-              color: 'primary.main',
+              color: 'secondary.main',
               '&:hover': {
                 backgroundColor: 'background.paper',
               },
@@ -292,7 +298,7 @@ export default function Carousel({
               zIndex: 10,
               backgroundColor: theme => alpha(theme.palette.background.paper, 0.8),
               boxShadow: 2,
-              color: 'primary.main',
+              color: 'secondary.main',
               '&:hover': {
                 backgroundColor: 'background.paper',
               },
@@ -378,9 +384,7 @@ export default function Carousel({
                 <FiberManualRecord
                   sx={{
                     fontSize: activeItemIndex === index ? 14 : 10,
-                    color: activeItemIndex === index
-                      ? 'primary.main'
-                      : alpha(theme.palette.primary.main, 0.3),
+                    color: (activeItemIndex === index) ? 'secondary.main' : alpha(theme.palette.secondary.main, 0.3),
                     transition: 'all 0.3s ease',
                   }}
                 />
