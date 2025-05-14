@@ -1,7 +1,16 @@
-export default async function MessagesPage() {
+import { Box } from '@mui/material';
+import dynamic from 'next/dynamic';
+
+const MessagesPanel = dynamic(() => import('@/components/messages/MessagesPanel'));
+
+export default function MessagesPage() {
   return (
-    <main>
-      <h1>Messages Page</h1>
-    </main>
+    <Box
+      sx={{
+        backgroundColor: 'background.paper'
+      }}
+    >
+      <MessagesPanel />
+    </Box>
   );
 }
