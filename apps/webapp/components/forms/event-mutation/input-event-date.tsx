@@ -79,7 +79,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
 
       {/* Date and Time Pickers */}
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DateTimePicker
               label="Start Date and Time"
@@ -91,7 +91,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
             />
           </LocalizationProvider>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DateTimePicker
               label="End Date and Time"
@@ -105,13 +105,13 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
         {/* Recurring Event Settings */}
         {eventType === 'recurring' && (
           <>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth color='secondary'>
                 <InputLabel color='secondary'>Frequency</InputLabel>
                 <Select
                   value={frequency}
                   onChange={(e) => setFrequency(Number(e.target.value) as Frequency)}
-                  color= 'secondary'
+                  color='secondary'
                 >
                   <MenuItem value={Frequency.DAILY}>Daily</MenuItem>
                   <MenuItem value={Frequency.WEEKLY}>Weekly</MenuItem>
@@ -120,7 +120,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Interval"
@@ -132,13 +132,13 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
             </Grid>
 
             {frequency === Frequency.WEEKLY && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <Typography variant="body1" gutterBottom>
                   Days of the Week
                 </Typography>
                 <Grid container spacing={1}>
                   {ALL_WEEKDAYS.map((day) => (
-                    <Grid item key={day}>
+                    <Grid key={day}>
                       <FormControlLabel
                         control={
                           <Checkbox

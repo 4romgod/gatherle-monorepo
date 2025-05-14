@@ -117,7 +117,7 @@ export default function InterestsSettingsPage({ user, eventCategories }: { user:
 
         {selectedInterests.length === 0 ? (
           <Typography variant="body2" color="textSecondary">
-            You haven't selected any interests yet. Click "Edit Interests" to get started!
+            You haven&apos;t selected any interests yet. Click &quot;Edit Interests&quot; to get started!
           </Typography>
         ) : (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -204,13 +204,13 @@ export default function InterestsSettingsPage({ user, eventCategories }: { user:
 
             <Grid container spacing={2}>
               {Object.entries(filteredInterests).map(([category, interests]) => (
-                <Grid item xs={12} key={category}>
+                <Grid size={{xs: 12}} key={category}>
                   <Typography variant="subtitle1" sx={{ mt: 1, mb: 1, fontWeight: 'bold' }}>
                     {category}
                   </Typography>
                   <Grid container spacing={1}>
                     {interests.map((interest) => (
-                      <Grid item xs={12} sm={6} md={4} key={interest}>
+                      <Grid size={{xs: 12, sm: 6, md: 4}} key={interest}>
                         <FormControlLabel
                           control={
                             <Checkbox

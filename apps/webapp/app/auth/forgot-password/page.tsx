@@ -1,14 +1,14 @@
 'use client';
 
+import { useActionState } from "react";
 import Logo from '@/components/logo';
 import { FormErrors } from '@/components/form-errors';
 import { forgotPasswordAction } from '@/data/actions/server';
 import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { Box, Button, Container, FormControl, InputLabel, OutlinedInput, Paper, Typography } from '@mui/material';
-import { useFormState } from 'react-dom';
 
 const ForgotPasswordPage = () => {
-  const [formState, formAction] = useFormState(forgotPasswordAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(forgotPasswordAction, SERVER_ACTION_INITIAL_STATE);
 
   return (
     <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.paper' }}>

@@ -26,7 +26,7 @@ const Footer = () => {
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           {footerSections.map((section) => (
-            <Grid item xs={6} sm={3} key={section.title}>
+            <Grid size={{xs: 6, sm: 3}} key={section.title}>
               <Typography 
                 variant="h6" 
                 fontWeight="bold" 
@@ -61,13 +61,13 @@ const Footer = () => {
         <Divider sx={{ my: 4 }} />
         
         <Grid container spacing={2} alignItems="center" justifyContent="space-between">
-          <Grid item xs={12} sm={6}>
+          <Grid size={{xs: 12, sm: 6}}>
             <Typography variant="body2" color="text.secondary">
               © {currentYear} Mapapa Solutions (Pty) Ltd. All rights reserved.
             </Typography>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid size={{xs: 12, sm: 6}}>
             <Box 
               sx={{ 
                 display: 'flex', 

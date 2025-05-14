@@ -49,10 +49,10 @@ export default async function Events() {
 
         <Box component="div">
           <Grid container mt={10}>
-            <Grid item md={4} id="event-filters" width={'100%'} p={2}>
+            <Grid size={{md: 4}} id="event-filters" width={'100%'} p={2}>
               <DesktopEventFilters categoryList={allCategories} />
             </Grid>
-            <Grid item md={8} p={2} id="events">
+            <Grid size={{md: 8}} p={2} id="events">
               <Paper sx={{ backgroundColor: 'background.default', p: 2 }}>
                 {events.readEvents.length ? (
                   <EventTileGrid eventsByCategory={eventsByCategory} />

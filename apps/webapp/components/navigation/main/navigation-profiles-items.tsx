@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { Divider, ListItemIcon, ListItemText, ListItem } from '@mui/material';
+import { Divider, ListItemIcon, ListItemText } from '@mui/material';
 import { AccountCircle, Logout, Settings } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
@@ -25,7 +25,7 @@ export default function ProfilesMenu({
     <Menu
       anchorEl={ProfilesMenuAnchorEl}
       anchorOrigin={{
-        vertical: 'top',
+        vertical: 'bottom',
         horizontal: 'right',
       }}
       id={ProfilesMenuId}
@@ -36,40 +36,60 @@ export default function ProfilesMenu({
       }}
       open={isProfilesMenuOpen}
       onClose={handleProfilesMenuClose}
+      slotProps={{
+        paper: {
+          style: {
+            padding: '8px 0',
+            minWidth: '200px'
+          }
+        }
+      }}
     >
-      <MenuItem onClick={handleProfilesMenuClose}>
-        <Link href={ROUTES.ACCOUNT.PROFILE}>
-          <ListItem>
-            <ListItemIcon>
-              <AccountCircle fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Profile</ListItemText>
-          </ListItem>
-        </Link>
-      </MenuItem>
+      <Link href={ROUTES.ACCOUNT.PROFILE} onClick={handleProfilesMenuClose}>
+        <MenuItem>
+          <ListItemIcon>
+            <AccountCircle fontSize="medium" />
+          </ListItemIcon>
+          <ListItemText
+            slotProps={{
+              primary: { fontSize: '1rem' }
+            }}
+          >
+            Profile
+          </ListItemText>
+        </MenuItem>
+      </Link>
+      <Link href={ROUTES.ACCOUNT.ROOT} onClick={handleProfilesMenuClose}>
+        <MenuItem>
+          <ListItemIcon>
+            <Settings fontSize="medium" />
+          </ListItemIcon>
+          <ListItemText
+            slotProps={{
+              primary: { fontSize: '1rem' }
+            }}
+          >
+            Settings
+          </ListItemText>
+        </MenuItem>
+      </Link>
       <Divider />
-      <MenuItem onClick={handleProfilesMenuClose}>
-        <Link href={ROUTES.ACCOUNT.ROOT}>
-          <ListItem>
-            <ListItemIcon>
-              <Settings fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Settings</ListItemText>
-          </ListItem>
-        </Link>
-      </MenuItem>
       <MenuItem
         onClick={() => {
           logoutUserAction();
           handleProfilesMenuClose();
         }}
       >
-        <ListItem>
-          <ListItemIcon>
-            <Logout fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Logout</ListItemText>
-        </ListItem>
+        <ListItemIcon>
+          <Logout fontSize="medium" />
+        </ListItemIcon>
+        <ListItemText
+          slotProps={{
+            primary: { fontSize: '1rem' }
+          }}
+        >
+          Logout
+        </ListItemText>
       </MenuItem>
     </Menu>
   );

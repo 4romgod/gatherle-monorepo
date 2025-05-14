@@ -20,7 +20,8 @@ const nextConfig = {
   },
   compiler: {
     styledComponents: true,
-  }
+  },
+  allowedDevOrigins: ['*']
 };
 
 export default nextConfig;

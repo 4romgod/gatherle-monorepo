@@ -6,7 +6,7 @@ import { ROUTES } from '@/lib/constants';
 
 export default function UserBox({ user }: { user: UserType }) {
   return (
-    <Grid item xs={12} sm={6} md={4} style={{ marginBottom: '1rem' }}>
+    <Grid size={{ xs: 12, sm: 6, md: 4 }} style={{ marginBottom: '1rem' }}>
       <Link href={ROUTES.USERS.USER(user.username)}>
         <Box
           display="flex"

@@ -70,7 +70,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
         <Box>
           <Grid container spacing={2}>
             {addressFields.map(({ label, name }) => (
-              <Grid item xs={12} sm={6} key={name}>
+              <Grid size={{xs: 12, sm: 6}} key={name}>
                 <TextField
                   fullWidth
                   label={label}

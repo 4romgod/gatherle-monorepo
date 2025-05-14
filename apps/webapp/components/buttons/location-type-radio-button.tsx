@@ -23,7 +23,7 @@ const LocationTypeRadioButtons: React.FC<LocationTypeRadioButtonsProps> = ({ sel
         description: 'To be Announced',
       }
     ].map(({ value, label, description }) => (
-      <Grid item xs={12} sm={4} key={value}>
+      <Grid size={{ xs: 12, sm: 4 }} key={value}>
         <RadioButtonWithIcon
           label={label}
           description={description}

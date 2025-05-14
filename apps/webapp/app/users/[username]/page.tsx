@@ -37,10 +37,10 @@ export default async function UserPage({ params }: { params: { username: string 
       <CustomContainer>
         <Box component="div">
           <Grid container>
-            <Grid item md={4} width={'100%'} p={2}>
+            <Grid size={{md: 4}} width={'100%'} p={2}>
               <UserDetails user={user} />
             </Grid>
-            <Grid item md={8} width={'100%'} p={2}>
+            <Grid size={{md: 8}} width={'100%'} p={2}>
               <Paper sx={{ backgroundColor: 'secondary.main', borderRadius: '12px', p: 5 }}>
                 <Typography variant="h5">Lorem</Typography>
                 <Typography variant="body1">
@@ -58,7 +58,7 @@ export default async function UserPage({ params }: { params: { username: string 
                 <Grid container spacing={2}>
                   {events.map((event) => {
                     return (
-                      <Grid item key={`EventTileGrid.${event.eventId}`} xs={12}>
+                      <Grid size={{ xs: 12 }} key={`EventTileGrid.${event.eventId}`}>
                         <Box component="div">
                           <EventBox event={event} />
                         </Box>

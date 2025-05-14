@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { registerUserAction } from '@/data/actions/server/auth';
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { FormErrors } from '@/components/form-errors';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -33,7 +33,7 @@ const RegisterPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { setToastProps, toastProps } = useCustomAppContext();
-  const [formState, formAction] = useFormState(registerUserAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(registerUserAction, SERVER_ACTION_INITIAL_STATE);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -83,7 +83,7 @@ const RegisterPage = () => {
 
           <Box component="form" action={formAction} noValidate>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <FormControl fullWidth margin="normal">
                   <TextField
                     required
@@ -95,7 +95,7 @@ const RegisterPage = () => {
                   <FormErrors error={formState?.zodErrors?.given_name} />
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <FormControl fullWidth margin="normal">
                   <TextField
                     required

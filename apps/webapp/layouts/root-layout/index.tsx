@@ -19,7 +19,7 @@ const TopProgressBar = dynamic(() => import('@/components/progress-bar'), { ssr:
 type RootLayoutProps = { children: ReactNode; session: Session | null };
 
 
-export default async function RootLayout({ children, session }: RootLayoutProps) {
+export default function RootLayout({ children, session }: RootLayoutProps) {
   const navHeight = 64; // TODO Adjust this value based on your AppBar height
 
   return (
@@ -29,7 +29,7 @@ export default async function RootLayout({ children, session }: RootLayoutProps)
           <SessionProvider session={session}>
             <CustomAppContextProvider>
               <CustomThemeProvider>
-                <body>
+                <Box component={'body'}>
                     <ToastProvider />
                     <TopProgressBar />
                     <MainNavigation isAuthN={Boolean(session)} />
@@ -45,7 +45,7 @@ export default async function RootLayout({ children, session }: RootLayoutProps)
                     <Box>
                         <Footer />
                     </Box>
-                </body>
+                </Box>
               </CustomThemeProvider>
             </CustomAppContextProvider>
           </SessionProvider>

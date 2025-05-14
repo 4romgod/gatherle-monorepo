@@ -8,7 +8,6 @@ import {
   Paper,
   Switch,
   FormControlLabel,
-  TextField,
   Button,
   Select,
   MenuItem,
@@ -70,7 +69,7 @@ export default function PersonalSettingsPage() {
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <FormControl fullWidth margin="normal">
             <LocalizationProvider
               dateAdapter={AdapterDayjs}
@@ -84,7 +83,7 @@ export default function PersonalSettingsPage() {
             </LocalizationProvider>
           </FormControl>
         </Grid>
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <FormControl fullWidth variant="outlined">
             <InputLabel
               color='secondary'
@@ -107,7 +106,7 @@ export default function PersonalSettingsPage() {
           </FormControl>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>
             Privacy Settings
           </Typography>

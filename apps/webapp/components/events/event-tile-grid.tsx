@@ -21,7 +21,7 @@ export default function EventTileGrid({ eventsByCategory }: EventTileGridProps) 
           </Typography>
           <Grid container spacing={2}>
             {eventsByCategory[categoryName].map((event) => (
-              <Grid item key={`EventTileGrid.${categoryName}.${event.eventId}`} xs={12}>
+              <Grid size={{ xs: 12 }} key={`EventTileGrid.${categoryName}.${event.eventId}`}>
                 <Box component="div">
                   <Link href={ROUTES.EVENTS.EVENT(event.slug)}>
                     <EventBox event={event} />

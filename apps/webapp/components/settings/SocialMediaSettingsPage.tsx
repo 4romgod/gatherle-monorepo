@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { JSX, useState } from 'react';
 import {
   Box,
   Typography,
@@ -107,25 +107,20 @@ export default function SocialMediaSettingsPage() {
         </Typography>
 
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Connected Accounts
             </Typography>
             <Grid container spacing={2}>
               {socialAccounts.map((account) => (
-                <Grid item xs={12} key={account.id}>
+                <Grid size={{ xs: 12 }} key={account.id}>
                   <Card variant="outlined">
-                    <CardContent sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      py: 1
-                    }}>
+                    <CardContent sx={{ py: 1 }}>
                       <Grid container alignItems="center">
-                        <Grid item xs={1}>
+                        <Grid size={{ xs: 1 }}>
                           {account.icon}
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Typography variant="subtitle1">
                             {account.platform}
                           </Typography>
@@ -133,7 +128,7 @@ export default function SocialMediaSettingsPage() {
                             {account.username}
                           </Typography>
                         </Grid>
-                        <Grid item xs={5} sx={{ textAlign: 'right' }}>
+                        <Grid size={{ xs: 5 }}>
                           <Button
                             variant={account.connected ? "outlined" : "contained"}
                             color={account.connected ? "secondary" : "primary"}
@@ -151,7 +146,7 @@ export default function SocialMediaSettingsPage() {
             </Grid>
           </Grid>
 
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Sharing Preferences
             </Typography>
@@ -167,7 +162,7 @@ export default function SocialMediaSettingsPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Custom Profile Link
             </Typography>
@@ -183,8 +178,10 @@ export default function SocialMediaSettingsPage() {
                   size="small"
                   fullWidth
                   placeholder="Enter your custom link"
-                  InputProps={{
-                    startAdornment: <LinkIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  slotProps={{
+                    input: {
+                      startAdornment: <LinkIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    }
                   }}
                 />
                 <Box>
@@ -199,15 +196,17 @@ export default function SocialMediaSettingsPage() {
                 </Box>
               </Box>
             ) : (
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                p: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1
-              }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1
+                }}
+              >
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <LinkIcon sx={{ mr: 1, color: 'text.secondary' }} />
                   <Typography>{customLink}</Typography>
@@ -223,7 +222,7 @@ export default function SocialMediaSettingsPage() {
             )}
           </Grid>
 
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="contained"

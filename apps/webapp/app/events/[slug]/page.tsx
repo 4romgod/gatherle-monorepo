@@ -6,7 +6,7 @@ import PurchaseCard from '@/components/purchase-card';
 import EventCategoryChip from '@/components/events/category/chip';
 import { RRule } from 'rrule';
 import { upperFirst } from 'lodash';
-import { CalendarToday, PeopleAltOutlined, Place } from '@mui/icons-material';
+import { CalendarToday, Place } from '@mui/icons-material';
 
 export const metadata: Metadata = {
   title: {
@@ -64,7 +64,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
         </Box>
 
         <Grid container spacing={5}>
-          <Grid item md={9} width={'100%'} mt={2}>
+          <Grid size={{md: 9}} width={'100%'} mt={2}>
             <Box component="div">
               <Typography fontWeight='bold' variant="h3" gutterBottom>
                 {title}
@@ -110,7 +110,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
               ) : (
                 <Grid container spacing={5}>
                   {organizerList.map((organizer) => (
-                    <Grid item key={organizer.userId}>
+                    <Grid key={organizer.userId}>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Avatar
                           src={organizer.profile_picture || undefined}
@@ -154,7 +154,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
               {comments ? (
                 <Grid container spacing={2}>
                   {Object.entries(comments).map(([key, comment]) => (
-                    <Grid item key={key}>
+                    <Grid key={key}>
                       <Typography variant="body2" gutterBottom>
                         {String(comment)}
                       </Typography>
@@ -168,7 +168,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
               )}
             </Box>
           </Grid>
-          <Grid item md={3} width={'100%'} mt={2}>
+          <Grid size={{md: 3}} width={'100%'} mt={2}>
             <PurchaseCard />
           </Grid>
         </Grid>

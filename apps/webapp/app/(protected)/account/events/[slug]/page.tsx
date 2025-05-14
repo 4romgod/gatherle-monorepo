@@ -76,7 +76,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
           </Typography>
           <Grid container spacing={2}>
             {event.organizerList.map((organizer) => (
-              <Grid item key={organizer.userId}>
+              <Grid key={organizer.userId}>
                 <Link href={`/users/${organizer.username}`} passHref>
                   <Chip
                     avatar={
@@ -100,7 +100,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
           </Typography>
           <Grid container spacing={2}>
             {event.rSVPList.map((rsvp) => (
-              <Grid item key={rsvp.userId}>
+              <Grid key={rsvp.userId}>
                 <Link href={`/users/${rsvp.username}`} passHref>
                   <Chip
                     avatar={
@@ -124,7 +124,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
           </Typography>
           <Grid container spacing={1}>
             {Object.entries(event.tags).map(([key, value]) => (
-              <Grid item key={key}>
+              <Grid key={key}>
                 <Chip label={`${key}: ${value}`} size="small" />
               </Grid>
             ))}
@@ -137,7 +137,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
           </Typography>
           <Grid container spacing={2}>
             {Object.entries(event.comments).map(([key, comment]) => (
-              <Grid item key={key}>
+              <Grid key={key}>
                 <Typography variant="body2" gutterBottom>
                   {String(comment)}
                 </Typography>

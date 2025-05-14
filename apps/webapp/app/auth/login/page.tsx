@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { useCustomAppContext } from '@/components/app-context';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { loginUserAction } from '@/data/actions/server/auth';
 import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { FormErrors } from '@/components/form-errors';
@@ -32,7 +32,7 @@ import { MdEmail } from 'react-icons/md';
 const LoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [formState, formAction] = useFormState(loginUserAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(loginUserAction, SERVER_ACTION_INITIAL_STATE);
   const { setToastProps, toastProps } = useCustomAppContext();
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -129,12 +129,12 @@ const LoginPage = () => {
             </Button>
 
             <Grid container>
-              <Grid item xs>
+              <Grid>
                 <a style={{ color: '#1e88e5', cursor: 'pointer' }} onClick={() => router.push('/auth/forgot-password')}>
                   Forgot password?
                 </a>
               </Grid>
-              <Grid item>
+              <Grid>
                 <Box>
                   <span>Don&apos;t have an account?&nbsp;</span>
                   <a style={{ color: '#1e88e5', cursor: 'pointer' }} onClick={() => router.push('/auth/register')}>

@@ -9,7 +9,7 @@ import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material'
 import { RRule } from 'rrule';
 
 export default function EventBoxSm({ event }: { event: EventType }) {
-  const { title, recurrenceRule, rSVPList, location } = event;
+  const { recurrenceRule, rSVPList, location } = event;
 
   return (
     <Card

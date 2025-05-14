@@ -24,7 +24,6 @@ import {
   LocationOn as LocationIcon,
   Cake as CakeIcon,
   Wc as GenderIcon,
-  Tag as TagIcon,
   Event as EventIcon,
   CheckCircle as RSVPIcon,
 } from '@mui/icons-material';
@@ -50,15 +49,11 @@ export default async function UserPublicProfile() {
     query: GetAllEventCategoriesDocument,
   });
 
-  const age = differenceInYears(new Date(), new Date(user.birthdate));
-  const formattedDOB = format(new Date(user.birthdate), 'dd MMMM yyyy');
-
-  // Mock data for interests
-  const interests = ["Photography", "Travel", "Cooking", "Hiking", "Technology"];
-
-  // This would normally come from your API
   const createdEvents = events.readEvents;
   const rsvpedEvents = events.readEvents;
+
+  const age = differenceInYears(new Date(), new Date(user.birthdate));
+  const formattedDOB = format(new Date(user.birthdate), 'dd MMMM yyyy');
 
   return (
     <Box sx={{ py: 6, backgroundColor: 'background.paper' }}>
@@ -75,7 +70,7 @@ export default async function UserPublicProfile() {
             sx={{
               height: 200,
               position: 'relative',
-              backgroundColor: 'secondary.dark',
+              backgroundColor: 'secondary.main',
             }}
           >
             <Link href={ROUTES.ACCOUNT.ROOT}>
@@ -171,11 +166,11 @@ export default async function UserPublicProfile() {
           <CardContent sx={{ px: 3, py: 4 }}>
             <Grid container spacing={4}>
               {/* User Information */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardHeader
                     title="Personal Information"
-                    titleTypographyProps={{ variant: 'h6', fontWeight: 'medium' }}
+                    slotProps={{ title: { variant: 'h6', fontWeight: 'medium' } }}
                   />
                   <Divider />
                   <CardContent>
@@ -189,8 +184,10 @@ export default async function UserPublicProfile() {
                         <ListItemText
                           primary="Email"
                           secondary={user.email}
-                          primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                          secondaryTypographyProps={{ variant: 'body1' }}
+                          slotProps={{
+                            primary: { variant: 'body2', color: 'text.secondary' },
+                            secondary: { variant: 'body1' },
+                          }}
                         />
                       </ListItem>
 
@@ -203,8 +200,10 @@ export default async function UserPublicProfile() {
                         <ListItemText
                           primary="Phone"
                           secondary={user.phone_number || "Not provided"}
-                          primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                          secondaryTypographyProps={{ variant: 'body1' }}
+                          slotProps={{
+                            primary: { variant: 'body2', color: 'text.secondary' },
+                            secondary: { variant: 'body1' },
+                          }}
                         />
                       </ListItem>
 
@@ -217,8 +216,10 @@ export default async function UserPublicProfile() {
                         <ListItemText
                           primary="Address"
                           secondary={user.address}
-                          primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                          secondaryTypographyProps={{ variant: 'body1' }}
+                          slotProps={{
+                            primary: { variant: 'body2', color: 'text.secondary' },
+                            secondary: { variant: 'body1' },
+                          }}
                         />
                       </ListItem>
 
@@ -231,8 +232,10 @@ export default async function UserPublicProfile() {
                         <ListItemText
                           primary="Birthday"
                           secondary={`${formattedDOB} (${age} years old)`}
-                          primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                          secondaryTypographyProps={{ variant: 'body1' }}
+                          slotProps={{
+                            primary: { variant: 'body2', color: 'text.secondary' },
+                            secondary: { variant: 'body1' },
+                          }}
                         />
                       </ListItem>
 
@@ -245,8 +248,10 @@ export default async function UserPublicProfile() {
                         <ListItemText
                           primary="Gender"
                           secondary={user.gender || "Not specified"}
-                          primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                          secondaryTypographyProps={{ variant: 'body1' }}
+                          slotProps={{
+                            primary: { variant: 'body2', color: 'text.secondary' },
+                            secondary: { variant: 'body1' },
+                          }}
                         />
                       </ListItem>
                     </List>
@@ -255,11 +260,11 @@ export default async function UserPublicProfile() {
               </Grid>
 
               {/* Interests */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
                   <CardHeader
                     title="Interests"
-                    titleTypographyProps={{ variant: 'h6', fontWeight: 'medium' }}
+                    slotProps={{ title: { variant: 'h6', fontWeight: 'medium' } }}
                   />
                   <Divider />
                   <CardContent>

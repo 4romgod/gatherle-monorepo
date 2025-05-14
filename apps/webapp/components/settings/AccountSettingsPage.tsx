@@ -123,7 +123,7 @@ export default function AccountSettingsPage() {
         </Typography>
 
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Username"
@@ -215,14 +215,14 @@ export default function AccountSettingsPage() {
             </Box>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
               <SecurityIcon sx={{ mr: 1, color: 'text.secondary' }} />
               Change Password
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Current Password"
@@ -320,7 +320,7 @@ export default function AccountSettingsPage() {
             </Box>
           </Grid>
 
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
             <Typography variant="subtitle1" color="primary" sx={{ display: 'flex', alignItems: 'center' }}>
               <DeleteIcon sx={{ mr: 1 }} />
               Delete Account

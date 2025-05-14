@@ -26,7 +26,7 @@ export default async function EventCategoryBox({ eventCategory }: { eventCategor
         '&:hover': {
           transform: 'translateY(-5px)',
           boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
-          backgroundColor: 'secondary.light'
+          backgroundColor: 'secondary.main'
         },
         p: 2
       }}

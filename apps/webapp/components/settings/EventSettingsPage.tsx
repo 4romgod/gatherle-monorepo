@@ -71,14 +71,14 @@ export default function EventSettingsPage() {
   ];
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, margin: 'auto' }}>
+    <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
       <Paper elevation={3} sx={{ padding: 3, borderRadius: 2 }}>
         <Typography variant="h4" fontWeight='bold' sx={{ mb: 5 }}>
           Event Preferences
         </Typography>
 
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Notification Preferences
             </Typography>
@@ -114,7 +114,7 @@ export default function EventSettingsPage() {
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Event Discovery
             </Typography>
@@ -135,7 +135,7 @@ export default function EventSettingsPage() {
             </Box>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <FormControl fullWidth variant="outlined">
               <InputLabel color='secondary'>Event Notification Frequency</InputLabel>
               <Select
@@ -154,13 +154,13 @@ export default function EventSettingsPage() {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Preferred Event Types
             </Typography>
             <Grid container spacing={1}>
               {eventTypes.map((type) => (
-                <Grid item xs={6} sm={4} key={type}>
+                <Grid size={{ xs: 6, sm: 4 }} key={type}>
                   <FormControlLabel
                     control={
                       <Switch
@@ -176,7 +176,7 @@ export default function EventSettingsPage() {
             </Grid>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Alert severity="info" sx={{ mt: 2 }}>
               These settings help us personalize your event recommendations and
               notification preferences.

@@ -109,7 +109,7 @@ export default function EditProfilePage({ user }: { user: UserType }) {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="First Name"
@@ -121,7 +121,7 @@ export default function EditProfilePage({ user }: { user: UserType }) {
               color='secondary'
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Surname"
@@ -133,7 +133,7 @@ export default function EditProfilePage({ user }: { user: UserType }) {
               color='secondary'
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Email"
@@ -145,7 +145,7 @@ export default function EditProfilePage({ user }: { user: UserType }) {
               color='secondary'
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             {/* TODO Enable this field when the backend is ready */}
             <TextField
               fullWidth
@@ -160,7 +160,7 @@ export default function EditProfilePage({ user }: { user: UserType }) {
               color='secondary'
             />
           </Grid>
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Location"

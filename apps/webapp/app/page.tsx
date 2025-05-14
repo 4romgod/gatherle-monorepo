@@ -10,7 +10,6 @@ import { Explore } from '@mui/icons-material';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import { Metadata } from 'next';
-import { getEventCategoryIcon } from '@/lib/constants';
 import EventsCarousel from '@/components/events/carousel';
 import { ROUTES } from '@/lib/constants';
 import EventCategoryBox from '@/components/events/category/box';
@@ -60,12 +59,11 @@ export default async function HomePage() {
 
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Grid container spacing={4}>
-            <Grid item xs={12} md={7}>
+            <Grid size={{ xs: 12, md: 7 }}>
               <Typography
                 variant="h1"
                 sx={{
                   fontWeight: 800,
-                  // color: 'white',
                   fontSize: { xs: '2.5rem', md: '3.5rem' },
                   mb: 2,
                   lineHeight: 1.2
@@ -104,7 +102,7 @@ export default async function HomePage() {
           <Grid container spacing={3} justifyContent="center">
             {eventCategories.readEventCategories.map((category, index) => {
               return (
-                <Grid item xs={6} sm={4} md={2} key={index}>
+                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={index}>
                   <EventCategoryBox eventCategory={category} />
                 </Grid>
               )
@@ -183,6 +181,7 @@ export default async function HomePage() {
             autoplayInterval={6000}
             itemWidth={350}
             showIndicators={true}
+            viewAllEventsButton={true}
           />
         </Container>
       </Box>
