@@ -4,7 +4,7 @@ import '@/components/global.css';
 import React, { ReactNode } from 'react';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { CustomAppContextProvider } from '@/components/app-context';
-import { ApolloWrapper } from '@/data/graphql/apollo-provider';
+import { ApolloWrapper } from '@/data/graphql/apollo-wrapper';
 import { SessionProvider } from 'next-auth/react';
 import CustomThemeProvider from '@/components/custom-providers/theme-provider';
 import ToastProvider from '@/components/custom-providers/toast-provider';

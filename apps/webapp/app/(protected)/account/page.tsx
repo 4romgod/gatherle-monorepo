@@ -21,6 +21,7 @@ import PasswordSettingsPage from '@/components/settings/PasswordSettingsPage';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
 import { GetAllEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
+import { omit } from 'lodash';
 
 export const metadata: Metadata = {
   title: {
@@ -43,7 +44,7 @@ export default async function SettingsPage() {
     query: GetAllEventCategoryGroupsDocument,
   });
 
-  const { token, __typename, ...user } = session.user;
+  const user = omit(session.user, ['token', '__typename']);
 
   const tabsProps: CustomTabsProps = {
     tabsTitle: 'Settings',

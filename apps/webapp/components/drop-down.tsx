@@ -4,25 +4,19 @@ import { ReactNode, useState } from 'react';
 import InputBase from '@mui/material/InputBase';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
-import Select, { SelectProps } from '@mui/material/Select';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import { useRouter } from 'next/navigation';
-import { Theme, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 
-// TODO MUIStyledCommonProps<Theme> cannot be found, using any for now
-type StyledSelectProps = (SelectProps<unknown> & any) & {
-  theme: Theme;
-  isdefaultselected: 'false';
-};
-
-const StyledSelect = styled(Select)<StyledSelectProps>(({ theme, isdefaultselected = 'true' }) => ({
+const StyledSelect = styled(Select<string>, { shouldForwardProp: (prop) => prop !== 'isDefaultSelected' })<{ isDefaultSelected: boolean }>(({ theme, isDefaultSelected }) => ({
   padding: 5,
   backgroundColor:
-    isdefaultselected == 'true'
+    isDefaultSelected === true
       ? '#F6F7F8'
       : theme.palette.mode === 'dark'
       ? theme.palette.secondary.dark
       : theme.palette.secondary.dark,
-  color: isdefaultselected == 'true' ? 'black' : 'white',
+  color: isDefaultSelected === true ? 'black' : 'white',
   borderRadius: 30,
 }));
 
@@ -50,7 +44,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
   const [selectedItem, setSelectedItem] = useState<string>('');
   const router = useRouter();
 
-  const onSelectChangeHandler = (event: any) => {
+  const onSelectChangeHandler = (event: SelectChangeEvent<string>) => {
     const selectedItemName = event.target.value;
     setSelectedItem(selectedItemName);
     const selectedItem = itemList.find((item) => item.name === selectedItemName);
@@ -61,7 +55,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
     }
   };
 
-  const isdefaultselected = (!selectedItem).toString();
+  const isDefaultSelected = !selectedItem;
 
   return (
     <FormControl variant="standard">
@@ -70,7 +64,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
         onChange={onSelectChangeHandler}
         input={<StyledInput />}
         displayEmpty={true}
-        isdefaultselected={isdefaultselected}
+        isDefaultSelected={isDefaultSelected}
       >
         <MenuItem value="">{defaultItem}</MenuItem>
         {itemList.map((item) => (

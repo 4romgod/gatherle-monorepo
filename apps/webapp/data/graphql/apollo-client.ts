@@ -1,20 +1,13 @@
-import { HttpLink, InMemoryCache, ApolloClient, NormalizedCacheObject } from '@apollo/client';
+import { HttpLink, InMemoryCache, ApolloClient } from '@apollo/client';
 import { GRAPHQL_URL } from '@/lib/constants';
+import { registerApolloClient } from '@apollo/client-integration-nextjs';
 
-let apolloClient: ApolloClient<NormalizedCacheObject>;
-
-export const getInstanceOfApolloClient = (
-  url = GRAPHQL_URL,
-  newInstance?: boolean,
-): ApolloClient<NormalizedCacheObject> => {
-  if (!apolloClient || newInstance) {
-    apolloClient = new ApolloClient({
-      cache: new InMemoryCache(),
-      link: new HttpLink({
-        uri: url,
-        fetchOptions: { next: { revalidate: 0 } },
-      }),
-    });
-  }
-  return apolloClient;
-};
+export const { getClient, query, PreloadQuery } = registerApolloClient(() => {
+  return new ApolloClient({
+    cache: new InMemoryCache(),
+    link: new HttpLink({
+      uri: GRAPHQL_URL,
+      fetchOptions: { next: { revalidate: 0 } },
+    }),
+  });
+});

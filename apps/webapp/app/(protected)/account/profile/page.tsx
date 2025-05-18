@@ -35,11 +35,12 @@ import EventsCarousel from '@/components/events/carousel';
 import EventCategoryChip from '@/components/events/category/chip';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
+import { omit } from 'lodash';
 
 export default async function UserPublicProfile() {
   const session = await auth();
   if (!session) return;
-  const { token, __typename, ...user } = session.user;
+  const user = omit(session.user, ['token', '__typename']);
 
   const { data: events } = await getClient().query({
     query: GetAllEventsDocument,

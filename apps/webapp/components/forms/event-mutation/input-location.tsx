@@ -31,7 +31,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
 
   useEffect(() => {
     onChange(locationDetails);
-  }, [locationDetails]);
+  }, [onChange, locationDetails]);
 
   const handleLocationTypeChange = useCallback((type: string) => {
     setLocationType(type);

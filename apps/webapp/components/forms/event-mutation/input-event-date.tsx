@@ -58,7 +58,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
     }
 
     onChange(result);
-  }, [eventType, startDateTime, endDateTime, frequency, interval, daysOfWeek]);
+  }, [onChange, eventType, startDateTime, endDateTime, frequency, interval, daysOfWeek]);
 
   const handleDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = event.target;

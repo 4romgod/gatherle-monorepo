@@ -9,7 +9,7 @@ export default function CategoryFilter({ categoryList, sxProps, onChange }: Cate
 
     useEffect(() => {
       onChange && onChange(categories); // TODO make this function mandatory
-    }, [categories]);
+    }, [categories, onChange]);
   
   const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
     const selectedCategories = event.target.value as string[];

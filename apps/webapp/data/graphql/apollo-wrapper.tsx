@@ -2,11 +2,7 @@
 
 import { GRAPHQL_URL } from '@/lib/constants';
 import { HttpLink } from '@apollo/client';
-import {
-  ApolloNextAppProvider,
-  NextSSRInMemoryCache,
-  NextSSRApolloClient,
-} from '@apollo/experimental-nextjs-app-support/ssr';
+import { ApolloNextAppProvider, InMemoryCache, ApolloClient } from "@apollo/client-integration-nextjs";
 
 const makeClient = () => {
   const httpLink = new HttpLink({
@@ -14,12 +10,16 @@ const makeClient = () => {
     fetchOptions: { next: { revalidate: 0 } },
   });
 
-  return new NextSSRApolloClient({
-    cache: new NextSSRInMemoryCache(),
+  return new ApolloClient({
+    cache: new InMemoryCache(),
     link: httpLink,
   });
 };
 
 export function ApolloWrapper({ children }: React.PropsWithChildren) {
-  return <ApolloNextAppProvider makeClient={makeClient}>{children}</ApolloNextAppProvider>;
+  return (
+    <ApolloNextAppProvider makeClient={makeClient}>
+      {children}
+    </ApolloNextAppProvider>
+  );
 }

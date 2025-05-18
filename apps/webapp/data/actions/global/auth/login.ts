@@ -1,12 +1,10 @@
-import { getInstanceOfApolloClient } from '@/data/graphql/apollo-client';
+import { getClient } from '@/data/graphql/apollo-client';
 import { LoginUserDocument, LoginUserInputType } from '@/data/graphql/types/graphql';
-import { GRAPHQL_URL } from '@/lib/constants';
 import { CredentialsSignin } from 'next-auth';
 
-const apolloClient = getInstanceOfApolloClient(GRAPHQL_URL, true);
 export async function loginUserGlobalAction(input: LoginUserInputType) {
   try {
-    const loginResponse = await apolloClient.mutate({
+    const loginResponse = await getClient().mutate({
       mutation: LoginUserDocument,
       variables: { input },
     });
