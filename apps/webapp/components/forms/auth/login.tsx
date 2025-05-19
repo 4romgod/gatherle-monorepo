@@ -52,7 +52,7 @@ export default function LoginForm() {
 
       // TODO: Redirect logic here
     }
-  }, [formState, setToastProps, toastProps]);
+  }, [formState]);
 
   return (
     <Box component="form" action={formAction} noValidate sx={{ mt: 1 }}>

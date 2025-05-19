@@ -1,14 +1,11 @@
 'use server';
 
-import { CreateUserInputType, Gender, RegisterUserDocument } from '@/data/graphql/types/graphql';
+import { CreateUserInputType, RegisterUserDocument } from '@/data/graphql/types/graphql';
 import { CreateUserInputTypeSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 
 export async function registerUserAction(prevState: any, formData: FormData) {
   const inputData: CreateUserInputType = {
-    address: 'A default address',
-    gender: Gender.Male,
-    phone_number: '+27670153447',
     birthdate: formData.get('birthdate')?.toString() ?? '',
     email: formData.get('email')?.toString().toLowerCase() ?? '',
     family_name: formData.get('family_name')?.toString() ?? '',

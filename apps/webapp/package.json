@@ -28,7 +28,6 @@
     "clsx": "^2.0.0",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.12",
-    "graphql": "^16.8.1",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "next": "^15.3.2",
@@ -44,7 +43,7 @@
     "zod": "^3.22.2"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/cli": "^5.0.6",
     "@graphql-codegen/client-preset": "^4.2.5",
     "@parcel/watcher": "^2.4.1",
     "@types/bcrypt": "^5.0.1",
@@ -59,6 +58,7 @@
     "eslint": "^8.52.0",
     "eslint-config-next": "^14.0.0",
     "eslint-config-prettier": "9.0.0",
+    "graphql": "^16.11.0",
     "prettier": "^3.0.3",
     "prettier-plugin-tailwindcss": "0.5.4",
     "typescript": "^5.5.4"

@@ -4,6 +4,8 @@ import { GRAPHQL_URL } from '@/lib/constants';
 import { HttpLink } from '@apollo/client';
 import { ApolloNextAppProvider, InMemoryCache, ApolloClient } from "@apollo/client-integration-nextjs";
 
+// Inspired by https://github.com/apollographql/apollo-client-integrations/tree/main/packages/nextjs
+
 const makeClient = () => {
   const httpLink = new HttpLink({
     uri: GRAPHQL_URL,

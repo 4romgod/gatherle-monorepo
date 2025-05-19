@@ -59,7 +59,7 @@ export default function RegisterForm() {
 
       // TODO: Redirect to the next page
     }
-  }, [formState, setToastProps, toastProps]);
+  }, [formState]);
 
   return (
     <Box component="form" action={formAction} noValidate>
