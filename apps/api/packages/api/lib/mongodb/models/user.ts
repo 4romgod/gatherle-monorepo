@@ -8,6 +8,7 @@ export const UserSchema = new Schema<UserTypeDocument>(
     address: {
       type: Schema.Types.Mixed,
       default: {},
+      required: false,
     },
     birthdate: {
       type: String,
@@ -72,7 +73,7 @@ export const UserSchema = new Schema<UserTypeDocument>(
       {
         type: Schema.Types.ObjectId,
         ref: 'EventCategory',
-        required: true,
+        required: false,
         index: true,
       },
     ],

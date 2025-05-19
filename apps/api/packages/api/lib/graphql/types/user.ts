@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { EVENT_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';
 import { ID, ObjectType, InputType, Field, registerEnumType, Authorized } from 'type-graphql';
 import { Document } from 'mongoose';
-import { Location } from './location';
 import { EventCategoryType } from './eventCategory';
 import GraphQLJSON from 'graphql-type-json';
 
@@ -41,8 +40,8 @@ export class UserType {
   username: string;
 
   // TODO use the right types
-  @Field((type) => GraphQLJSON, { description: USER_DESCRIPTIONS.ADDRESS })
-  address: Record<string, any>;
+  @Field((type) => GraphQLJSON, { nullable: true, description: USER_DESCRIPTIONS.ADDRESS })
+  address?: Record<string, any>;
 
   @Field((type) => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
   birthdate: string;
@@ -92,8 +91,8 @@ export class CreateUserInputType {
   username?: string;
 
   // TODO use the right types
-  @Field((type) => GraphQLJSON, { description: USER_DESCRIPTIONS.ADDRESS })
-  address: Record<string, any>;
+  @Field((type) => GraphQLJSON, { nullable: true, description: USER_DESCRIPTIONS.ADDRESS })
+  address?: Record<string, any>;
 
   @Field((type) => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
   birthdate: string;
@@ -121,7 +120,6 @@ export class CreateUserInputType {
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: string[];
-
 }
 
 @InputType('UpdateUserInputType', { description: USER_DESCRIPTIONS.UPDATE_INPUT })

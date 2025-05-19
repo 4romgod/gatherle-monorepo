@@ -6,9 +6,7 @@ import mongoose from 'mongoose';
 
 export const UserTypeSchema = z.object({
   userId: z.string().refine(mongoose.Types.ObjectId.isValid, {message: `User with ID ${ERROR_MESSAGES.DOES_NOT_EXIST}`}),
-
-  address: z.record(z.any()),
-
+  
   birthdate: z
     .string()
     .refine(validateDate, {message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}`})
@@ -18,11 +16,13 @@ export const UserTypeSchema = z.object({
 
   family_name: z.string().min(1, {message: `Last name ${ERROR_MESSAGES.REQUIRED}`}),
 
-  gender: z.nativeEnum(Gender, {message: ERROR_MESSAGES.INVALID_GENDER}).optional(),
-
   given_name: z.string().min(1, {message: `First name ${ERROR_MESSAGES.REQUIRED}`}),
 
-  phone_number: z.string().regex(REGEX_PHONE_NUMBER, {message: ERROR_MESSAGES.INVALID_PHONE_NUMBER}),
+  address: z.record(z.any()).optional(),
+
+  gender: z.nativeEnum(Gender, {message: ERROR_MESSAGES.INVALID_GENDER}).optional(),
+
+  phone_number: z.string().regex(REGEX_PHONE_NUMBER, {message: ERROR_MESSAGES.INVALID_PHONE_NUMBER}).optional(),
 
   profile_picture: z.string().optional(),
 
