@@ -83,6 +83,12 @@ export const UserSchema = new Schema<UserTypeDocument>(
   },
 );
 
+// Helper for password hashing
+async function hashPassword(plainPassword: string): Promise<string> {
+  const salt = await genSalt(10);
+  return hash(plainPassword, salt);
+}
+
 UserSchema.pre('validate', async function (next: CallbackWithoutResultAndOptionalError) {
   try {
     this.userId = this._id!.toString();
@@ -103,8 +109,7 @@ UserSchema.pre('validate', async function (next: CallbackWithoutResultAndOptiona
     }
 
     if (this.isModified('password')) {
-      const salt = await genSalt(10);
-      this.password = await hash(this.password, salt);
+      this.password = await hashPassword(this.password);
     }
 
     if (this.isModified('email')) {
@@ -114,6 +119,32 @@ UserSchema.pre('validate', async function (next: CallbackWithoutResultAndOptiona
     next();
   } catch (err) {
     console.log('Error when pre-saving the user', err);
+    next(err as CallbackError);
+  }
+});
+
+// Pre-update hook (e.g. findByIdAndUpdate)
+UserSchema.pre(['findOneAndUpdate', 'updateOne'], async function (next) {
+  try {
+    const update = this.getUpdate();
+
+    if (!update || typeof update !== 'object' || Array.isArray(update)) {
+      return next();
+    }
+
+    const updateObj = update as Record<string, any>;
+
+    if (updateObj.password) {
+      updateObj.password = await hashPassword(updateObj.password);
+    }
+
+    if (updateObj.email) {
+      updateObj.email = updateObj.email.toLowerCase();
+    }
+    this.setUpdate(updateObj);
+    next();
+  } catch (err) {
+    console.error('Error in pre-update hook', err);
     next(err as CallbackError);
   }
 });
