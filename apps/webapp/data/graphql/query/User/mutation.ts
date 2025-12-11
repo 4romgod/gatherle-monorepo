@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
 export const RegisterUserDocument = graphql(`
-  mutation RegisterUser($input: CreateUserInputType!) {
+  mutation RegisterUser($input: CreateUserInput!) {
     createUser(input: $input) {
       userId
       email
@@ -29,7 +29,7 @@ export const RegisterUserDocument = graphql(`
 `);
 
 export const LoginUserDocument = graphql(`
-  mutation LoginUser($input: LoginUserInputType!) {
+  mutation LoginUser($input: LoginUserInput!) {
     loginUser(input: $input) {
       userId
       email
@@ -57,7 +57,7 @@ export const LoginUserDocument = graphql(`
 `);
 
 export const UpdateUserDocument = graphql(`
-  mutation UpdateUser($input: UpdateUserInputType!) {
+  mutation UpdateUser($input: UpdateUserInput!) {
     updateUser(input: $input) {
       userId
       email

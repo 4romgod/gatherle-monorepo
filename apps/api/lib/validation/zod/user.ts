@@ -4,7 +4,7 @@ import {Gender} from '@ntlango/commons/types/user';
 import {ERROR_MESSAGES, validateDate} from '@/validation/common';
 import mongoose from 'mongoose';
 
-export const UserTypeSchema = z.object({
+export const UserSchema = z.object({
   userId: z.string().refine(mongoose.Types.ObjectId.isValid, {message: `User with ID ${ERROR_MESSAGES.DOES_NOT_EXIST}`}),
   
   birthdate: z
@@ -29,16 +29,16 @@ export const UserTypeSchema = z.object({
   username: z.string().min(3, `username ${ERROR_MESSAGES.TOO_SHORT}`).optional(),
 });
 
-export const CreateUserInputTypeSchema = UserTypeSchema.extend({
+export const CreateUserInputSchema = UserSchema.extend({
   password: z.string().min(8, {message: ERROR_MESSAGES.INVALID_PASSWORD}),
 }).omit({userId: true});
 
-export const UpdateUserInputTypeSchema = UserTypeSchema.partial().extend({
+export const UpdateUserInputSchema = UserSchema.partial().extend({
   userId: z.string().refine(mongoose.Types.ObjectId.isValid, {message: `User with UserId ${ERROR_MESSAGES.DOES_NOT_EXIST}`}),
   password: z.string().min(8, {message: ERROR_MESSAGES.INVALID_PASSWORD}).optional(),
 });
 
-export const LoginUserInputTypeSchema = z.object({
+export const LoginUserInputSchema = z.object({
   email: z.string().email({message: ERROR_MESSAGES.INVALID_EMAIL}),
   password: z.string().min(8, {message: ERROR_MESSAGES.INVALID_PASSWORD}),
 });

@@ -17,7 +17,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import { UserType } from '@/data/graphql/types/graphql';
+import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
 import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { useCustomAppContext } from '@/components/app-context';
@@ -28,7 +28,7 @@ interface AccountSettings {
   email: string;
 }
 
-export default function AccountSettingsPage({ user }: { user: UserType }) {
+export default function AccountSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useCustomAppContext();
   const [updateUserFormState, updateUserFormAction] = useActionState(updateUserProfileAction, SERVER_ACTION_INITIAL_STATE);
   const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, SERVER_ACTION_INITIAL_STATE);

@@ -3,7 +3,7 @@ import {ArgsDictionary, ResolverData} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 import {OPERATION_NAMES, SECRET_KEYS} from '@/constants';
-import {UserRole, UserType} from '@ntlango/commons/types';
+import {UserRole, User} from '@ntlango/commons/types';
 import {verify, sign, JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
 import type {StringValue} from 'ms';
 import {EventDAO} from '@/mongodb/dao';
@@ -58,7 +58,7 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
  * @param expiresIn expressed in seconds or a string describing a time span [zeit/ms](https://github.com/zeit/ms.js).  Eg: 60, "2 days", "10h", "7d"
  * @returns A JWT token as a string
  */
-export const generateToken = async (user: UserType, secret?: string, expiresIn?: string | number) => {
+export const generateToken = async (user: User, secret?: string, expiresIn?: string | number) => {
   const jwtSecret: Secret | undefined = secret ?? (await getConfigValue(SECRET_KEYS.JWT_SECRET));
   if (!jwtSecret) {
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -80,14 +80,14 @@ export const verifyToken = async (token: string, secret?: string) => {
       throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
     }
     const {iat, exp, ...user} = verify(token, jwtSecret) as JwtPayload;
-    return user as UserType;
+    return user as User;
   } catch (err) {
     console.log('Error when verifying token', err);
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }
 };
 
-export const isAuthorizedByOperation = async (operationName: string, args: ArgsDictionary, user: UserType): Promise<boolean> => {
+export const isAuthorizedByOperation = async (operationName: string, args: ArgsDictionary, user: User): Promise<boolean> => {
   switch (operationName) {
     case OPERATION_NAMES.UPDATE_USER:
       return args.input.userId == user.userId;
@@ -107,7 +107,7 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
   }
 };
 
-const isAuthorizedToUpdateEvent = async (eventId: string, user: UserType) => {
+const isAuthorizedToUpdateEvent = async (eventId: string, user: User) => {
   const event = await EventDAO.readEventById(eventId);
   return event.organizerList
     .map((organizer) => {

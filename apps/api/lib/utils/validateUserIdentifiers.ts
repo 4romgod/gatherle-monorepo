@@ -1,9 +1,9 @@
-import {CancelRSVPInputType, RSVPInputType} from '@ntlango/commons/types';
+import {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
 import {CustomError, ErrorTypes} from './exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 
-export const validateUserIdentifiers = async (input: RSVPInputType | CancelRSVPInputType): Promise<string[]> => {
+export const validateUserIdentifiers = async (input: RsvpInput | CancelRsvpInput): Promise<string[]> => {
   const {userIdList, emailList, usernameList} = input;
 
   try {

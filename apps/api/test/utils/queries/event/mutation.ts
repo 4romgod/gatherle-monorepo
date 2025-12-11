@@ -1,6 +1,6 @@
 export const getCreateEventMutation = (event: any) => {
   return {
-    query: `mutation CreateEvent($input: CreateEventInputType!) {
+    query: `mutation CreateEvent($input: CreateEventInput!) {
             createEvent(input: $input) {
               eventId
               slug

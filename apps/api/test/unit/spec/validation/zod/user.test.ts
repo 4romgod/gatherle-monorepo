@@ -1,8 +1,8 @@
 import {
-  UserTypeSchema,
-  CreateUserInputTypeSchema,
-  UpdateUserInputTypeSchema,
-  LoginUserInputTypeSchema,
+  UserSchema,
+  CreateUserInputSchema,
+  UpdateUserInputSchema,
+  LoginUserInputSchema,
   ForgotPasswordInputTypeSchema,
   ResetPasswordInputTypeSchema,
   ERROR_MESSAGES,
@@ -31,16 +31,16 @@ describe('User', () => {
     username: 'johndoe',
   });
 
-  describe('UserTypeSchema', () => {
-    it('should validate valid UserTypeSchema', () => {
+  describe('UserSchema', () => {
+    it('should validate valid UserSchema', () => {
       const validInput = getValidUserInput();
-      const {success, error} = UserTypeSchema.safeParse(validInput);
+      const {success, error} = UserSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const {success, error} = UserTypeSchema.safeParse(invalidInput);
+      const {success, error} = UserSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors.length).toBeGreaterThan(0);
@@ -52,7 +52,7 @@ describe('User', () => {
         ...getValidUserInput(),
         email: 'invalid-email',
       };
-      const {success, error} = UserTypeSchema.safeParse(invalidInput);
+      const {success, error} = UserSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe(ERROR_MESSAGES.INVALID_EMAIL);
@@ -64,7 +64,7 @@ describe('User', () => {
         ...getValidUserInput(),
         phone_number: 'invalid-phone',
       };
-      const {success, error} = UserTypeSchema.safeParse(invalidInput);
+      const {success, error} = UserSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PHONE_NUMBER);
@@ -72,20 +72,20 @@ describe('User', () => {
     });
   });
 
-  describe('CreateUserInputTypeSchema', () => {
-    it('should validate valid CreateUserInputTypeSchema', () => {
+  describe('CreateUserInputSchema', () => {
+    it('should validate valid CreateUserInputSchema', () => {
       const validInput = {
         ...getValidUserInput(),
         password: 'securepassword123',
         userId: undefined,
       };
-      const {success, error} = CreateUserInputTypeSchema.safeParse(validInput);
+      const {success, error} = CreateUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const {success, error} = CreateUserInputTypeSchema.safeParse(invalidInput);
+      const {success, error} = CreateUserInputSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors.length).toBeGreaterThan(0);
@@ -93,13 +93,13 @@ describe('User', () => {
     });
   });
 
-  describe('UpdateUserInputTypeSchema', () => {
-    it('should validate valid UpdateUserInputTypeSchema', () => {
+  describe('UpdateUserInputSchema', () => {
+    it('should validate valid UpdateUserInputSchema', () => {
       const validInput = {
         userId: mockID,
         given_name: 'Updated Name',
       };
-      const {success, error} = UpdateUserInputTypeSchema.safeParse(validInput);
+      const {success, error} = UpdateUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -108,7 +108,7 @@ describe('User', () => {
         userId: 'invalid-id-format',
         given_name: 'Updated Name',
       };
-      const {success, error} = UpdateUserInputTypeSchema.safeParse(invalidInput);
+      const {success, error} = UpdateUserInputSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe(`User with UserId ${ERROR_MESSAGES.DOES_NOT_EXIST}`);
@@ -116,19 +116,19 @@ describe('User', () => {
     });
   });
 
-  describe('LoginUserInputTypeSchema', () => {
-    it('should validate valid LoginUserInputTypeSchema', () => {
+  describe('LoginUserInputSchema', () => {
+    it('should validate valid LoginUserInputSchema', () => {
       const validInput = {
         email: 'user@example.com',
         password: 'securepassword123',
       };
-      const {success, error} = LoginUserInputTypeSchema.safeParse(validInput);
+      const {success, error} = LoginUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const {success, error} = LoginUserInputTypeSchema.safeParse(invalidInput);
+      const {success, error} = LoginUserInputSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors.length).toBeGreaterThan(0);
@@ -140,7 +140,7 @@ describe('User', () => {
         email: 'invalid-email',
         password: 'securepassword123',
       };
-      const {success, error} = LoginUserInputTypeSchema.safeParse(invalidInput);
+      const {success, error} = LoginUserInputSchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe(ERROR_MESSAGES.INVALID_EMAIL);

@@ -5,8 +5,8 @@ import {modelOptions, prop} from '@typegoose/typegoose';
 import {EVENT_CATEGORY_DESCRIPTIONS} from '../constants';
 
 @modelOptions({schemaOptions: {timestamps: true}})
-@ObjectType('EventCategoryType', {description: EVENT_CATEGORY_DESCRIPTIONS.TYPE})
-export class EventCategoryType {
+@ObjectType('EventCategory', {description: EVENT_CATEGORY_DESCRIPTIONS.TYPE})
+export class EventCategory {
     @prop({required: true, unique: true, index: true})
     @Field((type) => ID, {description: EVENT_CATEGORY_DESCRIPTIONS.ID})
     eventCategoryId: string;
@@ -32,8 +32,8 @@ export class EventCategoryType {
     color?: string;
 }
 
-@InputType('CreateEventCategoryInputType', {description: EVENT_CATEGORY_DESCRIPTIONS.CREATE_INPUT})
-export class CreateEventCategoryInputType {
+@InputType('CreateEventCategoryInput', {description: EVENT_CATEGORY_DESCRIPTIONS.CREATE_INPUT})
+export class CreateEventCategoryInput {
     @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.NAME})
     name: string;
 
@@ -47,8 +47,8 @@ export class CreateEventCategoryInputType {
     color?: string;
 }
 
-@InputType('UpdateEventCategoryInputType', {description: EVENT_CATEGORY_DESCRIPTIONS.UPDATE_INPUT})
-export class UpdateEventCategoryInputType {
+@InputType('UpdateEventCategoryInput', {description: EVENT_CATEGORY_DESCRIPTIONS.UPDATE_INPUT})
+export class UpdateEventCategoryInput {
     @Field((type) => ID, {description: EVENT_CATEGORY_DESCRIPTIONS.ID})
     eventCategoryId: string;
 

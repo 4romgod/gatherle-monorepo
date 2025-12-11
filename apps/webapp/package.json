@@ -5,7 +5,7 @@
     "build": "npm-run-all codegen lint:fix build:next",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:next": "next build -d",
-    "codegen": "if [ -z \"$NEXT_PUBLIC_GRAPHQL_URL\" ]; then echo \"Skipping codegen: NEXT_PUBLIC_GRAPHQL_URL not set\"; else graphql-codegen; fi",
+    "codegen": "graphql-codegen",
     "codegen:watch": "graphql-codegen --watch",
     "dev": "npm-run-all codegen start:dev",
     "lint": "npm run lint:check",

@@ -1,4 +1,4 @@
-import {CancelRSVPInputType, RSVPInputType} from '@ntlango/commons/types';
+import {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
 import {ObjectId} from 'mongoose';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
@@ -17,7 +17,7 @@ describe('validateUserIdentifiers', () => {
   });
 
   it('should validate user identifiers successfully', async () => {
-    const input: RSVPInputType = {
+    const input: RsvpInput = {
       eventId: 'event123',
       userIdList: ['user1'],
       usernameList: ['username1'],
@@ -38,7 +38,7 @@ describe('validateUserIdentifiers', () => {
   });
 
   it('should throw error when no valid user identifiers found', async () => {
-    const input: CancelRSVPInputType = {
+    const input: CancelRsvpInput = {
       eventId: 'event123',
       userIdList: [],
     };

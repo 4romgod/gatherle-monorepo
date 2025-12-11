@@ -1,9 +1,9 @@
 import { Person } from '@mui/icons-material';
 import { Typography, Avatar, Box, Paper } from '@mui/material';
 import { MapPinIcon } from '@heroicons/react/24/solid';
-import { UserType } from '@/data/graphql/types/graphql';
+import { User } from '@/data/graphql/types/graphql';
 
-export default function UserDetails({ user }: { user: UserType }) {
+export default function UserDetails({ user }: { user: User }) {
   return (
     <Paper
       component="div"

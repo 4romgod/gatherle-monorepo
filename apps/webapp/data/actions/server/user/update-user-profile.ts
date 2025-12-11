@@ -1,7 +1,7 @@
 'use server';
 
-import { UpdateUserInputType, UpdateUserDocument, Gender } from '@/data/graphql/types/graphql';
-import { UpdateUserInputTypeSchema } from '@/data/validation';
+import { UpdateUserInput, UpdateUserDocument, Gender } from '@/data/graphql/types/graphql';
+import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
 
@@ -22,7 +22,7 @@ export async function updateUserProfileAction(prevState: any, formData: FormData
   const genderStr = formData.get('gender')?.toString();
   const gender = Object.values(Gender).includes(genderStr as Gender) ? (genderStr as Gender) : undefined;
 
-  let inputData: UpdateUserInputType = {
+  let inputData: UpdateUserInput = {
     userId: userId,
     given_name: formData.get('given_name')?.toString() || undefined,
     family_name: formData.get('family_name')?.toString() || undefined,
@@ -36,10 +36,10 @@ export async function updateUserProfileAction(prevState: any, formData: FormData
     address: address ? JSON.parse(address) : undefined, // TODO validate before you parse
   };
 
-  inputData = Object.fromEntries(Object.entries(inputData).filter(([_, v]) => v !== undefined)) as UpdateUserInputType;
+  inputData = Object.fromEntries(Object.entries(inputData).filter(([_, v]) => v !== undefined)) as UpdateUserInput;
 
   console.log('input data', inputData);
-  const validatedFields = UpdateUserInputTypeSchema.safeParse(inputData);
+  const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
       ...prevState,

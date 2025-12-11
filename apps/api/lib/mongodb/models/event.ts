@@ -1,6 +1,6 @@
 import {getModelForClass, pre} from '@typegoose/typegoose';
 import {kebabCase} from 'lodash';
-import {EventType} from '@ntlango/commons/types';
+import {Event as EventEntity} from '@ntlango/commons/types';
 
 @pre<EventModel>('validate', function (next) {
   try {
@@ -16,10 +16,10 @@ import {EventType} from '@ntlango/commons/types';
     next(error as Error);
   }
 })
-class EventModel extends EventType {}
+class EventModel extends EventEntity {}
 
 const Event = getModelForClass(EventModel, {
-  options: {customName: 'EventType'},
+  options: {customName: 'Event'},
 });
 
 export default Event;

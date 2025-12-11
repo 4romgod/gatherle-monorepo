@@ -1,12 +1,12 @@
-import {EventTypeSchema, CreateEventInputTypeSchema, UpdateEventInputTypeSchema, validateInput} from '@/validation';
+import {EventSchema, CreateEventInputSchema, UpdateEventInputSchema, validateInput} from '@/validation';
 import mongoose from 'mongoose';
 import {EventStatus} from '@ntlango/commons/types/event';
 
 describe('Event', () => {
   const mockID = new mongoose.Types.ObjectId().toString();
 
-  describe('EventTypeSchema', () => {
-    it('should validate valid EventTypeSchema', () => {
+  describe('EventSchema', () => {
+    it('should validate valid EventSchema', () => {
       const validInput = {
         eventId: mockID,
         slug: 'event-slug',
@@ -30,19 +30,19 @@ describe('Event', () => {
         privacySetting: 'Public',
         eventLink: 'https://example.com/event',
       };
-      const errors = EventTypeSchema.safeParse(validInput);
+      const errors = EventSchema.safeParse(validInput);
       expect(errors.success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const errors = EventTypeSchema.safeParse(invalidInput);
+      const errors = EventSchema.safeParse(invalidInput);
       expect(errors.success).toBe(false);
     });
   });
 
-  describe('CreateEventInputTypeSchema', () => {
-    it('should validate valid CreateEventInputTypeSchema', () => {
+  describe('CreateEventInputSchema', () => {
+    it('should validate valid CreateEventInputSchema', () => {
       const validInput = {
         title: 'Event Title',
         description: 'Event Description',
@@ -64,25 +64,25 @@ describe('Event', () => {
         privacySetting: 'Public',
         eventLink: 'https://example.com/event',
       };
-      const errors = CreateEventInputTypeSchema.safeParse(validInput);
+      const errors = CreateEventInputSchema.safeParse(validInput);
       expect(errors.success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const errors = CreateEventInputTypeSchema.safeParse(invalidInput);
+      const errors = CreateEventInputSchema.safeParse(invalidInput);
       expect(errors.success).toBe(false);
     });
   });
 
-  describe('UpdateEventInputTypeSchema', () => {
-    it('should validate valid UpdateEventInputTypeSchema', () => {
+  describe('UpdateEventInputSchema', () => {
+    it('should validate valid UpdateEventInputSchema', () => {
       const validInput = {
         eventId: mockID,
         title: 'Updated Event Title',
       };
 
-      const errors = UpdateEventInputTypeSchema.safeParse(validInput);
+      const errors = UpdateEventInputSchema.safeParse(validInput);
       expect(errors.success).toBe(true);
     });
 
@@ -91,7 +91,7 @@ describe('Event', () => {
         eventId: 'invalid-id-format',
         title: 'Updated Event Title',
       };
-      const errors = UpdateEventInputTypeSchema.safeParse(invalidInput);
+      const errors = UpdateEventInputSchema.safeParse(invalidInput);
       expect(errors.success).toBe(false);
     });
   });

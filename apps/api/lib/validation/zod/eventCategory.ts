@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {ERROR_MESSAGES} from '@/validation';
 import mongoose from 'mongoose';
 
-export const EventCategoryTypeSchema = z.object({
+export const EventCategorySchema = z.object({
   eventCategoryId: z
     .string()
     .refine(mongoose.Types.ObjectId.isValid, {message: `Event Category eventCategoryId ${ERROR_MESSAGES.INVALID}`})
@@ -31,11 +31,11 @@ export const EventCategoryTypeSchema = z.object({
     .describe('The unique slug of the Event Category. This is a URL-friendly string.'),
 });
 
-export const CreateEventCategoryTypeSchema = EventCategoryTypeSchema.extend({})
+export const CreateEventCategorySchema = EventCategorySchema.extend({})
   .omit({eventCategoryId: true, slug: true})
   .describe('Schema for creating a new Event Category. All fields except ID are required.');
 
-export const UpdateEventCategoryTypeSchema = EventCategoryTypeSchema.partial()
+export const UpdateEventCategorySchema = EventCategorySchema.partial()
   .extend({
     eventCategoryId: z
       .string()

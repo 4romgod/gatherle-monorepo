@@ -1,4 +1,4 @@
-import {EventCategoryTypeSchema, CreateEventCategoryTypeSchema, UpdateEventCategoryTypeSchema} from '@/validation';
+import {EventCategorySchema, CreateEventCategorySchema, UpdateEventCategorySchema} from '@/validation';
 import mongoose from 'mongoose';
 
 describe('Event Category', () => {
@@ -13,16 +13,16 @@ describe('Event Category', () => {
     slug: 'category-slug',
   });
 
-  describe('EventCategoryTypeSchema', () => {
-    it('should validate valid EventCategoryTypeSchema', () => {
+  describe('EventCategorySchema', () => {
+    it('should validate valid EventCategorySchema', () => {
       const validInput = getValidEventCategoryInput();
-      const {success, error} = EventCategoryTypeSchema.safeParse(validInput);
+      const {success, error} = EventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const {success, error} = EventCategoryTypeSchema.safeParse(invalidInput);
+      const {success, error} = EventCategorySchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors.length).toBeGreaterThan(0);
@@ -34,7 +34,7 @@ describe('Event Category', () => {
         ...getValidEventCategoryInput(),
         eventCategoryId: 'invalid-id-format',
       };
-      const {success, error} = EventCategoryTypeSchema.safeParse(invalidInput);
+      const {success, error} = EventCategorySchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe('Event Category eventCategoryId is invalid');
@@ -42,19 +42,19 @@ describe('Event Category', () => {
     });
   });
 
-  describe('CreateEventCategoryTypeSchema', () => {
-    it('should validate valid CreateEventCategoryTypeSchema', () => {
+  describe('CreateEventCategorySchema', () => {
+    it('should validate valid CreateEventCategorySchema', () => {
       const validInput = {
         ...getValidEventCategoryInput(),
         eventCategoryId: undefined,
       };
-      const {success, error} = CreateEventCategoryTypeSchema.safeParse(validInput);
+      const {success, error} = CreateEventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
-      const {success, error} = CreateEventCategoryTypeSchema.safeParse(invalidInput);
+      const {success, error} = CreateEventCategorySchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors.length).toBeGreaterThan(0);
@@ -62,13 +62,13 @@ describe('Event Category', () => {
     });
   });
 
-  describe('UpdateEventCategoryTypeSchema', () => {
-    it('should validate valid UpdateEventCategoryTypeSchema', () => {
+  describe('UpdateEventCategorySchema', () => {
+    it('should validate valid UpdateEventCategorySchema', () => {
       const validInput = {
         eventCategoryId: mockID,
         name: 'Updated Category Name',
       };
-      const {success, error} = UpdateEventCategoryTypeSchema.safeParse(validInput);
+      const {success, error} = UpdateEventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -77,7 +77,7 @@ describe('Event Category', () => {
         eventCategoryId: 'invalid-id-format',
         name: 'Updated Category Name',
       };
-      const {success, error} = UpdateEventCategoryTypeSchema.safeParse(invalidInput);
+      const {success, error} = UpdateEventCategorySchema.safeParse(invalidInput);
       expect(success).toBe(false);
       if (error) {
         expect(error.errors[0].message).toBe('Event Category eventCategoryId is invalid');

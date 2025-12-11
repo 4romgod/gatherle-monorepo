@@ -1,17 +1,17 @@
-import {EventCategoryGroup} from '@/mongodb/models';
+import {EventCategoryGroup as EventCategoryGroupModel} from '@/mongodb/models';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {
-  CreateEventCategoryGroupInputType,
-  EventCategoryGroupType,
+  CreateEventCategoryGroupInput,
+  EventCategoryGroup,
   QueryOptionsInput,
-  UpdateEventCategoryGroupInputType,
+  UpdateEventCategoryGroupInput,
 } from '@ntlango/commons/types';
 
 class EventCategoryGroupDAO {
-  static async create(input: CreateEventCategoryGroupInputType): Promise<EventCategoryGroupType> {
+  static async create(input: CreateEventCategoryGroupInput): Promise<EventCategoryGroup> {
     try {
-      const eventCategoryGroup = await EventCategoryGroup.create(input);
+      const eventCategoryGroup = await EventCategoryGroupModel.create(input);
       return eventCategoryGroup.toObject();
     } catch (error) {
       console.log('Error creating event category group', error);
@@ -19,9 +19,9 @@ class EventCategoryGroupDAO {
     }
   }
 
-  static async readEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroupType> {
+  static async readEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroup> {
     try {
-      const query = EventCategoryGroup.findOne({ slug: slug }).populate('eventCategoryList');
+      const query = EventCategoryGroupModel.findOne({slug: slug}).populate('eventCategoryList');
       const eventCategoryGroup = await query.exec();
       if (!eventCategoryGroup) {
         throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
@@ -36,9 +36,11 @@ class EventCategoryGroupDAO {
     }
   }
 
-  static async readEventCategoryGroups(options?: QueryOptionsInput): Promise<EventCategoryGroupType[]> {
+  static async readEventCategoryGroups(options?: QueryOptionsInput): Promise<EventCategoryGroup[]> {
     try {
-      const query = options ? transformOptionsToQuery(EventCategoryGroup, options) : EventCategoryGroup.find({}).populate('eventCategoryList');
+      const query = options
+        ? transformOptionsToQuery(EventCategoryGroupModel, options)
+        : EventCategoryGroupModel.find({}).populate('eventCategoryList');
       const eventCategoryGroups = await query.exec();
       return eventCategoryGroups.map((eventCategoryGroup) => eventCategoryGroup.toObject());
     } catch (error) {
@@ -47,9 +49,11 @@ class EventCategoryGroupDAO {
     }
   }
 
-  static async updateEventCategoryGroup(input: UpdateEventCategoryGroupInputType) {
+  static async updateEventCategoryGroup(input: UpdateEventCategoryGroupInput) {
     try {
-      const updatedEventCategoryGroup = await EventCategoryGroup.findByIdAndUpdate(input.eventCategoryGroupId, input, { new: true })
+      const updatedEventCategoryGroup = await EventCategoryGroupModel.findByIdAndUpdate(input.eventCategoryGroupId, input, {
+        new: true,
+      })
         .populate('eventCategoryList')
         .exec();
 
@@ -66,9 +70,9 @@ class EventCategoryGroupDAO {
     }
   }
 
-  static async deleteEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroupType> {
+  static async deleteEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroup> {
     try {
-      const deletedEventCategoryGroup = await EventCategoryGroup.findOneAndDelete({ slug }).exec();
+      const deletedEventCategoryGroup = await EventCategoryGroupModel.findOneAndDelete({slug}).exec();
       if (!deletedEventCategoryGroup) {
         throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
       }

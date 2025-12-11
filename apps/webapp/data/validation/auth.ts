@@ -4,7 +4,7 @@ import { Gender, UserRole } from '../graphql/types/graphql';
 
 const InputMaybe = z.union([z.string(), z.undefined()]);
 
-export const CreateUserInputTypeSchema = z.object({
+export const CreateUserInputSchema = z.object({
   birthdate: z.string().refine(date => isValid(parseISO(date)), {
     message: 'Birthdate should be in YYYY-MM-DD format',
   }),
@@ -17,7 +17,7 @@ export const CreateUserInputTypeSchema = z.object({
   username: InputMaybe,
 });
 
-export const UpdateUserInputTypeSchema = z.object({
+export const UpdateUserInputSchema = z.object({
   userId: z.string().min(1, { message: 'User ID is required' }),
   given_name: z.string().min(1, { message: 'First name is required' }).optional(),
   family_name: z.string().min(1, { message: 'Last name is required' }).optional(),
@@ -40,7 +40,7 @@ export const UpdateUserInputTypeSchema = z.object({
   interests: z.array(z.string()).optional().nullable(),
 });
 
-export const LoginUserInputTypeSchema = z.object({
+export const LoginUserInputSchema = z.object({
   email: z.string().email({ message: 'Invalid email format' }),
   password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
 });

@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import {
   Media,
-  EventType,
-  CreateEventInputType,
-  UpdateEventInputType,
-  RSVPInputType,
-  CancelRSVPInputType,
+  Event,
+  CreateEventInput,
+  UpdateEventInput,
+  RsvpInput,
+  CancelRsvpInput,
 } from '@ntlango/commons/types';
 import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 
@@ -47,14 +47,14 @@ describe('Media ObjectType', () => {
   });
 });
 
-describe('EventType', () => {
+describe('Event', () => {
   it('should define ObjectType correctly', () => {
-    const eventType = new EventType();
+    const eventType = new Event();
     expect(eventType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const eventType = new EventType();
+    const eventType = new Event();
 
     expect(eventType.eventId).toBeUndefined(); // Because we are testing default values
     expect(eventType.slug).toBeUndefined();
@@ -76,14 +76,14 @@ describe('EventType', () => {
   });
 });
 
-describe('CreateEventInputType', () => {
+describe('CreateEventInput', () => {
   it('should define InputType correctly', () => {
-    const createEventInputType = new CreateEventInputType();
+    const createEventInputType = new CreateEventInput();
     expect(createEventInputType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const createEventInputType = new CreateEventInputType();
+    const createEventInputType = new CreateEventInput();
 
     expect(createEventInputType.title).toBeUndefined();
     expect(createEventInputType.description).toBeUndefined();
@@ -103,14 +103,14 @@ describe('CreateEventInputType', () => {
   });
 });
 
-describe('UpdateEventInputType', () => {
+describe('UpdateEventInput', () => {
   it('should define InputType correctly', () => {
-    const updateEventInputType = new UpdateEventInputType();
+    const updateEventInputType = new UpdateEventInput();
     expect(updateEventInputType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const updateEventInputType = new UpdateEventInputType();
+    const updateEventInputType = new UpdateEventInput();
 
     expect(updateEventInputType.eventId).toBeUndefined();
     expect(updateEventInputType.title).toBeUndefined();
@@ -131,14 +131,14 @@ describe('UpdateEventInputType', () => {
   });
 });
 
-describe('RSVPInputType', () => {
+describe('RsvpInput', () => {
   it('should define InputType correctly', () => {
-    const rsvpInputType = new RSVPInputType();
+    const rsvpInputType = new RsvpInput();
     expect(rsvpInputType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const rsvpInputType = new RSVPInputType();
+    const rsvpInputType = new RsvpInput();
 
     expect(rsvpInputType.eventId).toBeUndefined();
     expect(rsvpInputType.userIdList).toBeUndefined();
@@ -147,14 +147,14 @@ describe('RSVPInputType', () => {
   });
 });
 
-describe('CancelRSVPInputType', () => {
+describe('CancelRsvpInput', () => {
   it('should define InputType correctly', () => {
-    const cancelRsvpInputType = new CancelRSVPInputType();
+    const cancelRsvpInputType = new CancelRsvpInput();
     expect(cancelRsvpInputType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const cancelRsvpInputType = new CancelRSVPInputType();
+    const cancelRsvpInputType = new CancelRsvpInput();
 
     expect(cancelRsvpInputType.eventId).toBeUndefined();
     expect(cancelRsvpInputType.userIdList).toBeUndefined();

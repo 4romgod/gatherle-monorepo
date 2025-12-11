@@ -3,7 +3,7 @@ import {ERROR_MESSAGES, REGEX_PHONE_NUMBER} from '../constants';
 import {validateDate, validateMongodbId} from '../utils';
 import {Gender} from '../types';
 
-export const CreateUserInputTypeSchema = z.object({
+export const CreateUserInputSchema = z.object({
     address: z
         .string()
         .min(3, {message: `Address ${ERROR_MESSAGES.TOO_SHORT}`})
@@ -19,7 +19,7 @@ export const CreateUserInputTypeSchema = z.object({
     username: z.string().min(3, `username ${ERROR_MESSAGES.TOO_SHORT}`).optional(),
 });
 
-export const UpdateUserInputTypeSchema = z.object({
+export const UpdateUserInputSchema = z.object({
     id: z.string().refine(validateMongodbId),
     address: z.string().optional(),
     birthdate: z
@@ -41,7 +41,7 @@ export const UpdateUserInputTypeSchema = z.object({
     username: z.string().optional(),
 });
 
-export const LoginUserInputTypeSchema = z.object({
+export const LoginUserInputSchema = z.object({
     email: z.string().email({message: ERROR_MESSAGES.INVALID_EMAIL}),
     password: z.string().min(8, {message: ERROR_MESSAGES.INVALID_PASSWORD}),
 });

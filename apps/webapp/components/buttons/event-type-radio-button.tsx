@@ -2,9 +2,9 @@ import React from 'react';
 import { Grid } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import RadioButtonWithIcon from '@/components/buttons/custom-radio-button';
-import { EventTypeRadioButtonsProps } from '@/lib/constants';
+import { EventRadioButtonsProps } from '@/lib/constants';
 
-const EventTypeRadioButtons: React.FC<EventTypeRadioButtonsProps> = ({ selectedType, onChange }) => (
+const EventRadioButtons: React.FC<EventRadioButtonsProps> = ({ selectedType, onChange }) => (
   <Grid container spacing={2}>
     {[
       {
@@ -32,4 +32,4 @@ const EventTypeRadioButtons: React.FC<EventTypeRadioButtonsProps> = ({ selectedT
   </Grid>
 );
 
-export default EventTypeRadioButtons;
+export default EventRadioButtons;

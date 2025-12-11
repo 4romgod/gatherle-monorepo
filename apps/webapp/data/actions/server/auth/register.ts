@@ -1,11 +1,11 @@
 'use server';
 
-import { CreateUserInputType, RegisterUserDocument } from '@/data/graphql/types/graphql';
-import { CreateUserInputTypeSchema } from '@/data/validation';
+import { CreateUserInput, RegisterUserDocument } from '@/data/graphql/types/graphql';
+import { CreateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 
 export async function registerUserAction(prevState: any, formData: FormData) {
-  const inputData: CreateUserInputType = {
+  const inputData: CreateUserInput = {
     birthdate: formData.get('birthdate')?.toString() ?? '',
     email: formData.get('email')?.toString().toLowerCase() ?? '',
     family_name: formData.get('family_name')?.toString() ?? '',
@@ -15,7 +15,7 @@ export async function registerUserAction(prevState: any, formData: FormData) {
 
   console.log(inputData);
 
-  const validatedFields = CreateUserInputTypeSchema.safeParse(inputData);
+  const validatedFields = CreateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
       ...prevState,

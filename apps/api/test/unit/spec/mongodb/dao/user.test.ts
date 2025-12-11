@@ -1,6 +1,6 @@
 import {UserDAO} from '@/mongodb/dao';
 import {User} from '@/mongodb/models';
-import {CreateUserInputType, UpdateUserInputType, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
+import {CreateUserInput, UpdateUserInput, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
 import {Gender, UserRole} from '@ntlango/commons/types/user';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
@@ -52,7 +52,7 @@ describe('UserDAO', () => {
     jest.clearAllMocks();
   });
 
-  const mockCreateUserInput: CreateUserInputType = {
+  const mockCreateUserInput: CreateUserInput = {
     email: 'test@example.com',
     password: 'password',
     username: 'testUser',
@@ -397,7 +397,7 @@ describe('UserDAO', () => {
   });
 
   describe('updateUser', () => {
-    const mockUpdateUserInput: UpdateUserInputType = {
+    const mockUpdateUserInput: UpdateUserInput = {
       userId: 'mockUserId',
       email: 'updated@example.com',
       username: 'updatedUser',
@@ -430,7 +430,7 @@ describe('UserDAO', () => {
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
-      const mockUpdateUserInputNotFound: UpdateUserInputType = {
+      const mockUpdateUserInputNotFound: UpdateUserInput = {
         userId: 'nonExistingUserId',
         email: 'updated@example.com',
         username: 'updatedUser',

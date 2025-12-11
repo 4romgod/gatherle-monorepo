@@ -1,7 +1,7 @@
-import {CreateEventInputType} from '@ntlango/commons/types';
+import {CreateEventInput} from '@ntlango/commons/types';
 import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 
-const events: CreateEventInputType[] = [
+const events: CreateEventInput[] = [
   {
     title: 'Rocking The Daisies 2024',
     description: 'Rocking The Daisies 2024',

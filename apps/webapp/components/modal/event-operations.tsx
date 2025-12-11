@@ -9,12 +9,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import { Dialog, DialogContent, IconButton, List, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import { deleteEventAction } from '@/data/actions/server/events/delete-event';
-import { EventType } from '@/data/graphql/types/graphql';
+import { Event } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { useCustomAppContext } from '../app-context';
 
-const EventOperationsModal = ({ event }: { event: EventType }) => {
+const EventOperationsModal = ({ event }: { event: Event }) => {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { setToastProps, toastProps } = useCustomAppContext();

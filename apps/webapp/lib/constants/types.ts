@@ -1,13 +1,13 @@
-import { CreateEventInputType, EventCategoryType, Location } from '@/data/graphql/types/graphql';
+import { CreateEventInput, EventCategory, Location } from '@/data/graphql/types/graphql';
 import { SxProps, Theme } from '@mui/material';
 
 export type DisplayEventFiltersProps = {
-  categoryList: EventCategoryType[];
+  categoryList: EventCategory[];
 };
 
 export type EventMutationFormProps = {
-  onSubmit?: (eventData: CreateEventInputType) => void;
-  categoryList: EventCategoryType[];
+  onSubmit?: (eventData: CreateEventInput) => void;
+  categoryList: EventCategory[];
 };
 
 export type LocationInputProps = {
@@ -24,7 +24,7 @@ export type StatusFilterProps = {
 
 export type CategoryFilterProps = {
   sxProps?: SxProps<Theme>;
-  categoryList: EventCategoryType[];
+  categoryList: EventCategory[];
   onChange?: (eventCategoryList: string[]) => void;
 };
 
@@ -32,7 +32,7 @@ export type EventDateInputProps = {
   onChange: (value: string) => void;
 };
 
-export type EventTypeRadioButtonsProps = {
+export type EventRadioButtonsProps = {
   selectedType: string;
   onChange: (value: string) => void;
 };

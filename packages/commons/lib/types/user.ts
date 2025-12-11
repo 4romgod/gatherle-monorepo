@@ -5,13 +5,13 @@ import {Authorized, Field, ID, InputType, ObjectType, registerEnumType} from 'ty
 import {modelOptions, prop, Ref, Severity} from '@typegoose/typegoose';
 
 import {EVENT_DESCRIPTIONS, USER_DESCRIPTIONS} from '../constants';
-import {EventCategoryType} from './eventCategory';
+import {EventCategory} from './eventCategory';
 import {
-    CreateUserInputTypeSchema,
+    CreateUserInputSchema,
     ForgotPasswordInputTypeSchema,
-    LoginUserInputTypeSchema,
+    LoginUserInputSchema,
     ResetPasswordInputTypeSchema,
-    UpdateUserInputTypeSchema,
+    UpdateUserInputSchema,
 } from '../validation';
 
 export enum Gender {
@@ -37,9 +37,9 @@ registerEnumType(UserRole, {
     description: USER_DESCRIPTIONS.USER_ROLE,
 });
 
-@ObjectType('UserType', {description: USER_DESCRIPTIONS.TYPE})
+@ObjectType('User', {description: USER_DESCRIPTIONS.TYPE})
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
-export class UserType {
+export class User {
     @prop({required: true, unique: true, index: true})
     @Field((type) => ID, {description: USER_DESCRIPTIONS.ID})
     userId: string;
@@ -91,19 +91,19 @@ export class UserType {
     @prop({required: true, select: false})
     password: string;
 
-    @prop({type: () => [String], ref: () => EventCategoryType, default: []})
-    @Field(() => [EventCategoryType], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
-    interests?: Ref<EventCategoryType>[];
+    @prop({type: () => [String], ref: () => EventCategory, default: []})
+    @Field(() => [EventCategory], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
+    interests?: Ref<EventCategory>[];
 }
 
-@ObjectType('UserWithTokenType', {description: USER_DESCRIPTIONS.WITH_TOKEN})
-export class UserWithTokenType extends UserType {
+@ObjectType('UserWithToken', {description: USER_DESCRIPTIONS.WITH_TOKEN})
+export class UserWithToken extends User {
     @Field((type) => String, {description: USER_DESCRIPTIONS.TOKEN})
     token: string;
 }
 
-@InputType('CreateUserInputType', {description: USER_DESCRIPTIONS.CREATE_INPUT})
-export class CreateUserInputType {
+@InputType('CreateUserInput', {description: USER_DESCRIPTIONS.CREATE_INPUT})
+export class CreateUserInput {
     @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
@@ -141,8 +141,8 @@ export class CreateUserInputType {
     interests?: string[];
 }
 
-@InputType('UpdateUserInputType', {description: USER_DESCRIPTIONS.UPDATE_INPUT})
-export class UpdateUserInputType {
+@InputType('UpdateUserInput', {description: USER_DESCRIPTIONS.UPDATE_INPUT})
+export class UpdateUserInput {
     @Field((type) => ID, {description: USER_DESCRIPTIONS.ID})
     userId: string;
 
@@ -187,8 +187,8 @@ export class UpdateUserInputType {
     interests?: string[];
 }
 
-@InputType('LoginUserInputType', {description: USER_DESCRIPTIONS.LOGIN_INPUT})
-export class LoginUserInputType {
+@InputType('LoginUserInput', {description: USER_DESCRIPTIONS.LOGIN_INPUT})
+export class LoginUserInput {
     @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
@@ -196,8 +196,8 @@ export class LoginUserInputType {
     password: string;
 }
 
-export type LoginUserInputInferedType = z.infer<typeof LoginUserInputTypeSchema>;
-export type CreateUserInputInferedType = z.infer<typeof CreateUserInputTypeSchema>;
-export type UpdateUserInputInferedType = z.infer<typeof UpdateUserInputTypeSchema>;
+export type LoginUserInputInferedType = z.infer<typeof LoginUserInputSchema>;
+export type CreateUserInputInferedType = z.infer<typeof CreateUserInputSchema>;
+export type UpdateUserInputInferedType = z.infer<typeof UpdateUserInputSchema>;
 export type ForgotPasswordInputInferedType = z.infer<typeof ForgotPasswordInputTypeSchema>;
 export type ResetPasswordInputInferedType = z.infer<typeof ResetPasswordInputTypeSchema>;

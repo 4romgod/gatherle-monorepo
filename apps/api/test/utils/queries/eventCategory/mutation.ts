@@ -1,6 +1,6 @@
 export const getCreateEventCategoryMutation = (createEventCategoryInput: any) => {
   return {
-    query: `mutation CreateEventCategory($input: CreateEventCategoryInputType!) {
+    query: `mutation CreateEventCategory($input: CreateEventCategoryInput!) {
             createEventCategory(input: $input) {
                 eventCategoryId
                 name
@@ -16,7 +16,7 @@ export const getCreateEventCategoryMutation = (createEventCategoryInput: any) =>
 
 export const getUpdateEventCategoryMutation = (updateEventCategoryInput: any) => {
   return {
-    query: `mutation UpdateEventCategory($input: UpdateEventCategoryInputType!) {
+    query: `mutation UpdateEventCategory($input: UpdateEventCategoryInput!) {
             updateEventCategory(input: $input) {
                 eventCategoryId
                 name

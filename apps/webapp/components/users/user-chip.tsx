@@ -1,8 +1,8 @@
-import { UserType } from '@/data/graphql/types/graphql';
+import { User } from '@/data/graphql/types/graphql';
 import { Avatar, Chip } from '@mui/material';
 import Link from 'next/link';
 
-export default function UserChip({ user }: { user: UserType }) {
+export default function UserChip({ user }: { user: User }) {
   const { profile_picture, username } = user;
 
   return (

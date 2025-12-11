@@ -3,13 +3,13 @@
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { IconButton, Typography } from '@mui/material';
-import { EventType } from '@/data/graphql/types/graphql';
+import { Event } from '@/data/graphql/types/graphql';
 import { Box } from '@mui/material';
 import { CalendarIcon, CheckCircleIcon, TicketIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { ShareRounded, ThumbUpOffAltOutlined } from '@mui/icons-material';
 import { RRule } from 'rrule';
 
-export default function EventBox({ event }: { event: EventType }) {
+export default function EventBox({ event }: { event: Event }) {
   const { title, recurrenceRule, rSVPList, media } = event;
 
   return (
