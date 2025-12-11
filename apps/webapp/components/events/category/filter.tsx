@@ -1,4 +1,4 @@
-import { EventCategoryType } from '@/data/graphql/types/graphql';
+import { EventCategory } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { Box, Typography } from '@mui/material';
 import { MouseEventHandler } from 'react';
@@ -7,7 +7,7 @@ export default function EventCategoryFilter({
   eventCategory,
   onClick,
 }: {
-  eventCategory: EventCategoryType;
+  eventCategory: EventCategory;
   onClick?: MouseEventHandler<HTMLDivElement>;
 }) {
   const IconComponent = getEventCategoryIcon(eventCategory.iconName);

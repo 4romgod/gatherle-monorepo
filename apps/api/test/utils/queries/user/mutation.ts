@@ -1,6 +1,6 @@
 export const getCreateUserMutation = (user: any) => {
   return {
-    query: `mutation CreateUser($input: CreateUserInputType!) {
+    query: `mutation CreateUser($input: CreateUserInput!) {
             createUser(input: $input) {
               userId
               email
@@ -17,7 +17,7 @@ export const getCreateUserMutation = (user: any) => {
 
 export const getUpdateUserMutation = (user: any) => {
   return {
-    query: `mutation UpdateUser($input: UpdateUserInputType!) {
+    query: `mutation UpdateUser($input: UpdateUserInput!) {
             updateUser(input: $input) {
               userId
               email
@@ -35,7 +35,7 @@ export const getUpdateUserMutation = (user: any) => {
 
 export const getLoginUserMutation = (loginData: any) => {
   return {
-    query: `mutation LoginUser($input: LoginUserInputType!) {
+    query: `mutation LoginUser($input: LoginUserInput!) {
             loginUser(input: $input) {
                 userId
                 email

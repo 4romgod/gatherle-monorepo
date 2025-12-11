@@ -2,14 +2,14 @@
 
 import React, { FormEvent, useState } from 'react';
 import { TextField, Button, Grid, Typography, MenuItem, Select, InputLabel, FormControl, Box, SelectChangeEvent, Paper } from '@mui/material';
-import { CreateEventInputType, EventPrivacySetting, EventStatus, Location } from '@/data/graphql/types/graphql';
+import { CreateEventInput, EventPrivacySetting, EventStatus, Location } from '@/data/graphql/types/graphql';
 import { EventMutationFormProps } from '@/lib/constants';
 import CategoryFilter from '@/components/events/filters/category';
 import LocationInput from './input-location';
 import EventDateInput from './input-event-date';
 
 export default function EventMutationForm({ categoryList }: EventMutationFormProps) {
-  const [eventData, setEventData] = useState<CreateEventInputType>({
+  const [eventData, setEventData] = useState<CreateEventInput>({
     title: '',
     description: '',
     location: {},

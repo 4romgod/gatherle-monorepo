@@ -3,13 +3,13 @@
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { CardContent, Typography } from '@mui/material';
-import { EventType } from '@/data/graphql/types/graphql';
+import { Event } from '@/data/graphql/types/graphql';
 import { Box } from '@mui/material';
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import Link from 'next/link';
 
-export default function EventBoxSm({ event }: { event: EventType }) {
+export default function EventBoxSm({ event }: { event: Event }) {
   const { recurrenceRule, rSVPList, location } = event;
 
   return (

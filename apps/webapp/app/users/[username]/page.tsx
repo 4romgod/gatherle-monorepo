@@ -1,7 +1,7 @@
 import CustomContainer from '@/components/custom-container';
 import EventBox from '@/components/events/event-box';
 import { getClient } from '@/data/graphql';
-import { EventCategoryType, EventType, FilterOperatorInput, GetAllEventsDocument, GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
+import { EventCategory, Event, FilterOperatorInput, GetAllEventsDocument, GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
 import { Typography, Box, Grid, Paper } from '@mui/material';
 import UserDetails from '@/components/users/user-details';
 import EventCategoryChip from '@/components/events/category/chip';
@@ -36,7 +36,7 @@ export default async function UserPage(props: Props) {
   const events = eventsRetrieved.readEvents;
 
   // TODO get this from user registration
-  const categories = events.reduce((accum: EventCategoryType[], curr: EventType) => accum.concat(curr.eventCategoryList), []);
+  const categories = events.reduce((accum: EventCategory[], curr: Event) => accum.concat(curr.eventCategoryList), []);
 
   return (
     <Box component="main">

@@ -18,13 +18,13 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { ALL_WEEKDAYS, Frequency, RRule, Weekday, WeekdayStr } from 'rrule';
 import dayjs, { Dayjs } from 'dayjs';
-import EventTypeRadioButtons from '@/components/buttons/event-type-radio-button';
+import EventRadioButtons from '@/components/buttons/event-type-radio-button';
 import { EventDateInputProps } from '@/lib/constants';
 
 // TODO persist the recurrence rule in local storage
 // TODO add date like in input-address
 export default function EventDateInput({ onChange }: EventDateInputProps) {
-  const [eventType, setEventType] = useState<string>('single');
+  const [eventType, setEvent] = useState<string>('single');
   const [startDateTime, setStartDateTime] = useState<Dayjs | null>(dayjs());
   const [endDateTime, setEndDateTime] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
 
@@ -75,7 +75,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
       </Typography>
 
       <FormControl component="fieldset" sx={{ width: '100%', mb: 4 }}>
-        <EventTypeRadioButtons selectedType={eventType} onChange={setEventType} />
+        <EventRadioButtons selectedType={eventType} onChange={setEvent} />
       </FormControl>
 
       {/* Date and Time Pickers */}

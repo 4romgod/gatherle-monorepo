@@ -1,53 +1,53 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
-import {CreateEventInputType, EventType, UpdateEventInputType, UserRole, QueryOptionsInput} from '@ntlango/commons/types';
+import {CreateEventInput, Event, UpdateEventInput, UserRole, QueryOptionsInput} from '@ntlango/commons/types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
-import {CreateEventInputTypeSchema, UpdateEventInputTypeSchema} from '@/validation/zod';
+import {CreateEventInputSchema, UpdateEventInputSchema} from '@/validation/zod';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
 import {EventDAO} from '@/mongodb/dao';
 
 @Resolver()
 export class EventResolver {
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.createEvent})
-  async createEvent(@Arg('input', () => CreateEventInputType) input: CreateEventInputType): Promise<EventType> {
-    validateInput<CreateEventInputType>(CreateEventInputTypeSchema, input);
+  @Mutation(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.createEvent})
+  async createEvent(@Arg('input', () => CreateEventInput) input: CreateEventInput): Promise<Event> {
+    validateInput<CreateEventInput>(CreateEventInputSchema, input);
     return EventDAO.create(input);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.updateEvent})
-  async updateEvent(@Arg('input', () => UpdateEventInputType) input: UpdateEventInputType): Promise<EventType> {
-    validateInput<UpdateEventInputType>(UpdateEventInputTypeSchema, input);
+  @Mutation(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.updateEvent})
+  async updateEvent(@Arg('input', () => UpdateEventInput) input: UpdateEventInput): Promise<Event> {
+    validateInput<UpdateEventInput>(UpdateEventInputSchema, input);
     return EventDAO.updateEvent(input);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventById})
-  async deleteEventById(@Arg('eventId', () => String) eventId: string): Promise<EventType> {
+  @Mutation(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventById})
+  async deleteEventById(@Arg('eventId', () => String) eventId: string): Promise<Event> {
     validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId));
     return EventDAO.deleteEventById(eventId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventBySlug})
-  async deleteEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventType> {
+  @Mutation(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventBySlug})
+  async deleteEventBySlug(@Arg('slug', () => String) slug: string): Promise<Event> {
     return EventDAO.deleteEventBySlug(slug);
   }
 
-  @Query(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventById})
-  async readEventById(@Arg('eventId', () => String) eventId: string): Promise<EventType | null> {
+  @Query(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventById})
+  async readEventById(@Arg('eventId', () => String) eventId: string): Promise<Event | null> {
     validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId));
     return EventDAO.readEventById(eventId);
   }
 
-  @Query(() => EventType, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventBySlug})
-  async readEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventType | null> {
+  @Query(() => Event, {description: RESOLVER_DESCRIPTIONS.EVENT.readEventBySlug})
+  async readEventBySlug(@Arg('slug', () => String) slug: string): Promise<Event | null> {
     return EventDAO.readEventBySlug(slug);
   }
 
-  @Query(() => [EventType], {description: RESOLVER_DESCRIPTIONS.EVENT.readEvents})
-  async readEvents(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<EventType[]> {
+  @Query(() => [Event], {description: RESOLVER_DESCRIPTIONS.EVENT.readEvents})
+  async readEvents(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<Event[]> {
     return EventDAO.readEvents(options);
   }
 }

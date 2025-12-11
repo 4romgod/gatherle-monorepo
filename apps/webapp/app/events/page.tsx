@@ -3,7 +3,7 @@ import EventTileGrid from '@/components/events/event-tile-grid';
 import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
 import { getClient } from '@/data/graphql';
 import { Typography, Grid, Box, Paper } from '@mui/material';
-import { EventCategoryType, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { EventCategory, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import SearchInput from '@/components/search/search-box';
 import DesktopEventFilters from '@/components/events/filters/desktop/display-desktop-filters';
 import MobileEventFilters from '@/components/events/filters/mobile/display-mobile-filters';
@@ -29,7 +29,7 @@ export default async function Events() {
     query: GetAllEventCategoriesDocument,
   });
 
-  const allCategories: EventCategoryType[] = eventCategories.readEventCategories;
+  const allCategories: EventCategory[] = eventCategories.readEventCategories;
   const eventsByCategory = groupEventsByCategory(events);
 
   return (

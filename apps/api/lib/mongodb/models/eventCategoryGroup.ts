@@ -1,6 +1,6 @@
 import {getModelForClass, pre} from '@typegoose/typegoose';
 import {kebabCase} from 'lodash';
-import {EventCategoryGroupType} from '@ntlango/commons/types';
+import {EventCategoryGroup as EventCategoryGroupEntity} from '@ntlango/commons/types';
 
 @pre<EventCategoryGroupModel>('validate', function (next) {
   try {
@@ -15,10 +15,10 @@ import {EventCategoryGroupType} from '@ntlango/commons/types';
     next(error as Error);
   }
 })
-class EventCategoryGroupModel extends EventCategoryGroupType {}
+class EventCategoryGroupModel extends EventCategoryGroupEntity {}
 
 const EventCategoryGroup = getModelForClass(EventCategoryGroupModel, {
-  options: {customName: 'EventCategoryGroupType'},
+  options: {customName: 'EventCategoryGroup'},
 });
 
 export default EventCategoryGroup;

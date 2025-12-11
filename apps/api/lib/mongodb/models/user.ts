@@ -1,8 +1,7 @@
 import {getModelForClass, pre, DocumentType} from '@typegoose/typegoose';
-import {Gender, UserRole, UserType} from '@ntlango/commons/types';
+import {Gender, UserRole, User as UserEntity} from '@ntlango/commons/types';
 import {genSalt, hash, compare} from 'bcryptjs';
 
-// Helper for password hashing
 async function hashPassword(plainPassword: string): Promise<string> {
   const salt = await genSalt(10);
   return hash(plainPassword, salt);
@@ -65,18 +64,18 @@ async function hashPassword(plainPassword: string): Promise<string> {
     next(err as Error);
   }
 })
-class UserModel extends UserType {
+class UserModel extends UserEntity {
   comparePassword(candidatePassword: string) {
     return compare(candidatePassword, this.password);
   }
 }
 
-export type UserTypeDocument = DocumentType<UserModel>;
+export type UserDocument = DocumentType<UserModel>;
 
 const User = getModelForClass(UserModel, {
-  options: {customName: 'UserType'},
+  options: {customName: 'User'},
   schemaOptions: {
-    // ensure default select behavior stays in sync with commons definition
+    // TODO ensure default select behavior stays in sync with commons definition
     toObject: {getters: true},
     toJSON: {getters: true},
   },

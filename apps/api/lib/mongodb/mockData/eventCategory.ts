@@ -1,6 +1,6 @@
-import {CreateEventCategoryInputType} from '@ntlango/commons/types';
+import {CreateEventCategoryInput} from '@ntlango/commons/types';
 
-export const eventCategories: CreateEventCategoryInputType[] = [
+export const eventCategories: CreateEventCategoryInput[] = [
   { name: 'Concerts', iconName: 'MusicalNoteIcon', description: 'Live music performances and festivals', color: '#FF69B4' },
   { name: 'Nightlife', iconName: 'SparklesIcon', description: 'Clubbing, parties, and nightlife events', color: '#8B008B' },
   { name: 'Workshops', iconName: 'WrenchIcon', description: 'Hands-on learning sessions and skill-building', color: '#FF8C00' },

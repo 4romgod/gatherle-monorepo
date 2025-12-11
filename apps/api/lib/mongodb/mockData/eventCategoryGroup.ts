@@ -1,6 +1,6 @@
-import {CreateEventCategoryGroupInputType} from '@ntlango/commons/types';
+import {CreateEventCategoryGroupInput} from '@ntlango/commons/types';
 
-const eventCategoryGroups: CreateEventCategoryGroupInputType[] = [
+const eventCategoryGroups: CreateEventCategoryGroupInput[] = [
   {
     name: 'Entertainment',
     eventCategoryList: ['Concerts', 'Nightlife', 'Film & Media', 'Gaming', 'Fashion & Beauty', 'Arts & Culture'],

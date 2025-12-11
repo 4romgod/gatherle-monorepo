@@ -1,21 +1,21 @@
 import {GraphQLError} from 'graphql';
-import {Event} from '@/mongodb/models';
+import {Event as EventModel} from '@/mongodb/models';
 import {
-  EventType,
-  UpdateEventInputType,
-  CreateEventInputType,
+  Event as EventEntity,
+  UpdateEventInput,
+  CreateEventInput,
   QueryOptionsInput,
-  RSVPInputType,
-  CancelRSVPInputType,
+  RsvpInput,
+  CancelRsvpInput,
 } from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {UpdateQuery} from 'mongoose';
 import {ERROR_MESSAGES} from '@/validation';
 
 class EventDAO {
-  static async create(input: CreateEventInputType): Promise<EventType> {
+  static async create(input: CreateEventInput): Promise<EventEntity> {
     try {
-      const event = await (await Event.create(input)).populate('organizerList rSVPList eventCategoryList');
+      const event = await (await EventModel.create(input)).populate('organizerList rSVPList eventCategoryList');
       return event.toObject();
     } catch (error) {
       console.error('Error creating event', error);
@@ -23,9 +23,9 @@ class EventDAO {
     }
   }
 
-  static async readEventById(eventId: string): Promise<EventType> {
+  static async readEventById(eventId: string): Promise<EventEntity> {
     try {
-      const query = Event.findById(eventId).populate('organizerList rSVPList eventCategoryList');
+      const query = EventModel.findById(eventId).populate('organizerList rSVPList eventCategoryList');
       const event = await query.exec();
       if (!event) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
@@ -40,9 +40,9 @@ class EventDAO {
     }
   }
 
-  static async readEventBySlug(slug: string): Promise<EventType> {
+  static async readEventBySlug(slug: string): Promise<EventEntity> {
     try {
-      const query = Event.findOne({slug: slug}).populate('organizerList rSVPList eventCategoryList');
+      const query = EventModel.findOne({slug: slug}).populate('organizerList rSVPList eventCategoryList');
       const event = await query.exec();
       if (!event) {
         throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
@@ -57,10 +57,10 @@ class EventDAO {
     }
   }
 
-  static async readEvents(options?: QueryOptionsInput): Promise<EventType[]> {
+  static async readEvents(options?: QueryOptionsInput): Promise<EventEntity[]> {
     try {
       const pipeline = transformOptionsToPipeline(options);
-      const events = await Event.aggregate<EventType>(pipeline).exec();
+      const events = await EventModel.aggregate<EventEntity>(pipeline).exec();
       return events;
     } catch (error) {
       console.error('Error reading events', error);
@@ -68,10 +68,12 @@ class EventDAO {
     }
   }
 
-  static async updateEvent(input: UpdateEventInputType): Promise<EventType> {
+  static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
     try {
       const {eventId, ...restInput} = input;
-      const updatedEvent = await Event.findByIdAndUpdate(eventId, restInput, {new: true}).populate('organizerList rSVPList eventCategoryList').exec();
+      const updatedEvent = await EventModel.findByIdAndUpdate(eventId, restInput, {new: true})
+        .populate('organizerList rSVPList eventCategoryList')
+        .exec();
 
       if (!updatedEvent) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
@@ -86,9 +88,11 @@ class EventDAO {
     }
   }
 
-  static async deleteEventById(eventId: string): Promise<EventType> {
+  static async deleteEventById(eventId: string): Promise<EventEntity> {
     try {
-      const deletedEvent = await Event.findByIdAndDelete(eventId).populate('organizerList rSVPList eventCategoryList').exec();
+      const deletedEvent = await EventModel.findByIdAndDelete(eventId)
+        .populate('organizerList rSVPList eventCategoryList')
+        .exec();
       if (!deletedEvent) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
       }
@@ -102,9 +106,11 @@ class EventDAO {
     }
   }
 
-  static async deleteEventBySlug(slug: string): Promise<EventType> {
+  static async deleteEventBySlug(slug: string): Promise<EventEntity> {
     try {
-      const deletedEvent = await Event.findOneAndDelete({slug}).populate('organizerList rSVPList eventCategoryList').exec();
+      const deletedEvent = await EventModel.findOneAndDelete({slug})
+        .populate('organizerList rSVPList eventCategoryList')
+        .exec();
       if (!deletedEvent) {
         throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
       }
@@ -118,12 +124,12 @@ class EventDAO {
     }
   }
 
-  static async RSVP(input: RSVPInputType) {
+  static async RSVP(input: RsvpInput) {
     const {eventId} = input;
 
     try {
       const validUserIds = await validateUserIdentifiers(input);
-      const updateQuery: UpdateQuery<EventType> = {
+      const updateQuery: UpdateQuery<EventEntity> = {
         $addToSet: {
           rSVPList: {
             $each: validUserIds,
@@ -131,7 +137,9 @@ class EventDAO {
         },
       };
 
-      const event = await Event.findByIdAndUpdate(eventId, updateQuery, {new: true}).populate('organizerList rSVPList eventCategoryList').exec();
+      const event = await EventModel.findByIdAndUpdate(eventId, updateQuery, {new: true})
+        .populate('organizerList rSVPList eventCategoryList')
+        .exec();
 
       if (!event) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
@@ -146,19 +154,21 @@ class EventDAO {
     }
   }
 
-  static async cancelRSVP(input: CancelRSVPInputType) {
+  static async cancelRSVP(input: CancelRsvpInput) {
     const {eventId} = input;
 
     try {
       const validUserIds = await validateUserIdentifiers(input);
-      const updateQuery: UpdateQuery<EventType> = {
+      const updateQuery: UpdateQuery<EventEntity> = {
         $pull: {
           rSVPList: {
             $in: validUserIds,
           },
         },
       };
-      const event = await Event.findByIdAndUpdate(eventId, updateQuery, {new: true}).populate('organizerList rSVPList eventCategoryList').exec();
+      const event = await EventModel.findByIdAndUpdate(eventId, updateQuery, {new: true})
+        .populate('organizerList rSVPList eventCategoryList')
+        .exec();
 
       if (!event) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);

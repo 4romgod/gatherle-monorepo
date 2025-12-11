@@ -4,9 +4,9 @@ import GraphQLJSON from 'graphql-type-json';
 import {modelOptions, prop, Ref, Severity} from '@typegoose/typegoose';
 
 import {EVENT_DESCRIPTIONS} from '../constants';
-import {EventCategoryType} from './eventCategory';
+import {EventCategory} from './eventCategory';
 import {Location} from './location';
-import {UserType} from './user';
+import {User} from './user';
 
 export enum EventPrivacySetting {
     Public = 'Public',
@@ -44,8 +44,8 @@ export class Media {
 }
 
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
-@ObjectType('EventType', {description: EVENT_DESCRIPTIONS.EVENT.TYPE})
-export class EventType {
+@ObjectType('Event', {description: EVENT_DESCRIPTIONS.EVENT.TYPE})
+export class Event {
     @prop({required: true, unique: true, index: true})
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
@@ -78,17 +78,17 @@ export class EventType {
     @Field(() => Int, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.CAPACITY})
     capacity?: number;
 
-    @prop({type: () => [String], ref: () => EventCategoryType, required: true})
-    @Field(() => [EventCategoryType], {description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
-    eventCategoryList: Ref<EventCategoryType>[];
+    @prop({type: () => [String], ref: () => EventCategory, required: true})
+    @Field(() => [EventCategory], {description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
+    eventCategoryList: Ref<EventCategory>[];
 
-    @prop({type: () => [String], ref: () => UserType, required: true})
-    @Field(() => [UserType], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
-    organizerList: Ref<UserType>[];
+    @prop({type: () => [String], ref: () => User, required: true})
+    @Field(() => [User], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
+    organizerList: Ref<User>[];
 
-    @prop({type: () => [String], ref: () => UserType, required: true})
-    @Field(() => [UserType], {description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIST})
-    rSVPList: Ref<UserType>[];
+    @prop({type: () => [String], ref: () => User, required: true})
+    @Field(() => [User], {description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIST})
+    rSVPList: Ref<User>[];
 
     @prop({type: () => Object, default: {}})
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
@@ -115,8 +115,8 @@ export class EventType {
     eventLink?: string;
 }
 
-@InputType('CreateEventInputType', {description: EVENT_DESCRIPTIONS.EVENT.CREATE_INPUT})
-export class CreateEventInputType {
+@InputType('CreateEventInput', {description: EVENT_DESCRIPTIONS.EVENT.CREATE_INPUT})
+export class CreateEventInput {
     @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.TITLE})
     title: string;
 
@@ -163,8 +163,8 @@ export class CreateEventInputType {
     eventLink?: string;
 }
 
-@InputType('UpdateEventInputType', {description: EVENT_DESCRIPTIONS.EVENT.UPDATE_INPUT})
-export class UpdateEventInputType {
+@InputType('UpdateEventInput', {description: EVENT_DESCRIPTIONS.EVENT.UPDATE_INPUT})
+export class UpdateEventInput {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 
@@ -214,8 +214,8 @@ export class UpdateEventInputType {
     eventLink?: string;
 }
 
-@InputType('RSVPInputType', {description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE})
-export class RSVPInputType {
+@InputType('RsvpInput', {description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE})
+export class RsvpInput {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 
@@ -229,8 +229,8 @@ export class RSVPInputType {
     emailList?: string[];
 }
 
-@InputType('CancelRSVPInputType', {description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE})
-export class CancelRSVPInputType {
+@InputType('CancelRsvpInput', {description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE})
+export class CancelRsvpInput {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 

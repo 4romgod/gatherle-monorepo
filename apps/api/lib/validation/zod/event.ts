@@ -3,7 +3,7 @@ import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 import {ERROR_MESSAGES} from '@/validation';
 import mongoose from 'mongoose';
 
-export const EventTypeSchema = z.object({
+export const EventSchema = z.object({
   eventId: z
     .string()
     .refine(mongoose.Types.ObjectId.isValid, {message: `Event ID ${ERROR_MESSAGES.INVALID}`})
@@ -72,9 +72,9 @@ export const EventTypeSchema = z.object({
   eventLink: z.string().optional().describe('A link to the event page or further information about the event.'),
 });
 
-export const CreateEventInputTypeSchema = EventTypeSchema.extend({}).omit({eventId: true, slug: true});
+export const CreateEventInputSchema = EventSchema.extend({}).omit({eventId: true, slug: true});
 
-export const UpdateEventInputTypeSchema = EventTypeSchema.partial()
+export const UpdateEventInputSchema = EventSchema.partial()
   .extend({
     eventId: z
       .string()

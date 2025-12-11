@@ -1,9 +1,9 @@
-import { EventCategoryType } from "@/data/graphql/types/graphql";
+import { EventCategory } from "@/data/graphql/types/graphql";
 import { getEventCategoryIcon } from "@/lib/constants";
 import { Box, Button, Typography } from "@mui/material";
 import Link from 'next/link';
 
-export default async function EventCategoryBox({ eventCategory }: { eventCategory: EventCategoryType }) {
+export default async function EventCategoryBox({ eventCategory }: { eventCategory: EventCategory }) {
   const IconComponent = getEventCategoryIcon(eventCategory.iconName);
 
   return (

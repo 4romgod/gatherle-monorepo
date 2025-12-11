@@ -1,13 +1,13 @@
 import React from 'react';
 import { Typography, Grid, Box } from '@mui/material';
-import { EventType } from '@/data/graphql/types/graphql';
+import { Event } from '@/data/graphql/types/graphql';
 import EventBox from '@/components/events/event-box';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
 
 export type EventTileGridProps = {
   eventsByCategory: {
-    [category: string]: EventType[];
+    [category: string]: Event[];
   };
 };
 

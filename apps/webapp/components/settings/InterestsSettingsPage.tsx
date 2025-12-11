@@ -17,15 +17,15 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
-import { EventCategoryGroupType, EventCategoryType, UserType } from '@/data/graphql/types/graphql';
+import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
 
-export default function InterestsSettingsPage({ user, eventCategoryGroups }: { user: UserType; eventCategoryGroups: EventCategoryGroupType[] }) {
-  const [selectedInterests, setSelectedInterests] = useState<EventCategoryType[]>(user.interests ? user.interests : []);
-  const [tempInterests, setTempInterests] = useState<EventCategoryType[]>([]);
+export default function InterestsSettingsPage({ user, eventCategoryGroups }: { user: User; eventCategoryGroups: EventCategoryGroup[] }) {
+  const [selectedInterests, setSelectedInterests] = useState<EventCategory[]>(user.interests ? user.interests : []);
+  const [tempInterests, setTempInterests] = useState<EventCategory[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleInterestToggle = (eventCategory: EventCategoryType) => {
+  const handleInterestToggle = (eventCategory: EventCategory) => {
     setTempInterests((prev) => {
       const exists = prev.some(item => item.eventCategoryId === eventCategory.eventCategoryId);
       if (exists) {

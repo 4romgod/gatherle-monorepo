@@ -1,7 +1,7 @@
-import {CreateUserInputType} from '@ntlango/commons/types';
+import {CreateUserInput} from '@ntlango/commons/types';
 import {Gender} from '@ntlango/commons/types/user';
 
-const users: CreateUserInputType[] = [
+const users: CreateUserInput[] = [
   {
     // id: 'user001',
     email: 'user001@gmail.com',

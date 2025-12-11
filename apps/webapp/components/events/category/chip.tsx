@@ -1,9 +1,9 @@
-import { EventCategoryType } from '@/data/graphql/types/graphql';
+import { EventCategory } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { Avatar, Chip } from '@mui/material';
 import Link from 'next/link';
 
-export default function EventCategoryChip({ category }: { category: EventCategoryType }) {
+export default function EventCategoryChip({ category }: { category: EventCategory }) {
   const IconComponent = getEventCategoryIcon(category.iconName);
   return (
     <Link key={category.eventCategoryId} href={`/events#${category.name}`} passHref style={{ margin: 5 }}>

@@ -1,7 +1,7 @@
 'use server';
 
-import { UpdateUserInputType, UpdateUserDocument } from '@/data/graphql/types/graphql';
-import { UpdateUserInputTypeSchema } from '@/data/validation';
+import { UpdateUserInput, UpdateUserDocument } from '@/data/graphql/types/graphql';
+import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
 
@@ -33,14 +33,14 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
   // TODO: Verify current password before updating
   // You might need a separate GraphQL query/mutation to verify the current password
 
-  let inputData: UpdateUserInputType = {
+  let inputData: UpdateUserInput = {
     userId: userId,
     password: newPassword, // Fixed: was using undefined 'password' variable
   };
 
   console.log('input data', inputData);
 
-  const validatedFields = UpdateUserInputTypeSchema.safeParse(inputData);
+  const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
       ...prevState,

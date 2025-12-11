@@ -2,11 +2,11 @@ import {getConfigValue, MongoDbClient} from '@/clients';
 import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryMockData, eventCategoryGroupMockData} from '@/mongodb/mockData';
 import {
-  CreateEventCategoryGroupInputType,
-  CreateEventCategoryInputType,
-  CreateEventInputType,
-  CreateUserInputType,
-  EventCategoryType,
+  CreateEventCategoryGroupInput,
+  CreateEventCategoryInput,
+  CreateEventInput,
+  CreateUserInput,
+  EventCategory,
 } from '@ntlango/commons/types';
 import {SECRET_KEYS} from '@/constants';
 
@@ -28,7 +28,7 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
   return randomItems;
 }
 
-async function seedEventCategories(categories: Array<CreateEventCategoryInputType>) {
+async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
   console.log('Starting to seed event category data...');
   for (const category of categories) {
     const eventCategoryResponse = await EventCategoryDAO.create(category);
@@ -37,7 +37,7 @@ async function seedEventCategories(categories: Array<CreateEventCategoryInputTyp
   console.log('Completed seeding event category data.');
 }
 
-async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<CreateEventCategoryGroupInputType>, eventCategoryList: Array<EventCategoryType>) {
+async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<CreateEventCategoryGroupInput>, eventCategoryList: Array<EventCategory>) {
   console.log('Starting to seed event category groups data...');
 
   for (const groupInput of eventCategoryGroupsInputList) {
@@ -63,7 +63,7 @@ async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<Creat
   console.log('Completed seeding event category group data.');
 }
 
-async function seedUsers(users: Array<CreateUserInputType>, eventCategoryIds: Array<string>) {
+async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<string>) {
   console.log('Starting to seed user data...');
   for (const user of users) {
     const userResponse = await UserDAO.create({
@@ -75,7 +75,7 @@ async function seedUsers(users: Array<CreateUserInputType>, eventCategoryIds: Ar
   console.log('Completed seeding user data.');
 }
 
-async function seedEvents(events: Array<CreateEventInputType>, userIds: Array<string>, eventCategoryIds: Array<string>) {
+async function seedEvents(events: Array<CreateEventInput>, userIds: Array<string>, eventCategoryIds: Array<string>) {
   console.log('Starting to seed event data...');
   for (const event of events) {
     const eventResponse = await EventDAO.create({

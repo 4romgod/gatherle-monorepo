@@ -1,18 +1,18 @@
 'use server';
 
-import { LoginUserInputType } from '@/data/graphql/types/graphql';
-import { LoginUserInputTypeSchema } from '@/data/validation';
+import { LoginUserInput } from '@/data/graphql/types/graphql';
+import { LoginUserInputSchema } from '@/data/validation';
 import { DEFAULT_LOGIN_REDIRECT } from '@/routes';
 import { AuthError } from 'next-auth';
 import { signIn } from '@/auth';
 
 export async function loginUserAction(prevState: any, formData: FormData) {
-  const inputData: LoginUserInputType = {
+  const inputData: LoginUserInput = {
     email: formData.get('email')?.toString().toLowerCase() ?? '',
     password: formData.get('password')?.toString() ?? '',
   };
 
-  const validatedFields = LoginUserInputTypeSchema.safeParse(inputData);
+  const validatedFields = LoginUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
       ...prevState,

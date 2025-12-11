@@ -1,13 +1,13 @@
-import { UserWithTokenType, UserType } from '@/data/graphql/types/graphql';
+import { UserWithToken, User } from '@/data/graphql/types/graphql';
 import { DefaultSession } from 'next-auth';
 
-export type ExtendedUserType = DefaultSession['user'] & UserWithTokenType;
+export type ExtendedUser = DefaultSession['user'] & UserWithToken;
 
 declare module 'next-auth' {
   interface Session {
-    user: ExtendedUserType;
+    user: ExtendedUser;
   }
 
-  interface JWT extends ExtendedUserType {}
-  interface User extends ExtendedUserType {}
+  interface JWT extends ExtendedUser {}
+  interface User extends ExtendedUser {}
 }
