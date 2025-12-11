@@ -149,7 +149,7 @@ Phase plan:
 
 | Phase | Scope | Effort |
 | --- | --- | --- |
-| 1. Participation | Extract `rSVPList` → `EventParticipant` collection; add basic status tracking | Medium |
+| 1. Participation | Extract `rsvpList` → `EventParticipant` collection; add basic status tracking | Medium |
 | 2. Organizations | Add `Organization`, `OrganizationMembership`, `Venue`; link events via `orgId` | Medium-High |
 | 3. Ticketing | Add `TicketType`, `WaitlistEntry`, `Invitation`; extend `EventParticipant` with `ticketTypeId` | Medium |
 | 4. Social Layer | Add `Follow`, `Intent`, `Activity`; extend `User` with social settings; wire feed/visibility | High |
