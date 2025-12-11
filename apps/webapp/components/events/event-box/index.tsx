@@ -11,43 +11,62 @@ import { RRule } from 'rrule';
 
 export default function EventBox({ event }: { event: Event }) {
   const { title, recurrenceRule, rSVPList, media } = event;
+  const recurrenceText = RRule.fromString(recurrenceRule).toText();
+  const imageUrl = media?.featuredImageUrl || 'https://images.unsplash.com/photo-1525286116112-b59af11adad1?auto=format&fit=crop&w=1200&q=80';
 
   return (
     <Card
       sx={{
-        p: 2,
-        display: 'flex',
-        backgroundColor: 'inherit',
-        boxShadow: "0",
-        borderRadius: '18px',
-        ':hover': {
-          boxShadow: '0 0 11px rgba(33,33,33,.2)',
-        },
-        flexDirection: { xs: 'column', sm: 'row' },
-        height: '100%',
+        p: 1,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '185px 1fr' },
+        gap: 1.25,
+        backgroundColor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 18px 48px rgba(0,0,0,0.08)',
         position: 'relative',
       }}
     >
-      {media && media.featuredImageUrl && (    // TODO handle undefined image (use a default image)
+      <Box
+        sx={{
+          position: 'relative',
+          height: { xs: 120, sm: '100%' },
+          borderRadius: 3,
+          overflow: 'hidden',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+        }}
+      >
         <CardMedia
           component="img"
-          image={media.featuredImageUrl}
+          image={imageUrl}
           alt={title}
           sx={{
-            width: { xs: '100%', sm: 230, lg: 240, xl: 270 },
-            height: { xs: 180, sm: 120, lg: 130, xl: 150 },
-            borderRadius: '12px',
-            mb: { xs: 2, sm: 0 },
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
           }}
         />
-      )}
-      <Box component="div">
-        <Box sx={{ alignSelf: 'center', ml: { sm: 2 } }}>
-          <Typography variant="h6" color="text.secondary">{title}</Typography>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+          }}
+        />
+      </Box>
+      <Box component="div" sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Box sx={{ alignSelf: 'center', width: '100%' }}>
+          <Typography variant="overline" color="secondary.main" sx={{ fontWeight: 700, letterSpacing: 1 }}>
+            Experience
+          </Typography>
+          <Typography variant="h6" color="text.primary" sx={{ mb: 0.75 }}>
+            {title}
+          </Typography>
 
           <Box component="div" sx={{ display: 'flex', flexDirection: 'row', marginTop: 1 }}>
             <CalendarIcon height={20} width={20} />
-            <Typography variant='subtitle2' paddingLeft={1}>{RRule.fromString(recurrenceRule).toText()}</Typography>
+            <Typography variant='subtitle2' paddingLeft={1}>{recurrenceText}</Typography>
           </Box>
 
           <Box component="div" sx={{ display: 'flex', flexDirection: 'row', marginTop: 1 }}>
@@ -61,14 +80,35 @@ export default function EventBox({ event }: { event: Event }) {
           </Box>
         </Box>
 
-        <Box component="div" sx={{ position: 'absolute', bottom: 16, right: 16 }}>
-          <IconButton size="small" sx={{ mr: 1 }}>
+        <Box component="div" sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+          <IconButton
+            size="small"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+            }}
+          >
             <ShareRounded />
           </IconButton>
-          <IconButton size="small" sx={{ mr: 1 }}>
+          <IconButton
+            size="small"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+            }}
+          >
             <ThumbUpOffAltOutlined height={20} width={20} />
           </IconButton>
-          <IconButton size="small" sx={{ mr: 1 }}>
+          <IconButton
+            size="small"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+            }}
+          >
             <EllipsisHorizontalIcon height={30} width={30} />
           </IconButton>
         </Box>

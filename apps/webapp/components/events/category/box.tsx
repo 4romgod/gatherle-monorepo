@@ -13,36 +13,40 @@ export default async function EventCategoryBox({ eventCategory }: { eventCategor
       sx={{
         width: '100%',
         height: '100%',
-        minHeight: 140,
+        minHeight: 110,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        backgroundColor: 'background.default',
-        borderRadius: 2,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-        transition: 'transform 0.3s, box-shadow 0.3s',
+        position: 'relative',
+        backgroundColor: 'background.paper',
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 10px 28px rgba(0,0,0,0.08)',
+        transition: 'transform 0.3s, box-shadow 0.3s, border-color 0.3s',
         '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
-          backgroundColor: 'secondary.main'
+          transform: 'translateY(-6px)',
+          boxShadow: '0 20px 35px rgba(0,0,0,0.12)',
+          borderColor: 'secondary.main',
         },
-        p: 2
+        p: 1.5
       }}
     >
       <Box
         sx={{
           fontSize: '2rem',
           mb: 1,
-          width: 50,
-          height: 50,
+          width: 42,
+          height: 42,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '50%',
-          backgroundColor: 'rgba(0,0,0,0.04)',
-          marginBottom: 2
+          background: 'rgba(255,255,255,0.7)',
+          marginBottom: 2,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
         <IconComponent

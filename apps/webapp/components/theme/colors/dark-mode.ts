@@ -1,29 +1,35 @@
 import { PaletteOptions } from '@mui/material';
-import { indigo, deepOrange } from '@mui/material/colors';
 
 const darkModeColors: PaletteOptions = {
   primary: {
-    light: deepOrange[300],
-    main: deepOrange[700],
-    dark: deepOrange[900],
-    contrastText: '#FFFFFF',
+    light: '#93c5fd',
+    main: '#3b82f6',
+    dark: '#1d4ed8',
+    contrastText: '#0b1224',
   },
   secondary: {
-    light: indigo[100],
-    main: indigo[300],
-    dark: indigo[700],
-    contrastText: '#FFFFFF',
+    light: '#fdba74',
+    main: '#f97316',
+    dark: '#c2410c',
+    contrastText: '#0b1224',
   },
   error: {
-    main: deepOrange[500],
+    main: '#f43f5e',
+  },
+  info: {
+    main: '#38bdf8',
   },
   background: {
-    default: '#121318',
-    paper: '#323338',
+    default: '#0b1224',
+    paper: '#111827',
   },
   text: {
-    primary: '#FFFFFF',
-    secondary: '#CCCCCC',
+    primary: '#e5e7eb',
+    secondary: '#9ca3af',
+  },
+  divider: '#1f2937',
+  success: {
+    main: '#22c55e',
   },
 };
 

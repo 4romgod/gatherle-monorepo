@@ -30,7 +30,8 @@ export default async function Events() {
   });
 
   const allCategories: EventCategory[] = eventCategories.readEventCategories;
-  const eventsByCategory = groupEventsByCategory(events);
+  const eventsList = events.readEvents ?? [];
+  const eventsByCategory = groupEventsByCategory(eventsList);
 
   return (
     <Box component="main">
@@ -38,7 +39,7 @@ export default async function Events() {
         <Box component="div">
           <Box component="div">
             <SearchInput
-              itemList={events.readEvents.map((item) => item.title)}
+              itemList={eventsList.map((item) => item.title)}
               sx={{
                 marginBottom: 5,
                 mx: 'auto',
@@ -53,8 +54,8 @@ export default async function Events() {
               <DesktopEventFilters categoryList={allCategories} />
             </Grid>
             <Grid size={{md: 8}} p={2} id="events">
-              <Paper sx={{ backgroundColor: 'background.default', p: 2 }}>
-                {events.readEvents.length ? (
+              <Paper sx={{ backgroundColor: 'background.default', p: 1.5 }}>
+                {eventsList.length ? (
                   <EventTileGrid eventsByCategory={eventsByCategory} />
                 ) : (
                   <Typography variant="h4">No Events Found</Typography>
