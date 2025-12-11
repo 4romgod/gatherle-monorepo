@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {z, ZodSchema} from 'zod';
-import {EventStatus, Gender} from '@/graphql/types';
+import {EventStatus} from '@ntlango/commons/types/event';
+import {Gender} from '@ntlango/commons/types/user';
 import {isValid, parseISO} from 'date-fns';
 
 export const validateMongodbId = (id: string, message?: string) => {

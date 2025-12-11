@@ -1,4 +1,4 @@
-import {QueryOptionsInput} from '@/graphql/types';
+import {QueryOptionsInput} from '@ntlango/commons/types';
 
 export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
   return {

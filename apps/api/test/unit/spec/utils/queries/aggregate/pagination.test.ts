@@ -1,4 +1,4 @@
-import {PaginationInput} from '@/graphql/types';
+import {PaginationInput} from '@ntlango/commons/types';
 import {createPaginationStages} from '@/utils';
 
 describe('createPaginationStages', () => {

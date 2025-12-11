@@ -1,4 +1,4 @@
-import {QueryOptionsInput} from '@/graphql/types';
+import {QueryOptionsInput} from '@ntlango/commons/types';
 import {PipelineStage} from 'mongoose';
 import {createEventPipelineStages} from './filter';
 import {createEventLookupStages} from './lookup';

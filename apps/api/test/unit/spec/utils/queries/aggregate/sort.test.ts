@@ -1,6 +1,6 @@
 import {createSortStages} from '@/utils';
 import {PipelineStage} from 'mongoose';
-import {SortInput, SortOrderInput} from '@/graphql/types';
+import {SortInput, SortOrderInput} from '@ntlango/commons/types';
 
 describe('createSortStages', () => {
   it('should return a valid sort pipeline stage for given sort inputs', () => {

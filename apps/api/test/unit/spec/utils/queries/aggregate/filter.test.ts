@@ -1,6 +1,6 @@
 import {createEventPipelineStages} from '@/utils'; // Adjust the import path as necessary
 import {PipelineStage} from 'mongoose';
-import {FilterInput, FilterOperatorInput} from '@/graphql/types';
+import {FilterInput, FilterOperatorInput} from '@ntlango/commons/types';
 
 describe('createEventPipelineStages', () => {
   it('should return a valid pipeline for simple equality filters', () => {

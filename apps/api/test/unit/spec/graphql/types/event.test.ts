@@ -1,14 +1,13 @@
 import 'reflect-metadata';
 import {
-  EventPrivacySetting,
-  EventStatus,
   Media,
   EventType,
   CreateEventInputType,
   UpdateEventInputType,
   RSVPInputType,
   CancelRSVPInputType,
-} from '@/graphql/types';
+} from '@ntlango/commons/types';
+import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 
 describe('Enums', () => {
   it('should ensure that EventPrivacySetting enum have the correct values', () => {

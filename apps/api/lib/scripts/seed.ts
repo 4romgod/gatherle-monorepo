@@ -1,9 +1,14 @@
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryMockData, eventCategoryGroupMockData} from '@/mongodb/mockData';
-import {CreateEventCategoryInputType, CreateEventInputType, CreateUserInputType, EventCategoryType} from '@/graphql/types';
+import {
+  CreateEventCategoryGroupInputType,
+  CreateEventCategoryInputType,
+  CreateEventInputType,
+  CreateUserInputType,
+  EventCategoryType,
+} from '@ntlango/commons/types';
 import {SECRET_KEYS} from '@/constants';
-import { CreateEventCategoryGroupInputType } from '@/graphql/types/eventCategoryGroup';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
   const copyArray = [...array];

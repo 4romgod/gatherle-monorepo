@@ -1,14 +1,15 @@
 import {transformEnumToErrorMessage} from '../utils/general';
-import {EventStatus} from '../types';
-import {Gender} from '../types/user';
+
+const EVENT_STATUS_VALUES = ['Cancelled', 'Completed', 'Ongoing', 'Upcoming'];
+const GENDER_VALUES = ['Male', 'Female', 'Other'];
 
 export const ERROR_MESSAGES = {
     ATLEAST_ONE: (type: string) => `Atleast one ${type} is required`,
     INVALID: 'is invalid',
     INVALID_DATE: 'should be in YYYY-MM-DD format',
     INVALID_EMAIL: 'Invalid email format',
-    INVALID_EVENT_STATUS: `Invalid event status, should be ${Object.values(EventStatus).slice(0, -1).join(', ') + ', or ' + Object.values(EventStatus).slice(-1)}`,
-    INVALID_GENDER: `Invalid gender input, should be ${transformEnumToErrorMessage(Gender)}`,
+    INVALID_EVENT_STATUS: `Invalid event status, should be ${EVENT_STATUS_VALUES.slice(0, -1).join(', ') + ', or ' + EVENT_STATUS_VALUES.slice(-1)}`,
+    INVALID_GENDER: `Invalid gender input, should be ${transformEnumToErrorMessage(GENDER_VALUES)}`,
     INVALID_PASSWORD: 'Password should be at least 8 characters long',
     INVALID_PHONE_NUMBER: 'Invalid phone number format',
     INVALID_QUERY: "Your query doesn't match the schema. Try double-checking it!",

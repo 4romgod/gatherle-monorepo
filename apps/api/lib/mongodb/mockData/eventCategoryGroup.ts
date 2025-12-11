@@ -1,4 +1,4 @@
-import { CreateEventCategoryGroupInputType } from '@/graphql/types/eventCategoryGroup';
+import {CreateEventCategoryGroupInputType} from '@ntlango/commons/types';
 
 const eventCategoryGroups: CreateEventCategoryGroupInputType[] = [
   {

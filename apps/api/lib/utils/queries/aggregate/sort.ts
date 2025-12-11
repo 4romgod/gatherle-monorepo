@@ -1,4 +1,4 @@
-import {SortInput} from '@/graphql/types';
+import {SortInput} from '@ntlango/commons/types';
 import {PipelineStage} from 'mongoose';
 
 export const createSortStages = (sortInput: SortInput[]): PipelineStage.Sort[] => {

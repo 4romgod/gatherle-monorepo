@@ -1,5 +1,5 @@
 import {EventCategory} from '@/mongodb/models';
-import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType, QueryOptionsInput} from '@/graphql/types';
+import {EventCategoryType, UpdateEventCategoryInputType, CreateEventCategoryInputType, QueryOptionsInput} from '@ntlango/commons/types';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 

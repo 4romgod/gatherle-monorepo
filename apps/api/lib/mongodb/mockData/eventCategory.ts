@@ -1,4 +1,4 @@
-import { CreateEventCategoryInputType } from '@/graphql/types';
+import {CreateEventCategoryInputType} from '@ntlango/commons/types';
 
 export const eventCategories: CreateEventCategoryInputType[] = [
   { name: 'Concerts', iconName: 'MusicalNoteIcon', description: 'Live music performances and festivals', color: '#FF69B4' },

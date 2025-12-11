@@ -1,4 +1,4 @@
-import {FilterInput, PaginationInput, QueryOptionsInput, SortInput} from '@/graphql/types';
+import {FilterInput, PaginationInput, QueryOptionsInput, SortInput} from '@ntlango/commons/types';
 import {Model, Query} from 'mongoose';
 
 export const addSortToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, sortInput: SortInput[]) => {

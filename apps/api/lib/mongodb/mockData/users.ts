@@ -1,4 +1,5 @@
-import { Gender, CreateUserInputType } from '@/graphql/types';
+import {CreateUserInputType} from '@ntlango/commons/types';
+import {Gender} from '@ntlango/commons/types/user';
 
 const users: CreateUserInputType[] = [
   {

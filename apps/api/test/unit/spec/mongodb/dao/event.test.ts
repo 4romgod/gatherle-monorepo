@@ -1,8 +1,16 @@
 import {EventDAO} from '@/mongodb/dao';
 import {Event} from '@/mongodb/models';
-import {EventType, RSVPInputType, SortOrderInput, UpdateEventCategoryInputType, UpdateEventInputType} from '@/graphql/types';
+import {
+  EventType,
+  RSVPInputType,
+  SortOrderInput,
+  UpdateEventCategoryInputType,
+  UpdateEventInputType,
+  QueryOptionsInput,
+  CreateEventInputType,
+} from '@ntlango/commons/types';
+import {EventStatus} from '@ntlango/commons/types/event';
 import {CustomError, ErrorTypes, transformOptionsToPipeline} from '@/utils';
-import {QueryOptionsInput, CreateEventInputType, EventStatus} from '@/graphql/types';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
 import {PipelineStage} from 'mongoose';

@@ -1,6 +1,6 @@
 import {EventTypeSchema, CreateEventInputTypeSchema, UpdateEventInputTypeSchema, validateInput} from '@/validation';
 import mongoose from 'mongoose';
-import {EventStatus} from '@/graphql/types';
+import {EventStatus} from '@ntlango/commons/types/event';
 
 describe('Event', () => {
   const mockID = new mongoose.Types.ObjectId().toString();

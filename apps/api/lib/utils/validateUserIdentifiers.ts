@@ -1,4 +1,4 @@
-import {CancelRSVPInputType, RSVPInputType} from '@/graphql/types';
+import {CancelRSVPInputType, RSVPInputType} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
 import {CustomError, ErrorTypes} from './exceptions';
 import {ERROR_MESSAGES} from '@/validation';

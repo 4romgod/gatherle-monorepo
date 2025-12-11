@@ -3,7 +3,7 @@ import {ArgsDictionary, ResolverData} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 import {OPERATION_NAMES, SECRET_KEYS} from '@/constants';
-import {UserRole, UserType} from '@/graphql/types';
+import {UserRole, UserType} from '@ntlango/commons/types';
 import {verify, sign, JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
 import type {StringValue} from 'ms';
 import {EventDAO} from '@/mongodb/dao';
@@ -109,5 +109,13 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
 
 const isAuthorizedToUpdateEvent = async (eventId: string, user: UserType) => {
   const event = await EventDAO.readEventById(eventId);
-  return event.organizerList.map((organizer) => organizer.userId).includes(user.userId);
+  return event.organizerList
+    .map((organizer) => {
+      if (typeof organizer === 'string') {
+        return organizer;
+      }
+      // organizer may be an ObjectId or a populated document
+      return (organizer as any).userId ?? (organizer as any)._id?.toString();
+    })
+    .includes(user.userId);
 };

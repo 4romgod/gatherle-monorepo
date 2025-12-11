@@ -1,8 +1,12 @@
-import { EventCategoryGroup } from '@/mongodb/models';
-import { QueryOptionsInput } from '@/graphql/types';
-import { GraphQLError } from 'graphql';
-import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
-import { CreateEventCategoryGroupInputType, EventCategoryGroupType, UpdateEventCategoryGroupInputType } from '@/graphql/types/eventCategoryGroup';
+import {EventCategoryGroup} from '@/mongodb/models';
+import {GraphQLError} from 'graphql';
+import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
+import {
+  CreateEventCategoryGroupInputType,
+  EventCategoryGroupType,
+  QueryOptionsInput,
+  UpdateEventCategoryGroupInputType,
+} from '@ntlango/commons/types';
 
 class EventCategoryGroupDAO {
   static async create(input: CreateEventCategoryGroupInputType): Promise<EventCategoryGroupType> {

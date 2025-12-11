@@ -1,4 +1,4 @@
-import {PaginationInput} from '@/graphql/types';
+import {PaginationInput} from '@ntlango/commons/types';
 import {PipelineStage} from 'mongoose';
 
 export const createPaginationStages = (paginationInput: PaginationInput): PipelineStage[] => {

@@ -1,7 +1,7 @@
 import {authChecker, generateToken, verifyToken, isAuthorizedByOperation} from '@/utils';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
-import {UserRole, UserType} from '@/graphql/types';
+import {UserRole, UserType} from '@ntlango/commons/types';
 import {OPERATION_NAMES} from '@/constants';
 import {verify, sign} from 'jsonwebtoken';
 import {EventDAO} from '@/mongodb/dao';
@@ -21,6 +21,7 @@ describe('Auth Utilities', () => {
     userId: 'user-id',
     email: 'user@example.com',
     username: 'username',
+    password: 'password',
     address: {
       locationType: 'venue',
       address: {

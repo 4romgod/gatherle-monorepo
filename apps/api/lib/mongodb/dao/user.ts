@@ -7,7 +7,7 @@ import {
   LoginUserInputType,
   UserWithTokenType,
   UserRole,
-} from '@/graphql/types';
+} from '@ntlango/commons/types';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';

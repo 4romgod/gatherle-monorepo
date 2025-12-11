@@ -1,4 +1,5 @@
-import {CreateEventInputType, EventPrivacySetting, EventStatus} from '@/graphql/types';
+import {CreateEventInputType} from '@ntlango/commons/types';
+import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 
 const events: CreateEventInputType[] = [
   {
@@ -9,7 +10,7 @@ const events: CreateEventInputType[] = [
       address: {
         street: 'Winefarm',
         city: 'Cape Town',
-        state: '',
+        state: 'Western Cape',
         zipCode: '8000',
         country: 'South Africa',
       },
@@ -47,7 +48,7 @@ const events: CreateEventInputType[] = [
       address: {
         street: 'Stellenbosch',
         city: 'Cape Town',
-        state: '',
+        state: 'Western Cape',
         zipCode: '8000',
         country: 'South Africa',
       },
@@ -85,7 +86,7 @@ const events: CreateEventInputType[] = [
       address: {
         street: 'Stellenbosch',
         city: 'Cape Town',
-        state: '',
+        state: 'Western Cape',
         zipCode: '8000',
         country: 'South Africa',
       },
@@ -150,7 +151,7 @@ const events: CreateEventInputType[] = [
       address: {
         street: 'Winefarm',
         city: 'Cape Town',
-        state: '',
+        state: 'Western Cape',
         zipCode: '8000',
         country: 'South Africa',
       },

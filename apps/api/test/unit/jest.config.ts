@@ -11,6 +11,8 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(?!test)(.*)$': '<rootDir>/lib/$1',
     '^@/test/(.*)$': '<rootDir>/test/$1',
+    '^@ntlango/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
+    '^@ntlango/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
   },
   globalSetup: '<rootDir>/test/unit/setup.ts',
   globalTeardown: '<rootDir>/test/unit/teardown.ts',

@@ -1,6 +1,13 @@
 import {GraphQLError} from 'graphql';
 import {Event} from '@/mongodb/models';
-import {EventType, UpdateEventInputType, CreateEventInputType, QueryOptionsInput, RSVPInputType, CancelRSVPInputType} from '@/graphql/types';
+import {
+  EventType,
+  UpdateEventInputType,
+  CreateEventInputType,
+  QueryOptionsInput,
+  RSVPInputType,
+  CancelRSVPInputType,
+} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {UpdateQuery} from 'mongoose';
 import {ERROR_MESSAGES} from '@/validation';

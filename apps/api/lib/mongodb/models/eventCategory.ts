@@ -1,54 +1,24 @@
-import {EventCategoryType} from '@/graphql/types';
+import {getModelForClass, pre} from '@typegoose/typegoose';
 import {kebabCase} from 'lodash';
-import {model, Schema, Document, CallbackWithoutResultAndOptionalError, CallbackError} from 'mongoose';
+import {EventCategoryType} from '@ntlango/commons/types';
 
-export const EventCategorySchema = new Schema<EventCategoryType & Document>(
-  {
-    eventCategoryId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    slug: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    name: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    iconName: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    color: {
-      type: String,
-      required: false,
-    },
-  },
-  {timestamps: true},
-);
-
-EventCategorySchema.pre('validate', async function (next: CallbackWithoutResultAndOptionalError) {
+@pre<EventCategoryModel>('validate', function (next) {
   try {
-    this.eventCategoryId = this._id!.toString();
+    if (!this.eventCategoryId && this._id) {
+      this.eventCategoryId = this._id.toString();
+    }
     if (this.isModified('name')) {
       this.slug = kebabCase(this.name);
     }
     next();
   } catch (error) {
-    next(error as CallbackError);
+    next(error as Error);
   }
-});
+})
+class EventCategoryModel extends EventCategoryType {}
 
-const EventCategory = model('EventCategory', EventCategorySchema);
+const EventCategory = getModelForClass(EventCategoryModel, {
+  options: {customName: 'EventCategoryType'},
+});
 
 export default EventCategory;

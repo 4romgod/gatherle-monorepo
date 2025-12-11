@@ -1,87 +1,6 @@
-import { Gender, UserRole, UserTypeDocument } from '@/graphql/types';
-import { model, Schema, CallbackWithoutResultAndOptionalError, CallbackError } from 'mongoose';
-import { hash, genSalt, compare } from 'bcryptjs';
-
-// TODO Add bio attribute
-export const UserSchema = new Schema<UserTypeDocument>(
-  {
-    address: {
-      type: Schema.Types.Mixed,
-      default: {},
-      required: false,
-    },
-    birthdate: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    family_name: {
-      type: String,
-      required: true,
-    },
-    gender: {
-      type: String,
-      enum: Object.values(Gender),
-      required: false,
-    },
-    given_name: {
-      type: String,
-      required: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      select: false,
-    },
-    phone_number: {
-      type: String,
-      required: false,
-    },
-    profile_picture: {
-      type: String,
-      required: false,
-    },
-    userId: {
-      type: String,
-      required: true,
-      unique: true,
-      indexes: true,
-    },
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    bio: {
-      type: String,
-      required: false,
-      unique: false,
-    },
-    userRole: {
-      type: String,
-      enum: Object.values(UserRole),
-      default: UserRole.User,
-      required: true,
-    },
-    interests: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'EventCategory',
-        required: false,
-        index: true,
-      },
-    ],
-  },
-  {
-    timestamps: true,
-  },
-);
+import {getModelForClass, pre, DocumentType} from '@typegoose/typegoose';
+import {Gender, UserRole, UserType} from '@ntlango/commons/types';
+import {genSalt, hash, compare} from 'bcryptjs';
 
 // Helper for password hashing
 async function hashPassword(plainPassword: string): Promise<string> {
@@ -89,9 +8,11 @@ async function hashPassword(plainPassword: string): Promise<string> {
   return hash(plainPassword, salt);
 }
 
-UserSchema.pre('validate', async function (next: CallbackWithoutResultAndOptionalError) {
+@pre<UserModel>('validate', async function (next) {
   try {
-    this.userId = this._id!.toString();
+    if (!this.userId && this._id) {
+      this.userId = this._id.toString();
+    }
 
     if (this.email && !this.username) {
       const baseUsername = this.email.split('@')[0];
@@ -117,14 +38,12 @@ UserSchema.pre('validate', async function (next: CallbackWithoutResultAndOptiona
     next();
   } catch (err) {
     console.log('Error when pre-saving the user', err);
-    next(err as CallbackError);
+    next(err as Error);
   }
-});
-
-// Pre-update hook (e.g. findByIdAndUpdate)
-UserSchema.pre(['findOneAndUpdate', 'updateOne'], async function (next) {
+})
+@pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function (next) {
   try {
-    const update = this.getUpdate();
+    const update = (this as any).getUpdate?.();
 
     if (!update || typeof update !== 'object' || Array.isArray(update)) {
       return next();
@@ -139,34 +58,28 @@ UserSchema.pre(['findOneAndUpdate', 'updateOne'], async function (next) {
     if (updateObj.email) {
       updateObj.email = updateObj.email.toLowerCase();
     }
-    this.setUpdate(updateObj);
+    (this as any).setUpdate?.(updateObj);
     next();
   } catch (err) {
     console.error('Error in pre-update hook', err);
-    next(err as CallbackError);
+    next(err as Error);
   }
-});
+})
+class UserModel extends UserType {
+  comparePassword(candidatePassword: string) {
+    return compare(candidatePassword, this.password);
+  }
+}
 
-UserSchema.methods.comparePassword = function (candidatePassword: string) {
-  return compare(candidatePassword, this.password);
-};
+export type UserTypeDocument = DocumentType<UserModel>;
 
-UserSchema.set('toJSON', {
-  virtuals: true,
-  transform: (doc, ret) => {
-    delete (ret as {password?: string}).password;
-    return ret;
+const User = getModelForClass(UserModel, {
+  options: {customName: 'UserType'},
+  schemaOptions: {
+    // ensure default select behavior stays in sync with commons definition
+    toObject: {getters: true},
+    toJSON: {getters: true},
   },
 });
-
-UserSchema.set('toObject', {
-  virtuals: true,
-  transform: (doc, ret) => {
-    delete (ret as {password?: string}).password;
-    return ret;
-  },
-});
-
-const User = model('User', UserSchema);
 
 export default User;

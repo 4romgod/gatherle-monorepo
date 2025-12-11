@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {REGEX_PHONE_NUMBER} from '@/constants';
-import {Gender} from '@/graphql/types';
+import {Gender} from '@ntlango/commons/types/user';
 import {ERROR_MESSAGES, validateDate} from '@/validation/common';
 import mongoose from 'mongoose';
 

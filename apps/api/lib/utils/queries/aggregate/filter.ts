@@ -1,4 +1,4 @@
-import {FilterInput, FilterOperatorInput} from '@/graphql/types';
+import {FilterInput, FilterOperatorInput} from '@ntlango/commons/types';
 import {PipelineStage} from 'mongoose';
 
 // TODO 1. Functionality for RootQuerySelector like ($and, $or, $text)

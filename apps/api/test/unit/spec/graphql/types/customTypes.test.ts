@@ -1,5 +1,5 @@
 import {graphql, GraphQLSchema, GraphQLObjectType, GraphQLString, ValueNode, Kind} from 'graphql';
-import {AnyType} from '@/graphql/types';
+import {AnyType} from '@ntlango/commons/types';
 
 describe('Custom Graphql Scalar Types', () => {
   describe('Any Type', () => {

@@ -1,5 +1,5 @@
 import {transformOptionsToPipeline} from '@/utils';
-import {FilterOperatorInput, QueryOptionsInput, SortOrderInput} from '@/graphql/types';
+import {FilterOperatorInput, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
 import {PipelineStage} from 'mongoose';
 import * as filterModule from '@/utils/queries/aggregate/filter';
 import * as lookupModule from '@/utils/queries/aggregate/lookup';

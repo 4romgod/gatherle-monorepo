@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {EventPrivacySetting, EventStatus} from '@/graphql/types';
+import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 import {ERROR_MESSAGES} from '@/validation';
 import mongoose from 'mongoose';
 

@@ -1,9 +1,10 @@
-import { UserDAO } from '@/mongodb/dao';
-import { User } from '@/mongodb/models';
-import { CreateUserInputType, UpdateUserInputType, QueryOptionsInput, Gender, UserRole, SortOrderInput } from '@/graphql/types';
-import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
-import { ERROR_MESSAGES } from '@/validation';
-import { generateToken } from '@/utils/auth';
+import {UserDAO} from '@/mongodb/dao';
+import {User} from '@/mongodb/models';
+import {CreateUserInputType, UpdateUserInputType, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
+import {Gender, UserRole} from '@ntlango/commons/types/user';
+import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
+import {ERROR_MESSAGES} from '@/validation';
+import {generateToken} from '@/utils/auth';
 
 jest.mock('@/mongodb/models', () => ({
   User: {
