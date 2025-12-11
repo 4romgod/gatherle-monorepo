@@ -172,7 +172,3 @@ Phase plan:
   - Follow: `{ followerUserId }`, `{ targetId, targetType }`
 - **Aggregation guidance**: prefer denorm + targeted projections over deep `$lookup`. For attendee lists, query `EventParticipant` by `eventId` with limits; use counts on Event for quick stats.***
 
-## Next Steps
-- Define TypeGraphQL/Typegoose classes matching these shapes in `packages/commons/lib/types`.
-- Add migration scripts to backfill `orgId` and move RSVP data into `EventParticipant`.
-- Extend resolvers/DAOs for Organizations, Venues, TicketTypes, Participants, and Waitlist.***
