@@ -172,13 +172,6 @@ Phase plan:
   - Follow: `{ followerUserId }`, `{ targetId, targetType }`
 - **Aggregation guidance**: prefer denorm + targeted projections over deep `$lookup`. For attendee lists, query `EventParticipant` by `eventId` with limits; use counts on Event for quick stats.***
 
-## Notes on Extensibility
-- Moving RSVP data into `EventParticipant` decouples attendance history from the Event document and enables tickets, check-ins, and cancellations.
-- `Organization` provides policy scoping (default visibility, ticket access rules) and a clear permission surface for multi-host teams.
-- `Venue` and `locationSnapshot` give us safe historical data while allowing updates to shared venues.
-- `TicketType` with `access` and `salesWindow` supports future promo codes and membership-only sales.
-- `Invitation` and `WaitlistEntry` set us up for structured invite flows and auto-promotions from waitlists.
-
 ## Next Steps
 - Define TypeGraphQL/Typegoose classes matching these shapes in `packages/commons/lib/types`.
 - Add migration scripts to backfill `orgId` and move RSVP data into `EventParticipant`.
