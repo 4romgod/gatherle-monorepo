@@ -279,7 +279,11 @@ export class Event {
     @Field(() => String, {nullable: true, description: 'Hero image for the event'})
     heroImage?: string;
 
-    @Field(() => [EventParticipant], {nullable: true, description: 'Resolved participants (not persisted in Event document)'})
+    @Field(() => [EventParticipant], {
+        nullable: true,
+        description:
+            'Resolved participants (not persisted in Event document; resolved via GraphQL field resolver by querying EventParticipant collection)',
+    })
     participants?: EventParticipant[];
 }
 
