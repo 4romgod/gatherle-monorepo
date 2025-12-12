@@ -37,6 +37,12 @@ export class EventParticipantResolver {
 
   @FieldResolver(() => User, {nullable: true})
   async user(@Root() participant: EventParticipant): Promise<User | null> {
+    // If user is already populated from aggregation, return it
+    if ((participant as any).user) {
+      return (participant as any).user;
+    }
+
+    // Fallback to fetching user by ID if not populated
     if (!participant.userId) {
       return null;
     }
