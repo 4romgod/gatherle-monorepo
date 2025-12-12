@@ -21,12 +21,10 @@ jest.mock('@/mongodb/models', () => ({
 
 // Helper function to create a mock mongoose chainable query
 const createMockSuccessMongooseQuery = <T>(result: T) => ({
-  ...result,
   exec: jest.fn().mockResolvedValue(result),
 });
 
 const createMockFailedMongooseQuery = <T>(error: T) => ({
-  ...error,
   exec: jest.fn().mockRejectedValue(error),
 });
 
