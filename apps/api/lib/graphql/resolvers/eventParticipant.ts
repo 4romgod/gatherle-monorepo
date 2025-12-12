@@ -7,7 +7,8 @@ import {
   User,
   UserRole,
 } from '@ntlango/commons/types';
-import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
+import EventParticipantDAO, {EventParticipantWithUser} from '@/mongodb/dao/eventParticipant';
+import {UserDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/validation';
 
 @Resolver(() => EventParticipant)
@@ -36,10 +37,10 @@ export class EventParticipantResolver {
   }
 
   @FieldResolver(() => User, {nullable: true})
-  async user(@Root() participant: EventParticipant): Promise<User | null> {
+  async user(@Root() participant: EventParticipant | EventParticipantWithUser): Promise<User | null> {
     // If user is already populated from aggregation, return it
-    if ((participant as any).user) {
-      return (participant as any).user;
+    if ('user' in participant && participant.user) {
+      return participant.user;
     }
 
     // Fallback to fetching user by ID if not populated

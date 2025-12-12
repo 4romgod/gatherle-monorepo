@@ -1,8 +1,10 @@
 import {GraphQLError} from 'graphql';
 import {UpdateQuery, Types} from 'mongoose';
-import {EventParticipant as EventParticipantEntity, ParticipantStatus, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
+import {EventParticipant as EventParticipantEntity, ParticipantStatus, UpsertEventParticipantInput, CancelEventParticipantInput, User} from '@ntlango/commons/types';
 import {EventParticipant} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+
+export type EventParticipantWithUser = EventParticipantEntity & {user?: User};
 
 class EventParticipantDAO {
   static async upsert(input: UpsertEventParticipantInput): Promise<EventParticipantEntity> {
@@ -71,7 +73,7 @@ class EventParticipantDAO {
     }
   }
 
-  static async readByEvent(eventId: string): Promise<EventParticipantEntity[]> {
+  static async readByEvent(eventId: string): Promise<EventParticipantWithUser[]> {
     try {
       const participants = await EventParticipant.aggregate([
         {$match: {eventId}},
@@ -94,7 +96,7 @@ class EventParticipantDAO {
           },
         },
       ]).exec();
-      return participants as EventParticipantEntity[];
+      return participants as EventParticipantWithUser[];
     } catch (error) {
       console.error('Error reading participants', error);
       throw KnownCommonError(error);
