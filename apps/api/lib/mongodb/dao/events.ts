@@ -136,13 +136,9 @@ class EventDAO {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
       }
 
-      // Best-effort participant upsert; do not block the RSVP flow if participant write fails
+      // Atomic participant upsert: fail entire RSVP if any participant operation fails
       for (const userId of validUserIds) {
-        try {
-          await EventParticipantDAO.upsert({eventId, userId, status: ParticipantStatus.Going});
-        } catch (participantError) {
-          console.warn('Participant upsert failed (non-blocking)', participantError);
-        }
+        await EventParticipantDAO.upsert({eventId, userId, status: ParticipantStatus.Going});
       }
 
       return event.toObject();
@@ -166,12 +162,9 @@ class EventDAO {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
       }
 
+      // Atomic participant cancellation: fail entire cancelRSVP if any participant operation fails
       for (const userId of validUserIds) {
-        try {
-          await EventParticipantDAO.cancel({eventId, userId});
-        } catch (participantError) {
-          console.warn(`Participant cancel failed (non-blocking) for userId ${userId} and eventId ${eventId}`, participantError);
-        }
+        await EventParticipantDAO.cancel({eventId, userId});
       }
 
       return event.toObject();

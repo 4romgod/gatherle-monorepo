@@ -1,4 +1,4 @@
-import {EventDAO} from '@/mongodb/dao';
+import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {Event as EventModel} from '@/mongodb/models';
 import {
   Event,
@@ -361,10 +361,12 @@ describe('EventDAO', () => {
 
       const updatedEventMock = {eventId: 'event123'};
       (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+      const upsertSpy = jest.spyOn(EventParticipantDAO, 'upsert').mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1'} as any);
 
       const result = await EventDAO.RSVP(input);
 
       expect(EventModel.findById).toHaveBeenCalledWith('event123');
+      expect(upsertSpy).toHaveBeenCalledTimes(validatedUserIds.length);
 
       expect(result).toEqual(updatedEventMock);
       expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
@@ -396,6 +398,25 @@ describe('EventDAO', () => {
       await expect(EventDAO.RSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
       expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
     });
+
+    it('should throw error when participant upsert fails (atomic behavior)', async () => {
+      const input: RsvpInput = {
+        eventId: 'event123',
+        userIdList: ['user1', 'user2'],
+      };
+
+      const validatedUserIds = ['user1', 'user2'];
+      const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+      const updatedEventMock = {eventId: 'event123'};
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+      
+      const participantError = new Error('Participant creation failed');
+      const upsertSpy = jest.spyOn(EventParticipantDAO, 'upsert').mockRejectedValue(participantError);
+
+      await expect(EventDAO.RSVP(input)).rejects.toThrow();
+      expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+      expect(upsertSpy).toHaveBeenCalled();
+    });
   });
 
   describe('cancelRSVP', () => {
@@ -416,10 +437,12 @@ describe('EventDAO', () => {
 
       const updatedEventMock = {eventId: 'event123'};
       (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+      const cancelSpy = jest.spyOn(EventParticipantDAO, 'cancel').mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1', status: 'Cancelled'} as any);
 
       const result = await EventDAO.cancelRSVP(input);
 
       expect(EventModel.findById).toHaveBeenCalledWith('event123');
+      expect(cancelSpy).toHaveBeenCalledTimes(validatedUserIds.length);
 
       expect(result).toEqual(updatedEventMock);
       expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
@@ -450,6 +473,25 @@ describe('EventDAO', () => {
 
       await expect(EventDAO.cancelRSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
       expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+    });
+
+    it('should throw error when participant cancellation fails (atomic behavior)', async () => {
+      const input: RsvpInput = {
+        eventId: 'event123',
+        userIdList: ['user1', 'user2'],
+      };
+
+      const validatedUserIds = ['user1', 'user2'];
+      const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+      const updatedEventMock = {eventId: 'event123'};
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+      
+      const participantError = new Error('Participant cancellation failed');
+      const cancelSpy = jest.spyOn(EventParticipantDAO, 'cancel').mockRejectedValue(participantError);
+
+      await expect(EventDAO.cancelRSVP(input)).rejects.toThrow();
+      expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+      expect(cancelSpy).toHaveBeenCalled();
     });
   });
 });
