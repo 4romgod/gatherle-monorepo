@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {Field, ID, InputType, ObjectType, registerEnumType} from 'type-graphql';
-import {modelOptions, prop, Severity} from '@typegoose/typegoose';
+import {index, modelOptions, prop, Severity} from '@typegoose/typegoose';
 
 export enum ParticipantStatus {
     Interested = 'Interested',
@@ -20,17 +20,18 @@ registerEnumType(ParticipantStatus, {name: 'ParticipantStatus'});
 registerEnumType(ParticipantVisibility, {name: 'ParticipantVisibility'});
 
 @ObjectType('EventParticipant')
+@index({eventId: 1, userId: 1}, {unique: true})
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
 export class EventParticipant {
     @prop({required: true, unique: true, index: true})
     @Field(() => ID)
     participantId: string;
 
-    @prop({required: true, index: true})
+    @prop({required: true})
     @Field(() => ID)
     eventId: string;
 
-    @prop({required: true, index: true})
+    @prop({required: true})
     @Field(() => ID)
     userId: string;
 
