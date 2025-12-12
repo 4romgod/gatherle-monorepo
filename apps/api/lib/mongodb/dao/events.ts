@@ -11,7 +11,6 @@ import type {
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {EventParticipantDAO} from '@/mongodb/dao';
-import {ParticipantStatus} from '@ntlango/commons/types';
 
 class EventDAO {
   static async create(input: CreateEventInput): Promise<EventEntity> {
@@ -139,7 +138,7 @@ class EventDAO {
       // Best-effort participant upsert; do not block the RSVP flow if participant write fails
       for (const userId of validUserIds) {
         try {
-          await EventParticipantDAO.upsert({eventId, userId, status: ParticipantStatus.Going});
+          await EventParticipantDAO.upsert({eventId, userId});
         } catch (participantError) {
           console.warn('Participant upsert failed (non-blocking)', participantError);
         }

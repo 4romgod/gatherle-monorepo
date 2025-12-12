@@ -7,7 +7,7 @@ import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 class EventParticipantDAO {
   static async upsert(input: UpsertEventParticipantInput): Promise<EventParticipantEntity> {
     try {
-      const {eventId, userId, status, quantity, invitedBy, sharedVisibility} = input;
+      const {eventId, userId, status = ParticipantStatus.Going, quantity, invitedBy, sharedVisibility} = input;
       const update: UpdateQuery<EventParticipantEntity> = {
         status,
         quantity,

@@ -71,8 +71,8 @@ export class UpsertEventParticipantInput {
     @Field(() => ID)
     userId: string;
 
-    @Field(() => ParticipantStatus)
-    status: ParticipantStatus;
+    @Field(() => ParticipantStatus, {nullable: true, defaultValue: ParticipantStatus.Going})
+    status?: ParticipantStatus;
 
     @Field(() => Number, {nullable: true})
     quantity?: number;
