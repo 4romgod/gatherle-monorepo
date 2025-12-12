@@ -1,4 +1,4 @@
-import {EventDAO} from '@/mongodb/dao';
+import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {Event as EventModel} from '@/mongodb/models';
 import {
   Event,
@@ -30,6 +30,8 @@ jest.mock('@/mongodb/models', () => ({
     aggregate: jest.fn(),
   },
 }));
+
+jest.mock('@/mongodb/dao/eventParticipant');
 
 // Helper function to create a mock mongoose chainable query
 const createMockSuccessMongooseQuery = <T>(result: T) => ({
@@ -450,6 +452,60 @@ describe('EventDAO', () => {
 
       await expect(EventDAO.cancelRSVP(input)).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
       expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+    });
+
+    it('should succeed even when EventParticipantDAO.cancel fails', async () => {
+      const input: RsvpInput = {
+        eventId: 'event123',
+        userIdList: ['user1', 'user2'],
+      };
+
+      const validatedUserIds = ['user1', 'user2'];
+      const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+
+      const updatedEventMock = {eventId: 'event123'};
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+
+      // Mock EventParticipantDAO.cancel to fail for all users
+      jest.spyOn(EventParticipantDAO, 'cancel').mockRejectedValue(new Error('Participant cancel failed'));
+
+      const result = await EventDAO.cancelRSVP(input);
+
+      expect(EventModel.findById).toHaveBeenCalledWith('event123');
+      expect(EventParticipantDAO.cancel).toHaveBeenCalledTimes(2);
+      expect(EventParticipantDAO.cancel).toHaveBeenCalledWith({eventId: 'event123', userId: 'user1'});
+      expect(EventParticipantDAO.cancel).toHaveBeenCalledWith({eventId: 'event123', userId: 'user2'});
+      expect(result).toEqual(updatedEventMock);
+      expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+    });
+
+    it('should log warnings when EventParticipantDAO.cancel encounters errors', async () => {
+      const input: RsvpInput = {
+        eventId: 'event123',
+        userIdList: ['user1'],
+      };
+
+      const validatedUserIds = ['user1'];
+      const validateUserIdentifiersSpy = jest.spyOn(validationUtil, 'validateUserIdentifiers').mockResolvedValue(validatedUserIds);
+
+      const updatedEventMock = {eventId: 'event123'};
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
+
+      const participantError = new Error('Database connection error');
+      jest.spyOn(EventParticipantDAO, 'cancel').mockRejectedValue(participantError);
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await EventDAO.cancelRSVP(input);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Participant cancel failed (non-blocking) for userId user1 and eventId event123',
+        participantError,
+      );
+      expect(result).toEqual(updatedEventMock);
+      expect(validateUserIdentifiersSpy).toHaveBeenCalledWith(input);
+
+      consoleWarnSpy.mockRestore();
     });
   });
 });
