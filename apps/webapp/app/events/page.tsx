@@ -4,6 +4,7 @@ import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
 import { getClient } from '@/data/graphql';
 import { Typography, Grid, Box, Paper } from '@mui/material';
 import { EventCategory, GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import SearchInput from '@/components/search/search-box';
 import DesktopEventFilters from '@/components/events/filters/desktop/display-desktop-filters';
 import MobileEventFilters from '@/components/events/filters/mobile/display-mobile-filters';
@@ -30,7 +31,7 @@ export default async function Events() {
   });
 
   const allCategories: EventCategory[] = eventCategories.readEventCategories;
-  const eventsList = events.readEvents ?? [];
+  const eventsList = (events.readEvents ?? []) as EventPreview[];
   const eventsByCategory = groupEventsByCategory(eventsList);
 
   return (

@@ -2,6 +2,7 @@ export * from './customTypes';
 export * from './event';
 export * from './eventCategory';
 export * from './eventCategoryGroup';
+export * from './eventParticipant';
 export * from './general';
 export * from './location';
 export * from './query';

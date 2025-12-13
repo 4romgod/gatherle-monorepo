@@ -1,12 +1,12 @@
-import { Metadata } from 'next';
-import { GetEventBySlugDocument, Location } from '@/data/graphql/types/graphql';
+import { GetEventBySlugDocument, GetEventBySlugQuery, Location } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
-import { Box, Typography, Grid, CardMedia, Container, Stack, Avatar } from '@mui/material';
+import { Avatar, AvatarGroup, Box, CardMedia, Chip, Container, Grid, Stack, Tooltip, Typography } from '@mui/material';
 import PurchaseCard from '@/components/purchase-card';
 import EventCategoryChip from '@/components/events/category/chip';
 import { RRule } from 'rrule';
 import { upperFirst } from 'lodash';
 import { CalendarToday, Place } from '@mui/icons-material';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +31,23 @@ export default async function Page(props: Props) {
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
   });
-  const { title, organizerList, description, media, recurrenceRule, location, eventCategoryList, comments } = eventRetrieved.readEventBySlug;
+  const { title, organizerList, description, media, recurrenceRule, location, eventCategoryList, comments, participants } =
+    eventRetrieved.readEventBySlug;
+  type EventDetailParticipant = NonNullable<
+    NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']
+  >[number];
+  const participantList = (participants ?? []) as EventDetailParticipant[];
+  const getParticipantDisplayName = (participant: EventDetailParticipant) => {
+    const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
+    const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
+    return nameParts.length ? nameParts.join(' ') : fallbackName;
+  };
+  const getParticipantInitial = (participant: EventDetailParticipant) =>
+    participant.user?.given_name?.charAt(0) ??
+    participant.user?.username?.charAt(0) ??
+    participant.userId?.charAt(0) ??
+    '?';
+  const getParticipantStatusLabel = (participant: EventDetailParticipant) => participant.status ?? 'Going';
 
   const getLocationText = (location: Location): string => {
     switch (location.locationType) {
@@ -135,6 +151,50 @@ export default async function Page(props: Props) {
                     </Grid>
                   ))}
                 </Grid>
+              )}
+            </Box>
+
+            <Box component="div" mt={8}>
+              <Typography variant="h5" gutterBottom>
+                Participants
+              </Typography>
+              {participantList.length === 0 ? (
+                <Typography color="text.secondary">No RSVPs yet.</Typography>
+              ) : (
+                <>
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                    <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 36, height: 36, fontSize: '0.9rem' } }}>
+                      {participantList.slice(0, 6).map((participant) => (
+                        <Tooltip
+                          key={participant.participantId}
+                          title={`${getParticipantDisplayName(participant)} · ${getParticipantStatusLabel(participant)}`}
+                        >
+                          <Avatar src={participant.user?.profile_picture || undefined}>
+                            {getParticipantInitial(participant)}
+                          </Avatar>
+                        </Tooltip>
+                      ))}
+                    </AvatarGroup>
+                    <Typography variant="body2" color="text.secondary">
+                      {participantList.length} participant{participantList.length === 1 ? '' : 's'} are in.
+                    </Typography>
+                  </Stack>
+                  <Grid container spacing={1}>
+                    {participantList.map((participant) => (
+                      <Grid key={participant.participantId}>
+                        <Chip
+                          avatar={
+                            <Avatar src={participant.user?.profile_picture || undefined}>
+                              {getParticipantInitial(participant)}
+                            </Avatar>
+                          }
+                          label={`${getParticipantDisplayName(participant)} · ${getParticipantStatusLabel(participant)}`}
+                          size="small"
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </>
               )}
             </Box>
 

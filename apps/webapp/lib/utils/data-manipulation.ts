@@ -1,13 +1,14 @@
-import { Event, EventCategory } from '../../data/graphql/types/graphql';
+import { EventCategory } from '@/data/graphql/types/graphql';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 
 type GroupedEventsByCategoryProps = {
-  [categoryName: string]: Event[];
+  [categoryName: string]: EventPreview[];
 };
 
-export const groupEventsByCategory = (events: Event[]): GroupedEventsByCategoryProps => {
+export const groupEventsByCategory = (events: EventPreview[]): GroupedEventsByCategoryProps => {
   const groupedEvents: GroupedEventsByCategoryProps = {};
 
-  events.forEach((event: Event) => {
+  events.forEach((event: EventPreview) => {
     if (!event.eventCategoryList?.length) {
       groupedEvents['All events'] = [...(groupedEvents['All events'] ?? []), event];
       return;

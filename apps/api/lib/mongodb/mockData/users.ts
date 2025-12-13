@@ -1,5 +1,5 @@
 import {CreateUserInput} from '@ntlango/commons/types';
-import {Gender} from '@ntlango/commons/types/user';
+import {Gender, SocialVisibility, UserRole} from '@ntlango/commons/types/user';
 
 const users: CreateUserInput[] = [
   {
@@ -19,8 +19,13 @@ const users: CreateUserInput[] = [
     given_name: 'Jack',
     password: 'dfuyihjknbsndhj',
     phone_number: '+12345678990',
-    profile_picture: '',
-    bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+    profile_picture: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+    bio: 'Trail runner and live music addict based in Durban.',
+    primaryTimezone: 'Africa/Johannesburg',
+    defaultVisibility: SocialVisibility.Public,
+    socialVisibility: SocialVisibility.Public,
+    roles: [UserRole.User],
+    shareRSVPByDefault: true,
   },
   {
     // id: 'host001',
@@ -39,8 +44,13 @@ const users: CreateUserInput[] = [
     given_name: 'Sean',
     password: 'tryuik',
     phone_number: '+12345678990',
-    profile_picture: '',
-    bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+    profile_picture: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
+    bio: 'Festival promoter bringing global acts to local stages.',
+    primaryTimezone: 'Africa/Johannesburg',
+    defaultVisibility: SocialVisibility.Followers,
+    socialVisibility: SocialVisibility.Followers,
+    roles: [UserRole.Host],
+    shareRSVPByDefault: true,
   },
   {
     // id: 'user002',
@@ -59,8 +69,13 @@ const users: CreateUserInput[] = [
     given_name: 'Celin',
     password: 'wreiujk22',
     phone_number: '+12345678990',
-    profile_picture: '',
-    bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+    profile_picture: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80',
+    bio: 'Food market explorer and night-run organizer.',
+    primaryTimezone: 'Africa/Johannesburg',
+    defaultVisibility: SocialVisibility.Public,
+    socialVisibility: SocialVisibility.Public,
+    roles: [UserRole.User],
+    shareRSVPByDefault: true,
   },
   {
     // id: 'host002',
@@ -79,8 +94,13 @@ const users: CreateUserInput[] = [
     given_name: 'Jeff',
     password: '123456789',
     phone_number: '+12345678990',
-    profile_picture: '',
-    bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+    profile_picture: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80',
+    bio: 'Investor by day, rooftop party host by night.',
+    primaryTimezone: 'Africa/Johannesburg',
+    defaultVisibility: SocialVisibility.Followers,
+    socialVisibility: SocialVisibility.Followers,
+    roles: [UserRole.Host, UserRole.User],
+    shareRSVPByDefault: false,
   },
 ];
 

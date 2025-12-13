@@ -11,6 +11,7 @@ import EventDateInput from './input-event-date';
 export default function EventMutationForm({ categoryList }: EventMutationFormProps) {
   const [eventData, setEventData] = useState<CreateEventInput>({
     title: '',
+    summary: '',
     description: '',
     location: {},
     recurrenceRule: '',
@@ -18,7 +19,6 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
     capacity: 100,
     eventCategoryList: [],
     organizerList: [],
-    rSVPList: [],
     tags: {},
     media: {
       featuredImageUrl: '',
@@ -93,7 +93,26 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
                 <Box>
                   <Typography variant="h6">Summary</Typography>
                   <Typography variant='body2'>
-                    Write a short, attention-grabbing description for your event. This will appear at the top of your event page (max 140 characters).
+                    Write a short, attention-grabbing description for your event. This will appear at the top of your event page.
+                  </Typography>
+                  <TextField
+                    required
+                    fullWidth
+                    label="Summary"
+                    name="summary"
+                    size='small'
+                    color='secondary'
+                    multiline
+                    rows={4}
+                    value={eventData.summary}
+                    onChange={handleChange}
+                    sx={{ mt: 1 }}
+                  />
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="h6">Description</Typography>
+                  <Typography variant='body2'>
+                    Add the full description for your event. This is what guests will read on the event page.
                   </Typography>
                   <TextField
                     required
@@ -103,7 +122,7 @@ export default function EventMutationForm({ categoryList }: EventMutationFormPro
                     size='small'
                     color='secondary'
                     multiline
-                    rows={4}
+                    rows={5}
                     value={eventData.description}
                     onChange={handleChange}
                     sx={{ mt: 1 }}

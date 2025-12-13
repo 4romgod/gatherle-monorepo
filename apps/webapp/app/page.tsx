@@ -20,6 +20,7 @@ import EventsCarousel from '@/components/events/carousel';
 import EventCategoryBox from '@/components/events/category/box';
 import { getClient } from '@/data/graphql';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { RRule } from 'rrule';
 
@@ -39,9 +40,10 @@ export default async function HomePage() {
   const { data: events } = await getClient().query({ query: GetAllEventsDocument });
   const { data } = await getClient().query({ query: GetAllEventCategoriesDocument });
   const eventCategories = data.readEventCategories?.slice(0, 6) ?? [];
-  const featuredEvents = events.readEvents?.slice(0, 8) ?? [];
-  const heroEvent = events.readEvents?.[0];
-  const heroEventRsvps = heroEvent?.rSVPList?.length ?? 0;
+  const eventList = (events.readEvents ?? []) as EventPreview[];
+  const featuredEvents = eventList.slice(0, 8);
+  const heroEvent = eventList[0];
+  const heroEventRsvps = heroEvent?.participants?.length ?? 0;
 
   const heroStats = [
     { label: 'Communities hosted', value: '2.4k+' },

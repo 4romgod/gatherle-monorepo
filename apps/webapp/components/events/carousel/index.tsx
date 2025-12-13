@@ -13,7 +13,7 @@ import {
   Button
 } from "@mui/material";
 import EventBoxSm from "@/components/events/event-box-sm";
-import { Event } from "@/data/graphql/types/graphql";
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import {
   KeyboardArrowLeft,
   KeyboardArrowRight,
@@ -23,7 +23,7 @@ import {
 import Link from 'next/link';
 
 interface EventCarouselProps {
-  events: Event[];
+  events: EventPreview[];
   title?: string;
   autoplay?: boolean;
   autoplayInterval?: number;

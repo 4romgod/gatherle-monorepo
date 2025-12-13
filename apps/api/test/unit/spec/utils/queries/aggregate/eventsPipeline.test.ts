@@ -15,7 +15,6 @@ describe('transformOptionsToPipeline', () => {
   it('should include lookup stages always', () => {
     const lookupStages: PipelineStage.Lookup[] = [
       {$lookup: {from: 'users', localField: 'organizerList', foreignField: '_id', as: 'organizerList'}},
-      {$lookup: {from: 'users', localField: 'rSVPList', foreignField: '_id', as: 'rSVPList'}},
       {$lookup: {from: 'eventcategories', localField: 'eventCategoryList', foreignField: '_id', as: 'eventCategoryList'}},
     ];
 
@@ -68,7 +67,6 @@ describe('transformOptionsToPipeline', () => {
 
     const lookupStages: PipelineStage.Lookup[] = [
       {$lookup: {from: 'users', localField: 'organizerList', foreignField: '_id', as: 'organizerList'}},
-      {$lookup: {from: 'users', localField: 'rSVPList', foreignField: '_id', as: 'rSVPList'}},
       {$lookup: {from: 'eventcategories', localField: 'eventCategoryList', foreignField: '_id', as: 'eventCategoryList'}},
     ];
     const sortStages: PipelineStage.Sort[] = [{$sort: {capacity: 1}}];

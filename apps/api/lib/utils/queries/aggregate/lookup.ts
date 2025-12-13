@@ -12,14 +12,6 @@ export const createEventLookupStages = (): PipelineStage.Lookup[] => {
     },
     {
       $lookup: {
-        from: 'users',
-        localField: 'rSVPList',
-        foreignField: '_id',
-        as: 'rSVPList',
-      },
-    },
-    {
-      $lookup: {
         from: 'eventcategories',
         localField: 'eventCategoryList',
         foreignField: '_id',

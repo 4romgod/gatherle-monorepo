@@ -33,6 +33,7 @@ import { GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import EventsCarousel from '@/components/events/carousel';
 import EventCategoryChip from '@/components/events/category/chip';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
 import { omit } from 'lodash';
@@ -45,8 +46,9 @@ export default async function UserPublicProfile() {
   const { data: events } = await getClient().query({
     query: GetAllEventsDocument,
   });
-  const rsvpdEvents = events.readEvents.filter((event) => event.rSVPList.some(rsvp => rsvp.userId === user.userId));
-  const organizedEvents = events.readEvents.filter((event) => event.organizerList.some(organizer => organizer.userId === user.userId));
+  const allEvents = (events.readEvents ?? []) as EventPreview[];
+  const rsvpdEvents = allEvents.filter((event) => event.participants?.some((p) => p.userId === user.userId));
+  const organizedEvents = allEvents.filter((event) => event.organizerList.some((organizer) => organizer.userId === user.userId));
   const interests = user.interests ? user.interests : [];
   const age = differenceInYears(new Date(), new Date(user.birthdate));
   const formattedDOB = format(new Date(user.birthdate), 'dd MMMM yyyy');

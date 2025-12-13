@@ -66,7 +66,6 @@ describe('Event', () => {
     expect(eventType.capacity).toBeUndefined();
     expect(eventType.eventCategoryList).toBeUndefined();
     expect(eventType.organizerList).toBeUndefined();
-    expect(eventType.rSVPList).toBeUndefined();
     expect(eventType.tags).toBeUndefined();
     expect(eventType.media).toBeUndefined();
     expect(eventType.additionalDetails).toBeUndefined();
@@ -93,7 +92,6 @@ describe('CreateEventInput', () => {
     expect(createEventInputType.capacity).toBeUndefined();
     expect(createEventInputType.eventCategoryList).toBeUndefined();
     expect(createEventInputType.organizerList).toBeUndefined();
-    expect(createEventInputType.rSVPList).toBeUndefined();
     expect(createEventInputType.tags).toBeUndefined();
     expect(createEventInputType.media).toBeUndefined();
     expect(createEventInputType.additionalDetails).toBeUndefined();
@@ -121,7 +119,6 @@ describe('UpdateEventInput', () => {
     expect(updateEventInputType.capacity).toBeUndefined();
     expect(updateEventInputType.eventCategoryList).toBeUndefined();
     expect(updateEventInputType.organizerList).toBeUndefined();
-    expect(updateEventInputType.rSVPList).toBeUndefined();
     expect(updateEventInputType.tags).toBeUndefined();
     expect(updateEventInputType.media).toBeUndefined();
     expect(updateEventInputType.additionalDetails).toBeUndefined();

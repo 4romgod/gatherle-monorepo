@@ -1,14 +1,10 @@
 import {getConfigValue, MongoDbClient} from '@/clients';
-import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO} from '@/mongodb/dao';
+import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryMockData, eventCategoryGroupMockData} from '@/mongodb/mockData';
-import {
-  CreateEventCategoryGroupInput,
-  CreateEventCategoryInput,
-  CreateEventInput,
-  CreateUserInput,
-  EventCategory,
-} from '@ntlango/commons/types';
+import {CreateEventCategoryGroupInput, CreateEventCategoryInput, CreateEventInput, CreateUserInput, EventCategory} from '@ntlango/commons/types';
 import {SECRET_KEYS} from '@/constants';
+import {ParticipantStatus, ParticipantVisibility} from '@ntlango/commons/types';
+import {EventVisibility} from '@ntlango/commons/types/event';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
   const copyArray = [...array];
@@ -78,12 +74,30 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
 async function seedEvents(events: Array<CreateEventInput>, userIds: Array<string>, eventCategoryIds: Array<string>) {
   console.log('Starting to seed event data...');
   for (const event of events) {
+    const organizerIds = getRandomUniqueItems(userIds, 2);
+    const participantIds = getRandomUniqueItems(userIds, 4);
     const eventResponse = await EventDAO.create({
       ...event,
-      organizerList: getRandomUniqueItems(userIds, 2),
-      rSVPList: getRandomUniqueItems(userIds, 2),
+      organizerList: organizerIds,
       eventCategoryList: getRandomUniqueItems(eventCategoryIds, 5),
     });
+
+    for (const userId of participantIds) {
+      let sharedVisibility: ParticipantVisibility;
+      if (eventResponse.visibility === undefined) {
+        throw new Error(`Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`);
+      } else if (eventResponse.visibility === EventVisibility.Public) {
+        sharedVisibility = ParticipantVisibility.Public;
+      } else {
+        sharedVisibility = ParticipantVisibility.Followers;
+      }
+      await EventParticipantDAO.upsert({
+        eventId: eventResponse.eventId,
+        userId,
+        status: ParticipantStatus.Going,
+        sharedVisibility,
+      });
+    }
     console.log(`   Created Event item with id: ${eventResponse.eventId}`);
   }
   console.log('Completed seeding event data.');

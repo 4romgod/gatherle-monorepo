@@ -13,3 +13,7 @@ describe('Models Index Exports', () => {
     expect(Models.EventCategory).toBeDefined();
   });
 });
+
+it('should export EventParticipant model', () => {
+  expect(Models.EventParticipant).toBeDefined();
+});
