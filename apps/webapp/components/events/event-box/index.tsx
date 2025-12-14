@@ -38,7 +38,7 @@ export default function EventBox({ event }: { event: EventPreview }) {
       sx={{
         p: { xs: 0.75, sm: 1 },
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '140px 1fr' },
+        gridTemplateColumns: { xs: '1fr', sm: '170px 1fr' },
         gap: 1,
         backgroundColor: 'background.paper',
         border: '1px solid',
@@ -52,7 +52,8 @@ export default function EventBox({ event }: { event: EventPreview }) {
       <Box
         sx={{
           position: 'relative',
-          height: { xs: 120, sm: '100%' },
+          height: { xs: 120, sm: 170 },
+          width: { xs: '100%', sm: 170 },
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',

@@ -10,9 +10,9 @@
     "cdk": "npx aws-cdk"
   },
   "devDependencies": {
+    "aws-cdk": "^2.147.0",
     "aws-cdk-lib": "^2.147.0",
-    "esbuild": "^0.23.0",
     "dotenv": "^16.4.5",
-    "aws-cdk": "^2.147.0"
+    "esbuild": "^0.27.1"
   }
 }
