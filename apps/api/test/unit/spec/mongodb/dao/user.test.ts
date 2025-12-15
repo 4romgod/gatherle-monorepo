@@ -1,6 +1,7 @@
 import {UserDAO} from '@/mongodb/dao';
 import {User} from '@/mongodb/models';
-import {CreateUserInput, UpdateUserInput, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
+import type {CreateUserInput, UpdateUserInput, QueryOptionsInput} from '@ntlango/commons/types';
+import { SortOrderInput} from '@ntlango/commons/types';
 import {Gender, UserRole} from '@ntlango/commons/types/user';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';

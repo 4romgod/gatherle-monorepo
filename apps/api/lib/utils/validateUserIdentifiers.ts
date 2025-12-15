@@ -1,4 +1,4 @@
-import {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
+import type {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
 import {CustomError, ErrorTypes} from './exceptions';
 import {ERROR_MESSAGES} from '@/validation';

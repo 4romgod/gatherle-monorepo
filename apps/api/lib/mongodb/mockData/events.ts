@@ -1,4 +1,4 @@
-import {CreateEventInput} from '@ntlango/commons/types';
+import type {CreateEventInput} from '@ntlango/commons/types';
 import {EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility} from '@ntlango/commons/types/event';
 
 const events: CreateEventInput[] = [

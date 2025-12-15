@@ -1,5 +1,5 @@
 import {createEventLookupStages} from '@/utils';
-import {PipelineStage} from 'mongoose';
+import type {PipelineStage} from 'mongoose';
 
 describe('createEventLookupStages', () => {
   it('should return an array of pipeline stages for lookup', () => {

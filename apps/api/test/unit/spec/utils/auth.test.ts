@@ -1,13 +1,14 @@
 import {authChecker, generateToken, verifyToken, isAuthorizedByOperation} from '@/utils';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
-import {UserRole, User} from '@ntlango/commons/types';
+import type { User} from '@ntlango/commons/types';
+import {UserRole} from '@ntlango/commons/types';
 import {OPERATION_NAMES} from '@/constants';
 import {verify, sign} from 'jsonwebtoken';
 import {EventDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/graphql';
-import {ArgsDictionary} from 'type-graphql';
-import {GraphQLResolveInfo} from 'graphql';
+import type {ServerContext} from '@/graphql';
+import type {ArgsDictionary} from 'type-graphql';
+import type {GraphQLResolveInfo} from 'graphql';
 
 jest.mock('jsonwebtoken');
 jest.mock('@/mongodb/dao');

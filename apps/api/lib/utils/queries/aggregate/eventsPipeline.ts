@@ -1,5 +1,5 @@
-import {QueryOptionsInput} from '@ntlango/commons/types';
-import {PipelineStage} from 'mongoose';
+import type {QueryOptionsInput} from '@ntlango/commons/types';
+import type {PipelineStage} from 'mongoose';
 import {createEventPipelineStages} from './filter';
 import {createEventLookupStages} from './lookup';
 import {createSortStages} from './sort';

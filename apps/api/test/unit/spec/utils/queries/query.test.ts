@@ -1,6 +1,7 @@
-import {Model, Query} from 'mongoose';
+import type {Model, Query} from 'mongoose';
 import {addSortToQuery, addPaginationToQuery, addFiltersToQuery, transformOptionsToQuery} from '@/utils';
-import {FilterInput, FilterOperatorInput, SortInput, SortOrderInput} from '@ntlango/commons/types';
+import type {FilterInput, SortInput} from '@ntlango/commons/types';
+import { FilterOperatorInput, SortOrderInput} from '@ntlango/commons/types';
 
 describe('Query', () => {
   describe('addSortToQuery', () => {

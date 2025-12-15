@@ -1,6 +1,7 @@
 import {Types} from 'mongoose';
 import request from 'supertest';
-import {IntegrationServer, startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {usersMockData} from '@/mongodb/mockData';
 import {UserDAO} from '@/mongodb/dao';
 import {
@@ -16,7 +17,8 @@ import {
   getReadUsersWithoutOptionsQuery,
   getUpdateUserMutation,
 } from '@/test/utils';
-import {CreateUserInput, Gender, QueryOptionsInput, User, UserWithToken} from '@ntlango/commons/types';
+import type {CreateUserInput, QueryOptionsInput, User, UserWithToken} from '@ntlango/commons/types';
+import { Gender} from '@ntlango/commons/types';
 import {ERROR_MESSAGES} from '@/validation';
 import {verifyToken} from '@/utils/auth';
 

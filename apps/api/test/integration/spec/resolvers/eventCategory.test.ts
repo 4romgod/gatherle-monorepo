@@ -1,11 +1,13 @@
 import request from 'supertest';
 import {Types} from 'mongoose';
 import {kebabCase} from 'lodash';
-import {IntegrationServer, startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {usersMockData} from '@/mongodb/mockData';
 import {generateToken} from '@/utils/auth';
-import {CreateEventCategoryInput, QueryOptionsInput, UserRole, User, UserWithToken} from '@ntlango/commons/types';
+import type {CreateEventCategoryInput, QueryOptionsInput, User, UserWithToken} from '@ntlango/commons/types';
+import { UserRole} from '@ntlango/commons/types';
 import {
   getCreateEventCategoryMutation,
   getReadEventCategoryByIdQuery,
@@ -119,7 +121,7 @@ describe('EventCategory Resolver', () => {
       });
 
       it('should read categories list with options', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        await EventCategoryDAO.create(createEventCategoryInput);
         const options: QueryOptionsInput = {filters: [{field: 'name', value: createEventCategoryInput.name}]};
         const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
 

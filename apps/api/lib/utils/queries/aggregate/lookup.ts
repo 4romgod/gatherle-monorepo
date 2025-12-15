@@ -1,4 +1,4 @@
-import {PipelineStage} from 'mongoose';
+import type {PipelineStage} from 'mongoose';
 
 export const createEventLookupStages = (): PipelineStage.Lookup[] => {
   return [

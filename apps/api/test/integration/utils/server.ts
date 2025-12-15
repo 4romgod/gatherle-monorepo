@@ -2,8 +2,8 @@ import type {Express} from 'express';
 import type {Server} from 'http';
 import type {ListenOptions} from 'net';
 import {startExpressApolloServer} from '@/graphql/apollo';
-import {ServerContext} from '@/graphql/apollo/server';
-import {ApolloServer} from '@apollo/server';
+import type {ServerContext} from '@/graphql/apollo/server';
+import type {ApolloServer} from '@apollo/server';
 import {MongoDbClient} from '@/clients';
 
 export interface IntegrationServer {

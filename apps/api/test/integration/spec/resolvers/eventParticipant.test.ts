@@ -1,11 +1,13 @@
 import request from 'supertest';
 import {Types} from 'mongoose';
-import {IntegrationServer, startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventDAO, EventCategoryDAO, UserDAO} from '@/mongodb/dao';
 import {EventParticipant} from '@/mongodb/models';
 import {usersMockData, eventsMockData} from '@/mongodb/mockData';
 import {generateToken} from '@/utils/auth';
-import {ParticipantStatus, UserRole, User, UserWithToken, CreateEventInput, EventCategory} from '@ntlango/commons/types';
+import type { User, UserWithToken, CreateEventInput, EventCategory} from '@ntlango/commons/types';
+import {ParticipantStatus, UserRole} from '@ntlango/commons/types';
 import {getCancelEventParticipantMutation, getReadEventParticipantsQuery, getUpsertEventParticipantMutation} from '@/test/utils';
 
 const TEST_PORT = 5005;

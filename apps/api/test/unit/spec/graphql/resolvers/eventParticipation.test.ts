@@ -1,11 +1,12 @@
 import 'reflect-metadata';
 import {EventParticipantResolver} from '@/graphql/resolvers/eventParticipant';
 import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
-import {
+import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
   EventParticipant,
-  User,
+  User} from '@ntlango/commons/types';
+import {
   ParticipantStatus,
 } from '@ntlango/commons/types';
 import * as validation from '@/validation';

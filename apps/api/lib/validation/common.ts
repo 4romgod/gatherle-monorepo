@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
-import {z, ZodSchema} from 'zod';
+import type {ZodSchema} from 'zod';
+import {z} from 'zod';
 import {EventStatus} from '@ntlango/commons/types/event';
 import {Gender} from '@ntlango/commons/types/user';
 import {isValid, parseISO} from 'date-fns';
@@ -43,8 +44,9 @@ export const validateDate = (date: string) => {
   return isValid(parseISO(date));
 };
 
-const transforomEnumToErrorMessage = (enumType: any) => {
-  return Object.values(enumType).slice(0).join(', ');
+const transforomEnumToErrorMessage = <T extends Record<string, string>>(enumType: T) => {
+  const values = Object.values(enumType).slice(0);
+  return values.join(', ');
 };
 
 export const ERROR_MESSAGES = {

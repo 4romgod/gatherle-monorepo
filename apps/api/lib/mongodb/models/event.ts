@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import {getModelForClass, pre} from '@typegoose/typegoose';
 import {kebabCase} from 'lodash';
 import {Event as EventEntity} from '@ntlango/commons/types';

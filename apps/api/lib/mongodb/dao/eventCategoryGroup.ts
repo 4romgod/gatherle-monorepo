@@ -1,7 +1,7 @@
 import {EventCategoryGroup as EventCategoryGroupModel} from '@/mongodb/models';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
-import {
+import type {
   CreateEventCategoryGroupInput,
   EventCategoryGroup,
   QueryOptionsInput,

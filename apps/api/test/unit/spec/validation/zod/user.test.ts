@@ -34,7 +34,7 @@ describe('User', () => {
   describe('UserSchema', () => {
     it('should validate valid UserSchema', () => {
       const validInput = getValidUserInput();
-      const {success, error} = UserSchema.safeParse(validInput);
+      const {success} = UserSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -79,7 +79,7 @@ describe('User', () => {
         password: 'securepassword123',
         userId: undefined,
       };
-      const {success, error} = CreateUserInputSchema.safeParse(validInput);
+      const {success} = CreateUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -99,7 +99,7 @@ describe('User', () => {
         userId: mockID,
         given_name: 'Updated Name',
       };
-      const {success, error} = UpdateUserInputSchema.safeParse(validInput);
+      const {success} = UpdateUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -122,7 +122,7 @@ describe('User', () => {
         email: 'user@example.com',
         password: 'securepassword123',
       };
-      const {success, error} = LoginUserInputSchema.safeParse(validInput);
+      const {success} = LoginUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -153,7 +153,7 @@ describe('User', () => {
       const validInput = {
         email: 'user@example.com',
       };
-      const {success, error} = ForgotPasswordInputTypeSchema.safeParse(validInput);
+      const {success} = ForgotPasswordInputTypeSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -183,7 +183,7 @@ describe('User', () => {
       const validInput = {
         password: 'newsecurepassword123',
       };
-      const {success, error} = ResetPasswordInputTypeSchema.safeParse(validInput);
+      const {success} = ResetPasswordInputTypeSchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 

@@ -1,6 +1,7 @@
 import {transformOptionsToPipeline} from '@/utils';
-import {FilterOperatorInput, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
-import {PipelineStage} from 'mongoose';
+import type { QueryOptionsInput} from '@ntlango/commons/types';
+import {FilterOperatorInput, SortOrderInput} from '@ntlango/commons/types';
+import type {PipelineStage} from 'mongoose';
 import * as filterModule from '@/utils/queries/aggregate/filter';
 import * as lookupModule from '@/utils/queries/aggregate/lookup';
 import * as sortModule from '@/utils/queries/aggregate/sort';

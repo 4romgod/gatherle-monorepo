@@ -1,11 +1,12 @@
 import {User as UserModel} from '@/mongodb/models';
-import {
+import type {
   User,
   UpdateUserInput,
   CreateUserInput,
   QueryOptionsInput,
   LoginUserInput,
-  UserWithToken,
+  UserWithToken} from '@ntlango/commons/types';
+import {
   UserRole,
 } from '@ntlango/commons/types';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';

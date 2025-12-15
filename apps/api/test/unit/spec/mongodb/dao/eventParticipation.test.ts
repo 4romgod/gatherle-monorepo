@@ -1,9 +1,10 @@
 import {EventParticipantDAO} from '@/mongodb/dao';
 import {EventParticipant as EventParticipantModel} from '@/mongodb/models';
-import {
+import type {
   EventParticipant,
   UpsertEventParticipantInput,
-  CancelEventParticipantInput,
+  CancelEventParticipantInput} from '@ntlango/commons/types';
+import {
   ParticipantStatus,
   ParticipantVisibility,
 } from '@ntlango/commons/types';

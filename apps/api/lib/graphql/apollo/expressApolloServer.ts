@@ -1,12 +1,13 @@
 import cors from 'cors';
-import express, {Express} from 'express';
+import type {Express} from 'express';
+import express from 'express';
 import bodyParser from 'body-parser';
-import {ListenOptions} from 'net';
+import type {ListenOptions} from 'net';
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {API_DOMAIN, GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS} from '@/constants';
 import {createApolloServer} from './server';
 import {expressMiddleware} from '@apollo/server/express4';
-import {Server} from 'http';
+import type {Server} from 'http';
 
 const serverStartTimeLabel = 'Server started after';
 

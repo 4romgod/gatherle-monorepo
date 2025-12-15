@@ -20,7 +20,8 @@ class EventDAO {
       return event.toObject();
     } catch (error) {
       console.error('Error creating event', error);
-      const typedError = error as { name?: string; message?: string; errors?: Record<string, any> };
+      type FieldError = {message?: string};
+      const typedError = error as {name?: string; message?: string; errors?: Record<string, FieldError>};
       const errorName = typedError?.name;
       const errorMessage = typedError?.message;
       const isValidationError =
@@ -29,12 +30,11 @@ class EventDAO {
         (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('validation failed'));
 
       if (isValidationError) {
-        const validationMessage =
-          typedError.errors && Object.values(typedError.errors).length > 0
-            ? Object.values(typedError.errors)
-                .map((fieldError: any) => fieldError.message)
-                .filter(Boolean)[0]
-            : 'Event validation failed';
+      const fieldErrors = typedError.errors ? (Object.values(typedError.errors) as FieldError[]) : [];
+      const validationMessage =
+        fieldErrors
+          .map((fieldError) => fieldError.message)
+          .filter((message): message is string => typeof message === 'string')[0] ?? 'Event validation failed';
         throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
       }
       throw KnownCommonError(error);

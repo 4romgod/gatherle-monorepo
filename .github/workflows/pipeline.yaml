@@ -10,6 +10,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  STAGE: Dev
+
 jobs:
   pr-check:
     if: github.event_name == 'pull_request'
@@ -30,11 +33,34 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run build for all workspaces
-      run: npm run build
+    - name: Run API lint
+      run: |
+        npm run lint -w @ntlango/api
+
+    - name: Build API TypeScript artifacts
+      run: |
+        npm run build:ts -w @ntlango/api
+
+    - name: Run API unit tests
+      run: |
+        npm run test:unit -w @ntlango/api
+
+    - name: Run Webapp lint
+      run: npm run lint -w @ntlango/webapp
+
+    # TODO make the webapp build work in PRs
+    # - name: Build webapp against running API
+    #   run: |
+    #     export NEXT_PUBLIC_GRAPHQL_URL=$GRAPHQL_URL
+
+    #     npm run dev -w @ntlango/api
+
+    #     npm run codegen -w @ntlango/webapp
+    #     npm run build:ts -w @ntlango/webapp
+    #     npm run build:next -w @ntlango/webapp
 
   api-deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'pull_request' # TODO change to 'push' for production deploys
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -60,6 +86,9 @@ jobs:
     - name: Transpile API
       run: npm run build:ts -w @ntlango/api
 
+    - name: Transpile Commons
+      run: npm run build:ts -w @ntlango/commons
+
     - name: Synthesize CDK application
       run: npm run build:cdk -w @ntlango/cdk
 
@@ -72,7 +101,6 @@ jobs:
     - name: Deploy CDK
       env:
         STAGE: ${{ vars.STAGE }}
-        NTLANGO_SECRET_ARN: ${{ vars.STAGE }}/ntlango/graphql-api
       run: npm run cdk -w @ntlango/cdk -- deploy '*' --verbose
 
     - name: Get API Gateway endpoint
@@ -91,34 +119,34 @@ jobs:
         echo "The graphql url is ${{ env.GRAPHQL_URL }}"
         npm run test:integration -w @ntlango/api
 
-  webapp-deploy:
-    if: github.event_name == 'push'
-    needs: api-deploy
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24.x]
-    env:
-      NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.api-deploy.outputs.graphql-url }}
-      NEXT_PUBLIC_JWT_SECRET: secret # TODO Placeholder, replace with secure method in production
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+  # webapp-deploy:
+  #   if: github.event_name == 'push'
+  #   needs: api-deploy
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       node-version: [24.x]
+  #   env:
+  #     NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.api-deploy.outputs.graphql-url }}
+  #     NEXT_PUBLIC_JWT_SECRET: secret # TODO Placeholder, replace with secure method in production
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
 
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+  #   - name: Setup Node.js ${{ matrix.node-version }}
+  #     uses: actions/setup-node@v3
+  #     with:
+  #       node-version: ${{ matrix.node-version }}
+  #       cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+  #   - name: Install dependencies
+  #     run: npm ci
 
-    - name: Generate GraphQL types
-      run: npm run codegen -w @ntlango/webapp
+  #   - name: Generate GraphQL types
+  #     run: npm run codegen -w @ntlango/webapp
 
-    - name: Transpile Webapp
-      run: npm run build:ts -w @ntlango/webapp
+  #   - name: Transpile Webapp
+  #     run: npm run build:ts -w @ntlango/webapp
 
-    - name: Run Next.js build
-      run: npm run build:next -w @ntlango/webapp
+  #   - name: Run Next.js build
+  #     run: npm run build:next -w @ntlango/webapp

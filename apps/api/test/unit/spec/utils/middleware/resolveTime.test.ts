@@ -1,7 +1,7 @@
-import {ResolverData} from 'type-graphql';
+import type {ResolverData} from 'type-graphql';
 import {HTTP_METHOD_COLOR_MAP, RESOLVE_TIME_COLOR_MAP, GRAPHQL_API_PATH, ANSI_COLOR_CODES} from '@/constants';
 import {getStatusCodeColor} from '@/utils';
-import {ServerContext} from '@/graphql';
+import type {ServerContext} from '@/graphql';
 import {ResolveTime} from '@/utils/middleware';
 
 jest.mock('@/constants', () => ({
@@ -69,7 +69,6 @@ describe('ResolveTime Middleware', () => {
     const resolveTimeColor = RESOLVE_TIME_COLOR_MAP.find((color) => 100 <= color.threshold)?.color || ANSI_COLOR_CODES.RED;
     const httpMethodColor = HTTP_METHOD_COLOR_MAP[context.req?.method ?? 'UNKNOWN HTTP METHOD'] ?? ANSI_COLOR_CODES.GREEN;
     const statusCodeColor = getStatusCodeColor(context.res?.statusCode || 200);
-    const baseUrl = context.req?.baseUrl ?? GRAPHQL_API_PATH;
 
     expect(console.log).toHaveBeenCalledWith(
       `${httpMethodColor}GET ${ANSI_COLOR_CODES.GRAY}/api ${ANSI_COLOR_CODES.BLUE}(Query.testField) ${statusCodeColor}200 - ${resolveTimeColor}[100 ms]${ANSI_COLOR_CODES.WHITE}`,

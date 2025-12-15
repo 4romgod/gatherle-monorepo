@@ -1,10 +1,10 @@
 import request from 'supertest';
-import {Types} from 'mongoose';
 import {kebabCase} from 'lodash';
-import {IntegrationServer, startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventDAO, EventCategoryDAO, UserDAO} from '@/mongodb/dao';
 import {eventsMockData, usersMockData} from '@/mongodb/mockData';
-import {CreateEventInput, UserWithToken, CreateUserInput} from '@ntlango/commons/types';
+import type {CreateEventInput, UserWithToken, CreateUserInput} from '@ntlango/commons/types';
 import {ERROR_MESSAGES} from '@/validation';
 import {
   getCreateEventMutation,

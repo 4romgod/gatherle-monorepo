@@ -1,4 +1,4 @@
-import {CreateEventCategoryGroupInput} from '@ntlango/commons/types';
+import type {CreateEventCategoryGroupInput} from '@ntlango/commons/types';
 
 const eventCategoryGroups: CreateEventCategoryGroupInput[] = [
   {

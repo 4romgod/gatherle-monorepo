@@ -1,17 +1,18 @@
 import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {Event as EventModel} from '@/mongodb/models';
-import {
+import type {
   RsvpInput,
-  SortOrderInput,
   UpdateEventInput,
   QueryOptionsInput,
-  CreateEventInput,
+  CreateEventInput} from '@ntlango/commons/types';
+import {
+  SortOrderInput
 } from '@ntlango/commons/types';
 import {EventStatus} from '@ntlango/commons/types/event';
 import {CustomError, ErrorTypes, transformOptionsToPipeline} from '@/utils';
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
-import {PipelineStage} from 'mongoose';
+import type {PipelineStage} from 'mongoose';
 import {MockMongoError} from '@/test/utils';
 import * as validationUtil from '@/utils/validateUserIdentifiers';
 

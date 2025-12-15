@@ -1,10 +1,12 @@
 import request from 'supertest';
 import {Types} from 'mongoose';
-import {IntegrationServer, startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventCategoryDAO, EventCategoryGroupDAO} from '@/mongodb/dao';
 import {usersMockData} from '@/mongodb/mockData';
 import {generateToken} from '@/utils/auth';
-import {UserRole, User, UserWithToken, QueryOptionsInput} from '@ntlango/commons/types';
+import type { User, UserWithToken, QueryOptionsInput} from '@ntlango/commons/types';
+import {UserRole} from '@ntlango/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
   getReadEventCategoryGroupBySlugQuery,
@@ -12,7 +14,7 @@ import {
   getReadEventCategoryGroupsWithOptionsQuery,
   getUpdateEventCategoryGroupMutation,
 } from '@/test/utils';
-import {EventCategoryGroup} from '@ntlango/commons/types';
+import type {EventCategoryGroup} from '@ntlango/commons/types';
 
 const TEST_PORT = 5004;
 

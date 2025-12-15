@@ -34,7 +34,7 @@ export class GraphQLStack extends Stack {
       memorySize: 256,
       handler: 'graphqlLambdaHandler',
       entry: pathHandlerFile,
-      projectRoot: pathApi,
+      projectRoot: pathRoot,
       depsLockFilePath: join(pathRoot, 'package-lock.json'),
       bundling: {
         tsconfig: join(pathApi, 'tsconfig.json'),
@@ -44,7 +44,7 @@ export class GraphQLStack extends Stack {
         loader: {'.html': 'file'},
       },
       environment: {
-        STAGE: `${process.env.STAGE}`,
+        STAGE: `${process.env.STAGE}`, // TODO fix CI/CD to pass this env variable
         NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
         NODE_OPTIONS: '--enable-source-maps',
       },

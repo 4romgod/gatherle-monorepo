@@ -1,13 +1,16 @@
-import {ServerContext} from '@/graphql';
-import {ArgsDictionary, ResolverData} from 'type-graphql';
+import type {ServerContext} from '@/graphql';
+import type {ArgsDictionary, ResolverData} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 import {OPERATION_NAMES, SECRET_KEYS} from '@/constants';
-import {UserRole, User} from '@ntlango/commons/types';
-import {verify, sign, JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
+import type {User} from '@ntlango/commons/types';
+import {UserRole} from '@ntlango/commons/types';
+import {verify, sign} from 'jsonwebtoken';
+import type {JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
 import type {StringValue} from 'ms';
 import {EventDAO} from '@/mongodb/dao';
 import {getConfigValue} from '@/clients';
+import {Types} from 'mongoose';
 
 const operationsRequiringOwnership = new Set([
   OPERATION_NAMES.UPDATE_USER,
@@ -62,7 +65,8 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
       throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
-    return true;
+    console.log(`${userRole} type user: '${user.username}' attempted to access non-protected operation ${operationName}`);
+    throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
   }
 
   throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -95,7 +99,7 @@ export const verifyToken = async (token: string, secret?: string) => {
     if (!jwtSecret) {
       throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
     }
-    const {iat, exp, ...user} = verify(token, jwtSecret) as JwtPayload;
+    const {iat: _iat, exp: _exp, ...user} = verify(token, jwtSecret) as JwtPayload;
     return user as User;
   } catch (err) {
     console.log('Error when verifying token', err);
@@ -126,25 +130,38 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
   }
 };
 
+const toOrganizerUserId = (organizer: unknown): string | undefined => {
+  if (!organizer) {
+    return undefined;
+  }
+  if (typeof organizer === 'string') {
+    return organizer;
+  }
+  if (organizer instanceof Types.ObjectId) {
+    return organizer.toString();
+  }
+  if (typeof organizer === 'object') {
+    const organizerRecord = organizer as Record<string, unknown>;
+    if (typeof organizerRecord.userId === 'string') {
+      return organizerRecord.userId;
+    }
+    const organizerId = organizerRecord._id;
+    if (organizerId && typeof (organizerId as {toString?: () => string}).toString === 'function') {
+      return (organizerId as {toString: () => string}).toString();
+    }
+    const organizerToString = organizerRecord.toString;
+    if (typeof organizerToString === 'function') {
+      return organizerToString.call(organizerRecord);
+    }
+  }
+  return undefined;
+};
+
 const isAuthorizedToUpdateEvent = async (eventId: string | undefined, user: User) => {
   if (!eventId) {
     return false;
   }
   const event = await EventDAO.readEventById(eventId);
-  return event.organizerList
-    .map((organizer) => {
-      if (typeof organizer === 'string') {
-        return organizer;
-      }
-      if (organizer && typeof organizer === 'object') {
-        if ((organizer as any).userId) {
-          return (organizer as any).userId;
-        }
-        if ((organizer as any)._id) {
-          return (organizer as any)._id?.toString();
-        }
-      }
-      return organizer?.toString();
-    })
-    .includes(user.userId);
+  const organizerIds = event.organizerList.map(toOrganizerUserId).filter((id): id is string => typeof id === 'string');
+  return organizerIds.includes(user.userId);
 };
