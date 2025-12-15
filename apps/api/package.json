@@ -5,7 +5,7 @@
   "main": "dist/lib/index.js",
   "types": "dist/types/lib/index.d.ts",
   "scripts": {
-    "build": "npm-run-all build:ts test:unit",
+    "build": "npm-run-all lint build:ts test:unit",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:node": "node -r ts-node/register",
     "build:image": "docker build -t ntlango-backend .",

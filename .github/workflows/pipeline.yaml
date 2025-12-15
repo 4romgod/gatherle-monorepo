@@ -1,25 +1,48 @@
-name: Pipeline (build, test:unit, deploy:aws, test:integration)
+name: Pipeline (PR validation + deploy)
 
 on:
   push:
-    branches: [ "mainline" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "mainline" ]
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build-and-deploy:
+  pr-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        node-version: [20.x]
-
-    permissions:
-      id-token: write
-      contents: read
-
+        node-version: [24.x]
     steps:
-    - name: Checkout out code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run build for all workspaces
+      run: npm run build
+
+  api-deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.x]
+    outputs:
+      graphql-url: ${{ steps.get-endpoint.outputs.graphql-url }}
+    steps:
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup Node.js ${{ matrix.node-version }}
@@ -34,19 +57,13 @@ jobs:
     - name: Install AWS CDK
       run: npm i -g aws-cdk
 
-    - name: Build/Transpile the code
+    - name: Transpile API
       run: npm run build:ts -w @ntlango/api
-
-    - name: Run unit tests
-      run: npm run test:unit -w @ntlango/api
 
     - name: Synthesize CDK application
       run: npm run build:cdk -w @ntlango/cdk
 
-    # - name: Remove dev dependencies
-    #   run: npm prune --omit=dev
-
-    - name: Configure AWS Credentials
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
@@ -58,17 +75,50 @@ jobs:
         NTLANGO_SECRET_ARN: ${{ vars.STAGE }}/ntlango/graphql-api
       run: npm run cdk -w @ntlango/cdk -- deploy '*' --verbose
 
-    - name: Get API Gateway Endpoint
+    - name: Get API Gateway endpoint
       id: get-endpoint
       run: |
-        export ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphqlStackId --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+        ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphqlStackId --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
         echo "GRAPHQL_URL=$ENDPOINT" >> $GITHUB_ENV
+        echo "graphql-url=$ENDPOINT" >> $GITHUB_OUTPUT
 
-    - name: Run Integration Tests
+    - name: Run integration tests
       env:
         STAGE: ${{ vars.STAGE }}
         NTLANGO_SECRET_ARN: ${{ vars.STAGE }}/ntlango/graphql-api
-        GRAPHQL_URL: ${{ env.GRAPHQL_URL }}
+        GRAPHQL_URL: ${{ steps.get-endpoint.outputs.graphql-url }}
       run: |
         echo "The graphql url is ${{ env.GRAPHQL_URL }}"
         npm run test:integration -w @ntlango/api
+
+  webapp-deploy:
+    if: github.event_name == 'push'
+    needs: api-deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.x]
+    env:
+      NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.api-deploy.outputs.graphql-url }}
+      NEXT_PUBLIC_JWT_SECRET: secret # TODO Placeholder, replace with secure method in production
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Generate GraphQL types
+      run: npm run codegen -w @ntlango/webapp
+
+    - name: Transpile Webapp
+      run: npm run build:ts -w @ntlango/webapp
+
+    - name: Run Next.js build
+      run: npm run build:next -w @ntlango/webapp

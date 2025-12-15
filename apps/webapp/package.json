@@ -2,7 +2,7 @@
   "name": "@ntlango/webapp",
   "private": true,
   "scripts": {
-    "build": "npm-run-all codegen build:ts lint:fix build:next",
+    "build": "npm-run-all codegen lint build:ts build:next",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:next": "next build -d",
     "codegen": "graphql-codegen",

@@ -39,3 +39,34 @@ export const getDeleteEventBySlugMutation = (slug: string) => {
     },
   };
 };
+
+export const getUpdateEventMutation = (input: any) => {
+  return {
+    query: `mutation UpdateEvent($input: UpdateEventInput!) {
+      updateEvent(input: $input) {
+        eventId
+        slug
+        title
+        description
+      }
+    }`,
+    variables: {
+      input,
+    },
+  };
+};
+
+export const getDeleteEventByIdMutation = (eventId: string) => {
+  return {
+    query: `mutation DeleteEventById($eventId: String!) {
+      deleteEventById(eventId: $eventId) {
+        eventId
+        slug
+        title
+      }
+    }`,
+    variables: {
+      eventId,
+    },
+  };
+};

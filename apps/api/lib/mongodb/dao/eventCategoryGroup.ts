@@ -12,6 +12,7 @@ class EventCategoryGroupDAO {
   static async create(input: CreateEventCategoryGroupInput): Promise<EventCategoryGroup> {
     try {
       const eventCategoryGroup = await EventCategoryGroupModel.create(input);
+      await eventCategoryGroup.populate('eventCategoryList');
       return eventCategoryGroup.toObject();
     } catch (error) {
       console.log('Error creating event category group', error);

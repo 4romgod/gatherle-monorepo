@@ -20,6 +20,23 @@ class EventDAO {
       return event.toObject();
     } catch (error) {
       console.error('Error creating event', error);
+      const typedError = error as { name?: string; message?: string; errors?: Record<string, any> };
+      const errorName = typedError?.name;
+      const errorMessage = typedError?.message;
+      const isValidationError =
+        errorName === 'ValidationError' ||
+        errorName === 'ValidatorError' ||
+        (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('validation failed'));
+
+      if (isValidationError) {
+        const validationMessage =
+          typedError.errors && Object.values(typedError.errors).length > 0
+            ? Object.values(typedError.errors)
+                .map((fieldError: any) => fieldError.message)
+                .filter(Boolean)[0]
+            : 'Event validation failed';
+        throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
+      }
       throw KnownCommonError(error);
     }
   }

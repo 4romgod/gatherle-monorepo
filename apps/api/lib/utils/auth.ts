@@ -9,6 +9,18 @@ import type {StringValue} from 'ms';
 import {EventDAO} from '@/mongodb/dao';
 import {getConfigValue} from '@/clients';
 
+const operationsRequiringOwnership = new Set([
+  OPERATION_NAMES.UPDATE_USER,
+  OPERATION_NAMES.DELETE_USER_BY_ID,
+  OPERATION_NAMES.DELETE_USER_BY_EMAIL,
+  OPERATION_NAMES.DELETE_USER_BY_USERNAME,
+  OPERATION_NAMES.UPDATE_EVENT,
+  OPERATION_NAMES.DELETE_EVENT,
+  OPERATION_NAMES.CREATE_EVENT,
+  OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT,
+  OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT,
+]);
+
 /**
  * Authorization checker function for GraphQL resolver operations
  *
@@ -40,13 +52,17 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
       return true;
     }
 
-    const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
-    if (isAuthorized) {
-      console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
-      return true;
+    if (operationsRequiringOwnership.has(operationName)) {
+      const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
+      if (isAuthorized) {
+        console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
+        return true;
+      }
+      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName} and resource:`);
+      throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
-    throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
+    return true;
   }
 
   throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -99,7 +115,7 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
       return args.username == user.username;
     case OPERATION_NAMES.UPDATE_EVENT:
     case OPERATION_NAMES.DELETE_EVENT:
-      return await isAuthorizedToUpdateEvent(args.eventId, user);
+      return await isAuthorizedToUpdateEvent(args.eventId ?? args.input?.eventId, user);
     case OPERATION_NAMES.CREATE_EVENT:
       return true;
     case OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT:
@@ -110,15 +126,25 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
   }
 };
 
-const isAuthorizedToUpdateEvent = async (eventId: string, user: User) => {
+const isAuthorizedToUpdateEvent = async (eventId: string | undefined, user: User) => {
+  if (!eventId) {
+    return false;
+  }
   const event = await EventDAO.readEventById(eventId);
   return event.organizerList
     .map((organizer) => {
       if (typeof organizer === 'string') {
         return organizer;
       }
-      // organizer may be an ObjectId or a populated document
-      return (organizer as any).userId ?? (organizer as any)._id?.toString();
+      if (organizer && typeof organizer === 'object') {
+        if ((organizer as any).userId) {
+          return (organizer as any).userId;
+        }
+        if ((organizer as any)._id) {
+          return (organizer as any)._id?.toString();
+        }
+      }
+      return organizer?.toString();
     })
     .includes(user.userId);
 };

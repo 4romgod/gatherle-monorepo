@@ -11,7 +11,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     repositoryConfig: [
       {
         owner: '4romgod',
-        repo: 'ntlango-backend',
+        repo: 'ntlango-monorepo',
       },
     ],
     description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK Stacks',

@@ -11,10 +11,9 @@ import {join} from 'path';
 
 configDotenv();
 
-
 const pathRoot = join(__dirname, '../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
-const pathHandlerFile = join(pathApi, 'lib', 'index.ts');
+const pathHandlerFile = join(pathApi, 'lib', 'graphql', 'apollo', 'lambdaHandler.ts');
 
 export class GraphQLStack extends Stack {
   readonly graphqlLambda: NodejsFunction;
@@ -35,7 +34,7 @@ export class GraphQLStack extends Stack {
       memorySize: 256,
       handler: 'graphqlLambdaHandler',
       entry: pathHandlerFile,
-      projectRoot: pathRoot,
+      projectRoot: pathApi,
       depsLockFilePath: join(pathRoot, 'package-lock.json'),
       bundling: {
         tsconfig: join(pathApi, 'tsconfig.json'),
