@@ -59,7 +59,7 @@ registerEnumType(EventLifecycleStatus, {
 @modelOptions({options: {allowMixed: Severity.ALLOW}})
 @ObjectType('Media', {description: EVENT_DESCRIPTIONS.EVENT.MEDIA_TYPE})
 export class Media {
-    @prop()
+    @prop({type: () => String})
     @Field((type) => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.FEATURED_IMAGE})
     featuredImageUrl?: string;
 
@@ -70,72 +70,72 @@ export class Media {
 
 @ObjectType('MediaAsset', {description: 'Rich media asset associated with an event'})
 export class MediaAsset {
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     mediaId?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     type?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     url?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     alt?: string;
 
-    @prop()
+    @prop({type: () => Number})
     @Field(() => Number, {nullable: true})
     width?: number;
 
-    @prop()
+    @prop({type: () => Number})
     @Field(() => Number, {nullable: true})
     height?: number;
 
-    @prop()
+    @prop({type: () => Number})
     @Field(() => Number, {nullable: true})
     order?: number;
 }
 
 @ObjectType('EventSchedule')
 export class EventSchedule {
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     startAt?: Date;
 
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     endAt?: Date;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     timezone?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     recurrenceRule?: string;
 }
 
 @ObjectType('EventOccurrence')
 export class EventOccurrence {
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     startAt?: Date;
 
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     endAt?: Date;
 }
 
 @ObjectType('EventOrganizer')
 export class EventOrganizer {
-    @prop()
+    @prop({type: () => String})
     @Field(() => ID, {nullable: true})
     userId?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     role?: string;
 }
@@ -147,23 +147,23 @@ export class Event {
     @Field((type) => ID, {description: EVENT_DESCRIPTIONS.EVENT.ID})
     eventId: string;
 
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.SLUG})
     slug: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.TITLE})
     title: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: 'Short summary for listings'})
     summary?: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION})
     description: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE})
     recurrenceRule: string;
 
@@ -179,11 +179,11 @@ export class Event {
     @Field(() => Location, {description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
     location: Location;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: 'Snapshot of location for history'})
     locationSnapshot?: string;
 
-    @prop({ref: () => String})
+    @prop({ref: () => String, type: () => String})
     @Field(() => ID, {nullable: true, description: 'Reference to a venue when available'})
     venueId?: string;
 
@@ -199,27 +199,27 @@ export class Event {
     @Field(() => EventVisibility, {nullable: true, description: 'Visibility controls for discovery'})
     visibility?: EventVisibility;
 
-    @prop()
+    @prop({type: () => Number})
     @Field(() => Int, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.CAPACITY})
     capacity?: number;
 
-    @prop()
+    @prop({type: () => Number})
     @Field(() => Int, {nullable: true, description: 'Optional RSVP/participant limit'})
     rsvpLimit?: number;
 
-    @prop({default: false})
+    @prop({default: false, type: () => Boolean})
     @Field(() => Boolean, {nullable: true, description: 'Enable waitlist when capacity is reached'})
     waitlistEnabled?: boolean;
 
-    @prop({default: false})
+    @prop({default: false, type: () => Boolean})
     @Field(() => Boolean, {nullable: true, description: 'Allow plus ones for guests'})
     allowGuestPlusOnes?: boolean;
 
-    @prop({default: false})
+    @prop({default: false, type: () => Boolean})
     @Field(() => Boolean, {nullable: true, description: 'Enable reminders for attendees'})
     remindersEnabled?: boolean;
 
-    @prop({default: true})
+    @prop({default: true, type: () => Boolean})
     @Field(() => Boolean, {nullable: true, description: 'Whether attendees list is visible'})
     showAttendees?: boolean;
 
@@ -267,18 +267,19 @@ export class Event {
     @Field(() => EventPrivacySetting, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.PRIVACY_SETTING})
     privacySetting?: EventPrivacySetting;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_LINK})
     eventLink?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: 'Organization owning the event'})
     orgId?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: 'Hero image for the event'})
     heroImage?: string;
 
+    // TODO do we not need to persist the IDs of participants?
     @Field(() => [EventParticipant], {
         nullable: true,
         description:
