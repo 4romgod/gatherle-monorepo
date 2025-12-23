@@ -16,7 +16,7 @@ describe('Event Category', () => {
   describe('EventCategorySchema', () => {
     it('should validate valid EventCategorySchema', () => {
       const validInput = getValidEventCategoryInput();
-      const {success, error} = EventCategorySchema.safeParse(validInput);
+      const {success} = EventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -48,7 +48,7 @@ describe('Event Category', () => {
         ...getValidEventCategoryInput(),
         eventCategoryId: undefined,
       };
-      const {success, error} = CreateEventCategorySchema.safeParse(validInput);
+      const {success} = CreateEventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 
@@ -68,7 +68,7 @@ describe('Event Category', () => {
         eventCategoryId: mockID,
         name: 'Updated Category Name',
       };
-      const {success, error} = UpdateEventCategorySchema.safeParse(validInput);
+      const {success} = UpdateEventCategorySchema.safeParse(validInput);
       expect(success).toBe(true);
     });
 

@@ -1,0 +1,14 @@
+{
+  "watch": ["lib"],
+  "ext": "ts,json",
+  "ignore": [
+    "test/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "dist/**",
+    "node_modules/**",
+    "*.log"
+  ],
+  "legacyWatch": false,
+  "delay": 1000
+}

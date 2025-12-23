@@ -8,15 +8,15 @@ import {EventCategory} from './eventCategory';
 @modelOptions({schemaOptions: {timestamps: true}})
 @ObjectType('EventCategoryGroup', {description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.TYPE})
 export class EventCategoryGroup {
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field((type) => ID, {description: EVENT_CATEGORY_DESCRIPTIONS.ID})
     eventCategoryGroupId: string;
 
-    @prop({required: true, unique: true})
+    @prop({required: true, unique: true, type: () => String})
     @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME})
     name: string;
 
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field((type) => String, {description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME})
     slug: string;
 

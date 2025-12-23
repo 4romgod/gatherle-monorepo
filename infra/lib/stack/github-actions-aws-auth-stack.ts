@@ -33,7 +33,7 @@ export class GitHubActionsAwsAuthStack extends Stack {
       },
     };
 
-    const role = new Role(this, 'gitHubDeployRoleId', {
+    const role = new Role(this, 'gitHubDeployRole', {
       roleName: 'githubActionsDeployRole',
       assumedBy: new WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, conditions),
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')],

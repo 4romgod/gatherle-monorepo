@@ -1,5 +1,5 @@
-import {SortInput} from '@ntlango/commons/types';
-import {PipelineStage} from 'mongoose';
+import type {SortInput} from '@ntlango/commons/types';
+import type {PipelineStage} from 'mongoose';
 
 export const createSortStages = (sortInput: SortInput[]): PipelineStage.Sort[] => {
   const sortOptions: PipelineStage.Sort = {

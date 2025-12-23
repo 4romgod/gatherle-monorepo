@@ -1,8 +1,8 @@
-import {FilterInput, PaginationInput, QueryOptionsInput, SortInput} from '@ntlango/commons/types';
-import {Model, Query} from 'mongoose';
+import type {FilterInput, PaginationInput, QueryOptionsInput, SortInput} from '@ntlango/commons/types';
+import type {Model, Query} from 'mongoose';
 
 export const addSortToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, sortInput: SortInput[]) => {
-  const sortOptions: any = {};
+  const sortOptions: Record<string, 1 | -1> = {};
   sortInput.forEach((sort) => {
     sortOptions[sort.field] = sort.order === 'asc' ? 1 : -1;
   });

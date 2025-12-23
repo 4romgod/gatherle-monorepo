@@ -1,6 +1,5 @@
-import {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
+import type {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
-import {ObjectId} from 'mongoose';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 import {validateUserIdentifiers} from '@/utils';

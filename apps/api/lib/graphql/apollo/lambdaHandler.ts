@@ -1,4 +1,4 @@
-import {APIGatewayProxyEvent, APIGatewayProxyResult, Callback, Context} from 'aws-lambda';
+import type {APIGatewayProxyEvent, APIGatewayProxyResult, Callback, Context} from 'aws-lambda';
 import {startServerAndCreateLambdaHandler, handlers} from '@as-integrations/aws-lambda';
 import {createApolloServer} from '@/graphql';
 import {getConfigValue, MongoDbClient} from '@/clients';

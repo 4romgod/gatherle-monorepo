@@ -1,6 +1,8 @@
 import {GraphQLError} from 'graphql';
-import {UpdateQuery, Types} from 'mongoose';
-import {EventParticipant as EventParticipantEntity, ParticipantStatus, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
+import type {UpdateQuery} from 'mongoose';
+import { Types} from 'mongoose';
+import type {EventParticipant as EventParticipantEntity, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
+import { ParticipantStatus} from '@ntlango/commons/types';
 import {EventParticipant} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 

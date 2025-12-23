@@ -6,6 +6,11 @@ import { loginUserGlobalAction } from './data/actions/global/auth/login';
 import { JWT_SECRET } from '@/lib/constants';
 import type { NextAuthConfig } from 'next-auth';
 
+/* TODO NEXT_PUBLIC_JWT_SECRET for client-side auth config exposes the JWT signing key to every user,
+  since NEXT_PUBLIC_* env vars are publicly readable in the shipped JavaScript. Anyone can inspect the bundle,
+  extract this secret, and mint valid JWTs for your API. Replace this with a server-only secret and change the 
+  client auth flow so it never requires direct access to the signing key.
+*/
 export default {
   trustHost: true,
   secret: JWT_SECRET,

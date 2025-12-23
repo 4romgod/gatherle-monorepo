@@ -37,3 +37,24 @@
 ## Security & Configuration Tips
 - Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `NTLANGO_SECRET_ARN`); Web (`NEXT_PUBLIC_GRAPHQL_URL`); CDK requires AWS creds.
 - Never commit secrets; use `.env` files ignored by git. For CDK, ensure AWS bootstrap is done per account/region before synth/deploy.
+- **Secret/Env Management**
+  - Keep a workspace-specific `.env` file per project (`apps/api/.env.local`, `apps/webapp/.env.local`, etc.) and never commit it; add `.env.*` to `.gitignore` if not already ignored.
+  - Document required keys per workspace so contributors know what to populate before running scripts: the API needs `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `NTLANGO_SECRET_ARN`; the webapp consumes `NEXT_PUBLIC_GRAPHQL_URL` (and uses `NEXT_PUBLIC_JWT_SECRET` wherever the client-side auth config expects it).
+  - For local dev run `npm run dev:api`/`npm run dev:web` with the matching `.env` or by exporting the vars, and consider adding `dotenv` helpers or scripts to validate the presence of required keys before starting.
+  - Share secret values via a secure vault (e.g., AWS Secrets Manager, 1Password, or the team-approved store) and keep the `NTLANGO_SECRET_ARN` format consistent with `vars.STAGE/ntlango/graphql-api` for AWS-integrated lookups.
+
+## CI/CD Secrets & Environment Variables
+- The pipeline uses GitHub Workflows (`.github/workflows/pipeline.yaml`) with two jobs: `pr-check` (lint/build/test) and `api-deploy` (CDK deploy + integration tests). Ensure each job runs from the root so workspace commands resolve correctly.
+- Global workflow env: `STAGE` defaults to `Dev`, but production pushes should override via GitHub repository variables (matching the stage naming in `packages/commons`).
+- Secrets/variables required in GitHub:
+  - `ASSUME_ROLE_ARN`: Role the CDK deploy job assumes (set under repo Settings → Secrets).
+  - `AWS_REGION`: Region used both for `configure-aws-credentials` and to satisfy `apps/api` env expectations.
+  - Repository `Variables`: `STAGE` (e.g., `Dev`, `Prod`) and `NTLANGO_SECRET_ARN` variants (e.g., `${{ vars.STAGE }}/ntlango/graphql-api`) so integration tests know where to resolve secrets.
+- Workflow flow for `api-deploy`:
+  1. Checkout → Install deps → CDK tools.
+  2. Build API/commons/CDK packages.
+  3. Configure AWS creds via the assumed role secret + `AWS_REGION`.
+  4. Deploy CDK stacks (`npm run cdk -w @ntlango/cdk -- deploy '*' --verbose`) with `STAGE` from repo vars.
+  5. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
+  6. Run integration tests with `STAGE`, `NTLANGO_SECRET_ARN`, `GRAPHQL_URL`.
+- Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output or stored secrets and include a secure way to inject these into the build (e.g., GitHub Actions env or `next.config.js` referencing process env).

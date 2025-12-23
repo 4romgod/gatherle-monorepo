@@ -1,11 +1,19 @@
-import {getModelForClass, pre, DocumentType} from '@typegoose/typegoose';
-import {Gender, UserRole, User as UserEntity} from '@ntlango/commons/types';
+import 'reflect-metadata';
+import type {DocumentType} from '@typegoose/typegoose';
+import {getModelForClass, pre} from '@typegoose/typegoose';
+import {User as UserEntity} from '@ntlango/commons/types';
 import {genSalt, hash, compare} from 'bcryptjs';
 
 async function hashPassword(plainPassword: string): Promise<string> {
   const salt = await genSalt(10);
   return hash(plainPassword, salt);
 }
+
+type UpdateFields = {
+  password?: string;
+  email?: string;
+  [key: string]: unknown;
+};
 
 @pre<UserModel>('validate', async function (next) {
   try {
@@ -40,24 +48,30 @@ async function hashPassword(plainPassword: string): Promise<string> {
     next(err as Error);
   }
 })
+
 @pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function (next) {
   try {
-    const update = (this as any).getUpdate?.();
+    type UpdateContext = {
+      getUpdate?: () => unknown;
+      setUpdate?: (update: UpdateFields) => void;
+    };
+    const context = this as UpdateContext;
+    const update = context.getUpdate?.();
 
     if (!update || typeof update !== 'object' || Array.isArray(update)) {
       return next();
     }
 
-    const updateObj = update as Record<string, any>;
+    const updateObj = {...(update as Record<string, unknown>)} as UpdateFields;
 
-    if (updateObj.password) {
+    if (typeof updateObj.password === 'string') {
       updateObj.password = await hashPassword(updateObj.password);
     }
 
-    if (updateObj.email) {
+    if (typeof updateObj.email === 'string') {
       updateObj.email = updateObj.email.toLowerCase();
     }
-    (this as any).setUpdate?.(updateObj);
+    context.setUpdate?.(updateObj);
     next();
   } catch (err) {
     console.error('Error in pre-update hook', err);

@@ -16,7 +16,7 @@ export const ERROR_MESSAGES = {
     INVALID_TIME: 'should be in HH:mm format',
     NOT_FOUND: (searchedItemType: string, searchParamType: string, searchParamValue: string) =>
         `${searchedItemType} with ${searchParamType} ${searchParamValue} does not exist`,
-    PASSWORD_MISSMATCH: 'Email and Password do not match',
+    PASSWORD_MISMATCH: 'Email and Password do not match',
     REQUIRED: 'is required',
     TOO_SHORT: 'is too short',
     UNAUTHENTICATED: 'You must be logged in to access this resource.',

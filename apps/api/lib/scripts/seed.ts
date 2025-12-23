@@ -1,7 +1,7 @@
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {usersMockData, eventsMockData, eventCategoryMockData, eventCategoryGroupMockData} from '@/mongodb/mockData';
-import {CreateEventCategoryGroupInput, CreateEventCategoryInput, CreateEventInput, CreateUserInput, EventCategory} from '@ntlango/commons/types';
+import type {CreateEventCategoryGroupInput, CreateEventCategoryInput, CreateEventInput, CreateUserInput, EventCategory} from '@ntlango/commons/types';
 import {SECRET_KEYS} from '@/constants';
 import {ParticipantStatus, ParticipantVisibility} from '@ntlango/commons/types';
 import {EventVisibility} from '@ntlango/commons/types/event';

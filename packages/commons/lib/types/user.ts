@@ -50,15 +50,15 @@ registerEnumType(SocialVisibility, {
 
 @ObjectType('UserProfile')
 export class UserProfile {
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     displayName?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     bio?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     avatar?: string;
 
@@ -69,15 +69,15 @@ export class UserProfile {
 
 @ObjectType('CommunicationPrefs')
 export class CommunicationPrefs {
-    @prop()
+    @prop({type: () => Boolean})
     @Field(() => Boolean, {nullable: true})
     emailEnabled?: boolean;
 
-    @prop()
+    @prop({type: () => Boolean})
     @Field(() => Boolean, {nullable: true})
     smsEnabled?: boolean;
 
-    @prop()
+    @prop({type: () => Boolean})
     @Field(() => Boolean, {nullable: true})
     pushEnabled?: boolean;
 }
@@ -89,7 +89,7 @@ export class UserPreferences {
     @Field(() => CommunicationPrefs, {nullable: true})
     communicationPrefs?: CommunicationPrefs;
 
-    @prop()
+    @prop({type: () => Object})
     @Field(() => GraphQLJSON, {nullable: true})
     notificationPrefs?: Record<string, any>;
 }
@@ -97,15 +97,15 @@ export class UserPreferences {
 @ObjectType('User', {description: USER_DESCRIPTIONS.TYPE})
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
 export class User {
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field((type) => ID, {description: USER_DESCRIPTIONS.ID})
     userId: string;
 
-    @prop({required: true, unique: true, index: true, lowercase: true})
+    @prop({required: true, unique: true, index: true, lowercase: true, type: () => String})
     @Field((type) => String, {description: USER_DESCRIPTIONS.EMAIL})
     email: string;
 
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field((type) => String, {description: USER_DESCRIPTIONS.USERNAME})
     username: string;
 
@@ -113,35 +113,35 @@ export class User {
     @Field((type) => GraphQLJSON, {nullable: true, description: USER_DESCRIPTIONS.ADDRESS})
     address?: Record<string, any>;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: USER_DESCRIPTIONS.BIRTHDATE})
     birthdate: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: USER_DESCRIPTIONS.GIVEN_NAME})
     given_name: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: USER_DESCRIPTIONS.FAMILY_NAME})
     family_name: string;
 
-    @prop({enum: Gender})
+    @prop({enum: Gender, type: () => String})
     @Field((type) => Gender, {nullable: true, description: USER_DESCRIPTIONS.GENDER})
     gender?: Gender;
 
-    @prop()
+    @prop({type: () => String})
     @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER})
     phone_number?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE})
     profile_picture?: string;
 
-    @prop()
+    @prop({type: () => String})
     @Field((type) => String, {nullable: true, description: USER_DESCRIPTIONS.BIO})
     bio?: string;
 
-    @prop({enum: UserRole, default: UserRole.User, required: true})
+    @prop({enum: UserRole, default: UserRole.User, required: true, type: () => String})
     @Field((type) => UserRole, {description: USER_DESCRIPTIONS.USER_ROLE})
     userRole: UserRole;
 
@@ -149,18 +149,18 @@ export class User {
     @Field(() => [UserRole], {nullable: true, description: 'Multiple roles supported'})
     roles?: UserRole[];
 
-    @prop({required: true, select: false})
+    @prop({required: true, select: false, type: () => String})
     password: string;
 
     @prop({type: () => [String], ref: () => EventCategory, default: []})
     @Field(() => [EventCategory], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
     interests?: Ref<EventCategory>[];
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true})
     primaryTimezone?: string;
 
-    @prop({enum: SocialVisibility})
+    @prop({enum: SocialVisibility, type: () => String})
     @Field(() => SocialVisibility, {nullable: true})
     defaultVisibility?: SocialVisibility;
 
@@ -172,19 +172,19 @@ export class User {
     @Field(() => UserPreferences, {nullable: true})
     preferences?: UserPreferences;
 
-    @prop({enum: SocialVisibility})
+    @prop({enum: SocialVisibility, type: () => String})
     @Field(() => SocialVisibility, {nullable: true})
     socialVisibility?: SocialVisibility;
 
-    @prop({default: true})
+    @prop({default: true, type: () => Boolean})
     @Field(() => Boolean, {nullable: true})
     shareRSVPByDefault?: boolean;
 
-    @prop({default: []})
+    @prop({default: [], type: () => [String]})
     @Field(() => [String], {nullable: true})
     mutedUserIds?: string[];
 
-    @prop({default: []})
+    @prop({default: [], type: () => [String]})
     @Field(() => [String], {nullable: true})
     blockedUserIds?: string[];
 }

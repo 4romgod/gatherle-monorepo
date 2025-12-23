@@ -8,7 +8,7 @@ import type {
   RsvpInput,
   CancelRsvpInput,
 } from '@ntlango/commons/types';
-import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
+import {CustomError, ErrorTypes, KnownCommonError, extractValidationErrorMessage, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {EventParticipantDAO} from '@/mongodb/dao';
 import {ParticipantStatus} from '@ntlango/commons/types';
@@ -20,6 +20,11 @@ class EventDAO {
       return event.toObject();
     } catch (error) {
       console.error('Error creating event', error);
+      const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
+      
+      if (validationMessage !== 'Event validation failed') {
+        throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
+      }
       throw KnownCommonError(error);
     }
   }

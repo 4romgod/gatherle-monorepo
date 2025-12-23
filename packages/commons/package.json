@@ -11,17 +11,12 @@
     "lint": "eslint \"lib/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit --pretty"
   },
-  "devDependencies": {
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.5"
-  },
   "dependencies": {
     "@typegoose/typegoose": "^12.4.0",
     "date-fns": "^3.6.0",
     "graphql": "^16.8.1",
     "graphql-type-json": "^0.3.2",
     "mongoose": "^8.4.1",
-    "npm-run-all": "^4.1.5",
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.1",
     "zod": "^3.23.8"

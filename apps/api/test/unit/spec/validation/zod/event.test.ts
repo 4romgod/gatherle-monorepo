@@ -1,4 +1,4 @@
-import {EventSchema, CreateEventInputSchema, UpdateEventInputSchema, validateInput} from '@/validation';
+import {EventSchema, CreateEventInputSchema, UpdateEventInputSchema} from '@/validation';
 import mongoose from 'mongoose';
 import {EventStatus} from '@ntlango/commons/types/event';
 

@@ -1,13 +1,15 @@
 import {authChecker, generateToken, verifyToken, isAuthorizedByOperation} from '@/utils';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
-import {UserRole, User} from '@ntlango/commons/types';
+import type { User} from '@ntlango/commons/types';
+import {UserRole} from '@ntlango/commons/types';
 import {OPERATION_NAMES} from '@/constants';
 import {verify, sign} from 'jsonwebtoken';
 import {EventDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/graphql';
-import {ArgsDictionary} from 'type-graphql';
-import {GraphQLResolveInfo} from 'graphql';
+import type {ServerContext} from '@/graphql';
+import type {ArgsDictionary} from 'type-graphql';
+import type {GraphQLResolveInfo} from 'graphql';
+import {Types} from 'mongoose';
 
 jest.mock('jsonwebtoken');
 jest.mock('@/mongodb/dao');
@@ -88,6 +90,64 @@ describe('Auth Utilities', () => {
       (EventDAO.readEventById as jest.Mock).mockResolvedValue({organizerList: [{userId: 'another-id'}]});
       const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUser);
       expect(result).toBe(false);
+    });
+
+    it('should handle various organizer ID formats - string ID', async () => {
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({organizerList: ['user-id']});
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUser);
+      expect(result).toBe(true);
+    });
+
+    it('should handle various organizer ID formats - ObjectId', async () => {
+      const mockObjectId = new Types.ObjectId('507f1f77bcf86cd799439011');
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizerList: [mockObjectId],
+      });
+      const mockUserWithObjectId = {...mockUser, userId: '507f1f77bcf86cd799439011'};
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUserWithObjectId);
+      expect(result).toBe(true);
+    });
+
+    it('should handle various organizer ID formats - object with _id', async () => {
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizerList: [{_id: new Types.ObjectId('507f1f77bcf86cd799439011')}],
+      });
+      const mockUserWithObjectId = {...mockUser, userId: '507f1f77bcf86cd799439011'};
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUserWithObjectId);
+      expect(result).toBe(true);
+    });
+
+    it('should handle various organizer ID formats - object with toString', async () => {
+      const mockOrganizer = {
+        toString: () => 'user-id',
+        someOtherProp: 'value',
+      };
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizerList: [mockOrganizer],
+      });
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUser);
+      expect(result).toBe(true);
+    });
+
+    it('should filter out invalid organizer formats', async () => {
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizerList: [null, undefined, 123, {}, {invalidProp: 'value'}],
+      });
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUser);
+      expect(result).toBe(false);
+    });
+
+    it('should handle mixed organizer formats', async () => {
+      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizerList: [
+          'other-user-id',
+          {userId: 'user-id'},
+          null,
+          {_id: 'another-id'},
+        ],
+      });
+      const result = await isAuthorizedByOperation(OPERATION_NAMES.UPDATE_EVENT, {eventId: 'event-id'}, mockUser);
+      expect(result).toBe(true);
     });
   });
 

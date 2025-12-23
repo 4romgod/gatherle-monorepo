@@ -1,4 +1,4 @@
-import {StackProps, Stack} from 'aws-cdk-lib';
+import {SecretValue, StackProps, Stack} from 'aws-cdk-lib';
 import {ISecret, Secret} from 'aws-cdk-lib/aws-secretsmanager';
 import {Construct} from 'constructs';
 import {configDotenv} from 'dotenv';
@@ -14,6 +14,10 @@ export class SecretsManagementStack extends Stack {
     this.ntlangoSecret = new Secret(this, 'ntlangoSecret', {
       secretName: `${process.env.STAGE}/ntlango/graphql-api`,
       description: 'Ntlango Secrets',
+      secretObjectValue: {
+        MONGO_DB_URL: SecretValue.unsafePlainText(process.env.MONGO_DB_URL ?? ''),
+        JWT_SECRET: SecretValue.unsafePlainText(process.env.JWT_SECRET ?? ''),
+      },
     });
   }
 }

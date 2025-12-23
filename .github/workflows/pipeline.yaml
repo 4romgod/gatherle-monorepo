@@ -1,25 +1,27 @@
-name: Pipeline (build, test:unit, deploy:aws, test:integration)
+name: Pipeline (PR validation + deploy)
 
 on:
   push:
-    branches: [ "mainline" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "mainline" ]
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  STAGE: Beta
 
 jobs:
-  build-and-deploy:
+  pr-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        node-version: [20.x]
-
-    permissions:
-      id-token: write
-      contents: read
-
+        node-version: [24.x]
     steps:
-    - name: Checkout out code
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup Node.js ${{ matrix.node-version }}
@@ -31,44 +33,112 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Run API lint
+      run: |
+        npm run lint -w @ntlango/api
+
+    - name: Build API TypeScript artifacts
+      run: |
+        npm run build:ts -w @ntlango/api
+
+    - name: Run API unit tests
+      run: |
+        npm run test:unit -w @ntlango/api
+
+    - name: Run Webapp lint
+      run: npm run lint -w @ntlango/webapp
+
+  api-deploy:
+    if: github.event_name == 'pull_request' # TODO change to 'push' for production deploys
+    runs-on: ubuntu-latest
+    outputs:
+      graphql_url: ${{ steps.get_endpoint.outputs.graphql_url }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 24.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
     - name: Install AWS CDK
       run: npm i -g aws-cdk
 
-    - name: Build/Transpile the code
-      run: npm run build:ts -w @ntlango/api
+    - name: Transpile Commons
+      run: npm run build:ts -w @ntlango/commons
 
-    - name: Run unit tests
-      run: npm run test:unit -w @ntlango/api
+    - name: Transpile API
+      run: npm run build:ts -w @ntlango/api
 
     - name: Synthesize CDK application
       run: npm run build:cdk -w @ntlango/cdk
 
-    # - name: Remove dev dependencies
-    #   run: npm prune --omit=dev
-
-    - name: Configure AWS Credentials
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Deploy CDK
-      env:
-        STAGE: ${{ vars.STAGE }}
-        NTLANGO_SECRET_ARN: ${{ vars.STAGE }}/ntlango/graphql-api
-      run: npm run cdk -w @ntlango/cdk -- deploy '*' --verbose
+      run: npm run cdk -w @ntlango/cdk -- deploy GraphQLStack --require-approval never
 
-    - name: Get API Gateway Endpoint
-      id: get-endpoint
+    - name: Get API Gateway endpoint
+      id: get_endpoint
       run: |
-        export ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphqlStackId --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+        ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphQLStack --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+        echo "Retrieved endpoint: $ENDPOINT"
         echo "GRAPHQL_URL=$ENDPOINT" >> $GITHUB_ENV
+        echo "graphql_url=$ENDPOINT" >> $GITHUB_OUTPUT
+        echo "Verify output was set:"
+        cat $GITHUB_OUTPUT
 
-    - name: Run Integration Tests
+    # TODO enable integration tests
+    # - name: Run integration tests
+    #   env:
+    #     STAGE: ${{ env.STAGE }}
+    #     NTLANGO_SECRET_ARN: ${{ env.STAGE }}/ntlango/graphql-api
+    #     GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
+    #   run: |
+    #     echo "The graphql url is ${{ env.GRAPHQL_URL }}"
+    #     npm run test:integration -w @ntlango/api
+
+  webapp-preview-deploy:
+    if: github.event_name == 'pull_request' # TODO change to 'push' for production deploys
+    needs: api-deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 24.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+
+    - name: Pull Vercel Environment Information
+      working-directory: ./apps/webapp
       env:
-        STAGE: ${{ vars.STAGE }}
-        NTLANGO_SECRET_ARN: ${{ vars.STAGE }}/ntlango/graphql-api
-        GRAPHQL_URL: ${{ env.GRAPHQL_URL }}
-      run: |
-        echo "The graphql url is ${{ env.GRAPHQL_URL }}"
-        npm run test:integration -w @ntlango/api
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+    - name: Deploy Preview to Vercel
+      working-directory: ./apps/webapp
+      env:
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        NEXT_PUBLIC_GRAPHQL_URL: https://c11y1xrbo8.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
+        NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}

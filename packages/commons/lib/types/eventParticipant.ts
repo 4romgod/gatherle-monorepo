@@ -23,43 +23,43 @@ registerEnumType(ParticipantVisibility, {name: 'ParticipantVisibility'});
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
 @index({eventId: 1, userId: 1}, {unique: true})
 export class EventParticipant {
-    @prop({required: true, unique: true, index: true})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field(() => ID)
     participantId: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field(() => ID)
     eventId: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field(() => ID)
     userId: string;
 
-    @prop({enum: ParticipantStatus, required: true, default: ParticipantStatus.Going})
+    @prop({enum: ParticipantStatus, required: true, default: ParticipantStatus.Going, type: () => String})
     @Field(() => ParticipantStatus)
     status: ParticipantStatus;
 
-    @prop({default: 1})
+    @prop({default: 1, type: () => Number})
     @Field(() => Number, {nullable: true})
     quantity?: number;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => ID, {nullable: true})
     invitedBy?: string;
 
-    @prop({enum: ParticipantVisibility, default: ParticipantVisibility.Followers})
+    @prop({enum: ParticipantVisibility, default: ParticipantVisibility.Followers, type: () => String})
     @Field(() => ParticipantVisibility, {nullable: true})
     sharedVisibility?: ParticipantVisibility;
 
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     rsvpAt?: Date;
 
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     cancelledAt?: Date;
 
-    @prop()
+    @prop({type: () => Date})
     @Field(() => Date, {nullable: true})
     checkedInAt?: Date;
 }

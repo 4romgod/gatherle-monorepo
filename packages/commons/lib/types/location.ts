@@ -6,34 +6,34 @@ import {EVENT_DESCRIPTIONS, LOCATION_DESCRIPTIONS} from '../constants';
 
 @ObjectType('Coordinates', {description: LOCATION_DESCRIPTIONS.COORDINATES})
 class Coordinates {
-    @prop({required: true})
+    @prop({required: true, type: () => Number})
     @Field((type) => Number, {description: LOCATION_DESCRIPTIONS.LATITUDE})
     latitude: number;
 
-    @prop({required: true})
+    @prop({required: true, type: () => Number})
     @Field((type) => Number, {description: LOCATION_DESCRIPTIONS.LONGITUDE})
     longitude: number;
 }
 
 @ObjectType('Address', {description: LOCATION_DESCRIPTIONS.ADDRESS})
 class Address {
-    @prop()
+    @prop({type: () => String})
     @Field((type) => String, {nullable: true, description: LOCATION_DESCRIPTIONS.STREET})
     street?: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: LOCATION_DESCRIPTIONS.CITY})
     city: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: LOCATION_DESCRIPTIONS.STATE})
     state: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: LOCATION_DESCRIPTIONS.ZIP_CODE})
     zipCode: string;
 
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: LOCATION_DESCRIPTIONS.COUNTRY})
     country: string;
 }
@@ -41,7 +41,7 @@ class Address {
 @modelOptions({options: {allowMixed: Severity.ALLOW}})
 @ObjectType('Location', {description: EVENT_DESCRIPTIONS.EVENT.LOCATION})
 export class Location {
-    @prop({required: true})
+    @prop({required: true, type: () => String})
     @Field((type) => String, {description: LOCATION_DESCRIPTIONS.LOCATION_TYPE})
     locationType: 'venue' | 'online' | 'tba';
 
@@ -53,7 +53,7 @@ export class Location {
     @Field(() => Address, {nullable: true, description: LOCATION_DESCRIPTIONS.ADDRESS})
     address?: Address;
 
-    @prop()
+    @prop({type: () => String})
     @Field(() => String, {nullable: true, description: LOCATION_DESCRIPTIONS.DETAILS})
     details?: string;
 }

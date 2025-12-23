@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import {getModelForClass, pre} from '@typegoose/typegoose';
 import {EventParticipant as EventParticipantEntity} from '@ntlango/commons/types';
 

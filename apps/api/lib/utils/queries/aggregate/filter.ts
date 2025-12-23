@@ -1,5 +1,6 @@
-import {FilterInput, FilterOperatorInput} from '@ntlango/commons/types';
-import {PipelineStage} from 'mongoose';
+import type {FilterInput} from '@ntlango/commons/types';
+import {FilterOperatorInput} from '@ntlango/commons/types';
+import type {PipelineStage} from 'mongoose';
 
 // TODO 1. Functionality for RootQuerySelector like ($and, $or, $text)
 export const createEventPipelineStages = (filters: FilterInput[]): PipelineStage[] => {

@@ -1,4 +1,4 @@
-import {QueryOptionsInput} from '@ntlango/commons/types';
+import type {QueryOptionsInput} from '@ntlango/commons/types';
 
 export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
   return {

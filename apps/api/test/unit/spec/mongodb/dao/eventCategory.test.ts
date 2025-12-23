@@ -1,6 +1,6 @@
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {EventCategory as EventCategoryModel} from '@/mongodb/models';
-import {EventCategory, CreateEventCategoryInput, UpdateEventCategoryInput, QueryOptionsInput} from '@ntlango/commons/types';
+import type {EventCategory, CreateEventCategoryInput, UpdateEventCategoryInput, QueryOptionsInput} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {MockMongoError} from '@/test/utils';

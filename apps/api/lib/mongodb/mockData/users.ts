@@ -1,4 +1,4 @@
-import {CreateUserInput} from '@ntlango/commons/types';
+import type {CreateUserInput} from '@ntlango/commons/types';
 import {Gender, SocialVisibility, UserRole} from '@ntlango/commons/types/user';
 
 const users: CreateUserInput[] = [

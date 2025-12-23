@@ -1,13 +1,28 @@
-import {ServerContext} from '@/graphql';
-import {ArgsDictionary, ResolverData} from 'type-graphql';
+import type {ServerContext} from '@/graphql';
+import type {ArgsDictionary, ResolverData} from 'type-graphql';
 import {CustomError, ErrorTypes} from '@/utils/exceptions';
 import {ERROR_MESSAGES} from '@/validation';
 import {OPERATION_NAMES, SECRET_KEYS} from '@/constants';
-import {UserRole, User} from '@ntlango/commons/types';
-import {verify, sign, JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
+import type {User} from '@ntlango/commons/types';
+import {UserRole} from '@ntlango/commons/types';
+import {verify, sign} from 'jsonwebtoken';
+import type {JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
 import type {StringValue} from 'ms';
 import {EventDAO} from '@/mongodb/dao';
 import {getConfigValue} from '@/clients';
+import {Types} from 'mongoose';
+
+const operationsRequiringOwnership = new Set([
+  OPERATION_NAMES.UPDATE_USER,
+  OPERATION_NAMES.DELETE_USER_BY_ID,
+  OPERATION_NAMES.DELETE_USER_BY_EMAIL,
+  OPERATION_NAMES.DELETE_USER_BY_USERNAME,
+  OPERATION_NAMES.UPDATE_EVENT,
+  OPERATION_NAMES.DELETE_EVENT,
+  OPERATION_NAMES.CREATE_EVENT,
+  OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT,
+  OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT,
+]);
 
 /**
  * Authorization checker function for GraphQL resolver operations
@@ -31,21 +46,26 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
     const operationName = info.fieldName;
 
     if (!roles.includes(userRole)) {
-      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName} and resource:`);
+      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
       throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
     if (user.userRole === UserRole.Admin) {
-      console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName} and resource`);
+      console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName}`);
       return true;
     }
 
-    const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
-    if (isAuthorized) {
-      console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
-      return true;
+    if (operationsRequiringOwnership.has(operationName)) {
+      const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
+      if (isAuthorized) {
+        console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
+        return true;
+      }
+      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
+      throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
+    console.log(`${userRole} type user: '${user.username}' attempted to access non-protected operation ${operationName}`);
     throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
   }
 
@@ -79,7 +99,7 @@ export const verifyToken = async (token: string, secret?: string) => {
     if (!jwtSecret) {
       throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
     }
-    const {iat, exp, ...user} = verify(token, jwtSecret) as JwtPayload;
+    const {iat: _iat, exp: _exp, ...user} = verify(token, jwtSecret) as JwtPayload;
     return user as User;
   } catch (err) {
     console.log('Error when verifying token', err);
@@ -99,7 +119,7 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
       return args.username == user.username;
     case OPERATION_NAMES.UPDATE_EVENT:
     case OPERATION_NAMES.DELETE_EVENT:
-      return await isAuthorizedToUpdateEvent(args.eventId, user);
+      return await isAuthorizedToUpdateEvent(args.eventId ?? args.input?.eventId, user);
     case OPERATION_NAMES.CREATE_EVENT:
       return true;
     case OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT:
@@ -110,15 +130,63 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
   }
 };
 
-const isAuthorizedToUpdateEvent = async (eventId: string, user: User) => {
+/**
+ * Type guard to check if value has a toString method
+ */
+const hasToString = (value: unknown): value is { toString: () => string } => {
+  return typeof value === 'object' && value !== null && typeof (value as any).toString === 'function';
+};
+
+/**
+ * Type guard to check if value is a record with specific properties
+ */
+const isOrganizerRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+/**
+ * Converts various organizer formats to a user ID string.
+ * Handles string IDs, ObjectIds, and organizer objects with userId or _id fields.
+ * 
+ * @param organizer The organizer value in various possible formats
+ * @returns The user ID as a string, or undefined if extraction fails
+ */
+const toOrganizerUserId = (organizer: unknown): string | undefined => {
+  if (!organizer) {
+    return undefined;
+  }
+
+  if (typeof organizer === 'string') {
+    return organizer;
+  }
+
+  if (organizer instanceof Types.ObjectId) {
+    return organizer.toString();
+  }
+
+  if (isOrganizerRecord(organizer)) {
+    if (typeof organizer.userId === 'string') {
+      return organizer.userId;
+    }
+
+    const organizerId = organizer._id;
+    if (organizerId && hasToString(organizerId)) {
+      return organizerId.toString();
+    }
+
+    if (hasToString(organizer)) {
+      return organizer.toString();
+    }
+  }
+
+  return undefined;
+};
+
+const isAuthorizedToUpdateEvent = async (eventId: string | undefined, user: User) => {
+  if (!eventId) {
+    return false;
+  }
   const event = await EventDAO.readEventById(eventId);
-  return event.organizerList
-    .map((organizer) => {
-      if (typeof organizer === 'string') {
-        return organizer;
-      }
-      // organizer may be an ObjectId or a populated document
-      return (organizer as any).userId ?? (organizer as any)._id?.toString();
-    })
-    .includes(user.userId);
+  const organizerIds = event.organizerList.map(toOrganizerUserId).filter((id): id is string => typeof id === 'string');
+  return organizerIds.includes(user.userId);
 };

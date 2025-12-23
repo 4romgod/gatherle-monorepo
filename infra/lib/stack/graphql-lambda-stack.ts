@@ -11,10 +11,9 @@ import {join} from 'path';
 
 configDotenv();
 
-
 const pathRoot = join(__dirname, '../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
-const pathHandlerFile = join(pathApi, 'lib', 'index.ts');
+const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'graphql', 'apollo', 'lambdaHandler.js');
 
 export class GraphQLStack extends Stack {
   readonly graphqlLambda: NodejsFunction;
@@ -27,7 +26,7 @@ export class GraphQLStack extends Stack {
 
     const ntlangoSecret = Secret.fromSecretNameV2(this, 'ImportedSecret', `${process.env.STAGE}/ntlango/graphql-api`);
 
-    this.graphqlLambda = new NodejsFunction(this, 'GraphqlLambdaFunctionId', {
+    this.graphqlLambda = new NodejsFunction(this, 'GraphqlLambdaFunction', {
       functionName: 'GraphqlLambdaFunction',
       description: 'This lambda function is a GraphQL Lambda that uses Apollo server: https://www.apollographql.com/docs/apollo-server/deployment/lambda',
       runtime: Runtime.NODEJS_20_X,
@@ -38,14 +37,13 @@ export class GraphQLStack extends Stack {
       projectRoot: pathRoot,
       depsLockFilePath: join(pathRoot, 'package-lock.json'),
       bundling: {
-        tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
-        minify: true,
-        externalModules: ['mock-aws-s3', 'aws-sdk', 'nock'],
+        minify: false,
+        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
         loader: {'.html': 'file'},
       },
       environment: {
-        STAGE: `${process.env.STAGE}`,
+        STAGE: `${process.env.STAGE}`, // TODO fix CI/CD to pass this env variable
         NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
         NODE_OPTIONS: '--enable-source-maps',
       },

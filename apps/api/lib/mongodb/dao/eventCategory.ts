@@ -1,5 +1,5 @@
 import {EventCategory as EventCategoryModel} from '@/mongodb/models';
-import {
+import type {
   EventCategory,
   UpdateEventCategoryInput,
   CreateEventCategoryInput,

@@ -1,6 +1,7 @@
 import {UserDAO} from '@/mongodb/dao';
 import {User} from '@/mongodb/models';
-import {CreateUserInput, UpdateUserInput, QueryOptionsInput, SortOrderInput} from '@ntlango/commons/types';
+import type {CreateUserInput, UpdateUserInput, QueryOptionsInput} from '@ntlango/commons/types';
+import { SortOrderInput} from '@ntlango/commons/types';
 import {Gender, UserRole} from '@ntlango/commons/types/user';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
@@ -175,7 +176,7 @@ describe('UserDAO', () => {
         }),
       );
 
-      await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(CustomError(ERROR_MESSAGES.PASSWORD_MISSMATCH, ErrorTypes.UNAUTHENTICATED));
+      await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(CustomError(ERROR_MESSAGES.PASSWORD_MISMATCH, ErrorTypes.UNAUTHENTICATED));
     });
 
     it('should throw UNAUTHENTICATED error when user not found', async () => {
@@ -186,7 +187,7 @@ describe('UserDAO', () => {
 
       (User.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
-      await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(CustomError(ERROR_MESSAGES.PASSWORD_MISSMATCH, ErrorTypes.UNAUTHENTICATED));
+      await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(CustomError(ERROR_MESSAGES.PASSWORD_MISMATCH, ErrorTypes.UNAUTHENTICATED));
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {

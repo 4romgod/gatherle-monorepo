@@ -1,4 +1,5 @@
-import {CustomError, CustomErrorType, KnownCommonError, ErrorTypes, duplicateFieldMessage} from '@/utils';
+import type { CustomErrorType} from '@/utils';
+import {CustomError, KnownCommonError, ErrorTypes, duplicateFieldMessage, extractValidationErrorMessage} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {GraphQLError} from 'graphql';
 
@@ -149,6 +150,91 @@ describe('exceptions', () => {
       };
       const result = duplicateFieldMessage(mongoError);
       expect(result).toBe('An error occurred.');
+    });
+  });
+
+  describe('extractValidationErrorMessage', () => {
+    it('should extract validation message from ValidationError with field errors', () => {
+      const error = {
+        name: 'ValidationError',
+        message: 'Validation failed',
+        errors: {
+          email: {message: 'Email is required'},
+          name: {message: 'Name must be at least 3 characters'},
+        },
+      };
+      const result = extractValidationErrorMessage(error);
+      expect(result).toBe('Email is required');
+    });
+
+    it('should extract validation message from ValidatorError', () => {
+      const error = {
+        name: 'ValidatorError',
+        message: 'validation failed: email is invalid',
+        errors: {
+          email: {message: 'Email format is invalid'},
+        },
+      };
+      const result = extractValidationErrorMessage(error);
+      expect(result).toBe('Email format is invalid');
+    });
+
+    it('should extract validation message when error message contains "validation failed"', () => {
+      const error = {
+        name: 'SomeError',
+        message: 'Event validation failed: age must be positive',
+        errors: {
+          age: {message: 'Age must be a positive number'},
+        },
+      };
+      const result = extractValidationErrorMessage(error);
+      expect(result).toBe('Age must be a positive number');
+    });
+
+    it('should return default message when no validation errors found', () => {
+      const error = {
+        name: 'ValidationError',
+        message: 'Validation failed',
+        errors: {},
+      };
+      const result = extractValidationErrorMessage(error, 'Custom default');
+      expect(result).toBe('Custom default');
+    });
+
+    it('should return default message when error is not a validation error', () => {
+      const error = {
+        name: 'MongoError',
+        message: 'Connection failed',
+      };
+      const result = extractValidationErrorMessage(error, 'Default validation message');
+      expect(result).toBe('Default validation message');
+    });
+
+    it('should return default message when errors array is empty', () => {
+      const error = {
+        name: 'ValidationError',
+        message: 'validation failed',
+        errors: {
+          field1: {},
+          field2: {message: undefined},
+        },
+      };
+      const result = extractValidationErrorMessage(error);
+      expect(result).toBe('Validation failed');
+    });
+
+    it('should handle null or undefined error gracefully', () => {
+      const result1 = extractValidationErrorMessage(null);
+      expect(result1).toBe('Validation failed');
+
+      const result2 = extractValidationErrorMessage(undefined);
+      expect(result2).toBe('Validation failed');
+    });
+
+    it('should use custom default message when provided', () => {
+      const error = {name: 'SomeError'};
+      const result = extractValidationErrorMessage(error, 'Event validation failed');
+      expect(result).toBe('Event validation failed');
     });
   });
 });
