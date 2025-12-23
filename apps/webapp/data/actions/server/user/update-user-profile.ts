@@ -4,15 +4,18 @@ import { UpdateUserInput, UpdateUserDocument, Gender } from '@/data/graphql/type
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
+import { ApolloError } from '@apollo/client';
+import type { ActionState } from '@/data/actions/types';
+import { getApolloErrorMessage } from '@/data/actions/types';
 
-export async function updateUserProfileAction(prevState: any, formData: FormData) {
+export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
 
   if (!userId || !token) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: 'User is not authenticated',
       zodErrors: null,
     };
@@ -42,7 +45,7 @@ export async function updateUserProfileAction(prevState: any, formData: FormData
   const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: null,
       zodErrors: validatedFields.error.flatten().fieldErrors,
     };
@@ -64,25 +67,26 @@ export async function updateUserProfileAction(prevState: any, formData: FormData
     // TODO after updating, also make sure the user session gets updated!
     const responseData = updateResponse.data?.updateUser;
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       data: responseData,
       apiError: null,
       zodErrors: null,
     };
   } catch (error) {
     console.error('Failed when calling Update User Mutation', error);
-    const networkError = (error as any).networkError;
-    if (networkError) {
-      console.error('Error Message', networkError.result.errors[0].message);
+    const errorMessage = getApolloErrorMessage(error as ApolloError);
+    
+    if (errorMessage) {
+      console.error('Error Message', errorMessage);
       return {
-        ...prevState,
-        apiError: networkError.result.errors[0].message,
+        ...(prevState ?? {}),
+        apiError: errorMessage,
         zodErrors: null,
       };
     }
 
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: 'An error occurred while updating your profile',
       zodErrors: null,
     };

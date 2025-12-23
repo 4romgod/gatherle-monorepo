@@ -19,14 +19,13 @@ import { Address, UpdateUserInput, User } from '@/data/graphql/types/graphql';
 import { useActionState } from 'react';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useCustomAppContext } from '@/components/app-context';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { FormErrors } from '@/components/form-errors';
 import AddressForm from '@/components/forms/input-address';
 
 export default function EditProfilePage({ user }: { user: User }) {
   const [isEditing, setIsEditing] = useState(false);
   const { setToastProps, toastProps } = useCustomAppContext();
-  const [formState, formAction] = useActionState(updateUserProfileAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const [loading, setLoading] = useState(false);
 
   const [profile, setProfile] = useState<UpdateUserInput>({

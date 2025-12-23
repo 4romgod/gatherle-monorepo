@@ -2,12 +2,11 @@
 
 import { useActionState } from "react";
 import { forgotPasswordAction } from '@/data/actions/server';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { Box, Button, FormControl, InputLabel, OutlinedInput } from '@mui/material';
 import { FormErrors } from '@/components/form-errors';
 
 export default function ForgotPasswordForm() {
-  const [formState, formAction] = useActionState(forgotPasswordAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(forgotPasswordAction, {});
 
   return (
     <Box component="form" action={formAction} noValidate sx={{ mt: 1 }}>
@@ -27,7 +26,7 @@ export default function ForgotPasswordForm() {
           autoFocus={true}
           color='secondary'
         />
-        <FormErrors error={formState?.zodErrors?.email} />
+        <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
 
       <Button

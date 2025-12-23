@@ -1,8 +1,9 @@
 'use server';
 
 import { ResetPasswordInputTypeSchema } from '@/data/validation';
+import type { ActionState } from '@/data/actions/types';
 
-export async function resetPasswordAction(prevState: any, formData: FormData) {
+export async function resetPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData = {
     password: formData.get('password')?.toString() ?? '',
     'confirm-password': formData.get('confirm-password')?.toString() ?? '',
@@ -11,11 +12,16 @@ export async function resetPasswordAction(prevState: any, formData: FormData) {
   const validatedFields = ResetPasswordInputTypeSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: null,
       zodErrors: validatedFields.error.flatten().fieldErrors,
     };
   }
 
   // TODO Call the API
+  return {
+    ...(prevState ?? {}),
+    apiError: 'Reset password not yet implemented',
+    zodErrors: null,
+  };
 }

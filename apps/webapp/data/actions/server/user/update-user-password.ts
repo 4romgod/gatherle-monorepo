@@ -4,15 +4,18 @@ import { UpdateUserInput, UpdateUserDocument } from '@/data/graphql/types/graphq
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
+import { ApolloError } from '@apollo/client';
+import type { ActionState } from '@/data/actions/types';
+import { getApolloErrorMessage } from '@/data/actions/types';
 
-export async function updateUserPasswordAction(prevState: any, formData: FormData) {
+export async function updateUserPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
 
   if (!userId || !token) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: 'User is not authenticated',
       zodErrors: null,
     };
@@ -21,10 +24,9 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
   const currentPassword = formData.get('currentPassword')?.toString();
   const newPassword = formData.get('newPassword')?.toString();
 
-  // Validate required fields
   if (!currentPassword || !newPassword) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: 'Both current and new passwords are required',
       zodErrors: null,
     };
@@ -32,10 +34,9 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
 
   // TODO: Verify current password before updating
   // You might need a separate GraphQL query/mutation to verify the current password
-
   let inputData: UpdateUserInput = {
     userId: userId,
-    password: newPassword, // Fixed: was using undefined 'password' variable
+    password: newPassword,
   };
 
   console.log('input data', inputData);
@@ -43,7 +44,7 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
   const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: null,
       zodErrors: validatedFields.error.flatten().fieldErrors,
     };
@@ -66,7 +67,7 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
     const responseData = updateResponse.data?.updateUser;
 
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       data: responseData,
       apiError: null,
       zodErrors: null,
@@ -74,19 +75,19 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
     };
   } catch (error) {
     console.error('Failed when calling Update User Mutation', error);
-    const networkError = (error as any).networkError;
+    const errorMessage = getApolloErrorMessage(error as ApolloError);
 
-    if (networkError) {
-      console.error('Error Message', networkError.result.errors[0].message);
+    if (errorMessage) {
+      console.error('Error Message', errorMessage);
       return {
-        ...prevState,
-        apiError: networkError.result.errors[0].message,
+        ...(prevState ?? {}),
+        apiError: errorMessage,
         zodErrors: null,
       };
     }
 
     return {
-      ...prevState,
+      ...(prevState ?? {}),
       apiError: 'An error occurred while updating your password',
       zodErrors: null,
     };

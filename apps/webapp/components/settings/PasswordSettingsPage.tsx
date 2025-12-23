@@ -31,12 +31,7 @@ interface PasswordStrength {
   color: 'error' | 'warning' | 'info' | 'success';
 }
 
-interface ActionState {
-  apiError?: string | null;
-  zodErrors?: any;
-  success?: boolean;
-  data?: any;
-}
+import type { ActionState } from '@/data/actions/types';
 
 export default function PasswordSettingsPage() {
   const [settings, setSettings] = useState<PasswordSettings>({
@@ -59,7 +54,6 @@ export default function PasswordSettingsPage() {
     color: 'error'
   });
 
-  // Password strength calculation
   const calculatePasswordStrength = (password: string): PasswordStrength => {
     if (!password) {
       return { score: 0, feedback: [], color: 'error' };
@@ -68,13 +62,11 @@ export default function PasswordSettingsPage() {
     let score = 0;
     const feedback: string[] = [];
 
-    // Length check
     if (password.length >= 8) score += 25;
     else feedback.push('Use at least 8 characters');
 
     if (password.length >= 12) score += 10;
 
-    // Character variety checks
     if (/[a-z]/.test(password)) score += 15;
     else feedback.push('Include lowercase letters');
 
@@ -87,10 +79,9 @@ export default function PasswordSettingsPage() {
     if (/[^a-zA-Z0-9]/.test(password)) score += 20;
     else feedback.push('Include special characters');
 
-    // Common patterns check
     const commonPatterns = [
       /123/i, /abc/i, /password/i, /qwerty/i, /admin/i,
-      /(\w)\1{2,}/i // repeated characters
+      /(\w)\1{2,}/i
     ];
 
     const hasCommonPattern = commonPatterns.some(pattern => pattern.test(password));
@@ -105,12 +96,10 @@ export default function PasswordSettingsPage() {
     return { score: Math.min(100, score), feedback, color };
   };
 
-  // Update password strength when new password changes
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(settings.newPassword));
   }, [settings.newPassword]);
 
-  // Handle action state changes
   useEffect(() => {
     if (actionState.success) {
       setSuccessMessage('Password changed successfully!');
@@ -133,20 +122,17 @@ export default function PasswordSettingsPage() {
       [name]: value
     }));
 
-    // Clear messages when typing
     setPasswordError('');
     setSuccessMessage('');
     setActionState({});
   };
 
   const validatePasswords = (): boolean => {
-    // Current password validation
     if (!settings.currentPassword.trim()) {
       setPasswordError('Current password is required');
       return false;
     }
 
-    // New password validation
     if (!settings.newPassword.trim()) {
       setPasswordError('New password is required');
       return false;
@@ -157,13 +143,11 @@ export default function PasswordSettingsPage() {
       return false;
     }
 
-    // Check if new password is different from current
     if (settings.currentPassword === settings.newPassword) {
       setPasswordError('New password must be different from current password');
       return false;
     }
 
-    // Confirm password validation
     if (!settings.confirmNewPassword.trim()) {
       setPasswordError('Please confirm your new password');
       return false;
@@ -174,7 +158,6 @@ export default function PasswordSettingsPage() {
       return false;
     }
 
-    // Password strength validation
     if (passwordStrength.score < 40) {
       setPasswordError('Password is too weak. Please follow the suggestions to strengthen it.');
       return false;
@@ -290,7 +273,6 @@ export default function PasswordSettingsPage() {
                   sx={{ pb: 4 }}
                 />
 
-                {/* Password Strength Indicator */}
                 {settings.newPassword && (
                   <Box sx={{ mb: 3, mt: -3 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>

@@ -22,7 +22,6 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useCustomAppContext } from '@/components/app-context';
 import { useEffect, useState } from 'react';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF } from 'react-icons/fa';
 
@@ -30,7 +29,7 @@ export default function RegisterForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { setToastProps, toastProps } = useCustomAppContext();
-  const [formState, formAction] = useActionState(registerUserAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(registerUserAction, {});
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -80,7 +79,7 @@ export default function RegisterForm() {
               variant="outlined"
               color='secondary'
             />
-            <FormErrors error={formState?.zodErrors?.given_name} />
+            <FormErrors error={formState.zodErrors?.given_name} />
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -92,7 +91,7 @@ export default function RegisterForm() {
               variant="outlined"
               color='secondary'
             />
-            <FormErrors error={formState?.zodErrors?.family_name} />
+            <FormErrors error={formState.zodErrors?.family_name} />
           </FormControl>
         </Grid>
       </Grid>
@@ -104,7 +103,7 @@ export default function RegisterForm() {
           variant="outlined"
           color='secondary'
         />
-        <FormErrors error={formState?.zodErrors?.email} />
+        <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
       <FormControl fullWidth margin="normal">
         <InputLabel
@@ -133,7 +132,7 @@ export default function RegisterForm() {
             </InputAdornment>
           }
         />
-        <FormErrors error={formState?.zodErrors?.password} />
+        <FormErrors error={formState.zodErrors?.password} />
       </FormControl>
       <FormControl fullWidth margin="normal">
         <LocalizationProvider
@@ -146,7 +145,7 @@ export default function RegisterForm() {
             name="birthdate"
           />
         </LocalizationProvider>
-        <FormErrors error={formState?.zodErrors?.birthdate} />
+        <FormErrors error={formState.zodErrors?.birthdate} />
       </FormControl>
 
       <Button variant="contained" color="secondary" fullWidth={true} sx={{ mt: 2 }} type="submit">

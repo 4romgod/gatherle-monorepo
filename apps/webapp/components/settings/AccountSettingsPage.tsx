@@ -19,7 +19,7 @@ import {
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
+
 import { useCustomAppContext } from '@/components/app-context';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 
@@ -30,8 +30,8 @@ interface AccountSettings {
 
 export default function AccountSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useCustomAppContext();
-  const [updateUserFormState, updateUserFormAction] = useActionState(updateUserProfileAction, SERVER_ACTION_INITIAL_STATE);
-  const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, SERVER_ACTION_INITIAL_STATE);
+  const [updateUserFormState, updateUserFormAction] = useActionState(updateUserProfileAction, {});
+  const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, {});
   const [isPending, startTransition] = useTransition();
   const [settings, setSettings] = useState<AccountSettings>({
     username: user.username,
