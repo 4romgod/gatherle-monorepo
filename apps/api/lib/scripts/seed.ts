@@ -1,7 +1,35 @@
 import {getConfigValue, MongoDbClient} from '@/clients';
-import {EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO, EventParticipantDAO} from '@/mongodb/dao';
-import {usersMockData, eventsMockData, eventCategoryMockData, eventCategoryGroupMockData} from '@/mongodb/mockData';
-import type {CreateEventCategoryGroupInput, CreateEventCategoryInput, CreateEventInput, CreateUserInput, EventCategory} from '@ntlango/commons/types';
+import {
+  EventCategoryDAO,
+  EventCategoryGroupDAO,
+  EventDAO,
+  OrganizationDAO,
+  OrganizationMembershipDAO,
+  UserDAO,
+  EventParticipantDAO,
+  VenueDAO,
+} from '@/mongodb/dao';
+import {
+  usersMockData,
+  eventsMockData,
+  eventCategoryMockData,
+  eventCategoryGroupMockData,
+} from '@/mongodb/mockData';
+import type {EventSeedData} from '@/mongodb/mockData';
+import organizationsData, {OrganizationSeedData} from '@/mongodb/mockData/organizations';
+import venuesData, {VenueSeedData} from '@/mongodb/mockData/venues';
+import organizationMembershipsData, {OrganizationMembershipSeed} from '@/mongodb/mockData/organizationMemberships';
+import type {
+  CreateEventCategoryGroupInput,
+  CreateEventCategoryInput,
+  CreateEventInput,
+  CreateOrganizationInput,
+  CreateUserInput,
+  CreateVenueInput,
+  EventCategory,
+  Organization,
+  Venue,
+} from '@ntlango/commons/types';
 import {SECRET_KEYS} from '@/constants';
 import {ParticipantStatus, ParticipantVisibility} from '@ntlango/commons/types';
 import {EventVisibility} from '@ntlango/commons/types/event';
@@ -71,16 +99,92 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
   console.log('Completed seeding user data.');
 }
 
-async function seedEvents(events: Array<CreateEventInput>, userIds: Array<string>, eventCategoryIds: Array<string>) {
+async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: string[]) {
+  console.log('Starting to seed organization data...');
+  const created: Organization[] = [];
+  for (let i = 0; i < seedData.length; i++) {
+    const config = seedData[i];
+    const ownerId = ownerIds[i % ownerIds.length];
+    const organizationInput: CreateOrganizationInput = {
+      ...config,
+      ownerId,
+    };
+    const organization = await OrganizationDAO.create(organizationInput);
+    created.push(organization);
+    console.log(`   Created Organization with id: ${organization.orgId}`);
+  }
+  console.log('Completed seeding organization data.');
+  return created;
+}
+
+async function seedVenues(seedData: VenueSeedData[], organizations: Organization[]) {
+  console.log('Starting to seed venue data...');
+  const createdVenues: Venue[] = [];
+  for (const venueSeed of seedData) {
+    const organization = organizations[venueSeed.orgIndex];
+    if (!organization) {
+      throw new Error(`Organization not found for venue index ${venueSeed.orgIndex}`);
+    }
+    const {orgIndex, ...venueFields} = venueSeed;
+    const venueInput: CreateVenueInput = {
+      ...venueFields,
+      orgId: organization.orgId,
+    };
+    const venue = await VenueDAO.create(venueInput);
+    createdVenues.push(venue);
+    console.log(`   Created Venue with id: ${venue.venueId}`);
+  }
+  console.log('Completed seeding venue data.');
+  return createdVenues;
+}
+
+async function seedOrganizationMemberships(seedData: OrganizationMembershipSeed[], organizations: Organization[], userIds: string[]) {
+  console.log('Starting to seed organization membership data...');
+  for (const membership of seedData) {
+    const organization = organizations[membership.orgIndex];
+    if (!organization) {
+      throw new Error(`Organization not found for membership orgIndex ${membership.orgIndex}`);
+    }
+    const userId = userIds[membership.userIndex % userIds.length];
+    await OrganizationMembershipDAO.create({
+      orgId: organization.orgId,
+      userId,
+      role: membership.role,
+    });
+    console.log(`   Created OrganizationMembership for user ${userId}`);
+  }
+  console.log('Completed seeding organization membership data.');
+}
+
+async function seedEvents(
+  events: EventSeedData[],
+  userIds: Array<string>,
+  eventCategoryIds: Array<string>,
+  organizations: Organization[],
+  venues: Venue[],
+) {
   console.log('Starting to seed event data...');
   for (const event of events) {
+    const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
+    const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
+
     const organizerIds = getRandomUniqueItems(userIds, 2);
     const participantIds = getRandomUniqueItems(userIds, 4);
-    const eventResponse = await EventDAO.create({
-      ...event,
+    const categorySelection =
+      event.eventCategoryList && event.eventCategoryList.length
+        ? event.eventCategoryList
+        : getRandomUniqueItems(eventCategoryIds, 5);
+
+    const {orgIndex, venueIndex, ...eventBase} = event;
+    const eventInput: CreateEventInput = {
+      ...eventBase,
       organizerList: organizerIds,
-      eventCategoryList: getRandomUniqueItems(eventCategoryIds, 5),
-    });
+      eventCategoryList: categorySelection,
+      orgId: organization?.orgId,
+      venueId: venue?.venueId,
+    };
+
+    const eventResponse = await EventDAO.create(eventInput);
 
     for (const userId of participantIds) {
       let sharedVisibility: ParticipantVisibility;
@@ -122,7 +226,11 @@ async function main() {
   await seedUsers(usersMockData, allEventCategoriesIds);
   const allUserIds = (await UserDAO.readUsers()).map((user) => user.userId);
 
-  await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds);
+  const createdOrganizations = await seedOrganizations(organizationsData, allUserIds);
+  const createdVenues = await seedVenues(venuesData, createdOrganizations);
+  await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, allUserIds);
+
+  await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds, createdOrganizations, createdVenues);
   console.log('Completed seeding data into the database.');
   await MongoDbClient.disconnectFromDatabase();
 }

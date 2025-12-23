@@ -4,25 +4,21 @@ import {
   RocketLaunch,
   ShieldMoon,
 } from '@mui/icons-material';
-import {
-  Box,
-  Button,
-  Chip,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-} from '@mui/material';
-import Link from 'next/link';
+import { Box, Button, Chip, Container, Grid, Paper, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
 import EventsCarousel from '@/components/events/carousel';
 import EventCategoryBox from '@/components/events/category/box';
+import OrganizationCard from '@/components/organization/card';
+import VenueCard from '@/components/venue/card';
 import { getClient } from '@/data/graphql';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { RRule } from 'rrule';
+import Link from 'next/link';
+import { GET_ORGANIZATIONS } from '@/data/graphql/query/Organization';
+import { GET_VENUES } from '@/data/graphql/query/Venue';
 
 export const metadata: Metadata = {
   title: {
@@ -36,14 +32,50 @@ export const metadata: Metadata = {
   },
 };
 
+type OrganizationSummary = {
+  orgId: string;
+  slug?: string;
+  name?: string;
+  description?: string;
+  logo?: string;
+  tags?: string[];
+  followersCount?: number;
+  isFollowable?: boolean;
+};
+
+type OrganizationResponse = {
+  readOrganizations: OrganizationSummary[] | null;
+};
+
+type VenueSummary = {
+  venueId: string;
+  name?: string;
+  type?: string;
+  capacity?: number;
+  address?: {
+    city?: string;
+    region?: string;
+    country?: string;
+  };
+  amenities?: string[];
+};
+
+type VenuesResponse = {
+  readVenues: VenueSummary[] | null;
+};
+
 export default async function HomePage() {
   const { data: events } = await getClient().query({ query: GetAllEventsDocument });
   const { data } = await getClient().query({ query: GetAllEventCategoriesDocument });
+  const orgResponse = await getClient().query<OrganizationResponse>({ query: GET_ORGANIZATIONS });
+  const venueResponse = await getClient().query<VenuesResponse>({ query: GET_VENUES });
   const eventCategories = data.readEventCategories?.slice(0, 6) ?? [];
   const eventList = (events.readEvents ?? []) as EventPreview[];
   const featuredEvents = eventList.slice(0, 8);
   const heroEvent = eventList[0];
   const heroEventRsvps = heroEvent?.participants?.length ?? 0;
+  const featuredOrganizations = (orgResponse.data.readOrganizations ?? []).slice(0, 3);
+  const featuredVenues = (venueResponse.data.readVenues ?? []).slice(0, 3);
 
   const heroStats = [
     { label: 'Communities hosted', value: '2.4k+' },
@@ -276,6 +308,106 @@ export default async function HomePage() {
             >
               Explore all categories
             </Button>
+          </Box>
+        </Container>
+      </Box>
+
+      <Box
+        id="communities"
+        sx={{
+          backgroundColor: 'background.default',
+          py: { xs: 5, md: 7 },
+        }}
+      >
+        <Container>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box>
+              <Typography variant="h5" fontWeight="bold">
+                Featured communities
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Discover the organizations powering the events you care about.
+              </Typography>
+            </Box>
+            <Box>
+              <Button component={Link} href={ROUTES.ORGANIZATIONS.ROOT} variant="outlined" size="small">
+                Explore all organizations
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(1, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                lg: 'repeat(3, minmax(0, 1fr))',
+              },
+              gap: 3,
+            }}
+          >
+            {featuredOrganizations.map((organization) => (
+              <Box key={organization.orgId}>
+                <OrganizationCard {...organization} />
+              </Box>
+            ))}
+            {featuredOrganizations.length === 0 && (
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  No highlighted communities yet.
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Container>
+      </Box>
+
+      <Box
+        id="venues"
+        sx={{
+          backgroundColor: 'background.paper',
+          py: { xs: 5, md: 7 },
+        }}
+      >
+        <Container>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Box>
+              <Typography variant="h5" fontWeight="bold">
+                Featured venues
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Spaces that host events big and small.
+              </Typography>
+            </Box>
+            <Box>
+              <Button component={Link} href={ROUTES.VENUES.ROOT} variant="outlined" size="small">
+                Browse all venues
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(1, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                lg: 'repeat(3, minmax(0, 1fr))',
+              },
+              gap: 3,
+            }}
+          >
+            {featuredVenues.map((venue) => (
+              <Box key={venue.venueId}>
+                <VenueCard {...venue} />
+              </Box>
+            ))}
+            {featuredVenues.length === 0 && (
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  No venues available at the moment.
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Container>
       </Box>

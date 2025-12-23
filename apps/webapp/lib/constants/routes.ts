@@ -27,4 +27,11 @@ export const ROUTES = {
     ROOT: '/users',
   },
   ROOT: '/',
+  ORGANIZATIONS: {
+    ROOT: '/organizations',
+    ORG: (slug: string) => `/organizations/${slug}`,
+  },
+  VENUES: {
+    ROOT: '/venues',
+  },
 };

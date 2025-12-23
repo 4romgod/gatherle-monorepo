@@ -3,3 +3,6 @@ export {default as UserDAO} from '@/mongodb/dao/user';
 export {default as EventCategoryDAO} from '@/mongodb/dao/eventCategory';
 export {default as EventCategoryGroupDAO} from '@/mongodb/dao/eventCategoryGroup';
 export {default as EventParticipantDAO} from '@/mongodb/dao/eventParticipant';
+export {default as OrganizationDAO} from '@/mongodb/dao/organization';
+export {default as OrganizationMembershipDAO} from '@/mongodb/dao/organizationMembership';
+export {default as VenueDAO} from '@/mongodb/dao/venue';

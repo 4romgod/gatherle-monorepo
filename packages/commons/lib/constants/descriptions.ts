@@ -90,6 +90,73 @@ export const USER_DESCRIPTIONS = {
     USERNAME: "User's unique chosen or auto generated username (e.g., 'deku123')",
 };
 
+export const ORGANIZATION_LINK_DESCRIPTIONS = {
+    TYPE: 'Represents a short link for an organization, including a label and target URL.',
+    INPUT: 'Input type for links that should be associated with an organization.',
+    LABEL: 'Readable label for the link (e.g., "Website", "Instagram").',
+    URL: 'Fully-qualified URL for the link target.',
+};
+
+export const ORGANIZATION_DESCRIPTIONS = {
+    TYPE: 'Represents an organization that owns events, venues, and membership policies.',
+    CREATE_INPUT: 'Input type for creating an organization, defining its policy defaults, owner, and optional metadata.',
+    UPDATE_INPUT: 'Input type for updating an existing organization.',
+    ID: "Unique identifier for the organization (e.g., 'org123')",
+    SLUG: 'URL-friendly slug derived from the organization name.',
+    NAME: 'Human-readable name of the organization.',
+    DESCRIPTION: 'Long-form description of what the organization represents.',
+    LOGO: 'URL pointing to the organization logo.',
+    OWNER_ID: 'User ID that owns the organization and can grant access.',
+    DEFAULT_VISIBILITY: 'Default visibility policy applied to events created by this organization.',
+    BILLING_EMAIL: 'Email address used for billing or payouts.',
+    LINKS: 'List of helpful links (website, socials) for the organization.',
+    DOMAINS: 'Domains that are allowed to create events on behalf of the organization.',
+    EVENT_DEFAULTS: 'Default settings (visibility, reminders, ticket) applied to events.',
+    EVENT_DEFAULT_VISIBILITY: 'Visibility default applied to events created under this org.',
+    EVENT_DEFAULT_REMINDERS: 'Whether reminders should be on by default.',
+    EVENT_DEFAULT_WAITLIST: 'Whether waitlists should be enabled by default.',
+    EVENT_DEFAULT_PLUS_ONES: 'Whether guest + ones are allowed by default.',
+    EVENT_DEFAULT_TICKET_ACCESS: 'Default ticket access policy for newcomers.',
+    TICKET_ACCESS: 'Ticket access policy enforced by the organization.',
+    FOLLOWERS_COUNT: 'Cached number of followers for the organization.',
+    FOLLOWABLE: 'Toggle to determine if the organization can be followed.',
+    TAGS: 'Discovery tags used to surface the organization.',
+    MEMBER_ROLES: 'Membership roles granted to users within the organization.',
+};
+
+export const ORGANIZATION_MEMBERSHIP_DESCRIPTIONS = {
+    TYPE: 'Represents a user membership in an organization, including role and join date.',
+    CREATE_INPUT: 'Input type for inviting or adding a user to an organization with a specific role.',
+    UPDATE_INPUT: 'Input type for updating an existing membership.',
+    DELETE_INPUT: 'Input type for removing a user from an organization.',
+    ID: "Unique identifier for the membership record (e.g., 'orgMembership123')",
+    ORGANIZATION_ID: 'Organization id that owns the membership.',
+    USER_ID: 'User id that belongs to the organization.',
+    ROLE: 'Role granted to the user inside the organization.',
+    JOINED_AT: 'Timestamp when the membership was created.',
+};
+
+export const VENUE_DESCRIPTIONS = {
+    TYPE: 'Represents a venue (physical or virtual) where events happen.',
+    CREATE_INPUT: 'Input type for creating a venue.',
+    UPDATE_INPUT: 'Input type for updating a venue.',
+    ID: "Unique identifier for the venue (e.g., 'venue123')",
+    ORGANIZATION_ID: 'Organization that owns or manages the venue.',
+    NAME: 'Name of the venue.',
+    ADDRESS: 'Structured address details for a physical location.',
+    STREET: 'Street address for the venue.',
+    CITY: 'City where the venue is located.',
+    REGION: 'State, province, or region for the venue.',
+    COUNTRY: 'Country where the venue resides.',
+    POSTAL_CODE: 'Postal or ZIP code for the venue.',
+    GEO: 'Geographical coordinates for the venue.',
+    LATITUDE: 'Latitude coordinate of the venue.',
+    LONGITUDE: 'Longitude coordinate of the venue.',
+    URL: 'Optional link for virtual venues or website.',
+    CAPACITY: 'Maximum number of guests the venue can hold.',
+    AMENITIES: 'List of amenities offered at the venue.',
+};
+
 export const RESOLVER_DESCRIPTIONS = {
     EVENT: {
         createEvent: 'Create a new event. Requires input data for creating a new event and returns the created event.',
@@ -130,6 +197,29 @@ export const RESOLVER_DESCRIPTIONS = {
         readUserByUsername: 'Read a user by their username. Requires the username and returns the user or 404 Error if not found.',
         readUserByEmail: 'Read a user by their email. Requires the email and returns the user or 404 Error if not found.',
         readUsers: 'Read a list of users. Accepts optional query options for pagination and filtering and returns a list of users.',
+    },
+    ORGANIZATION: {
+        createOrganization: 'Create a new organization with policy defaults and return the created record.',
+        updateOrganization: 'Update the metadata or policies for an existing organization.',
+        deleteOrganizationById: 'Delete an organization by its ID. Requires the org ID and returns the deleted organization.',
+        readOrganizationById: 'Read an organization by its ID. Returns the organization or a 404 Error if not found.',
+        readOrganizationBySlug: 'Read an organization by its slug. Returns the organization or a 404 Error if not found.',
+        readOrganizations: 'Read a list of organizations. Supports optional query options for filtering and pagination.',
+    },
+    VENUE: {
+        createVenue: 'Create a new venue. Requires organization, location, and type data.',
+        updateVenue: 'Update an existing venue with new address or capacity data.',
+        deleteVenueById: 'Delete a venue by its ID. Requires the venue ID and returns the deleted venue.',
+        readVenueById: 'Read a venue by its ID. Returns the venue or a 404 Error if not found.',
+        readVenues: 'Read a list of venues. Supports optional query options for filtering and pagination.',
+        readVenuesByOrgId: 'Read venues scoped to an organization. Requires the organization ID.',
+    },
+    ORGANIZATION_MEMBERSHIP: {
+        createOrganizationMembership: 'Add a user to an organization with the supplied role.',
+        updateOrganizationMembership: 'Update the role for an existing organization membership.',
+        deleteOrganizationMembership: 'Remove a user from an organization.',
+        readOrganizationMembershipById: 'Read a membership by its ID. Returns the membership or a 404 Error if not found.',
+        readOrganizationMembershipsByOrgId: 'Read all memberships that belong to an organization.',
     },
 };
 

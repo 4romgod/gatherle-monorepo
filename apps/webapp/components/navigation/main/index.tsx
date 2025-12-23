@@ -22,6 +22,8 @@ type MainNavigationProps = {
 
 const navLinks = [
   { label: 'Events', href: ROUTES.EVENTS.ROOT },
+  { label: 'Organizations', href: ROUTES.ORGANIZATIONS.ROOT },
+  { label: 'Venues', href: ROUTES.VENUES.ROOT },
   { label: 'Community', href: ROUTES.USERS.ROOT },
   { label: 'For hosts', href: ROUTES.ACCOUNT.EVENTS.CREATE },
 ];

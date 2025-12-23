@@ -3,3 +3,6 @@ export {default as User} from './user';
 export {default as EventCategory} from './eventCategory';
 export {default as EventCategoryGroup} from './eventCategoryGroup';
 export {default as EventParticipant} from './eventParticipant';
+export {default as Organization} from './organization';
+export {default as OrganizationMembership} from './organizationMembership';
+export {default as Venue} from './venue';

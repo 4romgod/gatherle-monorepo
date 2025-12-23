@@ -1,0 +1,181 @@
+import request from 'supertest';
+import {Types} from 'mongoose';
+import type {IntegrationServer} from '@/test/integration/utils/server';
+import {startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import {generateToken} from '@/utils/auth';
+import {usersMockData} from '@/mongodb/mockData';
+import type {User, UserWithToken} from '@ntlango/commons/types';
+import {UserRole, VenueType, OrganizationTicketAccess} from '@ntlango/commons/types';
+import {OrganizationDAO} from '@/mongodb/dao';
+import {getCreateOrganizationMutation} from '@/test/utils';
+import {
+  getCreateVenueMutation,
+  getDeleteVenueByIdMutation,
+  getReadVenueByIdQuery,
+  getReadVenuesByOrgIdQuery,
+  getReadVenuesQuery,
+  getUpdateVenueMutation,
+} from '@/test/utils';
+
+describe('Venue Resolver', () => {
+  let server: IntegrationServer;
+  let url = '';
+  const TEST_PORT = 5004;
+  let adminUser: UserWithToken;
+  const createdVenueIds: string[] = [];
+  const createdOrgIds: string[] = [];
+
+  const createOrganization = async (name: string) => {
+    const response = await request(url)
+      .post('')
+      .set('token', adminUser.token)
+      .send(
+        getCreateOrganizationMutation({
+          name,
+          ownerId: adminUser.userId,
+          allowedTicketAccess: OrganizationTicketAccess.Public,
+        }),
+      );
+
+    const organization = response.body.data.createOrganization;
+    createdOrgIds.push(organization.orgId);
+    return organization;
+  };
+
+  const createVenue = async (orgId: string) => {
+    const response = await request(url)
+      .post('')
+      .set('token', adminUser.token)
+      .send(
+        getCreateVenueMutation({
+          orgId,
+          type: VenueType.Physical,
+          name: 'Integration Venue',
+          address: {
+            city: 'Cape Town',
+            country: 'South Africa',
+          },
+        }),
+      );
+
+    const venue = response.body.data.createVenue;
+    createdVenueIds.push(venue.venueId);
+    return venue;
+  };
+
+  beforeAll(async () => {
+    server = await startIntegrationServer({port: TEST_PORT});
+    url = server.url;
+    const user: User = {
+      ...usersMockData[0],
+      userId: new Types.ObjectId().toString(),
+      username: 'venueAdmin',
+      email: 'venue-admin@example.com',
+      userRole: UserRole.Admin,
+      interests: undefined,
+    } as User;
+    const token = await generateToken(user);
+    adminUser = {...user, token};
+  });
+
+  afterAll(async () => {
+    await stopIntegrationServer(server);
+  });
+
+  afterEach(async () => {
+    await Promise.all(
+      createdVenueIds.map((venueId) =>
+        request(url)
+          .post('')
+          .set('token', adminUser.token)
+          .send(getDeleteVenueByIdMutation(venueId))
+          .catch(() => {}),
+      ),
+    );
+    await Promise.all(
+      createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})),
+    );
+    createdVenueIds.length = 0;
+    createdOrgIds.length = 0;
+  });
+
+  describe('Positive', () => {
+    it('creates a venue with valid input', async () => {
+      const organization = await createOrganization('Venue Org');
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateVenueMutation({
+            orgId: organization.orgId,
+            type: VenueType.Physical,
+            name: 'Created Venue',
+          }),
+        );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.createVenue).toHaveProperty('venueId');
+      createdVenueIds.push(response.body.data.createVenue.venueId);
+    });
+
+    it('updates a venue with valid input', async () => {
+      const organization = await createOrganization('Venue Org Update');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(getUpdateVenueMutation({venueId: venue.venueId, name: 'Updated Venue', capacity: 200}));
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.updateVenue.name).toBe('Updated Venue');
+    });
+
+    it('reads venue by id and lists venues', async () => {
+      const organization = await createOrganization('Venue Org List');
+      const venue = await createVenue(organization.orgId);
+
+      const readByIdResponse = await request(url)
+        .post('')
+        .send(getReadVenueByIdQuery(venue.venueId));
+      expect(readByIdResponse.status).toBe(200);
+      expect(readByIdResponse.body.data.readVenueById.venueId).toBe(venue.venueId);
+
+      const listResponse = await request(url).post('').send(getReadVenuesQuery());
+      expect(listResponse.status).toBe(200);
+      expect(listResponse.body.data.readVenues).toEqual(
+        expect.arrayContaining([{venueId: venue.venueId}].map((item) => expect.objectContaining(item))),
+      );
+
+      const byOrgResponse = await request(url)
+        .post('')
+        .send(getReadVenuesByOrgIdQuery(organization.orgId));
+      expect(byOrgResponse.status).toBe(200);
+      expect(byOrgResponse.body.data.readVenuesByOrgId[0].orgId).toBe(organization.orgId);
+    });
+  });
+
+  describe('Negative', () => {
+    it('requires admin token to create a venue', async () => {
+      const organization = await createOrganization('Venue Org Unauthorized');
+
+      const response = await request(url)
+        .post('')
+        .send(
+          getCreateVenueMutation({
+            orgId: organization.orgId,
+            type: VenueType.Physical,
+            name: 'Unauthorized Venue',
+          }),
+        );
+
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 404 when reading a missing venue id', async () => {
+      const response = await request(url).post('').send(getReadVenueByIdQuery(new Types.ObjectId().toString()));
+      expect(response.status).toBe(404);
+    });
+  });
+});

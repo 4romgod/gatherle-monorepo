@@ -5,7 +5,14 @@ import { ROUTES } from './lib/constants';
  * These routes DO NOT require authentication
  * @type {string[]}
  */
-export const publicRoutes: string[] = [ROUTES.ROOT, ROUTES.EVENTS.ROOT, ROUTES.USERS.ROOT, '/home'];
+export const publicRoutes: string[] = [
+  ROUTES.ROOT,
+  ROUTES.EVENTS.ROOT,
+  ROUTES.USERS.ROOT,
+  ROUTES.ORGANIZATIONS.ROOT,
+  ROUTES.VENUES.ROOT,
+  '/home',
+];
 
 /**
  * An array of routes that are used for authentication
