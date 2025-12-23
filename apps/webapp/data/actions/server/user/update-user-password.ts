@@ -4,8 +4,11 @@ import { UpdateUserInput, UpdateUserDocument } from '@/data/graphql/types/graphq
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
+import { ApolloError } from '@apollo/client';
+import type { ActionState } from '@/data/actions/types';
+import { getApolloErrorMessage } from '@/data/actions/types';
 
-export async function updateUserPasswordAction(prevState: any, formData: FormData) {
+export async function updateUserPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
@@ -21,7 +24,6 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
   const currentPassword = formData.get('currentPassword')?.toString();
   const newPassword = formData.get('newPassword')?.toString();
 
-  // Validate required fields
   if (!currentPassword || !newPassword) {
     return {
       ...prevState,
@@ -32,10 +34,9 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
 
   // TODO: Verify current password before updating
   // You might need a separate GraphQL query/mutation to verify the current password
-
   let inputData: UpdateUserInput = {
     userId: userId,
-    password: newPassword, // Fixed: was using undefined 'password' variable
+    password: newPassword,
   };
 
   console.log('input data', inputData);
@@ -74,13 +75,13 @@ export async function updateUserPasswordAction(prevState: any, formData: FormDat
     };
   } catch (error) {
     console.error('Failed when calling Update User Mutation', error);
-    const networkError = (error as any).networkError;
+    const errorMessage = getApolloErrorMessage(error as ApolloError);
 
-    if (networkError) {
-      console.error('Error Message', networkError.result.errors[0].message);
+    if (errorMessage) {
+      console.error('Error Message', errorMessage);
       return {
         ...prevState,
-        apiError: networkError.result.errors[0].message,
+        apiError: errorMessage,
         zodErrors: null,
       };
     }

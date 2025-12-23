@@ -17,7 +17,6 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Gender, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { useCustomAppContext } from '@/components/app-context';
 import dayjs from "dayjs";
 
@@ -32,7 +31,7 @@ interface PersonalSettings {
 export default function PersonalSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useCustomAppContext();
   const [loading, setLoading] = useState(false);
-  const [formState, formAction] = useActionState(updateUserProfileAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const [settings, setSettings] = useState<PersonalSettings>({
     privateProfile: false,
     showEmail: true,

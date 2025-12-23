@@ -4,8 +4,11 @@ import { UpdateUserInput, UpdateUserDocument, Gender } from '@/data/graphql/type
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
+import { ApolloError } from '@apollo/client';
+import type { ActionState } from '@/data/actions/types';
+import { getApolloErrorMessage } from '@/data/actions/types';
 
-export async function updateUserProfileAction(prevState: any, formData: FormData) {
+export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
@@ -71,12 +74,13 @@ export async function updateUserProfileAction(prevState: any, formData: FormData
     };
   } catch (error) {
     console.error('Failed when calling Update User Mutation', error);
-    const networkError = (error as any).networkError;
-    if (networkError) {
-      console.error('Error Message', networkError.result.errors[0].message);
+    const errorMessage = getApolloErrorMessage(error as ApolloError);
+    
+    if (errorMessage) {
+      console.error('Error Message', errorMessage);
       return {
         ...prevState,
-        apiError: networkError.result.errors[0].message,
+        apiError: errorMessage,
         zodErrors: null,
       };
     }

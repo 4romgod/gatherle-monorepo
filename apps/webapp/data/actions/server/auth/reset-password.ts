@@ -1,8 +1,9 @@
 'use server';
 
 import { ResetPasswordInputTypeSchema } from '@/data/validation';
+import type { ActionState } from '@/data/actions/types';
 
-export async function resetPasswordAction(prevState: any, formData: FormData) {
+export async function resetPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData = {
     password: formData.get('password')?.toString() ?? '',
     'confirm-password': formData.get('confirm-password')?.toString() ?? '',
@@ -18,4 +19,9 @@ export async function resetPasswordAction(prevState: any, formData: FormData) {
   }
 
   // TODO Call the API
+  return {
+    ...prevState,
+    apiError: 'Feature coming soon',
+    zodErrors: null,
+  };
 }

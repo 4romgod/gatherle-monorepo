@@ -21,9 +21,3 @@ export const EVENT_CATEGORY_ICON_MAPPING: EventCategoryIconComponents = {
 export const getEventCategoryIcon = (iconName: string) => {
   return EVENT_CATEGORY_ICON_MAPPING[iconName] ?? EVENT_CATEGORY_ICON_MAPPING.UserGroupIcon;
 };
-
-export const SERVER_ACTION_INITIAL_STATE = {
-  data: null,
-  apiError: null,
-  zodErrors: null,
-};

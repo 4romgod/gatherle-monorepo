@@ -5,8 +5,9 @@ import { LoginUserInputSchema } from '@/data/validation';
 import { DEFAULT_LOGIN_REDIRECT } from '@/routes';
 import { AuthError } from 'next-auth';
 import { signIn } from '@/auth';
+import type { ActionState } from '@/data/actions/types';
 
-export async function loginUserAction(prevState: any, formData: FormData) {
+export async function loginUserAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData: LoginUserInput = {
     email: formData.get('email')?.toString().toLowerCase() ?? '',
     password: formData.get('password')?.toString() ?? '',

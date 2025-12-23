@@ -1,8 +1,9 @@
 'use server';
 
 import { ForgotPasswordInputTypeSchema } from '@/data/validation';
+import type { ActionState } from '@/data/actions/types';
 
-export async function forgotPasswordAction(prevState: any, formData: FormData) {
+export async function forgotPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData = {
     email: formData.get('email')?.toString().toLowerCase() ?? '',
   };
@@ -17,4 +18,9 @@ export async function forgotPasswordAction(prevState: any, formData: FormData) {
   }
 
   // TODO Call the API
+  return {
+    ...prevState,
+    apiError: 'Feature coming soon',
+    zodErrors: null,
+  };
 }

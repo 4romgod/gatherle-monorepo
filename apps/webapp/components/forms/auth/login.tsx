@@ -17,14 +17,13 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useActionState } from 'react';
 import { loginUserAction } from '@/data/actions/server/auth';
-import { SERVER_ACTION_INITIAL_STATE } from '@/lib/constants';
 import { FormErrors } from '@/components/form-errors';
 import { useCustomAppContext } from '@/components/app-context';
 
 export default function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [formState, formAction] = useActionState(loginUserAction, SERVER_ACTION_INITIAL_STATE);
+  const [formState, formAction] = useActionState(loginUserAction, {});
   const { setToastProps, toastProps } = useCustomAppContext();
 
   const handleClickShowPassword = () => setShowPassword((prev) => !prev);
@@ -69,7 +68,7 @@ export default function LoginForm() {
           autoFocus
           color="secondary"
         />
-        <FormErrors error={formState?.zodErrors?.email} />
+        <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
 
       <FormControl required fullWidth margin="normal">
@@ -96,7 +95,7 @@ export default function LoginForm() {
             </InputAdornment>
           }
         />
-        <FormErrors error={formState?.zodErrors?.password} />
+        <FormErrors error={formState.zodErrors?.password} />
       </FormControl>
 
       <FormControlLabel control={<Checkbox value="remember" color="secondary" />} label="Remember me" />
