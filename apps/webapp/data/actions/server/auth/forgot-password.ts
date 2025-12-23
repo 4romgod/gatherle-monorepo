@@ -20,7 +20,7 @@ export async function forgotPasswordAction(prevState: ActionState, formData: For
   // TODO Call the API
   return {
     ...(prevState ?? {}),
-    apiError: 'Forgot password not yet implemented',
+    apiError: 'Feature coming soon',
     zodErrors: null,
   };
 }
