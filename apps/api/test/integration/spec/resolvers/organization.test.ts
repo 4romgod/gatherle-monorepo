@@ -10,7 +10,6 @@ import {UserRole} from '@ntlango/commons/types';
 import {OrganizationTicketAccess} from '@ntlango/commons/types';
 import {
   getCreateOrganizationMutation,
-  getDeleteOrganizationByIdMutation,
   getReadOrganizationByIdQuery,
   getReadOrganizationBySlugQuery,
   getReadOrganizationsQuery,

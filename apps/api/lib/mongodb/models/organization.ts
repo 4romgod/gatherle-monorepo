@@ -9,7 +9,7 @@ import {Organization as OrganizationEntity} from '@ntlango/commons/types';
       this.orgId = this._id.toString();
     }
 
-    if ((!this.slug && this.name) || this.isModified('name')) {
+    if (!this.slug && this.name) {
       this.slug = kebabCase(this.name);
     }
 

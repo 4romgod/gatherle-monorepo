@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 
 export type VenueCardProps = {

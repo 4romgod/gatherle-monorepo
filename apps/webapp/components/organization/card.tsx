@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  Avatar,
   Box,
   Button,
   Card,

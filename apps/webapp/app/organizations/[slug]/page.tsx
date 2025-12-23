@@ -13,10 +13,30 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export const metadata: Metadata = {
-  title: 'Organizations · Ntlango',
-  description: 'Discover organizations powering events on Ntlango.',
-};
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const organizationResult = await getClient().query<{ readOrganizationBySlug: Organization }, { slug: string }>({
+      query: GET_ORGANIZATION_BY_SLUG,
+      variables: { slug },
+    });
+    const organization = organizationResult.data.readOrganizationBySlug;
+    
+    if (organization) {
+      return {
+        title: `${organization.name} · Ntlango`,
+        description: organization.description || `Discover events by ${organization.name} on Ntlango.`,
+      };
+    }
+  } catch (error) {
+    console.error('Unable to load organization metadata', error);
+  }
+
+  return {
+    title: 'Organization · Ntlango',
+    description: 'Discover organizations powering events on Ntlango.',
+  };
+}
 
 export default async function OrganizationPage({ params }: Props) {
   const { slug } = await params;
@@ -41,18 +61,23 @@ export default async function OrganizationPage({ params }: Props) {
   const domainsAllowed = organization.domainsAllowed ?? [];
   const links = organization.links ?? [];
 
-  const eventResponse = await getClient().query<GetAllEventsQuery>({
-    query: GetAllEventsDocument,
-    variables: {
-      options: {
-        filters: [{ field: 'orgId', value: organization.orgId }],
-        sort: [{ field: 'title', order: SortOrderInput.Asc }],
-        pagination: { limit: 12 },
+  let events: GetAllEventsQuery['readEvents'] = [];
+  try {
+    const eventResponse = await getClient().query<GetAllEventsQuery>({
+      query: GetAllEventsDocument,
+      variables: {
+        options: {
+          filters: [{ field: 'orgId', value: organization.orgId }],
+          sort: [{ field: 'title', order: SortOrderInput.Asc }],
+          pagination: { limit: 12 },
+        },
       },
-    },
-  });
-
-  const events = eventResponse.data.readEvents ?? [];
+    });
+    events = eventResponse.data.readEvents ?? [];
+  } catch (error) {
+    console.error('Unable to load events for organization', error);
+    events = [];
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 5 }}>
