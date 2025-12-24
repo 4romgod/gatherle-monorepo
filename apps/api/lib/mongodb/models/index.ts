@@ -6,3 +6,6 @@ export {default as EventParticipant} from './eventParticipant';
 export {default as Organization} from './organization';
 export {default as OrganizationMembership} from './organizationMembership';
 export {default as Venue} from './venue';
+export {default as Activity} from './activity';
+export {default as Follow} from './follow';
+export {default as Intent} from './intent';

@@ -15,3 +15,5 @@ export * from './venue/query';
 export * from './venue/mutation';
 export * from './organizationMembership/query';
 export * from './organizationMembership/mutation';
+export * from './social/mutation';
+export * from './social/query';

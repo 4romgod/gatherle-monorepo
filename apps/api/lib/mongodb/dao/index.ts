@@ -6,3 +6,6 @@ export {default as EventParticipantDAO} from '@/mongodb/dao/eventParticipant';
 export {default as OrganizationDAO} from '@/mongodb/dao/organization';
 export {default as OrganizationMembershipDAO} from '@/mongodb/dao/organizationMembership';
 export {default as VenueDAO} from '@/mongodb/dao/venue';
+export {default as FollowDAO} from '@/mongodb/dao/follow';
+export {default as IntentDAO} from '@/mongodb/dao/intent';
+export {default as ActivityDAO} from '@/mongodb/dao/activity';

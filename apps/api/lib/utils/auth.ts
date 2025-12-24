@@ -8,7 +8,7 @@ import {UserRole} from '@ntlango/commons/types';
 import {verify, sign} from 'jsonwebtoken';
 import type {JwtPayload, Secret, SignOptions} from 'jsonwebtoken';
 import type {StringValue} from 'ms';
-import {EventDAO} from '@/mongodb/dao';
+import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {getConfigValue} from '@/clients';
 import {Types} from 'mongoose';
 
@@ -19,9 +19,11 @@ const operationsRequiringOwnership = new Set([
   OPERATION_NAMES.DELETE_USER_BY_USERNAME,
   OPERATION_NAMES.UPDATE_EVENT,
   OPERATION_NAMES.DELETE_EVENT,
+  OPERATION_NAMES.DELETE_EVENT_BY_SLUG,
   OPERATION_NAMES.CREATE_EVENT,
   OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT,
   OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT,
+  OPERATION_NAMES.READ_EVENT_PARTICIPANTS,
 ]);
 
 /**
@@ -119,12 +121,16 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
       return args.username == user.username;
     case OPERATION_NAMES.UPDATE_EVENT:
     case OPERATION_NAMES.DELETE_EVENT:
-      return await isAuthorizedToUpdateEvent(args.eventId ?? args.input?.eventId, user);
+      return await isAuthorizedByEventId(args.eventId ?? args.input?.eventId, user);
+    case OPERATION_NAMES.DELETE_EVENT_BY_SLUG:
+      return await isAuthorizedByEventSlug(args.slug, user);
     case OPERATION_NAMES.CREATE_EVENT:
       return true;
     case OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT:
     case OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT:
       return args.input?.userId === user.userId;
+    case OPERATION_NAMES.READ_EVENT_PARTICIPANTS:
+      return await isAuthorizedToReadEventParticipants(args.eventId, user);
     default:
       return false;
   }
@@ -182,11 +188,43 @@ const toOrganizerUserId = (organizer: unknown): string | undefined => {
   return undefined;
 };
 
-const isAuthorizedToUpdateEvent = async (eventId: string | undefined, user: User) => {
+const getOrganizerIdsFromEvent = (event: {organizerList?: unknown[]}): string[] => {
+  if (!event.organizerList) {
+    return [];
+  }
+  return event.organizerList
+    .map((organizer) => toOrganizerUserId(organizer))
+    .filter((id): id is string => Boolean(id));
+};
+
+const isUserOrganizer = (event: {organizerList?: unknown[]}, user: User) => {
+  const organizerIds = getOrganizerIdsFromEvent(event);
+  return organizerIds.includes(user.userId);
+};
+
+const isAuthorizedByEventId = async (eventId: string | undefined, user: User) => {
   if (!eventId) {
     return false;
   }
   const event = await EventDAO.readEventById(eventId);
-  const organizerIds = event.organizerList.map(toOrganizerUserId).filter((id): id is string => typeof id === 'string');
-  return organizerIds.includes(user.userId);
+  return isUserOrganizer(event, user);
+};
+
+const isAuthorizedByEventSlug = async (slug: string | undefined, user: User) => {
+  if (!slug) {
+    return false;
+  }
+  const event = await EventDAO.readEventBySlug(slug);
+  return isUserOrganizer(event, user);
+};
+
+const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, user: User) => {
+  if (!eventId) {
+    return false;
+  }
+  const [event, participants] = await Promise.all([EventDAO.readEventById(eventId), EventParticipantDAO.readByEvent(eventId)]);
+  if (isUserOrganizer(event, user)) {
+    return true;
+  }
+  return participants.some((participant) => participant.userId === user.userId);
 };

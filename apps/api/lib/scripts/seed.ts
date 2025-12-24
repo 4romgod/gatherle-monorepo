@@ -1,8 +1,11 @@
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {
+  ActivityDAO,
   EventCategoryDAO,
   EventCategoryGroupDAO,
   EventDAO,
+  FollowDAO,
+  IntentDAO,
   OrganizationDAO,
   OrganizationMembershipDAO,
   UserDAO,
@@ -14,7 +17,11 @@ import {
   eventsMockData,
   eventCategoryMockData,
   eventCategoryGroupMockData,
+  followSeedData,
+  intentSeedData,
+  activitySeedData,
 } from '@/mongodb/mockData';
+import type {FollowSeed, IntentSeed, ActivitySeed} from '@/mongodb/mockData/social';
 import type {EventSeedData} from '@/mongodb/mockData';
 import organizationsData, {OrganizationSeedData} from '@/mongodb/mockData/organizations';
 import venuesData, {VenueSeedData} from '@/mongodb/mockData/venues';
@@ -26,6 +33,7 @@ import type {
   CreateOrganizationInput,
   CreateUserInput,
   CreateVenueInput,
+  Event,
   EventCategory,
   Organization,
   Venue,
@@ -162,8 +170,9 @@ async function seedEvents(
   eventCategoryIds: Array<string>,
   organizations: Organization[],
   venues: Venue[],
-) {
+): Promise<Event[]> {
   console.log('Starting to seed event data...');
+  const createdEvents: Event[] = [];
   for (const event of events) {
     const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
     const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
@@ -207,8 +216,94 @@ async function seedEvents(
       }
     }
     console.log(`   Created Event item with id: ${eventResponse.eventId}`);
+    createdEvents.push(eventResponse);
   }
   console.log('Completed seeding event data.');
+  return createdEvents;
+}
+
+async function seedFollows(seedData: FollowSeed[], userIds: string[], organizations: Organization[]) {
+  console.log('Starting to seed follow edges...');
+  for (const seed of seedData) {
+    const followerUserId = userIds[seed.followerIndex];
+    const targetId =
+      seed.targetUserIndex !== undefined
+        ? userIds[seed.targetUserIndex]
+        : seed.targetOrgIndex !== undefined
+        ? organizations[seed.targetOrgIndex]?.orgId
+        : undefined;
+
+    if (!followerUserId || !targetId) {
+      console.warn('Skipping follow seed due to missing IDs', seed);
+      continue;
+    }
+
+    await FollowDAO.upsert({
+      followerUserId,
+      targetType: seed.targetType,
+      targetId,
+      status: seed.status,
+    });
+  }
+  console.log('Completed seeding follow edges.');
+}
+
+async function seedIntents(seedData: IntentSeed[], userIds: string[], events: Event[]) {
+  console.log('Starting to seed intents...');
+  for (const seed of seedData) {
+    const userId = userIds[seed.userIndex];
+    const event = events[seed.eventIndex];
+    if (!userId || !event?.eventId) {
+      console.warn('Skipping intent seed due to missing IDs', seed);
+      continue;
+    }
+
+    await IntentDAO.upsert({
+      userId,
+      eventId: event.eventId,
+      status: seed.status,
+      visibility: seed.visibility,
+      source: seed.source,
+      metadata: seed.metadata,
+    });
+  }
+  console.log('Completed seeding intents.');
+}
+
+async function seedActivities(seedData: ActivitySeed[], userIds: string[], events: Event[]) {
+  console.log('Starting to seed activity feed...');
+  for (const seed of seedData) {
+    const actorId = userIds[seed.actorIndex];
+    const objectId =
+      seed.objectRef === 'event' ? events[seed.objectIndex]?.eventId : userIds[seed.objectIndex];
+    if (!actorId || !objectId) {
+      console.warn('Skipping activity seed due to missing IDs', seed);
+      continue;
+    }
+
+    let metadata = seed.metadata;
+    if (!metadata && seed.objectRef === 'event') {
+      metadata = {eventTitle: events[seed.objectIndex]?.title};
+    }
+    let targetId: string | undefined;
+    if (seed.targetIndex !== undefined) {
+      targetId =
+        seed.targetRef === 'event' ? events[seed.targetIndex]?.eventId : userIds[seed.targetIndex];
+    }
+
+    await ActivityDAO.create({
+      actorId,
+      verb: seed.verb,
+      objectType: seed.objectType,
+      objectId,
+      targetType: seed.targetType,
+      targetId,
+      visibility: seed.visibility,
+      eventAt: seed.eventAt ? new Date(seed.eventAt) : undefined,
+      metadata,
+    });
+  }
+  console.log('Completed seeding activity feed.');
 }
 
 async function main() {
@@ -230,7 +325,17 @@ async function main() {
   const createdVenues = await seedVenues(venuesData, createdOrganizations);
   await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, allUserIds);
 
-  await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds, createdOrganizations, createdVenues);
+  const createdEvents = await seedEvents(
+    eventsMockData,
+    allUserIds,
+    allEventCategoriesIds,
+    createdOrganizations,
+    createdVenues,
+  );
+
+  await seedFollows(followSeedData, allUserIds, createdOrganizations);
+  await seedIntents(intentSeedData, allUserIds, createdEvents);
+  await seedActivities(activitySeedData, allUserIds, createdEvents);
   console.log('Completed seeding data into the database.');
   await MongoDbClient.disconnectFromDatabase();
 }

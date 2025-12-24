@@ -1,10 +1,16 @@
+import Link from 'next/link';
+import { JSX } from 'react';
+import { auth } from '@/auth';
 import {
   AutoAwesome,
+  DynamicFeed,
   Explore,
+  People,
+  PersonAdd,
   RocketLaunch,
   ShieldMoon,
 } from '@mui/icons-material';
-import { Box, Button, Chip, Container, Grid, Paper, Typography } from '@mui/material';
+import { Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
 import EventsCarousel from '@/components/events/carousel';
@@ -12,13 +18,13 @@ import EventCategoryBox from '@/components/events/category/box';
 import OrganizationCard from '@/components/organization/card';
 import VenueCard from '@/components/venue/card';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoriesDocument, GetAllEventsDocument } from '@/data/graphql/types/graphql';
+import { GetAllEventCategoriesDocument, GetAllEventsDocument, GetSocialFeedDocument, GetSocialFeedQuery } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { RRule } from 'rrule';
-import Link from 'next/link';
 import { GET_ORGANIZATIONS } from '@/data/graphql/query/Organization';
 import { GET_VENUES } from '@/data/graphql/query/Venue';
+import { isAuthenticated } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: {
@@ -64,7 +70,81 @@ type VenuesResponse = {
   readVenues: VenueSummary[] | null;
 };
 
+type SocialHighlight = {
+  title: string;
+  description: string;
+  icon: JSX.Element;
+};
+
+const SOCIAL_FEED_LIMIT = 4;
+
+const socialHighlights: SocialHighlight[] = [
+  {
+    title: 'Follow the people who inspire you',
+    description: 'Track hosts, friends, and organizations with updates that land directly on your feed.',
+    icon: <People fontSize="small" />,
+  },
+  {
+    title: 'Share RSVP intent with the right crowd',
+    description: 'Control whether your Going or Interested signals are public or kept within your followers.',
+    icon: <PersonAdd fontSize="small" />,
+  },
+  {
+    title: 'See the moments that matter',
+    description: 'Activity cards surface RSVPs, launches, and check-ins from your circle.',
+    icon: <DynamicFeed fontSize="small" />,
+  },
+];
+
+const verbLabels: Record<string, string> = {
+  Followed: 'followed',
+  RSVPd: "RSVP'd",
+  Commented: 'commented on',
+  Published: 'published',
+  CreatedOrg: 'created',
+  CheckedIn: 'checked in to',
+  Invited: 'invited someone to',
+};
+
+const formatActivityDate = (value?: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
+const getActivityObjectLabel = (activity: GetSocialFeedQuery['readFeed'][number]): string => {
+  const metadata = activity.metadata as Record<string, any> | undefined;
+  if (activity.objectType === 'Event' && metadata?.eventTitle) {
+    return metadata.eventTitle;
+  }
+  if (activity.objectType === 'Organization' && metadata?.name) {
+    return metadata.name;
+  }
+  return activity.objectType.toLowerCase();
+};
+
+const getActorLabel = (activity: GetSocialFeedQuery['readFeed'][number]): string => {
+  if (activity.actorId) {
+    return `User ${activity.actorId.slice(0, 6)}`;
+  }
+  return 'Someone';
+};
+
 export default async function HomePage() {
+  const session = await auth();
+  const token = session?.user?.token;
+  const isAuth = isAuthenticated(token);
+
   const { data: events } = await getClient().query({ query: GetAllEventsDocument });
   const { data } = await getClient().query({ query: GetAllEventCategoriesDocument });
   const orgResponse = await getClient().query<OrganizationResponse>({ query: GET_ORGANIZATIONS });
@@ -76,6 +156,35 @@ export default async function HomePage() {
   const heroEventRsvps = heroEvent?.participants?.length ?? 0;
   const featuredOrganizations = (orgResponse.data.readOrganizations ?? []).slice(0, 3);
   const featuredVenues = (venueResponse.data.readVenues ?? []).slice(0, 3);
+
+  const socialCtaLabel = isAuth
+    ? 'View your feed'
+    : token
+    ? 'Refresh your session to unlock socials'
+    : 'Sign in to unlock socials';
+  let socialFeed: GetSocialFeedQuery['readFeed'] = [];
+  if (isAuth) {
+    try {
+      const feedResponse = await getClient().query<GetSocialFeedQuery>({
+        query: GetSocialFeedDocument,
+        variables: { limit: SOCIAL_FEED_LIMIT },
+        context: {
+          headers: {
+            token: token,
+          },
+        },
+      });
+      socialFeed = feedResponse.data.readFeed ?? [];
+    } catch (error) {
+      console.error('Unable to load social feed', error);
+    }
+  }
+
+  const feedPlaceholderCopy = isAuth
+    ? 'Follow people and join events to see this feed light up.'
+    : token
+    ? 'Refresh your credentials to view personalized social updates.'
+    : 'Sign in to surface personalized social updates from your follow network.';
 
   const heroStats = [
     { label: 'Communities hosted', value: '2.4k+' },
@@ -410,6 +519,142 @@ export default async function HomePage() {
             )}
           </Box>
         </Container>
+      </Box>
+
+      <Box
+        id="social-layer"
+        sx={{
+          backgroundColor: 'background.default',
+          py: { xs: 5, md: 7 },
+        }}
+      >
+        <CustomContainer>
+          <Grid container spacing={6} alignItems="stretch">
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
+                Social layer
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Follow hosts, friends, and organizations, share your intent with the right audience, and catch the moments your circle
+                is creating in one place.
+              </Typography>
+              <Stack spacing={1}>
+                {socialHighlights.map((highlight) => (
+                  <Paper
+                    key={highlight.title}
+                    variant="outlined"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: 3,
+                    }}
+                  >
+                    <Box sx={{ color: 'primary.main' }}>{highlight.icon}</Box>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="600">
+                        {highlight.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {highlight.description}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Stack>
+              <Box sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  component={Link}
+                  href={isAuth ? ROUTES.EVENTS.ROOT : ROUTES.AUTH.LOGIN}
+                  sx={{ borderRadius: 999 }}
+                >
+                  {socialCtaLabel}
+                </Button>
+              </Box>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  borderRadius: 4,
+                  p: { xs: 2, md: 3 },
+                  minHeight: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold">
+                  Activity preview
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Live updates shaped by the people you follow.
+                </Typography>
+                <Stack spacing={2} flexGrow={1}>
+                  {isAuth && socialFeed.length > 0 ? (
+                    socialFeed.map((activity) => {
+                      const objectLabel = getActivityObjectLabel(activity);
+                      const verbLabel = verbLabels[activity.verb] ?? activity.verb;
+                      const timestampLabel = formatActivityDate(activity.eventAt ?? activity.metadata?.timestamp);
+                      return (
+                        <Paper
+                          key={activity.activityId}
+                          variant="outlined"
+                          sx={{
+                            borderRadius: 3,
+                            px: 2,
+                            py: 1.5,
+                            backgroundColor: 'background.paper',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              mb: 0.75,
+                            }}
+                          >
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {getActorLabel(activity)}
+                            </Typography>
+                            <Chip size="small" label={activity.visibility} />
+                          </Box>
+                          <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            {`${verbLabel} ${objectLabel}`}
+                          </Typography>
+                          {timestampLabel && (
+                            <Typography variant="caption" color="text.secondary">
+                              {timestampLabel}
+                            </Typography>
+                          )}
+                        </Paper>
+                      );
+                    })
+                  ) : (
+                    <Box
+                      sx={{
+                        borderRadius: 3,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        p: 2,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {feedPlaceholderCopy}
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+        </CustomContainer>
       </Box>
 
       <Box

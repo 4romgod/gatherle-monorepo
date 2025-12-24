@@ -6,3 +6,6 @@ export * from './eventParticipant';
 export * from './organization';
 export * from './organizationMembership';
 export * from './venue';
+export * from './follow';
+export * from './intent';
+export * from './activity';

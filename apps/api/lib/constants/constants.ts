@@ -30,6 +30,7 @@ export const OPERATION_NAMES = {
   CREATE_EVENT: 'createEvent',
   UPDATE_EVENT: 'updateEvent',
   DELETE_EVENT: 'deleteEventById',
+  DELETE_EVENT_BY_SLUG: 'deleteEventBySlug',
   READ_EVENT_BY_ID: 'readEventById',
   READ_EVENT_BY_SLUG: 'readEventBySlug',
   READ_EVENTS: 'readEvents',
@@ -41,6 +42,7 @@ export const OPERATION_NAMES = {
   READ_EVENT_CATEGORIES: 'readEventCategories',
   UPSERT_EVENT_PARTICIPANT: 'upsertEventParticipant',
   CANCEL_EVENT_PARTICIPANT: 'cancelEventParticipant',
+  READ_EVENT_PARTICIPANTS: 'readEventParticipants',
 };
 
 export const ANSI_COLOR_CODES = {

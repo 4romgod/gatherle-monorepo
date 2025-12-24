@@ -9,6 +9,9 @@ import {
   OrganizationResolver,
   OrganizationMembershipResolver,
   VenueResolver,
+  FollowResolver,
+  IntentResolver,
+  ActivityResolver,
 } from '@/graphql/resolvers';
 import { authChecker } from '@/utils/auth';
 import { ResolveTime } from '@/utils';
@@ -21,6 +24,9 @@ const createSchema = () => {
       EventResolver,
       UserResolver,
       EventParticipantResolver,
+      FollowResolver,
+      IntentResolver,
+      ActivityResolver,
       OrganizationResolver,
       OrganizationMembershipResolver,
       VenueResolver,

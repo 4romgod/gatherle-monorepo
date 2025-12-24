@@ -1,4 +1,7 @@
 export * from './customTypes';
+export * from './activity';
+export * from './follow';
+export * from './intent';
 export * from './event';
 export * from './eventCategory';
 export * from './eventCategoryGroup';

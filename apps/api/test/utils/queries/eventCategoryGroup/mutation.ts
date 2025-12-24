@@ -9,6 +9,9 @@ export const getCreateEventCategoryGroupMutation = (input: any) => {
           eventCategoryList {
             eventCategoryId
             name
+            slug
+            iconName
+            description
           }
         }
       }
@@ -30,6 +33,9 @@ export const getUpdateEventCategoryGroupMutation = (input: any) => {
           eventCategoryList {
             eventCategoryId
             name
+            slug
+            iconName
+            description
           }
         }
       }

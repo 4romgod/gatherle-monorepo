@@ -85,9 +85,47 @@ export const USER_DESCRIPTIONS = {
     PHONE_NUMBER: "User's phone number (optional) (e.g., '+27 800 555 1234')",
     PROFILE_PICTURE: "URL to the user's profile picture (e.g., 'https://example.com/profile.jpg')",
     BIO: 'Short biography about the user',
+    SHARE_CHECKINS: 'Whether check-in activity is shared with followers by default',
     TOKEN: 'Authentication and Authorization JWT token',
     USER_ROLE: 'Role assigned to the user within the system, ("Admin", "User", "Host", "Guest")',
     USERNAME: "User's unique chosen or auto generated username (e.g., 'deku123')",
+};
+
+export const SOCIAL_DESCRIPTIONS = {
+    FOLLOW: {
+        TYPE: 'Represents a follow relationship between a user and a user or organization.',
+        CREATE_INPUT: 'Input type for following another user or organization.',
+        ID: 'Unique identifier for the follow relationship.',
+        FOLLOWER_USER_ID: 'User who is doing the following.',
+        TARGET_TYPE: 'Specifies whether the follow target is a User or an Organization.',
+        TARGET_ID: 'ID of the user or organization being followed.',
+        STATUS: 'Current status of the follow relationship.',
+    },
+    INTENT: {
+        TYPE: 'Represents a user intent signal (Interested, Going, Maybe, Declined) for an event.',
+        CREATE_INPUT: 'Input type for upserting an intent for an event.',
+        ID: 'Unique identifier for the intent record.',
+        USER_ID: 'ID of the user expressing the intent.',
+        EVENT_ID: 'ID of the event that the intent references.',
+        STATUS: 'Current status of the intent (Interested, Going, Maybe, Declined).',
+        VISIBILITY: 'Visibility policy for the intent (Public, Followers, Private).',
+        SOURCE: 'Origin of the intent data (Manual, Ticket, Invite, OrgAnnouncement).',
+        PARTICIPANT_ID: 'Optional EventParticipant ID tied to the intent.',
+        METADATA: 'Additional metadata to describe the intent.',
+    },
+    ACTIVITY: {
+        TYPE: 'Represents an activity feed entry for personalization (follows, RSVPs, comments, etc.).',
+        CREATE_INPUT: 'Input type for creating a new activity entry.',
+        ACTOR_ID: 'ID of the user that performed the activity.',
+        VERB: 'Action verb describing the activity (Followed, RSVPd, Commented, etc.).',
+        OBJECT_TYPE: 'Type of the object affected by the activity (User, Organization, Event, etc.).',
+        OBJECT_ID: 'ID of the object that the activity refers to.',
+        TARGET_TYPE: 'Optional type of the target item (used for organizations/events as targets).',
+        TARGET_ID: 'Optional ID of the target item associated with the activity.',
+        VISIBILITY: 'Visibility of the activity entry.',
+        EVENT_AT: 'Timestamp when the activity occurred.',
+        METADATA: 'Additional metadata that enriches the activity.',
+    },
 };
 
 export const ORGANIZATION_LINK_DESCRIPTIONS = {
@@ -197,6 +235,22 @@ export const RESOLVER_DESCRIPTIONS = {
         readUserByUsername: 'Read a user by their username. Requires the username and returns the user or 404 Error if not found.',
         readUserByEmail: 'Read a user by their email. Requires the email and returns the user or 404 Error if not found.',
         readUsers: 'Read a list of users. Accepts optional query options for pagination and filtering and returns a list of users.',
+    },
+    FOLLOW: {
+        follow: 'Create or re-activate a follow connection from the authenticated user.',
+        unfollow: 'Remove a follow connection initiated by the authenticated user.',
+        readFollowing: 'List the users and organizations that the authenticated user follows.',
+        readFollowers: 'List followers for a specific user or organization.',
+    },
+    INTENT: {
+        upsertIntent: 'Create or update an intent for an event on behalf of the authenticated user.',
+        readIntentsByUser: 'List intents that belong to the authenticated user.',
+        readIntentsByEvent: 'List intents associated with a specific event.',
+    },
+    ACTIVITY: {
+        logActivity: 'Log a new activity event for the authenticated user.',
+        readActivitiesByActor: 'Retrieve activities authored by a given actor.',
+        readFeed: 'Read a feed of activities relevant to the authenticated user.',
     },
     ORGANIZATION: {
         createOrganization: 'Create a new organization with policy defaults and return the created record.',

@@ -26,7 +26,12 @@ describe('Event Resolver', () => {
   const testEventSlug = kebabCase(testEventTitle);
   const testEventDescription = 'Test Event Description';
 
-  const createEventOnServer = async () => {
+const baseEventData = (() => {
+  const {orgIndex, venueIndex, ...rest} = eventsMockData[0];
+  return rest;
+})();
+
+const createEventOnServer = async () => {
     const response = await request(url)
       .post('')
       .set('token', testUser.token)
@@ -34,8 +39,8 @@ describe('Event Resolver', () => {
     return response.body.data.createEvent;
   };
 
-  const buildEventInput = (): CreateEventInput => ({
-    ...eventsMockData[0],
+const buildEventInput = (): CreateEventInput => ({
+  ...baseEventData,
     title: testEventTitle,
     description: testEventDescription,
     eventCategoryList: [testEventCategory.eventCategoryId],

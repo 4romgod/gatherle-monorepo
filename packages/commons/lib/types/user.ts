@@ -180,6 +180,10 @@ export class User {
     @Field(() => Boolean, {nullable: true})
     shareRSVPByDefault?: boolean;
 
+    @prop({default: true, type: () => Boolean})
+    @Field(() => Boolean, {nullable: true, description: USER_DESCRIPTIONS.SHARE_CHECKINS})
+    shareCheckinsByDefault?: boolean;
+
     @prop({default: [], type: () => [String]})
     @Field(() => [String], {nullable: true})
     mutedUserIds?: string[];
@@ -244,6 +248,9 @@ export class CreateUserInput {
 
     @Field(() => Boolean, {nullable: true})
     shareRSVPByDefault?: boolean;
+
+    @Field(() => Boolean, {nullable: true, description: USER_DESCRIPTIONS.SHARE_CHECKINS})
+    shareCheckinsByDefault?: boolean;
 
     @Field(() => GraphQLJSON, {nullable: true})
     profile?: Record<string, any>;
@@ -317,6 +324,9 @@ export class UpdateUserInput {
 
     @Field(() => Boolean, {nullable: true})
     shareRSVPByDefault?: boolean;
+
+    @Field(() => Boolean, {nullable: true, description: USER_DESCRIPTIONS.SHARE_CHECKINS})
+    shareCheckinsByDefault?: boolean;
 
     @Field(() => GraphQLJSON, {nullable: true})
     profile?: Record<string, any>;

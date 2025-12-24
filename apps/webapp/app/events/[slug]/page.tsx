@@ -69,6 +69,18 @@ export default async function Page(props: Props) {
     }
   };
 
+  const getRecurrenceText = (rule?: string | null): string => {
+    if (!rule) {
+      return 'Schedule coming soon';
+    }
+    try {
+      return upperFirst(RRule.fromString(rule).toText());
+    } catch (error) {
+      console.error('Unable to parse recurrence rule', error);
+      return 'Schedule coming soon';
+    }
+  };
+
   return (
     <Container>
       <Box my={4}>
@@ -99,7 +111,7 @@ export default async function Page(props: Props) {
               </Typography>
               <Typography fontWeight='bold' variant="body2" gutterBottom>
                 <CalendarToday sx={{ mr: 1 }} />
-                {upperFirst(RRule.fromString(recurrenceRule).toText())}
+                {getRecurrenceText(recurrenceRule)}
               </Typography>
             </Box>
 
