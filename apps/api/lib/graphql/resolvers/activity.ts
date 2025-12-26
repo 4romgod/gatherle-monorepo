@@ -20,9 +20,38 @@ export class ActivityResolver {
   @Query(() => [Activity], {description: RESOLVER_DESCRIPTIONS.ACTIVITY.readActivitiesByActor})
   async readActivitiesByActor(
     @Arg('actorId', () => String) actorId: string,
+    @Ctx() context: ServerContext,
     @Arg('limit', () => Int, {nullable: true}) limit?: number,
   ): Promise<Activity[]> {
-    return ActivityDAO.readByActor(actorId, limit ?? 25);
+    const viewer = await requireAuthenticatedUser(context);
+    const activities = await ActivityDAO.readByActor(actorId, limit ?? 25);
+
+    // If the requesting user is the actor, they can see all of their own activities.
+    if (viewer.userId === actorId) {
+      return activities;
+    }
+
+    const follows = await FollowDAO.readFollowingForUser(viewer.userId);
+    const isFollower = follows.some(
+      (follow) =>
+        follow.targetType === FollowTargetType.User &&
+        follow.targetId === actorId,
+    );
+
+    return activities.filter((activity: any) => {
+      const visibility = activity.visibility || 'PUBLIC';
+
+      if (visibility === 'PRIVATE') {
+        return false;
+      }
+
+      if (visibility === 'FOLLOWERS') {
+        return isFollower;
+      }
+
+      // Default: treat as public.
+      return true;
+    });
   }
 
   @Query(() => [Activity], {description: RESOLVER_DESCRIPTIONS.ACTIVITY.readFeed})
