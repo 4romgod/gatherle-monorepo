@@ -17,18 +17,24 @@ class IntentDAO {
       if (participantId) update.participantId = participantId;
       if (metadata) update.metadata = metadata;
 
+      const hasUpdates = Object.keys(update).length > 0;
+      const updateQuery: any = {
+        $setOnInsert: {
+          intentId: intentId ?? new Types.ObjectId().toString(),
+          userId,
+          eventId,
+        },
+      };
+
+      if (hasUpdates) {
+        updateQuery.$set = {
+          ...update,
+        };
+      }
+
       const intent = await IntentModel.findOneAndUpdate(
         filter,
-        {
-          $set: {
-            ...update,
-          },
-          $setOnInsert: {
-            intentId: intentId ?? new Types.ObjectId().toString(),
-            userId,
-            eventId,
-          },
-        },
+        updateQuery,
         {new: true, upsert: true, setDefaultsOnInsert: true},
       ).exec();
 
