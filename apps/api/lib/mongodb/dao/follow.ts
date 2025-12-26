@@ -10,15 +10,17 @@ class FollowDAO {
     try {
       const {followerUserId, targetType, targetId, status} = input;
       const update: UpdateQuery<FollowEntity> = {
-        targetType,
-        targetId,
+        $set: {
+          targetType,
+          targetId,
+        },
         $setOnInsert: {
           followId: new Types.ObjectId().toString(),
           createdAt: new Date(),
         },
       };
-      if (status) {
-        update.status = status;
+      if (status !== undefined) {
+        (update.$set as Partial<FollowEntity>).status = status;
       }
       const follow = await FollowModel.findOneAndUpdate(
         {followerUserId, targetType, targetId},
