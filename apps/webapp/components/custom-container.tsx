@@ -1,5 +1,5 @@
-import { Box, SxProps, Theme } from "@mui/material";
-import { ReactNode } from "react";
+import { Box, SxProps, Theme } from '@mui/material';
+import { ReactNode } from 'react';
 
 interface CustomContainerProps {
   children: ReactNode;

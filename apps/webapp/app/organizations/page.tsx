@@ -49,27 +49,27 @@ export default async function OrganizationsPage() {
           </Button>
         </Box>
       </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(1, minmax(0, 1fr))',
-                sm: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(3, minmax(0, 1fr))',
-              },
-              gap: 3,
-            }}
-          >
-            {organizations.map((organization) => (
-              <Box key={organization.orgId}>
-                <OrganizationCard {...organization} />
-              </Box>
-            ))}
-            {organizations.length === 0 && (
-              <Box>
-                <Typography variant="body1" color="text.secondary">
-                  No organizations have been published yet.
-                </Typography>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(1, minmax(0, 1fr))',
+            sm: 'repeat(3, minmax(0, 1fr))',
+            lg: 'repeat(4, minmax(0, 1fr))',
+          },
+          gap: 3,
+        }}
+      >
+        {organizations.map(organization => (
+          <Box key={organization.orgId}>
+            <OrganizationCard {...organization} />
+          </Box>
+        ))}
+        {organizations.length === 0 && (
+          <Box>
+            <Typography variant="body1" color="text.secondary">
+              No organizations have been published yet.
+            </Typography>
           </Box>
         )}
       </Box>

@@ -30,7 +30,7 @@ This document captures the current target model for Ntlango’s event platform, 
 ### Category and Tag
 - `categoryId`, `name`, `slug`, `iconName`, `color`, `description`.
 - CategoryGroup (navigation aid): e.g., “Arts & Culture” containing curated categories like “Music”, “Theatre”. Use for navigation and theming, not user-generated.
-- Tags: freeform `tagList: string[]` on Event for flexible, user-driven descriptors (e.g., “jazz”, “rooftop”, “founder circle”). Not curated; used for search and recommendations, not primary navigation.
+- Tags: freeform on Event for flexible, user-driven descriptors (e.g., “jazz”, “rooftop”, “founder circle”). Not curated; used for search and recommendations, not primary navigation.
 
 ### Event
 - Identity: `eventId`, `slug`, `orgId?`.
@@ -39,7 +39,7 @@ This document captures the current target model for Ntlango’s event platform, 
 - Schedule: `primarySchedule { startAt, endAt, timezone, recurrenceRule? }`, optional `occurrences[]` for generated instances.
 - Location: `venueId?`, `locationSnapshot` (address/url at publish time).
 - People: `organizers: [{ userId, role: Host|CoHost|Volunteer }]`.
-- Taxonomy: `categoryIds: string[]`, `tagList: string[]`.
+- Taxonomy: `categoryIds: string[]`.
 - Settings: `rsvpLimit?`, `allowGuestPlusOnes`, `waitlistEnabled`, `remindersEnabled`.
 - Monetization: `ticketTypes[]`, `currency`, `refundPolicy?`.
 - Privacy: `privacySetting` (aligns with visibility) and optional invite-only flag.
@@ -143,7 +143,7 @@ erDiagram
 ## Migration Phasing (recommended)
 Before new collections, apply new attributes to existing types:
 - User: `primaryTimezone`, `defaultVisibility`, `profile { displayName, bio, avatar, socialLinks }`, `preferences { communicationPrefs, notificationPrefs }`, social settings (`socialVisibility`, `shareRSVPByDefault`, `mutedUserIds`, `blockedUserIds`), support multiple roles.
-- Event: `orgId`, `summary`, `heroImage`, `media: MediaAsset[]`, `visibility` (Public|Private|Unlisted|Invitation), `status` (Draft|Published|Cancelled|Completed), `primarySchedule` (+ `recurrenceRule`, `occurrences`), `venueId` + `locationSnapshot`, `organizers` with roles, `categoryIds` + `tagList`, settings (`rsvpLimit`, `waitlistEnabled`, `allowGuestPlusOnes`, `remindersEnabled`, `showAttendees`).
+- Event: `orgId`, `summary`, `heroImage`, `media: MediaAsset[]`, `visibility` (Public|Private|Unlisted|Invitation), `status` (Draft|Published|Cancelled|Completed), `primarySchedule` (+ `recurrenceRule`, `occurrences`), `venueId` + `locationSnapshot`, `organizers` with roles, `categoryIds`, settings (`rsvpLimit`, `waitlistEnabled`, `allowGuestPlusOnes`, `remindersEnabled`, `showAttendees`).
 
 Phase plan:
 
@@ -158,14 +158,14 @@ Phase plan:
 ## Mongo/NoSQL Adaptation Strategy
 - **Embed stable snapshots**: keep small, relatively immutable data on parents to avoid frequent lookups (e.g., `locationSnapshot`, `organizers` roles on Event, `media` array, org name/logo on Event, actor displayName/avatar on Activity).
 - **Reference high-churn/fan-out**: keep separate collections for `EventParticipant`, `Intent`, `Follow`, `Activity`, `TicketType`, `WaitlistEntry` with indexes; denormalize key fields (event title/hero, org name, actor info) for read speed.
-- **Categories/Tags**: curated Categories/CategoryGroup collections; Events store `categoryIds` and `tagList`. Index on `categoryIds`, `tagList`, `orgId`.
+- **Categories/Tags**: curated Categories/CategoryGroup collections; Events store `categoryIds`. Index on `categoryIds`, `orgId`.
 - **Organizations/Venues**: reference via `orgId`/`venueId` and store snapshots on Event to preserve history; keep full docs in their own collections.
 - **Feed/Activity**: append-only Activity collection with visibility flags and denormed actor/object/org snippets. Index on `actorId`, `targetType/targetId`, `eventAt`, `visibility`. Start with query-time filtering; optionally materialize per-user timelines if volume grows.
 - **Intent vs Participant**: keep both; allow `participantId` on Intent for ticketed flows. “Interested/Maybe” intents can exist without participants.
 - **Follow graph**: single Follow collection (`followerUserId`, `targetType`, `targetId`, `status`). Index on follower for fan-out and on target for counts.
 - **Counters**: maintain counts on Event/Org (followers, intents, participants) with atomic inc/dec and periodic reconciliation jobs to avoid heavy aggregations on hot paths.
 - **Indexes (indicative)**:
-  - Event: `{ orgId, status, visibility, primarySchedule.startAt }`, `{ categoryIds: 1 }`, `{ tagList: 1 }`
+  - Event: `{ orgId, status, visibility, primarySchedule.startAt }`, `{ categoryIds: 1 }`
   - Participant: `{ eventId, status }`, `{ userId, status }`
   - Intent: `{ userId }`, `{ eventId, status }`
   - Activity: `{ actorId }`, `{ targetType, targetId }`, `{ visibility, eventAt }`

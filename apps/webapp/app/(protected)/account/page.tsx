@@ -1,14 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import {
-  Person,
-  PersonOutlined,
-  ManageAccounts,
-  Password,
-  Interests,
-  Event,
-  PermMedia,
-} from '@mui/icons-material';
+import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, PermMedia } from '@mui/icons-material';
 import { Box } from '@mui/material';
 import CustomTabs, { CustomTabsProps } from '@/components/tabs/custom-tabs';
 import EditProfilePage from '@/components/settings/EditProfilePage';
@@ -53,44 +45,44 @@ export default async function SettingsPage() {
         name: 'Edit Profile',
         content: <EditProfilePage user={user} />,
         icon: <PersonOutlined fontSize="small" />,
-        description: 'Customize how you appear to others'
+        description: 'Customize how you appear to others',
       },
       {
         name: 'Personal Info',
         content: <PersonalSettingsPage user={user} />,
         icon: <Person fontSize="small" />,
-        description: 'Manage your personal information'
+        description: 'Manage your personal information',
       },
       {
         name: 'Interests',
         content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
         icon: <Interests fontSize="small" />,
-        description: 'Select and manage your interests'
+        description: 'Select and manage your interests',
       },
       {
         name: 'Events',
         content: <EventSettingsPage user={user} />,
         icon: <Event fontSize="small" />,
-        description: 'Configure your event preferences'
+        description: 'Configure your event preferences',
       },
       {
         name: 'Account',
         content: <AccountSettingsPage user={user} />,
         icon: <ManageAccounts fontSize="small" />,
-        description: 'Control your account settings'
+        description: 'Control your account settings',
       },
       {
         name: 'Password',
         content: <PasswordSettingsPage />,
         icon: <Password fontSize="small" />,
-        description: 'Control your account settings'
+        description: 'Control your account settings',
       },
       {
         name: 'Social media',
         content: <SocialMediaSettingsPage />,
         icon: <PermMedia fontSize="small" />,
-        description: 'Connect social media accounts'
-      }
+        description: 'Connect social media accounts',
+      },
     ],
   };
 

@@ -86,10 +86,7 @@ describe('OrganizationMembershipResolver', () => {
       const result = await resolver.updateOrganizationMembership(updateInput);
 
       expect(validation.validateInput).toHaveBeenCalled();
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        updateInput.membershipId,
-        expect.any(String),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(updateInput.membershipId, expect.any(String));
       expect(OrganizationMembershipDAO.update).toHaveBeenCalledWith(updateInput);
       expect(result.role).toBe(OrganizationRole.Host);
     });
@@ -106,10 +103,7 @@ describe('OrganizationMembershipResolver', () => {
       const result = await resolver.deleteOrganizationMembership(deleteInput);
 
       expect(validation.validateInput).toHaveBeenCalled();
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        deleteInput.membershipId,
-        expect.any(String),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(deleteInput.membershipId, expect.any(String));
       expect(OrganizationMembershipDAO.delete).toHaveBeenCalledWith(deleteInput.membershipId);
       expect(result).toEqual(mockMembership);
     });
@@ -121,10 +115,7 @@ describe('OrganizationMembershipResolver', () => {
 
       const result = await resolver.readOrganizationMembershipById(mockMembership.membershipId);
 
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        mockMembership.membershipId,
-        expect.any(String),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(mockMembership.membershipId, expect.any(String));
       expect(OrganizationMembershipDAO.readMembershipById).toHaveBeenCalledWith(mockMembership.membershipId);
       expect(result).toEqual(mockMembership);
     });
@@ -136,10 +127,7 @@ describe('OrganizationMembershipResolver', () => {
 
       const result = await resolver.readOrganizationMembershipsByOrgId(mockMembership.orgId);
 
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        mockMembership.orgId,
-        expect.stringContaining('Organization'),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(mockMembership.orgId, expect.stringContaining('Organization'));
       expect(OrganizationMembershipDAO.readMembershipsByOrgId).toHaveBeenCalledWith(mockMembership.orgId);
       expect(result).toEqual([mockMembership]);
     });

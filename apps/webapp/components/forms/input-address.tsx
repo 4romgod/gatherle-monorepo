@@ -13,7 +13,13 @@ interface AddressFormProps {
   name?: string; // Name for the form context
 }
 
-export default function AddressForm({ value, onChange, disabled = false, errors = {}, name = 'address' }: AddressFormProps) {
+export default function AddressForm({
+  value,
+  onChange,
+  disabled = false,
+  errors = {},
+  name = 'address',
+}: AddressFormProps) {
   const defaultAddress: Address = {
     street: '',
     city: '',
@@ -39,12 +45,8 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
   return (
     <Grid container spacing={2}>
       {/* Hidden input to store the entire address object as JSON */}
-      <input 
-        type="hidden" 
-        name={name} 
-        value={addressJson} 
-      />
-      
+      <input type="hidden" name={name} value={addressJson} />
+
       <Grid size={{ xs: 12 }}>
         <TextField
           fullWidth
@@ -58,7 +60,7 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
         />
         <FormErrors error={errors?.street} />
       </Grid>
-      
+
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
           fullWidth
@@ -73,7 +75,7 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
         />
         <FormErrors error={errors?.city} />
       </Grid>
-      
+
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
           fullWidth
@@ -88,7 +90,7 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
         />
         <FormErrors error={errors?.state} />
       </Grid>
-      
+
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
           fullWidth
@@ -103,7 +105,7 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
         />
         <FormErrors error={errors?.country} />
       </Grid>
-      
+
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
           fullWidth
@@ -120,4 +122,4 @@ export default function AddressForm({ value, onChange, disabled = false, errors 
       </Grid>
     </Grid>
   );
-};
+}

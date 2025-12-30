@@ -47,8 +47,10 @@ export default async function UserPublicProfile() {
     query: GetAllEventsDocument,
   });
   const allEvents = (events.readEvents ?? []) as EventPreview[];
-  const rsvpdEvents = allEvents.filter((event) => event.participants?.some((p) => p.userId === user.userId));
-  const organizedEvents = allEvents.filter((event) => event.organizerList.some((organizer) => organizer.userId === user.userId));
+  const rsvpdEvents = allEvents.filter(event => event.participants?.some(p => p.userId === user.userId));
+  const organizedEvents = allEvents.filter(event =>
+    event.organizers.some(organizer => organizer.userId === user.userId),
+  );
   const interests = user.interests ? user.interests : [];
   const age = differenceInYears(new Date(), new Date(user.birthdate));
   const formattedDOB = format(new Date(user.birthdate), 'dd MMMM yyyy');
@@ -89,7 +91,7 @@ export default async function UserPublicProfile() {
                   color: 'text.primary',
                   '&:hover': {
                     bgcolor: 'background.default',
-                  }
+                  },
                 }}
               >
                 Edit
@@ -107,7 +109,7 @@ export default async function UserPublicProfile() {
           >
             <Box sx={{ position: 'relative' }}>
               <Avatar
-                src={user.profile_picture || "/api/placeholder/120/120"}
+                src={user.profile_picture || '/api/placeholder/120/120'}
                 alt={`${user.given_name} ${user.family_name}`}
                 sx={{
                   width: 160,
@@ -142,23 +144,13 @@ export default async function UserPublicProfile() {
                 @{user.username}
               </Typography>
               <Divider orientation="vertical" flexItem sx={{ mx: 2, height: 16 }} />
-              <Chip
-                label={user.userRole}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
+              <Chip label={user.userRole} size="small" color="primary" variant="outlined" />
             </Box>
           </Box>
 
           {/* Bio */}
           <Box sx={{ px: 3, py: 2 }}>
-            <Typography
-              variant="body1"
-              align="center"
-              color="text.secondary"
-              sx={{ maxWidth: 800, mx: 'auto' }}
-            >
+            <Typography variant="body1" align="center" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto' }}>
               {user.bio || ''}
             </Typography>
           </Box>
@@ -200,7 +192,7 @@ export default async function UserPublicProfile() {
                         </ListItemAvatar>
                         <ListItemText
                           primary="Phone"
-                          secondary={user.phone_number || "Not provided"}
+                          secondary={user.phone_number || 'Not provided'}
                           slotProps={{
                             primary: { variant: 'body2', color: 'text.secondary' },
                             secondary: { variant: 'body1' },
@@ -216,7 +208,7 @@ export default async function UserPublicProfile() {
                         </ListItemAvatar>
                         <ListItemText
                           primary="Address"
-                          secondary={JSON.stringify(user.address)}  // TODO make it nice
+                          secondary={JSON.stringify(user.address)} // TODO make it nice
                           slotProps={{
                             primary: { variant: 'body2', color: 'text.secondary' },
                             secondary: { variant: 'body1' },
@@ -248,7 +240,7 @@ export default async function UserPublicProfile() {
                         </ListItemAvatar>
                         <ListItemText
                           primary="Gender"
-                          secondary={user.gender || "Not specified"}
+                          secondary={user.gender || 'Not specified'}
                           slotProps={{
                             primary: { variant: 'body2', color: 'text.secondary' },
                             secondary: { variant: 'body1' },
@@ -263,18 +255,12 @@ export default async function UserPublicProfile() {
               {/* Interests */}
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card variant="outlined" sx={{ height: '100%' }}>
-                  <CardHeader
-                    title="Interests"
-                    slotProps={{ title: { variant: 'h6', fontWeight: 'medium' } }}
-                  />
+                  <CardHeader title="Interests" slotProps={{ title: { variant: 'h6', fontWeight: 'medium' } }} />
                   <Divider />
                   <CardContent>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                       {interests.map((category, index) => (
-                        <EventCategoryChip
-                          key={index}
-                          category={category}
-                        />
+                        <EventCategoryChip key={index} category={category} />
                       ))}
                     </Box>
                   </CardContent>

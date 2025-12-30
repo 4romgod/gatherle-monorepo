@@ -33,10 +33,7 @@ class ActivityDAO {
   static async readByActor(actorId: string, limit = 25): Promise<ActivityEntity[]> {
     try {
       const sanitizedLimit = Math.max(1, Math.min(limit, 100));
-      const activities = await ActivityModel.find({actorId})
-        .sort({eventAt: -1, createdAt: -1})
-        .limit(sanitizedLimit)
-        .exec();
+      const activities = await ActivityModel.find({actorId}).sort({eventAt: -1, createdAt: -1}).limit(sanitizedLimit).exec();
       return activities.map((activity) => activity.toObject());
     } catch (error) {
       console.error('Error reading activities by actor', error);

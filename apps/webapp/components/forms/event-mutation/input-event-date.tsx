@@ -53,7 +53,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
         interval,
         dtstart: startDateTime.toDate(),
         until: endDateTime.toDate(),
-        byweekday: daysOfWeek.map((d) => Weekday.fromStr(d)),
+        byweekday: daysOfWeek.map(d => Weekday.fromStr(d)),
       });
       result = rule.toString();
     }
@@ -63,9 +63,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
 
   const handleDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = event.target;
-    setDaysOfWeek((prev) =>
-      checked ? [...prev, value as WeekdayStr] : prev.filter((day) => day !== value)
-    );
+    setDaysOfWeek(prev => (checked ? [...prev, value as WeekdayStr] : prev.filter(day => day !== value)));
   };
 
   return (
@@ -107,12 +105,12 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
         {eventType === 'recurring' && (
           <>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <FormControl fullWidth color='secondary'>
-                <InputLabel color='secondary'>Frequency</InputLabel>
+              <FormControl fullWidth color="secondary">
+                <InputLabel color="secondary">Frequency</InputLabel>
                 <Select
                   value={frequency}
-                  onChange={(e) => setFrequency(Number(e.target.value) as Frequency)}
-                  color='secondary'
+                  onChange={e => setFrequency(Number(e.target.value) as Frequency)}
+                  color="secondary"
                 >
                   <MenuItem value={Frequency.DAILY}>Daily</MenuItem>
                   <MenuItem value={Frequency.WEEKLY}>Weekly</MenuItem>
@@ -127,8 +125,8 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
                 label="Interval"
                 type="number"
                 value={interval}
-                onChange={(e) => setInterval(parseInt(e.target.value))}
-                color='secondary'
+                onChange={e => setInterval(parseInt(e.target.value))}
+                color="secondary"
               />
             </Grid>
 
@@ -138,7 +136,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
                   Days of the Week
                 </Typography>
                 <Grid container spacing={1}>
-                  {ALL_WEEKDAYS.map((day) => (
+                  {ALL_WEEKDAYS.map(day => (
                     <Grid key={day}>
                       <FormControlLabel
                         control={
@@ -146,7 +144,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
                             value={day}
                             checked={daysOfWeek.includes(day)}
                             onChange={handleDayChange}
-                            color='secondary'
+                            color="secondary"
                           />
                         }
                         label={day}

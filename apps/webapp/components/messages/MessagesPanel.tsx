@@ -85,7 +85,7 @@ const mockThreads = [
 export default function MessagesPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<number>(mockThreads[0].id);
 
-  const selectedThread = mockThreads.find((t) => t.id === selectedThreadId);
+  const selectedThread = mockThreads.find(t => t.id === selectedThreadId);
 
   return (
     <Box sx={{ py: 6 }}>
@@ -96,7 +96,7 @@ export default function MessagesPage() {
 
         <Grid container spacing={2}>
           {/* Left: Threads list */}
-          <Grid size={{ xs: 12, md: 4 }} >
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper sx={{ minHeight: '90vh' }}>
               <List disablePadding>
                 {mockThreads.map((thread, index) => (
@@ -117,20 +117,12 @@ export default function MessagesPage() {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight="medium"
-                          >
+                          <Typography variant="subtitle1" fontWeight="medium">
                             {thread.senderName}
                           </Typography>
                         }
                         secondary={
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            component="span"
-                            noWrap
-                          >
+                          <Typography variant="body2" color="text.secondary" component="span" noWrap>
                             {thread.lastMessage}
                           </Typography>
                         }
@@ -147,7 +139,7 @@ export default function MessagesPage() {
           </Grid>
 
           {/* Right: Conversation view */}
-          <Grid size={{ xs: 12, md: 8 }} >
+          <Grid size={{ xs: 12, md: 8 }}>
             <Paper sx={{ p: 2, minHeight: '90vh' }}>
               {selectedThread ? (
                 <>
@@ -157,7 +149,7 @@ export default function MessagesPage() {
                   <Divider sx={{ mb: 2 }} />
 
                   <Box display="flex" flexDirection="column" gap={2}>
-                    {selectedThread.messages.map((msg) => (
+                    {selectedThread.messages.map(msg => (
                       <Box
                         key={msg.id}
                         sx={{
@@ -170,11 +162,7 @@ export default function MessagesPage() {
                         }}
                       >
                         <Typography variant="body2">{msg.message}</Typography>
-                        <Typography
-                          variant="caption"
-                          display="block"
-                          align={msg.fromMe ? 'right' : 'left'}
-                        >
+                        <Typography variant="caption" display="block" align={msg.fromMe ? 'right' : 'left'}>
                           {format(msg.timestamp, 'HH:mm')}
                         </Typography>
                       </Box>

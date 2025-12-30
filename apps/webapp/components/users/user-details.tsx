@@ -10,20 +10,21 @@ export default function UserDetails({ user }: { user: User }) {
       sx={{
         backgroundColor: 'background.default',
         borderRadius: '12px',
-        p: 3
+        p: 3,
       }}
     >
       <Box component="div" sx={{ position: 'relative' }}>
         {user.profile_picture ? (
           <Avatar
-            variant='square'
+            variant="square"
             src={user.profile_picture}
             alt={user.username}
             sx={{
               width: '100%',
               height: '100%',
               borderRadius: '7px',
-            }} />
+            }}
+          />
         ) : (
           <Person
             sx={{
@@ -35,9 +36,9 @@ export default function UserDetails({ user }: { user: User }) {
         <Box
           component="div"
           sx={{
-            position: "absolute",
+            position: 'absolute',
             bottom: '5%',
-            left: "5%",
+            left: '5%',
           }}
         >
           <Typography variant="h5" fontWeight="bold" color="white">
@@ -45,18 +46,19 @@ export default function UserDetails({ user }: { user: User }) {
           </Typography>
           <Box component="div" sx={{ display: 'flex', flexDirection: 'row', marginTop: 1 }}>
             <MapPinIcon color="white" height={20} width={20} />
-            <Typography variant='subtitle2' color="white" paddingLeft={1}>{user.address}</Typography>
+            <Typography variant="subtitle2" color="white" paddingLeft={1}>
+              {user.address}
+            </Typography>
           </Box>
         </Box>
       </Box>
       <Box marginTop={3}>
-        <Typography variant="h6">
-          About Me
-        </Typography>
+        <Typography variant="h6">About Me</Typography>
         <Typography variant="body1">
-          Lorem ipsum dolor, sit amet consectetur adipisicing elit. Atque exercitationem, repellat vitae possimus facere sed recusandae quia
+          Lorem ipsum dolor, sit amet consectetur adipisicing elit. Atque exercitationem, repellat vitae possimus facere
+          sed recusandae quia
         </Typography>
       </Box>
     </Paper>
-  )
-};
+  );
+}

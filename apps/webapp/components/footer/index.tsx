@@ -45,7 +45,8 @@ const Footer = () => {
               Bring people together with Ntlango
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 520 }}>
-              Craft intimate gatherings, bold conferences, or community rituals with the platform built for modern hosts.
+              Craft intimate gatherings, bold conferences, or community rituals with the platform built for modern
+              hosts.
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
@@ -59,18 +60,13 @@ const Footer = () => {
         </Box>
 
         <Grid container spacing={4}>
-          {footerSections.map((section) => (
+          {footerSections.map(section => (
             <Grid size={{ xs: 6, sm: 3 }} key={section.title}>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                gutterBottom
-                color={theme.palette.text.primary}
-              >
+              <Typography variant="h6" fontWeight="bold" gutterBottom color={theme.palette.text.primary}>
                 {section.title}
               </Typography>
               <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-                {section.links.map((link) => (
+                {section.links.map(link => (
                   <Box component="li" key={link.name} sx={{ mb: 1 }}>
                     <Link
                       href={link.href}

@@ -1,25 +1,10 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import {
-  Box,
-  Typography,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-  Fade,
-  Paper,
-  alpha,
-  Button
-} from "@mui/material";
-import EventBoxSm from "@/components/events/event-box-sm";
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Box, Typography, IconButton, useMediaQuery, useTheme, Fade, Paper, alpha, Button } from '@mui/material';
+import EventBoxSm from '@/components/events/event-box-sm';
 import { EventPreview } from '@/data/graphql/query/Event/types';
-import {
-  KeyboardArrowLeft,
-  KeyboardArrowRight,
-  FiberManualRecord,
-  ArrowForward
-} from "@mui/icons-material";
+import { KeyboardArrowLeft, KeyboardArrowRight, FiberManualRecord, ArrowForward } from '@mui/icons-material';
 import Link from 'next/link';
 
 interface EventCarouselProps {
@@ -39,7 +24,7 @@ export default function EventCarousel({
   autoplayInterval = 5000,
   itemWidth = 320,
   showIndicators = true,
-  viewAllEventsButton = true
+  viewAllEventsButton = true,
 }: EventCarouselProps) {
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
@@ -92,27 +77,30 @@ export default function EventCarousel({
   }, [events.length, itemWidth, isMobile]);
 
   // Scroll to a specific index with exact positioning for mobile
-  const scrollToIndex = useCallback((index: number) => {
-    if (containerRef.current) {
-      const newIndex = Math.max(0, Math.min(index, events.length - 1));
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      if (containerRef.current) {
+        const newIndex = Math.max(0, Math.min(index, events.length - 1));
 
-      let scrollAmount;
-      if (isMobile) {
-        // For mobile: exact positioning with proper centering
-        scrollAmount = newIndex * containerRef.current.offsetWidth;
-      } else {
-        // For desktop: adjust for the smaller gap
-        scrollAmount = newIndex * (itemWidth + 8); // Match the gap value used in layout
+        let scrollAmount;
+        if (isMobile) {
+          // For mobile: exact positioning with proper centering
+          scrollAmount = newIndex * containerRef.current.offsetWidth;
+        } else {
+          // For desktop: adjust for the smaller gap
+          scrollAmount = newIndex * (itemWidth + 8); // Match the gap value used in layout
+        }
+
+        containerRef.current.scrollTo({
+          left: scrollAmount,
+          behavior: 'smooth',
+        });
+
+        setActiveItemIndex(newIndex);
       }
-
-      containerRef.current.scrollTo({
-        left: scrollAmount,
-        behavior: 'smooth'
-      });
-
-      setActiveItemIndex(newIndex);
-    }
-  }, [events.length, isMobile, itemWidth]);
+    },
+    [events.length, isMobile, itemWidth],
+  );
 
   // Handle next and back navigation
   const handleNext = useCallback(() => {
@@ -215,7 +203,7 @@ export default function EventCarousel({
           // For desktop: use the smaller gap value
           const newIndex = Math.min(
             Math.max(0, Math.round(containerRef.current.scrollLeft / (itemWidth + 8))),
-            events.length - 1
+            events.length - 1,
           );
           setActiveItemIndex(newIndex);
         }
@@ -275,12 +263,7 @@ export default function EventCarousel({
         )}
 
         {viewAllEventsButton && (
-          <Button
-            endIcon={<ArrowForward />}
-            color="secondary"
-            component={Link}
-            href="/events"
-          >
+          <Button endIcon={<ArrowForward />} color="secondary" component={Link} href="/events">
             View all events
           </Button>
         )}
@@ -297,8 +280,8 @@ export default function EventCarousel({
                 backgroundColor: theme => theme.palette.background.paper,
                 boxShadow: 1,
                 '&:hover': {
-                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
-                }
+                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08),
+                },
               }}
             >
               <KeyboardArrowLeft />
@@ -312,8 +295,8 @@ export default function EventCarousel({
                 backgroundColor: theme => theme.palette.background.paper,
                 boxShadow: 1,
                 '&:hover': {
-                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
-                }
+                  backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08),
+                },
               }}
             >
               <KeyboardArrowRight />
@@ -328,7 +311,7 @@ export default function EventCarousel({
           position: 'relative',
           overflow: 'hidden',
           width: '100%',
-          borderRadius: 2
+          borderRadius: 2,
         }}
       >
         {/* Left Arrow (Mobile/Tablet + Hover) */}
@@ -464,7 +447,7 @@ export default function EventCarousel({
                 <FiberManualRecord
                   sx={{
                     fontSize: activeItemIndex === index ? 14 : 10,
-                    color: (activeItemIndex === index) ? 'secondary.main' : alpha(theme.palette.secondary.main, 0.3),
+                    color: activeItemIndex === index ? 'secondary.main' : alpha(theme.palette.secondary.main, 0.3),
                     transition: 'all 0.3s ease',
                   }}
                 />

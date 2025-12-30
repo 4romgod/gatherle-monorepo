@@ -51,13 +51,7 @@ const RadioButtonWithIcon: React.FC<RadioButtonWithIconProps> = ({
         )}
       </Box>
     </Box>
-    <Radio
-      value={value}
-      checked={selected}
-      onChange={() => onChange(value)}
-      color='secondary'
-      sx={{ ml: 2 }}
-    />
+    <Radio value={value} checked={selected} onChange={() => onChange(value)} color="secondary" sx={{ ml: 2 }} />
   </Box>
 );
 

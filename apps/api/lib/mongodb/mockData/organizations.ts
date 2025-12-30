@@ -1,4 +1,5 @@
-import {CreateOrganizationInput, EventVisibility, OrganizationTicketAccess} from '@ntlango/commons/types';
+import type {CreateOrganizationInput} from '@ntlango/commons/types';
+import {EventVisibility, OrganizationTicketAccess} from '@ntlango/commons/types';
 
 export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'>;
 

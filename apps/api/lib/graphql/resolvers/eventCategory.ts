@@ -1,12 +1,6 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
-import {
-  CreateEventCategoryInput,
-  EventCategory,
-  UpdateEventCategoryInput,
-  UserRole,
-  QueryOptionsInput,
-} from '@ntlango/commons/types';
+import {CreateEventCategoryInput, EventCategory, UpdateEventCategoryInput, UserRole, QueryOptionsInput} from '@ntlango/commons/types';
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {CreateEventCategorySchema, UpdateEventCategorySchema, validateInput, validateMongodbId} from '@/validation';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';

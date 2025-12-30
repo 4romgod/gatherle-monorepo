@@ -1,6 +1,6 @@
-import { EventCategory } from "@/data/graphql/types/graphql";
-import { getEventCategoryIcon } from "@/lib/constants";
-import { Box, Button, Typography } from "@mui/material";
+import { EventCategory } from '@/data/graphql/types/graphql';
+import { getEventCategoryIcon } from '@/lib/constants';
+import { Box, Button, Typography } from '@mui/material';
 import Link from 'next/link';
 
 export default async function EventCategoryBox({ eventCategory }: { eventCategory: EventCategory }) {
@@ -31,7 +31,7 @@ export default async function EventCategoryBox({ eventCategory }: { eventCategor
           boxShadow: '0 20px 35px rgba(0,0,0,0.12)',
           borderColor: 'secondary.main',
         },
-        p: 1.5
+        p: 1.5,
       }}
     >
       <Box
@@ -49,20 +49,11 @@ export default async function EventCategoryBox({ eventCategory }: { eventCategor
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
-        <IconComponent
-          color={eventCategory.color || ''}
-          height={24}
-          width={24}
-        />
+        <IconComponent color={eventCategory.color || ''} height={24} width={24} />
       </Box>
-      <Typography
-        variant="subtitle1"
-        component="span"
-        fontWeight="medium"
-        color="text.primary"
-      >
+      <Typography variant="subtitle1" component="span" fontWeight="medium" color="text.primary">
         {eventCategory.name}
       </Typography>
     </Button>
-  )
+  );
 }

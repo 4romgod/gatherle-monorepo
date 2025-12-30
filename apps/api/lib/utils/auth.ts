@@ -139,7 +139,7 @@ export const isAuthorizedByOperation = async (operationName: string, args: ArgsD
 /**
  * Type guard to check if value has a toString method
  */
-const hasToString = (value: unknown): value is { toString: () => string } => {
+const hasToString = (value: unknown): value is {toString: () => string} => {
   return typeof value === 'object' && value !== null && typeof (value as any).toString === 'function';
 };
 
@@ -153,7 +153,7 @@ const isOrganizerRecord = (value: unknown): value is Record<string, unknown> => 
 /**
  * Converts various organizer formats to a user ID string.
  * Handles string IDs, ObjectIds, and organizer objects with userId or _id fields.
- * 
+ *
  * @param organizer The organizer value in various possible formats
  * @returns The user ID as a string, or undefined if extraction fails
  */
@@ -188,16 +188,14 @@ const toOrganizerUserId = (organizer: unknown): string | undefined => {
   return undefined;
 };
 
-const getOrganizerIdsFromEvent = (event: {organizerList?: unknown[]}): string[] => {
-  if (!event.organizerList) {
+const getOrganizerIdsFromEvent = (event: {organizers?: Array<{userId?: string}>}): string[] => {
+  if (!event.organizers) {
     return [];
   }
-  return event.organizerList
-    .map((organizer) => toOrganizerUserId(organizer))
-    .filter((id): id is string => Boolean(id));
+  return event.organizers.map((organizer) => organizer.userId).filter((id): id is string => Boolean(id));
 };
 
-const isUserOrganizer = (event: {organizerList?: unknown[]}, user: User) => {
+const isUserOrganizer = (event: {organizers?: Array<{userId?: string}>}, user: User) => {
   const organizerIds = getOrganizerIdsFromEvent(event);
   return organizerIds.includes(user.userId);
 };

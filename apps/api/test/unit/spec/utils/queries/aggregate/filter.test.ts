@@ -1,7 +1,7 @@
 import {createEventPipelineStages} from '@/utils'; // Adjust the import path as necessary
 import type {PipelineStage} from 'mongoose';
 import type {FilterInput} from '@ntlango/commons/types';
-import { FilterOperatorInput} from '@ntlango/commons/types';
+import {FilterOperatorInput} from '@ntlango/commons/types';
 
 describe('createEventPipelineStages', () => {
   it('should return a valid pipeline for simple equality filters', () => {
@@ -19,16 +19,16 @@ describe('createEventPipelineStages', () => {
   });
 
   it('should return a valid pipeline for nested field filters', () => {
-    const filters: FilterInput[] = [{field: 'organizerList.email', value: 'jay@rocknation.com', operator: FilterOperatorInput.eq}];
+    const filters: FilterInput[] = [{field: 'organizers.email', value: 'jay@rocknation.com', operator: FilterOperatorInput.eq}];
     const expectedPipeline: PipelineStage[] = [
       {
         $addFields: {
-          'value.organizerList': {
+          'value.organizers': {
             $filter: {
-              input: '$organizerList',
-              as: 'organizerListItem',
+              input: '$organizers',
+              as: 'organizersItem',
               cond: {
-                $eq: ['$$organizerListItem.email', 'jay@rocknation.com'],
+                $eq: ['$$organizersItem.email', 'jay@rocknation.com'],
               },
             },
           },
@@ -36,7 +36,7 @@ describe('createEventPipelineStages', () => {
       },
       {
         $match: {
-          'value.organizerList.0.email': {$eq: 'jay@rocknation.com'},
+          'value.organizers.0.email': {$eq: 'jay@rocknation.com'},
         },
       },
     ];

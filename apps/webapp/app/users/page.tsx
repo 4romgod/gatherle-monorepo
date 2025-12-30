@@ -16,7 +16,7 @@ export default async function Page() {
           All Users
         </Typography>
         <SearchInput
-          itemList={users.map((user) => `${user.given_name} ${user.family_name}`)}
+          itemList={users.map(user => `${user.given_name} ${user.family_name}`)}
           sx={{
             marginBottom: 5,
             mx: 'auto',
@@ -24,7 +24,7 @@ export default async function Page() {
         />
         <Divider />
         <Grid container spacing={4} style={{ marginTop: '2rem' }}>
-          {users.map((user) => (
+          {users.map(user => (
             <UserBox key={user.userId} user={user} />
           ))}
         </Grid>

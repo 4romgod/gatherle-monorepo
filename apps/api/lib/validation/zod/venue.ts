@@ -14,29 +14,58 @@ const venueAddressSchema = z.object({
 });
 
 const venueGeoSchema = z.object({
-  latitude: z.number().gte(-90, {message: `Latitude ${ERROR_MESSAGES.INVALID}`}).lte(90, {message: `Latitude ${ERROR_MESSAGES.INVALID}`}),
-  longitude: z.number().gte(-180, {message: `Longitude ${ERROR_MESSAGES.INVALID}`}).lte(180, {message: `Longitude ${ERROR_MESSAGES.INVALID}`}),
+  latitude: z
+    .number()
+    .gte(-90, {message: `Latitude ${ERROR_MESSAGES.INVALID}`})
+    .lte(90, {message: `Latitude ${ERROR_MESSAGES.INVALID}`}),
+  longitude: z
+    .number()
+    .gte(-180, {message: `Longitude ${ERROR_MESSAGES.INVALID}`})
+    .lte(180, {message: `Longitude ${ERROR_MESSAGES.INVALID}`}),
 });
 
 export const CreateVenueInputSchema = z.object({
-  orgId: z.string().refine(mongoIdValidator, {message: `Organization ID ${ERROR_MESSAGES.INVALID}`}).optional(),
+  orgId: z
+    .string()
+    .refine(mongoIdValidator, {message: `Organization ID ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   type: z.nativeEnum(VenueType),
   name: z.string().min(2, {message: `Name ${ERROR_MESSAGES.REQUIRED}`}),
   address: venueAddressSchema.optional(),
   geo: venueGeoSchema.optional(),
-  url: z.string().url({message: `URL ${ERROR_MESSAGES.INVALID}`}).optional(),
-  capacity: z.number().int().positive({message: `Capacity ${ERROR_MESSAGES.INVALID}`}).optional(),
+  url: z
+    .string()
+    .url({message: `URL ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
+  capacity: z
+    .number()
+    .int()
+    .positive({message: `Capacity ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   amenities: z.array(z.string()).optional(),
 });
 
 export const UpdateVenueInputSchema = z.object({
   venueId: z.string().refine(mongoIdValidator, {message: `Venue ID ${ERROR_MESSAGES.INVALID}`}),
-  orgId: z.string().refine(mongoIdValidator, {message: `Organization ID ${ERROR_MESSAGES.INVALID}`}).optional(),
+  orgId: z
+    .string()
+    .refine(mongoIdValidator, {message: `Organization ID ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   type: z.nativeEnum(VenueType).optional(),
-  name: z.string().min(2, {message: `Name ${ERROR_MESSAGES.TOO_SHORT}`}).optional(),
+  name: z
+    .string()
+    .min(2, {message: `Name ${ERROR_MESSAGES.TOO_SHORT}`})
+    .optional(),
   address: venueAddressSchema.optional(),
   geo: venueGeoSchema.optional(),
-  url: z.string().url({message: `URL ${ERROR_MESSAGES.INVALID}`}).optional(),
-  capacity: z.number().int().positive({message: `Capacity ${ERROR_MESSAGES.INVALID}`}).optional(),
+  url: z
+    .string()
+    .url({message: `URL ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
+  capacity: z
+    .number()
+    .int()
+    .positive({message: `Capacity ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   amenities: z.array(z.string()).optional(),
 });

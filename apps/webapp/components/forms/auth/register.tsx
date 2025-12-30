@@ -31,7 +31,7 @@ export default function RegisterForm() {
   const { setToastProps, toastProps } = useCustomAppContext();
   const [formState, formAction] = useActionState(registerUserAction, {});
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleClickShowPassword = () => setShowPassword(show => !show);
 
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -72,44 +72,23 @@ export default function RegisterForm() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth margin="normal">
-            <TextField
-              required
-              label="First Name"
-              name="given_name"
-              variant="outlined"
-              color='secondary'
-            />
+            <TextField required label="First Name" name="given_name" variant="outlined" color="secondary" />
             <FormErrors error={formState.zodErrors?.given_name} />
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth margin="normal">
-            <TextField
-              required
-              label="Last Name"
-              name="family_name"
-              variant="outlined"
-              color='secondary'
-            />
+            <TextField required label="Last Name" name="family_name" variant="outlined" color="secondary" />
             <FormErrors error={formState.zodErrors?.family_name} />
           </FormControl>
         </Grid>
       </Grid>
       <FormControl fullWidth margin="normal">
-        <TextField
-          required
-          label="Email Address"
-          name="email"
-          variant="outlined"
-          color='secondary'
-        />
+        <TextField required label="Email Address" name="email" variant="outlined" color="secondary" />
         <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
       <FormControl fullWidth margin="normal">
-        <InputLabel
-          htmlFor="password"
-          color='secondary'
-        >
+        <InputLabel htmlFor="password" color="secondary">
           Password
         </InputLabel>
         <OutlinedInput
@@ -118,7 +97,7 @@ export default function RegisterForm() {
           name="password"
           type={showPassword ? 'text' : 'password'}
           autoComplete="current-password"
-          color='secondary'
+          color="secondary"
           endAdornment={
             <InputAdornment position="end">
               <IconButton
@@ -135,15 +114,8 @@ export default function RegisterForm() {
         <FormErrors error={formState.zodErrors?.password} />
       </FormControl>
       <FormControl fullWidth margin="normal">
-        <LocalizationProvider
-          dateAdapter={AdapterDayjs}
-          adapterLocale="en"
-        >
-          <DatePicker
-            label="Date of Birth"
-            format="YYYY-MM-DD"
-            name="birthdate"
-          />
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
+          <DatePicker label="Date of Birth" format="YYYY-MM-DD" name="birthdate" />
         </LocalizationProvider>
         <FormErrors error={formState.zodErrors?.birthdate} />
       </FormControl>
@@ -159,7 +131,7 @@ export default function RegisterForm() {
         size="large"
         fullWidth={true}
         startIcon={<FaFacebookF />}
-        color='secondary'
+        color="secondary"
         sx={{ mt: 1, mb: 1 }}
       >
         Continue with Facebook
@@ -170,11 +142,11 @@ export default function RegisterForm() {
         size="large"
         fullWidth={true}
         startIcon={<FcGoogle />}
-        color='secondary'
+        color="secondary"
         sx={{ mt: 1, mb: 1 }}
       >
         Continue with Google
       </Button>
     </Box>
   );
-};
+}

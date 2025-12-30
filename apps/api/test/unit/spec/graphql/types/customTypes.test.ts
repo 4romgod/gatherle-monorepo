@@ -1,4 +1,4 @@
-import type { ValueNode} from 'graphql';
+import type {ValueNode} from 'graphql';
 import {graphql, GraphQLSchema, GraphQLObjectType, GraphQLString, Kind} from 'graphql';
 import {AnyType} from '@ntlango/commons/types';
 

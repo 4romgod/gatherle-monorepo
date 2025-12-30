@@ -1,13 +1,7 @@
 import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {Event as EventModel} from '@/mongodb/models';
-import type {
-  RsvpInput,
-  UpdateEventInput,
-  QueryOptionsInput,
-  CreateEventInput} from '@ntlango/commons/types';
-import {
-  SortOrderInput
-} from '@ntlango/commons/types';
+import type {RsvpInput, UpdateEventInput, QueryOptionsInput, CreateEventInput} from '@ntlango/commons/types';
+import {SortOrderInput} from '@ntlango/commons/types';
 import {EventStatus} from '@ntlango/commons/types/event';
 import {CustomError, ErrorTypes, transformOptionsToPipeline} from '@/utils';
 import {GraphQLError} from 'graphql';
@@ -58,7 +52,7 @@ describe('EventDAO', () => {
       locationType: 'tba',
     },
     recurrenceRule: 'FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=13',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
   };
 
@@ -66,7 +60,7 @@ describe('EventDAO', () => {
     ...mockEventInput,
     eventId: 'mockEventId',
     slug: 'sample-event',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
   };
 
@@ -284,7 +278,7 @@ describe('EventDAO', () => {
         locationType: 'online',
         details: 'updated location',
       },
-      organizerList: [],
+      organizers: [],
       eventCategoryList: [],
     };
 
@@ -361,7 +355,9 @@ describe('EventDAO', () => {
       const updatedEventMock = {eventId: 'event123'};
       (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
 
-      const upsertSpy = jest.spyOn(EventParticipantDAO, 'upsert').mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1'} as any);
+      const upsertSpy = jest
+        .spyOn(EventParticipantDAO, 'upsert')
+        .mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1'} as any);
 
       const result = await EventDAO.RSVP(input);
 
@@ -437,7 +433,9 @@ describe('EventDAO', () => {
       const updatedEventMock = {eventId: 'event123'};
       (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({toObject: () => updatedEventMock}));
 
-      const cancelSpy = jest.spyOn(EventParticipantDAO, 'cancel').mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1', status: 'Cancelled'} as any);
+      const cancelSpy = jest
+        .spyOn(EventParticipantDAO, 'cancel')
+        .mockResolvedValue({participantId: 'p1', eventId: 'event123', userId: 'user1', status: 'Cancelled'} as any);
 
       const result = await EventDAO.cancelRSVP(input);
 

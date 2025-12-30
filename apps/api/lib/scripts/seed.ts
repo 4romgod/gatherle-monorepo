@@ -23,9 +23,12 @@ import {
 } from '@/mongodb/mockData';
 import type {FollowSeed, IntentSeed, ActivitySeed} from '@/mongodb/mockData/social';
 import type {EventSeedData} from '@/mongodb/mockData';
-import organizationsData, {OrganizationSeedData} from '@/mongodb/mockData/organizations';
-import venuesData, {VenueSeedData} from '@/mongodb/mockData/venues';
-import organizationMembershipsData, {OrganizationMembershipSeed} from '@/mongodb/mockData/organizationMemberships';
+import type {OrganizationSeedData} from '@/mongodb/mockData/organizations';
+import organizationsData from '@/mongodb/mockData/organizations';
+import type {VenueSeedData} from '@/mongodb/mockData/venues';
+import venuesData from '@/mongodb/mockData/venues';
+import type {OrganizationMembershipSeed} from '@/mongodb/mockData/organizationMemberships';
+import organizationMembershipsData from '@/mongodb/mockData/organizationMemberships';
 import type {
   CreateEventCategoryGroupInput,
   CreateEventCategoryInput,
@@ -180,14 +183,15 @@ async function seedEvents(
     const organizerIds = getRandomUniqueItems(userIds, 2);
     const participantIds = getRandomUniqueItems(userIds, 4);
     const categorySelection =
-      event.eventCategoryList && event.eventCategoryList.length
-        ? event.eventCategoryList
-        : getRandomUniqueItems(eventCategoryIds, 5);
+      event.eventCategoryList && event.eventCategoryList.length ? event.eventCategoryList : getRandomUniqueItems(eventCategoryIds, 5);
 
     const {orgIndex, venueIndex, ...eventBase} = event;
     const eventInput: CreateEventInput = {
       ...eventBase,
-      organizerList: organizerIds,
+      organizers: organizerIds.map((userId, index) => ({
+        userId,
+        role: index === 0 ? 'Host' : 'CoHost',
+      })),
       eventCategoryList: categorySelection,
       orgId: organization?.orgId,
       venueId: venue?.venueId,
@@ -198,7 +202,9 @@ async function seedEvents(
     for (const userId of participantIds) {
       let sharedVisibility: ParticipantVisibility;
       if (eventResponse.visibility === undefined) {
-        throw new Error(`Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`);
+        throw new Error(
+          `Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`,
+        );
       } else if (eventResponse.visibility === EventVisibility.Public) {
         sharedVisibility = ParticipantVisibility.Public;
       } else {
@@ -230,8 +236,8 @@ async function seedFollows(seedData: FollowSeed[], userIds: string[], organizati
       seed.targetUserIndex !== undefined
         ? userIds[seed.targetUserIndex]
         : seed.targetOrgIndex !== undefined
-        ? organizations[seed.targetOrgIndex]?.orgId
-        : undefined;
+          ? organizations[seed.targetOrgIndex]?.orgId
+          : undefined;
 
     if (!followerUserId || !targetId) {
       console.warn('Skipping follow seed due to missing IDs', seed);
@@ -274,8 +280,7 @@ async function seedActivities(seedData: ActivitySeed[], userIds: string[], event
   console.log('Starting to seed activity feed...');
   for (const seed of seedData) {
     const actorId = userIds[seed.actorIndex];
-    const objectId =
-      seed.objectRef === 'event' ? events[seed.objectIndex]?.eventId : userIds[seed.objectIndex];
+    const objectId = seed.objectRef === 'event' ? events[seed.objectIndex]?.eventId : userIds[seed.objectIndex];
     if (!actorId || !objectId) {
       console.warn('Skipping activity seed due to missing IDs', seed);
       continue;
@@ -287,8 +292,7 @@ async function seedActivities(seedData: ActivitySeed[], userIds: string[], event
     }
     let targetId: string | undefined;
     if (seed.targetIndex !== undefined) {
-      targetId =
-        seed.targetRef === 'event' ? events[seed.targetIndex]?.eventId : userIds[seed.targetIndex];
+      targetId = seed.targetRef === 'event' ? events[seed.targetIndex]?.eventId : userIds[seed.targetIndex];
     }
 
     await ActivityDAO.create({
@@ -325,13 +329,7 @@ async function main() {
   const createdVenues = await seedVenues(venuesData, createdOrganizations);
   await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, allUserIds);
 
-  const createdEvents = await seedEvents(
-    eventsMockData,
-    allUserIds,
-    allEventCategoriesIds,
-    createdOrganizations,
-    createdVenues,
-  );
+  const createdEvents = await seedEvents(eventsMockData, allUserIds, allEventCategoriesIds, createdOrganizations, createdVenues);
 
   await seedFollows(followSeedData, allUserIds, createdOrganizations);
   await seedIntents(intentSeedData, allUserIds, createdEvents);

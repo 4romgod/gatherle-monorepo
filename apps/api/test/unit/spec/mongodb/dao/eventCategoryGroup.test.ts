@@ -95,7 +95,7 @@ describe('EventCategoryGroupDAO', () => {
       expect(mockCreatedDocument.populate).toHaveBeenCalledWith('eventCategoryList');
       expect(result.eventCategoryList).toEqual(mockPopulatedCategories);
       expect(result.eventCategoryList).toHaveLength(mockPopulatedCategories.length);
-      
+
       result.eventCategoryList.forEach((category: any) => {
         expect(category).toHaveProperty('eventCategoryId');
         expect(category).toHaveProperty('name');
@@ -195,7 +195,7 @@ describe('EventCategoryGroupDAO', () => {
 
       const result = await EventCategoryGroupDAO.readEventCategoryGroups(options);
 
-      expect(transformOptionsToQuery).toHaveBeenCalledWith(EventCategoryGroupModel, options);      
+      expect(transformOptionsToQuery).toHaveBeenCalledWith(EventCategoryGroupModel, options);
       expect(mockQuery.populate).toHaveBeenCalledWith('eventCategoryList');
       expect(mockQuery.exec).toHaveBeenCalled();
       expect(result).toEqual(mockGroups);

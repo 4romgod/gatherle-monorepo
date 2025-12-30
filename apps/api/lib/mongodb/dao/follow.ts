@@ -22,11 +22,11 @@ class FollowDAO {
       if (status !== undefined) {
         (update.$set as Partial<FollowEntity>).status = status;
       }
-      const follow = await FollowModel.findOneAndUpdate(
-        {followerUserId, targetType, targetId},
-        update,
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      ).exec();
+      const follow = await FollowModel.findOneAndUpdate({followerUserId, targetType, targetId}, update, {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }).exec();
 
       if (!follow) {
         throw CustomError('Unable to upsert follow', ErrorTypes.INTERNAL_SERVER_ERROR);

@@ -20,5 +20,5 @@ export default function EventCategoryChip({ category }: { category: EventCategor
         clickable
       />
     </Link>
-  )
-};
+  );
+}

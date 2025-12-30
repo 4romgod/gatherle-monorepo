@@ -12,16 +12,16 @@ export const transformOptionsToPipeline = (options?: QueryOptionsInput): Pipelin
   if (options) {
     const {filters, sort, pagination} = options;
 
+    if (filters) {
+      pipeline.push(...createEventPipelineStages(filters));
+    }
+
     if (sort) {
       pipeline.push(...createSortStages(sort));
     }
 
     if (pagination) {
       pipeline.push(...createPaginationStages(pagination));
-    }
-
-    if (filters) {
-      pipeline.push(...createEventPipelineStages(filters));
     }
   }
 

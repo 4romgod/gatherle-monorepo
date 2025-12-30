@@ -1,13 +1,6 @@
 import {GraphQLError} from 'graphql';
 import {Event as EventModel} from '@/mongodb/models';
-import type {
-  Event as EventEntity,
-  UpdateEventInput,
-  CreateEventInput,
-  QueryOptionsInput,
-  RsvpInput,
-  CancelRsvpInput,
-} from '@ntlango/commons/types';
+import type {Event as EventEntity, UpdateEventInput, CreateEventInput, QueryOptionsInput, RsvpInput, CancelRsvpInput} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, KnownCommonError, extractValidationErrorMessage, transformOptionsToPipeline, validateUserIdentifiers} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {EventParticipantDAO} from '@/mongodb/dao';
@@ -16,12 +9,12 @@ import {ParticipantStatus} from '@ntlango/commons/types';
 class EventDAO {
   static async create(input: CreateEventInput): Promise<EventEntity> {
     try {
-      const event = await (await EventModel.create(input)).populate('organizerList eventCategoryList');
+      const event = await (await EventModel.create(input)).populate('eventCategoryList');
       return event.toObject();
     } catch (error) {
       console.error('Error creating event', error);
       const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
-      
+
       if (validationMessage !== 'Event validation failed') {
         throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
       }
@@ -31,7 +24,7 @@ class EventDAO {
 
   static async readEventById(eventId: string): Promise<EventEntity> {
     try {
-      const query = EventModel.findById(eventId).populate('organizerList eventCategoryList');
+      const query = EventModel.findById(eventId).populate('eventCategoryList');
       const event = await query.exec();
       if (!event) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
@@ -48,7 +41,7 @@ class EventDAO {
 
   static async readEventBySlug(slug: string): Promise<EventEntity> {
     try {
-      const query = EventModel.findOne({slug: slug}).populate('organizerList eventCategoryList');
+      const query = EventModel.findOne({slug: slug}).populate('eventCategoryList');
       const event = await query.exec();
       if (!event) {
         throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
@@ -77,9 +70,7 @@ class EventDAO {
   static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
     try {
       const {eventId, ...restInput} = input;
-      const updatedEvent = await EventModel.findByIdAndUpdate(eventId, restInput, {new: true})
-        .populate('organizerList eventCategoryList')
-        .exec();
+      const updatedEvent = await EventModel.findByIdAndUpdate(eventId, restInput, {new: true}).populate('eventCategoryList').exec();
 
       if (!updatedEvent) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
@@ -96,9 +87,7 @@ class EventDAO {
 
   static async deleteEventById(eventId: string): Promise<EventEntity> {
     try {
-      const deletedEvent = await EventModel.findByIdAndDelete(eventId)
-        .populate('organizerList eventCategoryList')
-        .exec();
+      const deletedEvent = await EventModel.findByIdAndDelete(eventId).populate('eventCategoryList').exec();
       if (!deletedEvent) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
       }
@@ -114,9 +103,7 @@ class EventDAO {
 
   static async deleteEventBySlug(slug: string): Promise<EventEntity> {
     try {
-      const deletedEvent = await EventModel.findOneAndDelete({slug})
-        .populate('organizerList eventCategoryList')
-        .exec();
+      const deletedEvent = await EventModel.findOneAndDelete({slug}).populate('eventCategoryList').exec();
       if (!deletedEvent) {
         throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
       }
@@ -135,7 +122,7 @@ class EventDAO {
 
     try {
       const validUserIds = await validateUserIdentifiers(input);
-      const event = await EventModel.findById(eventId).populate('organizerList eventCategoryList').exec();
+      const event = await EventModel.findById(eventId).populate('eventCategoryList').exec();
 
       if (!event) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
@@ -160,7 +147,7 @@ class EventDAO {
 
     try {
       const validUserIds = await validateUserIdentifiers(input);
-      const event = await EventModel.findById(eventId).populate('organizerList eventCategoryList').exec();
+      const event = await EventModel.findById(eventId).populate('eventCategoryList').exec();
 
       if (!event) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);

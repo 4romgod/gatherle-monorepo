@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, Button, styled, Box, Typography, Theme, useMediaQuery } from '@mui/material';
@@ -30,7 +30,10 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
   if (!isMounted || !isMobile) return null;
 
   const toggleBottomSheet = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-    if (event.type === 'keydown' && ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')) {
+    if (
+      event.type === 'keydown' &&
+      ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')
+    ) {
       return;
     }
     setIsBottomSheetOpen(open);
@@ -38,11 +41,7 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
 
   return (
     <Box component="div">
-      <FloatingButton
-        variant="contained"
-        color="primary"
-        onClick={toggleBottomSheet(true)}
-      >
+      <FloatingButton variant="contained" color="primary" onClick={toggleBottomSheet(true)}>
         <Box
           component="div"
           sx={{
@@ -51,7 +50,9 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
           }}
         >
           <TuneIcon />
-          <Typography variant='body1' pl={1}>Filters</Typography>
+          <Typography variant="body1" pl={1}>
+            Filters
+          </Typography>
         </Box>
       </FloatingButton>
       <Drawer
@@ -62,19 +63,17 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
           sx: {
             maxHeight: '80%',
             borderRadius: '8px 8px 0 0',
-            backgroundColor: '#ffffffb'
-          }
+            backgroundColor: '#ffffffb',
+          },
         }}
       >
         <Box component="div">
-          <Typography variant='h6' p={2}>Filters</Typography>
+          <Typography variant="h6" p={2}>
+            Filters
+          </Typography>
         </Box>
         <Box component="div">
-          <Typography
-            variant='h6'
-            p={2}
-            onClick={toggleBottomSheet(false)}
-          >
+          <Typography variant="h6" p={2} onClick={toggleBottomSheet(false)}>
             X
           </Typography>
         </Box>
@@ -92,13 +91,7 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
             <DateFilter />
           </Box>
           <Box component="div" pt={1}>
-            <Button
-              variant="contained"
-              size="large"
-              color="secondary"
-              fullWidth={true}
-              sx={{ mt: 1, mb: 1 }}
-            >
+            <Button variant="contained" size="large" color="secondary" fullWidth={true} sx={{ mt: 1, mb: 1 }}>
               Filter Events
             </Button>
           </Box>
@@ -106,4 +99,4 @@ export default function MobileEventFilters({ categoryList }: DisplayEventFilters
       </Drawer>
     </Box>
   );
-};
+}

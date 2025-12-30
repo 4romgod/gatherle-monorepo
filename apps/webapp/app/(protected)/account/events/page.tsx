@@ -17,10 +17,10 @@ export default async function EventsPage() {
       options: {
         filters: [
           {
-            field: 'organizerList.userId',
+            field: 'organizers.userId',
             operator: FilterOperatorInput.Eq,
             value: session.user.id,
-          }
+          },
         ],
       },
     },
@@ -29,7 +29,7 @@ export default async function EventsPage() {
   return (
     <main>
       <div>
-        {events.readEvents.map((event) => {
+        {events.readEvents.map(event => {
           return (
             <Link key={event.eventId} href={ROUTES.ACCOUNT.EVENTS.EVENT(event.slug)}>
               <EventBox key={event.eventId} event={event} />;

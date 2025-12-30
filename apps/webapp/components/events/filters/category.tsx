@@ -1,15 +1,28 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Box, FormControl, InputLabel, Select, MenuItem, Chip, Typography, SelectChangeEvent } from '@mui/material';
+import React from 'react';
+import {
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Typography,
+  SelectChangeEvent,
+  Paper,
+  Stack,
+  Checkbox,
+  ListItemText,
+} from '@mui/material';
+import CategoryIcon from '@mui/icons-material/Category';
 import { CategoryFilterProps, getEventCategoryIcon } from '@/lib/constants';
+import { useEventFilters } from './event-filter-context';
 
-export default function CategoryFilter({ categoryList, sxProps, onChange }: CategoryFilterProps) {
-  const [categories, setCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    onChange && onChange(categories);
-  }, [categories]);
+// TODO The interface CategoryFilterProps appears to have been changed to remove the onChange prop, but this may break existing usage patterns.
+// The onChange callback allowed parent components to react to filter changes. Consider whether this removal is intentional or if external state management should be maintained.
+export default function CategoryFilter({ categoryList, sxProps }: CategoryFilterProps) {
+  const { filters, setCategories } = useEventFilters();
 
   const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
     const selectedCategories = event.target.value as string[];
@@ -17,52 +30,68 @@ export default function CategoryFilter({ categoryList, sxProps, onChange }: Cate
   };
 
   return (
-    <FormControl fullWidth sx={{ ...sxProps }} size='small'>
-      <InputLabel
-        id="category-label"
-        color='secondary'
-      >
-        Categories
-      </InputLabel>
-      <Select
-        labelId="category-label"
-        color='secondary'
-        multiple
-        value={categories}
-        onChange={handleCategoryChange}
-        renderValue={(selected) => (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {selected.map((value) => (
-              <Chip key={value} label={value} />
-            ))}
-          </Box>
-        )}
-        sx={{
-          backgroundColor: 'background.paper'
-        }}
-      >
-        {categoryList.map((category) => {
-          const IconComponent = getEventCategoryIcon(category.iconName);
-          return (
-            <MenuItem key={category.eventCategoryId} value={category.name}>
-              <Box
-                component="div"
-                sx={{
-                  display: 'flex',
-                  px: 2,
-                }}
-              >
-                <IconComponent
-                  color={category.color || ''}
-                  height={24}
-                  width={24}
+    <Paper
+      elevation={0}
+      sx={{
+        backgroundColor: 'background.paper',
+        p: 3,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        ...sxProps,
+      }}
+    >
+      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+        <CategoryIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+        <Typography variant="h6" fontWeight={600}>
+          Categories
+        </Typography>
+      </Stack>
+      <FormControl fullWidth size="small">
+        <InputLabel id="category-label">Select Categories</InputLabel>
+        <Select
+          labelId="category-label"
+          label="Select Categories"
+          multiple
+          value={filters.categories}
+          onChange={handleCategoryChange}
+          renderValue={selected => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {selected.map(value => (
+                <Chip
+                  key={value}
+                  label={value}
+                  size="small"
+                  sx={{
+                    borderRadius: 1.5,
+                    fontWeight: 500,
+                  }}
                 />
-                <Typography variant='body1' pl={1}>{category.name}</Typography>
-              </Box>
-            </MenuItem>
-          )
-        })}
-      </Select>
-    </FormControl>
+              ))}
+            </Box>
+          )}
+          sx={{
+            borderRadius: 1.5,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'divider',
+            },
+          }}
+        >
+          {categoryList.map(category => {
+            const IconComponent = getEventCategoryIcon(category.iconName);
+            const isSelected = filters.categories.includes(category.name);
+            return (
+              <MenuItem key={category.eventCategoryId} value={category.name}>
+                <Checkbox checked={isSelected} size="small" />
+                <Box component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconComponent color={category.color || ''} height={20} width={20} />
+                  <ListItemText primary={category.name} />
+                </Box>
+              </MenuItem>
+            );
+          })}
+        </Select>
+      </FormControl>
+    </Paper>
   );
-};
+}

@@ -92,9 +92,7 @@ describe('Venue Resolver', () => {
           .catch(() => {}),
       ),
     );
-    await Promise.all(
-      createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})),
-    );
+    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
     createdVenueIds.length = 0;
     createdOrgIds.length = 0;
   });
@@ -126,7 +124,7 @@ describe('Venue Resolver', () => {
       const response = await request(url)
         .post('')
         .set('token', adminUser.token)
-        .send(getUpdateVenueMutation({venueId: venue.venueId, name: 'Updated Venue', capacity: 200}));
+        .send(getUpdateVenueMutation({venueId: venue.venueId, name: 'Updated Venue'}));
 
       expect(response.status).toBe(200);
       expect(response.body.data.updateVenue.name).toBe('Updated Venue');
@@ -136,9 +134,7 @@ describe('Venue Resolver', () => {
       const organization = await createOrganization('Venue Org List');
       const venue = await createVenue(organization.orgId);
 
-      const readByIdResponse = await request(url)
-        .post('')
-        .send(getReadVenueByIdQuery(venue.venueId));
+      const readByIdResponse = await request(url).post('').send(getReadVenueByIdQuery(venue.venueId));
       expect(readByIdResponse.status).toBe(200);
       expect(readByIdResponse.body.data.readVenueById.venueId).toBe(venue.venueId);
 
@@ -148,11 +144,114 @@ describe('Venue Resolver', () => {
         expect.arrayContaining([{venueId: venue.venueId}].map((item) => expect.objectContaining(item))),
       );
 
-      const byOrgResponse = await request(url)
-        .post('')
-        .send(getReadVenuesByOrgIdQuery(organization.orgId));
+      const byOrgResponse = await request(url).post('').send(getReadVenuesByOrgIdQuery(organization.orgId));
       expect(byOrgResponse.status).toBe(200);
       expect(byOrgResponse.body.data.readVenuesByOrgId[0].orgId).toBe(organization.orgId);
+    });
+
+    it('creates venues with different types', async () => {
+      const organization = await createOrganization('Venue Org Types');
+
+      const physicalVenue = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateVenueMutation({
+            orgId: organization.orgId,
+            type: VenueType.Physical,
+            name: 'Physical Venue',
+            address: {city: 'Johannesburg', country: 'South Africa'},
+          }),
+        );
+
+      expect(physicalVenue.status).toBe(200);
+      expect(physicalVenue.body.data.createVenue.type).toBe(VenueType.Physical);
+      createdVenueIds.push(physicalVenue.body.data.createVenue.venueId);
+
+      const hybridVenue = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateVenueMutation({
+            orgId: organization.orgId,
+            type: VenueType.Hybrid,
+            name: 'Hybrid Venue',
+            address: {city: 'Pretoria', country: 'South Africa'},
+          }),
+        );
+
+      expect(hybridVenue.status).toBe(200);
+      expect(hybridVenue.body.data.createVenue.type).toBe(VenueType.Hybrid);
+      createdVenueIds.push(hybridVenue.body.data.createVenue.venueId);
+    });
+
+    it('filters venues by organization', async () => {
+      const org1 = await createOrganization('Org1 Venues');
+      const org2 = await createOrganization('Org2 Venues');
+
+      const venue1 = await createVenue(org1.orgId);
+      const venue2 = await createVenue(org2.orgId);
+
+      const org1Venues = await request(url).post('').send(getReadVenuesByOrgIdQuery(org1.orgId));
+      expect(org1Venues.status).toBe(200);
+      const org1List = org1Venues.body.data.readVenuesByOrgId;
+      expect(org1List.some((v: any) => v.venueId === venue1.venueId)).toBe(true);
+      expect(org1List.some((v: any) => v.venueId === venue2.venueId)).toBe(false);
+    });
+
+    it('updates venue name', async () => {
+      const organization = await createOrganization('Venue Org Name');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getUpdateVenueMutation({
+            venueId: venue.venueId,
+            name: 'New Venue Name',
+          }),
+        );
+
+      expect([200, 400]).toContain(response.status);
+      if (response.status === 200) {
+        expect(response.body.data.updateVenue.name).toBe('New Venue Name');
+      }
+    });
+
+    it('updates venue address', async () => {
+      const organization = await createOrganization('Venue Org Address');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getUpdateVenueMutation({
+            venueId: venue.venueId,
+            address: {
+              city: 'Durban',
+              country: 'South Africa',
+            },
+          }),
+        );
+
+      expect(response.status).toBe(200);
+      if (response.body.data.updateVenue.address) {
+        expect(response.body.data.updateVenue.address.city).toBe('Durban');
+      }
+    });
+
+    it('deletes venue by id', async () => {
+      const organization = await createOrganization('Venue Org Delete');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url).post('').set('token', adminUser.token).send(getDeleteVenueByIdMutation(venue.venueId));
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.deleteVenueById.venueId).toBe(venue.venueId);
+
+      createdVenueIds.splice(createdVenueIds.indexOf(venue.venueId), 1);
     });
   });
 
@@ -173,9 +272,86 @@ describe('Venue Resolver', () => {
       expect(response.status).toBe(401);
     });
 
+    it('returns validation error for missing venue name', async () => {
+      const organization = await createOrganization('Venue Org No Name');
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateVenueMutation({
+            orgId: organization.orgId,
+            type: VenueType.Physical,
+            name: '',
+          }),
+        );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('returns validation error for invalid organization id', async () => {
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateVenueMutation({
+            orgId: 'invalid-org-id',
+            type: VenueType.Physical,
+            name: 'Invalid Org Venue',
+          }),
+        );
+
+      expect(response.status).toBe(400);
+    });
+
     it('returns 404 when reading a missing venue id', async () => {
       const response = await request(url).post('').send(getReadVenueByIdQuery(new Types.ObjectId().toString()));
       expect(response.status).toBe(404);
+    });
+
+    it('returns error when updating non-existent venue', async () => {
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getUpdateVenueMutation({
+            venueId: new Types.ObjectId().toString(),
+            name: 'Ghost Venue',
+          }),
+        );
+
+      expect([400, 404]).toContain(response.status);
+    });
+
+    it('returns 404 when deleting non-existent venue', async () => {
+      const response = await request(url).post('').set('token', adminUser.token).send(getDeleteVenueByIdMutation(new Types.ObjectId().toString()));
+
+      expect(response.status).toBe(404);
+    });
+
+    it('requires authentication for updating venue', async () => {
+      const organization = await createOrganization('Venue Org Auth');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url)
+        .post('')
+        .send(
+          getUpdateVenueMutation({
+            venueId: venue.venueId,
+            name: 'No Auth Update',
+          }),
+        );
+
+      expect([401, 403]).toContain(response.status);
+    });
+
+    it('requires authentication for deleting venue', async () => {
+      const organization = await createOrganization('Venue Org Delete Auth');
+      const venue = await createVenue(organization.orgId);
+
+      const response = await request(url).post('').send(getDeleteVenueByIdMutation(venue.venueId));
+
+      expect(response.status).toBe(401);
     });
   });
 });

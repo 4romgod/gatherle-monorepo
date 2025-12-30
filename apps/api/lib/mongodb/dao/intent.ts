@@ -32,11 +32,7 @@ class IntentDAO {
         };
       }
 
-      const intent = await IntentModel.findOneAndUpdate(
-        filter,
-        updateQuery,
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      ).exec();
+      const intent = await IntentModel.findOneAndUpdate(filter, updateQuery, {new: true, upsert: true, setDefaultsOnInsert: true}).exec();
 
       if (!intent) {
         throw CustomError('Unable to persist intent', ErrorTypes.INTERNAL_SERVER_ERROR);

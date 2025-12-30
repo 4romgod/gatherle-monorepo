@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility} from '@ntlango/commons/types/event';
+import {EventLifecycleStatus, EventOrganizerRole, EventPrivacySetting, EventStatus, EventVisibility} from '@ntlango/commons/types/event';
 import {ERROR_MESSAGES} from '@/validation';
 import mongoose from 'mongoose';
 
@@ -68,12 +68,15 @@ export const EventSchema = z.object({
 
   categoryIds: z.array(z.string()).optional().describe('Flattened category ids'),
 
-  tagList: z.array(z.string()).optional().describe('Freeform tags'),
-
-  organizerList: z
-    .array(z.string().refine(mongoose.Types.ObjectId.isValid, {message: `Event ID ${ERROR_MESSAGES.INVALID}`}))
+  organizers: z
+    .array(
+      z.object({
+        userId: z.string().refine(mongoose.Types.ObjectId.isValid, {message: `User ID ${ERROR_MESSAGES.INVALID}`}),
+        role: z.nativeEnum(EventOrganizerRole),
+      }),
+    )
     .min(1, {message: 'At least one organizer is required'})
-    .describe('The list of organizers for the event, identified by their IDs.'),
+    .describe('The list of organizers for the event with their roles.'),
 
   tags: z.record(z.any()).optional().describe('A set of tags associated with the event for categorization or search purposes.'),
 

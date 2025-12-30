@@ -1,13 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  TextField,
-  Grid,
-  Typography,
-  Box,
-  FormControl,
-} from '@mui/material';
+import { TextField, Grid, Typography, Box, FormControl } from '@mui/material';
 import { LocationInputProps } from '@/lib/constants';
 import { Location } from '@/data/graphql/types/graphql';
 import LocationTypeRadioButtons from '@/components/buttons/location-type-radio-button';
@@ -25,8 +19,8 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
 
   const [locationDetails, setLocationDetails] = useState<Location>({
     locationType,
-    address: (locationType === 'venue') ? { ...defaultAddress } : undefined,
-    details: (locationType !== 'venue') ? '' : undefined,
+    address: locationType === 'venue' ? { ...defaultAddress } : undefined,
+    details: locationType !== 'venue' ? '' : undefined,
   });
 
   useEffect(() => {
@@ -37,14 +31,14 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
     setLocationType(type);
     setLocationDetails({
       locationType: type,
-      address: (type === 'venue') ? { ...defaultAddress } : undefined,
-      details: (type !== 'venue') ? '' : undefined,
+      address: type === 'venue' ? { ...defaultAddress } : undefined,
+      details: type !== 'venue' ? '' : undefined,
     });
   }, []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setLocationDetails((prev) => ({
+    setLocationDetails(prev => ({
       ...prev,
       address: prev.address ? { ...prev.address, [name]: value } : undefined,
     }));
@@ -60,7 +54,9 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>Location</Typography>
+      <Typography variant="h5" gutterBottom>
+        Location
+      </Typography>
 
       <FormControl component="fieldset" sx={{ width: '100%', mb: 4 }}>
         <LocationTypeRadioButtons selectedType={locationType} onChange={handleLocationTypeChange} />
@@ -71,7 +67,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
         <Box>
           <Grid container spacing={2}>
             {addressFields.map(({ label, name }) => (
-              <Grid size={{xs: 12, sm: 6}} key={name}>
+              <Grid size={{ xs: 12, sm: 6 }} key={name}>
                 <TextField
                   fullWidth
                   label={label}
@@ -80,7 +76,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
                   onChange={handleInputChange}
                   required
                   sx={{ mt: 1 }}
-                  color='secondary'
+                  color="secondary"
                 />
               </Grid>
             ))}

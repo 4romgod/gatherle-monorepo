@@ -87,9 +87,7 @@ describe('OrganizationMembership Resolver', () => {
           .catch(() => {}),
       ),
     );
-    await Promise.all(
-      createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})),
-    );
+    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
     createdMembershipIds.length = 0;
     createdOrgIds.length = 0;
   });
@@ -125,17 +123,11 @@ describe('OrganizationMembership Resolver', () => {
       const organization = await createOrganization('Membership Read Org');
       const membership = await createMembership(organization.orgId, new Types.ObjectId().toString());
 
-      const byIdResponse = await request(url)
-        .post('')
-        .send(getReadOrganizationMembershipByIdQuery(membership.membershipId));
+      const byIdResponse = await request(url).post('').send(getReadOrganizationMembershipByIdQuery(membership.membershipId));
       expect(byIdResponse.status).toBe(200);
-      expect(byIdResponse.body.data.readOrganizationMembershipById.membershipId).toBe(
-        membership.membershipId,
-      );
+      expect(byIdResponse.body.data.readOrganizationMembershipById.membershipId).toBe(membership.membershipId);
 
-      const byOrgResponse = await request(url)
-        .post('')
-        .send(getReadOrganizationMembershipsByOrgIdQuery(organization.orgId));
+      const byOrgResponse = await request(url).post('').send(getReadOrganizationMembershipsByOrgIdQuery(organization.orgId));
       expect(byOrgResponse.status).toBe(200);
       expect(byOrgResponse.body.data.readOrganizationMembershipsByOrgId).toEqual(
         expect.arrayContaining([{membershipId: membership.membershipId}].map((item) => expect.objectContaining(item))),
@@ -152,9 +144,7 @@ describe('OrganizationMembership Resolver', () => {
         .send(getDeleteOrganizationMembershipMutation({membershipId: membership.membershipId}));
 
       expect(response.status).toBe(200);
-      expect(response.body.data.deleteOrganizationMembership.membershipId).toBe(
-        membership.membershipId,
-      );
+      expect(response.body.data.deleteOrganizationMembership.membershipId).toBe(membership.membershipId);
       createdMembershipIds.splice(createdMembershipIds.indexOf(membership.membershipId), 1);
     });
   });

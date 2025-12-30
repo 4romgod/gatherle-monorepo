@@ -22,13 +22,9 @@ export default function ToggleThemeMode({ setThemeMode, themeMode }: ToggleTheme
         minWidth: 0,
         padding: 0,
       }}
-      color='secondary'
+      color="secondary"
     >
-      {isDarkTheme ? (
-        <SunIcon height={24} width={24} />
-      ) : (
-        <MoonIcon height={24} width={24} />
-      )}
+      {isDarkTheme ? <SunIcon height={24} width={24} /> : <MoonIcon height={24} width={24} />}
     </Button>
   );
 }

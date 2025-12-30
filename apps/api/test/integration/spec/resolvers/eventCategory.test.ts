@@ -2,12 +2,12 @@ import request from 'supertest';
 import {Types} from 'mongoose';
 import {kebabCase} from 'lodash';
 import type {IntegrationServer} from '@/test/integration/utils/server';
-import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import {startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventCategoryDAO} from '@/mongodb/dao';
 import {usersMockData} from '@/mongodb/mockData';
 import {generateToken} from '@/utils/auth';
 import type {CreateEventCategoryInput, QueryOptionsInput, User, UserWithToken} from '@ntlango/commons/types';
-import { UserRole} from '@ntlango/commons/types';
+import {UserRole, SortOrderInput} from '@ntlango/commons/types';
 import {
   getCreateEventCategoryMutation,
   getReadEventCategoryByIdQuery,
@@ -60,10 +60,7 @@ describe('EventCategory Resolver', () => {
       });
 
       it('should create a new event category when input is valid', async () => {
-        const response = await request(url)
-          .post('')
-          .set('token', adminUser.token)
-          .send(getCreateEventCategoryMutation(createEventCategoryInput));
+        const response = await request(url).post('').set('token', adminUser.token).send(getCreateEventCategoryMutation(createEventCategoryInput));
 
         expect(response.status).toBe(200);
         expect(response.error).toBeFalsy();
@@ -130,6 +127,40 @@ describe('EventCategory Resolver', () => {
         const ourCategory = categories.find((category: any) => category.slug === testEventCategorySlug);
         expect(ourCategory).toBeDefined();
       });
+
+      it('should read category by slug', async () => {
+        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.readEventCategoryBySlug.eventCategoryId).toBe(createdCategory.eventCategoryId);
+      });
+
+      it('should read categories with pagination', async () => {
+        await EventCategoryDAO.create(createEventCategoryInput);
+        const options: QueryOptionsInput = {pagination: {skip: 0, limit: 5}};
+        const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
+
+        expect(response.status).toBe(200);
+        const categories = response.body.data.readEventCategories;
+        expect(categories.length).toBeLessThanOrEqual(5);
+      });
+
+      it('should read categories with sort', async () => {
+        await EventCategoryDAO.create(createEventCategoryInput);
+        const options: QueryOptionsInput = {
+          sort: [{field: 'name', order: SortOrderInput.asc}],
+        };
+        const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
+
+        expect(response.status).toBe(200);
+        const categories = response.body.data.readEventCategories;
+        if (categories.length > 1) {
+          const names = categories.map((c: any) => c.name);
+          const sortedNames = [...names].sort();
+          expect(names).toEqual(sortedNames);
+        }
+      });
     });
   });
 
@@ -138,6 +169,47 @@ describe('EventCategory Resolver', () => {
       it('should require admin authorization', async () => {
         const response = await request(url).post('').send(getCreateEventCategoryMutation(createEventCategoryInput));
         expect(response.status).toBe(401);
+      });
+
+      it('should return conflict for duplicate category name', async () => {
+        await request(url).post('').set('token', adminUser.token).send(getCreateEventCategoryMutation(createEventCategoryInput));
+
+        const duplicateResponse = await request(url)
+          .post('')
+          .set('token', adminUser.token)
+          .send(getCreateEventCategoryMutation(createEventCategoryInput));
+
+        expect(duplicateResponse.status).toBe(409);
+
+        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
+      });
+
+      it('should return validation error for missing name', async () => {
+        const response = await request(url)
+          .post('')
+          .set('token', adminUser.token)
+          .send(
+            getCreateEventCategoryMutation({
+              ...createEventCategoryInput,
+              name: '',
+            }),
+          );
+
+        expect(response.status).toBe(400);
+      });
+
+      it('should return validation error for missing icon name', async () => {
+        const response = await request(url)
+          .post('')
+          .set('token', adminUser.token)
+          .send(
+            getCreateEventCategoryMutation({
+              ...createEventCategoryInput,
+              iconName: '',
+            }),
+          );
+
+        expect(response.status).toBe(400);
       });
     });
 
@@ -154,11 +226,34 @@ describe('EventCategory Resolver', () => {
           );
         expect(response.status).toBe(404);
       });
+
+      it('should require authentication', async () => {
+        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+
+        const response = await request(url)
+          .post('')
+          .send(
+            getUpdateEventCategoryMutation({
+              eventCategoryId: createdCategory.eventCategoryId,
+              iconName: 'no-auth',
+            }),
+          );
+
+        expect(response.status).toBe(401);
+
+        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
+      });
     });
 
     describe('readEventCategory Queries', () => {
       it('should return not found for missing slug', async () => {
         const response = await request(url).post('').send(getReadEventCategoryBySlugQuery('missing'));
+        expect(response.status).toBe(404);
+      });
+
+      it('should return not found for non-existent id', async () => {
+        const response = await request(url).post('').send(getReadEventCategoryByIdQuery(new Types.ObjectId().toString()));
+
         expect(response.status).toBe(404);
       });
     });

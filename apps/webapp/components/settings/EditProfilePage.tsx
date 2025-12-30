@@ -1,20 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Avatar,
-  Grid,
-  IconButton,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Edit as EditIcon,
-  CameraAlt as CameraIcon
-} from '@mui/icons-material';
+import { Box, Typography, TextField, Button, Avatar, Grid, IconButton, CircularProgress } from '@mui/material';
+import { Edit as EditIcon, CameraAlt as CameraIcon } from '@mui/icons-material';
 import { Address, UpdateUserInput, User } from '@/data/graphql/types/graphql';
 import { useActionState } from 'react';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
@@ -67,7 +55,7 @@ export default function EditProfilePage({ user }: { user: User }) {
     const { name, value } = e.target;
     setProfile(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -75,7 +63,7 @@ export default function EditProfilePage({ user }: { user: User }) {
     setProfile(prev => ({
       ...prev,
       address: address,
-    }))
+    }));
   };
 
   return (
@@ -85,20 +73,15 @@ export default function EditProfilePage({ user }: { user: User }) {
           display: { xs: 'block', md: 'flex' },
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: 3
+          mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight='bold' sx={{ mb: { xs: 2, md: 0 } }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: { xs: 2, md: 0 } }}>
           Edit Profile
         </Typography>
 
         {!isEditing && (
-          <Button
-            startIcon={<EditIcon />}
-            onClick={() => setIsEditing(true)}
-            variant="outlined"
-            color="primary"
-          >
+          <Button startIcon={<EditIcon />} onClick={() => setIsEditing(true)} variant="outlined" color="primary">
             Edit
           </Button>
         )}
@@ -114,19 +97,14 @@ export default function EditProfilePage({ user }: { user: User }) {
             />
             {isEditing && (
               <Box sx={{ position: 'absolute', bottom: 10, right: 0 }}>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="profile-picture-upload"
-                  type="file"
-                />
+                <input accept="image/*" style={{ display: 'none' }} id="profile-picture-upload" type="file" />
                 <label htmlFor="profile-picture-upload">
                   <IconButton
                     component="span"
                     sx={{
                       backgroundColor: 'rgba(0,0,0,0.5)',
                       color: 'white',
-                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+                      '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
                     }}
                   >
                     <CameraIcon fontSize="small" />
@@ -152,7 +130,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   variant="outlined"
-                  color='secondary'
+                  color="secondary"
                 />
                 <FormErrors error={formState?.zodErrors?.given_name} />
               </Grid>
@@ -165,7 +143,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   variant="outlined"
-                  color='secondary'
+                  color="secondary"
                 />
                 <FormErrors error={formState?.zodErrors?.family_name} />
               </Grid>
@@ -178,7 +156,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   variant="outlined"
-                  color='secondary'
+                  color="secondary"
                 />
                 <FormErrors error={formState?.zodErrors?.username} />
               </Grid>
@@ -192,11 +170,11 @@ export default function EditProfilePage({ user }: { user: User }) {
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   variant="outlined"
-                  color='secondary'
+                  color="secondary"
                   slotProps={{
                     inputLabel: {
-                      shrink: true
-                    }
+                      shrink: true,
+                    },
                   }}
                 />
                 <FormErrors error={formState?.zodErrors?.birthdate} />
@@ -212,7 +190,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                   multiline
                   rows={3}
                   variant="outlined"
-                  color='secondary'
+                  color="secondary"
                 />
                 <FormErrors error={formState?.zodErrors?.bio} />
               </Grid>
@@ -226,7 +204,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     variant="outlined"
-                    color='secondary'
+                    color="secondary"
                   />
                   <FormErrors error={formState?.zodErrors?.phone_number} />
                 </Box>
@@ -238,12 +216,7 @@ export default function EditProfilePage({ user }: { user: User }) {
             <Typography variant="h5" sx={{ my: 2 }}>
               Home Address
             </Typography>
-            <AddressForm
-              value={profile.address}
-              onChange={handleAddressChange}
-              disabled={!isEditing}
-              name='address'
-            />
+            <AddressForm value={profile.address} onChange={handleAddressChange} disabled={!isEditing} name="address" />
           </Grid>
         </Grid>
 
@@ -270,6 +243,6 @@ export default function EditProfilePage({ user }: { user: User }) {
           </Box>
         )}
       </Box>
-    </Box >
+    </Box>
   );
-};
+}

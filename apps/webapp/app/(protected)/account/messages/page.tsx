@@ -7,7 +7,7 @@ export default function MessagesPage() {
   return (
     <Box
       sx={{
-        backgroundColor: 'background.paper'
+        backgroundColor: 'background.paper',
       }}
     >
       <MessagesPanel />

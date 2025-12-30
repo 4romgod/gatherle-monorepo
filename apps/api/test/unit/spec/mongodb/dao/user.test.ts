@@ -1,7 +1,7 @@
 import {UserDAO} from '@/mongodb/dao';
 import {User} from '@/mongodb/models';
 import type {CreateUserInput, UpdateUserInput, QueryOptionsInput} from '@ntlango/commons/types';
-import { SortOrderInput} from '@ntlango/commons/types';
+import {SortOrderInput} from '@ntlango/commons/types';
 import {Gender, UserRole} from '@ntlango/commons/types/user';
 import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
@@ -64,7 +64,7 @@ describe('UserDAO', () => {
         city: 'Durban',
         state: 'KZN',
         zipCode: '0900',
-      }
+      },
     },
     interests: [],
     birthdate: '1997-07-05',
@@ -91,12 +91,12 @@ describe('UserDAO', () => {
       (User.create as jest.Mock).mockResolvedValue(
         createMockSuccessMongooseQuery({
           toObject: () => mockUser,
-        })
+        }),
       );
 
       const result = await UserDAO.create(mockCreateUserInput);
 
-      expect(result).toEqual({ ...mockUser, token: 'mockToken' });
+      expect(result).toEqual({...mockUser, token: 'mockToken'});
       expect(generateToken).toHaveBeenCalledWith(mockUser);
     });
 
@@ -110,13 +110,13 @@ describe('UserDAO', () => {
               username: 'test',
             };
           },
-        })
+        }),
       );
 
-      const result = await UserDAO.create({ ...mockCreateUserInput, username: undefined });
+      const result = await UserDAO.create({...mockCreateUserInput, username: undefined});
 
-      expect(result).toEqual({ ...mockUser, username: 'test', token: 'mockToken' });
-      expect(generateToken).toHaveBeenCalledWith({ ...mockUser, username: 'test' });
+      expect(result).toEqual({...mockUser, username: 'test', token: 'mockToken'});
+      expect(generateToken).toHaveBeenCalledWith({...mockUser, username: 'test'});
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
@@ -153,8 +153,8 @@ describe('UserDAO', () => {
 
       const result = await UserDAO.login(mockLoginUserInput);
 
-      expect(result).toEqual({ ...mockUser, token: 'mockToken' });
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(result).toEqual({...mockUser, token: 'mockToken'});
+      expect(User.findOne).toHaveBeenCalledWith({email: 'test@example.com'});
       expect(generateToken).toHaveBeenCalledWith(mockUser);
     });
 
@@ -266,7 +266,7 @@ describe('UserDAO', () => {
       const result = await UserDAO.readUserByUsername(username);
 
       expect(result).toEqual(mockUser);
-      expect(User.findOne).toHaveBeenCalledWith({ username: 'testUser' });
+      expect(User.findOne).toHaveBeenCalledWith({username: 'testUser'});
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
@@ -309,7 +309,7 @@ describe('UserDAO', () => {
       const result = await UserDAO.readUserByEmail(email);
 
       expect(result).toEqual(mockUser);
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
+      expect(User.findOne).toHaveBeenCalledWith({email: 'test@example.com'});
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
@@ -348,7 +348,7 @@ describe('UserDAO', () => {
         },
       ];
 
-      const mockResults = mockUsers.map((user) => ({ toObject: () => user }));
+      const mockResults = mockUsers.map((user) => ({toObject: () => user}));
       (User.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResults));
 
       const result = await UserDAO.readUsers();
@@ -380,7 +380,7 @@ describe('UserDAO', () => {
         },
       ];
 
-      const mockResults = mockUsers.map((user) => ({ toObject: () => user }));
+      const mockResults = mockUsers.map((user) => ({toObject: () => user}));
       (transformOptionsToQuery as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResults));
 
       const result = await UserDAO.readUsers(options);
@@ -426,7 +426,7 @@ describe('UserDAO', () => {
           email: 'updated@example.com',
           username: 'updatedUser',
         },
-        { new: true },
+        {new: true},
       );
     });
 
@@ -519,7 +519,7 @@ describe('UserDAO', () => {
       const result = await UserDAO.deleteUserByEmail(email);
 
       expect(result).toEqual(mockDeletedUser);
-      expect(User.findOneAndDelete).toHaveBeenCalledWith({ email: 'deleted@example.com' });
+      expect(User.findOneAndDelete).toHaveBeenCalledWith({email: 'deleted@example.com'});
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
@@ -561,7 +561,7 @@ describe('UserDAO', () => {
       const result = await UserDAO.deleteUserByUsername(username);
 
       expect(result).toEqual(mockDeletedUser);
-      expect(User.findOneAndDelete).toHaveBeenCalledWith({ username: 'deletedUser' });
+      expect(User.findOneAndDelete).toHaveBeenCalledWith({username: 'deletedUser'});
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
@@ -602,7 +602,7 @@ describe('UserDAO', () => {
         {
           userRole: UserRole.Admin,
         },
-        { new: true },
+        {new: true},
       );
     });
 
@@ -617,7 +617,7 @@ describe('UserDAO', () => {
         {
           userRole: UserRole.Admin,
         },
-        { new: true },
+        {new: true},
       );
     });
 
@@ -631,7 +631,7 @@ describe('UserDAO', () => {
         {
           userRole: UserRole.Admin,
         },
-        { new: true },
+        {new: true},
       );
     });
   });

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useState } from 'react';
 import { Card, CardContent, Typography, Button, Box, IconButton } from '@mui/material';
@@ -10,7 +10,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
   margin: 'auto',
   backgroundColor: 'inherit',
   borderRadius: theme.shape.borderRadius,
-//   boxShadow: theme.shadows?[3],
+  //   boxShadow: theme.shadows?[3],
   transition: 'transform 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-2px)',
@@ -74,38 +74,26 @@ export default function PurchaseCard() {
         <Typography variant="h5" component="div" gutterBottom>
           <FaTicketAlt /> Event Ticket
         </Typography>
-        <PriceTypography>
-          R{basePrice.toFixed(2)}
-        </PriceTypography>
+        <PriceTypography>R{basePrice.toFixed(2)}</PriceTypography>
         <Typography variant="body2" color="text.secondary">
           per ticket
         </Typography>
         <QuantityBox>
-          <QuantityButton
-            aria-label="Decrease quantity"
-            onClick={handleDecrement}
-          >
+          <QuantityButton aria-label="Decrease quantity" onClick={handleDecrement}>
             <FaMinus />
           </QuantityButton>
           <QuantityTypography>{quantity}</QuantityTypography>
-          <QuantityButton
-            aria-label="Increase quantity"
-            onClick={handleIncrement}
-          >
+          <QuantityButton aria-label="Increase quantity" onClick={handleIncrement}>
             <FaPlus />
           </QuantityButton>
         </QuantityBox>
         <Typography variant="h6" gutterBottom>
           Total: R{totalPrice.toFixed(2)}
         </Typography>
-        <PurchaseButton
-          variant="contained"
-          fullWidth
-          aria-label="Purchase tickets"
-        >
+        <PurchaseButton variant="contained" fullWidth aria-label="Purchase tickets">
           Purchase Tickets
         </PurchaseButton>
       </CardContent>
     </StyledCard>
   );
-};
+}

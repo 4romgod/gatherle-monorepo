@@ -36,6 +36,12 @@ export enum EventLifecycleStatus {
     Completed = 'Completed',
 }
 
+export enum EventOrganizerRole {
+    Host = 'Host',
+    CoHost = 'CoHost',
+    Volunteer = 'Volunteer',
+}
+
 registerEnumType(EventPrivacySetting, {
     name: 'EventPrivacySetting',
     description: EVENT_DESCRIPTIONS.EVENT.PRIVACY_SETTING,
@@ -54,6 +60,11 @@ registerEnumType(EventVisibility, {
 registerEnumType(EventLifecycleStatus, {
     name: 'EventLifecycleStatus',
     description: 'Lifecycle status of the event',
+});
+
+registerEnumType(EventOrganizerRole, {
+    name: 'EventOrganizerRole',
+    description: 'Role of an event organizer',
 });
 
 @modelOptions({options: {allowMixed: Severity.ALLOW}})
@@ -131,13 +142,13 @@ export class EventOccurrence {
 
 @ObjectType('EventOrganizer')
 export class EventOrganizer {
-    @prop({type: () => String})
-    @Field(() => ID, {nullable: true})
-    userId?: string;
+    @prop({type: () => String, required: true})
+    @Field(() => ID, {description: 'User ID of the organizer'})
+    userId: string;
 
-    @prop({type: () => String})
-    @Field(() => String, {nullable: true})
-    role?: string;
+    @prop({enum: EventOrganizerRole, type: () => String, required: true})
+    @Field(() => EventOrganizerRole, {description: 'Role of the organizer'})
+    role: EventOrganizerRole;
 }
 
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
@@ -231,17 +242,9 @@ export class Event {
     @Field(() => [String], {nullable: true, description: 'Flattened category ids'})
     categoryIds?: string[];
 
-    @prop({type: () => [String], default: []})
-    @Field(() => [String], {nullable: true, description: 'Freeform tags'})
-    tagList?: string[];
-
-    @prop({type: () => [String], ref: () => User, required: true})
-    @Field(() => [User], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
-    organizerList: Ref<User>[];
-
-    @prop({type: () => [EventOrganizer], default: []})
-    @Field(() => [EventOrganizer], {nullable: true, description: 'Organizers with roles'})
-    organizers?: EventOrganizer[];
+    @prop({type: () => [EventOrganizer], required: true})
+    @Field(() => [EventOrganizer], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
+    organizers: EventOrganizer[];
 
     @prop({type: () => Object, default: {}})
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
@@ -341,14 +344,11 @@ export class CreateEventInput {
     @Field(() => [String], {description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
     eventCategoryList: string[];
 
-    @Field(() => [String], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
-    organizerList: string[];
+    @Field(() => [GraphQLJSON], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
+    organizers: Record<string, any>[];
 
     @Field(() => [String], {nullable: true, description: 'Category ids'})
     categoryIds?: string[];
-
-    @Field(() => [String], {nullable: true, description: 'Freeform tags'})
-    tagList?: string[];
 
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
     tags?: Record<string, any>;
@@ -437,14 +437,11 @@ export class UpdateEventInput {
     @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
     eventCategoryList?: string[];
 
-    @Field(() => [String], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
-    organizerList?: string[];
+    @Field(() => [GraphQLJSON], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
+    organizers?: Record<string, any>[];
 
     @Field(() => [String], {nullable: true, description: 'Category ids'})
     categoryIds?: string[];
-
-    @Field(() => [String], {nullable: true, description: 'Freeform tags'})
-    tagList?: string[];
 
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
     tags?: Record<string, any>;

@@ -63,29 +63,16 @@ export default function NotificationsPage() {
                   </ListItemAvatar>
                   <ListItemText
                     primary={
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight="medium"
-                      >
+                      <Typography variant="subtitle1" fontWeight="medium">
                         {notif.title}
                       </Typography>
                     }
                     secondary={
                       <>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          component='span'
-                        >
+                        <Typography variant="body2" color="text.secondary" component="span">
                           {notif.description}
                         </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.disabled"
-                          display="block"
-                          component='span'
-                          mt={0.5}
-                        >
+                        <Typography variant="caption" color="text.disabled" display="block" component="span" mt={0.5}>
                           {formatDistanceToNow(notif.timestamp, { addSuffix: true })}
                         </Typography>
                       </>

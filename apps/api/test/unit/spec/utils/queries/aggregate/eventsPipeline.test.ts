@@ -1,5 +1,5 @@
 import {transformOptionsToPipeline} from '@/utils';
-import type { QueryOptionsInput} from '@ntlango/commons/types';
+import type {QueryOptionsInput} from '@ntlango/commons/types';
 import {FilterOperatorInput, SortOrderInput} from '@ntlango/commons/types';
 import type {PipelineStage} from 'mongoose';
 import * as filterModule from '@/utils/queries/aggregate/filter';
@@ -15,7 +15,6 @@ describe('transformOptionsToPipeline', () => {
 
   it('should include lookup stages always', () => {
     const lookupStages: PipelineStage.Lookup[] = [
-      {$lookup: {from: 'users', localField: 'organizerList', foreignField: '_id', as: 'organizerList'}},
       {$lookup: {from: 'eventcategories', localField: 'eventCategoryList', foreignField: '_id', as: 'eventCategoryList'}},
     ];
 
@@ -67,7 +66,6 @@ describe('transformOptionsToPipeline', () => {
     const filters = [{field: 'status', value: 'Completed', operator: FilterOperatorInput.eq}];
 
     const lookupStages: PipelineStage.Lookup[] = [
-      {$lookup: {from: 'users', localField: 'organizerList', foreignField: '_id', as: 'organizerList'}},
       {$lookup: {from: 'eventcategories', localField: 'eventCategoryList', foreignField: '_id', as: 'eventCategoryList'}},
     ];
     const sortStages: PipelineStage.Sort[] = [{$sort: {capacity: 1}}];
@@ -81,6 +79,6 @@ describe('transformOptionsToPipeline', () => {
 
     const options: QueryOptionsInput = {sort: sortInput, pagination: paginationInput, filters};
     const pipeline = transformOptionsToPipeline(options);
-    expect(pipeline).toEqual([...lookupStages, ...sortStages, ...paginationStages, ...filterStages]);
+    expect(pipeline).toEqual([...lookupStages, ...filterStages, ...sortStages, ...paginationStages]);
   });
 });

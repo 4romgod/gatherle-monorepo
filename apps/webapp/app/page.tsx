@@ -1,15 +1,7 @@
 import Link from 'next/link';
 import { JSX } from 'react';
 import { auth } from '@/auth';
-import {
-  AutoAwesome,
-  DynamicFeed,
-  Explore,
-  People,
-  PersonAdd,
-  RocketLaunch,
-  ShieldMoon,
-} from '@mui/icons-material';
+import { AutoAwesome, DynamicFeed, Explore, People, PersonAdd, RocketLaunch, ShieldMoon } from '@mui/icons-material';
 import { Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
@@ -18,7 +10,12 @@ import EventCategoryBox from '@/components/events/category/box';
 import OrganizationCard from '@/components/organization/card';
 import VenueCard from '@/components/venue/card';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoriesDocument, GetAllEventsDocument, GetSocialFeedDocument, GetSocialFeedQuery } from '@/data/graphql/types/graphql';
+import {
+  GetAllEventCategoriesDocument,
+  GetAllEventsDocument,
+  GetSocialFeedDocument,
+  GetSocialFeedQuery,
+} from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { RRule } from 'rrule';
@@ -160,8 +157,8 @@ export default async function HomePage() {
   const socialCtaLabel = isAuth
     ? 'View your feed'
     : token
-    ? 'Refresh your session to unlock socials'
-    : 'Sign in to unlock socials';
+      ? 'Refresh your session to unlock socials'
+      : 'Sign in to unlock socials';
   let socialFeed: GetSocialFeedQuery['readFeed'] = [];
   if (isAuth) {
     try {
@@ -183,8 +180,8 @@ export default async function HomePage() {
   const feedPlaceholderCopy = isAuth
     ? 'Follow people and join events to see this feed light up.'
     : token
-    ? 'Refresh your credentials to view personalized social updates.'
-    : 'Sign in to surface personalized social updates from your follow network.';
+      ? 'Refresh your credentials to view personalized social updates.'
+      : 'Sign in to surface personalized social updates from your follow network.';
 
   const heroStats = [
     { label: 'Communities hosted', value: '2.4k+' },
@@ -259,7 +256,8 @@ export default async function HomePage() {
                   mb: 3,
                 }}
               >
-                Ntlango is the modern layer for community-led events—discover inspiring gatherings or host your own with gorgeous, human-first pages.
+                Ntlango is the modern layer for community-led events—discover inspiring gatherings or host your own with
+                gorgeous, human-first pages.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
                 <Button
@@ -291,7 +289,7 @@ export default async function HomePage() {
                 </Button>
               </Box>
               <Grid container spacing={2}>
-                {heroStats.map((stat) => (
+                {heroStats.map(stat => (
                   <Grid size={{ xs: 12, sm: 4 }} key={stat.label}>
                     <Box
                       sx={{
@@ -402,7 +400,7 @@ export default async function HomePage() {
                 <Grid size={{ xs: 6, sm: 4, md: 2 }} key={index}>
                   <EventCategoryBox eventCategory={category} />
                 </Grid>
-              )
+              );
             })}
           </Grid>
 
@@ -449,13 +447,13 @@ export default async function HomePage() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: 'repeat(1, minmax(0, 1fr))',
-                sm: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(3, minmax(0, 1fr))',
+                sm: 'repeat(3, minmax(0, 1fr))',
+                lg: 'repeat(4, minmax(0, 1fr))',
               },
               gap: 3,
             }}
           >
-            {featuredOrganizations.map((organization) => (
+            {featuredOrganizations.map(organization => (
               <Box key={organization.orgId}>
                 <OrganizationCard {...organization} />
               </Box>
@@ -468,6 +466,26 @@ export default async function HomePage() {
               </Box>
             )}
           </Box>
+        </Container>
+      </Box>
+
+      <Box
+        id="featured-events"
+        sx={{
+          backgroundColor: 'background.paper',
+          py: { xs: 5, md: 7 },
+        }}
+      >
+        <Container>
+          <EventsCarousel
+            events={featuredEvents}
+            title="Upcoming Events"
+            autoplay={false}
+            autoplayInterval={6000}
+            itemWidth={260}
+            showIndicators={true}
+            viewAllEventsButton={true}
+          />
         </Container>
       </Box>
 
@@ -499,13 +517,13 @@ export default async function HomePage() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: 'repeat(1, minmax(0, 1fr))',
-                sm: 'repeat(2, minmax(0, 1fr))',
+                sm: 'repeat(3, minmax(0, 1fr))',
                 lg: 'repeat(3, minmax(0, 1fr))',
               },
               gap: 3,
             }}
           >
-            {featuredVenues.map((venue) => (
+            {featuredVenues.map(venue => (
               <Box key={venue.venueId}>
                 <VenueCard {...venue} />
               </Box>
@@ -535,11 +553,11 @@ export default async function HomePage() {
                 Social layer
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Follow hosts, friends, and organizations, share your intent with the right audience, and catch the moments your circle
-                is creating in one place.
+                Follow hosts, friends, and organizations, share your intent with the right audience, and catch the
+                moments your circle is creating in one place.
               </Typography>
               <Stack spacing={1}>
-                {socialHighlights.map((highlight) => (
+                {socialHighlights.map(highlight => (
                   <Paper
                     key={highlight.title}
                     variant="outlined"
@@ -596,7 +614,7 @@ export default async function HomePage() {
                 </Typography>
                 <Stack spacing={2} flexGrow={1}>
                   {isAuth && socialFeed.length > 0 ? (
-                    socialFeed.map((activity) => {
+                    socialFeed.map(activity => {
                       const objectLabel = getActivityObjectLabel(activity);
                       const verbLabel = verbLabels[activity.verb] ?? activity.verb;
                       const timestampLabel = formatActivityDate(activity.eventAt ?? activity.metadata?.timestamp);
@@ -666,7 +684,7 @@ export default async function HomePage() {
       >
         <CustomContainer>
           <Grid container spacing={3} alignItems="center">
-            {experiencePillars.map((pillar) => (
+            {experiencePillars.map(pillar => (
               <Grid size={{ xs: 12, md: 4 }} key={pillar.title}>
                 <Paper
                   sx={{
@@ -675,10 +693,10 @@ export default async function HomePage() {
                     borderRadius: 3,
                     border: '1px solid',
                     borderColor: 'divider',
-              backgroundColor: 'background.paper',
-              boxShadow: '0 18px 36px rgba(0,0,0,0.08)',
-            }}
-          >
+                    backgroundColor: 'background.paper',
+                    boxShadow: '0 18px 36px rgba(0,0,0,0.08)',
+                  }}
+                >
                   <Box
                     sx={{
                       width: 44,
@@ -704,26 +722,6 @@ export default async function HomePage() {
             ))}
           </Grid>
         </CustomContainer>
-      </Box>
-
-      <Box
-        id="featured-events"
-        sx={{
-          backgroundColor: 'background.paper',
-          py: { xs: 5, md: 7 },
-        }}
-      >
-        <Container>
-          <EventsCarousel
-            events={featuredEvents}
-            title="Upcoming Events"
-            autoplay={false}
-            autoplayInterval={6000}
-            itemWidth={260}
-            showIndicators={true}
-            viewAllEventsButton={true}
-          />
-        </Container>
       </Box>
 
       <Box
@@ -766,13 +764,7 @@ export default async function HomePage() {
               >
                 Start hosting
               </Button>
-              <Button
-                variant="outlined"
-                color="inherit"
-                size="large"
-                component={Link}
-                href={ROUTES.EVENTS.ROOT}
-              >
+              <Button variant="outlined" color="inherit" size="large" component={Link} href={ROUTES.EVENTS.ROOT}>
                 See community events
               </Button>
             </Box>

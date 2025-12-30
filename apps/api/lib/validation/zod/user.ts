@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 
 export const UserSchema = z.object({
   userId: z.string().refine(mongoose.Types.ObjectId.isValid, {message: `User with ID ${ERROR_MESSAGES.DOES_NOT_EXIST}`}),
-  
+
   birthdate: z
     .string()
     .refine(validateDate, {message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}`})

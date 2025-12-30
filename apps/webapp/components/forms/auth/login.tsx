@@ -26,7 +26,7 @@ export default function LoginForm() {
   const [formState, formAction] = useActionState(loginUserAction, {});
   const { setToastProps, toastProps } = useCustomAppContext();
 
-  const handleClickShowPassword = () => setShowPassword((prev) => !prev);
+  const handleClickShowPassword = () => setShowPassword(prev => !prev);
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };

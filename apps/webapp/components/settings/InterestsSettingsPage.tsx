@@ -19,14 +19,20 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
 
-export default function InterestsSettingsPage({ user, eventCategoryGroups }: { user: User; eventCategoryGroups: EventCategoryGroup[] }) {
+export default function InterestsSettingsPage({
+  user,
+  eventCategoryGroups,
+}: {
+  user: User;
+  eventCategoryGroups: EventCategoryGroup[];
+}) {
   const [selectedInterests, setSelectedInterests] = useState<EventCategory[]>(user.interests ? user.interests : []);
   const [tempInterests, setTempInterests] = useState<EventCategory[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleInterestToggle = (eventCategory: EventCategory) => {
-    setTempInterests((prev) => {
+    setTempInterests(prev => {
       const exists = prev.some(item => item.eventCategoryId === eventCategory.eventCategoryId);
       if (exists) {
         return prev.filter(item => item.eventCategoryId !== eventCategory.eventCategoryId);
@@ -48,13 +54,15 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
   };
 
   // Filter event categories based on search term
-  const filteredCategoryGroups = eventCategoryGroups.map(group => {
-    const filteredCategories = group.eventCategoryList.filter(category =>
-      category.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const filteredCategoryGroups = eventCategoryGroups
+    .map(group => {
+      const filteredCategories = group.eventCategoryList.filter(category =>
+        category.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
 
-    return { ...group, eventCategoryList: filteredCategories };
-  }).filter(group => group.eventCategoryList.length > 0);
+      return { ...group, eventCategoryList: filteredCategories };
+    })
+    .filter(group => group.eventCategoryList.length > 0);
 
   return (
     <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
@@ -63,13 +71,10 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
           display: { xs: 'block', md: 'flex' },
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: 3
+          mb: 3,
         }}
       >
-        <Typography
-          variant="h4"
-          fontWeight='bold' sx={{ mb: 5 }}
-        >
+        <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
           My Interests
         </Typography>
 
@@ -92,7 +97,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {selectedInterests.map((interest) => (
+          {selectedInterests.map(interest => (
             <Chip
               key={interest.eventCategoryId}
               label={interest.name}
@@ -109,12 +114,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
       </Typography>
 
       <Box component="form" noValidate>
-        <Dialog
-          open={openModal}
-          onClose={() => setOpenModal(false)}
-          maxWidth="md"
-          fullWidth
-        >
+        <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
           <DialogTitle>Select Your Interests</DialogTitle>
           <DialogContent>
             <Box sx={{ mb: 2, mt: 1 }}>
@@ -122,13 +122,13 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
                 fullWidth
                 placeholder="Search interests..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
                       <SearchIcon />
                     </InputAdornment>
-                  )
+                  ),
                 }}
                 variant="outlined"
               />
@@ -138,7 +138,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
               Selected Interests: {tempInterests.length}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-              {tempInterests.map((interest) => (
+              {tempInterests.map(interest => (
                 <Chip
                   key={interest.eventCategoryId}
                   label={interest.name}
@@ -149,13 +149,13 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
             </Box>
 
             <Grid container spacing={2}>
-              {filteredCategoryGroups.map((categoryGroup) => (
+              {filteredCategoryGroups.map(categoryGroup => (
                 <Grid size={{ xs: 12 }} key={categoryGroup.eventCategoryGroupId}>
                   <Typography variant="subtitle1" sx={{ mt: 1, mb: 1, fontWeight: 'bold' }}>
                     {categoryGroup.name}
                   </Typography>
                   <Grid container spacing={1}>
-                    {categoryGroup.eventCategoryList.map((category) => (
+                    {categoryGroup.eventCategoryList.map(category => (
                       <Grid size={{ xs: 12, sm: 6, md: 4 }} key={category.eventCategoryId}>
                         <FormControlLabel
                           control={
@@ -178,11 +178,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
             <Button onClick={() => setOpenModal(false)} color="secondary">
               Cancel
             </Button>
-            <Button
-              onClick={handleSaveInterests}
-              color="primary"
-              variant="contained"
-            >
+            <Button onClick={handleSaveInterests} color="primary" variant="contained">
               Save Interests
             </Button>
           </DialogActions>
@@ -190,4 +186,4 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: { u
       </Box>
     </Box>
   );
-};
+}

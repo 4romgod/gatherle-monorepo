@@ -4,9 +4,9 @@ import {CreateActivityInput, FollowTargetType, Activity} from '@ntlango/commons/
 import {CreateActivityInputSchema} from '@/validation/zod';
 import {validateInput} from '@/validation';
 import {ActivityDAO, FollowDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/graphql';
+import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import { requireAuthenticatedUser } from '@/utils';
+import {requireAuthenticatedUser} from '@/utils';
 
 @Resolver(() => Activity)
 export class ActivityResolver {
@@ -32,11 +32,7 @@ export class ActivityResolver {
     }
 
     const follows = await FollowDAO.readFollowingForUser(viewer.userId);
-    const isFollower = follows.some(
-      (follow) =>
-        follow.targetType === FollowTargetType.User &&
-        follow.targetId === actorId,
-    );
+    const isFollower = follows.some((follow) => follow.targetType === FollowTargetType.User && follow.targetId === actorId);
 
     return activities.filter((activity: any) => {
       const visibility = activity.visibility || 'PUBLIC';

@@ -1,9 +1,10 @@
 import 'reflect-metadata';
-import { FollowResolver } from '@/graphql/resolvers/follow';
-import { FollowDAO } from '@/mongodb/dao';
-import { CreateFollowInput, Follow, FollowTargetType, FollowStatus, User, UserRole } from '@ntlango/commons/types';
-import { Types } from 'mongoose';
-import { requireAuthenticatedUser } from '@/utils';
+import {FollowResolver} from '@/graphql/resolvers/follow';
+import {FollowDAO} from '@/mongodb/dao';
+import type {CreateFollowInput, Follow, User} from '@ntlango/commons/types';
+import {FollowTargetType, FollowStatus, UserRole} from '@ntlango/commons/types';
+import {Types} from 'mongoose';
+import {requireAuthenticatedUser} from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
   FollowDAO: {

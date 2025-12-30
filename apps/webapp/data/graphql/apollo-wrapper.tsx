@@ -2,7 +2,7 @@
 
 import { GRAPHQL_URL } from '@/lib/constants';
 import { HttpLink } from '@apollo/client';
-import { ApolloNextAppProvider, InMemoryCache, ApolloClient } from "@apollo/client-integration-nextjs";
+import { ApolloNextAppProvider, InMemoryCache, ApolloClient } from '@apollo/client-integration-nextjs';
 
 // Inspired by https://github.com/apollographql/apollo-client-integrations/tree/main/packages/nextjs
 
@@ -19,9 +19,5 @@ const makeClient = () => {
 };
 
 export function ApolloWrapper({ children }: React.PropsWithChildren) {
-  return (
-    <ApolloNextAppProvider makeClient={makeClient}>
-      {children}
-    </ApolloNextAppProvider>
-  );
+  return <ApolloNextAppProvider makeClient={makeClient}>{children}</ApolloNextAppProvider>;
 }

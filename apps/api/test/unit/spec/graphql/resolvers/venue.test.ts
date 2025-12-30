@@ -125,10 +125,7 @@ describe('VenueResolver', () => {
 
       const result = await resolver.readVenuesByOrgId(orgId);
 
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        orgId,
-        expect.stringContaining('Organization'),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(orgId, expect.stringContaining('Organization'));
       expect(VenueDAO.readVenuesByOrgId).toHaveBeenCalledWith(orgId);
       expect(result).toEqual([mockVenue]);
     });

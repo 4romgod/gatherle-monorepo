@@ -1,14 +1,8 @@
 import 'reflect-metadata';
 import {EventParticipantResolver} from '@/graphql/resolvers/eventParticipant';
 import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
-import type {
-  UpsertEventParticipantInput,
-  CancelEventParticipantInput,
-  EventParticipant,
-  User} from '@ntlango/commons/types';
-import {
-  ParticipantStatus,
-} from '@ntlango/commons/types';
+import type {UpsertEventParticipantInput, CancelEventParticipantInput, EventParticipant, User} from '@ntlango/commons/types';
+import {ParticipantStatus} from '@ntlango/commons/types';
 import * as validation from '@/validation';
 
 jest.mock('@/mongodb/dao', () => ({

@@ -9,12 +9,14 @@ export default function UserChip({ user }: { user: User }) {
     <Link href={`/users/${username}`} passHref>
       <Chip
         label={username}
-        avatar={profile_picture ? (
-          <Avatar src={profile_picture} alt={username} />
-        ) : (
-          <Avatar>{username.charAt(0).toLocaleUpperCase()}</Avatar>
-        )}
+        avatar={
+          profile_picture ? (
+            <Avatar src={profile_picture} alt={username} />
+          ) : (
+            <Avatar>{username.charAt(0).toLocaleUpperCase()}</Avatar>
+          )
+        }
       />
     </Link>
-  )
-};
+  );
+}
