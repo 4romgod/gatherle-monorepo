@@ -9,6 +9,15 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 - `infra` – AWS CDK stacks for deploying the API
 - `tools/cli` – Python CLI utilities
 
+## Backend architecture (apps/api)
+- **Schema & resolvers:** TypeGraphQL schema built in `apps/api/lib/graphql/schema/index.ts` with resolvers in `apps/api/lib/graphql/resolvers`.
+- **Server runtime:** Apollo Server configuration in `apps/api/lib/graphql/apollo` (Express for local dev, Lambda handler for AWS).
+- **GraphQL path:** `/v1/graphql` (see `apps/api/lib/constants/constants.ts`); health check at `/health`.
+- **Models & persistence:** Typegoose models are defined in `packages/commons/lib/types` and instantiated via Mongoose models in `apps/api/lib/mongodb/models`.
+- **Data access:** DAOs in `apps/api/lib/mongodb/dao` provide the main CRUD/query surface and are used by resolvers.
+- **Validation:** Zod schemas in `apps/api/lib/validation/zod`, enforced by `validateInput` helpers.
+- **Auth:** JWT-based auth in `apps/api/lib/utils/auth.ts` with role + ownership checks for sensitive mutations.
+
 ## Prerequisites
 - Node 22.x and npm (workspace-aware). No pnpm needed.
 - Docker (only if you build the API image).
@@ -36,6 +45,7 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 - Internal package links use npm workspaces with matching versions (`@ntlango/commons@1.0.0`); keep versions aligned if you publish.
 - If codegen is noisy offline, export a dummy `NEXT_PUBLIC_GRAPHQL_URL` or rely on the skip logic in the web `codegen` script.
 - Jest workers sometimes crash in big repos; API tests are forced to `--runInBand` for stability.
+- Domain model details live in `docs/data-model.md` and map directly to types in `packages/commons/lib/types`.
 
 ## Common commands
 - Build everything: `npm run build`

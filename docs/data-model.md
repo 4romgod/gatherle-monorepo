@@ -1,6 +1,6 @@
 # Domain Data Model
 
-This document captures the current target model for Ntlango’s event platform, emphasizing extensibility and clear ownership boundaries.
+This document captures the current data model for Ntlango’s event platform as implemented in the backend, plus the near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/Typegoose classes in `packages/commons/lib/types` and are persisted via Mongoose models in `apps/api/lib/mongodb/models`.
 
 ## Core Goals
 - Support individuals and organizations hosting repeatable and one-off experiences.
@@ -8,167 +8,147 @@ This document captures the current target model for Ntlango’s event platform, 
 - Allow growth into paid tickets, invites, waitlists, and richer engagement.
 - Enable a social layer that creates FOMO: users see where friends and followed orgs are going, with privacy-aware visibility.
 
-## Entities
+## Implementation Status
+
+**Implemented today**
+- User, Event, EventCategory, EventCategoryGroup
+- EventParticipant
+- Organization, OrganizationMembership, Venue
+- Follow, Intent, Activity
+
+**Planned/partial**
+- TicketType, Invitation, WaitlistEntry
+- Comment, Reaction, Audit Trail
+
+## Entities (Current Implementation)
 
 ### User
-- `userId`, `username`, `email`, `roles` (Admin|Host|User), `primaryTimezone`, `defaultVisibility`.
-- Profile: `displayName`, `bio`, `avatar`, `socialLinks`.
-- Preferences: `communicationPrefs` (channels + topics), `notificationPrefs`.
-- Social settings: `socialVisibility` (Public|Followers|Private), `shareRSVPByDefault`, `shareCheckinsByDefault`, `mutedUserIds`, `blockedUserIds`.
+- `userId`, `email`, `username`, `userRole`, optional `roles[]`.
+- Profile fields: `given_name`, `family_name`, `birthdate`, `gender`, `phone_number`, `profile_picture`, `bio`.
+- `address` (freeform JSON) plus `interests` (EventCategory refs).
+- Social & visibility: `primaryTimezone`, `defaultVisibility`, `socialVisibility`, `shareRSVPByDefault`, `shareCheckinsByDefault`, `mutedUserIds`, `blockedUserIds`.
+- Structured profile: `profile { displayName, bio, avatar, socialLinks[] }`.
+- Preferences: `preferences { communicationPrefs, notificationPrefs }`.
 
 ### Organization
-- Purpose: groups hosts, venues, and events under shared ownership/policy.
-- Fields: `orgId`, `slug`, `name`, `description`, `logo`, `ownerId`, `memberRoles: [{ userId, role }]` (Owner|Admin|Host|Moderator|Member), `defaultVisibility`, `billingEmail?`, `links?`, `createdAt`.
-- Policies: `eventDefaults` (visibility, reminders, ticket settings), `allowedTicketAccess` (Public|Members|InviteOnly), `domainsAllowed?`.
-- Relationships: owns events, venues, invitation policies; members can host depending on role.
-- Social: `followersCount`, `isFollowable` (toggle if some orgs don’t want followers), `tags` for discovery.
+- `orgId`, `slug`, `name`, `description`, `logo`, `ownerId`.
+- `defaultVisibility`, `billingEmail`, `links[]`, `domainsAllowed[]`.
+- `eventDefaults { visibility, remindersEnabled, waitlistEnabled, allowGuestPlusOnes, ticketAccess }`.
+- `allowedTicketAccess` (Public|Members|InviteOnly).
+- Social: `followersCount`, `isFollowable`, `tags[]`.
+- Memberships are stored in `OrganizationMembership` (see below) and resolved in GraphQL.
+
+### OrganizationMembership
+- `membershipId`, `orgId`, `userId`, `role` (Owner|Admin|Host|Moderator|Member), `joinedAt`.
+- Enforces uniqueness per `(orgId, userId)`.
 
 ### Venue
-- Fields: `venueId`, `orgId?`, `type` (Physical|Virtual|Hybrid), `name`, `address` (street/city/region/country/postal), `geo` (lat/lng), `url?` (virtual), `capacity?`, `amenities?: string[]`.
-- Snapshots: `locationSnapshot` lives on Event to preserve historical address even if venue updates.
+- `venueId`, optional `orgId`, `type` (Physical|Virtual|Hybrid), `name`.
+- `address { street, city, region, country, postalCode }`.
+- `geo { latitude, longitude }`.
+- `url`, `capacity`, `amenities[]`.
 
-### Category and Tag
-- `categoryId`, `name`, `slug`, `iconName`, `color`, `description`.
-- CategoryGroup (navigation aid): e.g., “Arts & Culture” containing curated categories like “Music”, “Theatre”. Use for navigation and theming, not user-generated.
-- Tags: freeform on Event for flexible, user-driven descriptors (e.g., “jazz”, “rooftop”, “founder circle”). Not curated; used for search and recommendations, not primary navigation.
+### EventCategory
+- `eventCategoryId`, `slug`, `name`, `iconName`, `description`, optional `color`.
+
+### EventCategoryGroup
+- `eventCategoryGroupId`, `name`, `slug`, `eventCategoryList[]`.
+
+### Location (embedded in Event)
+- `locationType`: `venue` | `online` | `tba`.
+- `coordinates { latitude, longitude }`.
+- `address { street, city, state, postalCode, country }`.
+- `details` (string) for arbitrary location notes.
 
 ### Event
 - Identity: `eventId`, `slug`, `orgId?`.
-- Content: `title`, `summary`, `description`, `heroImage`, `media: MediaAsset[]`, `attachments`.
-- Status/visibility: `status` (Draft|Published|Cancelled|Completed), `visibility` (Public|Private|Unlisted|Invitation).
-- Schedule: `primarySchedule { startAt, endAt, timezone, recurrenceRule? }`, optional `occurrences[]` for generated instances.
-- Location: `venueId?`, `locationSnapshot` (address/url at publish time).
-- People: `organizers: [{ userId, role: Host|CoHost|Volunteer }]`.
-- Taxonomy: `categoryIds: string[]`.
-- Settings: `rsvpLimit?`, `allowGuestPlusOnes`, `waitlistEnabled`, `remindersEnabled`.
-- Monetization: `ticketTypes[]`, `currency`, `refundPolicy?`.
-- Privacy: `privacySetting` (aligns with visibility) and optional invite-only flag.
-- Social signals: exposure driven by `Intent` (below) and `Activity` entries; event can choose `showAttendees` (bool) to limit public attendee lists.
-
-### TicketType
-- `ticketTypeId`, `eventId`, `name`, `description`, `price`, `currency`, `capacity`, `salesWindow { startAt, endAt }`, `access` (Public|Members|InviteOnly), `perUserLimit?`, `refundableUntil?`, `addons?`.
+- Content: `title`, `summary`, `description`, `heroImage`, `media`, `mediaAssets[]`.
+- Status: `status` (Cancelled|Completed|Ongoing|Upcoming).
+- Lifecycle: `lifecycleStatus` (Draft|Published|Cancelled|Completed).
+- Visibility: `visibility` (Public|Private|Unlisted|Invitation), `privacySetting` (Public|Private|Invitation).
+- Schedule: `recurrenceRule` (required), plus `primarySchedule? { startAt, endAt, timezone, recurrenceRule }` and `occurrences?[]`.
+- Location: `location` (Location type above), `venueId?` and `locationSnapshot?`.
+- People: `organizers [{ userId, role: Host|CoHost|Volunteer }]`.
+- Taxonomy: `eventCategoryList[]` (EventCategory refs), `categoryIds?[]` for flattened ids.
+- Settings: `capacity`, `rsvpLimit`, `waitlistEnabled`, `allowGuestPlusOnes`, `remindersEnabled`, `showAttendees`.
+- Metadata:
+  - `tags` (JSON): free-form tagging for search and discovery. Typically an array of strings or lightweight tag objects, for example:
+    - `["family-friendly", "outdoors", "live-music"]`
+    - `[{ "key": "audience", "value": "families" }, { "key": "vibe", "value": "chill" }]`
+  - `additionalDetails` (JSON): arbitrary, event-specific key–value metadata not modeled as first-class fields. Expected to be a shallow object whose values are JSON-serializable, for example:
+    - `{ "dressCode": "casual", "parkingInfo": "street + garage", "language": "en" }`
+    - `{ "sponsor": { "name": "Acme Corp", "tier": "gold" } }`
+  - `comments` (JSON): reserved for inline or system-generated comments associated with the event. May be unused in some deployments. When used, it is typically an array of comment objects that reference users rather than storing full user data, for example:
+    - `[{"userId": "u123", "text": "Doors open at 7pm", "createdAt": "2024-01-01T18:00:00Z"}]`
+  - `eventLink`: canonical URL for the event’s public landing page (may point to an internal or external site).
+- `participants` is resolved by GraphQL via `EventParticipant` and is not stored on the Event document.
 
 ### EventParticipant
-- `participantId`, `eventId`, `userId`, `ticketTypeId?`, `status` (Interested|Going|Waitlisted|Cancelled|CheckedIn), `quantity`, `invitedBy?`, `rsvpAt`, `cancelledAt?`, `checkedInAt?`, `notes?`.
-- Add `sharedVisibility` (Public|Followers|Private) to reflect what can be surfaced in feeds; default inherits from user settings.
+- `participantId`, `eventId`, `userId`, `status` (Interested|Going|Waitlisted|Cancelled|CheckedIn).
+- `quantity`, `invitedBy`, `sharedVisibility` (Public|Followers|Private).
+- `rsvpAt`, `cancelledAt`, `checkedInAt`.
 
-### WaitlistEntry
-- `waitlistEntryId`, `eventId`, `userId`, `priority`, `createdAt`.
+### Follow
+- `followId`, `followerUserId`, `targetType` (User|Organization), `targetId`.
+- `status` (Active|Muted), `createdAt`.
 
-### Invitation
-- `inviteId`, `eventId`, `email|userId`, `status` (Sent|Accepted|Declined|Expired), `sentAt`, `respondedAt?`, `role?` (for co-host invites).
-- Track `sourceFollow?` for invites sent because a friend/org is going.
+### Intent
+- `intentId`, `userId`, `eventId`, optional `participantId`.
+- `status` (Interested|Going|Maybe|Declined).
+- `visibility` (Public|Followers|Private), `source` (Manual|Ticket|Invite|OrgAnnouncement).
+- `metadata` (JSON), `createdAt`, `updatedAt`.
 
-### MediaAsset
-- `mediaId`, `type` (Image|Video|Doc), `url`, `alt`, `width?`, `height?`, `order`.
+### Activity
+- `activityId`, `actorId`, `verb` (Followed|RSVPd|Commented|Published|CreatedOrg|CheckedIn|Invited).
+- `objectType` (User|Organization|Event|Comment|TicketType), `objectId`.
+- `targetType?`, `targetId?`, `visibility` (Public|Followers|Private), `eventAt`, `metadata`.
 
-### Comment / Reaction
-- `commentId`, `eventId`, `userId`, `body`, `parentId?`, `createdAt`.
-- `reactionId`, `targetType` (Event|Comment), `targetId`, `userId`, `kind` (Like|Celebrate|Interested), `createdAt`.
+## Planned Entities & Extensions
 
-### Audit Trail
-- `eventAuditId`, `eventId`, `changes: [{ field, oldValue, newValue, changedBy, changedAt }]`.
+### TicketType (planned)
+- Price and access controls to formalize paid tickets: `ticketTypeId`, `eventId`, `name`, `description`, `price`, `currency`, `capacity`, `salesWindow`, `access`, `perUserLimit`, `refundableUntil`, `addons`.
 
-### Social Graph & FOMO (New)
-- **Follow**: `followId`, `followerUserId`, `targetType` (User|Organization), `targetId`, `status` (Active|Muted), `createdAt`.
-  - Muting allows keeping the edge but suppressing feed items.
-- **Intent**: signals “where people are going”
-  - Fields: `intentId`, `userId`, `eventId`, `status` (Interested|Going|Maybe|Declined), `visibility` (Public|Followers|Private), `createdAt`, `source` (Manual|Ticket|Invite|OrgAnnouncement).
-  - Typically derived/kept in sync with `EventParticipant` (Going/Cancelled/Waitlisted); `Interested/Maybe` can be lighter weight without tickets.
-- **Activity**: feed item for personalization
-  - Fields: `activityId`, `actorId`, `verb` (Followed|RSVPd|Commented|Published|CreatedOrg|CheckedIn|Invited), `objectType` (User|Organization|Event|Comment|TicketType), `objectId`, `targetType?`, `targetId?`, `eventAt`, `visibility` (Public|Followers|Private), `metadata?`.
-  - Populated on key actions to fan-out feeds; respects visibility on read.
-- **OrganizationMembership**: `orgId`, `userId`, `role` (Owner|Admin|Host|Moderator|Member), `joinedAt`.
-  - Drives permissions for event creation, venue management, and org-level announcements.
+### Invitation / WaitlistEntry (planned)
+- Invitations: `inviteId`, `eventId`, `email|userId`, `status`, `sentAt`, `respondedAt`, `role?`.
+- Waitlist: `waitlistEntryId`, `eventId`, `userId`, `priority`, `createdAt`.
 
-### Privacy & Visibility Rules
+### Comment / Reaction / AuditTrail (planned)
+- Dedicated collections to replace the current `Event.comments` JSON payloads.
+- Audit entries for tracking field-level changes on Event.
+
+## Privacy & Visibility Rules
 - User defaults: `socialVisibility`, `shareRSVPByDefault`, `shareCheckinsByDefault`.
-- Intent visibility: set per intent; defaults from user. Drives whether an activity can show up in follower feeds.
-- Event-level toggle `showAttendees`: if false, hide attendee lists except for organizers/admins; still allow counts.
-- Follow status `Muted` suppresses feed but keeps the edge (useful for soft-unfollow).
+- EventParticipant `sharedVisibility` determines attendee visibility in feeds and event pages.
+- Follow status `Muted` suppresses feed items while keeping the edge.
+- Event `showAttendees` hides attendee lists from non-organizers; counts can still be exposed.
 
-## Key Relationships (Mermaid)
-
-```mermaid
-erDiagram
-  User ||--o{ OrganizationMembership : "memberRoles"
-  User ||--o{ Follow : follows
-  User ||--o{ Intent : has
-  User ||--o{ Activity : acts
-  User ||--o{ EventParticipant : participates
-  User ||--o{ Invitation : receives
-  User ||--o{ Comment : writes
-  User ||--o{ Reaction : reacts
-
-  Organization ||--o{ Event : owns
-  Organization ||--o{ Venue : manages
-  Organization ||--o{ OrganizationMembership : has
-  Organization ||--o{ Follow : followedBy
-
-  Event ||--o{ TicketType : offers
-  Event ||--o{ EventParticipant : has
-  Event ||--o{ Intent : attracts
-  Event ||--o{ WaitlistEntry : queues
-  Event ||--o{ Invitation : sends
-  Event ||--o{ Comment : has
-  Event ||--o{ Reaction : has
-  Event }o--|| Venue : at
-  Event }o--o{ Category : tagged
-
-  TicketType ||--o{ EventParticipant : issues
-```
+## GraphQL Query Patterns
+- List queries accept `QueryOptionsInput` (`pagination`, `sort`, `filters`) and are translated into Mongo aggregation pipelines.
+- Ownership checks for sensitive mutations live in `apps/api/lib/utils/auth.ts` and rely on `OPERATION_NAMES` for enforcement.
 
 ## Feed & FOMO Flow
 1) User follows User/Organization → `Follow` created, `Activity: Followed`.
-2) User marks Going/Interested → `Intent` created/updated, `Activity: RSVPd` created with visibility; participant record updated if ticketed.
+2) User marks Going/Interested → `Intent` created/updated; if RSVP/ticketed, `EventParticipant` is upserted.
 3) Feed query pulls Activities where:
-   - actor in my follow set, and
+   - actor is in my follow set, and
    - activity visibility allows (Public or Followers when I follow), and
    - I’m not blocking/muting the actor/org.
-4) Event detail can show “Friends going” via intersecting my follow set with public/follower-visible Intents/Participants.
+4) Event detail can show “Friends going” via intersecting my follow set with visible Intents/Participants.
 
-## Notes on Extensibility
-- Moving RSVP data into `EventParticipant` decouples attendance history from the Event document and enables tickets, check-ins, and cancellations.
-- `Follow` + `Intent` + `Activity` give a flexible feed surface without overloading Event documents.
-- `Organization` provides policy scoping (default visibility, ticket access rules) and a clear permission surface for multi-host teams; also followable for org announcements.
-- `Venue` and `locationSnapshot` give us safe historical data while allowing updates to shared venues.
-- `TicketType` with `access` and `salesWindow` supports future promo codes and membership-only sales.
-- `Invitation` and `WaitlistEntry` set us up for structured invite flows and auto-promotions from waitlists.
+## Mongo/NoSQL Adaptation Strategy (current)
+- **Reference + resolve:** Most relationships are stored as IDs and resolved in GraphQL (e.g., Event → EventParticipant, Organization → OrganizationMembership).
+- **Use JSON for flexible fields:** `tags`, `additionalDetails`, `comments`, and several metadata blobs are stored as JSON to move fast.
+- **Indexes (implemented):**
+  - Event: `eventId`, `slug` are unique; `eventCategoryList` is populated for reads.
+  - EventParticipant: unique `{eventId, userId}`.
+  - Organization: unique `slug`.
+  - OrganizationMembership: unique `{orgId, userId}`.
+  - Follow: unique `{followerUserId, targetType, targetId}`.
+  - Intent: unique `{userId, eventId}`.
+  - Activity: index `{actorId, eventAt}`.
 
-## Next Steps
-- Define TypeGraphQL/Typegoose classes matching these shapes in `packages/commons/lib/types` (Follow, Intent, Activity, OrganizationMembership, etc.).
-- Add migration scripts to backfill `orgId` and move RSVP data into `EventParticipant`, and to seed Intent records for existing participants.
-- Extend resolvers/DAOs for Organizations, Venues, TicketTypes, Participants, Waitlist, Follows, Intents, and feed queries with visibility enforcement.
-
-## Migration Phasing (recommended)
-Before new collections, apply new attributes to existing types:
-- User: `primaryTimezone`, `defaultVisibility`, `profile { displayName, bio, avatar, socialLinks }`, `preferences { communicationPrefs, notificationPrefs }`, social settings (`socialVisibility`, `shareRSVPByDefault`, `mutedUserIds`, `blockedUserIds`), support multiple roles.
-- Event: `orgId`, `summary`, `heroImage`, `media: MediaAsset[]`, `visibility` (Public|Private|Unlisted|Invitation), `status` (Draft|Published|Cancelled|Completed), `primarySchedule` (+ `recurrenceRule`, `occurrences`), `venueId` + `locationSnapshot`, `organizers` with roles, `categoryIds`, settings (`rsvpLimit`, `waitlistEnabled`, `allowGuestPlusOnes`, `remindersEnabled`, `showAttendees`).
-
-Phase plan:
-
-| Phase | Scope | Effort |
-| --- | --- | --- |
-| 1. Participation | Extract `rsvpList` → `EventParticipant` collection; add basic status tracking | Medium |
-| 2. Organizations | Add `Organization`, `OrganizationMembership`, `Venue`; link events via `orgId` | Medium-High |
-| 3. Ticketing | Add `TicketType`, `WaitlistEntry`, `Invitation`; extend `EventParticipant` with `ticketTypeId` | Medium |
-| 4. Social Layer | Add `Follow`, `Intent`, `Activity`; extend `User` with social settings; wire feed/visibility | High |
-| 5. Rich Media & Engagement | Add `MediaAsset`, `Comment`, `Reaction`, `Audit Trail` | Medium |
-
-## Mongo/NoSQL Adaptation Strategy
-- **Embed stable snapshots**: keep small, relatively immutable data on parents to avoid frequent lookups (e.g., `locationSnapshot`, `organizers` roles on Event, `media` array, org name/logo on Event, actor displayName/avatar on Activity).
-- **Reference high-churn/fan-out**: keep separate collections for `EventParticipant`, `Intent`, `Follow`, `Activity`, `TicketType`, `WaitlistEntry` with indexes; denormalize key fields (event title/hero, org name, actor info) for read speed.
-- **Categories/Tags**: curated Categories/CategoryGroup collections; Events store `categoryIds`. Index on `categoryIds`, `orgId`.
-- **Organizations/Venues**: reference via `orgId`/`venueId` and store snapshots on Event to preserve history; keep full docs in their own collections.
-- **Feed/Activity**: append-only Activity collection with visibility flags and denormed actor/object/org snippets. Index on `actorId`, `targetType/targetId`, `eventAt`, `visibility`. Start with query-time filtering; optionally materialize per-user timelines if volume grows.
-- **Intent vs Participant**: keep both; allow `participantId` on Intent for ticketed flows. “Interested/Maybe” intents can exist without participants.
-- **Follow graph**: single Follow collection (`followerUserId`, `targetType`, `targetId`, `status`). Index on follower for fan-out and on target for counts.
-- **Counters**: maintain counts on Event/Org (followers, intents, participants) with atomic inc/dec and periodic reconciliation jobs to avoid heavy aggregations on hot paths.
-- **Indexes (indicative)**:
-  - Event: `{ orgId, status, visibility, primarySchedule.startAt }`, `{ categoryIds: 1 }`
-  - Participant: `{ eventId, status }`, `{ userId, status }`
-  - Intent: `{ userId }`, `{ eventId, status }`
-  - Activity: `{ actorId }`, `{ targetType, targetId }`, `{ visibility, eventAt }`
-  - Follow: `{ followerUserId }`, `{ targetId, targetType }`
-- **Aggregation guidance**: prefer denorm + targeted projections over deep `$lookup`. For attendee lists, query `EventParticipant` by `eventId` with limits; use counts on Event for quick stats.
-
+## Suggested Next Steps
+- Replace `Event.comments` JSON with `Comment` and `Reaction` collections and wire up resolvers.
+- Introduce `TicketType`, `Invitation`, and `WaitlistEntry` types + DAOs + resolvers.
+- Add projections/denormed summary fields for high-traffic reads (event title/org info on Activity).
+- Capture `locationSnapshot` consistently for published events to preserve historical data.

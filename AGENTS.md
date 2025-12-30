@@ -8,6 +8,15 @@
 - `infra`: AWS CDK stacks for API deployment; expects AWS creds and bootstrap.
 - `tools/cli`: Python utilities; keep in sync with API contracts when modifying schemas.
 
+## Backend Architecture (API)
+- GraphQL schema is built with TypeGraphQL (`apps/api/lib/graphql/schema/index.ts`) and uses resolvers in `apps/api/lib/graphql/resolvers`.
+- Apollo server setup lives in `apps/api/lib/graphql/apollo` (Express for local dev, Lambda handler for infra).
+- GraphQL endpoint path is `/v1/graphql`; the dev server also exposes `/health`.
+- Models are Typegoose classes defined in `packages/commons/lib/types` and instantiated in `apps/api/lib/mongodb/models`.
+- Data access is centralized in DAOs under `apps/api/lib/mongodb/dao`, which are used by resolvers.
+- Input validation uses Zod schemas in `apps/api/lib/validation/zod` plus shared validation helpers in `apps/api/lib/validation`.
+- Auth uses JWTs (`apps/api/lib/utils/auth.ts`) and TypeGraphQL `@Authorized` with ownership checks for sensitive mutations.
+
 ## Build, Test, and Development Commands
 - Install deps: `npm install` (root). Workspace-only: `npm install -w <workspace>`.
 - API dev server: `npm run dev:api` (scoped; avoids workspace fan-out).
@@ -33,6 +42,12 @@
 - Use concise, present-tense commit subjects (`feat: add event category validation`, `fix: handle missing jwt secret`) and group related changes.
 - For PRs, include: scope/summary, linked issue/ticket, env variables touched, and test evidence (commands run + outputs). Add screenshots/GIFs for UI changes in `apps/webapp`.
 - Keep workspaces version-aligned (`@ntlango/*@1.0.0`) when publishing; avoid committing secrets or `.env` files.
+
+## Adding/Updating Domain Models
+- Add or update TypeGraphQL/Typegoose types in `packages/commons/lib/types` and re-export from `packages/commons/lib/types/index.ts`.
+- Add matching Mongoose models in `apps/api/lib/mongodb/models` and update `apps/api/lib/mongodb/models/index.ts`.
+- Add DAO logic under `apps/api/lib/mongodb/dao` and wire it into resolvers in `apps/api/lib/graphql/resolvers`.
+- Update validation in `apps/api/lib/validation/zod` for new inputs; use `validateInput` helpers in resolvers.
 
 ## Security & Configuration Tips
 - Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `NTLANGO_SECRET_ARN`); Web (`NEXT_PUBLIC_GRAPHQL_URL`); CDK requires AWS creds.
