@@ -18,6 +18,7 @@ const config: Config = {
   globalTeardown: '<rootDir>/test/unit/teardown.ts',
   collectCoverage: true,
   coverageDirectory: '<rootDir>/test/unit/coverage',
+  coverageReporters: ['text', 'text-summary', 'lcov'],
   coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/test/'],
 };
 
