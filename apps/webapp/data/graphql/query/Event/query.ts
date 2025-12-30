@@ -50,18 +50,16 @@ export const GetAllEventsDocument = graphql(`
         type
         order
       }
-      organizerList {
+      organizers {
         userId
-        email
-        username
-        address
-        birthdate
-        family_name
-        gender
-        given_name
-        phone_number
-        profile_picture
-        userRole
+        role
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+        }
       }
       participants {
         participantId
@@ -132,18 +130,16 @@ export const GetEventBySlugDocument = graphql(`
         type
         order
       }
-      organizerList {
+      organizers {
         userId
-        email
-        username
-        address
-        birthdate
-        family_name
-        gender
-        given_name
-        phone_number
-        profile_picture
-        userRole
+        role
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+        }
       }
       participants {
         participantId

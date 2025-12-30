@@ -1,12 +1,5 @@
 import 'reflect-metadata';
-import {
-  Media,
-  Event,
-  CreateEventInput,
-  UpdateEventInput,
-  RsvpInput,
-  CancelRsvpInput,
-} from '@ntlango/commons/types';
+import {Media, Event, CreateEventInput, UpdateEventInput, RsvpInput, CancelRsvpInput} from '@ntlango/commons/types';
 import {EventPrivacySetting, EventStatus} from '@ntlango/commons/types/event';
 
 describe('Enums', () => {
@@ -65,7 +58,7 @@ describe('Event', () => {
     expect(eventType.status).toBeUndefined();
     expect(eventType.capacity).toBeUndefined();
     expect(eventType.eventCategoryList).toBeUndefined();
-    expect(eventType.organizerList).toBeUndefined();
+    expect(eventType.organizers).toBeUndefined();
     expect(eventType.tags).toBeUndefined();
     expect(eventType.media).toBeUndefined();
     expect(eventType.additionalDetails).toBeUndefined();
@@ -91,7 +84,7 @@ describe('CreateEventInput', () => {
     expect(createEventInputType.status).toBeUndefined();
     expect(createEventInputType.capacity).toBeUndefined();
     expect(createEventInputType.eventCategoryList).toBeUndefined();
-    expect(createEventInputType.organizerList).toBeUndefined();
+    expect(createEventInputType.organizers).toBeUndefined();
     expect(createEventInputType.tags).toBeUndefined();
     expect(createEventInputType.media).toBeUndefined();
     expect(createEventInputType.additionalDetails).toBeUndefined();
@@ -118,7 +111,7 @@ describe('UpdateEventInput', () => {
     expect(updateEventInputType.status).toBeUndefined();
     expect(updateEventInputType.capacity).toBeUndefined();
     expect(updateEventInputType.eventCategoryList).toBeUndefined();
-    expect(updateEventInputType.organizerList).toBeUndefined();
+    expect(updateEventInputType.organizers).toBeUndefined();
     expect(updateEventInputType.tags).toBeUndefined();
     expect(updateEventInputType.media).toBeUndefined();
     expect(updateEventInputType.additionalDetails).toBeUndefined();

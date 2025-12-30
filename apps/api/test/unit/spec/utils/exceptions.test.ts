@@ -1,4 +1,4 @@
-import type { CustomErrorType} from '@/utils';
+import type {CustomErrorType} from '@/utils';
 import {CustomError, KnownCommonError, ErrorTypes, duplicateFieldMessage, extractValidationErrorMessage} from '@/utils';
 import {ERROR_MESSAGES} from '@/validation';
 import {GraphQLError} from 'graphql';

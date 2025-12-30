@@ -21,19 +21,17 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
       return 'Custom recurrence';
     }
   })();
-  const imageUrl = heroImage || media?.featuredImageUrl || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
+  const imageUrl =
+    heroImage ||
+    media?.featuredImageUrl ||
+    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
   const cityLabel = location?.address?.city || 'Featured';
-  const locationLabel = location?.address
-    ? `${location.address.country}, ${location.address.city}`
-    : 'Location TBA';
+  const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
   const participantCount = participants?.length ?? 0;
   const participantList = (participants ?? []) as EventParticipantPreview[];
   const visibleParticipants = participantList.slice(0, 3);
   const getParticipantLabel = (participant: EventParticipantPreview) => {
-    const nameParts = [
-      participant.user?.given_name,
-      participant.user?.family_name,
-    ].filter(Boolean);
+    const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
     const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
     return nameParts.length ? nameParts.join(' ') : fallbackName;
@@ -57,7 +55,7 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
           transition: 'transform 0.2s, box-shadow 0.2s',
           '&:hover': {
             transform: 'translateY(-4px)',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.12)'
+            boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
           },
           borderRadius: 2,
           overflow: 'hidden',
@@ -75,7 +73,7 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover'
+              objectFit: 'cover',
             }}
           />
           <Box
@@ -135,8 +133,11 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
                 '& .MuiAvatar-root': { width: 26, height: 26, fontSize: '0.7rem' },
               }}
             >
-              {visibleParticipants.map((participant) => (
-                <Tooltip key={participant.participantId} title={`${getParticipantLabel(participant)} · ${participant.status}`}>
+              {visibleParticipants.map(participant => (
+                <Tooltip
+                  key={participant.participantId}
+                  title={`${getParticipantLabel(participant)} · ${participant.status}`}
+                >
                   <Avatar src={participant.user?.profile_picture || undefined}>
                     {getParticipantAvatarLetter(participant).toUpperCase()}
                   </Avatar>

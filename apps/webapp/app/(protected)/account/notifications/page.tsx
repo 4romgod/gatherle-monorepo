@@ -8,7 +8,7 @@ export default function NotificationsPage() {
     <Box
       sx={{
         backgroundColor: 'background.paper',
-        minHeight: '100vh'
+        minHeight: '100vh',
       }}
     >
       <NotificationsPanel />

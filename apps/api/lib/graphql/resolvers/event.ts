@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root} from 'type-graphql';
-import {CreateEventInput, Event, UpdateEventInput, UserRole, QueryOptionsInput, EventParticipant} from '@ntlango/commons/types';
+import {CreateEventInput, Event, UpdateEventInput, UserRole, QueryOptionsInput, EventParticipant, EventOrganizer, User} from '@ntlango/commons/types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
 import {CreateEventInputSchema, UpdateEventInputSchema} from '@/validation/zod';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
+import {EventDAO, EventParticipantDAO, UserDAO} from '@/mongodb/dao';
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -57,5 +57,21 @@ export class EventResolver {
       return [];
     }
     return EventParticipantDAO.readByEvent(event.eventId);
+  }
+}
+
+@Resolver(() => EventOrganizer)
+export class EventOrganizerResolver {
+  @FieldResolver(() => User, {nullable: true})
+  async user(@Root() organizer: EventOrganizer): Promise<User | null> {
+    if (!organizer.userId) {
+      return null;
+    }
+
+    try {
+      return await UserDAO.readUserById(organizer.userId);
+    } catch {
+      return null;
+    }
   }
 }

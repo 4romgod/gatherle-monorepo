@@ -1,9 +1,10 @@
 import 'reflect-metadata';
-import { buildSchemaSync } from 'type-graphql';
+import {buildSchemaSync} from 'type-graphql';
 import {
   EventCategoryResolver,
   EventCategoryGroupResolver,
   EventResolver,
+  EventOrganizerResolver,
   UserResolver,
   EventParticipantResolver,
   OrganizationResolver,
@@ -13,8 +14,8 @@ import {
   IntentResolver,
   ActivityResolver,
 } from '@/graphql/resolvers';
-import { authChecker } from '@/utils/auth';
-import { ResolveTime } from '@/utils';
+import {authChecker} from '@/utils/auth';
+import {ResolveTime} from '@/utils';
 
 const createSchema = () => {
   const schema = buildSchemaSync({
@@ -22,6 +23,7 @@ const createSchema = () => {
       EventCategoryResolver,
       EventCategoryGroupResolver,
       EventResolver,
+      EventOrganizerResolver,
       UserResolver,
       EventParticipantResolver,
       FollowResolver,

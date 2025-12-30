@@ -10,8 +10,7 @@ const events: EventSeedData[] = [
   {
     title: 'Signal Studios Urban Maker Fair',
     summary: 'Experience design, art, and tech installations across two floors.',
-    description:
-      'A weekend of interactive installations, generative art, and hardware showcase by emerging creatives.',
+    description: 'A weekend of interactive installations, generative art, and hardware showcase by emerging creatives.',
     location: {
       locationType: 'venue',
       address: {
@@ -23,7 +22,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=12,13',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 600,
     tags: {features: ['installations', 'workshops'], vibe: ['creative', 'immersive']},
@@ -44,8 +43,7 @@ const events: EventSeedData[] = [
   {
     title: 'Harbour Collective: Salt City Night Market',
     summary: 'Food, craft, and jazz curated by coastal makers.',
-    description:
-      'Monthly showcase of small-batch food, craft cocktails, live jazz, and a rotating vinyl guest DJ.',
+    description: 'Monthly showcase of small-batch food, craft cocktails, live jazz, and a rotating vinyl guest DJ.',
     location: {
       locationType: 'venue',
       address: {
@@ -57,7 +55,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR;INTERVAL=1',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 900,
     tags: {themes: ['music', 'food', 'nightlife']},
@@ -78,8 +76,7 @@ const events: EventSeedData[] = [
   {
     title: 'Harbour Collective Rooftop Afterparty',
     summary: 'Invite-only rooftop set for Harbour Collective members.',
-    description:
-      'A clandestine rooftop session with voltaic sets, immersive visuals, and late-night street food.',
+    description: 'A clandestine rooftop session with voltaic sets, immersive visuals, and late-night street food.',
     location: {
       locationType: 'venue',
       address: {
@@ -91,7 +88,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYDAY=SA',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 220,
     tags: {access: ['invite-only'], music: ['amapiano', 'house']},
@@ -112,14 +109,13 @@ const events: EventSeedData[] = [
   {
     title: 'Emergent Labs: Innovation Summit',
     summary: 'Hybrid summit for AI, climate, and cultural founders.',
-    description:
-      'Two-day salon of talks, hands-on labs, and guided networking for future-focused founders.',
+    description: 'Two-day salon of talks, hands-on labs, and guided networking for future-focused founders.',
     location: {
       locationType: 'virtual',
       details: 'Private stream link shared 48h before start',
     },
     recurrenceRule: 'FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=18,19',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 180,
     tags: {tracks: ['AI', 'Climate'], format: ['hybrid']},
@@ -140,8 +136,7 @@ const events: EventSeedData[] = [
   {
     title: 'Emergent Labs Founders Studio Day',
     summary: 'Small-group working session with coaches and creative technologists.',
-    description:
-      'Hands-on studio day with breakout coaching, rapid prototyping kits, and mentorship pods.',
+    description: 'Hands-on studio day with breakout coaching, rapid prototyping kits, and mentorship pods.',
     location: {
       locationType: 'venue',
       address: {
@@ -153,7 +148,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYMONTHDAY=3',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 40,
     tags: {format: ['workshop', 'studio'], mood: ['intimate']},
@@ -174,8 +169,7 @@ const events: EventSeedData[] = [
   {
     title: 'Cape Town Wellness Immersion',
     summary: 'Three-day wellness retreat beside the ocean.',
-    description:
-      'Guided breathwork, sound healing, trail runs, and conscious dining curated by bilingual coaches.',
+    description: 'Guided breathwork, sound healing, trail runs, and conscious dining curated by bilingual coaches.',
     location: {
       locationType: 'venue',
       address: {
@@ -187,7 +181,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR,SA,SU',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 120,
     tags: {focus: ['wellness', 'retreat'], include: ['sound', 'yoga']},
@@ -221,7 +215,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYDAY=SA',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 220,
     tags: {themes: ['art', 'music'], vibe: ['transit', 'nocturnal'], locale: ['Johannesburg']},
@@ -255,7 +249,7 @@ const events: EventSeedData[] = [
       },
     },
     recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR,SA,SU',
-    organizerList: [],
+    organizers: [],
     eventCategoryList: [],
     capacity: 120,
     tags: {focus: ['wellness', 'retreat'], rituals: ['sound', 'campfire'], mood: ['restorative']},

@@ -1,9 +1,5 @@
 import {OrganizationMembership as OrganizationMembershipModel} from '@/mongodb/models';
-import type {
-  CreateOrganizationMembershipInput,
-  OrganizationMembership,
-  UpdateOrganizationMembershipInput,
-} from '@ntlango/commons/types';
+import type {CreateOrganizationMembershipInput, OrganizationMembership, UpdateOrganizationMembershipInput} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 import {GraphQLError} from 'graphql';
 

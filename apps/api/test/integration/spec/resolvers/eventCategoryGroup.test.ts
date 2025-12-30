@@ -1,11 +1,11 @@
 import request from 'supertest';
 import {Types} from 'mongoose';
 import type {IntegrationServer} from '@/test/integration/utils/server';
-import { startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
+import {startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
 import {EventCategoryDAO, EventCategoryGroupDAO} from '@/mongodb/dao';
 import {usersMockData} from '@/mongodb/mockData';
 import {generateToken} from '@/utils/auth';
-import type { User, UserWithToken, QueryOptionsInput} from '@ntlango/commons/types';
+import type {User, UserWithToken, QueryOptionsInput} from '@ntlango/commons/types';
 import {UserRole} from '@ntlango/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
@@ -111,7 +111,7 @@ describe('EventCategoryGroup Resolver', () => {
         expect(category).toHaveProperty('slug');
         expect(category).toHaveProperty('iconName');
         expect(category).toHaveProperty('description');
-        
+
         // Verify it matches one of our test categories
         const matchingCategory = categories.find((c) => c.eventCategoryId === category.eventCategoryId);
         expect(matchingCategory).toBeDefined();

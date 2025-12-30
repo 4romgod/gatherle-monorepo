@@ -1,10 +1,5 @@
 import Logo from '@/components/logo';
-import {
-  Box,
-  Container,
-  Paper,
-  Typography,
-} from '@mui/material';
+import { Box, Container, Paper, Typography } from '@mui/material';
 import RegisterForm from '@/components/forms/auth/register';
 
 export default function RegisterPage() {
@@ -23,4 +18,4 @@ export default function RegisterPage() {
       </Container>
     </Box>
   );
-};
+}

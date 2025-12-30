@@ -13,7 +13,7 @@ import {
   FormControl,
   InputLabel,
   Slider,
-  Alert
+  Alert,
 } from '@mui/material';
 import { User } from '@/data/graphql/types/graphql';
 
@@ -35,20 +35,20 @@ export default function EventSettingsPage({ user }: { user: User }) {
     eventRecommendations: true,
     maxDistanceForEvents: 50, // KM
     preferredEvents: initialPreferredEvents,
-    eventFrequency: 'weekly'
+    eventFrequency: 'weekly',
   });
 
   const handleToggleChange = (name: keyof EventSettings) => {
     setSettings(prev => ({
       ...prev,
-      [name]: !prev[name]
+      [name]: !prev[name],
     }));
   };
 
   const handleSliderChange = (event: Event, newValue: number | number[]) => {
     setSettings(prev => ({
       ...prev,
-      maxDistanceForEvents: newValue as number
+      maxDistanceForEvents: newValue as number,
     }));
   };
 
@@ -57,7 +57,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
       ...prev,
       preferredEvents: prev.preferredEvents.includes(categoryId)
         ? prev.preferredEvents.filter(id => id !== categoryId)
-        : [...prev.preferredEvents, categoryId]
+        : [...prev.preferredEvents, categoryId],
     }));
   };
 
@@ -71,7 +71,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
 
   return (
     <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
-      <Typography variant="h4" fontWeight='bold' sx={{ mb: 5 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
         Event Preferences
       </Typography>
 
@@ -117,9 +117,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
             Event Discovery
           </Typography>
           <Box sx={{ px: 2 }}>
-            <Typography gutterBottom>
-              Maximum Distance for Events: {settings.maxDistanceForEvents} miles
-            </Typography>
+            <Typography gutterBottom>Maximum Distance for Events: {settings.maxDistanceForEvents} miles</Typography>
             <Slider
               value={settings.maxDistanceForEvents}
               onChange={handleSliderChange}
@@ -128,22 +126,24 @@ export default function EventSettingsPage({ user }: { user: User }) {
               marks
               min={5}
               max={100}
-              color='secondary'
+              color="secondary"
             />
           </Box>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
           <FormControl fullWidth variant="outlined">
-            <InputLabel color='secondary'>Event Notification Frequency</InputLabel>
+            <InputLabel color="secondary">Event Notification Frequency</InputLabel>
             <Select
               value={settings.eventFrequency}
-              onChange={(e) => setSettings(prev => ({
-                ...prev,
-                eventFrequency: e.target.value as 'daily' | 'weekly' | 'monthly'
-              }))}
+              onChange={e =>
+                setSettings(prev => ({
+                  ...prev,
+                  eventFrequency: e.target.value as 'daily' | 'weekly' | 'monthly',
+                }))
+              }
               label="Event Notification Frequency"
-              color='secondary'
+              color="secondary"
             >
               <MenuItem value="daily">Daily</MenuItem>
               <MenuItem value="weekly">Weekly</MenuItem>
@@ -163,7 +163,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
             </Typography>
           ) : (
             <Grid container spacing={1}>
-              {user.interests?.map((category) => (
+              {user.interests?.map(category => (
                 <Grid size={{ xs: 6, sm: 4 }} key={category.eventCategoryId}>
                   <FormControlLabel
                     control={
@@ -183,21 +183,16 @@ export default function EventSettingsPage({ user }: { user: User }) {
 
         <Grid size={{ xs: 12 }}>
           <Alert severity="info" sx={{ mt: 2 }}>
-            These settings help us personalize your event recommendations and
-            notification preferences.
+            These settings help us personalize your event recommendations and notification preferences.
           </Alert>
         </Grid>
       </Grid>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSave}
-        >
+        <Button variant="contained" color="primary" onClick={handleSave}>
           Save Changes
         </Button>
       </Box>
     </Box>
   );
-};
+}

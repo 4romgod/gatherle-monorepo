@@ -63,7 +63,7 @@ export default async function VenuesPage() {
           gap: 3,
         }}
       >
-        {venues.map((venue) => (
+        {venues.map(venue => (
           <Box key={venue.venueId}>
             <VenueCard {...venue} />
           </Box>

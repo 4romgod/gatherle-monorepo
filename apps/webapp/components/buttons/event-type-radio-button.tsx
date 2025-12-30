@@ -18,7 +18,7 @@ const EventRadioButtons: React.FC<EventRadioButtonsProps> = ({ selectedType, onC
         description: 'Repeats over a period on a schedule.',
       },
     ].map(({ value, label, description }) => (
-      <Grid size={{xs: 12, sm: 6}} key={value}>
+      <Grid size={{ xs: 12, sm: 6 }} key={value}>
         <RadioButtonWithIcon
           label={label}
           description={description}

@@ -26,10 +26,16 @@ const domainSchema = z
 export const CreateOrganizationInputSchema = z.object({
   name: z.string().min(2, {message: `Name ${ERROR_MESSAGES.REQUIRED}`}),
   description: z.string().optional(),
-  logo: z.string().url({message: `Logo ${ERROR_MESSAGES.INVALID}`}).optional(),
+  logo: z
+    .string()
+    .url({message: `Logo ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   ownerId: z.string().refine(mongoIdValidator, {message: `Owner ID ${ERROR_MESSAGES.INVALID}`}),
   defaultVisibility: z.nativeEnum(EventVisibility).optional(),
-  billingEmail: z.string().email({message: `Billing Email ${ERROR_MESSAGES.INVALID_EMAIL}`}).optional(),
+  billingEmail: z
+    .string()
+    .email({message: `Billing Email ${ERROR_MESSAGES.INVALID_EMAIL}`})
+    .optional(),
   links: z.array(organizationLinkSchema).optional(),
   domainsAllowed: z.array(domainSchema).optional(),
   eventDefaults: eventDefaultsSchema.optional(),
@@ -38,11 +44,20 @@ export const CreateOrganizationInputSchema = z.object({
 });
 
 const updatableOrganizationFields = z.object({
-  name: z.string().min(2, {message: `Name ${ERROR_MESSAGES.TOO_SHORT}`}).optional(),
+  name: z
+    .string()
+    .min(2, {message: `Name ${ERROR_MESSAGES.TOO_SHORT}`})
+    .optional(),
   description: z.string().optional(),
-  logo: z.string().url({message: `Logo ${ERROR_MESSAGES.INVALID}`}).optional(),
+  logo: z
+    .string()
+    .url({message: `Logo ${ERROR_MESSAGES.INVALID}`})
+    .optional(),
   defaultVisibility: z.nativeEnum(EventVisibility).optional(),
-  billingEmail: z.string().email({message: `Billing Email ${ERROR_MESSAGES.INVALID_EMAIL}`}).optional(),
+  billingEmail: z
+    .string()
+    .email({message: `Billing Email ${ERROR_MESSAGES.INVALID_EMAIL}`})
+    .optional(),
   links: z.array(organizationLinkSchema).optional(),
   domainsAllowed: z.array(domainSchema).optional(),
   eventDefaults: eventDefaultsSchema.optional(),
@@ -55,7 +70,10 @@ export const UpdateOrganizationInputSchema = z
     orgId: z.string().refine(mongoIdValidator, {message: `Organization ID ${ERROR_MESSAGES.INVALID}`}),
   })
   .merge(updatableOrganizationFields)
-  .refine((data) => {
-    const {orgId, ...rest} = data;
-    return Object.values(rest).some((value) => typeof value !== 'undefined');
-  }, {message: 'At least one field must be updated'});
+  .refine(
+    (data) => {
+      const {orgId, ...rest} = data;
+      return Object.values(rest).some((value) => typeof value !== 'undefined');
+    },
+    {message: 'At least one field must be updated'},
+  );

@@ -1,8 +1,8 @@
 import {GraphQLError} from 'graphql';
 import type {UpdateQuery} from 'mongoose';
-import { Types} from 'mongoose';
+import {Types} from 'mongoose';
 import type {EventParticipant as EventParticipantEntity, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
-import { ParticipantStatus} from '@ntlango/commons/types';
+import {ParticipantStatus} from '@ntlango/commons/types';
 import {EventParticipant} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 
@@ -22,11 +22,11 @@ class EventParticipantDAO {
       if (invitedBy !== undefined) update.invitedBy = invitedBy;
       if (sharedVisibility !== undefined) update.sharedVisibility = sharedVisibility;
 
-      const participant = await EventParticipant.findOneAndUpdate(
-        {eventId, userId},
-        update,
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      ).exec();
+      const participant = await EventParticipant.findOneAndUpdate({eventId, userId}, update, {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }).exec();
 
       if (!participant) {
         throw CustomError('Unable to upsert participant', ErrorTypes.INTERNAL_SERVER_ERROR);

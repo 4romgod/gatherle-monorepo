@@ -21,6 +21,11 @@ export const getUpdateVenueMutation = (input: any) => ({
         venueId
         name
         capacity
+        address {
+          city
+          country
+          street
+        }
       }
     }
   `,

@@ -26,14 +26,12 @@ export default async function CreateEvent() {
     <Box
       component="main"
       sx={{
-        backgroundColor: 'background.paper'
+        backgroundColor: 'background.paper',
       }}
     >
-      <Container maxWidth='md'>
-        <EventMutationForm
-          categoryList={eventCategories.readEventCategories}
-        />
+      <Container maxWidth="md">
+        <EventMutationForm categoryList={eventCategories.readEventCategories} />
       </Container>
     </Box>
-  )
-};
+  );
+}

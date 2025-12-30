@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       variables: { slug },
     });
     const organization = organizationResult.data.readOrganizationBySlug;
-    
+
     if (organization) {
       return {
         title: `${organization.name} · Ntlango`,
@@ -111,7 +111,7 @@ export default async function OrganizationPage({ params }: Props) {
             {organization.description || 'No description provided yet.'}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2 }}>
-            {tags.map((tag) => (
+            {tags.map(tag => (
               <Button size="small" key={tag} variant="outlined">
                 #{tag}
               </Button>
@@ -128,7 +128,11 @@ export default async function OrganizationPage({ params }: Props) {
           <Typography variant="h6" fontWeight={600}>
             {organization.followersCount.toLocaleString()}
           </Typography>
-          <Button variant={organization.isFollowable ? 'contained' : 'outlined'} sx={{ mt: 1 }} disabled={!organization.isFollowable}>
+          <Button
+            variant={organization.isFollowable ? 'contained' : 'outlined'}
+            sx={{ mt: 1 }}
+            disabled={!organization.isFollowable}
+          >
             {organization.isFollowable ? 'Follow' : 'Not followable'}
           </Button>
         </Box>
@@ -141,12 +145,12 @@ export default async function OrganizationPage({ params }: Props) {
           Links and domains
         </Typography>
         <Stack direction="row" flexWrap="wrap" spacing={1}>
-          {links.map((link) => (
+          {links.map(link => (
             <Button key={link.url} component="a" href={link.url} size="small" target="_blank" rel="noreferrer">
               {link.label}
             </Button>
           ))}
-          {domainsAllowed.map((domain) => (
+          {domainsAllowed.map(domain => (
             <Button key={domain} size="small" variant="outlined">
               {domain}
             </Button>
@@ -154,71 +158,71 @@ export default async function OrganizationPage({ params }: Props) {
         </Stack>
       </Box>
 
-  <Box sx={{ mt: 4 }}>
-    <Typography variant="h5" fontWeight={600} gutterBottom>
-      Event defaults
-    </Typography>
-    <Box
-      sx={{
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-      }}
-    >
-      {[
-        { label: 'Visibility', value: organization.eventDefaults?.visibility ?? 'Public' },
-        { label: 'Reminders', value: organization.eventDefaults?.remindersEnabled ? 'On' : 'Off' },
-        { label: 'Waitlist', value: organization.eventDefaults?.waitlistEnabled ? 'Enabled' : 'Disabled' },
-        { label: 'Guest +1', value: organization.eventDefaults?.allowGuestPlusOnes ? 'Allowed' : 'Disabled' },
-        { label: 'Ticket access', value: organization.eventDefaults?.ticketAccess ?? 'Unrestricted' },
-      ].map((meta) => (
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h5" fontWeight={600} gutterBottom>
+          Event defaults
+        </Typography>
         <Box
-          key={meta.label}
           sx={{
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            p: 2,
-            minHeight: 90,
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           }}
         >
-          <Typography variant="subtitle2" color="text.secondary">
-            {meta.label}
-          </Typography>
-          <Typography variant="body1" fontWeight={600}>
-            {meta.value}
-          </Typography>
+          {[
+            { label: 'Visibility', value: organization.eventDefaults?.visibility ?? 'Public' },
+            { label: 'Reminders', value: organization.eventDefaults?.remindersEnabled ? 'On' : 'Off' },
+            { label: 'Waitlist', value: organization.eventDefaults?.waitlistEnabled ? 'Enabled' : 'Disabled' },
+            { label: 'Guest +1', value: organization.eventDefaults?.allowGuestPlusOnes ? 'Allowed' : 'Disabled' },
+            { label: 'Ticket access', value: organization.eventDefaults?.ticketAccess ?? 'Unrestricted' },
+          ].map(meta => (
+            <Box
+              key={meta.label}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                p: 2,
+                minHeight: 90,
+              }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                {meta.label}
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {meta.value}
+              </Typography>
+            </Box>
+          ))}
         </Box>
-      ))}
-    </Box>
-  </Box>
-
-  <Box sx={{ mt: 5 }}>
-    <Typography variant="h5" fontWeight={600} gutterBottom>
-      Upcoming events
-    </Typography>
-    {events.length === 0 ? (
-      <Typography color="text.secondary">No events have been published yet.</Typography>
-    ) : (
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(3, minmax(0, 1fr))',
-          },
-        }}
-      >
-        {events.map((event) => (
-          <Box key={event.eventId}>
-            <EventBoxSm event={event} />
-          </Box>
-        ))}
       </Box>
-    )}
-  </Box>
+
+      <Box sx={{ mt: 5 }}>
+        <Typography variant="h5" fontWeight={600} gutterBottom>
+          Upcoming events
+        </Typography>
+        {events.length === 0 ? (
+          <Typography color="text.secondary">No events have been published yet.</Typography>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 3,
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(3, minmax(0, 1fr))',
+                lg: 'repeat(4, minmax(0, 1fr))',
+              },
+            }}
+          >
+            {events.map(event => (
+              <Box key={event.eventId}>
+                <EventBoxSm event={event} />
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
     </Container>
   );
 }

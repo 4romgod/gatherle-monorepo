@@ -48,9 +48,7 @@ const parsed = EnvSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error('Invalid API environment configuration:');
   parsed.error.issues.forEach((issue) => {
-    console.error(
-      `  ${issue.path.length ? issue.path.join('.') : 'root'}: ${issue.message}`,
-    );
+    console.error(`  ${issue.path.length ? issue.path.join('.') : 'root'}: ${issue.message}`);
   });
   process.exit(1);
 }

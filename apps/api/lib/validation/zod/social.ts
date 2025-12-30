@@ -5,10 +5,7 @@ import {IntentSource, IntentStatus, IntentVisibility} from '@ntlango/commons/typ
 import {ActivityObjectType, ActivityVerb, ActivityVisibility} from '@ntlango/commons/types/activity';
 import {ERROR_MESSAGES} from '@/validation';
 
-const objectIdSchema = z
-  .string()
-  .refine(mongoose.Types.ObjectId.isValid, {message: ERROR_MESSAGES.INVALID})
-  .describe('MongoDB ObjectId');
+const objectIdSchema = z.string().refine(mongoose.Types.ObjectId.isValid, {message: ERROR_MESSAGES.INVALID}).describe('MongoDB ObjectId');
 
 export const CreateFollowInputSchema = z.object({
   targetType: z.nativeEnum(FollowTargetType),

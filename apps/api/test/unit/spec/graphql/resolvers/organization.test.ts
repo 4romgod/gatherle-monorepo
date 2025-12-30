@@ -1,14 +1,8 @@
 import 'reflect-metadata';
 import {OrganizationResolver} from '@/graphql/resolvers/organization';
 import {OrganizationDAO, OrganizationMembershipDAO} from '@/mongodb/dao';
-import {
-  CreateOrganizationInput,
-  Organization,
-  OrganizationMembership,
-  OrganizationRole,
-  QueryOptionsInput,
-  UpdateOrganizationInput,
-} from '@ntlango/commons/types';
+import type {CreateOrganizationInput, Organization, OrganizationMembership, QueryOptionsInput, UpdateOrganizationInput} from '@ntlango/commons/types';
+import {OrganizationRole} from '@ntlango/commons/types';
 import {OrganizationTicketAccess} from '@ntlango/commons/types';
 import * as validation from '@/validation';
 
@@ -129,10 +123,7 @@ describe('OrganizationResolver', () => {
 
       const result = await resolver.deleteOrganizationById(mockOrganization.orgId);
 
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        mockOrganization.orgId,
-        expect.stringContaining('Organization'),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(mockOrganization.orgId, expect.stringContaining('Organization'));
       expect(OrganizationDAO.deleteOrganizationById).toHaveBeenCalledWith(mockOrganization.orgId);
       expect(result).toEqual(mockOrganization);
     });
@@ -144,10 +135,7 @@ describe('OrganizationResolver', () => {
 
       const result = await resolver.readOrganizationById(mockOrganization.orgId);
 
-      expect(validation.validateMongodbId).toHaveBeenCalledWith(
-        mockOrganization.orgId,
-        expect.stringContaining('Organization'),
-      );
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(mockOrganization.orgId, expect.stringContaining('Organization'));
       expect(OrganizationDAO.readOrganizationById).toHaveBeenCalledWith(mockOrganization.orgId);
       expect(result).toEqual(mockOrganization);
     });

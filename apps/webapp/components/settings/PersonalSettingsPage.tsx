@@ -11,14 +11,14 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Gender, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useCustomAppContext } from '@/components/app-context';
-import dayjs from "dayjs";
+import dayjs from 'dayjs';
 
 interface PersonalSettings {
   privateProfile: boolean;
@@ -43,7 +43,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
   const handleToggleChange = (name: keyof PersonalSettings) => {
     setSettings(prev => ({
       ...prev,
-      [name]: !prev[name]
+      [name]: !prev[name],
     }));
   };
 
@@ -51,7 +51,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
     const { name, value } = e.target;
     setSettings(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -79,7 +79,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
 
   return (
     <Box sx={{ p: 3, maxWidth: 600, margin: 'auto' }}>
-      <Typography variant="h4" fontWeight='bold' sx={{ mb: 5 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
         Personal Settings
       </Typography>
 
@@ -87,10 +87,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12 }}>
             <FormControl fullWidth margin="normal">
-              <LocalizationProvider
-                dateAdapter={AdapterDayjs}
-                adapterLocale="en"
-              >
+              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
                 <DatePicker
                   label="Date of Birth"
                   format="YYYY-MM-DD"
@@ -102,19 +99,15 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel
-                color='secondary'
-              >
-                Gender
-              </InputLabel>
+              <InputLabel color="secondary">Gender</InputLabel>
               <Select
                 name="gender"
                 value={settings.gender || ''}
-                onChange={(e) => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+                onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
                 label="Gender"
                 color="secondary"
               >
-                {Object.values(Gender).map((gender) => (
+                {Object.values(Gender).map(gender => (
                   <MenuItem key={gender} value={gender}>
                     {gender}
                   </MenuItem>
@@ -161,15 +154,11 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         </Grid>
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            type="submit"
-          >
+          <Button variant="contained" color="primary" type="submit">
             Save Changes
           </Button>
         </Box>
       </Box>
     </Box>
   );
-};
+}

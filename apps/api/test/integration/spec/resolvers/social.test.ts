@@ -4,13 +4,25 @@ import {startIntegrationServer, stopIntegrationServer} from '@/test/integration/
 import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
 import {Activity, Follow, Intent} from '@/mongodb/models';
 import {usersMockData, eventsMockData} from '@/mongodb/mockData';
-import {EventCategory, User, UserWithToken, CreateEventInput} from '@ntlango/commons/types';
+import type {EventCategory, User, UserWithToken, CreateEventInput} from '@ntlango/commons/types';
 import {EventStatus, EventVisibility, EventLifecycleStatus} from '@ntlango/commons/types/event';
 import {FollowTargetType} from '@ntlango/commons/types/follow';
 import {IntentStatus, IntentVisibility, IntentSource} from '@ntlango/commons/types/intent';
 import {ActivityVerb, ActivityObjectType, ActivityVisibility} from '@ntlango/commons/types/activity';
-import {SocialVisibility, CreateUserInput} from '@ntlango/commons/types/user';
-import {getFollowMutation, getReadFollowersQuery, getReadFollowingQuery, getReadFeedQuery, getLogActivityMutation, getReadActivitiesByActorQuery, getUpsertIntentMutation, getReadIntentsByEventQuery, getReadIntentsByUserQuery, getUnfollowMutation} from '@/test/utils';
+import type {CreateUserInput} from '@ntlango/commons/types/user';
+import {SocialVisibility} from '@ntlango/commons/types/user';
+import {
+  getFollowMutation,
+  getReadFollowersQuery,
+  getReadFollowingQuery,
+  getReadFeedQuery,
+  getLogActivityMutation,
+  getReadActivitiesByActorQuery,
+  getUpsertIntentMutation,
+  getReadIntentsByEventQuery,
+  getReadIntentsByUserQuery,
+  getUnfollowMutation,
+} from '@/test/utils';
 
 const TEST_PORT = 5010;
 
@@ -52,7 +64,7 @@ describe('Social resolver integration', () => {
       title: 'Social Feed Event',
       description: 'A gathering for social signals',
       eventCategoryList: [category.eventCategoryId],
-      organizerList: [actorUser.userId],
+      organizers: [{userId: actorUser.userId, role: 'Host'}],
       status: EventStatus.Upcoming,
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
@@ -84,10 +96,7 @@ describe('Social resolver integration', () => {
     expect(followResponse.status).toBe(200);
     expect(followResponse.body.data.follow.targetId).toBe(targetUser.userId);
 
-    const followingResponse = await request(url)
-      .post('')
-      .set('token', actorUser.token)
-      .send(getReadFollowingQuery());
+    const followingResponse = await request(url).post('').set('token', actorUser.token).send(getReadFollowingQuery());
 
     expect(followingResponse.status).toBe(200);
     expect(followingResponse.body.data.readFollowing.length).toBeGreaterThan(0);
@@ -128,18 +137,12 @@ describe('Social resolver integration', () => {
     expect(intentResponse.status).toBe(200);
     expect(intentResponse.body.data.upsertIntent.eventId).toBe(eventId);
 
-    const userIntentsResponse = await request(url)
-      .post('')
-      .set('token', actorUser.token)
-      .send(getReadIntentsByUserQuery());
+    const userIntentsResponse = await request(url).post('').set('token', actorUser.token).send(getReadIntentsByUserQuery());
 
     expect(userIntentsResponse.status).toBe(200);
     expect(userIntentsResponse.body.data.readIntentsByUser.length).toBeGreaterThan(0);
 
-    const eventIntentsResponse = await request(url)
-      .post('')
-      .set('token', actorUser.token)
-      .send(getReadIntentsByEventQuery(eventId));
+    const eventIntentsResponse = await request(url).post('').set('token', actorUser.token).send(getReadIntentsByEventQuery(eventId));
 
     expect(eventIntentsResponse.status).toBe(200);
     expect(eventIntentsResponse.body.data.readIntentsByEvent.length).toBeGreaterThan(0);
@@ -161,20 +164,170 @@ describe('Social resolver integration', () => {
     expect(logResponse.status).toBe(200);
     expect(logResponse.body.data.logActivity.actorId).toBe(actorUser.userId);
 
-    const actorFeedResponse = await request(url)
-      .post('')
-      .set('token', actorUser.token)
-      .send(getReadActivitiesByActorQuery(actorUser.userId));
+    const actorFeedResponse = await request(url).post('').set('token', actorUser.token).send(getReadActivitiesByActorQuery(actorUser.userId));
 
     expect(actorFeedResponse.status).toBe(200);
     expect(actorFeedResponse.body.data.readActivitiesByActor.length).toBeGreaterThan(0);
 
-    const feedResponse = await request(url)
-      .post('')
-      .set('token', actorUser.token)
-      .send(getReadFeedQuery(5));
+    const feedResponse = await request(url).post('').set('token', actorUser.token).send(getReadFeedQuery(5));
 
     expect(feedResponse.status).toBe(200);
     expect(feedResponse.body.data.readFeed.length).toBeGreaterThan(0);
+  });
+
+  it('handles duplicate follows gracefully', async () => {
+    const firstFollow = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(getFollowMutation({targetType: FollowTargetType.User, targetId: targetUser.userId}));
+
+    expect(firstFollow.status).toBe(200);
+
+    const duplicateFollow = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(getFollowMutation({targetType: FollowTargetType.User, targetId: targetUser.userId}));
+
+    // The API may return 200 (idempotent) or 409 (conflict)
+    expect([200, 409]).toContain(duplicateFollow.status);
+
+    await request(url).post('').set('token', actorUser.token).send(getUnfollowMutation(FollowTargetType.User, targetUser.userId));
+  });
+
+  it('handles intent status updates', async () => {
+    const initialIntent = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(
+        getUpsertIntentMutation({
+          eventId,
+          status: IntentStatus.Interested,
+          visibility: IntentVisibility.Public,
+          source: IntentSource.Manual,
+        }),
+      );
+
+    expect(initialIntent.status).toBe(200);
+    expect(initialIntent.body.data.upsertIntent.status).toBe(IntentStatus.Interested);
+
+    const updatedIntent = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(
+        getUpsertIntentMutation({
+          eventId,
+          status: IntentStatus.Going,
+          visibility: IntentVisibility.Public,
+          source: IntentSource.Manual,
+        }),
+      );
+
+    expect(updatedIntent.status).toBe(200);
+    expect(updatedIntent.body.data.upsertIntent.status).toBe(IntentStatus.Going);
+  });
+
+  it('requires authentication for follow mutation', async () => {
+    const response = await request(url)
+      .post('')
+      .send(getFollowMutation({targetType: FollowTargetType.User, targetId: targetUser.userId}));
+
+    expect(response.status).toBe(401);
+  });
+
+  it('requires authentication for unfollow mutation', async () => {
+    const response = await request(url).post('').send(getUnfollowMutation(FollowTargetType.User, targetUser.userId));
+
+    expect(response.status).toBe(401);
+  });
+
+  it('requires authentication for intent mutations', async () => {
+    const response = await request(url)
+      .post('')
+      .send(
+        getUpsertIntentMutation({
+          eventId,
+          status: IntentStatus.Going,
+          visibility: IntentVisibility.Public,
+          source: IntentSource.Manual,
+        }),
+      );
+
+    expect(response.status).toBe(401);
+  });
+
+  it('requires authentication for activity logging', async () => {
+    const response = await request(url)
+      .post('')
+      .send(
+        getLogActivityMutation({
+          verb: ActivityVerb.RSVPd,
+          objectType: ActivityObjectType.Event,
+          objectId: eventId,
+          visibility: ActivityVisibility.Public,
+        }),
+      );
+
+    expect(response.status).toBe(401);
+  });
+
+  it('returns validation error for invalid follow target type', async () => {
+    const response = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(getFollowMutation({targetType: 'InvalidType', targetId: targetUser.userId}));
+
+    expect(response.status).toBe(400);
+  });
+
+  it('allows following an organization', async () => {
+    const org = await EventCategoryDAO.create({
+      name: 'Follow Org',
+      iconName: 'org',
+      description: 'Org for following',
+    });
+    const followResponse = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(getFollowMutation({targetType: FollowTargetType.Organization, targetId: org.eventCategoryId}));
+
+    expect(followResponse.status).toBe(200);
+    expect(followResponse.body.data.follow.targetType).toBe(FollowTargetType.Organization);
+    expect(followResponse.body.data.follow.targetId).toBe(org.eventCategoryId);
+
+    await request(url).post('').set('token', actorUser.token).send(getUnfollowMutation(FollowTargetType.Organization, org.eventCategoryId));
+
+    await EventCategoryDAO.deleteEventCategoryById(org.eventCategoryId).catch(() => {});
+  });
+
+  it('records activities with different visibility levels', async () => {
+    const privateActivity = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(
+        getLogActivityMutation({
+          verb: ActivityVerb.Commented,
+          objectType: ActivityObjectType.Event,
+          objectId: eventId,
+          visibility: ActivityVisibility.Private,
+        }),
+      );
+
+    expect(privateActivity.status).toBe(200);
+    expect(privateActivity.body.data.logActivity.visibility).toBe(ActivityVisibility.Private);
+
+    const followersActivity = await request(url)
+      .post('')
+      .set('token', actorUser.token)
+      .send(
+        getLogActivityMutation({
+          verb: ActivityVerb.CheckedIn,
+          objectType: ActivityObjectType.Event,
+          objectId: eventId,
+          visibility: ActivityVisibility.Followers,
+        }),
+      );
+
+    expect(followersActivity.status).toBe(200);
+    expect(followersActivity.body.data.logActivity.visibility).toBe(ActivityVisibility.Followers);
   });
 });

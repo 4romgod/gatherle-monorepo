@@ -12,11 +12,7 @@ import {
   InputAdornment,
   LinearProgress,
 } from '@mui/material';
-import {
-  Visibility,
-  VisibilityOff,
-  Security as SecurityIcon
-} from '@mui/icons-material';
+import { Visibility, VisibilityOff, Security as SecurityIcon } from '@mui/icons-material';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
 
 interface PasswordSettings {
@@ -37,7 +33,7 @@ export default function PasswordSettingsPage() {
   const [settings, setSettings] = useState<PasswordSettings>({
     currentPassword: '',
     newPassword: '',
-    confirmNewPassword: ''
+    confirmNewPassword: '',
   });
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -51,7 +47,7 @@ export default function PasswordSettingsPage() {
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     score: 0,
     feedback: [],
-    color: 'error'
+    color: 'error',
   });
 
   const calculatePasswordStrength = (password: string): PasswordStrength => {
@@ -79,10 +75,7 @@ export default function PasswordSettingsPage() {
     if (/[^a-zA-Z0-9]/.test(password)) score += 20;
     else feedback.push('Include special characters');
 
-    const commonPatterns = [
-      /123/i, /abc/i, /password/i, /qwerty/i, /admin/i,
-      /(\w)\1{2,}/i
-    ];
+    const commonPatterns = [/123/i, /abc/i, /password/i, /qwerty/i, /admin/i, /(\w)\1{2,}/i];
 
     const hasCommonPattern = commonPatterns.some(pattern => pattern.test(password));
     if (!hasCommonPattern) score += 10;
@@ -107,7 +100,7 @@ export default function PasswordSettingsPage() {
       setSettings({
         currentPassword: '',
         newPassword: '',
-        confirmNewPassword: ''
+        confirmNewPassword: '',
       });
     } else if (actionState.apiError) {
       setPasswordError(actionState.apiError);
@@ -119,7 +112,7 @@ export default function PasswordSettingsPage() {
     const { name, value } = e.target;
     setSettings(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
     setPasswordError('');
@@ -168,7 +161,7 @@ export default function PasswordSettingsPage() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validatePasswords()) {
       return;
     }
@@ -187,17 +180,18 @@ export default function PasswordSettingsPage() {
       } catch (error) {
         setActionState({
           apiError: 'An unexpected error occurred',
-          success: false
+          success: false,
         });
       }
     });
   };
 
-  const isFormValid = settings.currentPassword && settings.newPassword && settings.confirmNewPassword && passwordStrength.score >= 40;
+  const isFormValid =
+    settings.currentPassword && settings.newPassword && settings.confirmNewPassword && passwordStrength.score >= 40;
 
   return (
     <Box sx={{ p: 3, maxWidth: 600, margin: 'auto' }}>
-      <Typography variant="h4" fontWeight='bold' sx={{ mb: 5 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
         Password Management
       </Typography>
 
@@ -220,7 +214,7 @@ export default function PasswordSettingsPage() {
                   onChange={handleInputChange}
                   variant="outlined"
                   disabled={isPending}
-                  error={(passwordError.includes('Current password') || !!actionState.zodErrors?.currentPassword)}
+                  error={passwordError.includes('Current password') || !!actionState.zodErrors?.currentPassword}
                   helperText={actionState.zodErrors?.currentPassword?.[0]}
                   slotProps={{
                     input: {
@@ -235,10 +229,10 @@ export default function PasswordSettingsPage() {
                             {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
-                      )
-                    }
+                      ),
+                    },
                   }}
-                  color='secondary'
+                  color="secondary"
                   sx={{ pb: 4 }}
                 />
 
@@ -251,7 +245,11 @@ export default function PasswordSettingsPage() {
                   onChange={handleInputChange}
                   variant="outlined"
                   disabled={isPending}
-                  error={(passwordError.includes('New password') || passwordError.includes('Password is too weak') || !!actionState.zodErrors?.newPassword)}
+                  error={
+                    passwordError.includes('New password') ||
+                    passwordError.includes('Password is too weak') ||
+                    !!actionState.zodErrors?.newPassword
+                  }
                   helperText={actionState.zodErrors?.newPassword?.[0]}
                   slotProps={{
                     input: {
@@ -266,10 +264,10 @@ export default function PasswordSettingsPage() {
                             {showNewPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
-                      )
-                    }
+                      ),
+                    },
                   }}
-                  color='secondary'
+                  color="secondary"
                   sx={{ pb: 4 }}
                 />
 
@@ -301,7 +299,11 @@ export default function PasswordSettingsPage() {
                   onChange={handleInputChange}
                   variant="outlined"
                   disabled={isPending}
-                  error={(passwordError.includes('do not match') || passwordError.includes('confirm') || !!actionState.zodErrors?.confirmNewPassword)}
+                  error={
+                    passwordError.includes('do not match') ||
+                    passwordError.includes('confirm') ||
+                    !!actionState.zodErrors?.confirmNewPassword
+                  }
                   helperText={actionState.zodErrors?.confirmNewPassword?.[0]}
                   slotProps={{
                     input: {
@@ -316,10 +318,10 @@ export default function PasswordSettingsPage() {
                             {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
-                      )
-                    }
+                      ),
+                    },
                   }}
-                  color='secondary'
+                  color="secondary"
                 />
               </Grid>
             </Grid>
@@ -352,4 +354,4 @@ export default function PasswordSettingsPage() {
       </form>
     </Box>
   );
-};
+}

@@ -21,12 +21,10 @@ export default function EventCategoryFilter({
         px: 2,
       }}
     >
-      <IconComponent
-        color={eventCategory.color || ''}
-        height={24}
-        width={24}
-      />
-      <Typography variant='body1' pl={1}>{eventCategory.name}</Typography>
+      <IconComponent color={eventCategory.color || ''} height={24} width={24} />
+      <Typography variant="body1" pl={1}>
+        {eventCategory.name}
+      </Typography>
     </Box>
   );
-};
+}

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { GetEventBySlugDocument, GetEventBySlugQuery, Location } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import { Avatar, AvatarGroup, Box, CardMedia, Chip, Container, Grid, Stack, Tooltip, Typography } from '@mui/material';
@@ -31,7 +32,7 @@ export default async function Page(props: Props) {
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
   });
-  const { title, organizerList, description, media, recurrenceRule, location, eventCategoryList, comments, participants } =
+  const { title, organizers, description, media, recurrenceRule, location, eventCategoryList, comments, participants } =
     eventRetrieved.readEventBySlug;
   type EventDetailParticipant = NonNullable<
     NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']
@@ -98,9 +99,9 @@ export default async function Page(props: Props) {
         </Box>
 
         <Grid container spacing={5}>
-          <Grid size={{md: 9}} width={'100%'} mt={2}>
+          <Grid size={{ md: 9 }} width={'100%'} mt={2}>
             <Box component="div">
-              <Typography fontWeight='bold' variant="h3" gutterBottom>
+              <Typography fontWeight="bold" variant="h3" gutterBottom>
                 {title}
               </Typography>
             </Box>
@@ -109,7 +110,7 @@ export default async function Page(props: Props) {
               <Typography variant="h5" gutterBottom>
                 Date and Time
               </Typography>
-              <Typography fontWeight='bold' variant="body2" gutterBottom>
+              <Typography fontWeight="bold" variant="body2" gutterBottom>
                 <CalendarToday sx={{ mr: 1 }} />
                 {getRecurrenceText(recurrenceRule)}
               </Typography>
@@ -119,7 +120,7 @@ export default async function Page(props: Props) {
               <Typography variant="h5" gutterBottom>
                 Location
               </Typography>
-              <Typography fontWeight='bold' variant="body2" gutterBottom>
+              <Typography fontWeight="bold" variant="body2" gutterBottom>
                 <Place sx={{ mr: 1 }} />
                 {getLocationText(location)}
               </Typography>
@@ -135,31 +136,81 @@ export default async function Page(props: Props) {
             </Box>
 
             <Box component="section" mt={8}>
-              <Typography variant="h5" gutterBottom>
+              <Typography variant="h5" gutterBottom fontWeight={700}>
                 Organized By
               </Typography>
 
-              {organizerList.length === 0 ? (
+              {organizers.length === 0 ? (
                 <Typography color="text.secondary">No organizers listed.</Typography>
               ) : (
-                <Grid container spacing={5}>
-                  {organizerList.map((organizer) => (
+                <Grid container spacing={3}>
+                  {organizers.map(organizer => (
                     <Grid key={organizer.userId}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar
-                          src={organizer.profile_picture || undefined}
-                          alt={`${organizer.given_name} ${organizer.family_name}`}
-                          sx={{ width: 64, height: 64 }}
-                        />
-                        <Box>
-                          <Typography variant="h6">
-                            {organizer.given_name} {organizer.family_name}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {`Email: ${organizer.email}`}
-                          </Typography>
-                        </Box>
-                      </Stack>
+                      {organizer.user ? (
+                        <Link
+                          href={`/users/${organizer.user.username}`}
+                          passHref
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Stack
+                            direction="row"
+                            spacing={2}
+                            alignItems="center"
+                            sx={{
+                              cursor: 'pointer',
+                              p: 2,
+                              borderRadius: 2,
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                                transform: 'translateY(-2px)',
+                              },
+                            }}
+                          >
+                            <Avatar
+                              src={organizer.user.profile_picture || undefined}
+                              alt={`${organizer.user.given_name || organizer.user.username}`}
+                              sx={{ width: 56, height: 56 }}
+                            >
+                              {!organizer.user.profile_picture &&
+                                (
+                                  organizer.user.given_name?.charAt(0) ||
+                                  organizer.user.username?.charAt(0) ||
+                                  '?'
+                                ).toUpperCase()}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="subtitle1" fontWeight={600}>
+                                {organizer.user.given_name && organizer.user.family_name
+                                  ? `${organizer.user.given_name} ${organizer.user.family_name}`
+                                  : organizer.user.username || 'Unknown User'}
+                              </Typography>
+                              {organizer.user.username && (organizer.user.given_name || organizer.user.family_name) && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  @{organizer.user.username}
+                                </Typography>
+                              )}
+                              <Chip
+                                label={organizer.role}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ mt: 0.5 }}
+                              />
+                            </Box>
+                          </Stack>
+                        </Link>
+                      ) : (
+                        <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
+                          <Avatar sx={{ width: 56, height: 56, bgcolor: 'grey.400' }}>?</Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" color="text.secondary">
+                              User unavailable
+                            </Typography>
+                            <Chip label={organizer.role} size="small" variant="outlined" sx={{ mt: 0.5 }} />
+                          </Box>
+                        </Stack>
+                      )}
                     </Grid>
                   ))}
                 </Grid>
@@ -176,7 +227,7 @@ export default async function Page(props: Props) {
                 <>
                   <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
                     <AvatarGroup max={6} sx={{ '& .MuiAvatar-root': { width: 36, height: 36, fontSize: '0.9rem' } }}>
-                      {participantList.slice(0, 6).map((participant) => (
+                      {participantList.slice(0, 6).map(participant => (
                         <Tooltip
                           key={participant.participantId}
                           title={`${getParticipantDisplayName(participant)} · ${getParticipantStatusLabel(participant)}`}
@@ -192,7 +243,7 @@ export default async function Page(props: Props) {
                     </Typography>
                   </Stack>
                   <Grid container spacing={1}>
-                    {participantList.map((participant) => (
+                    {participantList.map(participant => (
                       <Grid key={participant.participantId}>
                         <Chip
                           avatar={
@@ -215,12 +266,12 @@ export default async function Page(props: Props) {
                 Categories
               </Typography>
               <Stack direction="row" spacing={1} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                {(eventCategoryList.length > 0) ? eventCategoryList.map((category, index) => (
-                  <EventCategoryChip key={`${category.name}.${index}`} category={category} />
-                )) : (
-                  <Typography variant='body2'>
-                    No available categories
-                  </Typography>
+                {eventCategoryList.length > 0 ? (
+                  eventCategoryList.map((category, index) => (
+                    <EventCategoryChip key={`${category.name}.${index}`} category={category} />
+                  ))
+                ) : (
+                  <Typography variant="body2">No available categories</Typography>
                 )}
               </Stack>
             </Box>
@@ -240,17 +291,15 @@ export default async function Page(props: Props) {
                   ))}
                 </Grid>
               ) : (
-                <Typography variant='body2'>
-                  No available comments
-                </Typography>
+                <Typography variant="body2">No available comments</Typography>
               )}
             </Box>
           </Grid>
-          <Grid size={{md: 3}} width={'100%'} mt={2}>
+          <Grid size={{ md: 3 }} width={'100%'} mt={2}>
             <PurchaseCard />
           </Grid>
         </Grid>
       </Box>
     </Container>
   );
-};
+}

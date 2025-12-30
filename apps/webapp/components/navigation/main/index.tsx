@@ -109,7 +109,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               ml: 3,
             }}
           >
-            {navLinks.map((link) => (
+            {navLinks.map(link => (
               <Button
                 key={link.label}
                 component={Link}

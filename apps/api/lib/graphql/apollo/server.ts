@@ -64,13 +64,9 @@ export const createApolloServer = async (expressApp?: Express) => {
 
       const {exception: _exception, http: _http, ...extensionsWithoutException} = formattedError.extensions ?? {};
       const baseErrorCode =
-        typeof extensionsWithoutException.code === 'string'
-          ? extensionsWithoutException.code
-          : ApolloServerErrorCode.INTERNAL_SERVER_ERROR;
+        typeof extensionsWithoutException.code === 'string' ? extensionsWithoutException.code : ApolloServerErrorCode.INTERNAL_SERVER_ERROR;
       const resolvedErrorCode = baseErrorCode;
-      const message = useInvalidQueryMessage(resolvedErrorCode)
-        ? ERROR_MESSAGES.INVALID_QUERY
-        : formattedError.message;
+      const message = useInvalidQueryMessage(resolvedErrorCode) ? ERROR_MESSAGES.INVALID_QUERY : formattedError.message;
       const status = getHttpStatusFromError(resolvedErrorCode, graphQLError);
 
       return {

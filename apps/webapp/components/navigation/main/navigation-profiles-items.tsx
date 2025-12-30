@@ -40,9 +40,9 @@ export default function ProfilesMenu({
         paper: {
           style: {
             padding: '8px 0',
-            minWidth: '200px'
-          }
-        }
+            minWidth: '200px',
+          },
+        },
       }}
     >
       <Link href={ROUTES.ACCOUNT.PROFILE} onClick={handleProfilesMenuClose}>
@@ -52,7 +52,7 @@ export default function ProfilesMenu({
           </ListItemIcon>
           <ListItemText
             slotProps={{
-              primary: { fontSize: '1rem' }
+              primary: { fontSize: '1rem' },
             }}
           >
             Profile
@@ -66,7 +66,7 @@ export default function ProfilesMenu({
           </ListItemIcon>
           <ListItemText
             slotProps={{
-              primary: { fontSize: '1rem' }
+              primary: { fontSize: '1rem' },
             }}
           >
             Settings
@@ -85,7 +85,7 @@ export default function ProfilesMenu({
         </ListItemIcon>
         <ListItemText
           slotProps={{
-            primary: { fontSize: '1rem' }
+            primary: { fontSize: '1rem' },
           }}
         >
           Logout

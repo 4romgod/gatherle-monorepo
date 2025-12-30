@@ -1,13 +1,7 @@
 import {EventParticipantDAO} from '@/mongodb/dao';
 import {EventParticipant as EventParticipantModel} from '@/mongodb/models';
-import type {
-  EventParticipant,
-  UpsertEventParticipantInput,
-  CancelEventParticipantInput} from '@ntlango/commons/types';
-import {
-  ParticipantStatus,
-  ParticipantVisibility,
-} from '@ntlango/commons/types';
+import type {EventParticipant, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
+import {ParticipantStatus, ParticipantVisibility} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes} from '@/utils';
 import {GraphQLError} from 'graphql';
 import {MockMongoError} from '@/test/utils';

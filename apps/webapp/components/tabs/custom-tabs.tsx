@@ -38,16 +38,15 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
 
   // Memoize tab panels to avoid unnecessary re-renders
-  const tabPanels = useMemo(() => tabs.map(({ content }, index) => (
-    <CustomTabPanel
-      key={`${id}-panel-content-${index}`}
-      value={value}
-      index={index}
-      id={id}
-    >
-      {content}
-    </CustomTabPanel>
-  )), [tabs, value, id]);
+  const tabPanels = useMemo(
+    () =>
+      tabs.map(({ content }, index) => (
+        <CustomTabPanel key={`${id}-panel-content-${index}`} value={value} index={index} id={id}>
+          {content}
+        </CustomTabPanel>
+      )),
+    [tabs, value, id],
+  );
 
   const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -84,7 +83,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
             sx={{
               py: 4,
               px: 2,
-              display: isSmallScreen ? 'none' : 'block'
+              display: isSmallScreen ? 'none' : 'block',
             }}
           >
             {tabsTitle}
@@ -102,7 +101,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
           slotProps={{
             indicator: {
               style: orientation === 'vertical' ? { left: 0, width: 4 } : undefined,
-            }
+            },
           }}
           sx={{
             height: orientation === 'vertical' ? '100%' : 'auto',

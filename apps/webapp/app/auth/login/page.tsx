@@ -1,13 +1,6 @@
 import Logo from '@/components/logo';
 import LoginForm from '@/components/forms/auth/login';
-import {
-  Box,
-  Button,
-  Container,
-  Divider,
-  Paper,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Container, Divider, Paper, Typography } from '@mui/material';
 import { FaFacebookF } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { MdEmail } from 'react-icons/md';

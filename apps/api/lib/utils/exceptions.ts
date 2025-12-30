@@ -64,26 +64,23 @@ export const KnownCommonError = (error: unknown): GraphQLError => {
     const {code, keyValue} = error as {code?: number; keyValue?: Record<string, string>};
     if (code) {
       switch (code) {
-        case 11000:
-          {
-            const key = keyValue ? Object.keys(keyValue)[0] : undefined;
-            if (key && keyValue?.[key]) {
-              message = `${capitalize(key)} ${keyValue[key]} already exists`;
-            } else {
-              message = 'A duplicate value was detected';
-            }
-            return CustomError(message, ErrorTypes.CONFLICT);
+        case 11000: {
+          const key = keyValue ? Object.keys(keyValue)[0] : undefined;
+          if (key && keyValue?.[key]) {
+            message = `${capitalize(key)} ${keyValue[key]} already exists`;
+          } else {
+            message = 'A duplicate value was detected';
           }
-        case 11001:
-          {
-            message = duplicateFieldMessage(error);
-            return CustomError(message, ErrorTypes.CONFLICT);
-          }
-        case 10334:
-          {
-            message = ERROR_MESSAGES.CONTENT_TOO_LARGE;
-            return CustomError(message, ErrorTypes.BAD_USER_INPUT);
-          }
+          return CustomError(message, ErrorTypes.CONFLICT);
+        }
+        case 11001: {
+          message = duplicateFieldMessage(error);
+          return CustomError(message, ErrorTypes.CONFLICT);
+        }
+        case 10334: {
+          message = ERROR_MESSAGES.CONTENT_TOO_LARGE;
+          return CustomError(message, ErrorTypes.BAD_USER_INPUT);
+        }
       }
     }
   }
@@ -102,7 +99,7 @@ export const extractValidationErrorMessage = (error: unknown, defaultMessage: st
   const typedError = error as {name?: string; message?: string; errors?: Record<string, FieldError>};
   const errorName = typedError?.name;
   const errorMessage = typedError?.message;
-  
+
   const isValidationError =
     errorName === 'ValidationError' ||
     errorName === 'ValidatorError' ||
@@ -114,9 +111,7 @@ export const extractValidationErrorMessage = (error: unknown, defaultMessage: st
 
   const fieldErrors = typedError.errors ? (Object.values(typedError.errors) as FieldError[]) : [];
   const validationMessage =
-    fieldErrors
-      .map((fieldError) => fieldError.message)
-      .filter((message): message is string => typeof message === 'string')[0] ?? defaultMessage;
+    fieldErrors.map((fieldError) => fieldError.message).filter((message): message is string => typeof message === 'string')[0] ?? defaultMessage;
 
   return validationMessage;
 };

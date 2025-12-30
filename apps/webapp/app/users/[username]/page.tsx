@@ -1,7 +1,12 @@
 import CustomContainer from '@/components/custom-container';
 import EventBox from '@/components/events/event-box';
 import { getClient } from '@/data/graphql';
-import { EventCategory, FilterOperatorInput, GetAllEventsDocument, GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
+import {
+  EventCategory,
+  FilterOperatorInput,
+  GetAllEventsDocument,
+  GetUserByUsernameDocument,
+} from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { Typography, Box, Grid, Paper } from '@mui/material';
 import UserDetails from '@/components/users/user-details';
@@ -26,10 +31,10 @@ export default async function UserPage(props: Props) {
       options: {
         filters: [
           {
-            field: 'organizerList.userId',
+            field: 'organizers.userId',
             operator: FilterOperatorInput.Eq,
             value: user.userId,
-          }
+          },
         ],
       },
     },
@@ -47,18 +52,22 @@ export default async function UserPage(props: Props) {
       <CustomContainer>
         <Box component="div">
           <Grid container>
-            <Grid size={{md: 4}} width={'100%'} p={2}>
+            <Grid size={{ md: 4 }} width={'100%'} p={2}>
               <UserDetails user={user} />
             </Grid>
-            <Grid size={{md: 8}} width={'100%'} p={2}>
+            <Grid size={{ md: 8 }} width={'100%'} p={2}>
               <Paper sx={{ backgroundColor: 'secondary.main', borderRadius: '12px', p: 5 }}>
                 <Typography variant="h5">Lorem</Typography>
                 <Typography variant="body1">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Non, dolores obcaecati? Ea dolore, numquam laboriosam in eum beatae blanditiis veniam culpa aliquid consectetur repellat possimus impedit reprehenderit atque? Pariatur, maxime?
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Non, dolores obcaecati? Ea dolore, numquam
+                  laboriosam in eum beatae blanditiis veniam culpa aliquid consectetur repellat possimus impedit
+                  reprehenderit atque? Pariatur, maxime?
                 </Typography>
               </Paper>
               <Paper elevation={3} sx={{ p: 3, mt: 3, backgroundColor: 'background.default', borderRadius: '12px' }}>
-                <Typography variant="h5" gutterBottom>Interests</Typography>
+                <Typography variant="h5" gutterBottom>
+                  Interests
+                </Typography>
                 {categories.map((category, index) => (
                   <EventCategoryChip key={`${category.name}.${index}`} category={category} />
                 ))}
@@ -66,7 +75,7 @@ export default async function UserPage(props: Props) {
 
               <Box component="div" pt={5}>
                 <Grid container spacing={2}>
-                  {events.map((event) => {
+                  {events.map(event => {
                     return (
                       <Grid size={{ xs: 12 }} key={`EventTileGrid.${event.eventId}`}>
                         <Box component="div">

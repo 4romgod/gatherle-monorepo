@@ -1,12 +1,7 @@
 import {EventCategoryGroup as EventCategoryGroupModel} from '@/mongodb/models';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
-import type {
-  CreateEventCategoryGroupInput,
-  EventCategoryGroup,
-  QueryOptionsInput,
-  UpdateEventCategoryGroupInput,
-} from '@ntlango/commons/types';
+import type {CreateEventCategoryGroupInput, EventCategoryGroup, QueryOptionsInput, UpdateEventCategoryGroupInput} from '@ntlango/commons/types';
 
 /**
  * Data Access Object for Event Category Group operations.

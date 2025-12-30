@@ -4,9 +4,9 @@ import {Intent, UpsertIntentInput} from '@ntlango/commons/types';
 import {UpsertIntentInputSchema} from '@/validation/zod';
 import {validateInput} from '@/validation';
 import {IntentDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/graphql';
+import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import { requireAuthenticatedUser } from '@/utils';
+import {requireAuthenticatedUser} from '@/utils';
 
 @Resolver(() => Intent)
 export class IntentResolver {

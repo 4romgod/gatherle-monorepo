@@ -48,7 +48,6 @@ type UpdateFields = {
     next(err as Error);
   }
 })
-
 @pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function (next) {
   try {
     type UpdateContext = {

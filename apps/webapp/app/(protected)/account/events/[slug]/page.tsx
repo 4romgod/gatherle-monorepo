@@ -49,7 +49,7 @@ export default async function Page(props: Props) {
             Event Categories
           </Typography>
           <Stack direction="row" spacing={1} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-            {event.eventCategoryList.map((category) => {
+            {event.eventCategoryList.map(category => {
               const IconComponent = getEventCategoryIcon(category.iconName);
               return (
                 <Link key={category.eventCategoryId} href={`/events#${category.name}`} passHref>
@@ -86,21 +86,50 @@ export default async function Page(props: Props) {
           <Typography variant="h4" gutterBottom>
             Organizers
           </Typography>
-          <Grid container spacing={2}>
-            {event.organizerList.map((organizer) => (
+          <Grid container spacing={3}>
+            {event.organizers.map(organizer => (
               <Grid key={organizer.userId}>
-                <Link href={`/users/${organizer.username}`} passHref>
-                  <Chip
-                    avatar={
-                      organizer.profile_picture ? (
-                        <Avatar src={organizer.profile_picture} alt={organizer.username} />
-                      ) : (
-                        <Avatar>{organizer.username.charAt(0).toLocaleUpperCase()}</Avatar>
-                      )
-                    }
-                    label={organizer.username}
-                  />
-                </Link>
+                {organizer.user ? (
+                  <Link href={`/users/${organizer.user.username}`} passHref style={{ textDecoration: 'none' }}>
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                      sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                    >
+                      <Avatar
+                        src={organizer.user.profile_picture || undefined}
+                        alt={`${organizer.user.given_name || organizer.user.username}`}
+                        sx={{ width: 56, height: 56 }}
+                      >
+                        {!organizer.user.profile_picture &&
+                          (
+                            organizer.user.given_name?.charAt(0) ||
+                            organizer.user.username?.charAt(0) ||
+                            '?'
+                          ).toUpperCase()}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {organizer.user.given_name && organizer.user.family_name
+                            ? `${organizer.user.given_name} ${organizer.user.family_name}`
+                            : organizer.user.username || 'Unknown User'}
+                        </Typography>
+                        <Chip label={organizer.role} size="small" color="primary" variant="outlined" sx={{ mt: 0.5 }} />
+                      </Box>
+                    </Stack>
+                  </Link>
+                ) : (
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ width: 56, height: 56, bgcolor: 'grey.400' }}>?</Avatar>
+                    <Box>
+                      <Typography variant="subtitle1" color="text.secondary">
+                        User ID: {organizer.userId}
+                      </Typography>
+                      <Chip label={organizer.role} size="small" variant="outlined" sx={{ mt: 0.5 }} />
+                    </Box>
+                  </Stack>
+                )}
               </Grid>
             ))}
           </Grid>
@@ -111,7 +140,7 @@ export default async function Page(props: Props) {
             RSVPs
           </Typography>
           <Grid container spacing={2}>
-            {participants.map((participant) => (
+            {participants.map(participant => (
               <Grid key={participant.participantId}>
                 <Chip
                   avatar={<Avatar>{participant.userId.charAt(0).toLocaleUpperCase()}</Avatar>}

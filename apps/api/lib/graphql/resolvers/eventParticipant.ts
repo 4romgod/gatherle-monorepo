@@ -1,12 +1,6 @@
 import 'reflect-metadata';
 import {Arg, Authorized, FieldResolver, Mutation, Query, Resolver, Root} from 'type-graphql';
-import {
-  CancelEventParticipantInput,
-  EventParticipant,
-  UpsertEventParticipantInput,
-  User,
-  UserRole,
-} from '@ntlango/commons/types';
+import {CancelEventParticipantInput, EventParticipant, UpsertEventParticipantInput, User, UserRole} from '@ntlango/commons/types';
 import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/validation';
 
@@ -22,9 +16,7 @@ export class EventParticipantResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => EventParticipant)
-  async cancelEventParticipant(
-    @Arg('input', () => CancelEventParticipantInput) input: CancelEventParticipantInput,
-  ): Promise<EventParticipant> {
+  async cancelEventParticipant(@Arg('input', () => CancelEventParticipantInput) input: CancelEventParticipantInput): Promise<EventParticipant> {
     validateMongodbId(input.eventId);
     validateMongodbId(input.userId);
     return EventParticipantDAO.cancel(input);

@@ -1,14 +1,5 @@
 import Link from 'next/link';
-import {
-  Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  Chip,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 
 export type OrganizationCardProps = {
@@ -21,7 +12,15 @@ export type OrganizationCardProps = {
   isFollowable?: boolean;
 };
 
-const OrganizationCard = ({ name, slug, description, logo, tags, followersCount, isFollowable }: OrganizationCardProps) => {
+const OrganizationCard = ({
+  name,
+  slug,
+  description,
+  logo,
+  tags,
+  followersCount,
+  isFollowable,
+}: OrganizationCardProps) => {
   return (
     <Card elevation={0} sx={{ borderRadius: 3, minHeight: 220, display: 'flex', flexDirection: 'column' }}>
       {logo ? (
@@ -56,7 +55,7 @@ const OrganizationCard = ({ name, slug, description, logo, tags, followersCount,
           </Typography>
         )}
         <Stack direction="row" spacing={1} flexWrap="wrap" mt={2} gap={1}>
-          {tags?.slice(0, 4).map((tag) => (
+          {tags?.slice(0, 4).map(tag => (
             <Chip key={tag} label={tag} size="small" />
           ))}
         </Stack>

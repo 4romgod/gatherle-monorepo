@@ -4,9 +4,9 @@ import {CreateFollowInput, Follow, FollowTargetType} from '@ntlango/commons/type
 import {CreateFollowInputSchema} from '@/validation/zod';
 import {validateInput} from '@/validation';
 import {FollowDAO} from '@/mongodb/dao';
-import {ServerContext} from '@/graphql';
+import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import { requireAuthenticatedUser } from '@/utils';
+import {requireAuthenticatedUser} from '@/utils';
 
 @Resolver(() => Follow)
 export class FollowResolver {

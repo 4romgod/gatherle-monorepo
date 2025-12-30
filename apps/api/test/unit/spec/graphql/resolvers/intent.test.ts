@@ -1,9 +1,10 @@
 import 'reflect-metadata';
-import { IntentResolver } from '@/graphql/resolvers/intent';
-import { IntentDAO } from '@/mongodb/dao';
-import { Intent, IntentStatus, IntentVisibility, IntentSource, UpsertIntentInput, User, UserRole } from '@ntlango/commons/types';
-import { Types } from 'mongoose';
-import { requireAuthenticatedUser } from '@/utils';
+import {IntentResolver} from '@/graphql/resolvers/intent';
+import {IntentDAO} from '@/mongodb/dao';
+import type {Intent, UpsertIntentInput, User} from '@ntlango/commons/types';
+import {IntentStatus, IntentVisibility, IntentSource, UserRole} from '@ntlango/commons/types';
+import {Types} from 'mongoose';
+import {requireAuthenticatedUser} from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
   IntentDAO: {

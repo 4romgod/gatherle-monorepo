@@ -1,5 +1,5 @@
 import type {ZodSchema} from 'zod';
-import { z} from 'zod';
+import {z} from 'zod';
 import {validateMongodbId, validateInput, validateDate, ERROR_MESSAGES, validateEmail, validateUsername} from '@/validation';
 import {EventStatus} from '@ntlango/commons/types/event';
 import mongoose from 'mongoose';

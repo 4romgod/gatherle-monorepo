@@ -8,14 +8,16 @@ import Select, { SelectChangeEvent } from '@mui/material/Select';
 import { useRouter } from 'next/navigation';
 import { styled } from '@mui/material/styles';
 
-const StyledSelect = styled(Select<string>, { shouldForwardProp: (prop) => prop !== 'isDefaultSelected' })<{ isDefaultSelected: boolean }>(({ theme, isDefaultSelected }) => ({
+const StyledSelect = styled(Select<string>, { shouldForwardProp: prop => prop !== 'isDefaultSelected' })<{
+  isDefaultSelected: boolean;
+}>(({ theme, isDefaultSelected }) => ({
   padding: 5,
   backgroundColor:
     isDefaultSelected === true
       ? '#F6F7F8'
       : theme.palette.mode === 'dark'
-      ? theme.palette.secondary.dark
-      : theme.palette.secondary.dark,
+        ? theme.palette.secondary.dark
+        : theme.palette.secondary.dark,
   color: isDefaultSelected === true ? 'black' : 'white',
   borderRadius: 30,
 }));
@@ -47,7 +49,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
   const onSelectChangeHandler = (event: SelectChangeEvent<string>) => {
     const selectedItemName = event.target.value;
     setSelectedItem(selectedItemName);
-    const selectedItem = itemList.find((item) => item.name === selectedItemName);
+    const selectedItem = itemList.find(item => item.name === selectedItemName);
 
     if (selectedItem && selectedItem.name) {
       console.log(`#${selectedItem.name}`);
@@ -67,7 +69,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
         isDefaultSelected={isDefaultSelected}
       >
         <MenuItem value="">{defaultItem}</MenuItem>
-        {itemList.map((item) => (
+        {itemList.map(item => (
           <MenuItem key={item.name} value={item.name}>
             <div>{renderItem(item)}</div>
           </MenuItem>

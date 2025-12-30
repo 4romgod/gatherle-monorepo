@@ -44,7 +44,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     const { name, value } = e.target;
     setSettings(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -63,7 +63,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     { value: 'es', label: 'Spanish' },
     { value: 'fr', label: 'French' },
     { value: 'de', label: 'German' },
-    { value: 'pt', label: 'Portuguese' }
+    { value: 'pt', label: 'Portuguese' },
   ];
 
   const timeZones = [
@@ -72,7 +72,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     { value: 'America/Denver', label: 'Mountain Time (Denver)' },
     { value: 'America/Los_Angeles', label: 'Pacific Time (Los Angeles)' },
     { value: 'America/Anchorage', label: 'Alaska Time (Anchorage)' },
-    { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' }
+    { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' },
   ];
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
 
   return (
     <Box sx={{ p: 3, maxWidth: 600, margin: 'auto' }}>
-      <Typography variant="h4" fontWeight='bold' sx={{ mb: 5 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
         Account Management
       </Typography>
 
@@ -135,9 +135,9 @@ export default function AccountSettingsPage({ user }: { user: User }) {
               slotProps={{
                 input: {
                   readOnly: true,
-                }
+                },
               }}
-              color='secondary'
+              color="secondary"
               sx={{
                 pb: 4,
               }}
@@ -151,7 +151,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
               value={settings.email}
               onChange={handleInputChange}
               variant="outlined"
-              color='secondary'
+              color="secondary"
               sx={{
                 pb: 4,
               }}
@@ -164,19 +164,15 @@ export default function AccountSettingsPage({ user }: { user: User }) {
                 pb: 4,
               }}
             >
-              <InputLabel
-                color='secondary'
-              >
-                Language
-              </InputLabel>
+              <InputLabel color="secondary">Language</InputLabel>
               <Select
                 name="language"
                 // TODO value={settings.language}
-                onChange={(e) => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+                onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
                 label="Language"
                 color="secondary"
               >
-                {languages.map((lang) => (
+                {languages.map(lang => (
                   <MenuItem key={lang.value} value={lang.value}>
                     {lang.label}
                   </MenuItem>
@@ -185,23 +181,16 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             </FormControl>
 
             <FormControl fullWidth variant="outlined">
-              <InputLabel
-                color='secondary'
-              >
-                Time Zone
-              </InputLabel>
+              <InputLabel color="secondary">Time Zone</InputLabel>
               <Select
                 name="timeZone"
                 // TODO value={settings.timeZone}
-                onChange={(e) => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+                onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
                 label="Time Zone"
                 color="secondary"
               >
-                {timeZones.map((zone) => (
-                  <MenuItem
-                    key={zone.value}
-                    value={zone.value}
-                  >
+                {timeZones.map(zone => (
+                  <MenuItem key={zone.value} value={zone.value}>
                     {zone.label}
                   </MenuItem>
                 ))}
@@ -209,12 +198,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             </FormControl>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                type="submit"
-                disabled={isPending}
-              >
+              <Button variant="contained" color="primary" type="submit" disabled={isPending}>
                 Save Changes
               </Button>
             </Box>
@@ -242,31 +226,19 @@ export default function AccountSettingsPage({ user }: { user: User }) {
         </Button>
 
         {/* Delete Account Confirmation Dialog */}
-        <Dialog
-          open={openDeleteAccountDialog}
-          onClose={() => setOpenDeleteAccountDialog(false)}
-        >
+        <Dialog open={openDeleteAccountDialog} onClose={() => setOpenDeleteAccountDialog(false)}>
           <DialogTitle>Delete Account</DialogTitle>
           <DialogContent>
             <Typography variant="body1">
-              Are you sure you want to permanently delete your account?
-              This action cannot be undone and will remove all your data.
+              Are you sure you want to permanently delete your account? This action cannot be undone and will remove all
+              your data.
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button 
-              onClick={() => setOpenDeleteAccountDialog(false)} 
-              color="secondary"
-              disabled={isPending}
-            >
+            <Button onClick={() => setOpenDeleteAccountDialog(false)} color="secondary" disabled={isPending}>
               Cancel
             </Button>
-            <Button
-              color="error"
-              variant="contained"
-              onClick={handleDeleteConfirm}
-              disabled={isPending}
-            >
+            <Button color="error" variant="contained" onClick={handleDeleteConfirm} disabled={isPending}>
               {isPending ? 'Deleting...' : 'Confirm Delete'}
             </Button>
           </DialogActions>
@@ -274,4 +246,4 @@ export default function AccountSettingsPage({ user }: { user: User }) {
       </Box>
     </Box>
   );
-};
+}

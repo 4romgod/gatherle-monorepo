@@ -64,9 +64,7 @@ describe('Organization Resolver', () => {
   });
 
   afterEach(async () => {
-    await Promise.all(
-      createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})),
-    );
+    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
     createdOrgIds.length = 0;
   });
 
@@ -85,16 +83,12 @@ describe('Organization Resolver', () => {
     it('reads organization by id and slug after creation', async () => {
       const createdOrganization = await createOrganizationOnServer();
 
-      const byIdResponse = await request(url)
-        .post('')
-        .send(getReadOrganizationByIdQuery(createdOrganization.orgId));
+      const byIdResponse = await request(url).post('').send(getReadOrganizationByIdQuery(createdOrganization.orgId));
 
       expect(byIdResponse.status).toBe(200);
       expect(byIdResponse.body.data.readOrganizationById.orgId).toBe(createdOrganization.orgId);
 
-      const bySlugResponse = await request(url)
-        .post('')
-        .send(getReadOrganizationBySlugQuery(createdOrganization.slug));
+      const bySlugResponse = await request(url).post('').send(getReadOrganizationBySlugQuery(createdOrganization.slug));
 
       expect(bySlugResponse.status).toBe(200);
       expect(bySlugResponse.body.data.readOrganizationBySlug.slug).toBe(createdOrganization.slug);
@@ -127,15 +121,84 @@ describe('Organization Resolver', () => {
       );
 
       const options = {filters: [{field: 'name', value: createdOrganization.name}]};
-      const filteredResponse = await request(url)
-        .post('')
-        .send(getReadOrganizationsWithOptionsQuery(options));
+      const filteredResponse = await request(url).post('').send(getReadOrganizationsWithOptionsQuery(options));
 
       expect(filteredResponse.status).toBe(200);
       const filteredList = filteredResponse.body.data.readOrganizations;
-      expect(filteredList).toEqual(
-        expect.arrayContaining([{orgId: createdOrganization.orgId}].map((org) => expect.objectContaining(org))),
-      );
+      expect(filteredList).toEqual(expect.arrayContaining([{orgId: createdOrganization.orgId}].map((org) => expect.objectContaining(org))));
+    });
+
+    it('reads organizations with pagination options', async () => {
+      await createOrganizationOnServer();
+      const response2 = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(getCreateOrganizationMutation(buildOrganizationInput('org-two')));
+      const org2 = response2.body.data.createOrganization;
+      createdOrgIds.push(org2.orgId);
+
+      const paginatedResponse = await request(url)
+        .post('')
+        .send(
+          getReadOrganizationsWithOptionsQuery({
+            pagination: {
+              skip: 0,
+              limit: 1,
+            },
+          }),
+        );
+
+      expect(paginatedResponse.status).toBe(200);
+      expect(paginatedResponse.body.data.readOrganizations.length).toBeLessThanOrEqual(1);
+    });
+
+    it('reads organizations with sort options', async () => {
+      await createOrganizationOnServer();
+
+      const sortedResponse = await request(url)
+        .post('')
+        .send(
+          getReadOrganizationsWithOptionsQuery({
+            sort: [{field: 'name', order: 'asc'}],
+          }),
+        );
+
+      expect(sortedResponse.status).toBe(200);
+      const orgs = sortedResponse.body.data.readOrganizations;
+      if (orgs.length > 1) {
+        const names = orgs.map((o: any) => o.name);
+        const sortedNames = [...names].sort();
+        expect(names).toEqual(sortedNames);
+      }
+    });
+
+    it('updates organization ticket access setting', async () => {
+      const createdOrganization = await createOrganizationOnServer();
+
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getUpdateOrganizationMutation({
+            orgId: createdOrganization.orgId,
+            allowedTicketAccess: OrganizationTicketAccess.Members,
+          }),
+        );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.updateOrganization.allowedTicketAccess).toBe(OrganizationTicketAccess.Members);
+    });
+
+    it('validates organization name is returned correctly', async () => {
+      const testName = 'Test Organization Name';
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(getCreateOrganizationMutation(buildOrganizationInput(testName)));
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.createOrganization.name).toBe(testName);
+      createdOrgIds.push(response.body.data.createOrganization.orgId);
     });
   });
 
@@ -146,6 +209,51 @@ describe('Organization Resolver', () => {
         .send(getCreateOrganizationMutation(buildOrganizationInput('unauthorized-org')));
 
       expect(response.status).toBe(401);
+    });
+
+    it('returns validation error for missing organization name', async () => {
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateOrganizationMutation({
+            name: '',
+            ownerId: adminUser.userId,
+            allowedTicketAccess: OrganizationTicketAccess.Public,
+          }),
+        );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('returns validation error for invalid ownerId', async () => {
+      const response = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(
+          getCreateOrganizationMutation({
+            name: 'Invalid Owner',
+            ownerId: 'invalid-id',
+            allowedTicketAccess: OrganizationTicketAccess.Public,
+          }),
+        );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('returns conflict when duplicate organization name is used', async () => {
+      const orgName = 'Duplicate Org';
+      await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(getCreateOrganizationMutation(buildOrganizationInput(orgName)));
+
+      const duplicateResponse = await request(url)
+        .post('')
+        .set('token', adminUser.token)
+        .send(getCreateOrganizationMutation(buildOrganizationInput(orgName)));
+
+      expect(duplicateResponse.status).toBe(409);
     });
 
     it('returns 404 when updating non-existent organization', async () => {
@@ -163,11 +271,30 @@ describe('Organization Resolver', () => {
     });
 
     it('returns 404 when reading a missing slug', async () => {
-      const response = await request(url)
-        .post('')
-        .send(getReadOrganizationBySlugQuery('missing-slug'));
+      const response = await request(url).post('').send(getReadOrganizationBySlugQuery('missing-slug'));
 
       expect(response.status).toBe(404);
+    });
+
+    it('returns 404 when reading non-existent organization by id', async () => {
+      const response = await request(url).post('').send(getReadOrganizationByIdQuery(new Types.ObjectId().toString()));
+
+      expect(response.status).toBe(404);
+    });
+
+    it('requires authentication for updating organization', async () => {
+      const createdOrganization = await createOrganizationOnServer();
+
+      const response = await request(url)
+        .post('')
+        .send(
+          getUpdateOrganizationMutation({
+            orgId: createdOrganization.orgId,
+            description: 'No auth',
+          }),
+        );
+
+      expect(response.status).toBe(401);
     });
   });
 });
