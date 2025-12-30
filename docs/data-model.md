@@ -57,7 +57,7 @@ This document captures the current data model for Ntlango’s event platform as 
 ### Location (embedded in Event)
 - `locationType`: `venue` | `online` | `tba`.
 - `coordinates { latitude, longitude }`.
-- `address { street, city, state, zipCode, country }`.
+- `address { street, city, state, postalCode, country }`.
 - `details` for arbitrary location notes.
 
 ### Event
