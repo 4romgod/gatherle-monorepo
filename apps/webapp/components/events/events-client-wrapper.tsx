@@ -1,27 +1,47 @@
-'use client';
+"use client";
 
+import { useMemo } from 'react';
 import { Box, Grid, Paper, Typography, Button, Stack, Chip } from '@mui/material';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventCategory } from '@/data/graphql/types/graphql';
 import { useEventFilters, EventFilterProvider } from '@/components/events/filters/event-filter-context';
-import DesktopEventFilters from '@/components/events/filters/desktop/display-desktop-filters';
-import MobileEventFilters from '@/components/events/filters/mobile/display-mobile-filters';
+import EventFiltersPanel from '@/components/events/filters/event-filters-panel';
 import EventTileGrid from '@/components/events/event-tile-grid';
 import SearchInput from '@/components/search/search-box';
 import CustomContainer from '@/components/custom-container';
-import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
+import { useFilteredEvents } from '@/components/events/filters/useFilteredEvents';
+import { useNetworkActivity } from '@/lib/network/activity';
 
 interface EventsContentProps {
+  categories: EventCategory[];
+  initialEvents: EventPreview[];
+}
+
+interface EventsClientWrapperProps {
   events: EventPreview[];
   categories: EventCategory[];
 }
 
-function EventsContent({ events, categories }: EventsContentProps) {
-  const { filteredEvents, filters, setSearchQuery, resetFilters, hasActiveFilters, removeCategory, removeStatus } =
-    useEventFilters();
-  const eventsByCategory = groupEventsByCategory(filteredEvents);
+function EventsContent({ categories, initialEvents }: EventsContentProps) {
+  const { filters, setSearchQuery, resetFilters, hasActiveFilters, removeCategory, removeStatus } = useEventFilters();
+  const { events: serverEvents, loading } = useFilteredEvents(filters, initialEvents);
+  const networkRequests = useNetworkActivity();
+  const showSkeletons = loading || networkRequests > 0;
+
+  const filteredEvents = useMemo(() => {
+    const query = filters.searchQuery.trim().toLowerCase();
+    if (!query) {
+      return serverEvents;
+    }
+    return serverEvents.filter(
+      event =>
+        event.title?.toLowerCase().includes(query) ||
+        event.summary?.toLowerCase().includes(query) ||
+        event.description?.toLowerCase().includes(query),
+    );
+  }, [serverEvents, filters.searchQuery]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -47,14 +67,14 @@ function EventsContent({ events, categories }: EventsContentProps) {
                 Discover Events
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Find the perfect event for you from {events.length} available events
+                Find the perfect event for you from {filteredEvents.length} available events
               </Typography>
             </Box>
           </Stack>
 
           {/* Search Bar */}
           <SearchInput
-            itemList={events.map(item => item.title)}
+            itemList={filteredEvents.map(item => item.title ?? '')}
             onSearch={handleSearch}
             sx={{
               mx: 'auto',
@@ -112,15 +132,14 @@ function EventsContent({ events, categories }: EventsContentProps) {
 
         {/* Main Content Grid */}
         <Grid container spacing={3}>
-          {/* Desktop Filters Sidebar */}
-          <Grid size={{ xs: 12, md: 3 }} id="event-filters">
+          <Grid size={{ xs: 12, md: 5 }} id="event-filters">
             <Box sx={{ position: 'sticky', top: 20 }}>
-              <DesktopEventFilters categoryList={categories} />
+              <EventFiltersPanel categoryList={categories} loading={loading} />
             </Box>
           </Grid>
 
           {/* Events List */}
-          <Grid size={{ xs: 12, md: 9 }} id="events">
+          <Grid size={{ xs: 12, md: 7 }} id="events">
             <Paper
               elevation={0}
               sx={{
@@ -132,14 +151,16 @@ function EventsContent({ events, categories }: EventsContentProps) {
                 minHeight: 400,
               }}
             >
-              {filteredEvents.length > 0 ? (
+              {loading || filteredEvents.length > 0 ? (
                 <Box>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                     <Typography variant="h6" fontWeight={600}>
-                      {filteredEvents.length} Event{filteredEvents.length !== 1 ? 's' : ''} Found
+                      {showSkeletons
+                        ? 'Loading events…'
+                        : `${filteredEvents.length} Event${filteredEvents.length !== 1 ? 's' : ''} Found`}
                     </Typography>
                   </Stack>
-                  <EventTileGrid eventsByCategory={eventsByCategory} />
+                  <EventTileGrid events={filteredEvents} loading={showSkeletons} />
                 </Box>
               ) : (
                 <Box
@@ -168,18 +189,15 @@ function EventsContent({ events, categories }: EventsContentProps) {
             </Paper>
           </Grid>
         </Grid>
-
-        {/* Mobile Filters */}
-        <MobileEventFilters categoryList={categories} />
       </CustomContainer>
     </Box>
   );
 }
 
-export default function EventsClientWrapper({ events, categories }: EventsContentProps) {
+export default function EventsClientWrapper({ events, categories }: EventsClientWrapperProps) {
   return (
-    <EventFilterProvider events={events}>
-      <EventsContent events={events} categories={categories} />
+    <EventFilterProvider>
+      <EventsContent categories={categories} initialEvents={events} />
     </EventFilterProvider>
   );
 }

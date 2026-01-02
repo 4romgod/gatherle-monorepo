@@ -3,6 +3,7 @@ import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttp
 import type {Express, Request, Response} from 'express';
 import type {GraphQLError, GraphQLFormattedError} from 'graphql';
 import {STAGE} from '@/constants';
+import type {ApolloServerPlugin} from '@apollo/server';
 import {ApolloServer} from '@apollo/server';
 import {createServer} from 'http';
 import {APPLICATION_STAGES} from '@ntlango/commons';
@@ -51,6 +52,44 @@ const getHttpStatusFromError = (errorCode: string, error: GraphQLError) => {
 
 const useInvalidQueryMessage = (code: string) => GRAPHQL_CLIENT_ERROR_CODES.has(code);
 
+type GraphQLQueryValue =
+  | string
+  | {
+      loc?: {
+        source?: {
+          body?: string;
+        };
+      };
+    };
+
+const getQueryStringFromRequest = (query: GraphQLQueryValue | undefined) => {
+  if (!query) {
+    return '<query not provided>';
+  }
+  if (typeof query === 'string') {
+    return query;
+  }
+  return query.loc?.source?.body ?? '<query not provided>';
+};
+
+const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> => ({
+  async requestDidStart({request}) {
+    if (!request) {
+      return {};
+    }
+    const query = getQueryStringFromRequest(request.query as GraphQLQueryValue | undefined).trim();
+    const variables = request.variables ?? {};
+    console.log('GraphQL request received:');
+    console.log('  Stage:', STAGE);
+    console.log('  Operation:', request.operationName ?? '<unnamed>');
+    if (query) {
+      console.log('  Query:\n', query);
+    }
+    console.log('  Variables:', JSON.stringify(variables, null, 2));
+    return {};
+  },
+});
+
 export const createApolloServer = async (expressApp?: Express) => {
   console.log('Creating Apollo Server...');
   const apolloServer = new ApolloServer<ServerContext>({
@@ -84,6 +123,7 @@ export const createApolloServer = async (expressApp?: Express) => {
     plugins: [
       ApolloServerPluginLandingPageLocalDefault(),
       ...(expressApp ? [ApolloServerPluginDrainHttpServer({httpServer: createServer(expressApp)})] : []),
+      ...(STAGE !== APPLICATION_STAGES.PROD ? [createGraphQLRequestLoggingPlugin()] : []),
     ],
   });
 

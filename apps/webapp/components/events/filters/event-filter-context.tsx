@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
-import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventStatus } from '@/data/graphql/types/graphql';
 import dayjs, { Dayjs } from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
@@ -29,7 +28,6 @@ interface EventFilterContextType {
   resetFilters: () => void;
   removeCategory: (category: string) => void;
   removeStatus: (status: EventStatus) => void;
-  filteredEvents: EventPreview[];
   hasActiveFilters: boolean;
 }
 
@@ -45,10 +43,9 @@ const initialFilters: EventFilters = {
 
 interface EventFilterProviderProps {
   children: ReactNode;
-  events: EventPreview[];
 }
 
-export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ children, events }) => {
+export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ children }) => {
   const [filters, setFilters] = useState<EventFilters>(initialFilters);
 
   const setCategories = (categories: string[]) => {
@@ -89,45 +86,6 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
     }));
   };
 
-  const filteredEvents = useMemo(() => {
-    let result = [...events];
-
-    // Filter by search query
-    if (filters.searchQuery.trim()) {
-      const query = filters.searchQuery.toLowerCase().trim();
-      result = result.filter(
-        event =>
-          event.title?.toLowerCase().includes(query) ||
-          event.summary?.toLowerCase().includes(query) ||
-          event.description?.toLowerCase().includes(query),
-      );
-    }
-
-    // Filter by categories
-    if (filters.categories.length > 0) {
-      result = result.filter(event => {
-        if (!event.eventCategoryList || event.eventCategoryList.length === 0) {
-          return false;
-        }
-        return event.eventCategoryList.some(cat => filters.categories.includes(cat.name));
-      });
-    }
-
-    // Filter by status
-    if (filters.statuses.length > 0) {
-      result = result.filter(event => {
-        if (!event.status) return false;
-        return filters.statuses.includes(event.status);
-      });
-    }
-
-    // TODO filters are still not working
-    // Note: Price and date filtering can be added when those fields are available in the GraphQL query
-    // For now, we keep the filter controls in the UI but don't filter by them
-
-    return result;
-  }, [events, filters]);
-
   const hasActiveFilters = useMemo(() => {
     return (
       filters.categories.length > 0 ||
@@ -150,7 +108,6 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
     resetFilters,
     removeCategory,
     removeStatus,
-    filteredEvents,
     hasActiveFilters,
   };
 

@@ -66,8 +66,6 @@ export const EventSchema = z.object({
     .min(1, {message: ERROR_MESSAGES.ATLEAST_ONE('event category')})
     .describe('The categories associated with the event.'),
 
-  categoryIds: z.array(z.string()).optional().describe('Flattened category ids'),
-
   organizers: z
     .array(
       z.object({

@@ -238,10 +238,6 @@ export class Event {
     @Field(() => [EventCategory], {description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST})
     eventCategoryList: Ref<EventCategory>[];
 
-    @prop({type: () => [String], default: []})
-    @Field(() => [String], {nullable: true, description: 'Flattened category ids'})
-    categoryIds?: string[];
-
     @prop({type: () => [EventOrganizer], required: true})
     @Field(() => [EventOrganizer], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
     organizers: EventOrganizer[];
@@ -347,9 +343,6 @@ export class CreateEventInput {
     @Field(() => [GraphQLJSON], {description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
     organizers: Record<string, any>[];
 
-    @Field(() => [String], {nullable: true, description: 'Category ids'})
-    categoryIds?: string[];
-
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
     tags?: Record<string, any>;
 
@@ -439,9 +432,6 @@ export class UpdateEventInput {
 
     @Field(() => [GraphQLJSON], {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST})
     organizers?: Record<string, any>[];
-
-    @Field(() => [String], {nullable: true, description: 'Category ids'})
-    categoryIds?: string[];
 
     @Field(() => GraphQLJSON, {nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS})
     tags?: Record<string, any>;

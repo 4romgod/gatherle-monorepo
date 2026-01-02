@@ -159,7 +159,7 @@ The `Event` document is the heart of the platform—taking organizer intent, loc
 - Schedule: `recurrenceRule` (required), plus `primarySchedule? { startAt, endAt, timezone, recurrenceRule }` and `occurrences?[]`.
 - Location: `location` (Location type above), `venueId?` and `locationSnapshot?`.
 - People: `organizers [{ userId, role: Host|CoHost|Volunteer }]`.
-- Taxonomy: `eventCategoryList[]` (EventCategory refs), `categoryIds?[]` for flattened ids.
+- Taxonomy: `eventCategoryList[]` (EventCategory refs) for flattened ids.
 - Settings: `capacity`, `rsvpLimit`, `waitlistEnabled`, `allowGuestPlusOnes`, `remindersEnabled`, `showAttendees`.
 - Metadata:
   - `tags` (JSON): free-form tagging for search and discovery. Typically an array of strings or lightweight tag objects, for example:

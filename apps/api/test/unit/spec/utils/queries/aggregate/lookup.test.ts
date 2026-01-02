@@ -8,7 +8,7 @@ describe('createEventLookupStages', () => {
         $lookup: {
           from: 'eventcategories',
           localField: 'eventCategoryList',
-          foreignField: '_id',
+          foreignField: 'eventCategoryId',
           as: 'eventCategoryList',
         },
       },
@@ -29,7 +29,7 @@ describe('createEventLookupStages', () => {
     expect(lookupStages[0]).toHaveProperty('$lookup');
     expect(lookupStages[0].$lookup).toHaveProperty('from', 'eventcategories');
     expect(lookupStages[0].$lookup).toHaveProperty('localField', 'eventCategoryList');
-    expect(lookupStages[0].$lookup).toHaveProperty('foreignField', '_id');
+    expect(lookupStages[0].$lookup).toHaveProperty('foreignField', 'eventCategoryId');
     expect(lookupStages[0].$lookup).toHaveProperty('as', 'eventCategoryList');
   });
 });
