@@ -144,9 +144,10 @@ export default async function Page(props: Props) {
                 <Typography color="text.secondary">No organizers listed.</Typography>
               ) : (
                 <Grid container spacing={3}>
-                  {organizers.map(organizer => (
-                    <Grid key={organizer.user.userId}>
-                      {organizer.user ? (
+                  {organizers
+                    .filter((organizer) => organizer.user) // Filter out organizers without valid user references
+                    .map((organizer) => (
+                      <Grid key={organizer.user.userId}>
                         <Link
                           href={`/users/${organizer.user.username}`}
                           passHref
@@ -200,19 +201,8 @@ export default async function Page(props: Props) {
                             </Box>
                           </Stack>
                         </Link>
-                      ) : (
-                        <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
-                          <Avatar sx={{ width: 56, height: 56, bgcolor: 'grey.400' }}>?</Avatar>
-                          <Box>
-                            <Typography variant="subtitle1" color="text.secondary">
-                              User unavailable
-                            </Typography>
-                            <Chip label={organizer.role} size="small" variant="outlined" sx={{ mt: 0.5 }} />
-                          </Box>
-                        </Stack>
-                      )}
-                    </Grid>
-                  ))}
+                      </Grid>
+                    ))}
                 </Grid>
               )}
             </Box>

@@ -1,16 +1,15 @@
 import CustomContainer from '@/components/custom-container';
-import EventBox from '@/components/events/event-box';
 import { getClient } from '@/data/graphql';
 import {
-  EventCategory,
   FilterOperatorInput,
   GetAllEventsDocument,
   GetUserByUsernameDocument,
+  EventOrganizerRole,
 } from '@/data/graphql/types/graphql';
-import { EventPreview } from '@/data/graphql/query/Event/types';
-import { Typography, Box, Grid, Paper } from '@mui/material';
+import { Box, Grid } from '@mui/material';
 import UserDetails from '@/components/users/user-details';
-import EventCategoryChip from '@/components/events/category/chip';
+import UserEventsSection from '@/components/users/user-events-section';
+import { auth } from '@/auth';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -18,6 +17,7 @@ interface Props {
 
 export default async function UserPage(props: Props) {
   const params = await props.params;
+  const session = await auth();
 
   const { data: userRetrieved } = await getClient().query({
     query: GetUserByUsernameDocument,
@@ -25,13 +25,14 @@ export default async function UserPage(props: Props) {
   });
   const user = userRetrieved.readUserByUsername;
 
-  const { data: eventsRetrieved } = await getClient().query({
+  // Fetch events where user is an organizer
+  const { data: organizerEventsData } = await getClient().query({
     query: GetAllEventsDocument,
     variables: {
       options: {
         filters: [
           {
-            field: 'organizers.user',
+            field: 'organizers.user.userId',
             operator: FilterOperatorInput.Eq,
             value: user.userId,
           },
@@ -39,13 +40,60 @@ export default async function UserPage(props: Props) {
       },
     },
   });
-  const events = eventsRetrieved.readEvents ?? [];
 
-  // TODO get this from user registration
-  const categories = (events ?? []).reduce(
-    (accum: EventCategory[], curr: EventPreview) => accum.concat(curr.eventCategories),
-    [],
-  );
+  // Fetch events where user is a participant
+  const { data: participantEventsData } = await getClient().query({
+    query: GetAllEventsDocument,
+    variables: {
+      options: {
+        filters: [
+          {
+            field: 'participants.userId',
+            operator: FilterOperatorInput.Eq,
+            value: user.userId,
+          },
+        ],
+      },
+    },
+  });
+
+  const organizerEvents = organizerEventsData.readEvents ?? [];
+  const participantEvents = participantEventsData.readEvents ?? [];
+
+  // Check if the viewing user is the profile owner
+  const isOwnProfile = session?.user?.username === user.username;
+
+  // Categorize events by role
+  const hostingEvents = organizerEvents
+    .filter((event) => 
+      event.organizers.some(
+        (org) => org.user && org.user.userId === user.userId && org.role === EventOrganizerRole.Host
+      )
+    )
+    .map((event) => ({ ...event, userRole: 'Host' as const }));
+
+  const coHostingEvents = organizerEvents
+    .filter((event) => 
+      event.organizers.some(
+        (org) => org.user && org.user.userId === user.userId && org.role === EventOrganizerRole.CoHost
+      )
+    )
+    .map((event) => ({ ...event, userRole: 'CoHost' as const }));
+
+  // Filter out events where user is already an organizer
+  const attendingEvents = participantEvents
+    .filter((event) => 
+      !event.organizers.some((org) => org.user && org.user.userId === user.userId)
+    )
+    .map((event) => {
+      const participation = event.participants?.find((p) => p.userId === user.userId);
+      return {
+        ...event,
+        userRole: 'Participant' as const,
+        participantStatus: participation?.status,
+        quantity: participation?.quantity ?? undefined, // Convert null to undefined
+      };
+    });
 
   return (
     <Box component="main">
@@ -53,39 +101,26 @@ export default async function UserPage(props: Props) {
         <Box component="div">
           <Grid container>
             <Grid size={{ md: 4 }} width={'100%'} p={2}>
-              <UserDetails user={user} />
+              <UserDetails user={user} isOwnProfile={isOwnProfile} />
             </Grid>
             <Grid size={{ md: 8 }} width={'100%'} p={2}>
-              <Paper sx={{ backgroundColor: 'secondary.main', borderRadius: '12px', p: 5 }}>
-                <Typography variant="h5">Lorem</Typography>
-                <Typography variant="body1">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Non, dolores obcaecati? Ea dolore, numquam
-                  laboriosam in eum beatae blanditiis veniam culpa aliquid consectetur repellat possimus impedit
-                  reprehenderit atque? Pariatur, maxime?
-                </Typography>
-              </Paper>
-              <Paper elevation={3} sx={{ p: 3, mt: 3, backgroundColor: 'background.default', borderRadius: '12px' }}>
-                <Typography variant="h5" gutterBottom>
-                  Interests
-                </Typography>
-                {categories.map((category, index) => (
-                  <EventCategoryChip key={`${category.name}.${index}`} category={category} />
-                ))}
-              </Paper>
-
-              <Box component="div" pt={5}>
-                <Grid container spacing={2}>
-                  {events.map(event => {
-                    return (
-                      <Grid size={{ xs: 12 }} key={`EventTileGrid.${event.eventId}`}>
-                        <Box component="div">
-                          <EventBox event={event} />
-                        </Box>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
+              <UserEventsSection
+                title="Hosting"
+                events={hostingEvents}
+                emptyMessage={`${user.given_name} is not hosting any events.`}
+              />
+              
+              <UserEventsSection
+                title="Co-Hosting"
+                events={coHostingEvents}
+                emptyMessage={`${user.given_name} is not co-hosting any events.`}
+              />
+              
+              <UserEventsSection
+                title="Attending"
+                events={attendingEvents}
+                emptyMessage={`${user.given_name} is not attending any events.`}
+              />
             </Grid>
           </Grid>
         </Box>
