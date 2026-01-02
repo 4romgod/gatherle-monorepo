@@ -2,6 +2,7 @@ import {OrganizationMembership as OrganizationMembershipModel} from '@/mongodb/m
 import type {CreateOrganizationMembershipInput, OrganizationMembership, UpdateOrganizationMembershipInput} from '@ntlango/commons/types';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 import {GraphQLError} from 'graphql';
+import {logger} from '@/utils/logger';
 
 class OrganizationMembershipDAO {
   static async create(input: CreateOrganizationMembershipInput): Promise<OrganizationMembership> {
@@ -9,7 +10,7 @@ class OrganizationMembershipDAO {
       const membership = await OrganizationMembershipModel.create(input);
       return membership.toObject();
     } catch (error) {
-      console.error('Error creating organization membership', error);
+      logger.error('Error creating organization membership', error);
       throw KnownCommonError(error);
     }
   }
@@ -23,7 +24,7 @@ class OrganizationMembershipDAO {
       }
       return membership.toObject();
     } catch (error) {
-      console.error(`Error reading membership ${membershipId}`, error);
+      logger.error(`Error reading membership ${membershipId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -36,7 +37,7 @@ class OrganizationMembershipDAO {
       const memberships = await OrganizationMembershipModel.find({orgId}).exec();
       return memberships.map((membership) => membership.toObject());
     } catch (error) {
-      console.error(`Error reading memberships for org ${orgId}`, error);
+      logger.error(`Error reading memberships for org ${orgId}`, error);
       throw KnownCommonError(error);
     }
   }
@@ -52,7 +53,7 @@ class OrganizationMembershipDAO {
       }
       return updatedMembership.toObject();
     } catch (error) {
-      console.error(`Error updating membership ${input.membershipId}`, error);
+      logger.error(`Error updating membership ${input.membershipId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -68,7 +69,7 @@ class OrganizationMembershipDAO {
       }
       return deletedMembership.toObject();
     } catch (error) {
-      console.error(`Error deleting membership ${membershipId}`, error);
+      logger.error(`Error deleting membership ${membershipId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }

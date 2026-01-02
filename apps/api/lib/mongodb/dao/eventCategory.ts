@@ -2,6 +2,8 @@ import {EventCategory as EventCategoryModel} from '@/mongodb/models';
 import type {EventCategory, UpdateEventCategoryInput, CreateEventCategoryInput, QueryOptionsInput} from '@ntlango/commons/types';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
+import {logger} from '@/utils/logger';
+
 
 class EventCategoryDAO {
   static async create(input: CreateEventCategoryInput): Promise<EventCategory> {
@@ -9,7 +11,7 @@ class EventCategoryDAO {
       const eventCategory = await EventCategoryModel.create(input);
       return eventCategory.toObject();
     } catch (error) {
-      console.log('Error creating event category', error);
+      logger.info('Error creating event category', error);
       throw KnownCommonError(error);
     }
   }
@@ -23,7 +25,7 @@ class EventCategoryDAO {
       }
       return eventCategory.toObject();
     } catch (error) {
-      console.log(`Error reading event category by evenCategoryId ${evenCategoryId}`, error);
+      logger.info(`Error reading event category by evenCategoryId ${evenCategoryId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -40,7 +42,7 @@ class EventCategoryDAO {
       }
       return eventCategory.toObject();
     } catch (error) {
-      console.log(`Error reading event category by slug ${slug}`, error);
+      logger.info(`Error reading event category by slug ${slug}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -54,7 +56,7 @@ class EventCategoryDAO {
       const eventCategories = await query.exec();
       return eventCategories.map((eventCategory) => eventCategory.toObject());
     } catch (error) {
-      console.error('Error reading event categories:', error);
+      logger.error('Error reading event categories:', error);
       throw KnownCommonError(error);
     }
   }
@@ -69,7 +71,7 @@ class EventCategoryDAO {
       }
       return updatedEventCategory.toObject();
     } catch (error) {
-      console.log(`Error updating event category with eventCategoryId ${input.eventCategoryId}`, error);
+      logger.info(`Error updating event category with eventCategoryId ${input.eventCategoryId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -85,7 +87,7 @@ class EventCategoryDAO {
       }
       return deletedEventCategory.toObject();
     } catch (error) {
-      console.error('Error deleting event category by eventCategoryId:', error);
+      logger.error('Error deleting event category by eventCategoryId:', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -101,7 +103,7 @@ class EventCategoryDAO {
       }
       return deletedEventCategory.toObject();
     } catch (error) {
-      console.error('Error deleting event category by slug:', error);
+      logger.error('Error deleting event category by slug:', error);
       if (error instanceof GraphQLError) {
         throw error;
       }

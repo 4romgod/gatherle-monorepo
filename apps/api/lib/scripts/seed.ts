@@ -44,6 +44,7 @@ import type {
 import {SECRET_KEYS} from '@/constants';
 import {ParticipantStatus, ParticipantVisibility} from '@ntlango/commons/types';
 import {EventVisibility} from '@ntlango/commons/types/event';
+import {logger} from '@/utils/logger';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
   const copyArray = [...array];
@@ -64,16 +65,16 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
 }
 
 async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
-  console.log('Starting to seed event category data...');
+  logger.info('Starting to seed event category data...');
   for (const category of categories) {
     const eventCategoryResponse = await EventCategoryDAO.create(category);
-    console.log(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
+    logger.info(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
   }
-  console.log('Completed seeding event category data.');
+  logger.info('Completed seeding event category data.');
 }
 
 async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<CreateEventCategoryGroupInput>, eventCategoryList: Array<EventCategory>) {
-  console.log('Starting to seed event category groups data...');
+  logger.info('Starting to seed event category groups data...');
 
   for (const groupInput of eventCategoryGroupsInputList) {
     // Replace category names with corresponding IDs
@@ -92,26 +93,26 @@ async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<Creat
 
     await EventCategoryGroupDAO.create(categoryGroupWithIds);
 
-    console.log(`   Seeded group: ${groupInput.name}`);
+    logger.info(`   Seeded group: ${groupInput.name}`);
   }
 
-  console.log('Completed seeding event category group data.');
+  logger.info('Completed seeding event category group data.');
 }
 
 async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<string>) {
-  console.log('Starting to seed user data...');
+  logger.info('Starting to seed user data...');
   for (const user of users) {
     const userResponse = await UserDAO.create({
       ...user,
       interests: getRandomUniqueItems(eventCategoryIds, 5),
     });
-    console.log(`   Created User item with id: ${userResponse.userId}`);
+    logger.info(`   Created User item with id: ${userResponse.userId}`);
   }
-  console.log('Completed seeding user data.');
+  logger.info('Completed seeding user data.');
 }
 
 async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: string[]) {
-  console.log('Starting to seed organization data...');
+  logger.info('Starting to seed organization data...');
   const created: Organization[] = [];
   for (let i = 0; i < seedData.length; i++) {
     const config = seedData[i];
@@ -122,14 +123,14 @@ async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: str
     };
     const organization = await OrganizationDAO.create(organizationInput);
     created.push(organization);
-    console.log(`   Created Organization with id: ${organization.orgId}`);
+    logger.info(`   Created Organization with id: ${organization.orgId}`);
   }
-  console.log('Completed seeding organization data.');
+  logger.info('Completed seeding organization data.');
   return created;
 }
 
 async function seedVenues(seedData: VenueSeedData[], organizations: Organization[]) {
-  console.log('Starting to seed venue data...');
+  logger.info('Starting to seed venue data...');
   const createdVenues: Venue[] = [];
   for (const venueSeed of seedData) {
     const organization = organizations[venueSeed.orgIndex];
@@ -143,14 +144,14 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
     };
     const venue = await VenueDAO.create(venueInput);
     createdVenues.push(venue);
-    console.log(`   Created Venue with id: ${venue.venueId}`);
+    logger.info(`   Created Venue with id: ${venue.venueId}`);
   }
-  console.log('Completed seeding venue data.');
+  logger.info('Completed seeding venue data.');
   return createdVenues;
 }
 
 async function seedOrganizationMemberships(seedData: OrganizationMembershipSeed[], organizations: Organization[], userIds: string[]) {
-  console.log('Starting to seed organization membership data...');
+  logger.info('Starting to seed organization membership data...');
   for (const membership of seedData) {
     const organization = organizations[membership.orgIndex];
     if (!organization) {
@@ -162,9 +163,9 @@ async function seedOrganizationMemberships(seedData: OrganizationMembershipSeed[
       userId,
       role: membership.role,
     });
-    console.log(`   Created OrganizationMembership for user ${userId}`);
+    logger.info(`   Created OrganizationMembership for user ${userId}`);
   }
-  console.log('Completed seeding organization membership data.');
+  logger.info('Completed seeding organization membership data.');
 }
 
 async function seedEvents(
@@ -174,7 +175,7 @@ async function seedEvents(
   organizations: Organization[],
   venues: Venue[],
 ): Promise<Event[]> {
-  console.log('Starting to seed event data...');
+  logger.info('Starting to seed event data...');
   const createdEvents: Event[] = [];
   for (const event of events) {
     const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
@@ -218,18 +219,18 @@ async function seedEvents(
           sharedVisibility,
         });
       } catch (err) {
-        console.error(`Failed to upsert participant (userId: ${userId}) for event (eventId: ${eventResponse.eventId}):`, err);
+        logger.error(`Failed to upsert participant (userId: ${userId}) for event (eventId: ${eventResponse.eventId}):`, err);
       }
     }
-    console.log(`   Created Event item with id: ${eventResponse.eventId}`);
+    logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
     createdEvents.push(eventResponse);
   }
-  console.log('Completed seeding event data.');
+  logger.info('Completed seeding event data.');
   return createdEvents;
 }
 
 async function seedFollows(seedData: FollowSeed[], userIds: string[], organizations: Organization[]) {
-  console.log('Starting to seed follow edges...');
+  logger.info('Starting to seed follow edges...');
   for (const seed of seedData) {
     const followerUserId = userIds[seed.followerIndex];
     const targetId =
@@ -240,7 +241,7 @@ async function seedFollows(seedData: FollowSeed[], userIds: string[], organizati
           : undefined;
 
     if (!followerUserId || !targetId) {
-      console.warn('Skipping follow seed due to missing IDs', seed);
+      logger.warn('Skipping follow seed due to missing IDs', seed);
       continue;
     }
 
@@ -251,16 +252,16 @@ async function seedFollows(seedData: FollowSeed[], userIds: string[], organizati
       status: seed.status,
     });
   }
-  console.log('Completed seeding follow edges.');
+  logger.info('Completed seeding follow edges.');
 }
 
 async function seedIntents(seedData: IntentSeed[], userIds: string[], events: Event[]) {
-  console.log('Starting to seed intents...');
+  logger.info('Starting to seed intents...');
   for (const seed of seedData) {
     const userId = userIds[seed.userIndex];
     const event = events[seed.eventIndex];
     if (!userId || !event?.eventId) {
-      console.warn('Skipping intent seed due to missing IDs', seed);
+      logger.warn('Skipping intent seed due to missing IDs', seed);
       continue;
     }
 
@@ -273,16 +274,16 @@ async function seedIntents(seedData: IntentSeed[], userIds: string[], events: Ev
       metadata: seed.metadata,
     });
   }
-  console.log('Completed seeding intents.');
+  logger.info('Completed seeding intents.');
 }
 
 async function seedActivities(seedData: ActivitySeed[], userIds: string[], events: Event[]) {
-  console.log('Starting to seed activity feed...');
+  logger.info('Starting to seed activity feed...');
   for (const seed of seedData) {
     const actorId = userIds[seed.actorIndex];
     const objectId = seed.objectRef === 'event' ? events[seed.objectIndex]?.eventId : userIds[seed.objectIndex];
     if (!actorId || !objectId) {
-      console.warn('Skipping activity seed due to missing IDs', seed);
+      logger.warn('Skipping activity seed due to missing IDs', seed);
       continue;
     }
 
@@ -307,11 +308,11 @@ async function seedActivities(seedData: ActivitySeed[], userIds: string[], event
       metadata,
     });
   }
-  console.log('Completed seeding activity feed.');
+  logger.info('Completed seeding activity feed.');
 }
 
 async function main() {
-  console.log('Starting to seed data into the database...');
+  logger.info('Starting to seed data into the database...');
 
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
   await MongoDbClient.connectToDatabase(secret);
@@ -334,10 +335,10 @@ async function main() {
   await seedFollows(followSeedData, allUserIds, createdOrganizations);
   await seedIntents(intentSeedData, allUserIds, createdEvents);
   await seedActivities(activitySeedData, allUserIds, createdEvents);
-  console.log('Completed seeding data into the database.');
+  logger.info('Completed seeding data into the database.');
   await MongoDbClient.disconnectFromDatabase();
 }
 
 main().catch((err) => {
-  console.error('An error occurred while attempting to seed the database:', err);
+  logger.error('An error occurred while attempting to seed the database:', err);
 });

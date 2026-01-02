@@ -16,7 +16,6 @@ import {
   Portal,
 } from '@mui/material';
 import { Tune as TuneIcon, Close as CloseIcon } from '@mui/icons-material';
-import PriceFilter from './price';
 import CategoryFilter from './category';
 import StatusFilter from './status';
 import DateFilter from './date';

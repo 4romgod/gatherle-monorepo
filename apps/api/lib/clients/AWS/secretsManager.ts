@@ -1,6 +1,7 @@
 import {AWS_REGION, JWT_SECRET, MONGO_DB_URL, STAGE, NTLANGO_SECRET_ARN, SECRET_KEYS} from '@/constants';
 import {SecretsManagerClient, GetSecretValueCommand} from '@aws-sdk/client-secrets-manager';
 import {APPLICATION_STAGES} from '@ntlango/commons';
+import {logger} from '@/utils/logger';
 
 let secretsManagerClient: SecretsManagerClient;
 
@@ -19,7 +20,7 @@ async function getSecretValue(secretKey: string): Promise<string> {
   }
 
   if (cachedSecrets && cachedSecrets[secretKey]) {
-    console.log('Secrets cache hit!');
+    logger.debug('Secrets cache hit!');
     return cachedSecrets[secretKey];
   }
 
@@ -36,7 +37,7 @@ async function getSecretValue(secretKey: string): Promise<string> {
 
     return secretValue;
   } catch (err) {
-    console.error('Error retrieving secret:', err);
+    logger.error('Error retrieving secret:', err);
     throw err;
   }
 }

@@ -5,6 +5,8 @@ import {ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery} from
 import {GraphQLError} from 'graphql';
 import {ERROR_MESSAGES} from '@/validation';
 import {generateToken} from '@/utils/auth';
+import {logger} from '@/utils/logger';
+
 
 class UserDAO {
   static async create(userData: CreateUserInput): Promise<UserWithToken> {
@@ -14,7 +16,7 @@ class UserDAO {
       const token = await generateToken(tokenPayload);
       return {...tokenPayload, token};
     } catch (error) {
-      console.log('Error when creating a new user', error);
+      logger.info('Error when creating a new user', error);
       throw KnownCommonError(error);
     }
   }
@@ -35,7 +37,7 @@ class UserDAO {
       const jwtToken = await generateToken(user.toObject());
       return {token: jwtToken, ...user.toObject()};
     } catch (error) {
-      console.log('Error when user logging in', error);
+      logger.info('Error when user logging in', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -52,7 +54,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      console.log(`Error reading user by userId ${userId}`, error);
+      logger.info(`Error reading user by userId ${userId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -69,7 +71,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      console.log(`Error reading user by username ${username}`, error);
+      logger.info(`Error reading user by username ${username}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -86,7 +88,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      console.log(`Error reading user by email ${email}`, error);
+      logger.info(`Error reading user by email ${email}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -96,11 +98,12 @@ class UserDAO {
 
   static async readUsers(options?: QueryOptionsInput): Promise<User[]> {
     try {
+      logger.debug('Reading users with options:', options);
       const query = options ? transformOptionsToQuery(UserModel, options) : UserModel.find({}).populate('interests');
       const retrieved = await query.exec();
       return retrieved.map((user) => user.toObject());
     } catch (error) {
-      console.log('Error querying users', error);
+      logger.info('Error querying users', error);
       throw KnownCommonError(error);
     }
   }
@@ -115,7 +118,7 @@ class UserDAO {
       }
       return updatedUser.toObject();
     } catch (error) {
-      console.log(`Error updating user with userId ${user.userId}`, error);
+      logger.info(`Error updating user with userId ${user.userId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -132,7 +135,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      console.log(`Error deleting user with userId ${userId}`);
+      logger.info(`Error deleting user with userId ${userId}`);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -149,7 +152,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      console.log(`Error deleting user with email ${email}`);
+      logger.info(`Error deleting user with email ${email}`);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -166,7 +169,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      console.log(`Error deleting user with username ${username}`, error);
+      logger.info(`Error deleting user with username ${username}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -183,7 +186,7 @@ class UserDAO {
       }
       return updatedUser.toObject();
     } catch (error) {
-      console.log(`Error promoting user to Admin with userId ${userId}`, error);
+      logger.info(`Error promoting user to Admin with userId ${userId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }

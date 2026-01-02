@@ -11,6 +11,7 @@ import type {StringValue} from 'ms';
 import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
 import {getConfigValue} from '@/clients';
 import {Types} from 'mongoose';
+import {logger} from '@/utils/logger';
 
 const operationsRequiringOwnership = new Set([
   OPERATION_NAMES.UPDATE_USER,
@@ -48,26 +49,26 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
     const operationName = info.fieldName;
 
     if (!roles.includes(userRole)) {
-      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
+      logger.debug(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
       throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
     if (user.userRole === UserRole.Admin) {
-      console.log(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName}`);
+      logger.debug(`${user.userRole} type user: '${user.username}' has permission for operation ${operationName}`);
       return true;
     }
 
     if (operationsRequiringOwnership.has(operationName)) {
       const isAuthorized = await isAuthorizedByOperation(info.fieldName, args, user);
       if (isAuthorized) {
-        console.log(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
+        logger.debug(`${userRole} type user: '${user.username}' has 'isAuthorizedByOperation' permission for operation ${operationName}`);
         return true;
       }
-      console.log(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
+      logger.debug(`${userRole} type user: '${user.username}' was denied for operation ${operationName}`);
       throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
     }
 
-    console.log(`${userRole} type user: '${user.username}' attempted to access non-protected operation ${operationName}`);
+    logger.debug(`${userRole} type user: '${user.username}' attempted to access non-protected operation ${operationName}`);
     throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
   }
 
@@ -81,6 +82,7 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
  * @returns A JWT token as a string
  */
 export const generateToken = async (user: User, secret?: string, expiresIn?: string | number) => {
+  logger.debug('Generating JWT token', {userId: user.userId, username: user.username, expiresIn});
   const jwtSecret: Secret | undefined = secret ?? (await getConfigValue(SECRET_KEYS.JWT_SECRET));
   if (!jwtSecret) {
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -104,7 +106,7 @@ export const verifyToken = async (token: string, secret?: string) => {
     const {iat: _iat, exp: _exp, ...user} = verify(token, jwtSecret) as JwtPayload;
     return user as User;
   } catch (err) {
-    console.log('Error when verifying token', err);
+    logger.debug('Error when verifying token', err);
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }
 };

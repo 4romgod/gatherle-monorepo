@@ -5,6 +5,8 @@ import type {EventParticipant as EventParticipantEntity, UpsertEventParticipantI
 import {ParticipantStatus} from '@ntlango/commons/types';
 import {EventParticipant} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+import {logger} from '@/utils/logger';
+
 
 class EventParticipantDAO {
   static async upsert(input: UpsertEventParticipantInput): Promise<EventParticipantEntity> {
@@ -34,7 +36,7 @@ class EventParticipantDAO {
 
       return participant.toObject();
     } catch (error) {
-      console.error('Error upserting event participant', error);
+      logger.error('Error upserting event participant', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -57,7 +59,7 @@ class EventParticipantDAO {
 
       return participant.toObject();
     } catch (error) {
-      console.error('Error cancelling event participant', error);
+      logger.error('Error cancelling event participant', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -70,7 +72,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find({eventId}).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      console.error('Error reading participants', error);
+      logger.error('Error reading participants', error);
       throw KnownCommonError(error);
     }
   }

@@ -2,6 +2,8 @@ import {EventCategoryGroup as EventCategoryGroupModel} from '@/mongodb/models';
 import {GraphQLError} from 'graphql';
 import {CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery} from '@/utils';
 import type {CreateEventCategoryGroupInput, EventCategoryGroup, QueryOptionsInput, UpdateEventCategoryGroupInput} from '@ntlango/commons/types';
+import {logger} from '@/utils/logger';
+
 
 /**
  * Data Access Object for Event Category Group operations.
@@ -21,7 +23,7 @@ class EventCategoryGroupDAO {
       await eventCategoryGroup.populate('eventCategoryList');
       return eventCategoryGroup.toObject();
     } catch (error) {
-      console.log('Error creating event category group', error);
+      logger.info('Error creating event category group', error);
       throw KnownCommonError(error);
     }
   }
@@ -39,7 +41,7 @@ class EventCategoryGroupDAO {
       }
       return eventCategoryGroup.toObject();
     } catch (error) {
-      console.log(`Error reading event category by slug ${slug}`, error);
+      logger.info(`Error reading event category by slug ${slug}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -59,7 +61,7 @@ class EventCategoryGroupDAO {
       const eventCategoryGroups = await query.exec();
       return eventCategoryGroups.map((eventCategoryGroup) => eventCategoryGroup.toObject());
     } catch (error) {
-      console.error('Error reading event category groups:', error);
+      logger.error('Error reading event category groups:', error);
       throw KnownCommonError(error);
     }
   }
@@ -81,7 +83,7 @@ class EventCategoryGroupDAO {
       }
       return updatedEventCategoryGroup.toObject();
     } catch (error) {
-      console.log(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, error);
+      logger.info(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -101,7 +103,7 @@ class EventCategoryGroupDAO {
       }
       return deletedEventCategoryGroup.toObject();
     } catch (error) {
-      console.error('Error deleting event category group by slug:', error);
+      logger.error('Error deleting event category group by slug:', error);
       if (error instanceof GraphQLError) {
         throw error;
       }

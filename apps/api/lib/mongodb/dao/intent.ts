@@ -3,6 +3,8 @@ import {Types} from 'mongoose';
 import type {Intent as IntentEntity, UpsertIntentInput} from '@ntlango/commons/types';
 import {Intent as IntentModel} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+import {logger} from '@/utils/logger';
+
 
 class IntentDAO {
   static async upsert(input: UpsertIntentInput & {userId: string}): Promise<IntentEntity> {
@@ -40,7 +42,7 @@ class IntentDAO {
 
       return intent.toObject();
     } catch (error) {
-      console.error('Error upserting intent', error);
+      logger.error('Error upserting intent', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -53,7 +55,7 @@ class IntentDAO {
       const intents = await IntentModel.find({userId}).sort({updatedAt: -1}).exec();
       return intents.map((intent) => intent.toObject());
     } catch (error) {
-      console.error('Error reading user intents', error);
+      logger.error('Error reading user intents', error);
       throw KnownCommonError(error);
     }
   }
@@ -63,7 +65,7 @@ class IntentDAO {
       const intents = await IntentModel.find({eventId}).sort({updatedAt: -1}).exec();
       return intents.map((intent) => intent.toObject());
     } catch (error) {
-      console.error('Error reading event intents', error);
+      logger.error('Error reading event intents', error);
       throw KnownCommonError(error);
     }
   }

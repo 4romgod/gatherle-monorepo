@@ -8,14 +8,19 @@ import {GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS} from '@/constants';
 import {createApolloServer} from './server';
 import {expressMiddleware} from '@apollo/server/express4';
 import type {Server} from 'http';
+import {logger} from '@/utils/logger';
 
 const DEV_URL = `http://localhost:9000${GRAPHQL_API_PATH}`;
 
 const serverStartTimeLabel = 'Server started after';
 
 export const startExpressApolloServer = async (listenOptions: ListenOptions = {port: 9000}) => {
-  console.time(serverStartTimeLabel);
-  console.log('Creating Apollo with Express middleware server...');
+  const startTime = Date.now();
+  logger.info('='.repeat(30));
+  logger.info('Starting Apollo Express Server...');
+  logger.info(`  Port: ${listenOptions.port}`);
+  logger.info(`  GraphQL Path: ${GRAPHQL_API_PATH}`);
+  logger.info('='.repeat(30));
 
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
   await MongoDbClient.connectToDatabase(secret);
@@ -26,10 +31,10 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = {p
 
   const apolloServer = await createApolloServer(expressApp);
 
-  console.log('Starting the apollo server...');
+  logger.info('Starting the apollo server...');
   await apolloServer.start();
 
-  console.log('Adding express middleware to apollo server...');
+  logger.info('Adding express middleware to apollo server...');
   expressApp.use(
     GRAPHQL_API_PATH,
     cors<cors.CorsRequest>(),
@@ -45,7 +50,19 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = {p
     }),
   );
 
+  // Request logging middleware
+  expressApp.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      const logMethod = res.statusCode >= 400 ? 'warn' : 'debug';
+      logger[logMethod](`${req.method} ${req.path} ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+  });
+
   expressApp.get('/health', (req, res) => {
+    logger.debug('Health check requested');
     res.status(HttpStatusCode.OK).send('Okay!');
   });
 
@@ -54,21 +71,22 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = {p
       const httpServer = expressApp.listen(listenOptions.port);
       httpServer
         .once('listening', () => {
-          console.log(`⚡️[server]: Server is running at ${DEV_URL}`);
+          logger.info(`⚡️[server]: Server is running at ${DEV_URL}`);
           return resolve(httpServer);
         })
         .once('close', () => {
-          console.log(`Server runnin on ${DEV_URL} is CLOSED!`);
+          logger.info(`Server running on ${DEV_URL} is CLOSED!`);
           resolve(httpServer);
         })
         .once('error', (error) => {
-          console.log(`Server failed to listen on port: ${listenOptions.port}`);
+          logger.error(`Server failed to listen on port: ${listenOptions.port}`, error);
           reject(error);
         });
     });
   };
 
   const httpServer = await listenForConnections();
-  console.timeEnd(serverStartTimeLabel);
+  const elapsed = Date.now() - startTime;
+  logger.info(`Server started after ${elapsed}ms`);
   return {url: DEV_URL, expressApp, apolloServer, httpServer};
 };

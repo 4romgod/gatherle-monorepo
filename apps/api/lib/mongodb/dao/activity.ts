@@ -3,6 +3,8 @@ import {Types} from 'mongoose';
 import type {Activity as ActivityEntity, CreateActivityInput} from '@ntlango/commons/types';
 import {Activity as ActivityModel} from '@/mongodb/models';
 import {KnownCommonError} from '@/utils';
+import {logger} from '@/utils/logger';
+
 
 class ActivityDAO {
   static async create(input: CreateActivityInput & {actorId: string}): Promise<ActivityEntity> {
@@ -22,7 +24,7 @@ class ActivityDAO {
       });
       return activity.toObject();
     } catch (error) {
-      console.error('Error creating activity', error);
+      logger.error('Error creating activity', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -36,7 +38,7 @@ class ActivityDAO {
       const activities = await ActivityModel.find({actorId}).sort({eventAt: -1, createdAt: -1}).limit(sanitizedLimit).exec();
       return activities.map((activity) => activity.toObject());
     } catch (error) {
-      console.error('Error reading activities by actor', error);
+      logger.error('Error reading activities by actor', error);
       throw KnownCommonError(error);
     }
   }
@@ -53,7 +55,7 @@ class ActivityDAO {
         .exec();
       return activities.map((activity) => activity.toObject());
     } catch (error) {
-      console.error('Error reading feed activities', error);
+      logger.error('Error reading feed activities', error);
       throw KnownCommonError(error);
     }
   }

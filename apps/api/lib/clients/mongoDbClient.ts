@@ -1,4 +1,5 @@
 import {connect, disconnect} from 'mongoose';
+import {logger} from '@/utils/logger';
 
 let mongodbConnected = false;
 
@@ -6,12 +7,15 @@ class MongoDbClient {
   static async connectToDatabase(databaseUrl: string) {
     try {
       if (!mongodbConnected) {
+        logger.info('Connecting to MongoDB...');
         await connect(databaseUrl);
         mongodbConnected = true;
-        console.log('MongoDB connected!');
+        logger.info('MongoDB connected successfully');
+      } else {
+        logger.debug('MongoDB already connected, skipping connection attempt');
       }
     } catch (error) {
-      console.log('Failed to connect to MongoDB!');
+      logger.error('Failed to connect to MongoDB!', error);
       throw error;
     }
   }
@@ -20,9 +24,9 @@ class MongoDbClient {
     try {
       await disconnect();
       mongodbConnected = false;
-      console.log('MongoDB disconnected!');
+      logger.info('MongoDB disconnected!');
     } catch (error) {
-      console.log('Failed to disconnect from MongoDB!');
+      logger.error('Failed to disconnect from MongoDB!', error);
       throw error;
     }
   }

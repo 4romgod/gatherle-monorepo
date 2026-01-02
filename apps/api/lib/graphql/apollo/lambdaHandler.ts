@@ -3,16 +3,20 @@ import {startServerAndCreateLambdaHandler, handlers} from '@as-integrations/aws-
 import {createApolloServer} from '@/graphql';
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {SECRET_KEYS} from '@/constants';
+import { logger } from '@/utils/logger';
 
 export const graphqlLambdaHandler = async (event: APIGatewayProxyEvent, context: Context, callback: Callback<APIGatewayProxyResult>) => {
-  console.log('Creating Apollo Server with Lambda Integration...');
+  logger.info('Lambda handler invoked');
+  logger.debug(`Request ID: ${context.awsRequestId}`);
+  logger.debug(`Path: ${event.path}`);
+  logger.info('Creating Apollo Server with Lambda Integration...');
 
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
   await MongoDbClient.connectToDatabase(secret);
 
   const apolloServer = await createApolloServer();
 
-  console.log('Starting server and creating lambda handler...');
+  logger.info('Starting server and creating lambda handler...');
   const lambdaHandler = startServerAndCreateLambdaHandler(apolloServer, handlers.createAPIGatewayProxyEventRequestHandler(), {
     context: async ({event, context}) => {
       return {

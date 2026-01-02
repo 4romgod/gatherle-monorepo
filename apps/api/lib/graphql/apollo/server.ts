@@ -3,6 +3,7 @@ import {ApolloServerPluginDrainHttpServer} from '@apollo/server/plugin/drainHttp
 import type {Express, Request, Response} from 'express';
 import type {GraphQLError, GraphQLFormattedError} from 'graphql';
 import {STAGE} from '@/constants';
+import {logger} from '@/utils/logger';
 import type {ApolloServerPlugin} from '@apollo/server';
 import {ApolloServer} from '@apollo/server';
 import {createServer} from 'http';
@@ -77,27 +78,28 @@ const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> 
     if (!request) {
       return {};
     }
+
+    // Skip introspection queries to reduce log noise
+    const operationName = request.operationName;
+    if (operationName === 'IntrospectionQuery' || operationName?.startsWith('__schema')) {
+      return {};
+    }
+
     const query = getQueryStringFromRequest(request.query as GraphQLQueryValue | undefined).trim();
     const variables = request.variables ?? {};
-    console.log('GraphQL request received:');
-    console.log('  Stage:', STAGE);
-    console.log('  Operation:', request.operationName ?? '<unnamed>');
-    if (query) {
-      console.log('  Query:\n', query);
-    }
-    console.log('  Variables:', JSON.stringify(variables, null, 2));
+    logger.graphql(operationName ?? '<unnamed>', query, variables);
     return {};
   },
 });
 
 export const createApolloServer = async (expressApp?: Express) => {
-  console.log('Creating Apollo Server...');
+  logger.info('Creating Apollo Server...');
   const apolloServer = new ApolloServer<ServerContext>({
     schema: createSchema(),
     includeStacktraceInErrorResponses: STAGE !== APPLICATION_STAGES.PROD,
     status400ForVariableCoercionErrors: true,
     formatError: (formattedError: GraphQLFormattedError, error: unknown) => {
-      console.warn('GraphQL Error:', {formattedError, error});
+      logger.warn('GraphQL Error:', {formattedError, error});
 
       const graphQLError = error as GraphQLError;
 

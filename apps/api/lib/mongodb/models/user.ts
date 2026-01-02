@@ -3,6 +3,7 @@ import type {DocumentType} from '@typegoose/typegoose';
 import {getModelForClass, pre} from '@typegoose/typegoose';
 import {User as UserEntity} from '@ntlango/commons/types';
 import {genSalt, hash, compare} from 'bcryptjs';
+import {logger} from '@/utils/logger';
 
 async function hashPassword(plainPassword: string): Promise<string> {
   const salt = await genSalt(10);
@@ -44,7 +45,7 @@ type UpdateFields = {
 
     next();
   } catch (err) {
-    console.log('Error when pre-saving the user', err);
+    logger.debug('Error when pre-saving the user', err);
     next(err as Error);
   }
 })
@@ -73,7 +74,7 @@ type UpdateFields = {
     context.setUpdate?.(updateObj);
     next();
   } catch (err) {
-    console.error('Error in pre-update hook', err);
+    logger.error('Error in pre-update hook', err);
     next(err as Error);
   }
 })

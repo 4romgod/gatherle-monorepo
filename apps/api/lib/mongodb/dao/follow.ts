@@ -4,6 +4,7 @@ import {Types} from 'mongoose';
 import type {Follow as FollowEntity, CreateFollowInput, FollowTargetType} from '@ntlango/commons/types';
 import {Follow as FollowModel} from '@/mongodb/models';
 import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
+import {logger} from '@/utils/logger';
 
 class FollowDAO {
   static async upsert(input: CreateFollowInput & {followerUserId: string}): Promise<FollowEntity> {
@@ -34,7 +35,7 @@ class FollowDAO {
 
       return follow.toObject();
     } catch (error) {
-      console.error('Error upserting follow', error);
+      logger.error('Error upserting follow', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -47,7 +48,7 @@ class FollowDAO {
       const follows = await FollowModel.find({followerUserId}).sort({createdAt: -1}).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      console.error('Error reading following list', error);
+      logger.error('Error reading following list', error);
       throw KnownCommonError(error);
     }
   }
@@ -57,7 +58,7 @@ class FollowDAO {
       const follows = await FollowModel.find({targetType, targetId}).sort({createdAt: -1}).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      console.error('Error reading followers', error);
+      logger.error('Error reading followers', error);
       throw KnownCommonError(error);
     }
   }
@@ -70,7 +71,7 @@ class FollowDAO {
       }
       return true;
     } catch (error) {
-      console.error('Error removing follow', error);
+      logger.error('Error removing follow', error);
       if (error instanceof GraphQLError) {
         throw error;
       }

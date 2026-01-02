@@ -2,6 +2,7 @@ import type {CancelRsvpInput, RsvpInput} from '@ntlango/commons/types';
 import {User} from '@/mongodb/models';
 import {CustomError, ErrorTypes} from './exceptions';
 import {ERROR_MESSAGES} from '@/validation';
+import {logger} from '@/utils/logger';
 
 export const validateUserIdentifiers = async (input: RsvpInput | CancelRsvpInput): Promise<string[]> => {
   const {userIdList, emailList, usernameList} = input;
@@ -30,7 +31,7 @@ export const validateUserIdentifiers = async (input: RsvpInput | CancelRsvpInput
 
     return Array.from(validUserIds);
   } catch (error) {
-    console.error('Error validating user IDs', error);
+    logger.error('Error validating user IDs', error);
     throw error;
   }
 };

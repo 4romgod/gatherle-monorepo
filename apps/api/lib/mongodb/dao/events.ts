@@ -5,6 +5,8 @@ import {CustomError, ErrorTypes, KnownCommonError, extractValidationErrorMessage
 import {ERROR_MESSAGES} from '@/validation';
 import {EventParticipantDAO} from '@/mongodb/dao';
 import {ParticipantStatus} from '@ntlango/commons/types';
+import {logger} from '@/utils/logger';
+
 
 class EventDAO {
   static async create(input: CreateEventInput): Promise<EventEntity> {
@@ -12,7 +14,7 @@ class EventDAO {
       const event = await (await EventModel.create(input)).populate('eventCategoryList');
       return event.toObject();
     } catch (error) {
-      console.error('Error creating event', error);
+      logger.error('Error creating event', error);
       const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
 
       if (validationMessage !== 'Event validation failed') {
@@ -31,7 +33,7 @@ class EventDAO {
       }
       return event.toObject();
     } catch (error) {
-      console.error('Error reading event by id', error);
+      logger.error('Error reading event by id', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -48,7 +50,7 @@ class EventDAO {
       }
       return event.toObject();
     } catch (error) {
-      console.error('Error reading event by slug:', error);
+      logger.error('Error reading event by slug:', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -58,11 +60,12 @@ class EventDAO {
 
   static async readEvents(options?: QueryOptionsInput): Promise<EventEntity[]> {
     try {
+      logger.debug('Reading events with options:', options);
       const pipeline = transformOptionsToPipeline(options);
       const events = await EventModel.aggregate<EventEntity>(pipeline).exec();
       return events;
     } catch (error) {
-      console.error('Error reading events', error);
+      logger.error('Error reading events', error);
       throw KnownCommonError(error);
     }
   }
@@ -77,7 +80,7 @@ class EventDAO {
       }
       return updatedEvent.toObject();
     } catch (error) {
-      console.error('Error updating event', error);
+      logger.error('Error updating event', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -93,7 +96,7 @@ class EventDAO {
       }
       return deletedEvent.toObject();
     } catch (error) {
-      console.error(`Error deleting event by eventId ${eventId}`, error);
+      logger.error(`Error deleting event by eventId ${eventId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -109,7 +112,7 @@ class EventDAO {
       }
       return deletedEvent.toObject();
     } catch (error) {
-      console.error(`Error deleting event with slug ${slug}`, error);
+      logger.error(`Error deleting event with slug ${slug}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -134,7 +137,7 @@ class EventDAO {
 
       return event.toObject();
     } catch (error) {
-      console.error(`Error updating event RSVP's with eventId ${eventId}`, error);
+      logger.error(`Error updating event RSVP's with eventId ${eventId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -159,7 +162,7 @@ class EventDAO {
 
       return event.toObject();
     } catch (error) {
-      console.error(`Error cancelling event RSVP's with eventId ${eventId}`, error);
+      logger.error(`Error cancelling event RSVP's with eventId ${eventId}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }

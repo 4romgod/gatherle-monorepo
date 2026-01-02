@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { Box, Grid, Paper, Typography, Button, Stack, Chip } from '@mui/material';
+import { Box, Grid, Paper, Typography, Button, Stack, Chip, Alert } from '@mui/material';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventCategory } from '@/data/graphql/types/graphql';
 import { useEventFilters, EventFilterProvider } from '@/components/events/filters/event-filter-context';
@@ -26,8 +26,10 @@ interface EventsClientWrapperProps {
 
 function EventsContent({ categories, initialEvents }: EventsContentProps) {
   const { filters, setSearchQuery, resetFilters, hasActiveFilters, removeCategory, removeStatus } = useEventFilters();
-  const { events: serverEvents, loading } = useFilteredEvents(filters, initialEvents);
+  const { events: serverEvents, loading, error } = useFilteredEvents(filters, initialEvents);
   const networkRequests = useNetworkActivity();
+
+  // TODO The showSkeletons variable combines loading state with networkRequests > 0. This means any network request (including unrelated API calls) will trigger skeleton display for events. Consider being more specific about which network activity should trigger the loading state, or rely solely on the loading prop from useFilteredEvents to avoid false positives.
   const showSkeletons = loading || networkRequests > 0;
 
   const filteredEvents = useMemo(() => {
@@ -140,6 +142,15 @@ function EventsContent({ categories, initialEvents }: EventsContentProps) {
 
           {/* Events List */}
           <Grid size={{ xs: 12, md: 7 }} id="events">
+            {error && (
+              <Alert 
+                severity="error" 
+                onClose={() => window.location.reload()}
+                sx={{ mb: 2 }}
+              >
+                {error}
+              </Alert>
+            )}
             <Paper
               elevation={0}
               sx={{

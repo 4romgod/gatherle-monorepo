@@ -34,6 +34,7 @@ const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
 
 export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPreview[]) => {
   const [events, setEvents] = useState<EventPreview[]>(initialEvents);
+  const [error, setError] = useState<string | null>(null);
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
   const [loadEvents, { loading }] = useLazyQuery<GetAllEventsQuery, GetAllEventsQueryVariables>(GetAllEventsDocument);
 
@@ -44,14 +45,24 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
   useEffect(() => {
     if (filterInputs.length === 0) {
       setEvents(initialEvents);
+      setError(null);
       return;
     }
 
+    const abortController = new AbortController();
     let isCurrent = true;
+
+    // Clear previous error when starting new request
+    setError(null);
 
     loadEvents({
       variables: { options: { filters: filterInputs } },
       fetchPolicy: 'network-only',
+      context: {
+        fetchOptions: {
+          signal: abortController.signal,
+        },
+      },
     })
       .then(response => {
         if (!isCurrent) {
@@ -59,18 +70,23 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
         }
         if (response.data?.readEvents) {
           setEvents(response.data.readEvents as EventPreview[]);
+          setError(null);
+        } else if (response.error) {
+          setError('Failed to load filtered events. Please try again.');
         }
       })
       .catch(error => {
-        if (isCurrent) {
+        if (isCurrent && error.name !== 'AbortError') {
           console.error('Error fetching filtered events', error);
+          setError('Unable to apply filters. Please check your connection and try again.');
         }
       });
 
     return () => {
       isCurrent = false;
+      abortController.abort();
     };
   }, [filterInputs, initialEvents, loadEvents]);
 
-  return { events, loading, hasFilterInputs: filterInputs.length > 0 };
+  return { events, loading, error, hasFilterInputs: filterInputs.length > 0 };
 };

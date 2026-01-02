@@ -80,13 +80,12 @@ export class OrganizationEventDefaultsInput {
 
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
 @ObjectType('Organization', {description: ORGANIZATION_DESCRIPTIONS.TYPE})
-@index({slug: 1}, {unique: true})
 export class Organization {
     @prop({required: true, unique: true, index: true, type: () => String})
     @Field(() => ID, {description: ORGANIZATION_DESCRIPTIONS.ID})
     orgId: string;
 
-    @prop({required: true, unique: true, type: () => String})
+    @prop({required: true, unique: true, index: true, type: () => String})
     @Field(() => String, {description: ORGANIZATION_DESCRIPTIONS.SLUG})
     slug: string;
 

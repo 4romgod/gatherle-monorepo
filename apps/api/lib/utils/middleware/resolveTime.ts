@@ -2,6 +2,7 @@ import type {NextFn, ResolverData} from 'type-graphql';
 import {HTTP_METHOD_COLOR_MAP, RESOLVE_TIME_COLOR_MAP, GRAPHQL_API_PATH, ANSI_COLOR_CODES} from '@/constants';
 import {getStatusCodeColor} from '@/utils';
 import type {ServerContext} from '@/graphql';
+import {logger} from '@/utils/logger';
 
 // TODO make it work with AWS Lambda
 export const ResolveTime = async ({context, info}: ResolverData<ServerContext>, next: NextFn) => {
@@ -20,7 +21,7 @@ export const ResolveTime = async ({context, info}: ResolverData<ServerContext>, 
   const baseUrl = context.req?.baseUrl ?? GRAPHQL_API_PATH;
 
   if (['Query', 'Mutation', 'Subscription'].includes(info.parentType.name)) {
-    console.log(
+    logger.debug(
       `${httpMethodColor}${httpMethod} ${ANSI_COLOR_CODES.GRAY}${baseUrl} ${ANSI_COLOR_CODES.BLUE}(${info.parentType.name}.${info.fieldName}) ${statusCodeColor}${statusCode} - ${resolveTimeColor}[${resolveTime} ms]${ANSI_COLOR_CODES.WHITE}`,
     );
   }

@@ -1,6 +1,7 @@
 import {APPLICATION_STAGES} from '@ntlango/commons';
 import {config} from 'dotenv';
 import {z} from 'zod';
+import {initLogger, LOG_LEVEL_MAP, LogLevel} from '@/utils/logger';
 
 config();
 
@@ -15,6 +16,12 @@ const EnvSchema = z
     AWS_REGION: z.string().default('eu-west-1'),
     STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.DEV),
     NTLANGO_SECRET_ARN: z.string().optional(),
+    LOG_LEVEL: z
+      .string()
+      .toLowerCase()
+      .optional()
+      .default('info')
+      .transform(val => LOG_LEVEL_MAP[val] ?? LogLevel.INFO),
   })
   .superRefine((env, ctx) => {
     if (env.STAGE === APPLICATION_STAGES.DEV) {
@@ -55,8 +62,22 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
+// Initialize logger with configured log level
+initLogger(env.LOG_LEVEL);
+
+// Log configuration (excluding secrets)
+const logLevel = Object.keys(LOG_LEVEL_MAP).find(key => LOG_LEVEL_MAP[key] === env.LOG_LEVEL) || 'unknown';
+console.log(`[INFO] Environment configuration loaded:`);
+console.log(`  - Stage: ${env.STAGE}`);
+console.log(`  - Region: ${env.AWS_REGION}`);
+console.log(`  - Log Level: ${logLevel}`);
+console.log(`  - MongoDB URL: ${env.MONGO_DB_URL ? '***configured***' : 'not set'}`);
+console.log(`  - JWT Secret: ${env.JWT_SECRET ? '***configured***' : 'not set'}`);
+console.log(`  - Secrets ARN: ${env.NTLANGO_SECRET_ARN || 'not set'}`);
+
 export const AWS_REGION = env.AWS_REGION;
 export const STAGE = env.STAGE;
 export const MONGO_DB_URL = env.MONGO_DB_URL;
 export const JWT_SECRET = env.JWT_SECRET;
 export const NTLANGO_SECRET_ARN = env.NTLANGO_SECRET_ARN;
+export const LOG_LEVEL = env.LOG_LEVEL;
