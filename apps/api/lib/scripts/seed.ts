@@ -182,7 +182,8 @@ async function seedEvents(
     const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
 
     const organizerIds = getRandomUniqueItems(userIds, 2);
-    const participantIds = getRandomUniqueItems(userIds, 4);
+    const participantCount = Math.floor(Math.random() * 5) + 2; // Random number between 2 and 6
+    const participantIds = getRandomUniqueItems(userIds, participantCount);
     const categorySelection =
       event.eventCategories && event.eventCategories.length ? event.eventCategories : getRandomUniqueItems(eventCategoryIds, 5);
 

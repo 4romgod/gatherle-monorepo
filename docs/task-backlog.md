@@ -19,7 +19,7 @@ This backlog captures known missing work discovered from TODO/FIXME markers and 
 | API-006 | Make resolveTime middleware Lambda compatible | P2 | Backlog | `apps/api/lib/utils/middleware/resolveTime.ts` | Adapt for Lambda runtime or guard for missing HTTP response. |
 | API-007 | Support nested query filters | P1 | Backlog | `apps/api/lib/utils/queries/query.ts` | TODO for nested fields and organizer-gender filter. |
 | API-008 | Implement RootQuery selector operators | P1 | Backlog | `apps/api/lib/utils/queries/aggregate/filter.ts` | Add `$and`, `$or`, `$text`, etc. |
-| API-013 | Filter using related/resolved fields | P2 | Done | `apps/api/lib/utils/queries/aggregate/filter.ts` | ~~Add support for organizers.user.*, participants.*, and other resolver-backed data.~~ Organizers now use lookup/populate for nested filtering. Participants still need resolution. |
+| API-013 | Filter using related/resolved fields | P2 | Done | `apps/api/lib/utils/queries/aggregate/filter.ts` | ~~Add support for organizers.user.*, participants.*, and other resolver-backed data.~~ Both organizers and participants now use lookup/populate for nested filtering via aggregation pipeline. |
 | API-009 | Consider middleware for known Mongoose errors | P3 | Backlog | `apps/api/lib/utils/exceptions.ts` | TODO suggests middleware-based translation of errors. |
 | API-010 | Enforce birthdate validation rules | P2 | Backlog | `packages/commons/lib/validation/auth.ts` | Ensure birthdate is not in the future. |
 | API-011 | Decide whether to persist participant IDs on Event | P2 | Backlog | `packages/commons/lib/types/event.ts` | Document/implement final decision. |

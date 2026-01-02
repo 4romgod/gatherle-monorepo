@@ -278,11 +278,10 @@ export class Event {
     @Field(() => String, {nullable: true, description: 'Hero image for the event'})
     heroImage?: string;
 
-    // TODO do we not need to persist the IDs of participants?
     @Field(() => [EventParticipant], {
         nullable: true,
         description:
-            'Resolved participants (not persisted in Event document; resolved via GraphQL field resolver by querying EventParticipant collection)',
+            'Resolved participants populated via $lookup aggregation (not persisted in Event document; queried from EventParticipant collection)',
     })
     participants?: EventParticipant[];
 }

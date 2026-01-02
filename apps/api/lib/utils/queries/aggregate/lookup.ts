@@ -63,5 +63,80 @@ export const createEventLookupStages = (): PipelineStage[] => {
         organizersUserMap: 0,
       },
     },
+    // Lookup participants from EventParticipant collection
+    {
+      $lookup: {
+        from: 'eventparticipants',
+        localField: 'eventId',
+        foreignField: 'eventId',
+        as: 'participants',
+      },
+    },
+    // Lookup users for participants
+    {
+      $lookup: {
+        from: 'users',
+        let: {participantUserIds: '$participants.userId'},
+        pipeline: [
+          {
+            $match: {
+              $expr: {$in: ['$userId', '$$participantUserIds']},
+            },
+          },
+        ],
+        as: 'participantsUsersMap',
+      },
+    },
+    {
+      $addFields: {
+        // Create a map for O(1) lookup of user data
+        participantsUserMap: {
+          $arrayToObject: {
+            $map: {
+              input: '$participantsUsersMap',
+              as: 'user',
+              in: {k: '$$user.userId', v: '$$user'},
+            },
+          },
+        },
+      },
+    },
+    {
+      $addFields: {
+        // Enrich each participant with their user data
+        participants: {
+          $map: {
+            input: '$participants',
+            as: 'participant',
+            in: {
+              participantId: '$$participant.participantId',
+              eventId: '$$participant.eventId',
+              userId: '$$participant.userId',
+              status: '$$participant.status',
+              quantity: '$$participant.quantity',
+              invitedBy: '$$participant.invitedBy',
+              sharedVisibility: '$$participant.sharedVisibility',
+              rsvpAt: '$$participant.rsvpAt',
+              cancelledAt: '$$participant.cancelledAt',
+              checkedInAt: '$$participant.checkedInAt',
+              createdAt: '$$participant.createdAt',
+              updatedAt: '$$participant.updatedAt',
+              user: {
+                $getField: {
+                  field: '$$participant.userId',
+                  input: '$participantsUserMap',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        participantsUsersMap: 0,
+        participantsUserMap: 0,
+      },
+    },
   ];
 };

@@ -10,8 +10,11 @@ describe('createEventLookupStages', () => {
 
   it('should return the correct number of pipeline stages', () => {
     const lookupStages = createEventLookupStages();
-    // Includes: $lookup for categories, $lookup for organizers, $addFields (create map), $addFields (reconstruct organizers), $project
-    expect(lookupStages.length).toBe(5);
+    // Includes:
+    // - eventCategories: $lookup
+    // - organizers: $lookup users, $addFields (create map), $addFields (reconstruct organizers), $project
+    // - participants: $lookup participants, $lookup users, $addFields (create map), $addFields (enrich participants), $project
+    expect(lookupStages.length).toBe(10);
   });
 
   it('should contain the correct fields in the eventCategories lookup stage', () => {
@@ -37,6 +40,34 @@ describe('createEventLookupStages', () => {
     
     // Verify the pipeline uses $in for efficient filtering
     const pipeline = secondStage.$lookup.pipeline as any[];
+    expect(pipeline).toBeDefined();
+    expect(pipeline.length).toBeGreaterThan(0);
+    expect(pipeline[0]).toHaveProperty('$match');
+  });
+
+  it('should contain the participants lookup stage', () => {
+    const lookupStages = createEventLookupStages();
+    const participantsStage = lookupStages[5] as PipelineStage.Lookup;
+
+    expect(participantsStage).toHaveProperty('$lookup');
+    expect(participantsStage.$lookup).toHaveProperty('from', 'eventparticipants');
+    expect(participantsStage.$lookup).toHaveProperty('localField', 'eventId');
+    expect(participantsStage.$lookup).toHaveProperty('foreignField', 'eventId');
+    expect(participantsStage.$lookup).toHaveProperty('as', 'participants');
+  });
+
+  it('should contain the participants users lookup stage with pipeline optimization', () => {
+    const lookupStages = createEventLookupStages();
+    const participantsUsersStage = lookupStages[6] as PipelineStage.Lookup;
+
+    expect(participantsUsersStage).toHaveProperty('$lookup');
+    expect(participantsUsersStage.$lookup).toHaveProperty('from', 'users');
+    expect(participantsUsersStage.$lookup).toHaveProperty('let');
+    expect(participantsUsersStage.$lookup).toHaveProperty('pipeline');
+    expect(participantsUsersStage.$lookup).toHaveProperty('as', 'participantsUsersMap');
+    
+    // Verify the pipeline uses $in for efficient filtering
+    const pipeline = participantsUsersStage.$lookup.pipeline as any[];
     expect(pipeline).toBeDefined();
     expect(pipeline.length).toBeGreaterThan(0);
     expect(pipeline[0]).toHaveProperty('$match');

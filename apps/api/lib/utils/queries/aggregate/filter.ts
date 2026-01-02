@@ -2,7 +2,7 @@ import type {FilterInput} from '@ntlango/commons/types';
 import {FilterOperatorInput} from '@ntlango/commons/types';
 import type {PipelineStage} from 'mongoose';
 
-// TODO: allow filtering on related/resolved fields (organizers.user.*, participants.*, etc.)
+// Filtering on related/resolved fields (organizers.user.*, participants.*, etc.) now supported via lookup aggregation
 const buildOperatorSymbol = (operator?: FilterOperatorInput) => {
   const normalized = operator || FilterOperatorInput.eq;
   return `$${normalized}` as `$${FilterOperatorInput}`;

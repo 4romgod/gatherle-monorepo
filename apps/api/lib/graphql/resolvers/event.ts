@@ -1,10 +1,10 @@
 import 'reflect-metadata';
-import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root} from 'type-graphql';
-import {CreateEventInput, Event, UpdateEventInput, UserRole, QueryOptionsInput, EventParticipant} from '@ntlango/commons/types';
+import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
+import {CreateEventInput, Event, UpdateEventInput, UserRole, QueryOptionsInput} from '@ntlango/commons/types';
 import {ERROR_MESSAGES, validateInput, validateMongodbId} from '@/validation';
 import {CreateEventInputSchema, UpdateEventInputSchema} from '@/validation/zod';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import {EventDAO, EventParticipantDAO} from '@/mongodb/dao';
+import {EventDAO} from '@/mongodb/dao';
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -49,13 +49,5 @@ export class EventResolver {
   @Query(() => [Event], {description: RESOLVER_DESCRIPTIONS.EVENT.readEvents})
   async readEvents(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<Event[]> {
     return EventDAO.readEvents(options);
-  }
-
-  @FieldResolver(() => [EventParticipant], {nullable: true})
-  async participants(@Root() event: Event): Promise<EventParticipant[]> {
-    if (!event.eventId) {
-      return [];
-    }
-    return EventParticipantDAO.readByEvent(event.eventId);
   }
 }
