@@ -41,18 +41,24 @@ export const createEventLookupStages = (): PipelineStage[] => {
     {
       $addFields: {
         organizers: {
-          $map: {
-            input: '$organizers',
-            as: 'organizer',
-            in: {
-              user: {
-                $getField: {
-                  field: '$$organizer.user',
-                  input: '$organizersUserMap',
+          $filter: {
+            input: {
+              $map: {
+                input: '$organizers',
+                as: 'organizer',
+                in: {
+                  user: {
+                    $getField: {
+                      field: '$$organizer.user',
+                      input: '$organizersUserMap',
+                    },
+                  },
+                  role: '$$organizer.role',
                 },
               },
-              role: '$$organizer.role',
             },
+            as: 'organizer',
+            cond: {$ne: ['$$organizer.user', null]},
           },
         },
       },
