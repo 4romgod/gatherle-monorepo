@@ -66,9 +66,23 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
 
 async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
   logger.info('Starting to seed event category data...');
+  
+  const existing = await EventCategoryDAO.readEventCategories();
+  
   for (const category of categories) {
-    const eventCategoryResponse = await EventCategoryDAO.create(category);
-    logger.info(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
+    try {
+      const found = existing.find(c => c.name === category.name);
+      
+      if (found) {
+        logger.info(`   Event Category "${category.name}" already exists, skipping...`);
+        continue;
+      }
+      
+      const eventCategoryResponse = await EventCategoryDAO.create(category);
+      logger.info(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
+    } catch (error) {
+      logger.warn(`   Failed to create Event Category "${category.name}":`, error);
+    }
   }
   logger.info('Completed seeding event category data.');
 }
@@ -76,24 +90,35 @@ async function seedEventCategories(categories: Array<CreateEventCategoryInput>) 
 async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<CreateEventCategoryGroupInput>, eventCategoryList: Array<EventCategory>) {
   logger.info('Starting to seed event category groups data...');
 
+  const existingGroups = await EventCategoryGroupDAO.readEventCategoryGroups();
+
   for (const groupInput of eventCategoryGroupsInputList) {
-    // Replace category names with corresponding IDs
-    const resolvedCategoryIds = groupInput.eventCategories.map((categoryName) => {
-      const match = eventCategoryList.find((category) => category.name === categoryName);
-      if (!match) {
-        throw new Error(`Event category not found: ${categoryName}`);
+    try {
+      const found = existingGroups.find(g => g.name === groupInput.name);
+      if (found) {
+        logger.info(`   Event Category Group "${groupInput.name}" already exists, skipping...`);
+        continue;
       }
-      return match.eventCategoryId;
-    });
 
-    const categoryGroupWithIds = {
-      ...groupInput,
-      eventCategories: resolvedCategoryIds,
-    };
+      const resolvedCategoryIds = groupInput.eventCategories.map((categoryName) => {
+        const match = eventCategoryList.find((category) => category.name === categoryName);
+        if (!match) {
+          throw new Error(`Event category not found: ${categoryName}`);
+        }
+        return match.eventCategoryId;
+      });
 
-    await EventCategoryGroupDAO.create(categoryGroupWithIds);
+      const categoryGroupWithIds = {
+        ...groupInput,
+        eventCategories: resolvedCategoryIds,
+      };
 
-    logger.info(`   Seeded group: ${groupInput.name}`);
+      await EventCategoryGroupDAO.create(categoryGroupWithIds);
+
+      logger.info(`   Seeded group: ${groupInput.name}`);
+    } catch (error) {
+      logger.warn(`   Failed to create Event Category Group "${groupInput.name}":`, error);
+    }
   }
 
   logger.info('Completed seeding event category group data.');
@@ -101,12 +126,25 @@ async function seedEventCategoryGroups(eventCategoryGroupsInputList: Array<Creat
 
 async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<string>) {
   logger.info('Starting to seed user data...');
+  const existingUsers = await UserDAO.readUsers();
+  
   for (const user of users) {
-    const userResponse = await UserDAO.create({
-      ...user,
-      interests: getRandomUniqueItems(eventCategoryIds, 5),
-    });
-    logger.info(`   Created User item with id: ${userResponse.userId}`);
+    try {
+      // Check if user with this email already exists (case-insensitive)
+      const found = existingUsers.find(u => u.email?.toLowerCase() === user.email?.toLowerCase());
+      if (found) {
+        logger.info(`   User with email "${user.email}" already exists, skipping...`);
+        continue;
+      }
+
+      const userResponse = await UserDAO.create({
+        ...user,
+        interests: getRandomUniqueItems(eventCategoryIds, 5),
+      });
+      logger.info(`   Created User item with id: ${userResponse.userId}`);
+    } catch (error) {
+      logger.warn(`   Failed to create User "${user.email}":`, error);
+    }
   }
   logger.info('Completed seeding user data.');
 }
@@ -114,16 +152,31 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
 async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: string[]) {
   logger.info('Starting to seed organization data...');
   const created: Organization[] = [];
+  const existingOrgs = await OrganizationDAO.readOrganizations();
+  
   for (let i = 0; i < seedData.length; i++) {
-    const config = seedData[i];
-    const ownerId = ownerIds[i % ownerIds.length];
-    const organizationInput: CreateOrganizationInput = {
-      ...config,
-      ownerId,
-    };
-    const organization = await OrganizationDAO.create(organizationInput);
-    created.push(organization);
-    logger.info(`   Created Organization with id: ${organization.orgId}`);
+    try {
+      const config = seedData[i];
+      const ownerId = ownerIds[i % ownerIds.length];
+      
+      // Check if organization with this name already exists
+      const found = existingOrgs.find(o => o.name === config.name);
+      if (found) {
+        logger.info(`   Organization "${config.name}" already exists, using existing...`);
+        created.push(found);
+        continue;
+      }
+
+      const organizationInput: CreateOrganizationInput = {
+        ...config,
+        ownerId,
+      };
+      const organization = await OrganizationDAO.create(organizationInput);
+      created.push(organization);
+      logger.info(`   Created Organization with id: ${organization.orgId}`);
+    } catch (error) {
+      logger.warn(`   Failed to create Organization:`, error);
+    }
   }
   logger.info('Completed seeding organization data.');
   return created;
@@ -132,19 +185,34 @@ async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: str
 async function seedVenues(seedData: VenueSeedData[], organizations: Organization[]) {
   logger.info('Starting to seed venue data...');
   const createdVenues: Venue[] = [];
+  const existingVenues = await VenueDAO.readVenues();
+  
   for (const venueSeed of seedData) {
-    const organization = organizations[venueSeed.orgIndex];
-    if (!organization) {
-      throw new Error(`Organization not found for venue index ${venueSeed.orgIndex}`);
+    try {
+      const organization = organizations[venueSeed.orgIndex];
+      if (!organization) {
+        throw new Error(`Organization not found for venue index ${venueSeed.orgIndex}`);
+      }
+      
+      // Check if venue with this name already exists
+      const found = existingVenues.find(v => v.name === venueSeed.name);
+      if (found) {
+        logger.info(`   Venue "${venueSeed.name}" already exists, using existing...`);
+        createdVenues.push(found);
+        continue;
+      }
+
+      const {orgIndex, ...venueFields} = venueSeed;
+      const venueInput: CreateVenueInput = {
+        ...venueFields,
+        orgId: organization.orgId,
+      };
+      const venue = await VenueDAO.create(venueInput);
+      createdVenues.push(venue);
+      logger.info(`   Created Venue with id: ${venue.venueId}`);
+    } catch (error) {
+      logger.warn(`   Failed to create Venue:`, error);
     }
-    const {orgIndex, ...venueFields} = venueSeed;
-    const venueInput: CreateVenueInput = {
-      ...venueFields,
-      orgId: organization.orgId,
-    };
-    const venue = await VenueDAO.create(venueInput);
-    createdVenues.push(venue);
-    logger.info(`   Created Venue with id: ${venue.venueId}`);
   }
   logger.info('Completed seeding venue data.');
   return createdVenues;
@@ -152,18 +220,33 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
 
 async function seedOrganizationMemberships(seedData: OrganizationMembershipSeed[], organizations: Organization[], userIds: string[]) {
   logger.info('Starting to seed organization membership data...');
+  
   for (const membership of seedData) {
-    const organization = organizations[membership.orgIndex];
-    if (!organization) {
-      throw new Error(`Organization not found for membership orgIndex ${membership.orgIndex}`);
+    try {
+      const organization = organizations[membership.orgIndex];
+      if (!organization) {
+        throw new Error(`Organization not found for membership orgIndex ${membership.orgIndex}`);
+      }
+      const userId = userIds[membership.userIndex % userIds.length];
+      
+      // Check if membership already exists by querying for this specific org
+      const existingMemberships = await OrganizationMembershipDAO.readMembershipsByOrgId(organization.orgId);
+      const found = existingMemberships.find(m => m.userId === userId);
+      
+      if (found) {
+        logger.info(`   OrganizationMembership for user ${userId} in org ${organization.orgId} already exists, skipping...`);
+        continue;
+      }
+      
+      await OrganizationMembershipDAO.create({
+        orgId: organization.orgId,
+        userId,
+        role: membership.role,
+      });
+      logger.info(`   Created OrganizationMembership for user ${userId}`);
+    } catch (error) {
+      logger.warn(`   Failed to create OrganizationMembership:`, error);
     }
-    const userId = userIds[membership.userIndex % userIds.length];
-    await OrganizationMembershipDAO.create({
-      orgId: organization.orgId,
-      userId,
-      role: membership.role,
-    });
-    logger.info(`   Created OrganizationMembership for user ${userId}`);
   }
   logger.info('Completed seeding organization membership data.');
 }
@@ -177,54 +260,68 @@ async function seedEvents(
 ): Promise<Event[]> {
   logger.info('Starting to seed event data...');
   const createdEvents: Event[] = [];
+  const existingEvents = await EventDAO.readEvents();
+  
   for (const event of events) {
-    const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
-    const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
-
-    const organizerIds = getRandomUniqueItems(userIds, 2);
-    const participantCount = Math.floor(Math.random() * 5) + 2; // Random number between 2 and 6
-    const participantIds = getRandomUniqueItems(userIds, participantCount);
-    const categorySelection =
-      event.eventCategories && event.eventCategories.length ? event.eventCategories : getRandomUniqueItems(eventCategoryIds, 5);
-
-    const {orgIndex, venueIndex, ...eventBase} = event;
-    const eventInput: CreateEventInput = {
-      ...eventBase,
-      organizers: organizerIds.map((userId, index) => ({
-        user: userId,
-        role: index === 0 ? 'Host' : 'CoHost',
-      })),
-      eventCategories: categorySelection,
-      orgId: organization?.orgId,
-      venueId: venue?.venueId,
-    };
-
-    const eventResponse = await EventDAO.create(eventInput);
-
-    for (const userId of participantIds) {
-      let sharedVisibility: ParticipantVisibility;
-      if (eventResponse.visibility === undefined) {
-        throw new Error(
-          `Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`,
-        );
-      } else if (eventResponse.visibility === EventVisibility.Public) {
-        sharedVisibility = ParticipantVisibility.Public;
-      } else {
-        sharedVisibility = ParticipantVisibility.Followers;
+    try {
+      // Check if event with this title already exists
+      const found = existingEvents.find(e => e.title === event.title);
+      if (found) {
+        logger.info(`   Event "${event.title}" already exists, using existing...`);
+        createdEvents.push(found);
+        continue;
       }
-      try {
-        await EventParticipantDAO.upsert({
-          eventId: eventResponse.eventId,
-          userId,
-          status: ParticipantStatus.Going,
-          sharedVisibility,
-        });
-      } catch (err) {
-        logger.error(`Failed to upsert participant (userId: ${userId}) for event (eventId: ${eventResponse.eventId}):`, err);
+
+      const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
+      const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
+
+      const organizerIds = getRandomUniqueItems(userIds, 2);
+      const participantCount = Math.floor(Math.random() * 5) + 2; // Random number between 2 and 6
+      const participantIds = getRandomUniqueItems(userIds, participantCount);
+      const categorySelection =
+        event.eventCategories && event.eventCategories.length ? event.eventCategories : getRandomUniqueItems(eventCategoryIds, 5);
+
+      const {orgIndex, venueIndex, ...eventBase} = event;
+      const eventInput: CreateEventInput = {
+        ...eventBase,
+        organizers: organizerIds.map((userId, index) => ({
+          user: userId,
+          role: index === 0 ? 'Host' : 'CoHost',
+        })),
+        eventCategories: categorySelection,
+        orgId: organization?.orgId,
+        venueId: venue?.venueId,
+      };
+
+      const eventResponse = await EventDAO.create(eventInput);
+
+      for (const userId of participantIds) {
+        let sharedVisibility: ParticipantVisibility;
+        if (eventResponse.visibility === undefined) {
+          throw new Error(
+            `Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`,
+          );
+        } else if (eventResponse.visibility === EventVisibility.Public) {
+          sharedVisibility = ParticipantVisibility.Public;
+        } else {
+          sharedVisibility = ParticipantVisibility.Followers;
+        }
+        try {
+          await EventParticipantDAO.upsert({
+            eventId: eventResponse.eventId,
+            userId,
+            status: ParticipantStatus.Going,
+            sharedVisibility,
+          });
+        } catch (err) {
+          logger.error(`Failed to upsert participant (userId: ${userId}) for event (eventId: ${eventResponse.eventId}):`, err);
+        }
       }
+      logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
+      createdEvents.push(eventResponse);
+    } catch (error) {
+      logger.warn(`   Failed to create Event:`, error);
     }
-    logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
-    createdEvents.push(eventResponse);
   }
   logger.info('Completed seeding event data.');
   return createdEvents;

@@ -21,10 +21,10 @@
     "test:unit": "jest --config=test/unit/jest.config.ts --runInBand"
   },
   "dependencies": {
-    "@ntlango/commons": "1.0.0",
     "@apollo/server": "^4.10.4",
     "@as-integrations/aws-lambda": "^3.1.0",
     "@aws-sdk/client-secrets-manager": "^3.621.0",
+    "@ntlango/commons": "1.0.0",
     "@typegoose/typegoose": "^12.4.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
@@ -35,6 +35,7 @@
     "lodash": "^4.17.21",
     "mongoose": "^8.3.0",
     "reflect-metadata": "^0.2.2",
+    "rrule": "^2.8.1",
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {

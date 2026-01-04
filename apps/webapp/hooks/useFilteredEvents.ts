@@ -9,6 +9,7 @@ import {
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventFilters } from '@/components/events/filters/event-filter-context';
+import { DATE_FILTER_OPTIONS } from '@ntlango/commons';
 
 const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   const inputs: FilterInput[] = [];
@@ -32,10 +33,29 @@ const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   return inputs;
 };
 
+const buildDateFilterParams = (filters: EventFilters): { dateFilterOption?: string; customDate?: string } => {
+  if (!filters.dateRange.start || !filters.dateRange.end) {
+    return {};
+  }
+
+  // If we have a stored filter option that's not CUSTOM, use it
+  if (filters.dateRange.filterOption && filters.dateRange.filterOption !== DATE_FILTER_OPTIONS.CUSTOM) {
+    return {
+      dateFilterOption: filters.dateRange.filterOption,
+    };
+  }
+
+  // Otherwise, treat it as a custom date
+  return {
+    customDate: filters.dateRange.start.toISOString(),
+  };
+};
+
 export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPreview[]) => {
   const [events, setEvents] = useState<EventPreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
+  const dateFilterParams = useMemo(() => buildDateFilterParams(filters), [filters.dateRange]);
   const [loadEvents, { loading }] = useLazyQuery<GetAllEventsQuery, GetAllEventsQueryVariables>(GetAllEventsDocument);
 
   useEffect(() => {
@@ -43,7 +63,8 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
   }, [initialEvents]);
 
   useEffect(() => {
-    if (filterInputs.length === 0) {
+    const hasDateFilter = !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate;
+    if (filterInputs.length === 0 && !hasDateFilter) {
       setEvents(initialEvents);
       setError(null);
       return;
@@ -56,7 +77,13 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
     setError(null);
 
     loadEvents({
-      variables: { options: { filters: filterInputs } },
+      variables: { 
+        options: { 
+          filters: filterInputs.length > 0 ? filterInputs : undefined,
+          dateFilterOption: dateFilterParams.dateFilterOption as any,
+          customDate: dateFilterParams.customDate, // GraphQL DateTimeISO scalar accepts ISO 8601 string
+        } 
+      },
       fetchPolicy: 'network-only',
       context: {
         fetchOptions: {
@@ -86,7 +113,12 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       isCurrent = false;
       abortController.abort();
     };
-  }, [filterInputs, initialEvents, loadEvents]);
+  }, [filterInputs, dateFilterParams, initialEvents, loadEvents]);
 
-  return { events, loading, error, hasFilterInputs: filterInputs.length > 0 };
+  return { 
+    events, 
+    loading, 
+    error, 
+    hasFilterInputs: filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate 
+  };
 };

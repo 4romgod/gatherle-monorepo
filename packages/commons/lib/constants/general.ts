@@ -1,5 +1,3 @@
-import {transformEnumToErrorMessage} from '../utils/general';
-
 const EVENT_STATUS_VALUES = ['Cancelled', 'Completed', 'Ongoing', 'Upcoming'];
 const GENDER_VALUES = ['Male', 'Female', 'Other'];
 
@@ -9,7 +7,7 @@ export const ERROR_MESSAGES = {
     INVALID_DATE: 'should be in YYYY-MM-DD format',
     INVALID_EMAIL: 'Invalid email format',
     INVALID_EVENT_STATUS: `Invalid event status, should be ${EVENT_STATUS_VALUES.slice(0, -1).join(', ') + ', or ' + EVENT_STATUS_VALUES.slice(-1)}`,
-    INVALID_GENDER: `Invalid gender input, should be ${transformEnumToErrorMessage(GENDER_VALUES)}`,
+    INVALID_GENDER: `Invalid gender input, should be ${GENDER_VALUES.slice(0, -1).join(', ') + ', or ' + GENDER_VALUES.slice(-1)}`,
     INVALID_PASSWORD: 'Password should be at least 8 characters long',
     INVALID_PHONE_NUMBER: 'Invalid phone number format',
     INVALID_QUERY: "Your query doesn't match the schema. Try double-checking it!",
@@ -34,4 +32,24 @@ export const AWS_REGIONS = {
     Ireland: 'eu-west-1',
     N_Virginia: 'us-east-1',
     Ohio: 'us-east-2',
+};
+
+export enum DATE_FILTER_OPTIONS {
+    TODAY = 'TODAY',
+    TOMORROW = 'TOMORROW',
+    THIS_WEEK = 'THIS_WEEK',
+    THIS_WEEKEND = 'THIS_WEEKEND',
+    THIS_MONTH = 'THIS_MONTH',
+    CUSTOM = 'CUSTOM', // UI-only: frontend uses this to show date picker, backend receives customDate field
+}
+
+export type DateFilterOption = Exclude<DATE_FILTER_OPTIONS, DATE_FILTER_OPTIONS.CUSTOM>;
+
+export const DATE_FILTER_LABELS: Record<DATE_FILTER_OPTIONS, string> = {
+    [DATE_FILTER_OPTIONS.TODAY]: 'Today',
+    [DATE_FILTER_OPTIONS.TOMORROW]: 'Tomorrow',
+    [DATE_FILTER_OPTIONS.THIS_WEEK]: 'This Week',
+    [DATE_FILTER_OPTIONS.THIS_WEEKEND]: 'This Weekend',
+    [DATE_FILTER_OPTIONS.THIS_MONTH]: 'This Month',
+    [DATE_FILTER_OPTIONS.CUSTOM]: 'Custom',
 };

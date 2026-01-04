@@ -1,19 +1,21 @@
 "use client";
 
-import { useMemo } from 'react';
-import { Box, Grid, Paper, Typography, Button, Stack, Chip, Alert } from '@mui/material';
+import { useMemo, useState, useEffect } from 'react';
+import { Box } from '@mui/material';
+import dayjs from 'dayjs';
 import { EventPreview } from '@/data/graphql/query/Event/types';
-import { EventCategory } from '@/data/graphql/types/graphql';
+import { EventCategory, EventStatus } from '@/data/graphql/types/graphql';
+import { DATE_FILTER_OPTIONS, DATE_FILTER_LABELS, type DateFilterOption } from '@ntlango/commons';
 import { EventFilterProvider } from '@/components/events/filters/event-filter-context';
-import EventFiltersPanel from '@/components/events/filters/event-filters-panel';
-import EventTileGrid from '@/components/events/event-tile-grid';
-import SearchInput from '@/components/search/search-box';
 import CustomContainer from '@/components/custom-container';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ClearIcon from '@mui/icons-material/Clear';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { useNetworkActivity } from '@/hooks/useNetworkActivity';
 import { useEventFilters } from '@/hooks/useEventFilters';
+import EventsHeader from '@/components/events/filters/events-header';
+import FilterButtons from '@/components/events/filters/filter-buttons';
+import ActiveFiltersPills from '@/components/events/filters/active-filters-pills';
+import { CategoryMenu, StatusMenu, DateMenu } from '@/components/events/filters/filter-menus';
+import EventsList from '@/components/events/filters/events-list';
 
 interface EventsContentProps {
   categories: EventCategory[];
@@ -26,11 +28,25 @@ interface EventsClientWrapperProps {
 }
 
 function EventsContent({ categories, initialEvents }: EventsContentProps) {
-  const { filters, setSearchQuery, resetFilters, hasActiveFilters, removeCategory, removeStatus } = useEventFilters();
+  const { filters, setSearchQuery, resetFilters, hasActiveFilters, removeCategory, removeStatus, setCategories, setStatuses, setDateRange } = useEventFilters();
   const { events: serverEvents, loading, error } = useFilteredEvents(filters, initialEvents);
   const networkRequests = useNetworkActivity();
 
-  // TODO The showSkeletons variable combines loading state with networkRequests > 0. This means any network request (including unrelated API calls) will trigger skeleton display for events. Consider being more specific about which network activity should trigger the loading state, or rely solely on the loading prop from useFilteredEvents to avoid false positives.
+  const [categoryAnchor, setCategoryAnchor] = useState<null | HTMLElement>(null);
+  const [statusAnchor, setStatusAnchor] = useState<null | HTMLElement>(null);
+  const [dateAnchor, setDateAnchor] = useState<null | HTMLElement>(null);
+  const [selectedDateOption, setSelectedDateOption] = useState<string | null>(null);
+  const [customDateAnchor, setCustomDateAnchor] = useState<null | HTMLElement>(null);
+  const [customDateValue, setCustomDateValue] = useState<Date | null>(null);
+
+  // Sync selectedDateOption with filter state - clear when filters are reset
+  useEffect(() => {
+    if (!filters.dateRange.start && !filters.dateRange.end) {
+      setSelectedDateOption(null);
+      setCustomDateValue(null);
+    }
+  }, [filters.dateRange.start, filters.dateRange.end]);
+
   const showSkeletons = loading || networkRequests > 0;
 
   const filteredEvents = useMemo(() => {
@@ -46,161 +62,129 @@ function EventsContent({ categories, initialEvents }: EventsContentProps) {
     );
   }, [serverEvents, filters.searchQuery]);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+  const handleCategoryToggle = (categoryName: string) => {
+    const newCategories = filters.categories.includes(categoryName)
+      ? filters.categories.filter(c => c !== categoryName)
+      : [...filters.categories, categoryName];
+    setCategories(newCategories);
   };
 
+  const handleStatusToggle = (status: EventStatus) => {
+    const newStatuses = filters.statuses.includes(status)
+      ? filters.statuses.filter(s => s !== status)
+      : [...filters.statuses, status];
+    setStatuses(newStatuses);
+  };
+
+  const handleDateSelect = (option: string, event?: React.MouseEvent<HTMLElement>) => {
+    if (option === 'custom') {
+      // Keep menu open and show date picker anchored to the menu
+      setCustomDateAnchor(dateAnchor);
+      // Don't set selectedDateOption yet - wait for actual date selection
+    } else {
+      // Close menu for predefined options
+      setDateAnchor(null);
+      // Display the label for the selected option
+      const label = DATE_FILTER_LABELS[option as DateFilterOption] || option;
+      setSelectedDateOption(label);
+      // Apply date range filter - backend will calculate the actual dates
+      // Just store dummy dates for UI display purposes
+      const now = dayjs();
+      setDateRange(now, now, option);
+    }
+  };
+
+  const handleCustomDateClose = () => {
+    setCustomDateAnchor(null);
+    setDateAnchor(null);
+  };
+
+  const handleCustomDateChange = (date: any) => {
+    if (date) {
+      const jsDate = date.toDate();
+      setCustomDateValue(jsDate);
+      // Format the date for display
+      const formattedDate = jsDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+      setSelectedDateOption(formattedDate);
+      // Apply custom date filter - store the actual date
+      // Use 'custom' as filterOption internally to distinguish from predefined options
+      setDateRange(date, date, 'custom');
+    }
+    handleCustomDateClose();
+  };
+
+  const statuses = Object.values(EventStatus);
+  const dateOptions = Object.values(DATE_FILTER_OPTIONS);
+
+  const eventTitles = filteredEvents.map(item => item.title).filter((title): title is string => !!title);
+
   return (
-    <Box component="main" sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 4 }}>
-      <CustomContainer>
-        {/* Header Section */}
-        <Box mb={5}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-            <Box>
-              <Typography
-                variant="h3"
-                fontWeight={700}
-                sx={{
-                  mb: 1,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Discover Events
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Find the perfect event for you from {filteredEvents.length} available events
-              </Typography>
-            </Box>
-          </Stack>
+    <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
+      <CustomContainer maxWidthOverrides={{ lg: '95%' }}>
+        <EventsHeader 
+          eventCount={filteredEvents.length}
+          eventTitles={eventTitles}
+          onSearch={setSearchQuery}
+        />
 
-          {/* Search Bar */}
-          <SearchInput
-            itemList={filteredEvents.map(item => item.title).filter((title): title is string => !!title)}
-            onSearch={handleSearch}
-            sx={{
-              mx: 'auto',
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                bgcolor: 'background.paper',
-              },
-            }}
-          />
-        </Box>
+        <FilterButtons
+          categoryCount={filters.categories.length}
+          statusCount={filters.statuses.length}
+          selectedDateOption={selectedDateOption}
+          hasActiveFilters={hasActiveFilters}
+          onCategoryClick={(e) => setCategoryAnchor(e.currentTarget)}
+          onStatusClick={(e) => setStatusAnchor(e.currentTarget)}
+          onDateClick={(e) => setDateAnchor(e.currentTarget)}
+          onClearAll={resetFilters}
+        />
 
-        {/* Active Filters Display */}
         {hasActiveFilters && (
-          <Box mb={3}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'primary.50',
-              }}
-            >
-              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" gap={1}>
-                <FilterListIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Active Filters:
-                </Typography>
-                {filters.categories.map(cat => (
-                  <Chip key={cat} label={cat} size="small" onDelete={() => removeCategory(cat)} />
-                ))}
-                {filters.statuses.map(status => (
-                  <Chip key={status} label={status} size="small" onDelete={() => removeStatus(status)} />
-                ))}
-                {filters.searchQuery && (
-                  <Chip label={`Search: "${filters.searchQuery}"`} size="small" onDelete={() => setSearchQuery('')} />
-                )}
-                <Button
-                  size="small"
-                  startIcon={<ClearIcon />}
-                  onClick={resetFilters}
-                  sx={{
-                    ml: 'auto',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  Clear All
-                </Button>
-              </Stack>
-            </Paper>
-          </Box>
+          <ActiveFiltersPills
+            categories={filters.categories}
+            statuses={filters.statuses}
+            onRemoveCategory={removeCategory}
+            onRemoveStatus={removeStatus}
+          />
         )}
 
-        {/* Main Content Grid */}
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 5 }} id="event-filters">
-            <Box sx={{ position: 'sticky', top: 20 }}>
-              <EventFiltersPanel categoryList={categories} loading={loading} />
-            </Box>
-          </Grid>
+        <CategoryMenu
+          anchorEl={categoryAnchor}
+          categories={categories}
+          selectedCategories={filters.categories}
+          onClose={() => setCategoryAnchor(null)}
+          onToggle={handleCategoryToggle}
+        />
 
-          {/* Events List */}
-          <Grid size={{ xs: 12, md: 7 }} id="events">
-            {error && (
-              <Alert 
-                severity="error" 
-                onClose={() => window.location.reload()}
-                sx={{ mb: 2 }}
-              >
-                {error}
-              </Alert>
-            )}
-            <Paper
-              elevation={0}
-              sx={{
-                backgroundColor: 'background.paper',
-                p: 3,
-                borderRadius: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                minHeight: 400,
-              }}
-            >
-              {loading || filteredEvents.length > 0 ? (
-                <Box>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography variant="h6" fontWeight={600}>
-                      {showSkeletons
-                        ? 'Loading events…'
-                        : `${filteredEvents.length} Event${filteredEvents.length !== 1 ? 's' : ''} Found`}
-                    </Typography>
-                  </Stack>
-                  <EventTileGrid events={filteredEvents} loading={showSkeletons} />
-                </Box>
-              ) : (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: 300,
-                    textAlign: 'center',
-                  }}
-                >
-                  <Typography variant="h5" fontWeight={600} color="text.secondary" mb={2}>
-                    No Events Found
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" mb={3}>
-                    Try adjusting your filters or search criteria
-                  </Typography>
-                  {hasActiveFilters && (
-                    <Button variant="contained" onClick={resetFilters} startIcon={<ClearIcon />}>
-                      Clear All Filters
-                    </Button>
-                  )}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
+        <StatusMenu
+          anchorEl={statusAnchor}
+          statuses={statuses}
+          selectedStatuses={filters.statuses}
+          onClose={() => setStatusAnchor(null)}
+          onToggle={handleStatusToggle}
+        />
+
+        <DateMenu
+          anchorEl={dateAnchor}
+          dateOptions={dateOptions}
+          selectedOption={selectedDateOption}
+          customDateAnchor={customDateAnchor}
+          onClose={() => setDateAnchor(null)}
+          onSelect={handleDateSelect}
+          onCustomDateChange={handleCustomDateChange}
+          onCustomDateClose={handleCustomDateClose}
+        />
+
+        <EventsList
+          events={filteredEvents}
+          loading={showSkeletons}
+          error={error}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={resetFilters}
+        />
       </CustomContainer>
     </Box>
   );
