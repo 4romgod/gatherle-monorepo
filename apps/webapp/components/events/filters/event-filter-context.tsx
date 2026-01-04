@@ -13,6 +13,7 @@ export interface EventFilters {
   dateRange: {
     start: Dayjs | null;
     end: Dayjs | null;
+    filterOption?: string; // Store the filter option (today, tomorrow, etc.)
   };
   statuses: EventStatus[];
   searchQuery: string;
@@ -22,7 +23,7 @@ export interface EventFilterContextType {
   filters: EventFilters;
   setCategories: (categories: string[]) => void;
   setPriceRange: (range: [number, number]) => void;
-  setDateRange: (start: Dayjs | null, end: Dayjs | null) => void;
+  setDateRange: (start: Dayjs | null, end: Dayjs | null, filterOption?: string) => void;
   setStatuses: (statuses: EventStatus[]) => void;
   setSearchQuery: (query: string) => void;
   resetFilters: () => void;
@@ -56,8 +57,8 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
     setFilters(prev => ({ ...prev, priceRange: range }));
   };
 
-  const setDateRange = (start: Dayjs | null, end: Dayjs | null) => {
-    setFilters(prev => ({ ...prev, dateRange: { start, end } }));
+  const setDateRange = (start: Dayjs | null, end: Dayjs | null, filterOption?: string) => {
+    setFilters(prev => ({ ...prev, dateRange: { start, end, filterOption } }));
   };
 
   const setStatuses = (statuses: EventStatus[]) => {

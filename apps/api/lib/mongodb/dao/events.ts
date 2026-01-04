@@ -6,7 +6,7 @@ import {ERROR_MESSAGES} from '@/validation';
 import {EventParticipantDAO} from '@/mongodb/dao';
 import {ParticipantStatus} from '@ntlango/commons/types';
 import {logger} from '@/utils/logger';
-import {hasOccurrenceInRange} from '@/utils/rrule';
+import {hasOccurrenceInRange, getDateRangeForFilter} from '@/utils/rrule';
 
 
 class EventDAO {
@@ -66,8 +66,35 @@ class EventDAO {
       let events = await EventModel.aggregate<EventEntity>(pipeline).exec();
       
       // Apply date range filtering if provided (filter in application layer since RRULEs are strings)
-      if (options?.dateRange?.startDate && options?.dateRange?.endDate) {
-        const {startDate, endDate} = options.dateRange;
+      // Handle customDate (takes precedence), dateFilterOption, and direct dateRange (for backwards compatibility)
+      let dateRangeToUse = options?.dateRange;
+      
+      if (options?.customDate) {
+        // Custom date takes precedence - use it directly
+        logger.debug('Using custom date:', options.customDate);
+        const calculatedRange = getDateRangeForFilter(
+          'custom' as any,
+          new Date(options.customDate)
+        );
+        dateRangeToUse = {
+          startDate: calculatedRange.startDate,
+          endDate: calculatedRange.endDate,
+        };
+      } else if (options?.dateFilterOption) {
+        // Use predefined filter option
+        logger.debug('Calculating date range from filter option:', options.dateFilterOption);
+        const calculatedRange = getDateRangeForFilter(
+          options.dateFilterOption as any,
+          undefined
+        );
+        dateRangeToUse = {
+          startDate: calculatedRange.startDate,
+          endDate: calculatedRange.endDate,
+        };
+      }
+
+      if (dateRangeToUse?.startDate && dateRangeToUse?.endDate) {
+        const {startDate, endDate} = dateRangeToUse;
         logger.debug('Applying date range filter:', {startDate, endDate});
         
         events = events.filter(event => {

@@ -40,12 +40,12 @@ export const DATE_FILTER_OPTIONS = {
     THIS_WEEK: 'this-week',
     THIS_WEEKEND: 'this-weekend',
     THIS_MONTH: 'this-month',
-    CUSTOM: 'custom',
+    CUSTOM: 'custom', // UI-only: frontend uses this to show date picker, backend receives customDate field
 } as const;
 
-export type DateFilterOption = (typeof DATE_FILTER_OPTIONS)[keyof typeof DATE_FILTER_OPTIONS];
+export type DateFilterOption = Exclude<(typeof DATE_FILTER_OPTIONS)[keyof typeof DATE_FILTER_OPTIONS], typeof DATE_FILTER_OPTIONS.CUSTOM>;
 
-export const DATE_FILTER_LABELS: Record<DateFilterOption, string> = {
+export const DATE_FILTER_LABELS: Record<(typeof DATE_FILTER_OPTIONS)[keyof typeof DATE_FILTER_OPTIONS], string> = {
     [DATE_FILTER_OPTIONS.TODAY]: 'Today',
     [DATE_FILTER_OPTIONS.TOMORROW]: 'Tomorrow',
     [DATE_FILTER_OPTIONS.THIS_WEEK]: 'This Week',

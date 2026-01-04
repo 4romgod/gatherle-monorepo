@@ -2,6 +2,7 @@ import {InputType, Field, Int, registerEnumType} from 'type-graphql';
 
 import {QUERY_DESCRIPTIONS} from '../constants';
 import {AnyType} from './customTypes';
+import {DateFilterOption} from '@ntlango/commons/constants';
 
 export enum SortOrderInput {
     asc = 'asc',
@@ -94,6 +95,22 @@ export class QueryOptionsInput {
     @Field(() => [FilterInput], {nullable: true, description: QUERY_DESCRIPTIONS.QUERY.FILTER})
     filters?: FilterInput[];
 
-    @Field(() => DateRangeInput, {nullable: true, description: 'Filter events by date range (evaluates RRULEs)'})
+    @Field(() => DateRangeInput, {
+        nullable: true,
+        description: 'Filter events by date range (evaluates RRULEs). Use dateFilterOption for predefined ranges.',
+    })
     dateRange?: DateRangeInput;
+
+    @Field(() => String, {
+        nullable: true,
+        description:
+            'Predefined date filter option. Backend calculates the date range. Valid values: \"today\", \"tomorrow\", \"this-week\", \"this-weekend\", \"this-month\". For custom dates, use customDate field instead.',
+    })
+    dateFilterOption?: DateFilterOption;
+
+    @Field(() => Date, {
+        nullable: true,
+        description: 'Custom date to filter events. When provided, this takes precedence over dateFilterOption.',
+    })
+    customDate?: Date;
 }

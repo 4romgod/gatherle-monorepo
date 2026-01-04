@@ -1,4 +1,4 @@
-import {RRule, RRuleSet, rrulestr} from 'rrule';
+import {RRuleSet, rrulestr} from 'rrule';
 import {logger} from './logger';
 import {DATE_FILTER_OPTIONS, type DateFilterOption} from '@ntlango/commons';
 
@@ -56,7 +56,7 @@ export function getNextOccurrence(rruleString: string, fromDate: Date = new Date
  * Parse date filter option and return appropriate date range
  */
 export function getDateRangeForFilter(
-  filterOption: DateFilterOption,
+  filterOption: DateFilterOption | typeof DATE_FILTER_OPTIONS.CUSTOM,
   customDate?: Date
 ): {startDate: Date; endDate: Date} {
   const now = new Date();
@@ -117,6 +117,7 @@ export function getDateRangeForFilter(
     }
 
     case DATE_FILTER_OPTIONS.CUSTOM: {
+      // Internal case used when customDate is provided
       if (!customDate) {
         throw new Error('Custom date filter requires a customDate parameter');
       }

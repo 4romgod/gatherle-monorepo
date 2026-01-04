@@ -6,10 +6,10 @@ import {
   GetAllEventsDocument,
   GetAllEventsQuery,
   GetAllEventsQueryVariables,
-  DateRangeInput,
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventFilters } from '@/components/events/filters/event-filter-context';
+import { DATE_FILTER_OPTIONS } from '@ntlango/commons/lib/constants';
 
 const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   const inputs: FilterInput[] = [];
@@ -33,25 +33,29 @@ const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   return inputs;
 };
 
-const buildDateRange = (filters: EventFilters): DateRangeInput | undefined => {
-  if (filters.dateRange.start && filters.dateRange.end) {
-    // Convert dayjs objects to JavaScript Date objects, then to ISO strings
-    const startDate = filters.dateRange.start.toDate();
-    const endDate = filters.dateRange.end.toDate();
-    
+const buildDateFilterParams = (filters: EventFilters): { dateFilterOption?: string; customDate?: string } => {
+  if (!filters.dateRange.start || !filters.dateRange.end) {
+    return {};
+  }
+
+  // If we have a stored filter option that's not CUSTOM, use it
+  if (filters.dateRange.filterOption && filters.dateRange.filterOption !== DATE_FILTER_OPTIONS.CUSTOM) {
     return {
-      startDate: startDate.toISOString() as any,
-      endDate: endDate.toISOString() as any,
+      dateFilterOption: filters.dateRange.filterOption,
     };
   }
-  return undefined;
+
+  // Otherwise, treat it as a custom date
+  return {
+    customDate: filters.dateRange.start.toISOString(),
+  };
 };
 
 export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPreview[]) => {
   const [events, setEvents] = useState<EventPreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
-  const dateRange = useMemo(() => buildDateRange(filters), [filters.dateRange]);
+  const dateFilterParams = useMemo(() => buildDateFilterParams(filters), [filters.dateRange]);
   const [loadEvents, { loading }] = useLazyQuery<GetAllEventsQuery, GetAllEventsQueryVariables>(GetAllEventsDocument);
 
   useEffect(() => {
@@ -59,7 +63,8 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
   }, [initialEvents]);
 
   useEffect(() => {
-    if (filterInputs.length === 0 && !dateRange) {
+    const hasDateFilter = !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate;
+    if (filterInputs.length === 0 && !hasDateFilter) {
       setEvents(initialEvents);
       setError(null);
       return;
@@ -75,7 +80,8 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       variables: { 
         options: { 
           filters: filterInputs.length > 0 ? filterInputs : undefined,
-          dateRange,
+          dateFilterOption: dateFilterParams.dateFilterOption,
+          customDate: dateFilterParams.customDate as any,
         } 
       },
       fetchPolicy: 'network-only',
@@ -107,7 +113,12 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       isCurrent = false;
       abortController.abort();
     };
-  }, [filterInputs, dateRange, initialEvents, loadEvents]);
+  }, [filterInputs, dateFilterParams, initialEvents, loadEvents]);
 
-  return { events, loading, error, hasFilterInputs: filterInputs.length > 0 || !!dateRange };
+  return { 
+    events, 
+    loading, 
+    error, 
+    hasFilterInputs: filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate 
+  };
 };
