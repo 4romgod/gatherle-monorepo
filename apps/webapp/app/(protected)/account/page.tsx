@@ -1,7 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, PermMedia } from '@mui/icons-material';
-import { Box } from '@mui/material';
+import { Container } from '@mui/material';
 import CustomTabs, { CustomTabsProps } from '@/components/tabs/custom-tabs';
 import EditProfilePage from '@/components/settings/EditProfilePage';
 import PersonalSettingsPage from '@/components/settings/PersonalSettingsPage';
@@ -42,53 +42,53 @@ export default async function SettingsPage() {
     tabsTitle: 'Settings',
     tabs: [
       {
-        name: 'Edit Profile',
+        name: 'Profile',
         content: <EditProfilePage user={user} />,
-        icon: <PersonOutlined fontSize="small" />,
-        description: 'Customize how you appear to others',
+        icon: <PersonOutlined key="profile-icon" fontSize="small" />,
+        description: 'Customize your public profile',
       },
       {
-        name: 'Personal Info',
+        name: 'Personal',
         content: <PersonalSettingsPage user={user} />,
-        icon: <Person fontSize="small" />,
-        description: 'Manage your personal information',
+        icon: <Person key="personal-icon" fontSize="small" />,
+        description: 'Personal details and privacy',
       },
       {
         name: 'Interests',
         content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
-        icon: <Interests fontSize="small" />,
-        description: 'Select and manage your interests',
+        icon: <Interests key="interests-icon" fontSize="small" />,
+        description: 'Manage your event interests',
       },
       {
         name: 'Events',
         content: <EventSettingsPage user={user} />,
-        icon: <Event fontSize="small" />,
-        description: 'Configure your event preferences',
+        icon: <Event key="events-icon" fontSize="small" />,
+        description: 'Event preferences and notifications',
       },
       {
         name: 'Account',
         content: <AccountSettingsPage user={user} />,
-        icon: <ManageAccounts fontSize="small" />,
-        description: 'Control your account settings',
+        icon: <ManageAccounts key="account-icon" fontSize="small" />,
+        description: 'Account security and settings',
       },
       {
         name: 'Password',
         content: <PasswordSettingsPage />,
-        icon: <Password fontSize="small" />,
-        description: 'Control your account settings',
+        icon: <Password key="password-icon" fontSize="small" />,
+        description: 'Change your password',
       },
       {
-        name: 'Social media',
+        name: 'Social Media',
         content: <SocialMediaSettingsPage />,
-        icon: <PermMedia fontSize="small" />,
-        description: 'Connect social media accounts',
+        icon: <PermMedia key="social-icon" fontSize="small" />,
+        description: 'Connect your social accounts',
       },
     ],
   };
 
   return (
-    <Box>
+    <Container maxWidth="xl">
       <CustomTabs tabsProps={tabsProps} />
-    </Box>
+    </Container>
   );
 }
