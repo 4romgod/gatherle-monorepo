@@ -1,16 +1,18 @@
 import { EventCategory } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
-import { Avatar, Chip } from '@mui/material';
+import { Avatar, Chip, alpha } from '@mui/material';
 import Link from 'next/link';
 
 export default function EventCategoryChip({ category }: { category: EventCategory }) {
   const IconComponent = getEventCategoryIcon(category.iconName);
+  const categoryColor = category.color ?? 'black';
+  
   return (
     <Link key={category.eventCategoryId} href={`/events#${category.name}`} passHref style={{ textDecoration: 'none' }}>
       <Chip
         avatar={
-          <Avatar sx={{ bgcolor: `${category.color}20` }}>
-            <IconComponent color={category.color ?? 'black'} width={20} height={20} />
+          <Avatar sx={{ bgcolor: alpha(categoryColor, 0.12) }}>
+            <IconComponent color={categoryColor} width={20} height={20} />
           </Avatar>
         }
         label={category.name}
@@ -22,7 +24,7 @@ export default function EventCategoryChip({ category }: { category: EventCategor
           color: category.color ?? 'text.primary',
           '&:hover': {
             borderColor: category.color ?? 'secondary.main',
-            bgcolor: `${category.color}10`,
+            bgcolor: alpha(categoryColor, 0.06),
           },
           fontWeight: 500,
           margin: 0.5,

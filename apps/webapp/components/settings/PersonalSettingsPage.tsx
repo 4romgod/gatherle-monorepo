@@ -111,7 +111,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
             <Divider sx={{ mb: 3 }} />
 
             <Grid container spacing={3}>
-              <Grid size={{xs: 12}}>
+              <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth>
                   <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
                     <DatePicker
@@ -128,7 +128,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                   </LocalizationProvider>
                 </FormControl>
               </Grid>
-              <Grid size={{xs: 12}}>
+              <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth variant="outlined">
                   <InputLabel color="secondary">Gender</InputLabel>
                   <Select

@@ -5,12 +5,53 @@ import {getConfigValue, MongoDbClient} from '@/clients';
 import {SECRET_KEYS} from '@/constants';
 import { logger } from '@/utils/logger';
 
+// TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, token',
   'Access-Control-Max-Age': '86400',
 };
+
+// Module-level variables for connection reuse across Lambda invocations
+let cachedServer: Awaited<ReturnType<typeof createApolloServer>> | null = null;
+let cachedLambdaHandler: Awaited<ReturnType<typeof startServerAndCreateLambdaHandler>> | null = null;
+let isDbConnected = false;
+
+async function initializeResources() {
+  // Initialize database connection if not already connected
+  if (!isDbConnected) {
+    logger.info('Initializing MongoDB connection...');
+    const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
+    await MongoDbClient.connectToDatabase(secret);
+    isDbConnected = true;
+    logger.info('MongoDB connection established');
+  }
+
+  // Initialize Apollo Server if not already created
+  if (!cachedServer) {
+    logger.info('Creating Apollo Server...');
+    cachedServer = await createApolloServer();
+    logger.info('Apollo Server created');
+  }
+
+  // Initialize Lambda handler if not already created
+  if (!cachedLambdaHandler) {
+    logger.info('Creating Lambda handler...');
+    cachedLambdaHandler = startServerAndCreateLambdaHandler(cachedServer, handlers.createAPIGatewayProxyEventRequestHandler(), {
+      context: async ({event, context}) => {
+        return {
+          token: event.headers.token,
+          lambdaEvent: event,
+          lambdaContext: context,
+        };
+      },
+    });
+    logger.info('Lambda handler created');
+  }
+
+  return cachedLambdaHandler;
+}
 
 export const graphqlLambdaHandler = async (event: APIGatewayProxyEvent, context: Context, callback: Callback<APIGatewayProxyResult>) => {
   try {
@@ -30,23 +71,8 @@ export const graphqlLambdaHandler = async (event: APIGatewayProxyEvent, context:
       };
     }
     
-    logger.info('Creating Apollo Server with Lambda Integration...');
-
-    const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
-    await MongoDbClient.connectToDatabase(secret);
-
-    const apolloServer = await createApolloServer();
-
-    logger.info('Starting server and creating lambda handler...');
-    const lambdaHandler = startServerAndCreateLambdaHandler(apolloServer, handlers.createAPIGatewayProxyEventRequestHandler(), {
-      context: async ({event, context}) => {
-        return {
-          token: event.headers.token,
-          lambdaEvent: event,
-          lambdaContext: context,
-        };
-      },
-    });
+    logger.info('Initializing resources (reusing cached if available)...');
+    const lambdaHandler = await initializeResources();
 
     logger.info('Executing lambda handler...');
     const startTime = Date.now();

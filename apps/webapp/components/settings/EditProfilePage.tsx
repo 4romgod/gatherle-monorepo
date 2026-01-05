@@ -173,7 +173,7 @@ export default function EditProfilePage({ user }: { user: User }) {
           <Divider sx={{ mb: 3 }} />
 
           <Grid container spacing={3}>
-            <Grid size={{xs: 12, sm: 6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="First Name"
@@ -186,7 +186,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               />
               <FormErrors error={formState?.zodErrors?.given_name} />
             </Grid>
-            <Grid size={{xs: 12, sm: 6}}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Last Name"
@@ -199,7 +199,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               />
               <FormErrors error={formState?.zodErrors?.family_name} />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Username"
@@ -212,7 +212,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               />
               <FormErrors error={formState?.zodErrors?.username} />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Phone Number"
@@ -225,7 +225,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               />
               <FormErrors error={formState?.zodErrors?.phone_number} />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Date of Birth"
@@ -244,7 +244,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               />
               <FormErrors error={formState?.zodErrors?.birthdate} />
             </Grid>
-            <Grid size={{xs: 12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Bio"

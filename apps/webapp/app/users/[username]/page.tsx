@@ -424,27 +424,6 @@ export default async function UserPage(props: Props) {
               </Paper>
             )}
           </Box>
-
-          {/* Footer Info */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 2,
-              bgcolor: 'background.default',
-            }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="caption" color="text.secondary">
-                User ID: {user.userId}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Member since 2021
-              </Typography>
-            </Stack>
-          </Paper>
         </Stack>
       </Container>
     </Box>

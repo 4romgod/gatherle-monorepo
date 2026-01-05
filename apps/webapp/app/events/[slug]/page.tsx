@@ -285,9 +285,6 @@ export default async function Page(props: Props) {
               )}
             </Box>
           </Grid>
-          {/* <Grid size={{ md: 3 }} width={'100%'} mt={2}>
-            <PurchaseCard />
-          </Grid> */}
         </Grid>
       </Box>
     </Container>
