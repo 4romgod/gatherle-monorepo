@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import React from 'react';
 import { Button, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
-import { NAV_LINKS } from '@/components/navigation/main/nav-constants';
+import { NAV_LINKS } from '@/lib/constants';
 
 type Props = {
   variant?: 'toolbar' | 'drawer';

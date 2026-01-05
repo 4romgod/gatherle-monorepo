@@ -129,7 +129,6 @@ export class EventSchedule {
     recurrenceRule?: string;
 }
 
-
 @ObjectType('EventOrganizer')
 export class EventOrganizer {
     @prop({ref: () => User, type: () => String, required: true})

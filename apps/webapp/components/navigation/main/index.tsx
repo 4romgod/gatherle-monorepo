@@ -16,9 +16,9 @@ import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-d
 import { Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import NavLinksList from '@/components/navigation/main/nav-links-list';
-import { getAvatarSrc, getDisplayName } from '@/components/navigation/main/nav-utils';
-import Logo from '@/components/logo';
+import { getAvatarSrc, getDisplayName } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
+import Logo from '@/components/logo';
 
 type MainNavigationProps = {
   isAuthN: boolean;
@@ -149,6 +149,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                   border: '1px solid',
                   borderColor: 'divider',
                   backgroundColor: 'background.paper',
+                  padding: 0,
+                  marginX: 1.5,
                   '&:hover': { color: 'text.primary' },
                 }}
               >
@@ -167,6 +169,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                   border: '1px solid',
                   borderColor: 'divider',
                   backgroundColor: 'background.paper',
+                  padding: 0,
+                  marginX: 1.5,
                   '&:hover': { color: 'text.primary' },
                 }}
               >
@@ -186,6 +190,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                   border: '1px solid',
                   borderColor: 'divider',
                   backgroundColor: 'background.paper',
+                  padding: 0,
                 }}
               >
                 <Avatar
@@ -197,9 +202,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                     backgroundColor: 'primary.main',
                     color: 'primary.contrastText',
                   }}
-                >
-                  {getDisplayName(session?.user).charAt(0).toUpperCase()}
-                </Avatar>
+                />
               </IconButton>
 
               {/* overflow menu hidden on mobile; drawer contains these items to avoid duplicates */}
