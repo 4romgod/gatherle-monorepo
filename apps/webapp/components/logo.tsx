@@ -47,18 +47,6 @@ export default function Logo() {
           NTL
         </Typography>
       </Box>
-      <Typography
-        variant="h5"
-        noWrap
-        sx={{
-          fontWeight: 800,
-          letterSpacing: '-0.04em',
-          fontFamily: spaceGrotesk.style.fontFamily,
-          color: 'text.primary',
-        }}
-      >
-        ntlango
-      </Typography>
     </Box>
   );
 }

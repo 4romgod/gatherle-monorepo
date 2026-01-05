@@ -7,37 +7,36 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
-import { MailOutline, MoreVert, NotificationsOutlined, ControlPointOutlined } from '@mui/icons-material';
+import { MailOutline, NotificationsOutlined, ControlPointOutlined } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
-import NotificationsMenu from '@/components/navigation/main/navigation-notifications-items';
 import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items';
 import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-drawer';
 import { Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
+import NavLinksList from '@/components/navigation/main/nav-links-list';
+import { getAvatarSrc, getDisplayName } from '@/components/navigation/main/nav-utils';
 import Logo from '@/components/logo';
+import { useSession } from 'next-auth/react';
 
 type MainNavigationProps = {
   isAuthN: boolean;
 };
-
-const navLinks = [
-  { label: 'Events', href: ROUTES.EVENTS.ROOT },
-  { label: 'Organizations', href: ROUTES.ORGANIZATIONS.ROOT },
-  { label: 'Venues', href: ROUTES.VENUES.ROOT },
-  { label: 'Community', href: ROUTES.USERS.ROOT },
-];
 
 /**
  * Inspired by: https://arshadalisoomro.hashnode.dev/creating-a-navigation-bar-with-mui-appbar-component-in-nextjs
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+
+  const theme = useTheme();
+  const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
 
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationsMenuAnchorEl, setNotificationsMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const isProfilesMenuOpen = Boolean(profilesMenuAnchorEl);
-  const isNotificationsMenuOpen = Boolean(notificationsMenuAnchorEl);
 
   const handleProfilesMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfilesMenuAnchorEl(event.currentTarget);
@@ -45,19 +44,9 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
 
   const handleProfilesMenuClose = () => {
     setProfilesMenuAnchorEl(null);
-    handleNotificationsMenuClose();
-  };
-
-  const handleNotificationsMenuClose = () => {
-    setNotificationsMenuAnchorEl(null);
-  };
-
-  const handleNotificationsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationsMenuAnchorEl(event.currentTarget);
   };
 
   const profilesMenuId = 'profiles-menu-id';
-  const notificationsMenuId = 'notifications-menu-id';
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -81,24 +70,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             gap: 1.25,
           }}
         >
-          <Box component="div" sx={{ display: { xs: 'flex', md: 'none' } }}>
-            <TemporaryDrawer isAuthN={isAuthN} />
-          </Box>
-
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Logo />
-            {/* <Chip
-              label="Live beta"
-              size="small"
-              color="secondary"
-              variant="outlined"
-              sx={{
-                display: { xs: 'none', sm: 'inline-flex' },
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                borderRadius: 10,
-              }}
-            /> */}
           </Box>
 
           <Box
@@ -108,22 +81,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               ml: 3,
             }}
           >
-            {navLinks.map(link => (
-              <Button
-                key={link.label}
-                component={Link}
-                href={link.href}
-                color="inherit"
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  '&:hover': { color: 'text.primary', backgroundColor: 'transparent' },
-                }}
-              >
-                {link.label}
-              </Button>
-            ))}
+            <NavLinksList variant="toolbar" />
           </Box>
 
           <Box sx={{ flexGrow: 1 }} />
@@ -185,6 +143,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 component={Link}
                 href={ROUTES.ACCOUNT.MESSAGES}
                 sx={{
+                  display: { xs: 'none', md: 'inline-flex' },
                   color: 'text.secondary',
                   borderRadius: 10,
                   border: '1px solid',
@@ -202,6 +161,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 component={Link}
                 href={ROUTES.ACCOUNT.NOTIFICATIONS}
                 sx={{
+                  display: { xs: 'none', md: 'inline-flex' },
                   color: 'text.secondary',
                   borderRadius: 10,
                   border: '1px solid',
@@ -221,6 +181,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 aria-haspopup="true"
                 onClick={handleProfilesMenuOpen}
                 sx={{
+                  display: { xs: 'none', md: 'inline-flex' },
                   borderRadius: 12,
                   border: '1px solid',
                   borderColor: 'divider',
@@ -228,6 +189,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 }}
               >
                 <Avatar
+                  src={getAvatarSrc(session?.user)}
                   sx={{
                     width: 36,
                     height: 36,
@@ -236,41 +198,29 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                     color: 'primary.contrastText',
                   }}
                 >
-                  A
+                  {getDisplayName(session?.user).charAt(0).toUpperCase()}
                 </Avatar>
               </IconButton>
 
-              <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
-                <IconButton
-                  size="large"
-                  aria-label="show more"
-                  aria-controls={notificationsMenuId}
-                  aria-haspopup="true"
-                  onClick={handleNotificationsMenuOpen}
-                  color="primary"
-                >
-                  <MoreVert />
-                </IconButton>
-              </Box>
+              {/* overflow menu hidden on mobile; drawer contains these items to avoid duplicates */}
             </Box>
           )}
+
+          <Box component="div" sx={{ display: { xs: 'flex', md: 'none' }, ml: 'auto' }}>
+            <TemporaryDrawer isAuthN={isAuthN} />
+          </Box>
         </Toolbar>
       </AppBar>
 
       <Box component="div">
-        <ProfilesMenu
-          ProfilesMenuAnchorEl={profilesMenuAnchorEl}
-          ProfilesMenuId={profilesMenuId}
-          handleProfilesMenuClose={handleProfilesMenuClose}
-          isProfilesMenuOpen={isProfilesMenuOpen}
-        />
-
-        <NotificationsMenu
-          NotificationsMenuAnchorEl={notificationsMenuAnchorEl}
-          NotificationsMenuId={notificationsMenuId}
-          handleNotificationsMenuClose={handleNotificationsMenuClose}
-          isNotificationsMenuOpen={isNotificationsMenuOpen}
-        />
+        {isMdUp && (
+          <ProfilesMenu
+            ProfilesMenuAnchorEl={profilesMenuAnchorEl}
+            ProfilesMenuId={profilesMenuId}
+            handleProfilesMenuClose={handleProfilesMenuClose}
+            isProfilesMenuOpen={isProfilesMenuOpen}
+          />
+        )}
       </Box>
     </Box>
   );
