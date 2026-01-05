@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   FormControl,
@@ -19,14 +19,21 @@ import CategoryIcon from '@mui/icons-material/Category';
 import { CategoryFilterProps, getEventCategoryIcon } from '@/lib/constants';
 import { useEventFilters } from '@/hooks/useEventFilters';
 
-// TODO The interface CategoryFilterProps appears to have been changed to remove the onChange prop, but this may break existing usage patterns.
-// The onChange callback allowed parent components to react to filter changes. Consider whether this removal is intentional or if external state management should be maintained.
-export default function CategoryFilter({ categoryList, sxProps }: CategoryFilterProps) {
-  const { filters, setCategories } = useEventFilters();
+export default function CategoryFilter({ categoryList, sxProps, onChange }: CategoryFilterProps) {
+  const contextFilters = onChange ? null : useEventFilters();
+  const [localCategories, setLocalCategories] = useState<string[]>([]);
+  
+  const selectedCategories = onChange ? localCategories : (contextFilters?.filters.categories || []);
 
   const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
-    const selectedCategories = event.target.value as string[];
-    setCategories(selectedCategories);
+    const selected = event.target.value as string[];
+    
+    if (onChange) {
+      setLocalCategories(selected);
+      onChange(selected);
+    } else if (contextFilters) {
+      contextFilters.setCategories(selected);
+    }
   };
 
   return (
@@ -53,7 +60,7 @@ export default function CategoryFilter({ categoryList, sxProps }: CategoryFilter
           labelId="category-label"
           label="Select Categories"
           multiple
-          value={filters.categories}
+          value={selectedCategories}
           onChange={handleCategoryChange}
           renderValue={selected => (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -79,7 +86,7 @@ export default function CategoryFilter({ categoryList, sxProps }: CategoryFilter
         >
           {categoryList.map(category => {
             const IconComponent = getEventCategoryIcon(category.iconName);
-            const isSelected = filters.categories.includes(category.name);
+            const isSelected = selectedCategories.includes(category.name);
             return (
               <MenuItem key={category.eventCategoryId} value={category.name}>
                 <Checkbox checked={isSelected} size="small" />

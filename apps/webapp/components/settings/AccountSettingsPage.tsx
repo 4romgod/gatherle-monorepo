@@ -19,7 +19,6 @@ import {
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
-
 import { useAppContext } from '@/hooks/useAppContext';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 

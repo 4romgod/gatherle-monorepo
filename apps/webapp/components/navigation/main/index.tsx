@@ -12,7 +12,7 @@ import Avatar from '@mui/material/Avatar';
 import NotificationsMenu from '@/components/navigation/main/navigation-notifications-items';
 import ProfilesMenu from '@/components/navigation/main/navigation-profiles-items';
 import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-drawer';
-import { Button, Chip } from '@mui/material';
+import { Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import Logo from '@/components/logo';
 
@@ -25,7 +25,6 @@ const navLinks = [
   { label: 'Organizations', href: ROUTES.ORGANIZATIONS.ROOT },
   { label: 'Venues', href: ROUTES.VENUES.ROOT },
   { label: 'Community', href: ROUTES.USERS.ROOT },
-  { label: 'For hosts', href: ROUTES.ACCOUNT.EVENTS.CREATE },
 ];
 
 /**
@@ -83,12 +82,12 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
           }}
         >
           <Box component="div" sx={{ display: { xs: 'flex', md: 'none' } }}>
-            <TemporaryDrawer />
+            <TemporaryDrawer isAuthN={isAuthN} />
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Logo />
-            <Chip
+            {/* <Chip
               label="Live beta"
               size="small"
               color="secondary"
@@ -99,7 +98,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 letterSpacing: 0.6,
                 borderRadius: 10,
               }}
-            />
+            /> */}
           </Box>
 
           <Box
@@ -175,7 +174,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 color="secondary"
                 startIcon={<ControlPointOutlined />}
                 onClick={() => router.push(ROUTES.ACCOUNT.EVENTS.CREATE)}
-                sx={{ display: { xs: 'none', sm: 'inline-flex' }, borderRadius: 10 }}
+                sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: 10 }}
               >
                 Host an event
               </Button>

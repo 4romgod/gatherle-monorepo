@@ -12,17 +12,24 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
-import { Clear, Home, Login, Menu } from '@mui/icons-material';
+import { Clear, Home, Login, Menu, Event, Business, Place, People, ControlPointOutlined } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 
-export default function TemporaryDrawer() {
+export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
   };
+
+  const navLinks = [
+    { label: 'Events', href: ROUTES.EVENTS.ROOT, icon: Event },
+    { label: 'Organizations', href: ROUTES.ORGANIZATIONS.ROOT, icon: Business },
+    { label: 'Venues', href: ROUTES.VENUES.ROOT, icon: Place },
+    { label: 'Community', href: ROUTES.USERS.ROOT, icon: People },
+  ];
 
   const DrawerList = (
     <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
@@ -43,20 +50,55 @@ export default function TemporaryDrawer() {
           </ListItem>
         </Link>
 
-        <ListItem disablePadding>
-          <ListItemButton>
-            <ListItemIcon>
-              <Login />
-            </ListItemIcon>
-            <ListItemText onClick={() => router.push(ROUTES.AUTH.LOGIN)} primary={'Log in'} />
-          </ListItemButton>
-        </ListItem>
+        <Divider sx={{ my: 1 }} />
 
-        <Divider />
+        {navLinks.map(link => (
+          <Link key={link.label} href={link.href}>
+            <ListItem disablePadding>
+              <ListItemButton>
+                <ListItemIcon>
+                  <link.icon />
+                </ListItemIcon>
+                <ListItemText primary={link.label} />
+              </ListItemButton>
+            </ListItem>
+          </Link>
+        ))}
 
-        <Button variant="contained" color="secondary" fullWidth>
-          <ListItemText onClick={() => router.push(ROUTES.AUTH.REGISTER)} primary={'Sign up'} />
-        </Button>
+        <Divider sx={{ my: 1 }} />
+
+        {!isAuthN && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => router.push(ROUTES.AUTH.LOGIN)}>
+                <ListItemIcon>
+                  <Login />
+                </ListItemIcon>
+                <ListItemText primary={'Log in'} />
+              </ListItemButton>
+            </ListItem>
+
+            <Box sx={{ px: 2, pt: 1 }}>
+              <Button variant="contained" color="secondary" fullWidth onClick={() => router.push(ROUTES.AUTH.REGISTER)}>
+                Join Ntlango
+              </Button>
+            </Box>
+          </>
+        )}
+
+        {isAuthN && (
+          <Box sx={{ px: 2 }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              fullWidth
+              startIcon={<ControlPointOutlined />}
+              onClick={() => router.push(ROUTES.ACCOUNT.EVENTS.CREATE)}
+            >
+              Host an event
+            </Button>
+          </Box>
+        )}
       </List>
     </Box>
   );

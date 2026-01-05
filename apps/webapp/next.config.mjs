@@ -22,16 +22,6 @@ const nextConfig = {
     styledComponents: true,
   },
   allowedDevOrigins: ['*'],
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Mark server-only modules as external to prevent them from being bundled for the client
-      config.externals = config.externals || [];
-      config.externals.push({
-        'type-graphql': 'commonjs type-graphql',
-      });
-    }
-    return config;
-  },
 };
 
 export default nextConfig;

@@ -5,7 +5,7 @@ import { Box } from '@mui/material';
 import dayjs from 'dayjs';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventCategory, EventStatus } from '@/data/graphql/types/graphql';
-import { DATE_FILTER_OPTIONS, DATE_FILTER_LABELS, type DateFilterOption } from '@ntlango/commons';
+import { DATE_FILTER_OPTIONS, DATE_FILTER_LABELS, type DateFilterOption } from '@/lib/constants/date-filters';
 import { EventFilterProvider } from '@/components/events/filters/event-filter-context';
 import CustomContainer from '@/components/custom-container';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';

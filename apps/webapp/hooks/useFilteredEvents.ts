@@ -9,7 +9,7 @@ import {
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventFilters } from '@/components/events/filters/event-filter-context';
-import { DATE_FILTER_OPTIONS } from '@ntlango/commons';
+import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 
 const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   const inputs: FilterInput[] = [];

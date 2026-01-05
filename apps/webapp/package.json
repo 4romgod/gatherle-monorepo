@@ -16,7 +16,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ntlango/commons": "*",
     "@apollo/client": "^3.13.8",
     "@apollo/client-integration-nextjs": "^0.12.2",
     "@emotion/react": "^11.13.0",

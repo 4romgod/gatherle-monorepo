@@ -7,7 +7,7 @@ import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import { Dayjs } from 'dayjs';
 import { EventCategory, EventStatus } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
-import { DATE_FILTER_LABELS } from '@ntlango/commons';
+import { DATE_FILTER_LABELS } from '@/lib/constants/date-filters';
 
 interface CategoryMenuProps {
   anchorEl: HTMLElement | null;

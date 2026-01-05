@@ -129,16 +129,6 @@ export class EventSchedule {
     recurrenceRule?: string;
 }
 
-@ObjectType('EventOccurrence')
-export class EventOccurrence {
-    @prop({type: () => Date})
-    @Field(() => Date, {nullable: true})
-    startAt?: Date;
-
-    @prop({type: () => Date})
-    @Field(() => Date, {nullable: true})
-    endAt?: Date;
-}
 
 @ObjectType('EventOrganizer')
 export class EventOrganizer {
@@ -181,10 +171,6 @@ export class Event {
     @prop({type: () => EventSchedule})
     @Field(() => EventSchedule, {nullable: true, description: 'Primary schedule details with timezone/recurrence'})
     primarySchedule?: EventSchedule;
-
-    @prop({type: () => [EventOccurrence], default: []})
-    @Field(() => [EventOccurrence], {nullable: true, description: 'Explicit occurrences when generated'})
-    occurrences?: EventOccurrence[];
 
     @prop({type: () => Location, required: true})
     @Field(() => Location, {description: EVENT_DESCRIPTIONS.EVENT.LOCATION})

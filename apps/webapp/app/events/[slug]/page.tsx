@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GetEventBySlugDocument, GetEventBySlugQuery, Location } from '@/data/graphql/types/graphql';
+import { GetEventBySlugDocument, GetEventBySlugQuery, Location, ParticipantStatus } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import { Avatar, AvatarGroup, Box, CardMedia, Chip, Container, Grid, Stack, Tooltip, Typography } from '@mui/material';
 import PurchaseCard from '@/components/purchase-card';
@@ -32,12 +32,12 @@ export default async function Page(props: Props) {
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
   });
-  const { title, organizers, description, media, recurrenceRule, location, eventCategories, comments, participants } =
-    eventRetrieved.readEventBySlug;
-  type EventDetailParticipant = NonNullable<
-    NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']
-  >[number];
+  const { title, organizers, description, media, recurrenceRule, location, eventCategories, comments, participants } = eventRetrieved.readEventBySlug;
+
+  type EventDetailParticipant = NonNullable<NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']>[number];
+
   const participantList = (participants ?? []) as EventDetailParticipant[];
+
   const getParticipantDisplayName = (participant: EventDetailParticipant) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
     const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
@@ -48,7 +48,7 @@ export default async function Page(props: Props) {
     participant.user?.username?.charAt(0) ??
     participant.userId?.charAt(0) ??
     '?';
-  const getParticipantStatusLabel = (participant: EventDetailParticipant) => participant.status ?? 'Going';
+  const getParticipantStatusLabel = (participant: EventDetailParticipant) => participant.status ?? ParticipantStatus.Going;
 
   const getLocationText = (location: Location): string => {
     switch (location.locationType) {
@@ -99,7 +99,7 @@ export default async function Page(props: Props) {
         </Box>
 
         <Grid container spacing={5}>
-          <Grid size={{ md: 9 }} width={'100%'} mt={2}>
+          <Grid size={{ md: 12 }} width={'100%'} mt={2}>
             <Box component="div">
               <Typography fontWeight="bold" variant="h3" gutterBottom>
                 {title}
@@ -284,9 +284,6 @@ export default async function Page(props: Props) {
                 <Typography variant="body2">No available comments</Typography>
               )}
             </Box>
-          </Grid>
-          <Grid size={{ md: 3 }} width={'100%'} mt={2}>
-            <PurchaseCard />
           </Grid>
         </Grid>
       </Box>

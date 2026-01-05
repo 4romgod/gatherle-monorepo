@@ -12,9 +12,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Stack,
+  Divider,
+  Paper,
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Save as SaveIcon } from '@mui/icons-material';
 import { Gender, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
@@ -78,87 +82,196 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
   }, [formState]);
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, margin: 'auto' }}>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 5 }}>
-        Personal Settings
-      </Typography>
+    <Box>
+      <Stack spacing={4}>
+        <Box>
+          <Typography variant="h4" fontWeight={700} gutterBottom>
+            Personal Settings
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage your personal information and privacy preferences
+          </Typography>
+        </Box>
 
-      <Box component="form" action={formAction} noValidate>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12 }}>
-            <FormControl fullWidth margin="normal">
-              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
-                <DatePicker
-                  label="Date of Birth"
-                  format="YYYY-MM-DD"
-                  name="birthdate"
-                  value={dayjs(settings.birthdate)}
-                />
-              </LocalizationProvider>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel color="secondary">Gender</InputLabel>
-              <Select
-                name="gender"
-                value={settings.gender || ''}
-                onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
-                label="Gender"
-                color="secondary"
-              >
-                {Object.values(Gender).map(gender => (
-                  <MenuItem key={gender} value={gender}>
-                    {gender}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+        <Box component="form" action={formAction} noValidate>
+          {/* Personal Details */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+            }}
+          >
+            <Typography variant="h6" fontWeight={600} gutterBottom>
+              Personal Details
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
 
-          <Grid size={{ xs: 12 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            <Grid container spacing={3}>
+              <Grid size={{ xs: 12 }}>
+                <FormControl fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
+                    <DatePicker
+                      label="Date of Birth"
+                      format="YYYY-MM-DD"
+                      name="birthdate"
+                      value={dayjs(settings.birthdate)}
+                      slotProps={{
+                        textField: {
+                          color: 'secondary',
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel color="secondary">Gender</InputLabel>
+                  <Select
+                    name="gender"
+                    value={settings.gender || ''}
+                    onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+                    label="Gender"
+                    color="secondary"
+                  >
+                    {Object.values(Gender).map(gender => (
+                      <MenuItem key={gender} value={gender}>
+                        {gender}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* Privacy Settings */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 3,
+            }}
+          >
+            <Typography variant="h6" fontWeight={600} gutterBottom>
               Privacy Settings
             </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.privateProfile}
-                  onChange={() => handleToggleChange('privateProfile')}
-                  color="secondary"
-                />
-              }
-              label="Private Profile"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.showEmail}
-                  onChange={() => handleToggleChange('showEmail')}
-                  color="secondary"
-                />
-              }
-              label="Show Email to Other Members"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.showPhoneNumber}
-                  onChange={() => handleToggleChange('showPhoneNumber')}
-                  color="secondary"
-                />
-              }
-              label="Show Phone Number to Other Members"
-            />
-          </Grid>
-        </Grid>
+            <Divider sx={{ mb: 3 }} />
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-          <Button variant="contained" color="primary" type="submit">
-            Save Changes
-          </Button>
+            <Stack spacing={2}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.privateProfile}
+                      onChange={() => handleToggleChange('privateProfile')}
+                      color="secondary"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        Private Profile
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Only you can see your profile information
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.showEmail}
+                      onChange={() => handleToggleChange('showEmail')}
+                      color="secondary"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        Show Email Address
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow other members to see your email
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.showPhoneNumber}
+                      onChange={() => handleToggleChange('showPhoneNumber')}
+                      color="secondary"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        Show Phone Number
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow other members to see your phone
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+            </Stack>
+          </Paper>
+
+          {/* Action Button */}
+          <Stack direction="row" justifyContent="flex-end">
+            <Button
+              startIcon={<SaveIcon />}
+              variant="contained"
+              color="secondary"
+              type="submit"
+              sx={{ borderRadius: 2 }}
+            >
+              Save Changes
+            </Button>
+          </Stack>
         </Box>
-      </Box>
+      </Stack>
     </Box>
   );
 }
