@@ -157,7 +157,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
                   opacity: disabled ? 0.5 : 1,
                   px: effectiveOrientation === 'horizontal' ? 2 : undefined,
                   py: effectiveOrientation === 'vertical' ? 1.5 : undefined,
-                  minWidth: isSmallScreen && effectiveOrientation === 'horizontal' ? 'auto' : undefined,
+                  minWidth: isSmallScreen ? 'auto' : undefined,
                 }}
               />
             </Tooltip>
