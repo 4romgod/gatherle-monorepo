@@ -5,13 +5,21 @@ import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
 import { ApolloError } from '@apollo/client';
-import type { ActionState } from '@/data/actions/types';
 import { getApolloErrorMessage } from '@/data/actions/types';
+import { logger } from '@/lib/utils';
+import type { ActionState } from '@/data/actions/types';
 
 export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
+
+  logger.debug('🔐 Update Profile Action - Session check:', {
+    hasSession: !!session,
+    userId: userId,
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN',
+  });
 
   if (!userId || !token) {
     return {
@@ -24,6 +32,8 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   const address = formData.get('address')?.toString();
   const genderStr = formData.get('gender')?.toString();
   const gender = Object.values(Gender).includes(genderStr as Gender) ? (genderStr as Gender) : undefined;
+  const interestsStr = formData.get('interests')?.toString();
+  const interests = interestsStr ? JSON.parse(interestsStr) : undefined;
 
   let inputData: UpdateUserInput = {
     userId: userId,
@@ -37,13 +47,15 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
     birthdate: formData.get('birthdate')?.toString() || undefined,
     gender: gender,
     address: address ? JSON.parse(address) : undefined, // TODO validate before you parse
+    interests: interests,
   };
 
   inputData = Object.fromEntries(Object.entries(inputData).filter(([_, v]) => v !== undefined)) as UpdateUserInput;
 
-  console.log('input data', inputData);
+  logger.debug('Validating input data', { fields: Object.keys(inputData) });
   const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
+    logger.warn('Validation failed', { errors: validatedFields.error.flatten().fieldErrors });
     return {
       ...prevState,
       apiError: null,
@@ -52,6 +64,7 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   }
 
   try {
+    logger.debug('Sending UpdateUser mutation');
     const updateResponse = await getClient().mutate({
       mutation: UpdateUserDocument,
       variables: {
@@ -64,7 +77,8 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
       },
     });
 
-    // TODO after updating, also make sure the user session gets updated!
+    logger.info('User profile updated successfully', { userId });
+    
     const responseData = updateResponse.data?.updateUser;
     return {
       ...prevState,
@@ -73,11 +87,11 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
       zodErrors: null,
     };
   } catch (error) {
-    console.error('Failed when calling Update User Mutation', error);
+    logger.error('Failed to update user profile', { error, userId });
     const errorMessage = getApolloErrorMessage(error as ApolloError);
 
     if (errorMessage) {
-      console.error('Error Message', errorMessage);
+      logger.error('GraphQL error message', { errorMessage });
       return {
         ...prevState,
         apiError: errorMessage,

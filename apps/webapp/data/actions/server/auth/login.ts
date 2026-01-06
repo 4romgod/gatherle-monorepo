@@ -6,6 +6,7 @@ import { DEFAULT_LOGIN_REDIRECT } from '@/routes';
 import { AuthError } from 'next-auth';
 import { signIn } from '@/auth';
 import type { ActionState } from '@/data/actions/types';
+import { logger } from '@/lib/utils/logger';
 
 export async function loginUserAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData: LoginUserInput = {
@@ -13,8 +14,11 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
     password: formData.get('password')?.toString() ?? '',
   };
 
+  logger.action('loginUserAction', { email: inputData.email });
+
   const validatedFields = LoginUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
+    logger.warn('Login validation failed', { errors: validatedFields.error.flatten().fieldErrors });
     return {
       ...prevState,
       apiError: null,
@@ -25,12 +29,14 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
   const { email, password } = validatedFields.data;
 
   try {
+    logger.debug('Attempting sign in');
     const user = await signIn('credentials', {
       email,
       password,
       redirectTo: DEFAULT_LOGIN_REDIRECT,
     });
-    console.log('signIn user', user);
+
+    logger.info('User logged in successfully', { email });
 
     return {
       ...prevState,
@@ -39,6 +45,7 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
       zodErrors: null,
     };
   } catch (error) {
+    logger.error('Login failed', { error, email: inputData.email });
     if (error instanceof AuthError) {
       switch (error.type) {
         case 'CredentialsSignin':

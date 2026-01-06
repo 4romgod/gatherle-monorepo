@@ -6,6 +6,7 @@ import { getClient } from '@/data/graphql';
 import { ApolloError } from '@apollo/client';
 import type { ActionState } from '@/data/actions/types';
 import { getApolloErrorMessage } from '@/data/actions/types';
+import { logger } from '@/lib/utils/logger';
 
 export async function registerUserAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData: CreateUserInput = {
@@ -16,10 +17,11 @@ export async function registerUserAction(prevState: ActionState, formData: FormD
     password: formData.get('password')?.toString() ?? '',
   };
 
-  console.log(inputData);
+  logger.action('registerUserAction', { email: inputData.email });
 
   const validatedFields = CreateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
+    logger.warn('Registration validation failed', { errors: validatedFields.error.flatten().fieldErrors });
     return {
       ...prevState,
       apiError: null,
@@ -28,6 +30,7 @@ export async function registerUserAction(prevState: ActionState, formData: FormD
   }
 
   try {
+    logger.debug('Sending user registration mutation');
     const registerResponse = await getClient().mutate({
       mutation: RegisterUserDocument,
       variables: {
@@ -35,6 +38,7 @@ export async function registerUserAction(prevState: ActionState, formData: FormD
       },
     });
 
+    logger.info('User registered successfully', { email: inputData.email });
     const responseData = registerResponse.data?.createUser;
     return {
       ...prevState,
@@ -43,7 +47,7 @@ export async function registerUserAction(prevState: ActionState, formData: FormD
       zodErrors: null,
     };
   } catch (error) {
-    console.error('Failed when calling Register User Mutation', error);
+    logger.error('Registration failed', { error, email: inputData.email });
     const errorMessage = getApolloErrorMessage(error as ApolloError);
 
     if (errorMessage) {
