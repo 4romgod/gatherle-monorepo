@@ -84,13 +84,17 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
   useEffect(() => {
     if (state.data && !state.apiError && session?.user?.token) {
       const updatedUser = state.data as User;
-      setOpenModal(false);
-      
-      signIn('refresh-session', {
-        userData: JSON.stringify(updatedUser),
-        token: session.user.token,
-        redirect: false,
-      });
+
+      const refreshSession = async () => {
+        await signIn('refresh-session', {
+          userData: JSON.stringify(updatedUser),
+          token: session.user.token,
+          redirect: false,
+        });
+        setOpenModal(false);
+      };
+
+      refreshSession();
     }
   }, [state.data, state.apiError]);
 
