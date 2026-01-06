@@ -83,15 +83,9 @@ describe('EventCategoryGroupDAO', () => {
       const mockCreatedDocument = {
         ...mockEventCategoryGroup,
         eventCategories: mockEventCategoryIds,
-        populate: jest.fn().mockImplementation(function (this: any, field: string) {
-          if (field === 'eventCategories') {
-            this.eventCategories = mockPopulatedCategories;
-          }
-          return Promise.resolve(this);
-        }),
         toObject: jest.fn().mockReturnValue({
           ...mockEventCategoryGroup,
-          eventCategories: mockPopulatedCategories,
+          eventCategories: mockEventCategoryIds,
         }),
       };
 
@@ -100,16 +94,12 @@ describe('EventCategoryGroupDAO', () => {
       const result = await EventCategoryGroupDAO.create(input);
 
       expect(EventCategoryGroupModel.create).toHaveBeenCalledWith(input);
-      expect(mockCreatedDocument.populate).toHaveBeenCalledWith('eventCategories');
-      expect(result.eventCategories).toEqual(mockPopulatedCategories);
-      expect(result.eventCategories).toHaveLength(mockPopulatedCategories.length);
+      expect(result.eventCategories).toEqual(mockEventCategoryIds);
+      expect(result.eventCategories).toHaveLength(mockEventCategoryIds.length);
 
-      result.eventCategories.forEach((category: any) => {
-        expect(category).toHaveProperty('eventCategoryId');
-        expect(category).toHaveProperty('name');
-        expect(category).toHaveProperty('slug');
-        expect(category).toHaveProperty('description');
-        expect(category).toHaveProperty('iconName');
+      // EventCategories are now just IDs, not populated objects
+      result.eventCategories.forEach((categoryId: any) => {
+        expect(typeof categoryId).toBe('string');
       });
     });
 
@@ -143,7 +133,6 @@ describe('EventCategoryGroupDAO', () => {
       const result = await EventCategoryGroupDAO.readEventCategoryGroupBySlug(slug);
 
       expect(EventCategoryGroupModel.findOne).toHaveBeenCalledWith({slug});
-      expect(mockQuery.populate).toHaveBeenCalledWith('eventCategories');
       expect(mockQuery.exec).toHaveBeenCalled();
       expect(result).toEqual(mockEventCategoryGroup);
     });
@@ -190,7 +179,6 @@ describe('EventCategoryGroupDAO', () => {
       const result = await EventCategoryGroupDAO.readEventCategoryGroups();
 
       expect(EventCategoryGroupModel.find).toHaveBeenCalledWith({});
-      expect(mockQuery.populate).toHaveBeenCalledWith('eventCategories');
       expect(mockQuery.exec).toHaveBeenCalled();
       expect(result).toEqual(mockGroups);
     });
@@ -215,7 +203,6 @@ describe('EventCategoryGroupDAO', () => {
       const result = await EventCategoryGroupDAO.readEventCategoryGroups(options);
 
       expect(transformOptionsToQuery).toHaveBeenCalledWith(EventCategoryGroupModel, options);
-      expect(mockQuery.populate).toHaveBeenCalledWith('eventCategories');
       expect(mockQuery.exec).toHaveBeenCalled();
       expect(result).toEqual(mockGroups);
     });
@@ -256,7 +243,6 @@ describe('EventCategoryGroupDAO', () => {
       expect(EventCategoryGroupModel.findByIdAndUpdate).toHaveBeenCalledWith(input.eventCategoryGroupId, input, {
         new: true,
       });
-      expect(mockQuery.populate).toHaveBeenCalledWith('eventCategories');
       expect(mockQuery.exec).toHaveBeenCalled();
       expect(result.name).toBe('Updated Group');
     });

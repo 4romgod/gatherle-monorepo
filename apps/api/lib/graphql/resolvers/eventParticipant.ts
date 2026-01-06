@@ -1,8 +1,9 @@
 import 'reflect-metadata';
-import {Arg, Authorized, FieldResolver, Mutation, Query, Resolver, Root} from 'type-graphql';
+import {Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root} from 'type-graphql';
 import {CancelEventParticipantInput, EventParticipant, UpsertEventParticipantInput, User, UserRole} from '@ntlango/commons/types';
-import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
+import {EventParticipantDAO} from '@/mongodb/dao';
 import {validateMongodbId} from '@/validation';
+import type {ServerContext} from '@/graphql';
 
 @Resolver(() => EventParticipant)
 export class EventParticipantResolver {
@@ -30,13 +31,20 @@ export class EventParticipantResolver {
   }
 
   @FieldResolver(() => User, {nullable: true})
-  async user(@Root() participant: EventParticipant): Promise<User | null> {
+  async user(@Root() participant: EventParticipant, @Ctx() context: ServerContext): Promise<User | null> {
     if (!participant.userId) {
       return null;
     }
 
+    // If already populated (check on participant object which may have user field from population)
+    const participantAny = participant as any;
+    if (participantAny.user && typeof participantAny.user === 'object' && 'userId' in participantAny.user) {
+      return participantAny.user as User;
+    }
+
+    // Batch-load via DataLoader
     try {
-      return UserDAO.readUserById(participant.userId);
+      return await context.loaders.user.load(participant.userId);
     } catch {
       return null;
     }

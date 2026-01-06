@@ -7,12 +7,11 @@ import {getConfigValue, MongoDbClient} from '@/clients';
 import {GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS} from '@/constants';
 import {createApolloServer} from './server';
 import {expressMiddleware} from '@apollo/server/express4';
+import {createUserLoader, createEventCategoryLoader} from '@/graphql/loaders';
 import type {Server} from 'http';
 import {logger} from '@/utils/logger';
 
 const DEV_URL = `http://localhost:9000${GRAPHQL_API_PATH}`;
-
-const serverStartTimeLabel = 'Server started after';
 
 export const startExpressApolloServer = async (listenOptions: ListenOptions = {port: 9000}) => {
   const startTime = Date.now();
@@ -41,10 +40,15 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = {p
     express.json(),
     expressMiddleware(apolloServer, {
       context: async ({req, res}) => {
+        const token = req.headers.token;
         return {
-          token: req.headers.token,
+          token: Array.isArray(token) ? token[0] : token,
           req,
           res,
+          loaders: {
+            user: createUserLoader(),
+            eventCategory: createEventCategoryLoader(),
+          },
         };
       },
     }),

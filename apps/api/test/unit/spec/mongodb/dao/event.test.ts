@@ -66,13 +66,11 @@ describe('EventDAO', () => {
   };
 
   describe('create', () => {
-    it('should create an event and return the populated event object', async () => {
-      const mockedPopulate = {
-        populate: jest.fn().mockResolvedValue({
-          toObject: jest.fn().mockReturnValue(expectedEvent),
-        }),
+    it('should create an event and return the event object', async () => {
+      const mockDocument = {
+        toObject: jest.fn().mockReturnValue(expectedEvent),
       };
-      (EventModel.create as jest.Mock).mockResolvedValue(mockedPopulate);
+      (EventModel.create as jest.Mock).mockResolvedValue(mockDocument);
 
       const createdEvent = await EventDAO.create(mockEventInput);
       expect(createdEvent).toEqual(expectedEvent);

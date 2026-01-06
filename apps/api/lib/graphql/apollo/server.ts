@@ -12,11 +12,17 @@ import {ApolloServerErrorCode} from '@apollo/server/errors';
 import {HttpStatusCode} from '@/constants';
 import {ERROR_MESSAGES} from '@/validation';
 import createSchema from '@/graphql/schema';
+import type DataLoader from 'dataloader';
+import type {User, EventCategory} from '@ntlango/commons/types';
 
 export interface ServerContext {
   token?: string;
   req?: Request;
   res?: Response;
+  loaders: {
+    user: DataLoader<string, User | null>;
+    eventCategory: DataLoader<string, EventCategory | null>;
+  };
 }
 
 const GRAPHQL_CLIENT_ERROR_CODES = new Set<string>([

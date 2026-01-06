@@ -10,6 +10,7 @@ import type {ServerContext} from '@/graphql';
 import type {ArgsDictionary} from 'type-graphql';
 import type {GraphQLResolveInfo} from 'graphql';
 import {Types} from 'mongoose';
+import {createMockContext} from '../../../utils/mockContext';
 
 jest.mock('jsonwebtoken');
 jest.mock('@/mongodb/dao');
@@ -150,7 +151,7 @@ describe('Auth Utilities', () => {
   });
 
   describe('authChecker', () => {
-    const mockContext: ServerContext = {token: 'valid-token'};
+    const mockContext: ServerContext = createMockContext({token: 'valid-token'});
     const root = null;
 
     beforeEach(() => {
@@ -352,7 +353,7 @@ describe('Auth Utilities', () => {
 
       it('should throw UNAUTHENTICATED Error for a user WITHOUT a token', async () => {
         const mockResolveInfo = {fieldName: OPERATION_NAMES.CREATE_EVENT} as GraphQLResolveInfo;
-        const mockContext: ServerContext = {token: undefined};
+        const mockContext: ServerContext = createMockContext({token: undefined});
         const args: ArgsDictionary = {input: {title: 'mock event title'}};
 
         await expect(authChecker({context: mockContext, info: mockResolveInfo, args, root}, [UserRole.User])).rejects.toThrow(
@@ -366,7 +367,7 @@ describe('Auth Utilities', () => {
         });
 
         const mockResolveInfo = {fieldName: OPERATION_NAMES.CREATE_EVENT} as GraphQLResolveInfo;
-        const mockContext: ServerContext = {token: 'invalid-token'};
+        const mockContext: ServerContext = createMockContext({token: 'invalid-token'});
         const args: ArgsDictionary = {input: {title: 'mock event title'}};
 
         await expect(authChecker({context: mockContext, info: mockResolveInfo, args, root}, [UserRole.User])).rejects.toThrow(
@@ -380,7 +381,7 @@ describe('Auth Utilities', () => {
         });
 
         const mockResolveInfo = {fieldName: OPERATION_NAMES.CREATE_EVENT} as GraphQLResolveInfo;
-        const mockContext: ServerContext = {token: 'expired-token'};
+        const mockContext: ServerContext = createMockContext({token: 'expired-token'});
         const args: ArgsDictionary = {input: {title: 'mock event title'}};
 
         await expect(authChecker({context: mockContext, info: mockResolveInfo, args, root}, [UserRole.User])).rejects.toThrow(

@@ -1,12 +1,13 @@
 import 'reflect-metadata';
-import {Arg, Mutation, Resolver, Query, Authorized} from 'type-graphql';
+import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx} from 'type-graphql';
 import {UserDAO} from '@/mongodb/dao';
-import {User, CreateUserInput, UpdateUserInput, LoginUserInput, UserRole, UserWithToken, QueryOptionsInput} from '@ntlango/commons/types';
+import {User, CreateUserInput, UpdateUserInput, LoginUserInput, UserRole, UserWithToken, QueryOptionsInput, EventCategory} from '@ntlango/commons/types';
 import {CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema} from '@/validation/zod';
 import {ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername} from '@/validation';
 import {RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS} from '@/constants';
+import type {ServerContext} from '@/graphql';
 
-@Resolver()
+@Resolver(() => User)
 export class UserResolver {
   @Mutation(() => UserWithToken, {description: RESOLVER_DESCRIPTIONS.USER.createUser})
   async createUser(
@@ -70,5 +71,23 @@ export class UserResolver {
   @Query(() => [User], {description: RESOLVER_DESCRIPTIONS.USER.readUsers})
   async readUsers(@Arg('options', () => QueryOptionsInput, {nullable: true}) options?: QueryOptionsInput): Promise<User[]> {
     return UserDAO.readUsers(options);
+  }
+
+  @FieldResolver(() => [EventCategory], {nullable: true})
+  async interests(@Root() user: User, @Ctx() context: ServerContext): Promise<EventCategory[]> {
+    if (!user.interests || user.interests.length === 0) {
+      return [];
+    }
+
+    // Check if already populated
+    const first = user.interests[0];
+    if (typeof first === 'object' && first !== null && 'eventCategoryId' in first) {
+      return user.interests as EventCategory[];
+    }
+
+    // Batch-load via DataLoader
+    const categoryIds = user.interests.map((ref) => (typeof ref === 'string' ? ref : (ref as any)._id?.toString() || ref.toString()));
+    const categories = await Promise.all(categoryIds.map((id) => context.loaders.eventCategory.load(id)));
+    return categories.filter((c): c is EventCategory => c !== null);
   }
 }

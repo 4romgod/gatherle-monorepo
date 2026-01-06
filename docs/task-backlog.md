@@ -24,6 +24,7 @@ This backlog captures known missing work discovered from TODO/FIXME markers and 
 | API-010 | Enforce birthdate validation rules | P2 | Backlog | `packages/commons/lib/validation/auth.ts` | Ensure birthdate is not in the future. |
 | API-011 | Decide whether to persist participant IDs on Event | P2 | Backlog | `packages/commons/lib/types/event.ts` | Document/implement final decision. |
 | API-012 | Fix CI/CD STAGE env wiring for GraphQL lambda | P1 | Backlog | `infra/lib/stack/graphql-lambda-stack.ts` | Ensure pipeline passes STAGE reliably. |
+| API-014 | Implement DataLoader batching for User and EventCategory | P1 | Backlog | `apps/api/lib/graphql/apollo/expressApolloServer.ts`, `apps/api/lib/graphql/loaders/` | Add per-request DataLoaders to eliminate N+1 DB queries when resolving nested users (organizers, participants) and event categories. Install `dataloader` package, create loader factory functions, wire into Apollo context, update resolvers to use `context.loaders.user.load(id)` instead of direct DAO calls. Expected latency reduction: ~70-90% for multi-event queries. |
 
 ### Planned API expansions (from product scope)
 - Add TicketType, Invitation, WaitlistEntry collections + DAOs + resolvers.

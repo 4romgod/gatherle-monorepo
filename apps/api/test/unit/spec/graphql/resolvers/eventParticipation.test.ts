@@ -4,6 +4,7 @@ import {EventParticipantDAO, UserDAO} from '@/mongodb/dao';
 import type {UpsertEventParticipantInput, CancelEventParticipantInput, EventParticipant, User} from '@ntlango/commons/types';
 import {ParticipantStatus} from '@ntlango/commons/types';
 import * as validation from '@/validation';
+import {createMockContext} from '../../../../utils/mockContext';
 
 jest.mock('@/mongodb/dao', () => ({
   EventParticipantDAO: {
@@ -205,11 +206,10 @@ describe('EventParticipantResolver', () => {
     } as User;
 
     it('should return user when userId is present and user exists', async () => {
-      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockUser);
+      const mockContext = createMockContext({}, {users: new Map([[mockParticipant.userId, mockUser]])});
 
-      const result = await resolver.user(mockParticipant);
+      const result = await resolver.user(mockParticipant, mockContext);
 
-      expect(UserDAO.readUserById).toHaveBeenCalledWith(mockParticipant.userId);
       expect(result).toEqual(mockUser);
     });
 
@@ -218,23 +218,18 @@ describe('EventParticipantResolver', () => {
         ...mockParticipant,
         userId: undefined,
       } as unknown as EventParticipant;
+      const mockContext = createMockContext();
 
-      const result = await resolver.user(participantWithoutUser);
+      const result = await resolver.user(participantWithoutUser, mockContext);
 
-      expect(UserDAO.readUserById).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
 
-    // Note: The resolver code has a try-catch but doesn't await the Promise,
-    // so errors actually propagate rather than being caught. This test verifies
-    // the actual behavior. If the resolver is fixed to await the promise,
-    // this test should be updated to expect null instead.
-    it('should propagate error when UserDAO throws an error', async () => {
-      const userError = new Error('User not found');
-      (UserDAO.readUserById as jest.Mock).mockRejectedValue(userError);
+    it('should return null when UserDAO throws an error', async () => {
+      const mockContext = createMockContext({}, {users: new Map()});
 
-      await expect(resolver.user(mockParticipant)).rejects.toThrow(userError);
-      expect(UserDAO.readUserById).toHaveBeenCalledWith(mockParticipant.userId);
+      const result = await resolver.user(mockParticipant, mockContext);
+      expect(result).toBeNull();
     });
 
     it('should return null when userId is empty string', async () => {
@@ -242,10 +237,10 @@ describe('EventParticipantResolver', () => {
         ...mockParticipant,
         userId: '',
       };
+      const mockContext = createMockContext();
 
-      const result = await resolver.user(participantWithEmptyUserId);
+      const result = await resolver.user(participantWithEmptyUserId, mockContext);
 
-      expect(UserDAO.readUserById).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });

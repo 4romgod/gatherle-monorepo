@@ -4,6 +4,7 @@ import {getStatusCodeColor} from '@/utils';
 import type {ServerContext} from '@/graphql';
 import {ResolveTime} from '@/utils/middleware';
 import {logger} from '@/utils/logger';
+import {createMockContext} from '../../../../utils/mockContext';
 
 jest.mock('@/constants', () => ({
   HTTP_METHOD_COLOR_MAP: {
@@ -43,15 +44,15 @@ describe('ResolveTime Middleware', () => {
   let next: jest.Mock;
 
   beforeEach(() => {
-    context = {
+    context = createMockContext({
       req: {
         method: 'GET',
         baseUrl: '/api',
-      },
+      } as any,
       res: {
         statusCode: 200,
-      },
-    } as unknown as ServerContext;
+      } as any,
+    });
 
     info = {
       parentType: {
@@ -71,7 +72,7 @@ describe('ResolveTime Middleware', () => {
     const mockDateNow = jest.spyOn(Date, 'now').mockImplementationOnce(() => 1000); // Mock start time
     const resolveTimeMock = jest.spyOn(Date, 'now').mockImplementationOnce(() => 1100); // Mock end time (100ms elapsed)
 
-    await ResolveTime({context, info} as ResolverData, next);
+    await ResolveTime({context, info} as ResolverData<ServerContext>, next);
 
     expect(next).toHaveBeenCalled();
 
@@ -91,8 +92,8 @@ describe('ResolveTime Middleware', () => {
     const mockDateNow = jest.spyOn(Date, 'now').mockImplementationOnce(() => 1000);
     const resolveTimeMock = jest.spyOn(Date, 'now').mockImplementationOnce(() => 1100);
 
-    context = {} as ServerContext;
-    await ResolveTime({context, info} as ResolverData, next);
+    context = createMockContext({});
+    await ResolveTime({context, info} as ResolverData<ServerContext>, next);
 
     const baseUrl = GRAPHQL_API_PATH;
     const resolveTimeColor = ANSI_COLOR_CODES.GREEN;

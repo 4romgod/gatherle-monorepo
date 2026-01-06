@@ -3,7 +3,8 @@ import {startServerAndCreateLambdaHandler, handlers} from '@as-integrations/aws-
 import {createApolloServer} from '@/graphql';
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {SECRET_KEYS} from '@/constants';
-import { logger } from '@/utils/logger';
+import {logger} from '@/utils/logger';
+import {createUserLoader, createEventCategoryLoader} from '@/graphql/loaders';
 
 // TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
 const CORS_HEADERS = {
@@ -40,10 +41,15 @@ async function initializeResources() {
     logger.info('Creating Lambda handler...');
     cachedLambdaHandler = startServerAndCreateLambdaHandler(cachedServer, handlers.createAPIGatewayProxyEventRequestHandler(), {
       context: async ({event, context}) => {
+        const token = event.headers.token;
         return {
-          token: event.headers.token,
+          token: Array.isArray(token) ? token[0] : token,
           lambdaEvent: event,
           lambdaContext: context,
+          loaders: {
+            user: createUserLoader(),
+            eventCategory: createEventCategoryLoader(),
+          },
         };
       },
     });

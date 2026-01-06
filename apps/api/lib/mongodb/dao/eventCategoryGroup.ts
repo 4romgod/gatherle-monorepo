@@ -20,7 +20,6 @@ class EventCategoryGroupDAO {
   static async create(input: CreateEventCategoryGroupInput): Promise<EventCategoryGroup> {
     try {
       const eventCategoryGroup = await EventCategoryGroupModel.create(input);
-      await eventCategoryGroup.populate('eventCategories');
       return eventCategoryGroup.toObject();
     } catch (error) {
       logger.info('Error creating event category group', error);
@@ -34,7 +33,7 @@ class EventCategoryGroupDAO {
    */
   static async readEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroup> {
     try {
-      const query = EventCategoryGroupModel.findOne({slug: slug}).populate('eventCategories');
+      const query = EventCategoryGroupModel.findOne({slug: slug});
       const eventCategoryGroup = await query.exec();
       if (!eventCategoryGroup) {
         throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
@@ -56,8 +55,8 @@ class EventCategoryGroupDAO {
   static async readEventCategoryGroups(options?: QueryOptionsInput): Promise<EventCategoryGroup[]> {
     try {
       const query = options
-        ? transformOptionsToQuery(EventCategoryGroupModel, options).populate('eventCategories')
-        : EventCategoryGroupModel.find({}).populate('eventCategories');
+        ? transformOptionsToQuery(EventCategoryGroupModel, options)
+        : EventCategoryGroupModel.find({});
       const eventCategoryGroups = await query.exec();
       return eventCategoryGroups.map((eventCategoryGroup) => eventCategoryGroup.toObject());
     } catch (error) {
@@ -75,7 +74,6 @@ class EventCategoryGroupDAO {
       const updatedEventCategoryGroup = await EventCategoryGroupModel.findByIdAndUpdate(input.eventCategoryGroupId, input, {
         new: true,
       })
-        .populate('eventCategories')
         .exec();
 
       if (!updatedEventCategoryGroup) {
