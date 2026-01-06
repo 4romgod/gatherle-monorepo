@@ -115,7 +115,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
             '& .MuiTab-root': {
               minHeight: effectiveOrientation === 'vertical' ? 48 : undefined,
               textAlign: effectiveOrientation === 'horizontal' ? 'center' : 'left',
-              justifyContent: 'flex-start',
+              justifyContent: effectiveOrientation === 'horizontal' ? 'center' : 'flex-start',
               alignItems: 'center',
               '&:hover': {
                 backgroundColor: 'action.hover',
