@@ -175,7 +175,13 @@ export default function EventSettingsPage({ user }: { user: User }) {
                 onChange={handleSliderChange}
                 valueLabelDisplay="auto"
                 step={5}
-                marks
+                marks={[
+                  { value: 5, label: '5 mi' },
+                  { value: 25, label: '25 mi' },
+                  { value: 50, label: '50 mi' },
+                  { value: 75, label: '75 mi' },
+                  { value: 100, label: '100 mi' },
+                ]}
                 min={5}
                 max={100}
                 color="secondary"
