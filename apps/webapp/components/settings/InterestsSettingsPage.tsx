@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useActionState, useTransition, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,21 +16,37 @@ import {
   TextField,
   InputAdornment,
   Stack,
+  Alert,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
+import { updateUserProfileAction } from '@/data/actions/server/user';
+import { signIn, useSession } from 'next-auth/react';
+import EventCategoryChip from '@/components/events/category/chip';
 
-export default function InterestsSettingsPage({
-  user,
-  eventCategoryGroups,
-}: {
+type InterestsSettingsPageProps = {
   user: User;
   eventCategoryGroups: EventCategoryGroup[];
-}) {
+}
+export default function InterestsSettingsPage({ user, eventCategoryGroups }: InterestsSettingsPageProps) {
   const [selectedInterests, setSelectedInterests] = useState<EventCategory[]>(user.interests ? user.interests : []);
   const [tempInterests, setTempInterests] = useState<EventCategory[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const { data: session } = useSession();
+  const [isPending, startTransition] = useTransition();
+  const [state, formAction] = useActionState(updateUserProfileAction, {
+    apiError: null,
+    zodErrors: null,
+  });
+
+  // Sync selectedInterests with session data when it updates
+  useEffect(() => {
+    if (session?.user?.interests) {
+      setSelectedInterests(session.user.interests);
+    }
+  }, [session?.user?.interests]);
 
   const handleInterestToggle = (eventCategory: EventCategory) => {
     setTempInterests(prev => {
@@ -44,14 +60,13 @@ export default function InterestsSettingsPage({
   };
 
   const handleSaveInterests = () => {
-    setSelectedInterests(tempInterests);
-    setOpenModal(false);
-    // TODO: Implement actual save logic (API call, etc.)
-    console.log('Selected Interests:', tempInterests);
-  };
-
-  const handleRemoveInterest = (interestId: string) => {
-    setSelectedInterests(prev => prev.filter(item => item.eventCategoryId !== interestId));
+    const formData = new FormData();
+    formData.append('userId', user.userId);
+    formData.append('interests', JSON.stringify(tempInterests.map(i => i.eventCategoryId)));
+    
+    startTransition(() => {
+      formAction(formData);
+    });
   };
 
   // Filter event categories based on search term
@@ -65,8 +80,40 @@ export default function InterestsSettingsPage({
     })
     .filter(group => group.eventCategories.length > 0);
 
+  // Update local state and session when action succeeds
+  useEffect(() => {
+    if (state.data && !state.apiError && session?.user?.token) {
+      const updatedUser = state.data as User;
+
+      const refreshSession = async () => {
+        await signIn('refresh-session', {
+          userData: JSON.stringify(updatedUser),
+          token: session.user.token,
+          redirect: false,
+        });
+        setOpenModal(false);
+      };
+
+      refreshSession();
+    }
+  }, [state.data, state.apiError]);
+
+  const hasSuccess = !!state.data && !state.apiError;
+
   return (
     <Box>
+      {state.apiError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {state.apiError}
+        </Alert>
+      )}
+      
+      {hasSuccess && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Your interests have been updated successfully!
+        </Alert>
+      )}
+      
       <Stack spacing={4}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={{ xs: 2, sm: 0 }} sx={{ mb: { xs: 3, sm: 5 } }}>
           <Box>
@@ -80,8 +127,8 @@ export default function InterestsSettingsPage({
 
           <Button
             startIcon={<AddIcon />}
-            variant="contained"
-            color="secondary"
+            variant="outlined"
+            color="primary"
             onClick={() => {
               setTempInterests([...selectedInterests]);
               setSearchTerm('');
@@ -113,20 +160,9 @@ export default function InterestsSettingsPage({
           ) : (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
               {selectedInterests.map(interest => (
-                <Chip
-                  key={interest.eventCategoryId}
-                  label={interest.name}
-                  onDelete={() => handleRemoveInterest(interest.eventCategoryId)}
-                  color="secondary"
-                  variant="filled"
-                  sx={{ 
-                    borderRadius: 2, 
-                    py: 2.5,
-                    px: 0.5,
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                  }}
-                />
+                <Box key={interest.eventCategoryId} sx={{ position: 'relative', display: 'inline-flex' }}>
+                  <EventCategoryChip category={interest} />
+                </Box>
               ))}
             </Box>
           )}
@@ -296,9 +332,10 @@ export default function InterestsSettingsPage({
             color="secondary"
             variant="contained"
             size="large"
+            disabled={isPending}
             sx={{ borderRadius: 2, px: 3, textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
           >
-            Save {tempInterests.length} {tempInterests.length === 1 ? 'Interest' : 'Interests'}
+            {isPending ? 'Saving...' : `Save ${tempInterests.length} ${tempInterests.length === 1 ? 'Interest' : 'Interests'}`}
           </Button>
         </DialogActions>
       </Dialog>

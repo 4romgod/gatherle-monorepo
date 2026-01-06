@@ -53,3 +53,30 @@ export const GetUserByUsernameDocument = graphql(`
     }
   }
 `);
+
+export const GetUserByIdDocument = graphql(`
+  query GetUserById($userId: String!) {
+    readUserById(userId: $userId) {
+      userId
+      email
+      username
+      bio
+      address
+      birthdate
+      family_name
+      gender
+      given_name
+      phone_number
+      profile_picture
+      userRole
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);

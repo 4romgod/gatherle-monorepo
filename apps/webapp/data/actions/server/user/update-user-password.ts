@@ -7,13 +7,17 @@ import { auth } from '@/auth';
 import { ApolloError } from '@apollo/client';
 import type { ActionState } from '@/data/actions/types';
 import { getApolloErrorMessage } from '@/data/actions/types';
+import { logger } from '@/lib/utils/logger';
 
 export async function updateUserPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
 
+  logger.action('updateUserPasswordAction', { userId, hasToken: !!token });
+
   if (!userId || !token) {
+    logger.warn('Password update failed: User not authenticated');
     return {
       ...prevState,
       apiError: 'User is not authenticated',
@@ -39,10 +43,10 @@ export async function updateUserPasswordAction(prevState: ActionState, formData:
     password: newPassword,
   };
 
-  console.log('input data', inputData);
-
+  logger.debug('Validating password update input');
   const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {
+    logger.warn('Password validation failed', { errors: validatedFields.error.flatten().fieldErrors });
     return {
       ...prevState,
       apiError: null,
@@ -51,6 +55,7 @@ export async function updateUserPasswordAction(prevState: ActionState, formData:
   }
 
   try {
+    logger.debug('Sending password update mutation');
     const updateResponse = await getClient().mutate({
       mutation: UpdateUserDocument,
       variables: {

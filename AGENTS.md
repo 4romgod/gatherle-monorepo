@@ -73,3 +73,71 @@
   5. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
   6. Run integration tests with `STAGE`, `NTLANGO_SECRET_ARN`, `GRAPHQL_URL`.
 - Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output or stored secrets and include a secure way to inject these into the build (e.g., GitHub Actions env or `next.config.js` referencing process env).
+
+## Predefined Prompts & Aliases
+This section contains shorthand commands that trigger predefined workflows. When a user types one of these aliases, execute the associated workflow automatically.
+
+**Available Commands:**
+- `pr` - Generate PR materials (branch name, commit message, PR title/description)
+
+### PR Generation (`pr`)
+**Trigger**: User types `pr`, `generate pr`, or similar.
+
+**Workflow**:
+1. Check staged changes using `get_changed_files` tool with `sourceControlState: ['staged']`.
+2. Read the modified files to understand the scope and nature of changes.
+3. Generate the following PR materials:
+   - **Branch name**: Follow git-flow conventions:
+     - `feat/brief-description` - New features
+     - `fix/brief-description` - Bug fixes
+     - `chore/brief-description` - Maintenance, deps, config
+     - `refactor/brief-description` - Code restructuring
+     - `docs/brief-description` - Documentation updates
+     - Use kebab-case, keep under 50 chars
+   - **Commit message**: Conventional commit format:
+     - Format: `type(scope): subject`
+     - Present tense, imperative mood
+     - Examples: `feat(webapp): add interests settings page`, `fix(api): handle null user interests`
+   - **PR Title**: Clear, concise summary matching commit message format
+   - **PR Description**: Include:
+     - **Summary**: What changes were made and why
+     - **Changes**: Bulleted list of key modifications by file/feature
+     - **Testing**: Commands run, manual testing performed, test results
+     - **Environment Variables**: Any new/modified env vars (if applicable)
+     - **Screenshots/GIFs**: For UI changes in `apps/webapp` (note if applicable)
+     - **Related Issues**: Link to issues/tickets (if known)
+4. Follow conventions from "Commit & Pull Request Guidelines" section above.
+5. Present all materials as **RAW MARKDOWN TEXT** in a single code block that the user can copy-paste directly (do NOT render as formatted markdown, do NOT create a new file).
+
+**Example Output Format** (raw markdown in code block):
+````markdown
+Branch Name:
+feat/interests-settings-page
+
+Commit Message:
+feat(webapp): add user interests settings with session refresh
+
+PR Title:
+feat(webapp): Add User Interests Settings with Session Refresh
+
+PR Description:
+## Summary
+Implemented user interests management on settings page with automatic session refresh after updates.
+
+## Changes
+- Added InterestsSettingsPage component with modal for selecting interests
+- Integrated EventCategoryChip for visual consistency
+- Implemented session refresh using custom 'refresh-session' credentials provider
+- Updated updateUserProfileAction to handle interests field
+
+## Testing
+- Manual testing: Updated interests, verified session refreshes without logout
+- Tested on different screen sizes (mobile/desktop responsive)
+
+## Environment Variables
+None
+
+## Screenshots
+UI changes - screenshots recommended
+```
+````

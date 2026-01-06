@@ -5,14 +5,17 @@ import { auth } from '@/auth';
 import { ApolloError } from '@apollo/client';
 import type { ActionState } from '@/data/actions/types';
 import { getApolloErrorMessage } from '@/data/actions/types';
+import { logger } from '@/lib/utils';
 
 export async function deleteUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   const userId = session?.user.userId;
   const token = session?.user.token;
 
-  console.log('input data', userId);
+  logger.action('deleteUserProfileAction', { userId, hasToken: !!token });
+
   if (!userId || !token) {
+    logger.warn('Delete profile failed: User not authenticated');
     return {
       ...prevState,
       apiError: 'User is not authenticated',
@@ -34,6 +37,7 @@ export async function deleteUserProfileAction(prevState: ActionState, formData: 
     });
 
     // TODO after deleting, logout the user
+    logger.info('User profile deleted successfully', { userId });
     const responseData = deleteResponse.data?.deleteUserById;
     return {
       ...prevState,
@@ -42,7 +46,7 @@ export async function deleteUserProfileAction(prevState: ActionState, formData: 
       zodErrors: null,
     };
   } catch (error) {
-    console.error('Failed when calling Delete User By Id Mutation', error);
+    logger.error('Failed to delete user profile', { error, userId });
     const errorMessage = getApolloErrorMessage(error as ApolloError);
 
     if (errorMessage) {

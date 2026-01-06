@@ -215,6 +215,7 @@ export default async function HomePage() {
           position: 'relative',
           overflow: 'hidden',
           py: { xs: 7, md: 10 },
+          px: { xs: 2, md: 3 },
           backgroundColor: '#0f172a',
           color: '#e2e8f0',
         }}
@@ -544,6 +545,7 @@ export default async function HomePage() {
         sx={{
           backgroundColor: 'background.default',
           py: { xs: 5, md: 7 },
+          px: { xs: 1, md: 2 },
         }}
       >
         <CustomContainer>

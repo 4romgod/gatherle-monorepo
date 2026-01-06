@@ -19,7 +19,7 @@ export default async function EventsPage() {
           {
             field: 'organizers.user.userId',
             operator: FilterOperatorInput.Eq,
-            value: session.user.id,
+            value: session.user.userId,
           },
         ],
       },
