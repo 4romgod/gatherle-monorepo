@@ -2,7 +2,7 @@
 
 import { ForgotPasswordInputTypeSchema } from '@/data/validation';
 import type { ActionState } from '@/data/actions/types';
-import { logger } from '@/lib/utils/logger';
+import { logger } from '@/lib/utils';
 
 export async function forgotPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData = {
