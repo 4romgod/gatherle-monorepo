@@ -43,8 +43,6 @@ export async function updateUserPasswordAction(prevState: ActionState, formData:
     password: newPassword,
   };
 
-  console.log('input data', inputData);
-
   logger.debug('Validating password update input');
   const validatedFields = UpdateUserInputSchema.safeParse(inputData);
   if (!validatedFields.success) {

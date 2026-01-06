@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 import { ApolloError } from '@apollo/client';
 import type { ActionState } from '@/data/actions/types';
 import { getApolloErrorMessage } from '@/data/actions/types';
-import { logger } from '@/lib/utils/logger';
+import { logger } from '@/lib/utils';
 
 export async function deleteUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
