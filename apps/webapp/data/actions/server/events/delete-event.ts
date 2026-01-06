@@ -3,7 +3,7 @@
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
 import { DeleteEventByIdDocument } from '@/data/graphql/types/graphql';
-import { logger } from '@/lib/utils/logger';
+import { logger } from '@/lib/utils';
 
 export async function deleteEventAction(eventId: string) {
   const session = await auth();
