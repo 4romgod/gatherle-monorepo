@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { JSX } from 'react';
 import { auth } from '@/auth';
 import { AutoAwesome, DynamicFeed, Explore, People, PersonAdd, RocketLaunch, ShieldMoon } from '@mui/icons-material';
-import { Box, Button, Card, CardContent, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
 import EventsCarousel from '@/components/events/carousel';
