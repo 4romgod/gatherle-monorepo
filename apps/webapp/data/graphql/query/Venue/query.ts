@@ -1,6 +1,6 @@
-import { gql } from '@apollo/client';
+import { graphql } from '@/data/graphql/types';
 
-export const GET_VENUES = gql`
+export const GetAllVenuesDocument = graphql(`
   query GetVenues {
     readVenues {
       venueId
@@ -23,4 +23,4 @@ export const GET_VENUES = gql`
       }
     }
   }
-`;
+`);

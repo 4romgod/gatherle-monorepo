@@ -1,10 +1,9 @@
 export * from './Event/mutation';
 export * from './Event/query';
-// TODO export * from './EventCategory/mutation';
 export * from './EventCategory/query';
-// TODO export * from './EventCategoryGroup/mutation';
 export * from './EventCategoryGroup/query';
 export * from './User/mutation';
 export * from './User/query';
-export * from './Organization';
-export * from './Venue';
+export * from './Organization/query';
+export * from './Venue/query';
+export * from './Social/query';

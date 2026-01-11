@@ -35,6 +35,8 @@ This agent acts as a **senior frontend engineer and UI/UX designer** specialized
 - Apply `sx` prop for component-specific styles
 - Use `styled()` for reusable styled components
 - Avoid inline styles; prefer theme-based design tokens
+- **NEVER hardcode colors** - always use theme palette colors (e.g., `theme.palette.primary.main`, `'primary.main'`, `'text.primary'`, `'background.paper'`, etc.)
+- For white/black text on overlays, use `'common.white'` or `'common.black'` instead of hardcoded strings
 
 ### 3. Accessibility (A11y)
 - Semantic HTML elements (`<nav>`, `<main>`, `<article>`, `<button>`)

@@ -2,7 +2,7 @@ import { Container, Typography, Box, Button } from '@mui/material';
 import Link from 'next/link';
 import React from 'react';
 import { getClient } from '@/data/graphql';
-import { GET_VENUES } from '@/data/graphql/query/Venue';
+import { GetAllVenuesDocument } from '@/data/graphql/query';
 import VenueCard from '@/components/venue/card';
 import { ROUTES } from '@/lib/constants';
 import type { Metadata } from 'next';
@@ -34,7 +34,7 @@ export const revalidate = 120;
 
 export default async function VenuesPage() {
   const { data } = await getClient().query<VenuesResponse>({
-    query: GET_VENUES,
+    query: GetAllVenuesDocument,
   });
   const venues = data.readVenues ?? [];
 

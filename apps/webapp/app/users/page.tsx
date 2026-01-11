@@ -1,6 +1,6 @@
 import { getClient } from '@/data/graphql';
 import { GetAllUsersDocument } from '@/data/graphql/types/graphql';
-import { Container, Typography, Grid, Box, Paper, Chip } from '@mui/material';
+import { Typography, Grid, Box, Paper } from '@mui/material';
 import { Diversity3, People } from '@mui/icons-material';
 import type { Metadata } from 'next';
 import SearchInput from '@/components/search/search-box';
@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   description: 'Discover and connect with people in your community who share your interests.',
 };
 
-// Enable ISR with 120-second revalidation
 export const revalidate = 120;
 
 export default async function Page() {

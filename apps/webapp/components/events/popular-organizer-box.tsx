@@ -24,7 +24,7 @@ export type PopularOrganizerBoxProps = {
 };
 
 export default function PopularOrganizerBox({ organization }: PopularOrganizerBoxProps) {
-  const { name, slug, description, logo, followersCount, isFollowable, tags } = organization;
+  const { name, slug, description, logo, followersCount, tags } = organization;
 
   return (
     <Card 
@@ -43,7 +43,7 @@ export default function PopularOrganizerBox({ organization }: PopularOrganizerBo
           </Typography>
           <Chip 
             icon={<GroupIcon fontSize="small" />} 
-            label={`${followersCount?.toLocaleString() ?? 0} followers`}
+            label={`${(followersCount ?? 0).toLocaleString()} followers`}
             size="small"
             sx={{ ml: 'auto' }}
           />

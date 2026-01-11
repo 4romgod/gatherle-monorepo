@@ -1,6 +1,6 @@
-import { gql } from '@apollo/client';
+import { graphql } from '@/data/graphql/types';
 
-export const GET_SOCIAL_FEED = gql`
+export const GetSocialFeedDocument = graphql(`
   query GetSocialFeed($limit: Int) {
     readFeed(limit: $limit) {
       activityId
@@ -13,4 +13,4 @@ export const GET_SOCIAL_FEED = gql`
       metadata
     }
   }
-`;
+`);

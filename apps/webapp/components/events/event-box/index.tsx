@@ -8,8 +8,6 @@ import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon, TicketIcon } from '@heroicons/react/24/outline';
 import { ShareRounded, BookmarkBorderOutlined, PeopleOutline } from '@mui/icons-material';
 import { RRule } from 'rrule';
-import Link from 'next/link';
-import { ROUTES } from '@/lib/constants';
 
 export default function EventBox({ event }: { event: EventPreview }) {
   const { title, slug, recurrenceRule, participants, media, heroImage, location, status } = event;
@@ -39,16 +37,12 @@ export default function EventBox({ event }: { event: EventPreview }) {
   const locationText = location?.address?.city || location?.details || 'Location TBA';
 
   return (
-    <Link 
-      href={slug ? ROUTES.EVENTS.EVENT(slug) : '#'}
-      style={{ textDecoration: 'none', display: 'block' }}
-    >
-      <Card
-        sx={{
-          p: 0,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' },
-          gap: 0,
+    <Card
+      sx={{
+        p: 0,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' },
+        gap: 0,
           backgroundColor: 'background.paper',
           border: '1px solid',
           borderColor: 'divider',
@@ -120,17 +114,6 @@ export default function EventBox({ event }: { event: EventPreview }) {
       <Box component="div" sx={{ display: 'flex', flexDirection: 'column', p: 2.5, gap: 2 }}>
         <Box>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <Typography
-              variant="overline"
-              sx={{ 
-                fontWeight: 700, 
-                letterSpacing: 1, 
-                fontSize: '0.7rem',
-                color: 'primary.main',
-              }}
-            >
-              Experience
-            </Typography>
             {participantCount > 0 && (
               <Chip
                 icon={<PeopleOutline sx={{ fontSize: 16 }} />}
@@ -254,6 +237,5 @@ export default function EventBox({ event }: { event: EventPreview }) {
         </Box>
       </Box>
     </Card>
-    </Link>
   );
 }

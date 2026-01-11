@@ -1,7 +1,7 @@
 import { Container, Typography, Box, Button } from '@mui/material';
 import React from 'react';
 import { getClient } from '@/data/graphql';
-import { GET_ORGANIZATIONS } from '@/data/graphql/query/Organization';
+import { GetAllOrganizationsDocument } from '@/data/graphql/query';
 import OrganizationCard from '@/components/organization/card';
 import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
@@ -31,7 +31,7 @@ export const revalidate = 120;
 
 export default async function OrganizationsPage() {
   const { data } = await getClient().query<OrganizationsResponse>({
-    query: GET_ORGANIZATIONS,
+    query: GetAllOrganizationsDocument,
   });
   const organizations = data.readOrganizations ?? [];
 

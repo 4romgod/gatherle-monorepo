@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
-import { GET_ORGANIZATION_BY_SLUG } from '@/data/graphql/query/Organization';
+import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
 import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 import EventBoxSm from '@/components/events/event-box-sm';
 import { ROUTES } from '@/lib/constants';
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
     const organizationResult = await getClient().query<{ readOrganizationBySlug: Organization }, { slug: string }>({
-      query: GET_ORGANIZATION_BY_SLUG,
+      query: GetOrganizationBySlugDocument,
       variables: { slug },
     });
     const organization = organizationResult.data.readOrganizationBySlug;
@@ -44,7 +44,7 @@ export default async function OrganizationPage({ params }: Props) {
 
   try {
     const organizationResult = await getClient().query<{ readOrganizationBySlug: Organization }, { slug: string }>({
-      query: GET_ORGANIZATION_BY_SLUG,
+      query: GetOrganizationBySlugDocument,
       variables: { slug },
     });
     organization = organizationResult.data.readOrganizationBySlug ?? null;

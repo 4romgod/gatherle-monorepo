@@ -30,9 +30,9 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
       )}
 
       {/* Quick Stats Box */}
-      <Card 
-        elevation={0} 
-        sx={{ 
+      <Card
+        elevation={0}
+        sx={{
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
@@ -48,6 +48,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
 
           <Stack spacing={2}>
             <Box>
+              {/** TODO: If pagination or filtering is implemented server-side, this will be inaccurate. Consider either fetching the actual total count from the database or implementing a separate count query. */}
               <Typography variant="h4" fontWeight={700} color="primary">
                 {stats.totalEvents.toLocaleString()}
               </Typography>
@@ -55,7 +56,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
                 Total Events
               </Typography>
             </Box>
-            
+
             <Box>
               <Typography variant="h4" fontWeight={700} color="secondary">
                 {stats.activeOrganizations.toLocaleString()}
@@ -69,9 +70,9 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
       </Card>
 
       {/* Trending Categories Box */}
-      <Card 
-        elevation={0} 
-        sx={{ 
+      <Card
+        elevation={0}
+        sx={{
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
@@ -85,7 +86,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
             </Typography>
           </Stack>
 
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap'}}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
             {trendingCategories.map((category) => (
               <EventCategoryChip key={category.eventCategoryId} category={category} />
             ))}

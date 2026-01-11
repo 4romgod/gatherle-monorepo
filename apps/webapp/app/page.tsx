@@ -19,8 +19,7 @@ import {
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { RRule } from 'rrule';
-import { GET_ORGANIZATIONS } from '@/data/graphql/query/Organization';
-import { GET_VENUES } from '@/data/graphql/query/Venue';
+import { GetAllOrganizationsDocument, GetAllVenuesDocument } from '@/data/graphql/query';
 import { isAuthenticated } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -149,8 +148,8 @@ export default async function HomePage() {
   const [{ data: events }, { data }, orgResponse, venueResponse] = await Promise.all([
     getClient().query({ query: GetAllEventsDocument }),
     getClient().query({ query: GetAllEventCategoriesDocument }),
-    getClient().query<OrganizationResponse>({ query: GET_ORGANIZATIONS }),
-    getClient().query<VenuesResponse>({ query: GET_VENUES }),
+    getClient().query<OrganizationResponse>({ query: GetAllOrganizationsDocument }),
+    getClient().query<VenuesResponse>({ query: GetAllVenuesDocument }),
   ]);
 
   const eventCategories = data.readEventCategories?.slice(0, 6) ?? [];
