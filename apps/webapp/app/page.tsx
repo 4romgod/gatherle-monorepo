@@ -24,7 +24,6 @@ import {
   BUTTON_PRIMARY_STYLES,
   SECTION_TITLE_STYLES,
   SPACING,
-  GRID_COLUMNS,
 } from '@/lib/constants';
 import { RRule } from 'rrule';
 import { GetAllOrganizationsDocument, GetAllVenuesDocument } from '@/data/graphql/query';
