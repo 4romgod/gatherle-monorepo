@@ -1,7 +1,7 @@
 /**
  * Logging utility for Next.js webapp with configurable log levels
  * Works in both server-side (Node.js) and client-side (browser) environments
- * 
+ *
  * Log levels (in order of severity):
  * - DEBUG: Detailed information for debugging
  * - INFO: General informational messages
@@ -54,7 +54,7 @@ class Logger {
     const timestamp = new Date().toISOString();
     const envPrefix = this.getEnvironmentPrefix();
     const prefix = `${envPrefix} [${timestamp}] [${level}]`;
-    
+
     if (args.length > 0) {
       console.log(prefix, message, ...args);
     } else {
@@ -126,7 +126,7 @@ const getDefaultLogLevel = (): LogLevel => {
   } else if (env === 'test') {
     return LogLevel.ERROR; // Only errors in tests
   }
-  
+
   return LogLevel.DEBUG; // Everything in development
 };
 

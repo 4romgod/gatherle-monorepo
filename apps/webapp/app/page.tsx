@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { JSX } from 'react';
 import { auth } from '@/auth';
 import { AutoAwesome, DynamicFeed, Explore, People, PersonAdd, RocketLaunch, ShieldMoon } from '@mui/icons-material';
-import { Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
 import EventsCarousel from '@/components/events/carousel';
@@ -17,7 +17,14 @@ import {
   GetSocialFeedQuery,
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
-import { ROUTES } from '@/lib/constants';
+import { 
+  ROUTES, 
+  CARD_STYLES, 
+  BUTTON_STYLES, 
+  BUTTON_PRIMARY_STYLES,
+  SECTION_TITLE_STYLES,
+  SPACING,
+} from '@/lib/constants';
 import { RRule } from 'rrule';
 import { GetAllOrganizationsDocument, GetAllVenuesDocument } from '@/data/graphql/query';
 import { isAuthenticated } from '@/lib/utils';
@@ -275,7 +282,7 @@ export default async function HomePage() {
                   component={Link}
                   href={ROUTES.EVENTS.ROOT}
                   startIcon={<Explore />}
-                  sx={{ px: 2.3, py: 1 }}
+                  sx={{ ...BUTTON_PRIMARY_STYLES }}
                 >
                   Explore events
                 </Button>
@@ -286,8 +293,9 @@ export default async function HomePage() {
                   component={Link}
                   href={ROUTES.ACCOUNT.EVENTS.CREATE}
                   sx={{
-                    px: 2.3,
-                    py: 1,
+                    ...BUTTON_STYLES,
+                    px: 4,
+                    py: 1.5,
                     borderColor: 'hero.cardBorder',
                     color: 'hero.text',
                     '&:hover': { borderColor: 'hero.text', backgroundColor: 'hero.cardBg' },
@@ -321,10 +329,11 @@ export default async function HomePage() {
             </Grid>
 
             <Grid size={{ xs: 12, md: 5 }}>
-              <Paper
+              <Card
+                elevation={0}
                 sx={{
-                  p: 2.1,
-                  borderRadius: 4,
+                  p: { xs: 3, md: 4 },
+                  borderRadius: 3,
                   border: '1px solid',
                   borderColor: 'hero.cardBorder',
                   backgroundColor: 'hero.cardBg',
@@ -379,12 +388,13 @@ export default async function HomePage() {
                       size="small"
                       component={Link}
                       href={ROUTES.EVENTS.EVENT(heroEvent.slug)}
+                      sx={BUTTON_STYLES}
                     >
                       View details
                     </Button>
                   )}
                 </Box>
-              </Paper>
+              </Card>
             </Grid>
           </Grid>
         </CustomContainer>
@@ -418,14 +428,14 @@ export default async function HomePage() {
         }}
       >
         <Container>
-          <Typography variant="h4" fontWeight="bold" sx={{ mb: 1, textAlign: 'center' }}>
+          <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, mb: 1, textAlign: 'center', fontSize: { xs: '1.5rem', md: '2rem' } }}>
             Choose your kind of magic
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
             Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.
           </Typography>
 
-          <Grid container spacing={3} justifyContent="center">
+          <Grid container spacing={SPACING.standard} justifyContent="center">
             {eventCategories.map((category, index) => {
               return (
                 <Grid size={{ xs: 6, sm: 4, md: 2 }} key={index}>
@@ -442,7 +452,7 @@ export default async function HomePage() {
               startIcon={<Explore />}
               component={Link}
               href={ROUTES.EVENTS.ROOT}
-              sx={{ borderRadius: 4, px: 3 }}
+              sx={{ ...BUTTON_STYLES, px: 3 }}
             >
               Explore all categories
             </Button>
@@ -458,7 +468,7 @@ export default async function HomePage() {
         }}
       >
         <Container>
-          <Typography variant="h4" fontWeight="bold" sx={{ mb: 1, textAlign: 'center' }}>
+          <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, mb: 1, textAlign: 'center', fontSize: { xs: '1.5rem', md: '2rem' } }}>
             The community behind the gatherings
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 5, textAlign: 'center' }}>
@@ -467,10 +477,10 @@ export default async function HomePage() {
 
           <Box sx={{ mb: 5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
                 Featured organizations
               </Typography>
-              <Button component={Link} href={ROUTES.ORGANIZATIONS.ROOT} variant="text" size="small" color="secondary">
+              <Button component={Link} href={ROUTES.ORGANIZATIONS.ROOT} variant="text" size="small" color="secondary" sx={BUTTON_STYLES}>
                 View all
               </Button>
             </Box>
@@ -502,10 +512,10 @@ export default async function HomePage() {
 
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" fontWeight="bold">
+              <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
                 Featured venues
               </Typography>
-              <Button component={Link} href={ROUTES.VENUES.ROOT} variant="text" size="small" color="secondary">
+              <Button component={Link} href={ROUTES.VENUES.ROOT} variant="text" size="small" color="secondary" sx={BUTTON_STYLES}>
                 View all
               </Button>
             </Box>
@@ -548,7 +558,7 @@ export default async function HomePage() {
         <CustomContainer>
           <Grid container spacing={6} alignItems="stretch">
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
+              <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, mb: 1, fontSize: { xs: '1.5rem', md: '2rem' } }}>
                 Social layer
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -557,16 +567,17 @@ export default async function HomePage() {
               </Typography>
               <Stack spacing={1}>
                 {socialHighlights.map(highlight => (
-                  <Paper
+                  <Card
                     key={highlight.title}
-                    variant="outlined"
+                    elevation={0}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1.5,
-                      px: 2,
-                      py: 1.25,
+                      p: 2,
                       borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'divider',
                     }}
                   >
                     <Box>{highlight.icon}</Box>
@@ -578,7 +589,7 @@ export default async function HomePage() {
                         {highlight.description}
                       </Typography>
                     </Box>
-                  </Paper>
+                  </Card>
                 ))}
               </Stack>
               <Box sx={{ mt: 3 }}>
@@ -587,7 +598,7 @@ export default async function HomePage() {
                   color="secondary"
                   component={Link}
                   href={isAuth ? ROUTES.EVENTS.ROOT : ROUTES.AUTH.LOGIN}
-                  sx={{ borderRadius: 999 }}
+                  sx={{ ...BUTTON_PRIMARY_STYLES, borderRadius: 999 }}
                 >
                   {socialCtaLabel}
                 </Button>
@@ -595,17 +606,16 @@ export default async function HomePage() {
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper
-                variant="outlined"
+              <Card
+                elevation={0}
                 sx={{
-                  borderRadius: 4,
-                  p: { xs: 2, md: 3 },
+                  ...CARD_STYLES,
                   minHeight: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                 }}
               >
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
                   Activity preview
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -668,7 +678,7 @@ export default async function HomePage() {
                     </Box>
                   )}
                 </Stack>
-              </Paper>
+              </Card>
             </Grid>
           </Grid>
         </CustomContainer>
@@ -682,18 +692,14 @@ export default async function HomePage() {
         }}
       >
         <CustomContainer>
-          <Grid container spacing={3} alignItems="center">
+          <Grid container spacing={SPACING.standard} alignItems="center">
             {experiencePillars.map(pillar => (
               <Grid size={{ xs: 12, md: 4 }} key={pillar.title}>
-                <Paper
+                <Card
+                  elevation={0}
                   sx={{
-                    p: 2.25,
+                    ...CARD_STYLES,
                     height: '100%',
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    backgroundColor: 'background.paper',
-                    boxShadow: 2,
                   }}
                 >
                   <Box
@@ -710,13 +716,13 @@ export default async function HomePage() {
                   >
                     {pillar.icon}
                   </Box>
-                  <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
+                  <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, mb: 1 }}>
                     {pillar.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {pillar.copy}
                   </Typography>
-                </Paper>
+                </Card>
               </Grid>
             ))}
           </Grid>
@@ -730,13 +736,10 @@ export default async function HomePage() {
         }}
       >
         <CustomContainer>
-          <Paper
+          <Card
+            elevation={0}
             sx={{
-              p: { xs: 2.25, md: 2.75 },
-              borderRadius: 4,
-              border: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: 'background.paper',
+              ...CARD_STYLES,
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
               alignItems: 'center',
@@ -745,7 +748,7 @@ export default async function HomePage() {
             }}
           >
             <Box>
-              <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
+              <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, mb: 1, fontSize: { xs: '1.5rem', md: '2rem' } }}>
                 Ready to launch your next gathering?
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 640 }}>
@@ -759,15 +762,15 @@ export default async function HomePage() {
                 size="large"
                 component={Link}
                 href={ROUTES.ACCOUNT.EVENTS.CREATE}
-                sx={{ borderRadius: 10 }}
+                sx={{ ...BUTTON_PRIMARY_STYLES, borderRadius: 10 }}
               >
                 Start hosting
               </Button>
-              <Button variant="outlined" color="inherit" size="large" component={Link} href={ROUTES.EVENTS.ROOT}>
+              <Button variant="outlined" color="inherit" size="large" component={Link} href={ROUTES.EVENTS.ROOT} sx={BUTTON_STYLES}>
                 See community events
               </Button>
             </Box>
-          </Paper>
+          </Card>
         </CustomContainer>
       </Box>
     </Box>

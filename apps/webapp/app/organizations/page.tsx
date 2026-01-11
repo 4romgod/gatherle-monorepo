@@ -1,4 +1,4 @@
-import { Container, Typography, Box, Button } from '@mui/material';
+import { Container, Typography, Box, Button, Grid } from '@mui/material';
 import React from 'react';
 import { getClient } from '@/data/graphql';
 import { GetAllOrganizationsDocument } from '@/data/graphql/query';
@@ -6,6 +6,7 @@ import OrganizationCard from '@/components/organization/card';
 import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Groups, Add } from '@mui/icons-material';
 
 type OrganizationSummary = {
   orgId: string;
@@ -36,46 +37,131 @@ export default async function OrganizationsPage() {
   const organizations = data.readOrganizations ?? [];
 
   return (
-    <Container>
-      <Box sx={{ mt: 6, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="overline" color="text.secondary">
-            Built for creators
-          </Typography>
-          <Typography variant="h4" fontWeight="bold">
-            Community spaces on Ntlango
-          </Typography>
-        </Box>
-        <Box>
-          <Button component={Link} href={ROUTES.EVENTS.ROOT} variant="outlined" size="small">
-            Browse events
-          </Button>
-        </Box>
-      </Box>
+    <Box>
+      {/* Hero Section */}
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(1, minmax(0, 1fr))',
-            sm: 'repeat(3, minmax(0, 1fr))',
-            lg: 'repeat(4, minmax(0, 1fr))',
-          },
-          gap: 3,
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          py: { xs: 6, md: 8 },
         }}
       >
-        {organizations.map(organization => (
-          <Box key={organization.orgId}>
-            <OrganizationCard {...organization} />
-          </Box>
-        ))}
-        {organizations.length === 0 && (
-          <Box>
-            <Typography variant="body1" color="text.secondary">
-              No organizations have been published yet.
+        <Container>
+          <Box sx={{ maxWidth: '800px' }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                letterSpacing: '0.1em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                mb: 2,
+              }}
+            >
+              <Groups sx={{ fontSize: 20 }} />
+              ORGANIZATIONS
             </Typography>
+            <Typography
+              variant="h3"
+              fontWeight={800}
+              sx={{
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.5rem' },
+                lineHeight: 1.2,
+              }}
+            >
+              Community spaces on Ntlango
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 4, fontSize: '1.125rem', lineHeight: 1.7 }}
+            >
+              Discover and connect with creative collectives, event organizers, and community spaces. Join organizations to stay updated on their latest events and activities.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="large"
+                component={Link}
+                href={ROUTES.EVENTS.ROOT}
+                sx={{
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  py: 1.5,
+                  px: 4,
+                  borderRadius: 2,
+                  fontSize: '1rem',
+                }}
+              >
+                Browse Events
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<Add />}
+                sx={{
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  py: 1.5,
+                  px: 4,
+                  borderRadius: 2,
+                  borderWidth: 2,
+                  fontSize: '1rem',
+                  '&:hover': {
+                    borderWidth: 2,
+                  },
+                }}
+              >
+                Create Organization
+              </Button>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Organizations Grid */}
+      <Container sx={{ py: 6 }}>
+        {organizations.length > 0 ? (
+          <Grid container spacing={3}>
+            {organizations.map(organization => (
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={organization.orgId}>
+                <OrganizationCard {...organization} />
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Box
+            sx={{
+              textAlign: 'center',
+              py: 12,
+            }}
+          >
+            <Groups sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
+              No organizations yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Be the first to create a community space on Ntlango
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              sx={{
+                fontWeight: 600,
+                textTransform: 'none',
+                px: 3,
+              }}
+            >
+              Create Organization
+            </Button>
           </Box>
         )}
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 }

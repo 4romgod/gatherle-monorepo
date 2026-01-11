@@ -80,7 +80,8 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
               color="secondary"
               fullWidth
               startIcon={<ControlPointOutlined />}
-              onClick={() => router.push(ROUTES.ACCOUNT.EVENTS.CREATE)}
+              component={Link}
+              href={ROUTES.ACCOUNT.EVENTS.CREATE}
             >
               Host an event
             </Button>
@@ -161,7 +162,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           <Divider sx={{ my: 1 }} />
 
           <ListItem disablePadding>
-            <ListItemButton onClick={() => router.push(ROUTES.AUTH.LOGIN)}>
+            <ListItemButton component={Link} href={ROUTES.AUTH.LOGIN}>
               <ListItemIcon>
                 <Login />
               </ListItemIcon>
@@ -170,7 +171,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           </ListItem>
 
           <Box sx={{ px: 2, pt: 1 }}>
-            <Button variant="contained" color="secondary" fullWidth onClick={() => router.push(ROUTES.AUTH.REGISTER)}>
+            <Button variant="contained" color="secondary" fullWidth component={Link} href={ROUTES.AUTH.REGISTER}>
               Join Ntlango
             </Button>
           </Box>

@@ -1,25 +1,20 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Box, Typography } from '@mui/material';
 import { spaceGrotesk } from '@/components/theme/fonts';
 
 export default function Logo() {
-  const router = useRouter();
-
   return (
     <Box
-      component="button"
-      type="button"
-      onClick={() => router.push('/')}
+      component={Link}
+      href="/"
       aria-label="Ntlango home"
       sx={{
         display: 'flex',
         alignItems: 'center',
         gap: 1,
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
+        textDecoration: 'none',
         px: 1,
         py: 0.5,
       }}

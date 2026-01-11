@@ -77,12 +77,12 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
     setError(null);
 
     loadEvents({
-      variables: { 
-        options: { 
+      variables: {
+        options: {
           filters: filterInputs.length > 0 ? filterInputs : undefined,
           dateFilterOption: dateFilterParams.dateFilterOption as any,
           customDate: dateFilterParams.customDate, // GraphQL DateTimeISO scalar accepts ISO 8601 string
-        } 
+        },
       },
       fetchPolicy: 'network-only',
       context: {
@@ -115,10 +115,10 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
     };
   }, [filterInputs, dateFilterParams, initialEvents, loadEvents]);
 
-  return { 
-    events, 
-    loading, 
-    error, 
-    hasFilterInputs: filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate 
+  return {
+    events,
+    loading,
+    error,
+    hasFilterInputs: filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate,
   };
 };

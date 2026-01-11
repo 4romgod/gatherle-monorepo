@@ -13,6 +13,7 @@ import {
   FormControl,
   InputLabel,
   Stack,
+  Card,
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -21,6 +22,7 @@ import { Gender, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
 import dayjs from 'dayjs';
+import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
 interface PersonalSettings {
   privateProfile: boolean;
@@ -81,20 +83,39 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
 
   return (
     <Box>
-      <Stack spacing={4}>
-        <Box sx={{ mb: { xs: 3, sm: 5 } }}>
-          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+      <Stack spacing={3}>
+        {/* Page Header */}
+        <Box sx={{ mb: 2 }}>
+          <Typography
+            variant="overline"
+            sx={{
+              color: 'primary.main',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              letterSpacing: '0.1em',
+            }}
+          >
+            PERSONAL
+          </Typography>
+          <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             Personal Settings
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
             Manage your personal information and privacy preferences
           </Typography>
         </Box>
 
         <Box component="form" action={formAction} noValidate>
           {/* Personal Details */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              p: 3,
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Personal Details
             </Typography>
 
@@ -135,11 +156,18 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 </FormControl>
               </Grid>
             </Grid>
-          </Box>
+          </Card>
 
           {/* Privacy Settings */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              p: 3,
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Privacy Settings
             </Typography>
 
@@ -210,17 +238,17 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 />
               </Box>
             </Stack>
-          </Box>
+          </Card>
 
           {/* Action Button */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: { xs: 3, sm: 4 } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
             <Button
               startIcon={<SaveIcon />}
               variant="contained"
-              color="secondary"
+              color="primary"
               type="submit"
               size="large"
-              sx={{ borderRadius: 2, px: 4, textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', width: { xs: '100%', sm: 'auto' } }}
+              sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
             >
               Save Changes
             </Button>

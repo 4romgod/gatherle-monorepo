@@ -3,9 +3,9 @@ import { headers } from 'next/headers';
 /**
  * Gets the base URL of the application dynamically based on request headers.
  * Uses http in development and https in production.
- * 
+ *
  * @returns The base URL (e.g., 'http://localhost:3000' or 'https://ntlango.com')
- * 
+ *
  * @example
  * ```ts
  * const baseUrl = await getBaseUrl();
@@ -21,10 +21,10 @@ export async function getBaseUrl(): Promise<string> {
 
 /**
  * Constructs a full URL for a given path.
- * 
+ *
  * @param path - The path to append to the base URL (should start with /)
  * @returns The full URL
- * 
+ *
  * @example
  * ```ts
  * const eventUrl = await getFullUrl('/events/my-event');

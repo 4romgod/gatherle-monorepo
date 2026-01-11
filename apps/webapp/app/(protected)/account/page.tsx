@@ -1,7 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, PermMedia } from '@mui/icons-material';
-import { Container } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import CustomTabs, { CustomTabsProps } from '@/components/tabs/custom-tabs';
 import EditProfilePage from '@/components/settings/EditProfilePage';
 import PersonalSettingsPage from '@/components/settings/PersonalSettingsPage';
@@ -115,8 +115,10 @@ export default async function SettingsPage() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
-      <CustomTabs tabsProps={tabsProps} />
-    </Container>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 0, md: 4 } }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
+        <CustomTabs tabsProps={tabsProps} />
+      </Container>
+    </Box>
   );
 }

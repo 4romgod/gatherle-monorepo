@@ -32,7 +32,14 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
         display: 'flex',
         flexDirection: 'column',
         border: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          bgcolor: 'action.hover',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        },
       }}
     >
       <CardContent sx={{ flexGrow: 1, p: 3 }}>
@@ -127,11 +134,10 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
 
       <Divider />
 
-      <CardActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
+      <CardActions sx={{ justifyContent: 'space-between', px: 3, py: 2.5 }}>
         {venueId ? (
           <Button
-            variant="outlined"
-            color="secondary"
+            variant="contained"
             size="medium"
             component={Link}
             href={detailsHref}
@@ -139,7 +145,7 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 600,
-              px: 2.5,
+              px: 3,
             }}
           >
             View Details
@@ -147,7 +153,6 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
         ) : (
           <Button
             variant="outlined"
-            color="secondary"
             size="medium"
             component={Link}
             href={ROUTES.VENUES.ROOT}
@@ -155,28 +160,12 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 600,
-              px: 2.5,
+              px: 3,
             }}
           >
             Browse Venues
           </Button>
         )}
-        <Button
-          variant="contained"
-          color="secondary"
-          size="medium"
-          component={Link}
-          href={ROUTES.EVENTS.ROOT}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            fontWeight: 600,
-            px: 2.5,
-            boxShadow: 2,
-          }}
-        >
-          Browse Events
-        </Button>
       </CardActions>
     </Card>
   );

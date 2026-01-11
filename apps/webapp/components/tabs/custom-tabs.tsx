@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, SyntheticEvent, useMemo } from 'react';
-import { Tabs, Tab, Box, Typography, Tooltip, useTheme, useMediaQuery } from '@mui/material';
+import { Tabs, Tab, Box, Typography, Card, useTheme, useMediaQuery } from '@mui/material';
 import { CustomTabPanel } from './custom-tabs-panel';
 
 export type CustomTabItem = {
@@ -69,32 +69,38 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
       sx={{
         display: 'flex',
         flexDirection: effectiveOrientation === 'vertical' ? 'row' : 'column',
-        height: effectiveOrientation === 'vertical' ? '100%' : 'auto',
+        minHeight: effectiveOrientation === 'vertical' ? '100vh' : 'auto',
+        gap: { xs: 0, md: 3 },
       }}
     >
-      <Box
+      {/* Sidebar Navigation */}
+      <Card
+        elevation={0}
         sx={{
-          borderBottom: effectiveOrientation === 'horizontal' ? 1 : 0,
+          borderRadius: { xs: 0, md: 3 },
+          border: 'none',
+          borderBottom: { xs: '1px solid', md: 'none' },
           borderColor: 'divider',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'background.default',
-          minHeight: effectiveOrientation === 'vertical' ? '100vh' : 'auto',
-          ...(effectiveOrientation === 'vertical' ? { minWidth: isSmallScreen ? 'auto' : '200px' } : {}),
+          backgroundColor: 'background.paper',
+          minHeight: effectiveOrientation === 'vertical' ? 'auto' : 'auto',
+          position: effectiveOrientation === 'vertical' ? { md: 'sticky' } : 'static',
+          top: effectiveOrientation === 'vertical' ? { md: 24 } : 'auto',
+          alignSelf: 'flex-start',
+          ...(effectiveOrientation === 'vertical' ? { minWidth: { xs: 'auto', md: 240 } } : {}),
         }}
       >
-        {tabsTitle && (
-          <Typography
-            variant="h6"
-            component="h2"
-            sx={{
-              py: 4,
-              px: 2,
-              display: isSmallScreen ? 'none' : 'block',
-            }}
-          >
-            {tabsTitle}
-          </Typography>
+        {tabsTitle && !isSmallScreen && (
+          <Box sx={{ p: 3 }}>
+            <Typography
+              variant="h5"
+              component="h2"
+              sx={{ fontWeight: 800, mt: 0.5 }}
+            >
+              {tabsTitle}
+            </Typography>
+          </Box>
         )}
 
         <Tabs
@@ -103,77 +109,88 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
           value={value}
           onChange={handleChange}
           aria-label={`${tabsTitle} tabs`}
-          textColor="secondary"
-          indicatorColor="secondary"
+          textColor="inherit"
           slotProps={{
             indicator: {
-              style: effectiveOrientation === 'vertical' ? { left: 0, width: 4 } : undefined,
+              style: effectiveOrientation === 'vertical' 
+                ? { left: 0, width: 3, borderRadius: 4, backgroundColor: theme.palette.primary.main } 
+                : { height: 3, borderRadius: 4, backgroundColor: theme.palette.primary.main },
             },
           }}
           sx={{
-            height: effectiveOrientation === 'vertical' ? '100%' : 'auto',
+            p: effectiveOrientation === 'vertical' ? 1 : 0,
             '& .MuiTab-root': {
-              minHeight: effectiveOrientation === 'vertical' ? 48 : undefined,
+              minHeight: effectiveOrientation === 'vertical' ? 48 : 56,
               textAlign: effectiveOrientation === 'horizontal' ? 'center' : 'left',
               justifyContent: effectiveOrientation === 'horizontal' ? 'center' : 'flex-start',
               alignItems: 'center',
+              borderRadius: effectiveOrientation === 'vertical' ? 2 : 0,
+              mx: effectiveOrientation === 'vertical' ? 0.5 : 0,
+              my: effectiveOrientation === 'vertical' ? 0.25 : 0,
+              color: 'text.secondary',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
               '&:hover': {
                 backgroundColor: 'action.hover',
+                color: 'text.primary',
               },
               '&.Mui-selected': {
-                fontWeight: 'bold',
+                fontWeight: 700,
+                color: 'text.primary',
+                backgroundColor: effectiveOrientation === 'vertical' ? 'action.selected' : 'transparent',
               },
             },
             '& .MuiTab-icon': {
-              marginRight: effectiveOrientation === 'vertical' ? '8px !important' : '0 !important',
+              marginRight: effectiveOrientation === 'vertical' ? '12px !important' : '0 !important',
               marginBottom: effectiveOrientation === 'horizontal' ? '4px !important' : '0 !important',
             },
           }}
         >
-          {tabs.map(({ name, icon, description, disabled }, index) => (
-            <Tooltip
+          {tabs.map(({ name, icon, disabled }, index) => (
+            <Tab
               key={`${id}-tab-${index}`}
-              title={description}
-              placement={effectiveOrientation === 'vertical' ? 'right' : 'bottom'}
-              arrow
-            >
-              <Tab
-                id={`${id}-tab-${index}`}
-                aria-controls={`${id}-panel-${index}`}
-                label={
-                  <span
-                    style={{
-                      textTransform: 'none',
-                      fontSize: effectiveOrientation === 'horizontal' ? '0.75rem' : undefined,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {name}
-                  </span>}
-                icon={icon}
-                iconPosition={effectiveOrientation === 'horizontal' ? 'top' : 'start'}
-                disabled={disabled}
-                sx={{
-                  opacity: disabled ? 0.5 : 1,
-                  px: effectiveOrientation === 'horizontal' ? 2 : undefined,
-                  py: effectiveOrientation === 'vertical' ? 1.5 : undefined,
-                  minWidth: isSmallScreen ? 'auto' : undefined,
-                }}
-              />
-            </Tooltip>
+              id={`${id}-tab-${index}`}
+              aria-controls={`${id}-panel-${index}`}
+              label={
+                <span
+                  style={{
+                    textTransform: 'none',
+                    fontSize: effectiveOrientation === 'horizontal' ? '0.75rem' : '0.875rem',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {name}
+                </span>}
+              icon={icon}
+              iconPosition={effectiveOrientation === 'horizontal' ? 'top' : 'start'}
+              disabled={disabled}
+              sx={{
+                opacity: disabled ? 0.5 : 1,
+                px: effectiveOrientation === 'horizontal' ? 2 : 2,
+                py: effectiveOrientation === 'vertical' ? 1.5 : undefined,
+                minWidth: isSmallScreen ? 'auto' : undefined,
+              }}
+            />
           ))}
         </Tabs>
-      </Box>
+      </Card>
 
-      <Box
+      {/* Content Area */}
+      <Card
+        elevation={0}
         sx={{
-          py: 0,
-          width: '100%',
+          flex: 1,
+          borderRadius: { xs: 0, md: 3 },
+          border: { xs: 0, md: '1px solid' },
+          borderColor: 'divider',
           backgroundColor: 'background.paper',
+          minHeight: '100vh',
         }}
       >
-        {tabPanels}
-      </Box>
+        <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+          {tabPanels}
+        </Box>
+      </Card>
     </Box>
   );
 }

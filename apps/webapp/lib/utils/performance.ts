@@ -43,7 +43,7 @@ export async function measureAsync<T>(operation: string, fn: () => Promise<T>): 
  * @returns Results array matching input order
  */
 export async function measureParallel<T extends any[]>(
-  operations: Array<{ name: string; fn: () => Promise<any> }>
+  operations: Array<{ name: string; fn: () => Promise<any> }>,
 ): Promise<T> {
   const startTime = performance.now();
   console.log(`[Performance] Starting ${operations.length} parallel operations...`);
@@ -60,7 +60,7 @@ export async function measureParallel<T extends any[]>(
         console.error(`  ✗ ${name} failed`, error);
         throw error;
       }
-    })
+    }),
   );
 
   const endTime = performance.now();

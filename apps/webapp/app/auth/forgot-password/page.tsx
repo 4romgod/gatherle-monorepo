@@ -4,13 +4,26 @@ import ForgotPasswordForm from '@/components/forms/auth/forgot-password';
 
 export default function ForgotPasswordPage() {
   return (
-    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.paper' }}>
+    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.default' }}>
       <Container maxWidth="sm">
-        <Paper elevation={3} sx={{ padding: 3, borderRadius: 2 }}>
-          <Logo />
+        <Paper
+          elevation={0}
+          sx={{
+            padding: 4,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <Logo />
+          </Box>
 
-          <Typography textAlign="center" component="h1" variant="h5" marginTop={2}>
-            Forgot Password
+          <Typography textAlign="center" component="h1" variant="h4" fontWeight={700} marginBottom={1}>
+            Reset your password
+          </Typography>
+          <Typography textAlign="center" variant="body2" color="text.secondary" marginBottom={4}>
+            Enter your email address and we'll send you a link to reset your password
           </Typography>
 
           <ForgotPasswordForm />

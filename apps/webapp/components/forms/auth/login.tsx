@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect } from 'react';
 import {
   Box,
   Button,
@@ -15,21 +15,30 @@ import {
   OutlinedInput,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { loginUserAction } from '@/data/actions/server/auth';
 import { FormErrors } from '@/components/form-errors';
 import { useAppContext } from '@/hooks/useAppContext';
+import { ROUTES } from '@/lib/constants';
+import NProgress from 'nprogress';
 
 export default function LoginForm() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [formState, formAction] = useActionState(loginUserAction, {});
+  const [formState, formAction, isPending] = useActionState(loginUserAction, {});
   const { setToastProps, toastProps } = useAppContext();
 
   const handleClickShowPassword = () => setShowPassword(prev => !prev);
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
+
+  useEffect(() => {
+    if (isPending) {
+      NProgress.start();
+    } else {
+      NProgress.done();
+    }
+  }, [isPending]);
 
   useEffect(() => {
     if (formState.apiError) {
@@ -100,22 +109,22 @@ export default function LoginForm() {
 
       <FormControlLabel control={<Checkbox value="remember" color="secondary" />} label="Remember me" />
 
-      <Button variant="contained" color="secondary" fullWidth sx={{ mt: 3, mb: 2 }} type="submit">
-        Log in
+      <Button variant="contained" color="secondary" fullWidth sx={{ mt: 3, mb: 2 }} type="submit" disabled={isPending}>
+        {isPending ? 'Logging in...' : 'Log in'}
       </Button>
 
       <Grid container>
         <Grid>
-          <a style={{ color: '#1e88e5', cursor: 'pointer' }} onClick={() => router.push('/auth/forgot-password')}>
+          <Link href={ROUTES.AUTH.FORGOT_PASSWORD} style={{ color: '#1e88e5', cursor: 'pointer' }}>
             Forgot password?
-          </a>
+          </Link>
         </Grid>
         <Grid>
           <Box>
             <span>Don&apos;t have an account?&nbsp;</span>
-            <a style={{ color: '#1e88e5', cursor: 'pointer' }} onClick={() => router.push('/auth/register')}>
-              {'Sign Up'}
-            </a>
+            <Link href={ROUTES.AUTH.REGISTER} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+              Sign Up
+            </Link>
           </Box>
         </Grid>
       </Grid>

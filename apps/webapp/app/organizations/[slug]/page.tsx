@@ -1,6 +1,7 @@
-import { Avatar, Box, Button, Container, Divider, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Button, Container, Card, CardContent, Divider, Stack, Typography, Grid, Paper, Chip } from '@mui/material';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { LocationOn, Language, People, ArrowBack, Share, CalendarMonth } from '@mui/icons-material';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
@@ -79,147 +80,319 @@ export default async function OrganizationPage({ params }: Props) {
     events = [];
   }
 
+  const coverImage = organization.logo || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
+
   return (
-    <Container maxWidth="lg" sx={{ py: 5 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          alignItems: 'center',
-          gap: 3,
-          mb: 4,
-        }}
-      >
-        <Avatar
-          src={organization.logo || undefined}
-          alt={organization.name}
-          sx={{
-            width: 100,
-            height: 100,
-            bgcolor: 'primary.main',
-            fontSize: 40,
-            fontWeight: 700,
-          }}
-        >
-          {organization.name?.charAt(0)}
-        </Avatar>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            {organization.name}
-          </Typography>
-          <Typography color="text.secondary" variant="body1">
-            {organization.description || 'No description provided yet.'}
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2 }}>
-            {tags.map(tag => (
-              <Button size="small" key={tag} variant="outlined">
-                #{tag}
-              </Button>
-            ))}
-          </Stack>
-        </Box>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            Followers
-          </Typography>
-          <Typography variant="h6" fontWeight={600}>
-            {organization.followersCount.toLocaleString()}
-          </Typography>
-          <Button
-            variant={organization.isFollowable ? 'contained' : 'outlined'}
-            sx={{ mt: 1 }}
-            disabled={!organization.isFollowable}
-          >
-            {organization.isFollowable ? 'Follow' : 'Not followable'}
-          </Button>
-        </Box>
-      </Box>
-
-      <Divider />
-
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h5" fontWeight={600} gutterBottom>
-          Links and domains
-        </Typography>
-        <Stack direction="row" flexWrap="wrap" spacing={1}>
-          {links.map(link => (
-            <Button key={link.url} component="a" href={link.url} size="small" target="_blank" rel="noreferrer">
-              {link.label}
-            </Button>
-          ))}
-          {domainsAllowed.map(domain => (
-            <Button key={domain} size="small" variant="outlined">
-              {domain}
-            </Button>
-          ))}
-        </Stack>
-      </Box>
-
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h5" fontWeight={600} gutterBottom>
-          Event defaults
-        </Typography>
+    <Box>
+      {/* Hero Section with Cover */}
+      <Box sx={{ position: 'relative', bgcolor: 'background.default' }}>
         <Box
           sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            height: { xs: 280, sm: 340, md: 380 },
+            width: '100%',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          {[
-            { label: 'Visibility', value: organization.eventDefaults?.visibility ?? 'Public' },
-            { label: 'Reminders', value: organization.eventDefaults?.remindersEnabled ? 'On' : 'Off' },
-            { label: 'Waitlist', value: organization.eventDefaults?.waitlistEnabled ? 'Enabled' : 'Disabled' },
-            { label: 'Guest +1', value: organization.eventDefaults?.allowGuestPlusOnes ? 'Allowed' : 'Disabled' },
-            { label: 'Ticket access', value: organization.eventDefaults?.ticketAccess ?? 'Unrestricted' },
-          ].map(meta => (
-            <Box
-              key={meta.label}
-              sx={{
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                p: 2,
-                minHeight: 90,
-              }}
-            >
-              <Typography variant="subtitle2" color="text.secondary">
-                {meta.label}
-              </Typography>
-              <Typography variant="body1" fontWeight={600}>
-                {meta.value}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      <Box sx={{ mt: 5 }}>
-        <Typography variant="h5" fontWeight={600} gutterBottom>
-          Upcoming events
-        </Typography>
-        {events.length === 0 ? (
-          <Typography color="text.secondary">No events have been published yet.</Typography>
-        ) : (
+          <Box
+            component="img"
+            src={coverImage}
+            alt={organization.name}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 35%',
+            }}
+          />
           <Box
             sx={{
-              display: 'grid',
-              gap: 3,
-              gridTemplateColumns: {
-                xs: '1fr',
-                md: 'repeat(3, minmax(0, 1fr))',
-                lg: 'repeat(4, minmax(0, 1fr))',
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '45%',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
+            }}
+          />
+          
+          {/* Back Button */}
+          <Button
+            component={Link}
+            href={ROUTES.ORGANIZATIONS.ROOT}
+            startIcon={<ArrowBack />}
+            sx={{
+              position: 'absolute',
+              top: 24,
+              left: 24,
+              bgcolor: 'background.paper',
+              opacity: 0.95,
+              backdropFilter: 'blur(10px)',
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                bgcolor: 'background.paper',
+                opacity: 1,
               },
             }}
           >
-            {events.map(event => (
-              <Box key={event.eventId}>
-                <EventBoxSm event={event} />
+            Back
+          </Button>
+
+          {/* Avatar and Title */}
+          <Container
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 2,
+              pb: 3,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+              <Avatar
+                src={organization.logo || undefined}
+                alt={organization.name}
+                sx={{
+                  width: { xs: 80, sm: 100, md: 120 },
+                  height: { xs: 80, sm: 100, md: 120 },
+                  border: '4px solid',
+                  borderColor: 'common.white',
+                  bgcolor: 'primary.main',
+                  fontSize: { xs: 32, sm: 40, md: 48 },
+                  fontWeight: 700,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                }}
+              >
+                {organization.name?.charAt(0)}
+              </Avatar>
+              <Box sx={{ flex: 1, pb: 1 }}>
+                <Typography
+                  variant="h3"
+                  fontWeight={800}
+                  sx={{
+                    color: 'common.white',
+                    fontSize: { xs: '1.625rem', sm: '2rem', md: '2.5rem' },
+                    textShadow: '0 2px 20px rgba(0,0,0,0.5)',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {organization.name}
+                </Typography>
               </Box>
-            ))}
-          </Box>
-        )}
+            </Box>
+          </Container>
+        </Box>
       </Box>
-    </Container>
+
+      {/* Main Content */}
+      <Container sx={{ mt: -6, position: 'relative', zIndex: 1 }}>
+        <Grid container spacing={3}>
+          {/* Left Column - Main Content */}
+          <Grid size={{ xs: 12, md: 8 }}>
+            {/* About Card */}
+            <Card
+              elevation={0}
+              sx={{
+                mb: 3,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="overline" color="primary" fontWeight={700} sx={{ letterSpacing: '0.1em' }}>
+                  About
+                </Typography>
+                <Typography variant="h5" fontWeight={700} sx={{ mb: 2, lineHeight: 1.3 }}>
+                  {organization.name}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                  {organization.description || 'No description provided yet.'}
+                </Typography>
+                
+                {tags.length > 0 && (
+                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={1} sx={{ mt: 3 }}>
+                    {tags.map(tag => (
+                      <Chip key={tag} label={`#${tag}`} size="small" sx={{ fontWeight: 500 }} />
+                    ))}
+                  </Stack>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Links Card */}
+            {(links.length > 0 || domainsAllowed.length > 0) && (
+              <Card
+                elevation={0}
+                sx={{
+                  mb: 3,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                    Links & Domains
+                  </Typography>
+                  <Stack spacing={1}>
+                    {links.map(link => (
+                      <Button
+                        key={link.url}
+                        component="a"
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        startIcon={<Language />}
+                        variant="outlined"
+                        fullWidth
+                        sx={{ justifyContent: 'flex-start', textTransform: 'none', fontWeight: 600 }}
+                      >
+                        {link.label}
+                      </Button>
+                    ))}
+                    {domainsAllowed.map(domain => (
+                      <Chip key={domain} label={domain} variant="outlined" />
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Upcoming Events */}
+            <Card
+              elevation={0}
+              sx={{
+                mb: 3,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
+                  Upcoming Events
+                </Typography>
+                {events.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <CalendarMonth sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                    <Typography color="text.secondary">No events published yet</Typography>
+                  </Box>
+                ) : (
+                  <Grid container spacing={2}>
+                    {events.map(event => (
+                      <Grid size={{ xs: 12, sm: 6 }} key={event.eventId}>
+                        <EventBoxSm event={event} />
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right Column - Sidebar */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ position: { md: 'sticky' }, top: 24 }}>
+              {/* Stats Card */}
+              <Card
+                elevation={0}
+                sx={{
+                  mb: 3,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="overline" color="text.secondary" fontWeight={600}>
+                    Community
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 3 }}>
+                    <People sx={{ color: 'primary.main', fontSize: 28 }} />
+                    <Typography variant="h4" fontWeight={700}>
+                      {organization.followersCount.toLocaleString()}
+                    </Typography>
+                    <Typography color="text.secondary">followers</Typography>
+                  </Box>
+                  <Button
+                    variant={organization.isFollowable ? 'contained' : 'outlined'}
+                    fullWidth
+                    disabled={!organization.isFollowable}
+                    sx={{ fontWeight: 600, textTransform: 'none', py: 1.5 }}
+                  >
+                    {organization.isFollowable ? 'Follow' : 'Private'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Share Card */}
+              <Card
+                elevation={0}
+                sx={{
+                  mb: 3,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'action.hover',
+                }}
+              >
+                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                  <Share sx={{ fontSize: 32, color: 'text.secondary', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>
+                    Share this organization
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    sx={{ mt: 2, fontWeight: 600, textTransform: 'none' }}
+                  >
+                    Copy Link
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Event Defaults Card */}
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="overline" color="text.secondary" fontWeight={600}>
+                    Event Defaults
+                  </Typography>
+                  <Stack spacing={2} sx={{ mt: 2 }}>
+                    {[
+                      { label: 'Visibility', value: organization.eventDefaults?.visibility ?? 'Public' },
+                      { label: 'Reminders', value: organization.eventDefaults?.remindersEnabled ? 'On' : 'Off' },
+                      { label: 'Waitlist', value: organization.eventDefaults?.waitlistEnabled ? 'Enabled' : 'Disabled' },
+                      { label: 'Guest +1', value: organization.eventDefaults?.allowGuestPlusOnes ? 'Allowed' : 'Disabled' },
+                    ].map(meta => (
+                      <Box key={meta.label}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                          {meta.label}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {meta.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 }

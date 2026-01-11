@@ -5,8 +5,8 @@ import InputBase from '@mui/material/InputBase';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { useRouter } from 'next/navigation';
 import { styled } from '@mui/material/styles';
+import { navigateToHash } from '@/lib/utils/navigation';
 
 const StyledSelect = styled(Select<string>, { shouldForwardProp: prop => prop !== 'isDefaultSelected' })<{
   isDefaultSelected: boolean;
@@ -44,7 +44,6 @@ interface DropDownProps<T extends Item> {
 
 export default function DropDown<T extends Item>({ itemList, defaultItem, renderItem }: DropDownProps<T>) {
   const [selectedItem, setSelectedItem] = useState<string>('');
-  const router = useRouter();
 
   const onSelectChangeHandler = (event: SelectChangeEvent<string>) => {
     const selectedItemName = event.target.value;
@@ -53,7 +52,7 @@ export default function DropDown<T extends Item>({ itemList, defaultItem, render
 
     if (selectedItem && selectedItem.name) {
       console.log(`#${selectedItem.name}`);
-      router.push(`#${selectedItem.name}`);
+      navigateToHash(selectedItem.name);
     }
   };
 

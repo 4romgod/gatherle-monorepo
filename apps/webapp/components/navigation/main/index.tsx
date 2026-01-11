@@ -98,7 +98,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               <Button
                 variant="text"
                 color="inherit"
-                onClick={() => router.push(ROUTES.AUTH.LOGIN)}
+                component={Link}
+                href={ROUTES.AUTH.LOGIN}
                 sx={{
                   color: 'text.secondary',
                   fontWeight: 600,
@@ -110,7 +111,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               <Button
                 variant="contained"
                 color="secondary"
-                onClick={() => router.push(ROUTES.AUTH.REGISTER)}
+                component={Link}
+                href={ROUTES.AUTH.REGISTER}
                 sx={{ borderRadius: 10 }}
               >
                 Join Ntlango
@@ -131,7 +133,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 variant="contained"
                 color="secondary"
                 startIcon={<ControlPointOutlined />}
-                onClick={() => router.push(ROUTES.ACCOUNT.EVENTS.CREATE)}
+                component={Link}
+                href={ROUTES.ACCOUNT.EVENTS.CREATE}
                 sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: 10 }}
               >
                 Host an event

@@ -78,7 +78,7 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
     });
 
     logger.info('User profile updated successfully', { userId });
-    
+
     const responseData = updateResponse.data?.updateUser;
     return {
       ...prevState,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Box,
   Button,
@@ -16,26 +16,33 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { registerUserAction } from '@/data/actions/server/auth';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { FormErrors } from '@/components/form-errors';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useAppContext } from '@/hooks/useAppContext';
-import { useEffect, useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF } from 'react-icons/fa';
+import NProgress from 'nprogress';
 
 export default function RegisterForm() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { setToastProps, toastProps } = useAppContext();
-  const [formState, formAction] = useActionState(registerUserAction, {});
+  const [formState, formAction, isPending] = useActionState(registerUserAction, {});
 
   const handleClickShowPassword = () => setShowPassword(show => !show);
 
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
+
+  useEffect(() => {
+    if (isPending) {
+      NProgress.start();
+    } else {
+      NProgress.done();
+    }
+  }, [isPending]);
 
   useEffect(() => {
     if (formState.apiError) {
@@ -64,9 +71,9 @@ export default function RegisterForm() {
     <Box component="form" action={formAction} noValidate>
       <Typography variant="body1" textAlign="center" paddingBottom={3}>
         <span>Already a member?&nbsp;</span>
-        <a style={{ color: '#1e88e5', cursor: 'pointer' }} onClick={() => router.push('/auth/login')}>
-          {'Log in here'}
-        </a>
+        <Link href="/auth/login" style={{ color: '#1e88e5', cursor: 'pointer' }}>
+          Log in here
+        </Link>
       </Typography>
 
       <Grid container spacing={2}>
@@ -120,8 +127,8 @@ export default function RegisterForm() {
         <FormErrors error={formState.zodErrors?.birthdate} />
       </FormControl>
 
-      <Button variant="contained" color="secondary" fullWidth={true} sx={{ mt: 2 }} type="submit">
-        Sign up
+      <Button variant="contained" color="secondary" fullWidth={true} sx={{ mt: 2 }} type="submit" disabled={isPending}>
+        {isPending ? 'Signing up...' : 'Sign up'}
       </Button>
 
       <Divider sx={{ marginY: 2 }}>or</Divider>

@@ -7,26 +7,44 @@ import { MdEmail } from 'react-icons/md';
 
 export default function LoginPage() {
   return (
-    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.paper' }}>
+    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.default' }}>
       <Container maxWidth="sm">
-        <Paper elevation={3} sx={{ padding: 3, borderRadius: 2 }}>
-          <Logo />
+        <Paper
+          elevation={0}
+          sx={{
+            padding: 4,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <Logo />
+          </Box>
 
-          <Typography textAlign="center" component="h1" variant="h5" marginTop={2}>
-            Log in
+          <Typography textAlign="center" component="h1" variant="h4" fontWeight={700} marginBottom={1}>
+            Welcome back
+          </Typography>
+          <Typography textAlign="center" variant="body2" color="text.secondary" marginBottom={4}>
+            Sign in to your account to continue
           </Typography>
 
           <LoginForm />
 
-          <Divider sx={{ marginY: 2 }}>or</Divider>
+          <Divider sx={{ marginY: 3 }}>or</Divider>
 
           <Button
             variant="outlined"
             size="large"
-            color="secondary"
             fullWidth
             startIcon={<FaFacebookF />}
-            sx={{ mt: 1, mb: 1 }}
+            sx={{
+              mt: 1,
+              mb: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
           >
             Continue with Facebook
           </Button>
@@ -34,10 +52,15 @@ export default function LoginPage() {
           <Button
             variant="outlined"
             size="large"
-            color="secondary"
             fullWidth
             startIcon={<FcGoogle />}
-            sx={{ mt: 1, mb: 1 }}
+            sx={{
+              mt: 1,
+              mb: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
           >
             Continue with Google
           </Button>
@@ -45,10 +68,15 @@ export default function LoginPage() {
           <Button
             variant="outlined"
             size="large"
-            color="secondary"
             fullWidth
             startIcon={<MdEmail />}
-            sx={{ mt: 1, mb: 1 }}
+            sx={{
+              mt: 1,
+              mb: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
           >
             Sign up with Email
           </Button>

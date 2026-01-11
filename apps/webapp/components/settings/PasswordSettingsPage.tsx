@@ -12,9 +12,11 @@ import {
   InputAdornment,
   LinearProgress,
   Stack,
+  Card,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Security as SecurityIcon } from '@mui/icons-material';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
+import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
 interface PasswordSettings {
   currentPassword: string;
@@ -192,18 +194,35 @@ export default function PasswordSettingsPage() {
 
   return (
     <Box>
-      <Box sx={{ mb: { xs: 3, sm: 5 } }}>
-        <Typography variant="h4" fontWeight={700} gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="overline"
+          sx={{
+            color: 'primary.main',
+            fontWeight: 700,
+            fontSize: '0.75rem',
+            letterSpacing: '0.1em',
+          }}
+        >
+          SECURITY
+        </Typography>
+        <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Password Management
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
           Update your password to keep your account secure
         </Typography>
       </Box>
 
       <form onSubmit={handleChangePassword}>
-        <Box>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            p: 3,
+          }}
+        >
+          <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Change Password
           </Typography>
 
@@ -283,7 +302,10 @@ export default function PasswordSettingsPage() {
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: `${passwordStrength.color}.main`,
-                    bgcolor: (theme) => theme.palette.mode === 'dark' ? `${passwordStrength.color}.dark` : `${passwordStrength.color}.lighter`,
+                    bgcolor: theme =>
+                      theme.palette.mode === 'dark'
+                        ? `${passwordStrength.color}.dark`
+                        : `${passwordStrength.color}.lighter`,
                   }}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -291,7 +313,13 @@ export default function PasswordSettingsPage() {
                       Password Strength
                     </Typography>
                     <Typography variant="body2" fontWeight={700} color={`${passwordStrength.color}.main`}>
-                      {passwordStrength.score >= 80 ? 'Strong' : passwordStrength.score >= 60 ? 'Good' : passwordStrength.score >= 40 ? 'Fair' : 'Weak'}
+                      {passwordStrength.score >= 80
+                        ? 'Strong'
+                        : passwordStrength.score >= 60
+                          ? 'Good'
+                          : passwordStrength.score >= 40
+                            ? 'Fair'
+                            : 'Weak'}
                     </Typography>
                   </Stack>
                   <LinearProgress
@@ -302,12 +330,23 @@ export default function PasswordSettingsPage() {
                   />
                   {passwordStrength.feedback.length > 0 && (
                     <Box>
-                      <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 1 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{ display: 'block', mb: 1 }}
+                      >
                         Suggestions to improve:
                       </Typography>
                       <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
                         {passwordStrength.feedback.map((tip, index) => (
-                          <Typography key={index} component="li" variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+                          <Typography
+                            key={index}
+                            component="li"
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mb: 0.5 }}
+                          >
                             {tip}
                           </Typography>
                         ))}
@@ -367,19 +406,19 @@ export default function PasswordSettingsPage() {
             </Alert>
           )}
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
             <Button
               type="submit"
               variant="contained"
-              color="secondary"
+              color="primary"
               disabled={!isFormValid || isPending}
               size="large"
-              sx={{ borderRadius: 2, px: 4, textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', width: { xs: '100%', sm: 'auto' } }}
+              sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
             >
               {isPending ? 'Changing Password...' : 'Change Password'}
             </Button>
           </Stack>
-        </Box>
+        </Card>
       </form>
     </Box>
   );

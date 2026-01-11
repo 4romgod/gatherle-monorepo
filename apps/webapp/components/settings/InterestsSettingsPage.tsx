@@ -17,23 +17,25 @@ import {
   InputAdornment,
   Stack,
   Alert,
+  Card,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user';
 import { signIn, useSession } from 'next-auth/react';
 import EventCategoryChip from '@/components/events/category/chip';
+import { BUTTON_STYLES, SECTION_TITLE_STYLES, EMPTY_STATE_STYLES, EMPTY_STATE_ICON_STYLES } from '@/lib/constants';
 
 type InterestsSettingsPageProps = {
   user: User;
   eventCategoryGroups: EventCategoryGroup[];
-}
+};
 export default function InterestsSettingsPage({ user, eventCategoryGroups }: InterestsSettingsPageProps) {
   const [selectedInterests, setSelectedInterests] = useState<EventCategory[]>(user.interests ? user.interests : []);
   const [tempInterests, setTempInterests] = useState<EventCategory[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const { data: session } = useSession();
   const [isPending, startTransition] = useTransition();
   const [state, formAction] = useActionState(updateUserProfileAction, {
@@ -63,7 +65,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
     const formData = new FormData();
     formData.append('userId', user.userId);
     formData.append('interests', JSON.stringify(tempInterests.map(i => i.eventCategoryId)));
-    
+
     startTransition(() => {
       formAction(formData);
     });
@@ -107,27 +109,44 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           {state.apiError}
         </Alert>
       )}
-      
+
       {hasSuccess && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Your interests have been updated successfully!
         </Alert>
       )}
-      
-      <Stack spacing={4}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={{ xs: 2, sm: 0 }} sx={{ mb: { xs: 3, sm: 5 } }}>
+
+      <Stack spacing={3}>
+        {/* Page Header */}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={{ xs: 2, sm: 0 }}
+        >
           <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                letterSpacing: '0.1em',
+              }}
+            >
+              INTERESTS
+            </Typography>
+            <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               My Interests
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
               Select interests to get personalized event recommendations
             </Typography>
           </Box>
 
           <Button
             startIcon={<AddIcon />}
-            variant="outlined"
+            variant="contained"
             color="primary"
             onClick={() => {
               setTempInterests([...selectedInterests]);
@@ -135,25 +154,33 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
               setOpenModal(true);
             }}
             size="large"
-            sx={{ borderRadius: 2, px: 3, textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', width: { xs: '100%', sm: 'auto' } }}
+            sx={{ ...BUTTON_STYLES, px: 3, width: { xs: '100%', sm: 'auto' } }}
           >
             Edit Interests
           </Button>
         </Stack>
 
         {/* Selected Interests Display */}
-        <Box>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            p: 3,
+          }}
+        >
+          <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Your Interests ({selectedInterests.length})
           </Typography>
 
           {selectedInterests.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <AddIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-              <Typography variant="h6" fontWeight={600} gutterBottom>
+            <Box sx={EMPTY_STATE_STYLES}>
+              <Box sx={EMPTY_STATE_ICON_STYLES}>
+                <AddIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+              </Box>
+              <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
                 No interests selected yet
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
                 Click "Edit Interests" to get started and receive personalized recommendations!
               </Typography>
             </Box>
@@ -166,7 +193,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
               ))}
             </Box>
           )}
-        </Box>
+        </Card>
       </Stack>
 
       {/* Interest Selection Modal */}
@@ -192,11 +219,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
                 Choose categories you're interested in
               </Typography>
             </Box>
-            <Button 
-              size="small" 
-              onClick={() => setOpenModal(false)} 
-              sx={{ minWidth: 'auto', color: 'text.secondary' }}
-            >
+            <Button size="small" onClick={() => setOpenModal(false)} sx={{ minWidth: 'auto', color: 'text.secondary' }}>
               <CloseIcon />
             </Button>
           </Stack>
@@ -229,7 +252,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
             sx={{
               p: 2,
               mb: 2,
-              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'secondary.dark' : 'secondary.lighter',
+              bgcolor: theme => (theme.palette.mode === 'dark' ? 'secondary.dark' : 'secondary.lighter'),
               borderRadius: 2,
             }}
           >
@@ -305,7 +328,11 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
                                 color="secondary"
                               />
                             }
-                            label={<Typography variant="body2" fontWeight={500}>{category.name}</Typography>}
+                            label={
+                              <Typography variant="body2" fontWeight={500}>
+                                {category.name}
+                              </Typography>
+                            }
                             sx={{ m: 0, width: '100%', userSelect: 'none' }}
                           />
                         </Box>
@@ -318,24 +345,21 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 2, gap: 1 }}>
-          <Button 
-            onClick={() => setOpenModal(false)} 
-            variant="outlined" 
-            size="large"
-            sx={{ borderRadius: 2, px: 3, textTransform: 'none', fontWeight: 600 }}
-          >
+          <Button onClick={() => setOpenModal(false)} variant="outlined" size="large" sx={{ ...BUTTON_STYLES, px: 3 }}>
             Cancel
           </Button>
           <Button
             startIcon={<SaveIcon />}
             onClick={handleSaveInterests}
-            color="secondary"
+            color="primary"
             variant="contained"
             size="large"
             disabled={isPending}
-            sx={{ borderRadius: 2, px: 3, textTransform: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+            sx={{ ...BUTTON_STYLES, px: 3 }}
           >
-            {isPending ? 'Saving...' : `Save ${tempInterests.length} ${tempInterests.length === 1 ? 'Interest' : 'Interests'}`}
+            {isPending
+              ? 'Saving...'
+              : `Save ${tempInterests.length} ${tempInterests.length === 1 ? 'Interest' : 'Interests'}`}
           </Button>
         </DialogActions>
       </Dialog>

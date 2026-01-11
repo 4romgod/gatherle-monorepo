@@ -5,10 +5,10 @@ import { ROUTES } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 import { isAuthenticated } from './lib/utils';
 
-export default auth(async (req) => {
+export default auth(async req => {
   const { nextUrl } = req;
 
-  const isLoggedIn = Boolean(req.auth) && await isAuthenticated(req.auth?.user?.token);
+  const isLoggedIn = Boolean(req.auth) && (await isAuthenticated(req.auth?.user?.token));
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname) || isPublicDynamicRoute(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
