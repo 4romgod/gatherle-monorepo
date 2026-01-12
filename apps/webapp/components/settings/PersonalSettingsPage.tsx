@@ -86,17 +86,6 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
       <Stack spacing={3}>
         {/* Page Header */}
         <Box sx={{ mb: 2 }}>
-          <Typography
-            variant="overline"
-            sx={{
-              color: 'primary.main',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-              letterSpacing: '0.1em',
-            }}
-          >
-            PERSONAL
-          </Typography>
           <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             Personal Settings
           </Typography>

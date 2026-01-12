@@ -9,8 +9,9 @@ import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material'
 import { RRule } from 'rrule';
 import Link from 'next/link';
 
-export default function EventBoxSm({ event }: { event: EventPreview }) {
+export default function EventBoxSm({ event, href }: { event: EventPreview; href?: string }) {
   const { recurrenceRule, participants, location, media, heroImage } = event;
+
   const recurrenceText = (() => {
     if (!recurrenceRule) {
       return 'Single occurrence';
@@ -21,10 +22,12 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
       return 'Custom recurrence';
     }
   })();
-  const imageUrl =
-    heroImage ||
-    media?.featuredImageUrl ||
-    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
+
+  // TODO: This placeholder image is just for development purposes
+  const imageUrl = heroImage
+    || media?.featuredImageUrl
+    || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
+
   const cityLabel = location?.address?.city || 'Featured';
   const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
   const participantCount = participants?.length ?? 0;
@@ -43,7 +46,7 @@ export default function EventBoxSm({ event }: { event: EventPreview }) {
     '?';
 
   return (
-    <Link href={`/events/${event.slug}`}>
+    <Link href={href || `/events/${event.slug}`}>
       <Card
         sx={{
           height: '100%',

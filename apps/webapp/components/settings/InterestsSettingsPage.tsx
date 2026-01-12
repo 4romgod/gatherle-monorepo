@@ -125,17 +125,6 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           spacing={{ xs: 2, sm: 0 }}
         >
           <Box>
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                letterSpacing: '0.1em',
-              }}
-            >
-              INTERESTS
-            </Typography>
             <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               My Interests
             </Typography>

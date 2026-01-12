@@ -104,17 +104,6 @@ export default function SocialMediaSettingsPage() {
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="overline"
-          sx={{
-            color: 'primary.main',
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            letterSpacing: '0.1em',
-          }}
-        >
-          SOCIAL
-        </Typography>
         <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Social Media Settings
         </Typography>
