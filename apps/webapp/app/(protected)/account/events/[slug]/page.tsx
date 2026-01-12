@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { GetEventBySlugDocument, GetEventBySlugQuery, Location, ParticipantStatus } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import {
@@ -35,6 +36,7 @@ import {
 import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import CopyLinkButton from '@/components/events/copy-link-button';
+import { auth } from '@/auth';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -44,12 +46,33 @@ export default async function Page(props: Props) {
   const params = await props.params;
   const eventUrl = await getFullUrl(`/events/${params.slug}`);
 
+  // Get current user session
+  const session = await auth();
+  const currentUserId = session?.user?.userId;
+
+  if (!currentUserId) {
+    redirect('/auth/signin');
+  }
+
   const { data: eventRetrieved } = await getClient().query({
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
   });
 
   const event = eventRetrieved.readEventBySlug as EventDetail;
+
+  // Check if event exists
+  if (!event) {
+    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+  }
+
+  // Authorization check: Only organizers can access this page
+  const isOrganizer = event.organizers.some(organizer => organizer.user.userId === currentUserId);
+
+  if (!isOrganizer) {
+    // Redirect unauthorized users back to their events list
+    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+  }
   const { title, organizers, description, media, recurrenceRule, location, eventCategories, participants } = event;
 
   type EventDetailParticipant = NonNullable<NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']>[number];

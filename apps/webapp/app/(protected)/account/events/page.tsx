@@ -1,4 +1,4 @@
-import EventBox from '@/components/events/event-box';
+import EventBox from '@/components/events/event-box-sm';
 import { FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
@@ -104,12 +104,7 @@ export default async function EventsPage() {
           <Grid container spacing={3}>
             {eventList.map(event => (
               <Grid size={{ xs: 12, md: 6, lg: 4 }} key={event.eventId}>
-                <Link
-                  href={ROUTES.ACCOUNT.EVENTS.EVENT(event.slug)}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <EventBox event={event} />
-                </Link>
+                <EventBox event={event} href={ROUTES.ACCOUNT.EVENTS.EVENT(event.slug)} />
               </Grid>
             ))}
           </Grid>

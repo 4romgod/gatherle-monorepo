@@ -89,17 +89,6 @@ export default function EditProfilePage({ user }: { user: User }) {
         sx={{ mb: 4 }}
       >
         <Box>
-          <Typography
-            variant="overline"
-            sx={{
-              color: 'primary.main',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-              letterSpacing: '0.1em',
-            }}
-          >
-            PROFILE
-          </Typography>
           <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
             Edit Profile
           </Typography>

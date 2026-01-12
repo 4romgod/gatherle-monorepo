@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { Box, Container, Typography, Button, Stack, Card } from '@mui/material';
 import { ArrowBack, Edit } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
@@ -7,6 +8,7 @@ import EventMutationForm from '@/components/forms/event-mutation';
 import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import Link from 'next/link';
+import { auth } from '@/auth';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -14,6 +16,13 @@ interface Props {
 
 export default async function Page(props: Props) {
   const params = await props.params;
+
+  const session = await auth();
+  const currentUserId = session?.user?.userId;
+
+  if (!currentUserId) {
+    redirect('/auth/signin');
+  }
 
   const { data: eventCategories } = await getClient().query({
     query: GetAllEventCategoriesDocument,
@@ -25,6 +34,17 @@ export default async function Page(props: Props) {
   });
 
   const event = eventRetrieved.readEventBySlug as EventDetail;
+
+  // Check if event exists
+  if (!event) {
+    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+  }
+
+  const isOrganizer = event.organizers.some(organizer => organizer.user.userId === currentUserId);
+
+  if (!isOrganizer) {
+    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+  }
 
   return (
     <Box

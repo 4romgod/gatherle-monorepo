@@ -75,17 +75,6 @@ export default function EventSettingsPage({ user }: { user: User }) {
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="overline"
-          sx={{
-            color: 'primary.main',
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            letterSpacing: '0.1em',
-          }}
-        >
-          EVENTS
-        </Typography>
         <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Event Preferences
         </Typography>

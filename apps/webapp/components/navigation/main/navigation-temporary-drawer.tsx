@@ -36,22 +36,22 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const DrawerList = (
     <Box sx={{ width: 280 }} role="presentation" onClick={toggleDrawer(false)}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
-        {isAuthN ? (
+        {isAuthN && session?.user ? (
           <Link
             href={ROUTES.ACCOUNT.PROFILE}
             aria-label="View profile"
             style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}
           >
             <Avatar
-              src={getAvatarSrc(session?.user)}
-              alt={getDisplayName(session?.user)}
+              src={getAvatarSrc(session.user)}
+              alt={getDisplayName(session.user)}
               sx={{ width: 48, height: 48 }}
             />
             <Box>
               <Typography variant="subtitle1" sx={{ color: 'text.primary' }}>
-                {getDisplayName(session?.user)}
+                {getDisplayName(session.user)}
               </Typography>
-              {session?.user?.email && (
+              {session.user.email && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   {session.user.email}
                 </Typography>

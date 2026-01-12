@@ -251,4 +251,65 @@ apps/webapp/
 
 ---
 
+## Predefined Webapp Commands
+
+### Open Browser (`browser`)
+**Trigger**: User types `browser`, `open browser`, `view`, or similar.
+
+**Workflow**:
+1. Check if webapp dev server is running on `http://localhost:3000`
+   - If not running, inform user to start it: `npm run dev:web`
+2. Open browser using `open_simple_browser` tool with URL: `http://localhost:3000`
+3. Keep browser open for testing and visual inspection
+
+**Example Usage**:
+```
+User: "browser"
+Agent: Opens http://localhost:3000 in Simple Browser
+```
+
+**Use Cases:**
+- Quick visual check of current changes
+- Preview UI after making modifications
+- View dev server without manually opening browser
+
+---
+
+### Authenticate (`auth`)
+**Trigger**: User types `auth`, `login`, `sign in`, or similar.
+
+**Workflow**:
+1. Guide user to sign-in page if browser is open (or inform to use `browser` command first)
+2. Provide mock user credentials based on testing needs:
+   - **Default (Host with events):** `jay@rocknation.com` / `tryuik` (jayz - has organized events)
+   - **Alternative Host:** `Jeff@amazon.com` / `123456789` (jeffbez)
+   - **Regular User:** `user001@gmail.com` / `dfuyihjknbsndhj` (jackBaur)
+3. Direct user through sign-in process
+4. After authentication, suggest navigating to relevant page:
+   - `/account/events` - for testing event management
+   - `/events` - for testing public events
+   - `/account/profile` - for testing user profile
+
+**Example Usage**:
+```
+User: "auth"
+Agent: Provides credentials for jayz (host with events):
+       Email: jay@rocknation.com
+       Password: tryuik
+       Then suggests navigating to /account/events
+```
+
+**Mock Users Reference** (from `apps/api/lib/mongodb/mockData/users.ts`):
+- **jayz** (Recommended): Host/organizer with multiple events
+- **jeffbez**: Host/organizer 
+- **jackBaur**: Regular user/attendee
+- **celin352**: Regular user
+
+**Use Cases:**
+- Testing authenticated features
+- Viewing organizer-specific pages
+- Testing with different user roles
+
+---
+
 **This agent is your go-to specialist for all Ntlango webapp UI/UX work.**
