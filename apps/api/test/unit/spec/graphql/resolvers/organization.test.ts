@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import {OrganizationResolver} from '@/graphql/resolvers/organization';
-import {OrganizationDAO, OrganizationMembershipDAO} from '@/mongodb/dao';
+import {FollowDAO, OrganizationDAO, OrganizationMembershipDAO} from '@/mongodb/dao';
 import type {CreateOrganizationInput, Organization, OrganizationMembership, QueryOptionsInput, UpdateOrganizationInput} from '@ntlango/commons/types';
-import {OrganizationRole} from '@ntlango/commons/types';
+import {FollowTargetType, OrganizationRole} from '@ntlango/commons/types';
 import {OrganizationTicketAccess} from '@ntlango/commons/types';
 import * as validation from '@/validation';
 
@@ -17,6 +17,9 @@ jest.mock('@/mongodb/dao', () => ({
   },
   OrganizationMembershipDAO: {
     readMembershipsByOrgId: jest.fn(),
+  },
+  FollowDAO: {
+    countFollowers: jest.fn(),
   },
 }));
 
@@ -44,7 +47,6 @@ describe('OrganizationResolver', () => {
     name: 'Ntlango Lab',
     ownerId: 'user-001',
     allowedTicketAccess: OrganizationTicketAccess.Public,
-    followersCount: 0,
     isFollowable: true,
   };
 
@@ -78,6 +80,23 @@ describe('OrganizationResolver', () => {
 
       expect(OrganizationMembershipDAO.readMembershipsByOrgId).toHaveBeenCalledWith(mockOrganization.orgId);
       expect(result).toEqual(memberships);
+    });
+  });
+
+  describe('followersCount field resolver', () => {
+    it('returns 0 when orgId is not provided', async () => {
+      const result = await resolver.followersCount({} as Organization);
+      expect(result).toBe(0);
+      expect(FollowDAO.countFollowers).not.toHaveBeenCalled();
+    });
+
+    it('returns follower count when orgId is provided', async () => {
+      (FollowDAO.countFollowers as jest.Mock).mockResolvedValue(42);
+
+      const result = await resolver.followersCount(mockOrganization);
+
+      expect(FollowDAO.countFollowers).toHaveBeenCalledWith(FollowTargetType.Organization, mockOrganization.orgId);
+      expect(result).toBe(42);
     });
   });
 

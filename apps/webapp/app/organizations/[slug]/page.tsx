@@ -1,14 +1,15 @@
 import { Avatar, Box, Button, Container, Card, CardContent, Divider, Stack, Typography, Grid, Paper, Chip } from '@mui/material';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { LocationOn, Language, People, ArrowBack, Share, CalendarMonth } from '@mui/icons-material';
+import { Language, ArrowBack, Share, CalendarMonth } from '@mui/icons-material';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
 import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
-import EventBoxSm from '@/components/events/event-box-sm';
 import { ROUTES } from '@/lib/constants';
+import FollowStatsCard from '@/components/organization/follow-stats-card';
+import EventBoxSm from '@/components/events/event-box-sm';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -300,36 +301,10 @@ export default async function OrganizationPage({ params }: Props) {
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: { md: 'sticky' }, top: 24 }}>
               {/* Stats Card */}
-              <Card
-                elevation={0}
-                sx={{
-                  mb: 3,
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="overline" color="text.secondary" fontWeight={600}>
-                    Community
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 3 }}>
-                    <People sx={{ color: 'primary.main', fontSize: 28 }} />
-                    <Typography variant="h4" fontWeight={700}>
-                      {organization.followersCount.toLocaleString()}
-                    </Typography>
-                    <Typography color="text.secondary">followers</Typography>
-                  </Box>
-                  <Button
-                    variant={organization.isFollowable ? 'contained' : 'outlined'}
-                    fullWidth
-                    disabled={!organization.isFollowable}
-                    sx={{ fontWeight: 600, textTransform: 'none', py: 1.5 }}
-                  >
-                    {organization.isFollowable ? 'Follow' : 'Private'}
-                  </Button>
-                </CardContent>
-              </Card>
+              <FollowStatsCard
+                orgId={organization.orgId}
+                initialFollowersCount={organization.followersCount ?? 0}
+              />
 
               {/* Share Card */}
               <Card

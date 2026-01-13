@@ -26,8 +26,8 @@ describe('User Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5003;
-  const testUserEmail = 'test@example.com';
-  const testUsername = 'testUsername';
+  const testUserEmail = `test-${Date.now()}@example.com`;
+  const testUsername = `testUsername-${Date.now()}`;
   const testPassword = 'testPassword';
   const cleanUserByEmail = async (email: string) => {
     try {
@@ -95,7 +95,7 @@ describe('User Resolver', () => {
     });
 
     describe('updateUser Mutation', () => {
-      const updatedEmail = 'updated@email.com';
+      const updatedEmail = `updated-${Date.now()}@email.com`;
 
       let createdUser: UserWithToken;
       beforeEach(async () => {
@@ -103,6 +103,7 @@ describe('User Resolver', () => {
       });
 
       afterEach(async () => {
+        await cleanUserByEmail(testUserEmail);
         await cleanUserByEmail(updatedEmail);
       });
 
@@ -112,7 +113,6 @@ describe('User Resolver', () => {
           .set('token', createdUser.token)
           .send(
             getUpdateUserMutation({
-              ...createUserInput,
               userId: createdUser.userId,
               email: updatedEmail,
             }),
@@ -127,6 +127,11 @@ describe('User Resolver', () => {
       let createdUser: UserWithToken;
       beforeEach(async () => {
         createdUser = await UserDAO.create(createUserInput);
+      });
+
+      afterEach(async () => {
+        // Clean up in case test failed before delete
+        await cleanUserByEmail(testUserEmail);
       });
 
       it('should delete a user by userId', async () => {
@@ -267,26 +272,29 @@ describe('User Resolver', () => {
 
     describe('updateUser Mutation', () => {
       let createdUser: UserWithToken;
+      const duplicateEmail = `duplicate-${Date.now()}@example.com`;
+      const duplicateUsername = `duplicate-${Date.now()}`;
+      
       beforeEach(async () => {
         createdUser = await UserDAO.create(createUserInput);
       });
 
       afterEach(async () => {
         await cleanUserByEmail(testUserEmail);
+        await cleanUserByEmail(duplicateEmail);
       });
 
       it('returns conflict for duplicate field', async () => {
         await UserDAO.create({
           ...createUserInput,
-          email: 'duplicate@example.com',
-          username: 'duplicate',
+          email: duplicateEmail,
+          username: duplicateUsername,
         });
         const response = await request(url)
           .post('')
           .set('token', createdUser.token)
-          .send(getUpdateUserMutation({userId: createdUser.userId, username: 'duplicate'}));
+          .send(getUpdateUserMutation({userId: createdUser.userId, username: duplicateUsername}));
         expect(response.status).toBe(409);
-        await cleanUserByEmail('duplicate@example.com');
       });
 
       it('returns bad input when invalid phone number is provided', async () => {

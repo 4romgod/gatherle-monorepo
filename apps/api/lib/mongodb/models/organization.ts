@@ -8,11 +8,9 @@ import {Organization as OrganizationEntity} from '@ntlango/commons/types';
     if (!this.orgId && this._id) {
       this.orgId = this._id.toString();
     }
-
-    if (!this.slug && this.name) {
+    if (this.isNew || !this.slug) {
       this.slug = kebabCase(this.name);
     }
-
     next();
   } catch (error) {
     next(error as Error);

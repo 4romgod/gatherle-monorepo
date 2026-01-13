@@ -63,11 +63,19 @@ class OrganizationDAO {
   static async updateOrganization(input: UpdateOrganizationInput): Promise<Organization> {
     try {
       const {orgId, ...rest} = input;
-      const updatedOrganization = await OrganizationModel.findByIdAndUpdate(orgId, rest, {new: true}).exec();
-      if (!updatedOrganization) {
+      const organization = await OrganizationModel.findById(orgId).exec();
+      if (!organization) {
         throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return updatedOrganization.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(rest).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(organization, fieldsToUpdate);
+      await organization.save();
+      
+      return organization.toObject();
     } catch (error) {
       logger.error(`Error updating organization ${input.orgId}`, error);
       if (error instanceof GraphQLError) {

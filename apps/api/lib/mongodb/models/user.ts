@@ -38,11 +38,9 @@ type UpdateFields = {
     if (this.isModified('password')) {
       this.password = await hashPassword(this.password);
     }
-
     if (this.isModified('email')) {
       this.email = this.email.toLowerCase();
     }
-
     next();
   } catch (err) {
     logger.debug('Error when pre-saving the user', err);

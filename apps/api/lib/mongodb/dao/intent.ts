@@ -11,33 +11,26 @@ class IntentDAO {
     try {
       const {userId, eventId, intentId, status, visibility, source, participantId, metadata} = input;
       const filter = intentId ? {intentId} : {userId, eventId};
-      const update: Partial<IntentEntity> = {};
-
-      if (status) update.status = status;
-      if (visibility) update.visibility = visibility;
-      if (source) update.source = source;
-      if (participantId) update.participantId = participantId;
-      if (metadata) update.metadata = metadata;
-
-      const hasUpdates = Object.keys(update).length > 0;
-      const updateQuery: any = {
-        $setOnInsert: {
-          intentId: intentId ?? new Types.ObjectId().toString(),
+      
+      let intent = await IntentModel.findOne(filter).exec();
+      
+      if (intent) {
+        if (status !== undefined) intent.status = status;
+        if (visibility !== undefined) intent.visibility = visibility;
+        if (source !== undefined) intent.source = source;
+        if (participantId !== undefined) intent.participantId = participantId;
+        if (metadata !== undefined) intent.metadata = metadata;
+        await intent.save();
+      } else {
+        intent = await IntentModel.create({
           userId,
           eventId,
-        },
-      };
-
-      if (hasUpdates) {
-        updateQuery.$set = {
-          ...update,
-        };
-      }
-
-      const intent = await IntentModel.findOneAndUpdate(filter, updateQuery, {new: true, upsert: true, setDefaultsOnInsert: true}).exec();
-
-      if (!intent) {
-        throw CustomError('Unable to persist intent', ErrorTypes.INTERNAL_SERVER_ERROR);
+          status,
+          visibility,
+          source,
+          participantId,
+          metadata,
+        });
       }
 
       return intent.toObject();

@@ -179,8 +179,11 @@ describe('VenueDAO', () => {
 
   describe('update', () => {
     it('updates venue', async () => {
-      (VenueModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+      const mockSave = jest.fn().mockResolvedValue({toObject: () => mockVenue});
+      (VenueModel.findOne as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
+          ...mockVenue,
+          save: mockSave,
           toObject: () => mockVenue,
         }),
       );
@@ -192,18 +195,19 @@ describe('VenueDAO', () => {
 
       const result = await VenueDAO.update(input);
 
-      expect(VenueModel.findOneAndUpdate).toHaveBeenCalledWith({venueId: 'venue-1'}, {name: 'Updated Venue'}, {new: true});
+      expect(VenueModel.findOne).toHaveBeenCalledWith({venueId: 'venue-1'});
+      expect(mockSave).toHaveBeenCalled();
       expect(result).toEqual(mockVenue);
     });
 
     it('throws not found error', async () => {
-      (VenueModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (VenueModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(VenueDAO.update({venueId: 'missing'})).rejects.toThrow(CustomError('Venue with id missing not found', ErrorTypes.NOT_FOUND));
     });
 
     it('wraps unknown errors', async () => {
-      (VenueModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+      (VenueModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(VenueDAO.update({venueId: 'venue-1'})).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),

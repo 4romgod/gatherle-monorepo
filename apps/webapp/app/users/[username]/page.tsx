@@ -34,6 +34,7 @@ import { ROUTES } from '@/lib/constants';
 import { omit } from 'lodash';
 import Link from 'next/link';
 import FollowButton from '@/components/users/follow-button';
+import UserFollowStats from '@/components/users/user-follow-stats';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -43,14 +44,12 @@ export default async function UserPage(props: Props) {
   const params = await props.params;
   const session = await auth();
 
-  // Fetch the user by username
   const { data: userRetrieved } = await getClient().query({
     query: GetUserByUsernameDocument,
     variables: { username: params.username },
   });
   const user = omit(userRetrieved.readUserByUsername, ['__typename']);
 
-  // Check if viewing own profile
   const isOwnProfile = session?.user?.username === user.username;
 
   const { data: events } = await getClient().query({
@@ -145,7 +144,7 @@ export default async function UserPage(props: Props) {
                     right: 20,
                   }}
                 >
-                  <FollowButton targetUserId={user.userId} size="small" />
+                  <FollowButton targetId={user.userId} size="small" />
                 </Box>
               )}
             </Box>
@@ -209,41 +208,13 @@ export default async function UserPage(props: Props) {
               </Box>
 
               {/* Stats */}
-              <Stack
-                direction="row"
-                spacing={4}
-                sx={{
-                  mt: 3,
-                  pt: 3,
-                  borderTop: 1,
-                  borderColor: 'divider',
-                }}
-              >
-                <Box>
-                  <Typography variant="h5" fontWeight={700} color="secondary">
-                    {organizedEvents.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Events Created
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight={700} color="secondary">
-                    {rsvpdEvents.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Events Attending
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight={700} color="secondary">
-                    {interests.length}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Interests
-                  </Typography>
-                </Box>
-              </Stack>
+              <UserFollowStats
+                userId={user.userId}
+                initialFollowersCount={user.followersCount ?? 0}
+                organizedEventsCount={organizedEvents.length}
+                rsvpdEventsCount={rsvpdEvents.length}
+                interestsCount={interests.length}
+              />
             </Box>
           </Paper>
 

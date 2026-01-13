@@ -1,27 +1,30 @@
 # Social Features Assessment
 
-**Date:** 12 January 2026  
+**Date:** 13 January 2026  
 **Status:** ✅ Development  
-**Feature:** User Follow System
+**Feature:** User & Organization Follow System
 
 ## Executive Summary
 
-The user follow system has been successfully implemented on the backend, enabling users to follow each other with approval workflows, notification preferences, and comprehensive error handling. The implementation follows enterprise-grade patterns with proper authentication, authorization, validation, and user feedback mechanisms.
+The follow system has been successfully implemented for both users and organizations, enabling social connections with configurable approval workflows, notification preferences, and comprehensive error handling. The implementation follows enterprise-grade patterns with proper authentication, authorization, validation, optimistic UI updates, and real-time follower count displays.
 
 ## Feature Overview
 
 ### Core Capabilities
-- **Follow/Unfollow Users**: Users can follow and unfollow other users
-- **Approval Workflow**: Supports pending, accepted, and rejected follow requests (currently auto-accepting)
+- **Follow/Unfollow Users & Organizations**: Full follow support for both entity types
+- **Configurable Approval Workflow**: FollowPolicy setting (Public/RequireApproval) per user/organization
 - **Notification Preferences**: Per-follow content visibility controls (Active/Muted)
-- **Query Operations**: Retrieve following lists, followers, and pending requests
-- **Multi-Target Support**: Architecture supports both User and Organization follows
+- **Query Operations**: Retrieve following lists, followers, pending requests, and follower counts
+- **Real-time Follower Counts**: Dynamically computed via FieldResolver with optimistic UI updates
+- **Pending State Management**: UI properly handles pending, accepted, and rejected states
 
 ### Current Behavior
-- All follow requests are auto-accepted upon creation
-- Privacy settings check is planned but not yet implemented (TODO in resolver)
-- Follow button shows "Following" only for accepted follows
-- Proper state management for pending/rejected follows
+- Follow requests respect the target's `followPolicy` setting:
+  - **Public**: Auto-accepts all follow requests immediately
+  - **RequireApproval**: Creates pending request requiring manual approval
+- Follow button shows contextual states: "Follow", "Following", or "Requested"
+- Follower counts update optimistically in the UI without page refresh
+- Organizations display follower stats in a dedicated card component
 
 ## Backend Implementation
 
@@ -43,10 +46,19 @@ class Follow {
 }
 ```
 
+**FollowPolicy Enum** (`packages/commons/lib/types/user.ts`):
+```typescript
+export enum FollowPolicy {
+  Public = 'Public',           // Auto-accept all follow requests
+  RequireApproval = 'RequireApproval',  // Require manual approval
+}
+```
+
 **Enums:**
 - `FollowTargetType`: User, Organization
 - `FollowContentVisibility`: Active, Muted
 - `FollowApprovalStatus`: Pending, Accepted, Rejected
+- `FollowPolicy`: Public, RequireApproval (on User and Organization types)
 
 **Notification Preferences:**
 - Nested object type with `contentVisibility` field
@@ -57,12 +69,14 @@ class Follow {
 
 **Mutations:**
 1. `follow(input: CreateFollowInput): Follow`
-   - Creates follow relationship (auto-accepts for now)
+   - Creates follow relationship
+   - Checks target's `followPolicy` to determine initial approval status
+   - Returns `Accepted` for Public targets, `Pending` for RequireApproval
    - Validates input with Zod schema
    - Requires authentication (Admin, Host, User roles)
 
 2. `unfollow(targetType, targetId): Boolean`
-   - Removes follow relationship
+   - Removes follow relationship (works for both pending and accepted)
    - Returns true on success
 
 3. `updateFollowNotificationPreferences(input): Follow`
@@ -89,20 +103,30 @@ class Follow {
    - Returns pending follow requests for authenticated user
    - Used for notifications/approval UI
 
+**FieldResolvers** (`apps/api/lib/graphql/resolvers/organization.ts`, `user.ts`):
+- `followersCount`: Dynamically computes follower count using `FollowDAO.countFollowers()`
+- Returns count of accepted follows only (excludes pending/rejected)
+
 ### Data Access Layer (`apps/api/lib/mongodb/dao/follow.ts`)
 
 **Methods:**
-- `upsert()`: Create or update follow with nested preferences
+- `upsert()`: Create or update follow with nested preferences and approval status
+  - Uses find+save pattern (not findOneAndUpdate) to trigger Mongoose hooks
+  - Accepts optional `approvalStatus` parameter based on target's policy
 - `updateNotificationPreferences()`: Update contentVisibility
 - `updateApprovalStatus()`: Accept/reject with authorization check
 - `readPendingFollows()`: Query pending requests by target user
 - `readFollowingForUser()`: Query user's following list
-- `readFollowers()`: Query followers of user/org
+- `readFollowers()`: Query followers of user/org (accepted only)
+- `countFollowers()`: Efficient count using `countDocuments` with accepted status filter
 - `remove()`: Delete follow relationship
 
 **Authorization:**
 - `updateApprovalStatus()` verifies caller is the target user
 - Prevents unauthorized approval/rejection of follow requests
+
+**Pattern Note:**
+All DAO operations now use the find+save pattern instead of findOneAndUpdate to ensure Mongoose pre-validation hooks run consistently.
 
 ### Validation (`apps/api/lib/validation/zod/social.ts`)
 
@@ -138,12 +162,14 @@ class Follow {
 **1. useFollow()**
 - Provides `follow()` and `unfollow()` functions
 - Loading states: `isLoading`, `followLoading`, `unfollowLoading`
-- Refetches following/followers lists on mutation
+- Refetches following list on mutation via `refetchQueries`
 - Passes JWT token via Apollo context
 
 **2. useFollowing()**
 - Queries authenticated user's following list
 - Returns `following` array, `loading`, `error`
+- Uses `skip: !token` to prevent unauthenticated queries
+- Uses `fetchPolicy: 'cache-and-network'` for fresh data on user switch
 - Auto-refetches when mutations complete
 
 **3. useFollowers(targetType, targetId)**
@@ -163,51 +189,96 @@ class Follow {
 **Authentication:**
 - All hooks use `useSession()` to get JWT token
 - Token passed via Apollo context headers: `{ token: session?.user?.token }`
+- Hooks skip queries when token is not available
 
 ### UI Components
 
 **FollowButton** (`apps/webapp/components/users/follow-button.tsx`):
 
 **Features:**
-- Toggle between "Follow" and "Following" states
-- Shows PersonAdd/PersonRemove icons
+- Supports both User and Organization targets via `targetType` prop
+- Three visual states: "Follow", "Following", "Requested" (pending)
+- Shows PersonAdd/PersonRemove/HourglassEmpty icons per state
 - Loading state with CircularProgress
 - Authentication check with redirect to login
-- Approval status check (only shows "Following" for accepted)
+- Approval status check for proper state display
 - Error handling with toast notifications
-- Matches Edit Profile button styling
-
-**Styling:**
-- `color="inherit"` to prevent MUI primary color
-- White background (`background.paper`)
-- Dark text (`text.primary`)
-- Shadow elevation on hover
-- Elevation Zero design system compliant
-- No ripple effect, custom transitions
+- Two style variants: `default` and `primary`
 
 **Props:**
-- `targetUserId`: User to follow/unfollow
-- `size`: 'small' | 'medium' | 'large'
-- `fullWidth`: Optional full-width button
+```typescript
+interface FollowButtonProps {
+  targetId: string;
+  targetType?: FollowTargetType;  // Default: User
+  size?: 'small' | 'medium' | 'large';
+  fullWidth?: boolean;
+  variant?: 'default' | 'primary';
+}
+```
 
-**User Experience:**
-- Unauthenticated users redirected to login with NProgress
-- Failed operations show error toast (top-right)
-- Optimistic UI updates via Apollo cache refetch
-- Button state reflects approval status correctly
+**Styling:**
+- `default`: White background with shadow, dark text
+- `primary`: Uses MUI contained button styling
+- Elevation Zero design system compliant
+
+---
+
+**FollowStatsCard** (`apps/webapp/components/organization/follow-stats-card.tsx`):
+
+**Features:**
+- Displays organization follower count with icon
+- Integrates FollowButton for organization following
+- **Optimistic UI updates**: Count adjusts immediately on follow/unfollow
+- Uses refs to track previous state and prevent double-counting
+- Waits for initial data load before tracking changes
+
+**Implementation Details:**
+```typescript
+// Tracks follow state changes with refs (not useState) to prevent re-renders
+const wasFollowingRef = useRef<boolean | null>(null);
+const initialLoadDoneRef = useRef(false);
+
+// Only adjusts count after initial load completes
+if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowing) {
+  setFollowersCount(prev => isCurrentlyFollowing ? prev + 1 : prev - 1);
+}
+```
+
+---
+
+**UserFollowStats** (`apps/webapp/components/users/user-follow-stats.tsx`):
+
+**Features:**
+- Displays user stats: Followers, Events Created, Events Attending, Interests
+- **Optimistic UI updates** for follower count (same pattern as FollowStatsCard)
+- Styled as horizontal stat row with consistent typography
 
 **Integration:**
 - Used in user profile page (`apps/webapp/app/users/[username]/page.tsx`)
-- Positioned top-right of cover image
-- Shown only for non-own profiles
+- Receives initial counts from server-side query
+- Updates optimistically based on follow state changes
 
 ## Architecture Decisions
 
-### Why Auto-Accept Follow Requests?
-- Simplifies initial MVP implementation
-- Privacy settings infrastructure planned (see TODO in resolver)
-- Easy to migrate to approval workflow when privacy features added
-- Database schema already supports full workflow
+### Why FollowPolicy Instead of Auto-Accept?
+- Gives users and organizations control over who can follow them
+- `Public` maintains backward compatibility (auto-accept behavior)
+- `RequireApproval` enables private accounts without breaking existing flows
+- Simple enum on User/Organization model, no complex privacy settings table
+- Easy to extend with additional policies later (e.g., `Closed`, `FollowersOfFollowers`)
+
+### Why Computed followersCount via FieldResolver?
+- Eliminates need for denormalized counter maintenance
+- Always accurate (no sync issues between count and actual follows)
+- Uses efficient `countDocuments` query with index on `{targetType, targetId, approvalStatus}`
+- Trades minor query overhead for data consistency
+- Frontend uses optimistic updates to maintain UX responsiveness
+
+### Why Optimistic UI with Refs?
+- Provides immediate feedback without waiting for server response
+- `useRef` instead of `useState` prevents effect re-triggers and double-counting
+- `initialLoadDoneRef` prevents false increment on initial data load
+- Pattern reused across FollowStatsCard and UserFollowStats components
 
 ### Why Nested Notification Preferences?
 - Extensibility: Can add push, email, event-type filters later
@@ -227,76 +298,77 @@ class Follow {
 - Per-request token passing for SSR compatibility
 - Works with NextAuth.js session management
 
-### Why Toast Notifications?
-- Existing toast system already in place (CustomAppContext)
-- Consistent error UX across app
-- Non-blocking user feedback
-- Matches Material-UI design patterns
+### Why skip: !token in useFollowing?
+- Prevents unauthenticated users from making failed queries
+- Avoids stale cache when switching between users
+- Combined with `cache-and-network` for fresh data on login
 
 ## Testing & Validation
 
+### Automated Testing
+- ✅ 504 unit tests passing (including updated DAO tests for find+save pattern)
+- ✅ Integration tests for social resolvers (follow, intent, activity)
+- ✅ Unit tests for FollowResolver (with FollowPolicy handling)
+- ✅ Unit tests for Organization followersCount FieldResolver
+- ✅ Authorization checks for accept/reject mutations
+- ✅ Validation schemas working (Zod)
+
 ### Manual Testing Completed
-- ✅ Follow/unfollow functionality in browser
+- ✅ Follow/unfollow functionality for users
+- ✅ Follow/unfollow functionality for organizations  
+- ✅ Pending state displays correctly ("Requested" button)
+- ✅ Follower count updates optimistically
 - ✅ Loading states display correctly
-- ✅ Button styling matches Edit Profile button
 - ✅ Authentication redirect with progress bar
 - ✅ Token passed correctly to GraphQL API
-- ✅ Approval status check working
 - ✅ Error toast notifications displaying
-
-### API Testing
-- ✅ Unit tests for DAO methods
-- ✅ Integration tests for resolvers
-- ✅ Authorization checks for accept/reject
-- ✅ Validation schemas working
+- ✅ User switching works (no stale cache)
 
 ### Code Quality
 - ✅ No TypeScript errors
 - ✅ Proper error handling with user feedback
-- ✅ Follow Elevation Zero design system
-- ✅ Unused code removed (UpdateFollowApprovalInput)
-- ✅ Race conditions eliminated (removed redundant refetch)
+- ✅ Follows Elevation Zero design system
+- ✅ Consistent find+save DAO pattern across codebase
 - ✅ Authentication checks in place
 
 ## Current Limitations
 
-1. **Auto-Accept Only**: All follows automatically accepted
-   - Privacy settings not yet implemented
-   - TODO marker in resolver for future work
-
-2. **No UI for Pending Requests**: 
+1. **No UI for Pending Requests**: 
    - Hook exists (`useFollowRequests`) but no component
    - No notification badge for pending requests count
-   - Manual approval flow not user-facing yet
+   - Users with RequireApproval policy can't approve requests in UI yet
 
-3. **No Followers/Following Lists**:
+2. **No Followers/Following Lists**:
    - Queries and hooks exist
    - UI components not yet built
-   - No follower/following count displays
+   - Profile only shows follower count, not list
 
-4. **No Bulk Operations**:
+3. **No Bulk Operations**:
    - Cannot remove all followers
    - Cannot accept/reject multiple requests at once
 
-5. **No Follow Limits**:
+4. **No Follow Limits**:
    - No rate limiting on follow actions
    - No maximum following/follower counts
+
+5. **No Settings UI for FollowPolicy**:
+   - FollowPolicy can only be set via direct database/API
+   - Settings page doesn't include follow privacy options yet
 
 ## Future Enhancements
 
 ### Phase 1: Core UX (High Priority)
-- [ ] Create PendingFollowRequests component
-- [ ] Add notification badge for pending requests
+- [ ] Create PendingFollowRequests component for approval UI
+- [ ] Add notification badge for pending requests count
 - [ ] Create FollowersList and FollowingList components
-- [ ] Display follower/following counts on profiles
 - [ ] Add loading skeleton for follow lists
+- [ ] Add FollowPolicy toggle to user/org settings page
 
 ### Phase 2: Privacy & Control (Medium Priority)
-- [ ] Implement privacy settings (public/private/friends)
-- [ ] Check privacy settings before auto-accepting follows
 - [ ] Add "Remove Follower" functionality
 - [ ] Block/unblock users feature
-- [ ] Hide followers/following lists based on privacy
+- [ ] Hide followers/following lists based on privacy settings
+- [ ] Mute notifications from specific followers
 
 ### Phase 3: Advanced Features (Low Priority)
 - [ ] Push notification preferences per follow
@@ -309,9 +381,23 @@ class Follow {
 ### Phase 4: Scale & Performance
 - [ ] Pagination for large follower/following lists
 - [ ] Rate limiting on follow actions
-- [ ] Caching strategies for follower counts
-- [ ] Denormalized counts for performance
+- [ ] Redis caching for frequently accessed counts
 - [ ] Background job for notification cleanup
+- [ ] Virtual scrolling for large lists
+
+## Completed Features ✅
+
+### Recently Completed (13 January 2026)
+- ✅ FollowPolicy enum (Public/RequireApproval) for Users and Organizations
+- ✅ Follow resolver respects target's followPolicy
+- ✅ followersCount computed via FieldResolver (not stored in DB)
+- ✅ FollowButton supports organizations with `targetType` prop
+- ✅ FollowButton shows "Requested" state for pending follows
+- ✅ FollowStatsCard component for organization pages
+- ✅ UserFollowStats component for user profile pages
+- ✅ Optimistic UI updates for follower counts
+- ✅ Fixed useFollowing hook cache issues (skip + cache-and-network)
+- ✅ DAO migration to find+save pattern for consistent hooks
 
 ## Integration Points
 
@@ -350,34 +436,58 @@ class Follow {
 ## Performance Considerations
 
 ### Current Performance
-- MongoDB indexes: `{followerUserId, targetType, targetId}` unique
+- MongoDB indexes: `{followerUserId, targetType, targetId}` unique compound
 - Additional indexes: `followerUserId`, `followId`
-- Apollo Client caching with refetch strategies
-- Optimistic UI updates via cache
+- `countDocuments` with `{targetType, targetId, approvalStatus}` filter
+- Apollo Client caching with `cache-and-network` policy
+- Optimistic UI updates eliminate perceived latency
 
 ### Performance Optimization Opportunities
-- Denormalize follower/following counts on User model
-- Implement cursor-based pagination for lists
-- Add Redis caching for frequently accessed counts
-- Use DataLoader for batch follow lookups
+- Add compound index for `{targetType, targetId, approvalStatus}` if counts slow down
+- Implement cursor-based pagination for follower lists
+- Add Redis caching for high-traffic organization counts
+- Use DataLoader for batch follow lookups in activity feeds
 - Implement virtual scrolling for large lists
 
 ## Developer Guidelines
 
 ### Adding Follow to New Entities
 1. Add new value to `FollowTargetType` enum
-2. Update GraphQL schema and types
-3. Add validation for new target type
-4. Update DAO queries to handle new type
-5. Create frontend hooks for new type
-6. Add UI components for new entity
+2. Add `followPolicy` field to the entity type (if approval control needed)
+3. Update GraphQL schema and types
+4. Add validation for new target type
+5. Update follow resolver to lookup new entity's followPolicy
+6. Create frontend hooks for new type
+7. Add UI components for new entity
 
 ### Modifying Approval Workflow
-1. Update `follow()` mutation to check privacy settings
-2. Modify DAO `upsert()` to set initial status
-3. Update FollowButton to handle pending state
+1. Update `FollowPolicy` enum if adding new policies
+2. Modify `follow()` resolver logic for new policy types
+3. Update FollowButton to handle new states
 4. Add UI for managing pending requests
 5. Update tests for new workflow
+
+### Using Optimistic Updates
+When adding follower counts to new components:
+```typescript
+// Use refs, not state, to track previous values
+const wasFollowingRef = useRef<boolean | null>(null);
+const initialLoadDoneRef = useRef(false);
+
+useEffect(() => {
+  if (loading) return;  // Wait for initial load
+  
+  const isCurrentlyFollowing = /* check follow status */;
+  
+  // Only adjust after initial load completes
+  if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowing) {
+    setCount(prev => isCurrentlyFollowing ? prev + 1 : prev - 1);
+  }
+  
+  wasFollowingRef.current = isCurrentlyFollowing;
+  initialLoadDoneRef.current = true;
+}, [following, targetId, loading]);
+```
 
 ### Adding Notification Preferences
 1. Add new fields to `FollowNotificationPreferences` ObjectType
@@ -388,22 +498,38 @@ class Follow {
 
 ## Conclusion
 
-The user follow system is production-ready for the current MVP scope. The implementation follows best practices with:
+The follow system is production-ready with configurable approval workflows and real-time follower counts. The implementation follows best practices with:
 - Clean separation of concerns (DAO, resolver, hooks, components)
 - Comprehensive error handling and user feedback
 - Proper authentication and authorization
 - Extensible architecture for future enhancements
 - Type-safe operations across the stack
+- Optimistic UI updates for responsive UX
+- Consistent DAO patterns (find+save for hook compatibility)
 
-The system is prepared for future expansion with privacy controls, notification customization, and advanced social features. The foundation is solid, and incremental improvements can be made without major refactoring.
+The system supports both public (auto-accept) and private (approval-required) follow policies, with UI components that properly reflect pending states. Follower counts are dynamically computed ensuring accuracy without sync issues.
 
 ## Related Documentation
-- [Data Model](./api/data-model.md)
-- [Design System](./webapp/design-system.md)
-- [Environment Variables](./environment-variables.md)
-- [Project Brief](./project-brief.md)
+- [Data Model](../api/data-model.md)
+- [Design System](../webapp/design-system.md)
+- [Environment Variables](../environment-variables.md)
+- [Project Brief](../project-brief.md)
 
 ## Change Log
+
+### 13 January 2026 - FollowPolicy & Optimistic Updates
+- Added `FollowPolicy` enum (Public/RequireApproval) to User and Organization types
+- Follow resolver now respects target's followPolicy for approval status
+- Migrated `followersCount` from stored field to computed FieldResolver
+- Added `countFollowers()` DAO method using efficient `countDocuments`
+- FollowButton now supports organizations via `targetType` prop
+- FollowButton shows "Requested" state for pending follows
+- Created FollowStatsCard component for organization pages
+- Created UserFollowStats component for user profiles
+- Implemented optimistic UI updates with useRef pattern
+- Fixed useFollowing hook cache issues (added skip + cache-and-network)
+- Migrated DAOs to find+save pattern for consistent Mongoose hook execution
+- Updated all related unit and integration tests
 
 ### 12 January 2026 - Initial Implementation
 - Implemented full follow system backend (types, resolvers, DAOs)

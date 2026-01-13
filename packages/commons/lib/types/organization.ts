@@ -4,6 +4,7 @@ import {index, modelOptions, prop, Severity} from '@typegoose/typegoose';
 
 import {EventVisibility} from './event';
 import {OrganizationMembership} from './organizationMembership';
+import {FollowPolicy} from './user';
 import {ORGANIZATION_DESCRIPTIONS, ORGANIZATION_LINK_DESCRIPTIONS} from '../constants';
 
 export enum OrganizationTicketAccess {
@@ -129,13 +130,17 @@ export class Organization {
     @Field(() => OrganizationTicketAccess, {description: ORGANIZATION_DESCRIPTIONS.TICKET_ACCESS})
     allowedTicketAccess: OrganizationTicketAccess;
 
-    @prop({type: () => Number, default: 0})
+    // Computed field - resolved via @FieldResolver in OrganizationResolver (no @prop, not stored in DB)
     @Field(() => Number, {description: ORGANIZATION_DESCRIPTIONS.FOLLOWERS_COUNT})
-    followersCount: number;
+    followersCount?: number;
 
     @prop({type: () => Boolean, default: true})
     @Field(() => Boolean, {description: ORGANIZATION_DESCRIPTIONS.FOLLOWABLE})
     isFollowable: boolean;
+
+    @prop({enum: FollowPolicy, default: FollowPolicy.Public, type: () => String})
+    @Field(() => FollowPolicy, {nullable: true, description: ORGANIZATION_DESCRIPTIONS.FOLLOW_POLICY})
+    followPolicy?: FollowPolicy;
 
     @prop({type: () => [String], default: []})
     @Field(() => [String], {nullable: true, description: ORGANIZATION_DESCRIPTIONS.TAGS})

@@ -18,4 +18,5 @@ yarn-error.log*
 *.tgz
 *.tsbuildinfo
 test-results.txt
+**/test/**/reports/
 .github/prompts/

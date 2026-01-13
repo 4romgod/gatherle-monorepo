@@ -7,13 +7,14 @@ import {
   UserRole,
   UpdateFollowNotificationPreferencesInput,
   FollowApprovalStatus,
+  FollowPolicy,
 } from '@ntlango/commons/types';
 import {
   CreateFollowInputSchema,
   UpdateFollowNotificationPreferencesInputSchema,
 } from '@/validation/zod';
 import {validateInput} from '@/validation';
-import {FollowDAO} from '@/mongodb/dao';
+import {FollowDAO, UserDAO, OrganizationDAO} from '@/mongodb/dao';
 import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
 import {getAuthenticatedUser} from '@/utils';
@@ -25,9 +26,22 @@ export class FollowResolver {
   async follow(@Arg('input', () => CreateFollowInput) input: CreateFollowInput, @Ctx() context: ServerContext): Promise<Follow> {
     validateInput(CreateFollowInputSchema, input);
     const user = getAuthenticatedUser(context);
-    // TODO: Check target user/org privacy settings to determine initial approvalStatus
-    // For now, all follows are auto-accepted
-    return FollowDAO.upsert({...input, followerUserId: user.userId});
+
+    let approvalStatus = FollowApprovalStatus.Pending;
+
+    if (input.targetType === FollowTargetType.User) {
+      const targetUser = await UserDAO.readUserById(input.targetId);
+      approvalStatus = targetUser.followPolicy === FollowPolicy.Public
+        ? FollowApprovalStatus.Accepted
+        : FollowApprovalStatus.Pending;
+    } else if (input.targetType === FollowTargetType.Organization) {
+      const targetOrg = await OrganizationDAO.readOrganizationById(input.targetId);
+      approvalStatus = targetOrg.followPolicy === FollowPolicy.Public
+        ? FollowApprovalStatus.Accepted
+        : FollowApprovalStatus.Pending;
+    }
+
+    return FollowDAO.upsert({...input, followerUserId: user.userId, approvalStatus});
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

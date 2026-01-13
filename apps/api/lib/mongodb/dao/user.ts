@@ -111,12 +111,19 @@ class UserDAO {
   static async updateUser(user: UpdateUserInput) {
     try {
       const {userId, ...updatableFields} = user;
-      const query = UserModel.findByIdAndUpdate(userId, updatableFields, {new: true});
-      const updatedUser = await query.exec();
-      if (!updatedUser) {
+      const existingUser = await UserModel.findById(userId).exec();
+      if (!existingUser) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
       }
-      return updatedUser.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(updatableFields).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(existingUser, fieldsToUpdate);
+      await existingUser.save();
+      
+      return existingUser.toObject();
     } catch (error) {
       logger.error(`Error updating user with userId ${user.userId}`, error);
       if (error instanceof GraphQLError) {
@@ -179,12 +186,15 @@ class UserDAO {
 
   static async promoteUserToAdmin(userId: string): Promise<User> {
     try {
-      const query = UserModel.findByIdAndUpdate(userId, {userRole: UserRole.Admin}, {new: true});
-      const updatedUser = await query.exec();
-      if (!updatedUser) {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
         throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
       }
-      return updatedUser.toObject();
+      
+      user.userRole = UserRole.Admin;
+      await user.save();
+      
+      return user.toObject();
     } catch (error) {
       logger.error(`Error promoting user to Admin with userId ${userId}`, error);
       if (error instanceof GraphQLError) {

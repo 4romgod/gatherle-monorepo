@@ -33,6 +33,11 @@ export enum SocialVisibility {
     Private = 'Private',
 }
 
+export enum FollowPolicy {
+    Public = 'Public',
+    RequireApproval = 'RequireApproval',
+}
+
 registerEnumType(Gender, {
     name: 'Gender',
     description: USER_DESCRIPTIONS.GENDER,
@@ -46,6 +51,11 @@ registerEnumType(UserRole, {
 registerEnumType(SocialVisibility, {
     name: 'SocialVisibility',
     description: 'Visibility of social signals (intents, presence)',
+});
+
+registerEnumType(FollowPolicy, {
+    name: 'FollowPolicy',
+    description: USER_DESCRIPTIONS.FOLLOW_POLICY,
 });
 
 @ObjectType('UserProfile')
@@ -191,6 +201,14 @@ export class User {
     @prop({default: [], type: () => [String]})
     @Field(() => [String], {nullable: true})
     blockedUserIds?: string[];
+
+    @prop({enum: FollowPolicy, default: FollowPolicy.Public, type: () => String})
+    @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
+    followPolicy?: FollowPolicy;
+
+    // Computed field - resolved via @FieldResolver in UserResolver (no @prop, not stored in DB)
+    @Field(() => Number, {description: USER_DESCRIPTIONS.FOLLOWERS_COUNT})
+    followersCount?: number;
 }
 
 @ObjectType('UserWithToken', {description: USER_DESCRIPTIONS.WITH_TOKEN})
@@ -266,6 +284,9 @@ export class CreateUserInput {
 
     @Field(() => [UserRole], {nullable: true})
     roles?: UserRole[];
+
+    @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
+    followPolicy?: FollowPolicy;
 }
 
 @InputType('UpdateUserInput', {description: USER_DESCRIPTIONS.UPDATE_INPUT})
@@ -342,6 +363,9 @@ export class UpdateUserInput {
 
     @Field(() => [UserRole], {nullable: true})
     roles?: UserRole[];
+
+    @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
+    followPolicy?: FollowPolicy;
 }
 
 @InputType('LoginUserInput', {description: USER_DESCRIPTIONS.LOGIN_INPUT})

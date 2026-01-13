@@ -544,51 +544,47 @@ describe('EventDAO', () => {
     };
 
     it('should update an event and return the populated event object', async () => {
-      (EventModel.findByIdAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => expectedUpdatedEvent,
-        }),
+      const mockEvent = {
+        ...expectedUpdatedEvent,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue(expectedUpdatedEvent),
+      };
+
+      (EventModel.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockEvent),
       );
 
-      const {eventId, ...mockUpdatedEventInputWithoutId} = mockUpdatedEventInput;
+      const {eventId} = mockUpdatedEventInput;
       const updatedEvent = await EventDAO.updateEvent(mockUpdatedEventInput);
       expect({...updatedEvent, slug: 'updated-event-title'}).toEqual(expectedUpdatedEvent);
-      expect(EventModel.findByIdAndUpdate).toHaveBeenCalledWith(eventId, expect.objectContaining(mockUpdatedEventInputWithoutId), {new: true});
+      expect(EventModel.findById).toHaveBeenCalledWith(eventId);
+      expect(mockEvent.save).toHaveBeenCalled();
     });
 
     it('should throw NOT_FOUND GraphQLError when the event to be updated is not found', async () => {
-      (EventModel.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
-      const {eventId, ...calledWithInput} = mockUpdatedEventInput;
       await expect(EventDAO.updateEvent(mockUpdatedEventInput)).rejects.toThrow(
         CustomError(`Event with eventId ${mockUpdatedEventInput.eventId} not found`, ErrorTypes.NOT_FOUND),
       );
-      expect(EventModel.findByIdAndUpdate).toHaveBeenCalledWith(eventId, expect.objectContaining(calledWithInput), {
-        new: true,
-      });
+      expect(EventModel.findById).toHaveBeenCalledWith(mockUpdatedEventInput.eventId);
     });
 
-    it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventModel.findByIdAndUpdate throws an UNKNOWN error', async () => {
-      (EventModel.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+    it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventModel.findById throws an UNKNOWN error', async () => {
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
-      const {eventId, ...calledWithInput} = mockUpdatedEventInput;
       await expect(EventDAO.updateEvent(mockUpdatedEventInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
-      expect(EventModel.findByIdAndUpdate).toHaveBeenCalledWith(eventId, expect.objectContaining(calledWithInput), {
-        new: true,
-      });
+      expect(EventModel.findById).toHaveBeenCalledWith(mockUpdatedEventInput.eventId);
     });
 
-    it('should throw the original GraphQLError when EventModel.findByIdAndUpdate throws a GraphQLError', async () => {
+    it('should throw the original GraphQLError when EventModel.findById throws a GraphQLError', async () => {
       const mockGraphqlError = new GraphQLError('GraphQL Error');
-      (EventModel.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
+      (EventModel.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
 
-      const {eventId, ...calledWithInput} = mockUpdatedEventInput;
       await expect(EventDAO.updateEvent(mockUpdatedEventInput)).rejects.toThrow(mockGraphqlError);
-      expect(EventModel.findByIdAndUpdate).toHaveBeenCalledWith(eventId, expect.objectContaining(calledWithInput), {
-        new: true,
-      });
+      expect(EventModel.findById).toHaveBeenCalledWith(mockUpdatedEventInput.eventId);
     });
   });
 

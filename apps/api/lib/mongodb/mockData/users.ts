@@ -1,5 +1,5 @@
 import type {CreateUserInput} from '@ntlango/commons/types';
-import {Gender, SocialVisibility, UserRole} from '@ntlango/commons/types/user';
+import {Gender, SocialVisibility, UserRole, FollowPolicy} from '@ntlango/commons/types/user';
 
 const users: CreateUserInput[] = [
   {
@@ -49,6 +49,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
+    followPolicy: FollowPolicy.RequireApproval,
     roles: [UserRole.Host],
     shareRSVPByDefault: true,
   },
@@ -74,6 +75,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
+    followPolicy: FollowPolicy.Public,
     roles: [UserRole.User],
     shareRSVPByDefault: true,
   },
@@ -99,6 +101,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
+    followPolicy: FollowPolicy.RequireApproval,
     roles: [UserRole.Host, UserRole.User],
     shareRSVPByDefault: false,
   },
@@ -124,6 +127,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
+    followPolicy: FollowPolicy.Public,
     roles: [UserRole.User],
     shareRSVPByDefault: true,
   },
@@ -149,6 +153,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
+    followPolicy: FollowPolicy.Public,
     roles: [UserRole.User],
     shareRSVPByDefault: false,
   },
@@ -174,6 +179,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
+    followPolicy: FollowPolicy.RequireApproval,
     roles: [UserRole.User],
     shareRSVPByDefault: true,
   },

@@ -1,16 +1,28 @@
 import request from 'supertest';
 import type {IntegrationServer} from '@/test/integration/utils/server';
 import {startIntegrationServer, stopIntegrationServer} from '@/test/integration/utils/server';
-import {EventCategoryDAO, EventDAO, UserDAO} from '@/mongodb/dao';
+import {EventCategoryDAO, EventDAO, UserDAO, OrganizationDAO} from '@/mongodb/dao';
 import {Activity, Follow, Intent} from '@/mongodb/models';
 import {usersMockData, eventsMockData} from '@/mongodb/mockData';
-import type {EventCategory, User, UserWithToken, CreateEventInput} from '@ntlango/commons/types';
-import {EventStatus, EventVisibility, EventLifecycleStatus} from '@ntlango/commons/types/event';
-import {FollowTargetType} from '@ntlango/commons/types/follow';
-import {IntentStatus, IntentVisibility, IntentSource} from '@ntlango/commons/types/intent';
-import {ActivityVerb, ActivityObjectType, ActivityVisibility} from '@ntlango/commons/types/activity';
-import type {CreateUserInput} from '@ntlango/commons/types/user';
-import {SocialVisibility} from '@ntlango/commons/types/user';
+import {
+  CreateUserInput,
+  SocialVisibility,
+  FollowTargetType,
+  ActivityVerb,
+  ActivityObjectType,
+  ActivityVisibility,
+  IntentStatus,
+  IntentVisibility,
+  IntentSource,
+  EventStatus,
+  EventVisibility,
+  EventLifecycleStatus,
+  OrganizationTicketAccess,
+  type EventCategory,
+  type User,
+  type UserWithToken,
+  type CreateEventInput,
+} from '@ntlango/commons/types';
 import {
   getFollowMutation,
   getReadFollowersQuery,
@@ -280,23 +292,24 @@ describe('Social resolver integration', () => {
   });
 
   it('allows following an organization', async () => {
-    const org = await EventCategoryDAO.create({
+    const org = await OrganizationDAO.create({
       name: `Follow Org ${Date.now()}`,
-      iconName: 'org',
       description: 'Org for following',
+      ownerId: actorUser.userId,
+      allowedTicketAccess: OrganizationTicketAccess.Public,
     });
     const followResponse = await request(url)
       .post('')
       .set('token', actorUser.token)
-      .send(getFollowMutation({targetType: FollowTargetType.Organization, targetId: org.eventCategoryId}));
+      .send(getFollowMutation({targetType: FollowTargetType.Organization, targetId: org.orgId}));
 
     expect(followResponse.status).toBe(200);
     expect(followResponse.body.data.follow.targetType).toBe(FollowTargetType.Organization);
-    expect(followResponse.body.data.follow.targetId).toBe(org.eventCategoryId);
+    expect(followResponse.body.data.follow.targetId).toBe(org.orgId);
 
-    await request(url).post('').set('token', actorUser.token).send(getUnfollowMutation(FollowTargetType.Organization, org.eventCategoryId));
+    await request(url).post('').set('token', actorUser.token).send(getUnfollowMutation(FollowTargetType.Organization, org.orgId));
 
-    await EventCategoryDAO.deleteEventCategoryById(org.eventCategoryId).catch(() => {});
+    await OrganizationDAO.deleteOrganizationById(org.orgId).catch(() => {});
   });
 
   it('records activities with different visibility levels', async () => {

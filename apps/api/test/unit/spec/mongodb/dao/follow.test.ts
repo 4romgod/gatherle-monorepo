@@ -9,7 +9,7 @@ import {ERROR_MESSAGES} from '@/validation';
 
 jest.mock('@/mongodb/models', () => ({
   Follow: {
-    findOneAndUpdate: jest.fn(),
+    create: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
     findOneAndDelete: jest.fn(),
@@ -45,11 +45,12 @@ describe('FollowDAO', () => {
 
   describe('upsert', () => {
     it('upserts a follow edge and returns it', async () => {
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockFollow,
-        }),
-      );
+      // Mock findOne to return null (no existing follow)
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      // Mock create to return new follow
+      (FollowModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => mockFollow,
+      });
 
       const input: CreateFollowInput & {followerUserId: string} = {
         followerUserId: 'user-1',
@@ -62,49 +63,37 @@ describe('FollowDAO', () => {
 
       const result = await FollowDAO.upsert(input);
 
-      expect(FollowModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {followerUserId: 'user-1', targetType: FollowTargetType.User, targetId: 'user-2'},
+      expect(FollowModel.findOne).toHaveBeenCalledWith({
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.User,
+        targetId: 'user-2',
+      });
+      expect(FollowModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          $set: expect.objectContaining({
-            targetType: FollowTargetType.User,
-            targetId: 'user-2',
-            'notificationPreferences.contentVisibility': FollowContentVisibility.Active,
-          }),
-          $setOnInsert: expect.objectContaining({
-            followId: expect.any(String),
-            createdAt: expect.any(Date),
-            approvalStatus: FollowApprovalStatus.Accepted,
-          }),
+          followerUserId: 'user-1',
+          targetType: FollowTargetType.User,
+          targetId: 'user-2',
+          notificationPreferences: {contentVisibility: FollowContentVisibility.Active},
         }),
-        expect.objectContaining({new: true, upsert: true, setDefaultsOnInsert: true}),
       );
       expect(result).toEqual(mockFollow);
     });
 
     it('omits notificationPreferences when not provided', async () => {
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockFollow,
-        }),
-      );
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (FollowModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => mockFollow,
+      });
 
       await FollowDAO.upsert({followerUserId: 'user-1', targetType: FollowTargetType.User, targetId: 'user-2'});
 
-      const [, update] = (FollowModel.findOneAndUpdate as jest.Mock).mock.calls[0];
-      expect(update.$set['notificationPreferences.contentVisibility']).toBeUndefined();
-    });
-
-    it('throws when upsert returns null', async () => {
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
-
-      await expect(
-        FollowDAO.upsert({followerUserId: 'user-1', targetType: FollowTargetType.User, targetId: 'user-2'}),
-      ).rejects.toThrow(CustomError('Unable to upsert follow', ErrorTypes.INTERNAL_SERVER_ERROR));
+      const [createArg] = (FollowModel.create as jest.Mock).mock.calls[0];
+      expect(createArg.notificationPreferences).toBeUndefined();
     });
 
     it('rethrows GraphQLError', async () => {
       const graphQLError = new GraphQLError('GraphQL Error');
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
 
       await expect(
         FollowDAO.upsert({followerUserId: 'user-1', targetType: FollowTargetType.User, targetId: 'user-2'}),
@@ -112,7 +101,7 @@ describe('FollowDAO', () => {
     });
 
     it('wraps unknown errors', async () => {
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(
         FollowDAO.upsert({followerUserId: 'user-1', targetType: FollowTargetType.User, targetId: 'user-2'}),
@@ -211,12 +200,16 @@ describe('FollowDAO', () => {
 
   describe('updateNotificationPreferences', () => {
     it('updates notification preferences successfully', async () => {
+      const mockSave = jest.fn().mockResolvedValue(undefined);
       const updatedFollow = {
         ...mockFollow,
         notificationPreferences: {contentVisibility: FollowContentVisibility.Muted},
       };
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+      (FollowModel.findOne as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
+          ...mockFollow,
+          notificationPreferences: {contentVisibility: FollowContentVisibility.Active},
+          save: mockSave,
           toObject: () => updatedFollow,
         }),
       );
@@ -225,16 +218,13 @@ describe('FollowDAO', () => {
         contentVisibility: FollowContentVisibility.Muted,
       });
 
-      expect(FollowModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {followId: 'follow-1', followerUserId: 'user-1'},
-        {$set: {'notificationPreferences.contentVisibility': FollowContentVisibility.Muted}},
-        {new: true},
-      );
+      expect(FollowModel.findOne).toHaveBeenCalledWith({followId: 'follow-1', followerUserId: 'user-1'});
+      expect(mockSave).toHaveBeenCalled();
       expect(result).toEqual(updatedFollow);
     });
 
     it('throws NOT_FOUND when follow does not exist', async () => {
-      (FollowModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(
         FollowDAO.updateNotificationPreferences('follow-1', 'user-1', {contentVisibility: FollowContentVisibility.Muted}),

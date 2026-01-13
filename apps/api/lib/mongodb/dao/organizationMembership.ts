@@ -45,13 +45,19 @@ class OrganizationMembershipDAO {
   static async update(input: UpdateOrganizationMembershipInput): Promise<OrganizationMembership> {
     try {
       const {membershipId, ...rest} = input;
-      const updatedMembership = await OrganizationMembershipModel.findOneAndUpdate({membershipId}, rest, {
-        new: true,
-      }).exec();
-      if (!updatedMembership) {
+      const membership = await OrganizationMembershipModel.findOne({membershipId}).exec();
+      if (!membership) {
         throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return updatedMembership.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(rest).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(membership, fieldsToUpdate);
+      await membership.save();
+      
+      return membership.toObject();
     } catch (error) {
       logger.error(`Error updating membership ${input.membershipId}`, error);
       if (error instanceof GraphQLError) {

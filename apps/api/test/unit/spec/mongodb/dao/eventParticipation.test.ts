@@ -9,7 +9,8 @@ import {Types} from 'mongoose';
 
 jest.mock('@/mongodb/models', () => ({
   EventParticipant: {
-    findOneAndUpdate: jest.fn(),
+    findOne: jest.fn(),
+    create: jest.fn(),
     find: jest.fn(),
   },
 }));
@@ -57,145 +58,77 @@ describe('EventParticipantDAO', () => {
       sharedVisibility: ParticipantVisibility.Public,
     };
 
-    it('should upsert a participant and return the participant object', async () => {
-      const mockResult = {
+    it('should update existing participant', async () => {
+      const existingParticipant = {
         ...mockEventParticipant,
-        quantity: 2,
-        sharedVisibility: ParticipantVisibility.Public,
-        toObject: jest.fn().mockReturnValue({
-          ...mockEventParticipant,
-          quantity: 2,
-          sharedVisibility: ParticipantVisibility.Public,
-        }),
+        status: ParticipantStatus.Interested,
+        save: jest.fn().mockResolvedValue({...mockEventParticipant, quantity: 2, status: ParticipantStatus.Going}),
+        toObject: jest.fn().mockReturnValue({...mockEventParticipant, quantity: 2, status: ParticipantStatus.Going}),
       };
 
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResult));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingParticipant));
 
       const result = await EventParticipantDAO.upsert(mockUpsertInput);
 
-      expect(result).toEqual({
-        ...mockEventParticipant,
-        quantity: 2,
-        sharedVisibility: ParticipantVisibility.Public,
-      });
-      expect(EventParticipantModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {eventId: mockEventId, userId: mockUserId},
-        {
-          status: ParticipantStatus.Going,
-          quantity: 2,
-          invitedBy: 'user789',
-          sharedVisibility: ParticipantVisibility.Public,
-          $setOnInsert: {
-            participantId: expect.any(String),
-            rsvpAt: expect.any(Date),
-          },
-        },
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      );
+      expect(result.status).toBe(ParticipantStatus.Going);
+      expect(result.quantity).toBe(2);
+      expect(EventParticipantModel.findOne).toHaveBeenCalledWith({eventId: mockEventId, userId: mockUserId});
+      expect(existingParticipant.save).toHaveBeenCalled();
     });
 
-    it('should create a new participant with $setOnInsert fields on first upsert', async () => {
-      const mockResult = {
+    it('should create new participant when not found', async () => {
+      const newParticipant = {
         ...mockEventParticipant,
-        toObject: jest.fn().mockReturnValue(mockEventParticipant),
+        quantity: 2,
+        toObject: jest.fn().mockReturnValue({...mockEventParticipant, quantity: 2}),
       };
 
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResult));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (EventParticipantModel.create as jest.Mock).mockResolvedValue(newParticipant);
 
       const result = await EventParticipantDAO.upsert(mockUpsertInput);
 
-      expect(result).toEqual(mockEventParticipant);
-      const callArgs = (EventParticipantModel.findOneAndUpdate as jest.Mock).mock.calls[0];
-      expect(callArgs[1].$setOnInsert).toHaveProperty('participantId');
-      expect(callArgs[1].$setOnInsert).toHaveProperty('rsvpAt');
-      expect(callArgs[1].$setOnInsert.rsvpAt).toBeInstanceOf(Date);
+      expect(result.quantity).toBe(2);
+      expect(EventParticipantModel.create).toHaveBeenCalledWith(expect.objectContaining({
+        eventId: mockEventId,
+        userId: mockUserId,
+        status: ParticipantStatus.Going,
+        quantity: 2,
+      }));
     });
 
-    it('should throw INTERNAL_SERVER_ERROR when findOneAndUpdate returns null', async () => {
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
-
-      await expect(EventParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(
-        CustomError('Unable to upsert participant', ErrorTypes.INTERNAL_SERVER_ERROR),
-      );
-    });
-
-    it('should throw INTERNAL_SERVER_ERROR GraphQLError when findOneAndUpdate throws an unknown error', async () => {
+    it('should handle errors gracefully', async () => {
       const mockError = new Error('Database Error');
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(EventParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(GraphQLError);
     });
 
-    it('should re-throw GraphQLError when findOneAndUpdate throws a GraphQLError', async () => {
+    it('should re-throw GraphQLError', async () => {
       const mockGraphqlError = new GraphQLError('GraphQL Error');
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
 
       await expect(EventParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(mockGraphqlError);
     });
 
-    it('should handle upsert with minimal required fields', async () => {
-      const minimalInput: UpsertEventParticipantInput = {
-        eventId: mockEventId,
-        userId: mockUserId,
-        status: ParticipantStatus.Interested,
-      };
-
-      const mockResult = {
-        ...mockEventParticipant,
-        status: ParticipantStatus.Interested,
-        quantity: undefined,
-        invitedBy: undefined,
-        sharedVisibility: undefined,
-        toObject: jest.fn().mockReturnValue({
-          ...mockEventParticipant,
-          status: ParticipantStatus.Interested,
-          quantity: undefined,
-          invitedBy: undefined,
-          sharedVisibility: undefined,
-        }),
-      };
-
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResult));
-
-      const result = await EventParticipantDAO.upsert(minimalInput);
-
-      expect(result.status).toBe(ParticipantStatus.Interested);
-      expect(EventParticipantModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {eventId: mockEventId, userId: mockUserId},
-        expect.objectContaining({
-          status: ParticipantStatus.Interested,
-        }),
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      );
-    });
-
-    it('should default status when not provided', async () => {
+    it('should default status to Going when not provided', async () => {
       const minimalInput: UpsertEventParticipantInput = {
         eventId: mockEventId,
         userId: mockUserId,
       };
 
-      const mockResult = {
+      const newParticipant = {
         ...mockEventParticipant,
         status: ParticipantStatus.Going,
-        toObject: jest.fn().mockReturnValue({
-          ...mockEventParticipant,
-          status: ParticipantStatus.Going,
-        }),
+        toObject: jest.fn().mockReturnValue({...mockEventParticipant, status: ParticipantStatus.Going}),
       };
 
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResult));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (EventParticipantModel.create as jest.Mock).mockResolvedValue(newParticipant);
 
       const result = await EventParticipantDAO.upsert(minimalInput);
 
       expect(result.status).toBe(ParticipantStatus.Going);
-      expect(EventParticipantModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {eventId: mockEventId, userId: mockUserId},
-        expect.objectContaining({
-          status: ParticipantStatus.Going,
-        }),
-        {new: true, upsert: true, setDefaultsOnInsert: true},
-      );
     });
   });
 
@@ -206,48 +139,43 @@ describe('EventParticipantDAO', () => {
     };
 
     it('should cancel a participant and return the updated participant object', async () => {
-      const mockCancelledParticipant = {
+      const existingParticipant = {
         ...mockEventParticipant,
-        status: ParticipantStatus.Cancelled,
-        cancelledAt: new Date('2024-01-02T00:00:00.000Z'),
+        save: jest.fn().mockResolvedValue({...mockEventParticipant, status: ParticipantStatus.Cancelled}),
         toObject: jest.fn().mockReturnValue({
           ...mockEventParticipant,
           status: ParticipantStatus.Cancelled,
-          cancelledAt: new Date('2024-01-02T00:00:00.000Z'),
+          cancelledAt: expect.any(Date),
         }),
       };
 
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockCancelledParticipant));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingParticipant));
 
       const result = await EventParticipantDAO.cancel(mockCancelInput);
 
       expect(result.status).toBe(ParticipantStatus.Cancelled);
-      expect(result.cancelledAt).toBeDefined();
-      expect(EventParticipantModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {eventId: mockEventId, userId: mockUserId},
-        {status: ParticipantStatus.Cancelled, cancelledAt: expect.any(Date)},
-        {new: true},
-      );
+      expect(EventParticipantModel.findOne).toHaveBeenCalledWith({eventId: mockEventId, userId: mockUserId});
+      expect(existingParticipant.save).toHaveBeenCalled();
     });
 
     it('should throw NOT_FOUND GraphQLError when participant is not found', async () => {
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(
         CustomError(`Participant not found for event ${mockEventId}`, ErrorTypes.NOT_FOUND),
       );
     });
 
-    it('should throw INTERNAL_SERVER_ERROR GraphQLError when findOneAndUpdate throws an unknown error', async () => {
+    it('should handle errors gracefully', async () => {
       const mockError = new MockMongoError(0);
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(GraphQLError);
     });
 
-    it('should re-throw GraphQLError when findOneAndUpdate throws a GraphQLError', async () => {
+    it('should re-throw GraphQLError', async () => {
       const mockGraphqlError = new GraphQLError('GraphQL Error');
-      (EventParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
+      (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
 
       await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(mockGraphqlError);
     });

@@ -48,6 +48,8 @@ describe('Event Resolver', () => {
   beforeAll(async () => {
     server = await startIntegrationServer({port: TEST_PORT});
     url = server.url;
+    // Clean up any leftover event categories from failed test runs
+    await EventCategoryDAO.deleteEventCategoryBySlug('integration-event-category').catch(() => {});
     testEventCategory = await EventCategoryDAO.create({
       name: 'IntegrationEventCategory',
       iconName: 'icon',
@@ -58,6 +60,8 @@ describe('Event Resolver', () => {
       email: 'event@example.com',
       username: 'eventUser',
     };
+    // Clean up user if exists from failed test run
+    await UserDAO.deleteUserByEmail(userInput.email).catch(() => {});
     testUser = await UserDAO.create(userInput);
   });
 
@@ -308,10 +312,10 @@ describe('Event Resolver', () => {
       input.eventCategories = ['invalid-category-id'];
       const response = await request(url).post('').set('token', testUser.token).send(getCreateEventMutation(input));
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       expect(response.body.errors).toBeDefined();
-      expect(response.body.errors[0].extensions.code).toBe('INTERNAL_SERVER_ERROR');
-      expect(response.body.errors[0].message).toContain('Cast to ObjectId failed');
+      expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+      expect(response.body.errors[0].message).toContain('Event Category ID');
     });
 
     it('returns unauthenticated when token missing', async () => {

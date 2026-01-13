@@ -409,25 +409,27 @@ describe('UserDAO', () => {
         userId: 'mockUserId',
         email: 'updated@example.com',
         username: 'updatedUser',
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'mockUserId',
+          email: 'updated@example.com',
+          username: 'updatedUser',
+        }),
       };
 
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockUpdatedUser,
-        }),
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUpdatedUser),
       );
 
       const result = await UserDAO.updateUser(mockUpdateUserInput);
 
-      expect(result).toEqual(mockUpdatedUser);
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        'mockUserId',
-        {
-          email: 'updated@example.com',
-          username: 'updatedUser',
-        },
-        {new: true},
-      );
+      expect(result).toEqual({
+        userId: 'mockUserId',
+        email: 'updated@example.com',
+        username: 'updatedUser',
+      });
+      expect(User.findById).toHaveBeenCalledWith('mockUserId');
+      expect(mockUpdatedUser.save).toHaveBeenCalled();
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
@@ -438,18 +440,20 @@ describe('UserDAO', () => {
         interests: [],
       };
 
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(UserDAO.updateUser(mockUpdateUserInputNotFound)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExistingUserId'), ErrorTypes.NOT_FOUND),
       );
+      expect(User.findById).toHaveBeenCalledWith('nonExistingUserId');
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
       const mockError = new Error('Mongodb Error');
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(UserDAO.updateUser(mockUpdateUserInput)).rejects.toThrow(KnownCommonError(mockError));
+      expect(User.findById).toHaveBeenCalledWith('mockUserId');
     });
   });
 
@@ -583,56 +587,45 @@ describe('UserDAO', () => {
 
   describe('promoteUserToAdmin', () => {
     it('should promote a user to ADMIN and return the updated user object', async () => {
-      const mockUpdatedUser = {
+      const mockUser = {
         userId: 'mockUserId',
-        UserRole: UserRole.Admin,
+        userRole: UserRole.Admin,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'mockUserId',
+          userRole: UserRole.Admin,
+        }),
       };
 
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockUpdatedUser,
-        }),
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
       );
 
       const result = await UserDAO.promoteUserToAdmin('mockUserId');
 
-      expect(result).toEqual(mockUpdatedUser);
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        'mockUserId',
-        {
-          userRole: UserRole.Admin,
-        },
-        {new: true},
-      );
+      expect(result).toEqual({
+        userId: 'mockUserId',
+        userRole: UserRole.Admin,
+      });
+      expect(User.findById).toHaveBeenCalledWith('mockUserId');
+      expect(mockUser.save).toHaveBeenCalled();
     });
 
     it('should throw NOT_FOUND error when user not found', async () => {
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(UserDAO.promoteUserToAdmin('nonExistingUserId')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExistingUserId'), ErrorTypes.NOT_FOUND),
       );
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        'nonExistingUserId',
-        {
-          userRole: UserRole.Admin,
-        },
-        {new: true},
-      );
+      expect(User.findById).toHaveBeenCalledWith('nonExistingUserId');
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
       const mockError = new Error('Mongodb Error');
-      (User.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(UserDAO.promoteUserToAdmin('anyId')).rejects.toThrow(KnownCommonError(mockError));
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        'anyId',
-        {
-          userRole: UserRole.Admin,
-        },
-        {new: true},
-      );
+      expect(User.findById).toHaveBeenCalledWith('anyId');
     });
   });
 });

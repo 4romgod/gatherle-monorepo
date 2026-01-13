@@ -41,6 +41,9 @@ describe('EventCategoryGroup Resolver', () => {
       ...user,
       token,
     };
+    // Clean up any leftover categories from failed test runs
+    await EventCategoryDAO.deleteEventCategoryBySlug('group-category-a').catch(() => {});
+    await EventCategoryDAO.deleteEventCategoryBySlug('group-category-b').catch(() => {});
     categories = [
       await EventCategoryDAO.create({
         name: 'Group Category A',
@@ -126,6 +129,8 @@ describe('EventCategoryGroup Resolver', () => {
     it('updates a group', async () => {
       const createdGroup = await createGroup(uniqueGroupName('Editable Group'));
       const updatedName = 'Updated Group';
+      // Clean up any leftover "updated-group" from failed test runs
+      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug('updated-group').catch(() => {});
       const updateResponse = await request(url)
         .post('')
         .set('token', adminUser.token)
@@ -138,7 +143,10 @@ describe('EventCategoryGroup Resolver', () => {
         );
       expect(updateResponse.status).toBe(200);
       expect(updateResponse.body.data.updateEventCategoryGroup.name).toBe(updatedName);
+      // Clean up using the ORIGINAL slug since slug shouldn't change on update
       await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(createdGroup.slug).catch(() => {});
+      // Also clean up in case slug did change (shouldn't happen with our fix)
+      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug('updated-group').catch(() => {});
     });
 
     it('reads groups with options', async () => {

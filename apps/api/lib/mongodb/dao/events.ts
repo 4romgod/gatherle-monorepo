@@ -114,12 +114,20 @@ class EventDAO {
   static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
     try {
       const {eventId, ...restInput} = input;
-      const updatedEvent = await EventModel.findByIdAndUpdate(eventId, restInput, {new: true}).exec();
+      const event = await EventModel.findById(eventId).exec();
 
-      if (!updatedEvent) {
+      if (!event) {
         throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return updatedEvent.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(restInput).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(event, fieldsToUpdate);
+      await event.save();
+      
+      return event.toObject();
     } catch (error) {
       logger.error('Error updating event', error);
       if (error instanceof GraphQLError) {

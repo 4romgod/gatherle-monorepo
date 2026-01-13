@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import {FollowResolver} from '@/graphql/resolvers/follow';
-import {FollowDAO} from '@/mongodb/dao';
+import {FollowDAO, UserDAO} from '@/mongodb/dao';
 import type {CreateFollowInput, Follow, User} from '@ntlango/commons/types';
-import {FollowTargetType, FollowContentVisibility, FollowApprovalStatus, UserRole} from '@ntlango/commons/types';
+import {FollowTargetType, FollowContentVisibility, FollowApprovalStatus, UserRole, FollowPolicy} from '@ntlango/commons/types';
 import {Types} from 'mongoose';
 import type {ServerContext} from '@/graphql';
 
@@ -15,6 +15,9 @@ jest.mock('@/mongodb/dao', () => ({
     updateNotificationPreferences: jest.fn(),
     updateApprovalStatus: jest.fn(),
     readPendingFollows: jest.fn(),
+  },
+  UserDAO: {
+    readUserById: jest.fn(),
   },
 }));
 
@@ -57,11 +60,13 @@ describe('FollowResolver', () => {
       createdAt: new Date(),
     };
 
+    (UserDAO.readUserById as jest.Mock).mockResolvedValue({...mockUser, followPolicy: FollowPolicy.Public});
     (FollowDAO.upsert as jest.Mock).mockResolvedValue(mockFollow);
 
     const result = await resolver.follow(mockInput, mockContext as ServerContext);
 
-    expect(FollowDAO.upsert).toHaveBeenCalledWith({...mockInput, followerUserId: mockUser.userId});
+    expect(UserDAO.readUserById).toHaveBeenCalledWith(mockInput.targetId);
+    expect(FollowDAO.upsert).toHaveBeenCalledWith({...mockInput, followerUserId: mockUser.userId, approvalStatus: FollowApprovalStatus.Accepted});
     expect(result).toEqual(mockFollow);
   });
 

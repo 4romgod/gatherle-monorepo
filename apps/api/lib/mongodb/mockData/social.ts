@@ -49,7 +49,6 @@ export const followSeedData: FollowSeed[] = [
     followerIndex: 1,
     targetType: FollowTargetType.User,
     targetUserIndex: 2,
-    approvalStatus: FollowApprovalStatus.Pending,
   },
 ];
 

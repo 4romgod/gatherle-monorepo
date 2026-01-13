@@ -15,6 +15,7 @@ export const GetAllUsersDocument = graphql(`
       phone_number
       profile_picture
       userRole
+      followersCount
       interests {
         eventCategoryId
         slug
@@ -42,6 +43,7 @@ export const GetUserByUsernameDocument = graphql(`
       phone_number
       profile_picture
       userRole
+      followersCount
       interests {
         eventCategoryId
         slug

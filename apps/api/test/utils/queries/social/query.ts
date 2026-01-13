@@ -7,7 +7,7 @@ export const getReadFollowingQuery = () => {
           followerUserId
           targetType
           targetId
-          status
+          approvalStatus
         }
       }
     `,
@@ -23,7 +23,7 @@ export const getReadFollowersQuery = (targetType: string, targetId: string) => {
           followerUserId
           targetType
           targetId
-          status
+          approvalStatus
         }
       }
     `,

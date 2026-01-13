@@ -2,13 +2,14 @@ import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root} from 'type-graphql';
 import {
   CreateOrganizationInput,
+  FollowTargetType,
   Organization,
   OrganizationMembership,
   QueryOptionsInput,
   UpdateOrganizationInput,
   UserRole,
 } from '@ntlango/commons/types';
-import {OrganizationDAO, OrganizationMembershipDAO} from '@/mongodb/dao';
+import {FollowDAO, OrganizationDAO, OrganizationMembershipDAO} from '@/mongodb/dao';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
 import {validateInput, validateMongodbId} from '@/validation';
 import {CreateOrganizationInputSchema, UpdateOrganizationInputSchema} from '@/validation/zod';
@@ -22,6 +23,14 @@ export class OrganizationResolver {
       return [];
     }
     return OrganizationMembershipDAO.readMembershipsByOrgId(organization.orgId);
+  }
+
+  @FieldResolver(() => Number)
+  async followersCount(@Root() organization: Organization): Promise<number> {
+    if (!organization.orgId) {
+      return 0;
+    }
+    return FollowDAO.countFollowers(FollowTargetType.Organization, organization.orgId);
   }
 
   @Authorized([UserRole.Admin])

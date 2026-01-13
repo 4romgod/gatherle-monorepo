@@ -71,15 +71,20 @@ class EventCategoryGroupDAO {
    */
   static async updateEventCategoryGroup(input: UpdateEventCategoryGroupInput) {
     try {
-      const updatedEventCategoryGroup = await EventCategoryGroupModel.findByIdAndUpdate(input.eventCategoryGroupId, input, {
-        new: true,
-      })
-        .exec();
+      const eventCategoryGroup = await EventCategoryGroupModel.findById(input.eventCategoryGroupId).exec();
 
-      if (!updatedEventCategoryGroup) {
+      if (!eventCategoryGroup) {
         throw CustomError('Event Category Group not found', ErrorTypes.NOT_FOUND);
       }
-      return updatedEventCategoryGroup.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(input).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(eventCategoryGroup, fieldsToUpdate);
+      await eventCategoryGroup.save();
+      
+      return eventCategoryGroup.toObject();
     } catch (error) {
       logger.info(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, error);
       if (error instanceof GraphQLError) {

@@ -56,11 +56,19 @@ class VenueDAO {
   static async update(input: UpdateVenueInput): Promise<Venue> {
     try {
       const {venueId, ...rest} = input;
-      const updatedVenue = await VenueModel.findOneAndUpdate({venueId}, rest, {new: true}).exec();
-      if (!updatedVenue) {
+      const venue = await VenueModel.findOne({venueId}).exec();
+      if (!venue) {
         throw CustomError(`Venue with id ${venueId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return updatedVenue.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(rest).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(venue, fieldsToUpdate);
+      await venue.save();
+      
+      return venue.toObject();
     } catch (error) {
       logger.error(`Error updating venue ${input.venueId}`, error);
       if (error instanceof GraphQLError) {

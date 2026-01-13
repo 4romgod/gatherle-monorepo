@@ -63,13 +63,19 @@ class EventCategoryDAO {
 
   static async updateEventCategory(input: UpdateEventCategoryInput) {
     try {
-      const updatedEventCategory = await EventCategoryModel.findByIdAndUpdate(input.eventCategoryId, input, {
-        new: true,
-      }).exec();
-      if (!updatedEventCategory) {
+      const eventCategory = await EventCategoryModel.findById(input.eventCategoryId).exec();
+      if (!eventCategory) {
         throw CustomError('Event Category not found', ErrorTypes.NOT_FOUND);
       }
-      return updatedEventCategory.toObject();
+      
+      // Filter out undefined values to avoid overwriting with undefined
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(input).filter(([_, value]) => value !== undefined)
+      );
+      Object.assign(eventCategory, fieldsToUpdate);
+      await eventCategory.save();
+      
+      return eventCategory.toObject();
     } catch (error) {
       logger.info(`Error updating event category with eventCategoryId ${input.eventCategoryId}`, error);
       if (error instanceof GraphQLError) {

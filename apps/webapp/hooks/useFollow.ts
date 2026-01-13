@@ -71,6 +71,8 @@ export function useFollowing() {
   const token = session?.user?.token;
 
   const { data, loading, error, refetch } = useQuery(GetFollowingDocument, {
+    skip: !token,
+    fetchPolicy: 'cache-and-network',
     context: {
       headers: {
         ...(token ? { token } : {}),

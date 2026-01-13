@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx} from 'type-graphql';
-import {UserDAO} from '@/mongodb/dao';
-import {User, CreateUserInput, UpdateUserInput, LoginUserInput, UserRole, UserWithToken, QueryOptionsInput, EventCategory} from '@ntlango/commons/types';
+import {FollowDAO, UserDAO} from '@/mongodb/dao';
+import {User, CreateUserInput, UpdateUserInput, LoginUserInput, UserRole, UserWithToken, QueryOptionsInput, EventCategory, FollowTargetType} from '@ntlango/commons/types';
 import {CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema} from '@/validation/zod';
 import {ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername} from '@/validation';
 import {RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS} from '@/constants';
@@ -9,6 +9,14 @@ import type {ServerContext} from '@/graphql';
 
 @Resolver(() => User)
 export class UserResolver {
+  @FieldResolver(() => Number)
+  async followersCount(@Root() user: User): Promise<number> {
+    if (!user.userId) {
+      return 0;
+    }
+    return FollowDAO.countFollowers(FollowTargetType.User, user.userId);
+  }
+
   @Mutation(() => UserWithToken, {description: RESOLVER_DESCRIPTIONS.USER.createUser})
   async createUser(
     @Arg('input', () => CreateUserInput, {description: USER_DESCRIPTIONS.CREATE_INPUT}) input: CreateUserInput,

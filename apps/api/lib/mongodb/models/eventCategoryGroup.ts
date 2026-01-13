@@ -8,7 +8,7 @@ import {EventCategoryGroup as EventCategoryGroupEntity} from '@ntlango/commons/t
     if (!this.eventCategoryGroupId && this._id) {
       this.eventCategoryGroupId = this._id.toString();
     }
-    if (this.isModified('name')) {
+    if (this.isNew || !this.slug) {
       this.slug = kebabCase(this.name);
     }
     next();

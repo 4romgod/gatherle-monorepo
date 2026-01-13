@@ -230,20 +230,23 @@ describe('EventCategoryGroupDAO', () => {
         eventCategories: mockEventCategoryIds,
       };
 
+      const mockSave = jest.fn().mockResolvedValue({
+        toObject: () => ({...mockEventCategoryGroup, name: 'Updated Group'}),
+      });
       const mockQuery = createMockSuccessMongooseQuery({
         ...mockEventCategoryGroup,
         name: 'Updated Group',
+        save: mockSave,
         toObject: jest.fn().mockReturnValue({...mockEventCategoryGroup, name: 'Updated Group'}),
       });
 
-      (EventCategoryGroupModel.findByIdAndUpdate as jest.Mock).mockReturnValue(mockQuery);
+      (EventCategoryGroupModel.findById as jest.Mock).mockReturnValue(mockQuery);
 
       const result = await EventCategoryGroupDAO.updateEventCategoryGroup(input);
 
-      expect(EventCategoryGroupModel.findByIdAndUpdate).toHaveBeenCalledWith(input.eventCategoryGroupId, input, {
-        new: true,
-      });
+      expect(EventCategoryGroupModel.findById).toHaveBeenCalledWith(input.eventCategoryGroupId);
       expect(mockQuery.exec).toHaveBeenCalled();
+      expect(mockSave).toHaveBeenCalled();
       expect(result.name).toBe('Updated Group');
     });
 
@@ -255,7 +258,7 @@ describe('EventCategoryGroupDAO', () => {
       };
 
       const mockQuery = createMockSuccessMongooseQuery(null);
-      (EventCategoryGroupModel.findByIdAndUpdate as jest.Mock).mockReturnValue(mockQuery);
+      (EventCategoryGroupModel.findById as jest.Mock).mockReturnValue(mockQuery);
 
       await expect(EventCategoryGroupDAO.updateEventCategoryGroup(input)).rejects.toThrow(
         CustomError('Event Category Group not found', ErrorTypes.NOT_FOUND),
@@ -270,7 +273,7 @@ describe('EventCategoryGroupDAO', () => {
       };
 
       const mockQuery = createMockFailedMongooseQuery(new MockMongoError(0));
-      (EventCategoryGroupModel.findByIdAndUpdate as jest.Mock).mockReturnValue(mockQuery);
+      (EventCategoryGroupModel.findById as jest.Mock).mockReturnValue(mockQuery);
 
       await expect(EventCategoryGroupDAO.updateEventCategoryGroup(input)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),

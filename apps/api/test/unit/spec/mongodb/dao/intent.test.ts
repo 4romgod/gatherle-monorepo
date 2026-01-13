@@ -9,7 +9,8 @@ import {ERROR_MESSAGES} from '@/validation';
 
 jest.mock('@/mongodb/models', () => ({
   Intent: {
-    findOneAndUpdate: jest.fn(),
+    create: jest.fn(),
+    findOne: jest.fn(),
     find: jest.fn(),
   },
 }));
@@ -44,11 +45,12 @@ describe('IntentDAO', () => {
 
   describe('upsert', () => {
     it('upserts intent with updates', async () => {
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockIntent,
-        }),
-      );
+      // Mock findOne to return null (no existing intent)
+      (IntentModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      // Mock create to return new intent
+      (IntentModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => mockIntent,
+      });
 
       const input: UpsertIntentInput & {userId: string} = {
         userId: 'user-1',
@@ -58,19 +60,18 @@ describe('IntentDAO', () => {
 
       const result = await IntentDAO.upsert(input);
 
-      const [filter, updateQuery] = (IntentModel.findOneAndUpdate as jest.Mock).mock.calls[0];
-      expect(filter).toEqual({userId: 'user-1', eventId: 'event-1'});
-      expect(updateQuery.$set).toEqual(expect.objectContaining({status: IntentStatus.Interested}));
-      expect(updateQuery.$setOnInsert).toEqual(expect.objectContaining({intentId: expect.any(String), userId: 'user-1', eventId: 'event-1'}));
+      expect(IntentModel.findOne).toHaveBeenCalledWith({userId: 'user-1', eventId: 'event-1'});
+      expect(IntentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({userId: 'user-1', eventId: 'event-1', status: IntentStatus.Interested}),
+      );
       expect(result).toEqual(mockIntent);
     });
 
     it('includes optional fields when provided', async () => {
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockIntent,
-        }),
-      );
+      (IntentModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (IntentModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => mockIntent,
+      });
 
       const input: UpsertIntentInput & {userId: string} = {
         userId: 'user-1',
@@ -84,8 +85,7 @@ describe('IntentDAO', () => {
 
       await IntentDAO.upsert(input);
 
-      const [, updateQuery] = (IntentModel.findOneAndUpdate as jest.Mock).mock.calls[0];
-      expect(updateQuery.$set).toEqual(
+      expect(IntentModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
           status: IntentStatus.Going,
           visibility: IntentVisibility.Private,
@@ -96,37 +96,32 @@ describe('IntentDAO', () => {
       );
     });
 
-    it('uses intentId filter when provided and skips empty updates', async () => {
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+    it('uses intentId filter when provided and updates existing intent', async () => {
+      const mockSave = jest.fn().mockResolvedValue({toObject: () => mockIntent});
+      (IntentModel.findOne as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
+          ...mockIntent,
+          save: mockSave,
           toObject: () => mockIntent,
         }),
       );
 
       await IntentDAO.upsert({userId: 'user-1', eventId: 'event-1', intentId: 'intent-1'});
 
-      const [filter, updateQuery] = (IntentModel.findOneAndUpdate as jest.Mock).mock.calls[0];
-      expect(filter).toEqual({intentId: 'intent-1'});
-      expect(updateQuery.$set).toBeUndefined();
-    });
-
-    it('throws when intent is missing', async () => {
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
-
-      await expect(IntentDAO.upsert({userId: 'user-1', eventId: 'event-1'})).rejects.toThrow(
-        CustomError('Unable to persist intent', ErrorTypes.INTERNAL_SERVER_ERROR),
-      );
+      expect(IntentModel.findOne).toHaveBeenCalledWith({intentId: 'intent-1'});
+      // When no updates are provided, save still happens (no-op update)
+      expect(mockSave).toHaveBeenCalled();
     });
 
     it('rethrows GraphQLError', async () => {
       const graphQLError = new GraphQLError('GraphQL Error');
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
+      (IntentModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
 
       await expect(IntentDAO.upsert({userId: 'user-1', eventId: 'event-1'})).rejects.toThrow(graphQLError);
     });
 
     it('wraps unknown errors', async () => {
-      (IntentModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+      (IntentModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(IntentDAO.upsert({userId: 'user-1', eventId: 'event-1'})).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),

@@ -13,36 +13,30 @@ import {CustomError, ErrorTypes, KnownCommonError} from '@/utils';
 import {logger} from '@/utils/logger';
 
 class FollowDAO {
-  static async upsert(input: CreateFollowInput & {followerUserId: string}): Promise<FollowEntity> {
+  static async upsert(input: CreateFollowInput & {followerUserId: string; approvalStatus?: FollowApprovalStatus}): Promise<FollowEntity> {
     try {
-      const {followerUserId, targetType, targetId, notificationPreferences} = input;
-      const update: UpdateQuery<FollowEntity> = {
-        $set: {
+      const {followerUserId, targetType, targetId, notificationPreferences, approvalStatus} = input;
+      
+      let follow = await FollowModel.findOne({followerUserId, targetType, targetId}).exec();
+      
+      if (follow) {
+        // Update existing follow
+        follow.targetType = targetType;
+        follow.targetId = targetId;
+        if (notificationPreferences?.contentVisibility !== undefined) {
+          follow.notificationPreferences = follow.notificationPreferences || {};
+          follow.notificationPreferences.contentVisibility = notificationPreferences.contentVisibility;
+        }
+        await follow.save();
+      } else {
+        // Create new follow - triggers pre-validation hooks
+        follow = await FollowModel.create({
+          followerUserId,
           targetType,
           targetId,
-        },
-        $setOnInsert: {
-          followId: new Types.ObjectId().toString(),
-          createdAt: new Date(),
-          approvalStatus: FollowApprovalStatus.Accepted, // Default to Accepted, will be overridden based on privacy settings in resolver
-        },
-      };
-      
-      // Handle nested notification preferences
-      if (notificationPreferences) {
-        if (notificationPreferences.contentVisibility !== undefined) {
-          (update.$set as any)['notificationPreferences.contentVisibility'] = notificationPreferences.contentVisibility;
-        }
-      }
-      
-      const follow = await FollowModel.findOneAndUpdate({followerUserId, targetType, targetId}, update, {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      }).exec();
-
-      if (!follow) {
-        throw CustomError('Unable to upsert follow', ErrorTypes.INTERNAL_SERVER_ERROR);
+          notificationPreferences,
+          approvalStatus: approvalStatus ?? FollowApprovalStatus.Pending,
+        });
       }
 
       return follow.toObject();
@@ -61,20 +55,18 @@ class FollowDAO {
     notificationPreferences: Partial<FollowNotificationPreferences>,
   ): Promise<FollowEntity> {
     try {
-      const update: UpdateQuery<FollowEntity> = {
-        $set: {},
-      };
-
-      // Update nested fields individually
-      if (notificationPreferences.contentVisibility !== undefined) {
-        (update.$set as any)['notificationPreferences.contentVisibility'] = notificationPreferences.contentVisibility;
-      }
-
-      const follow = await FollowModel.findOneAndUpdate({followId, followerUserId: userId}, update, {new: true}).exec();
+      const follow = await FollowModel.findOne({followId, followerUserId: userId}).exec();
 
       if (!follow) {
         throw CustomError('Follow not found or user not authorized', ErrorTypes.NOT_FOUND);
       }
+      
+      if (notificationPreferences.contentVisibility !== undefined) {
+        follow.notificationPreferences = follow.notificationPreferences || {};
+        follow.notificationPreferences.contentVisibility = notificationPreferences.contentVisibility;
+      }
+      
+      await follow.save();
 
       return follow.toObject();
     } catch (error) {
@@ -88,15 +80,12 @@ class FollowDAO {
 
   static async updateApprovalStatus(followId: string, targetUserId: string, approvalStatus: FollowApprovalStatus): Promise<FollowEntity> {
     try {
-      // Find the follow where the targetUserId is the one being followed
       const follow = await FollowModel.findOne({followId}).exec();
 
       if (!follow) {
         throw CustomError('Follow request not found', ErrorTypes.NOT_FOUND);
       }
 
-      // Verify that the targetUserId is indeed the target of this follow
-      // (only the person being followed can accept/reject)
       if (follow.targetId !== targetUserId) {
         throw CustomError('Not authorized to modify this follow request', ErrorTypes.UNAUTHORIZED);
       }
@@ -146,6 +135,19 @@ class FollowDAO {
       return follows.map((f) => f.toObject());
     } catch (error) {
       logger.error('Error reading followers', error);
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async countFollowers(targetType: FollowTargetType, targetId: string): Promise<number> {
+    try {
+      return await FollowModel.countDocuments({
+        targetType,
+        targetId,
+        approvalStatus: FollowApprovalStatus.Accepted,
+      }).exec();
+    } catch (error) {
+      logger.error('Error counting followers', error);
       throw KnownCommonError(error);
     }
   }

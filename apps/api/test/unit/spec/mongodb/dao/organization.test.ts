@@ -38,7 +38,6 @@ describe('OrganizationDAO', () => {
     description: 'Test Org Description',
     ownerId: 'owner-1',
     allowedTicketAccess: OrganizationTicketAccess.Public,
-    followersCount: 0,
     isFollowable: true,
   };
 
@@ -173,8 +172,11 @@ describe('OrganizationDAO', () => {
 
   describe('updateOrganization', () => {
     it('updates organization', async () => {
-      (OrganizationModel.findByIdAndUpdate as jest.Mock).mockReturnValue(
+      const mockSave = jest.fn().mockResolvedValue({toObject: () => mockOrganization});
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
+          ...mockOrganization,
+          save: mockSave,
           toObject: () => mockOrganization,
         }),
       );
@@ -186,12 +188,13 @@ describe('OrganizationDAO', () => {
 
       const result = await OrganizationDAO.updateOrganization(input);
 
-      expect(OrganizationModel.findByIdAndUpdate).toHaveBeenCalledWith('org-1', {name: 'Updated Org'}, {new: true});
+      expect(OrganizationModel.findById).toHaveBeenCalledWith('org-1');
+      expect(mockSave).toHaveBeenCalled();
       expect(result).toEqual(mockOrganization);
     });
 
     it('throws not found error', async () => {
-      (OrganizationModel.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(OrganizationDAO.updateOrganization({orgId: 'missing'})).rejects.toThrow(
         CustomError('Organization with id missing not found', ErrorTypes.NOT_FOUND),
@@ -199,7 +202,7 @@ describe('OrganizationDAO', () => {
     });
 
     it('wraps unknown errors', async () => {
-      (OrganizationModel.findByIdAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(OrganizationDAO.updateOrganization({orgId: 'org-1'})).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),

@@ -7,7 +7,7 @@ export const getFollowMutation = (input: any) => {
           followerUserId
           targetType
           targetId
-          status
+          approvalStatus
         }
       }
     `,

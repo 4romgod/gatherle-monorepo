@@ -86,9 +86,11 @@ export const USER_DESCRIPTIONS = {
     PROFILE_PICTURE: "URL to the user's profile picture (e.g., 'https://example.com/profile.jpg')",
     BIO: 'Short biography about the user',
     SHARE_CHECKINS: 'Whether check-in activity is shared with followers by default',
+    FOLLOWERS_COUNT: 'Number of accepted followers for the user.',
     TOKEN: 'Authentication and Authorization JWT token',
     USER_ROLE: 'Role assigned to the user within the system, ("Admin", "User", "Host", "Guest")',
     USERNAME: "User's unique chosen or auto generated username (e.g., 'deku123')",
+    FOLLOW_POLICY: 'Policy for accepting new followers: Public (auto-accept all) or RequireApproval (manual approval required). Default: Public',
 };
 
 export const SOCIAL_DESCRIPTIONS = {
@@ -160,8 +162,9 @@ export const ORGANIZATION_DESCRIPTIONS = {
     EVENT_DEFAULT_PLUS_ONES: 'Whether guest + ones are allowed by default.',
     EVENT_DEFAULT_TICKET_ACCESS: 'Default ticket access policy for newcomers.',
     TICKET_ACCESS: 'Ticket access policy enforced by the organization.',
-    FOLLOWERS_COUNT: 'Cached number of followers for the organization.',
+    FOLLOWERS_COUNT: 'Number of accepted followers for the organization.',
     FOLLOWABLE: 'Toggle to determine if the organization can be followed.',
+    FOLLOW_POLICY: 'Policy for accepting new followers: Public (auto-accept all) or RequireApproval (manual approval required). Default: Public',
     TAGS: 'Discovery tags used to surface the organization.',
     MEMBER_ROLES: 'Membership roles granted to users within the organization.',
 };

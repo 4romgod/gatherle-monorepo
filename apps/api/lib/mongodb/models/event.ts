@@ -9,7 +9,7 @@ import {Event as EventEntity} from '@ntlango/commons/types';
       this.eventId = this._id.toString();
     }
 
-    if (this.isModified('title')) {
+    if (this.isNew || !this.slug) {
       this.slug = kebabCase(this.title);
     }
     next();

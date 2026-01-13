@@ -62,7 +62,7 @@ export const EventSchema = z.object({
   showAttendees: z.boolean().optional().describe('Show attendee list'),
 
   eventCategories: z
-    .array(z.string())
+    .array(z.string().refine(mongoose.Types.ObjectId.isValid, {message: `Event Category ID ${ERROR_MESSAGES.INVALID}`}))
     .min(1, {message: ERROR_MESSAGES.ATLEAST_ONE('event category')})
     .describe('The categories associated with the event.'),
 

@@ -1,6 +1,4 @@
 import {GraphQLError} from 'graphql';
-import type {UpdateQuery} from 'mongoose';
-import {Types} from 'mongoose';
 import type {EventParticipant as EventParticipantEntity, UpsertEventParticipantInput, CancelEventParticipantInput} from '@ntlango/commons/types';
 import {ParticipantStatus} from '@ntlango/commons/types';
 import {EventParticipant} from '@/mongodb/models';
@@ -13,25 +11,24 @@ class EventParticipantDAO {
     try {
       const {eventId, userId, status = ParticipantStatus.Going, quantity, invitedBy, sharedVisibility} = input;
 
-      const update: UpdateQuery<EventParticipantEntity> = {
-        status,
-        $setOnInsert: {
-          participantId: new Types.ObjectId().toString(),
+      let participant = await EventParticipant.findOne({eventId, userId}).exec();
+      
+      if (participant) {
+        participant.status = status;
+        if (quantity !== undefined) participant.quantity = quantity;
+        if (invitedBy !== undefined) participant.invitedBy = invitedBy;
+        if (sharedVisibility !== undefined) participant.sharedVisibility = sharedVisibility;
+        await participant.save();
+      } else {
+        participant = await EventParticipant.create({
+          eventId,
+          userId,
+          status,
+          quantity,
+          invitedBy,
+          sharedVisibility,
           rsvpAt: new Date(),
-        },
-      };
-      if (quantity !== undefined) update.quantity = quantity;
-      if (invitedBy !== undefined) update.invitedBy = invitedBy;
-      if (sharedVisibility !== undefined) update.sharedVisibility = sharedVisibility;
-
-      const participant = await EventParticipant.findOneAndUpdate({eventId, userId}, update, {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      }).exec();
-
-      if (!participant) {
-        throw CustomError('Unable to upsert participant', ErrorTypes.INTERNAL_SERVER_ERROR);
+        });
       }
 
       return participant.toObject();
@@ -47,15 +44,15 @@ class EventParticipantDAO {
   static async cancel(input: CancelEventParticipantInput): Promise<EventParticipantEntity> {
     try {
       const {eventId, userId} = input;
-      const participant = await EventParticipant.findOneAndUpdate(
-        {eventId, userId},
-        {status: ParticipantStatus.Cancelled, cancelledAt: new Date()},
-        {new: true},
-      ).exec();
+      const participant = await EventParticipant.findOne({eventId, userId}).exec();
 
       if (!participant) {
         throw CustomError(`Participant not found for event ${eventId}`, ErrorTypes.NOT_FOUND);
       }
+      
+      participant.status = ParticipantStatus.Cancelled;
+      participant.cancelledAt = new Date();
+      await participant.save();
 
       return participant.toObject();
     } catch (error) {

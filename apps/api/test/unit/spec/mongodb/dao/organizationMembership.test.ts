@@ -132,8 +132,11 @@ describe('OrganizationMembershipDAO', () => {
 
   describe('update', () => {
     it('updates membership', async () => {
-      (OrganizationMembershipModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+      const mockSave = jest.fn().mockResolvedValue({toObject: () => mockMembership});
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
+          ...mockMembership,
+          save: mockSave,
           toObject: () => mockMembership,
         }),
       );
@@ -145,16 +148,13 @@ describe('OrganizationMembershipDAO', () => {
 
       const result = await OrganizationMembershipDAO.update(input);
 
-      expect(OrganizationMembershipModel.findOneAndUpdate).toHaveBeenCalledWith(
-        {membershipId: 'membership-1'},
-        {role: OrganizationRole.Member},
-        {new: true},
-      );
+      expect(OrganizationMembershipModel.findOne).toHaveBeenCalledWith({membershipId: 'membership-1'});
+      expect(mockSave).toHaveBeenCalled();
       expect(result).toEqual(mockMembership);
     });
 
     it('throws not found error', async () => {
-      (OrganizationMembershipModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(OrganizationMembershipDAO.update({membershipId: 'missing'})).rejects.toThrow(
         CustomError('Organization membership missing not found', ErrorTypes.NOT_FOUND),
@@ -162,7 +162,7 @@ describe('OrganizationMembershipDAO', () => {
     });
 
     it('wraps unknown errors', async () => {
-      (OrganizationMembershipModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(OrganizationMembershipDAO.update({membershipId: 'membership-1'})).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),

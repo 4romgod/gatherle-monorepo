@@ -1,7 +1,10 @@
 import type {CreateOrganizationInput} from '@ntlango/commons/types';
 import {EventVisibility, OrganizationTicketAccess} from '@ntlango/commons/types';
+import {FollowPolicy} from '@ntlango/commons/types/user';
 
-export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'>;
+export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'> & {
+  followPolicy?: FollowPolicy;
+};
 
 const organizations: OrganizationSeedData[] = [
   {
@@ -24,6 +27,7 @@ const organizations: OrganizationSeedData[] = [
       {label: 'Instagram', url: 'https://instagram.com/signalstudios'},
     ],
     domainsAllowed: ['signalstudios.co.za'],
+    followPolicy: FollowPolicy.Public,
   },
   {
     name: 'Harbour Collective',
@@ -46,6 +50,7 @@ const organizations: OrganizationSeedData[] = [
       {label: 'Booking', url: 'https://harbourcollective.live/book'},
     ],
     domainsAllowed: ['harbourcollective.live'],
+    followPolicy: FollowPolicy.RequireApproval,
   },
   {
     name: 'Emergent Labs',
@@ -68,6 +73,7 @@ const organizations: OrganizationSeedData[] = [
       {label: 'LinkedIn', url: 'https://linkedin.com/company/emergent-labs'},
     ],
     domainsAllowed: ['emergentlabs.studio'],
+    followPolicy: FollowPolicy.Public,
   },
   {
     name: 'Streetcar Society',
@@ -89,6 +95,7 @@ const organizations: OrganizationSeedData[] = [
       {label: 'Instagram', url: 'https://instagram.com/streetcar.society'},
     ],
     domainsAllowed: ['streetcarsociety.io'],
+    followPolicy: FollowPolicy.Public,
   },
   {
     name: 'Veld Wellness Collective',
@@ -110,6 +117,7 @@ const organizations: OrganizationSeedData[] = [
       {label: 'Journal', url: 'https://veldwellness.africa/journal'},
     ],
     domainsAllowed: ['veldwellness.africa'],
+    followPolicy: FollowPolicy.RequireApproval,
   },
 ];
 
