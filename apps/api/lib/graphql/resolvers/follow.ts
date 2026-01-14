@@ -19,7 +19,7 @@ import {validateInput} from '@/validation';
 import {FollowDAO, UserDAO, OrganizationDAO} from '@/mongodb/dao';
 import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import {getAuthenticatedUser, CustomError, ErrorTypes} from '@/utils';
+import {getAuthenticatedUser} from '@/utils';
 
 @Resolver(() => Follow)
 export class FollowResolver {
