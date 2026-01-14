@@ -19,29 +19,33 @@ import {validateInput} from '@/validation';
 import {FollowDAO, UserDAO, OrganizationDAO} from '@/mongodb/dao';
 import type {ServerContext} from '@/graphql';
 import {RESOLVER_DESCRIPTIONS} from '@/constants';
-import {getAuthenticatedUser} from '@/utils';
+import {getAuthenticatedUser, CustomError, ErrorTypes} from '@/utils';
 
 @Resolver(() => Follow)
 export class FollowResolver {
-  @FieldResolver(() => User)
-  async follower(@Root() follow: Follow): Promise<User> {
-    return UserDAO.readUserById(follow.followerUserId);
+  @FieldResolver(() => User, {nullable: true})
+  async follower(@Root() follow: Follow, @Ctx() context: ServerContext): Promise<User | null> {
+    const user = await context.loaders.user.load(follow.followerUserId);
+    if (!user) {
+      return null;
+    }
+    return user;
   }
 
   @FieldResolver(() => User, {nullable: true})
-  async targetUser(@Root() follow: Follow): Promise<User | null> {
+  async targetUser(@Root() follow: Follow, @Ctx() context: ServerContext): Promise<User | null> {
     if (follow.targetType !== FollowTargetType.User) {
       return null;
     }
-    return UserDAO.readUserById(follow.targetId);
+    return context.loaders.user.load(follow.targetId);
   }
 
   @FieldResolver(() => Organization, {nullable: true})
-  async targetOrganization(@Root() follow: Follow): Promise<Organization | null> {
+  async targetOrganization(@Root() follow: Follow, @Ctx() context: ServerContext): Promise<Organization | null> {
     if (follow.targetType !== FollowTargetType.Organization) {
       return null;
     }
-    return OrganizationDAO.readOrganizationById(follow.targetId);
+    return context.loaders.organization.load(follow.targetId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

@@ -4,7 +4,7 @@ import {createApolloServer} from '@/graphql';
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {SECRET_KEYS} from '@/constants';
 import {logger} from '@/utils/logger';
-import {createUserLoader, createEventCategoryLoader} from '@/graphql/loaders';
+import {createUserLoader, createEventCategoryLoader, createOrganizationLoader} from '@/graphql/loaders';
 
 // TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
 const CORS_HEADERS = {
@@ -49,6 +49,7 @@ async function initializeResources() {
           loaders: {
             user: createUserLoader(),
             eventCategory: createEventCategoryLoader(),
+            organization: createOrganizationLoader(),
           },
         };
       },

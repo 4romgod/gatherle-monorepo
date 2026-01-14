@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import { PersonRemove as PersonRemoveIcon } from '@mui/icons-material';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
-import { useSession } from 'next-auth/react';
 
 interface FollowingUser {
   userId: string;
