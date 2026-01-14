@@ -33,7 +33,9 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
 
   // Get pending follow requests count for notification badge (only count pending, not accepted/rejected)
-  const { requests: followRequests } = useFollowRequests(FollowTargetType.User);
+  const { requests: followRequests } = isAuthN
+    ? useFollowRequests(FollowTargetType.User)
+    : { requests: [] };
   const pendingCount = followRequests?.filter(req => req.approvalStatus === FollowApprovalStatus.Pending).length || 0;
 
   const theme = useTheme();
