@@ -32,8 +32,13 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const { data: session } = useSession();
 
   // Get pending follow requests count for notification badge (only count pending, not accepted/rejected)
-  const { requests: followRequests } = useFollowRequests(FollowTargetType.User);
-  const pendingCount = followRequests?.filter(req => req.approvalStatus === FollowApprovalStatus.Pending).length || 0;
+  const followRequestsResult = isAuthN
+    ? useFollowRequests(FollowTargetType.User)
+    : { requests: [] as { approvalStatus?: FollowApprovalStatus }[] };
+  const pendingCount =
+    followRequestsResult.requests?.filter(
+      (req) => req.approvalStatus === FollowApprovalStatus.Pending
+    ).length || 0;
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
