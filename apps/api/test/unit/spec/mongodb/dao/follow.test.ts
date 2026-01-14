@@ -105,7 +105,7 @@ describe('FollowDAO', () => {
 
       (FollowModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingRejectedFollow));
 
-      const result = await FollowDAO.upsert({
+      await FollowDAO.upsert({
         followerUserId: 'user-1',
         targetType: FollowTargetType.User,
         targetId: 'user-2',

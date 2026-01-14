@@ -44,7 +44,6 @@ export default function FollowButton({
 
   const isFollowing = followStatus === FollowApprovalStatus.Accepted;
   const isPending = followStatus === FollowApprovalStatus.Pending;
-  const isRejected = followStatus === FollowApprovalStatus.Rejected;
 
   const handleFollowToggle = async () => {
     if (!session?.user?.token) {

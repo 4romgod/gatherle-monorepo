@@ -50,7 +50,6 @@ export default function FollowingListItem({
   onUnfollow,
   isLoading = false,
 }: FollowingListItemProps) {
-  const { data: session } = useSession();
   const [localLoading, setLocalLoading] = React.useState(false);
 
   const isUser = following.targetType === FollowTargetType.User;

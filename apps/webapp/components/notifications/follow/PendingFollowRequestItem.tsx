@@ -40,16 +40,13 @@ export default function PendingFollowRequestItem({
   follower,
   approvalStatus,
   createdAt,
-  updatedAt,
   onAccept,
   onReject,
   isLoading = false,
 }: PendingFollowRequestItemProps) {
   const [localLoading, setLocalLoading] = React.useState(false);
 
-  const displayName = follower.given_name && follower.family_name
-    ? `${follower.given_name} ${follower.family_name}`.trim()
-    : follower.username;
+  const displayName = `${follower.given_name} ${follower.family_name}`.trim();
   const timestamp = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
   const isPending = approvalStatus === FollowApprovalStatus.Pending;
 
