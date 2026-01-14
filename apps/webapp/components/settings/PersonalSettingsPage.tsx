@@ -97,7 +97,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         </Box>
 
         <Box component="form" action={formAction} noValidate>
-          {/* Hidden field for a setting that isn't in the form */}
+          {/* Hidden field to submit followPolicy value with form data */}
           <input type="hidden" name="followPolicy" value={settings.followPolicy} />
           
           {/* Personal Details */}
