@@ -110,6 +110,24 @@ export default function FollowersListItem({ follower, targetType = FollowTargetT
             )}
           </Box>
         }
+        secondary={
+          follower.bio && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: 0.5,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+              }}
+            >
+              {follower.bio}
+            </Typography>
+          )
+        }
       />
     </ListItem>
   );
