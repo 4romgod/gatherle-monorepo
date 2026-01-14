@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
+import Badge from '@mui/material/Badge';
 import { MailOutline, NotificationsOutlined, ControlPointOutlined } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -16,8 +16,10 @@ import TemporaryDrawer from '@/components/navigation/main/navigation-temporary-d
 import { Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import NavLinksList from '@/components/navigation/main/nav-links-list';
-import { getAvatarSrc, getDisplayName } from '@/lib/utils';
+import { getAvatarSrc } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
+import { useFollowRequests } from '@/hooks';
+import { FollowTargetType, FollowApprovalStatus } from '@/data/graphql/types/graphql';
 import Logo from '@/components/logo';
 
 type MainNavigationProps = {
@@ -28,8 +30,13 @@ type MainNavigationProps = {
  * Inspired by: https://arshadalisoomro.hashnode.dev/creating-a-navigation-bar-with-mui-appbar-component-in-nextjs
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
-  const router = useRouter();
   const { data: session } = useSession();
+
+  // Get pending follow requests count for notification badge (only count pending, not accepted/rejected)
+  const { requests: followRequests } = isAuthN
+    ? useFollowRequests(FollowTargetType.User)
+    : { requests: [] };
+  const pendingCount = followRequests?.filter(req => req.approvalStatus === FollowApprovalStatus.Pending).length || 0;
 
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -169,7 +176,20 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                   '&:hover': { color: 'text.primary' },
                 }}
               >
-                <NotificationsOutlined />
+                <Badge
+                  badgeContent={pendingCount}
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.65rem',
+                      height: 16,
+                      minWidth: 16,
+                      fontWeight: 700,
+                    },
+                  }}
+                >
+                  <NotificationsOutlined />
+                </Badge>
               </IconButton>
 
               <IconButton

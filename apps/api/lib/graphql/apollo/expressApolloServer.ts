@@ -7,7 +7,7 @@ import {getConfigValue, MongoDbClient} from '@/clients';
 import {GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS} from '@/constants';
 import {createApolloServer} from './server';
 import {expressMiddleware} from '@apollo/server/express4';
-import {createUserLoader, createEventCategoryLoader} from '@/graphql/loaders';
+import {createUserLoader, createEventCategoryLoader, createOrganizationLoader} from '@/graphql/loaders';
 import type {Server} from 'http';
 import {logger} from '@/utils/logger';
 
@@ -48,6 +48,7 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = {p
           loaders: {
             user: createUserLoader(),
             eventCategory: createEventCategoryLoader(),
+            organization: createOrganizationLoader(),
           },
         };
       },

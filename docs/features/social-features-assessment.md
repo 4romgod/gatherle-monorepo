@@ -333,36 +333,22 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 
 ## Current Limitations
 
-1. **No UI for Pending Requests**: 
-   - Hook exists (`useFollowRequests`) but no component
-   - No notification badge for pending requests count
-   - Users with RequireApproval policy can't approve requests in UI yet
-
-2. **No Followers/Following Lists**:
-   - Queries and hooks exist
-   - UI components not yet built
-   - Profile only shows follower count, not list
-
-3. **No Bulk Operations**:
+1. **No Bulk Operations**:
    - Cannot remove all followers
    - Cannot accept/reject multiple requests at once
 
-4. **No Follow Limits**:
+2. **No Follow Limits**:
    - No rate limiting on follow actions
    - No maximum following/follower counts
 
-5. **No Settings UI for FollowPolicy**:
-   - FollowPolicy can only be set via direct database/API
-   - Settings page doesn't include follow privacy options yet
-
 ## Future Enhancements
 
-### Phase 1: Core UX (High Priority)
-- [ ] Create PendingFollowRequests component for approval UI
-- [ ] Add notification badge for pending requests count
-- [ ] Create FollowersList and FollowingList components
-- [ ] Add loading skeleton for follow lists
-- [ ] Add FollowPolicy toggle to user/org settings page
+### Phase 1: Core UX (High Priority) ✅
+- [x] Create PendingFollowRequests component for approval UI
+- [x] Add notification badge for pending requests count
+- [x] Create FollowersList and FollowingList components
+- [x] Add loading skeleton for follow lists
+- [x] Add FollowPolicy toggle to user/org settings page
 
 ### Phase 2: Privacy & Control (Medium Priority)
 - [ ] Add "Remove Follower" functionality
@@ -387,7 +373,43 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 
 ## Completed Features ✅
 
-### Recently Completed (13 January 2026)
+### Latest Updates (14 January 2026 - Evening)
+- ✅ **Re-follow after rejection fix**: Updated FollowDAO.upsert to properly handle re-following after rejection
+  - When UserA follows UserB again after being rejected, the follow status now correctly updates from Rejected to Pending (or Accepted for Public accounts)
+  - Prevents rejected follows from staying in Rejected state on subsequent follow attempts
+  - Added test case: "updates existing follow when re-following after rejection"
+- ✅ **Follow button logic fix for rejected status**: Updated FollowButton to treat Rejected status same as not following
+  - Button now correctly calls `follow()` instead of `unfollow()` when status is Rejected
+  - Prevents "Failed to unfollow" error when trying to re-follow after rejection
+- ✅ **Follow stats filtering fix**: Updated readFollowers to only return Accepted follows
+  - Followers list modal now only shows accepted followers (excludes pending/rejected)
+  - Follower counts are accurate (only counting accepted follows via countFollowers which already filtered)
+- ✅ **Dialog hydration error fix**: Removed nested Typography in DialogTitle components
+  - Fixed invalid HTML structure (<h2><h6>) that caused hydration errors
+  - DialogTitle already renders as h2, so removed redundant Typography wrapper
+
+### Phase 1 Complete (14 January 2026 - Afternoon)
+- ✅ FollowersList component with follow-back functionality
+- ✅ FollowingList component with unfollow functionality
+- ✅ FollowListSkeleton loading states for both lists
+- ✅ Clickable follower/following counts in UserFollowStats
+- ✅ Clickable follower count in FollowStatsCard (organizations)
+- ✅ Dialog modals for viewing followers and following
+- ✅ Follow privacy toggle in PersonalSettingsPage (Private Account)
+- ✅ Backend field resolvers for targetUser and targetOrganization on Follow type
+- ✅ GraphQL queries updated to include user/org details for followers/following
+- ✅ Complete Phase 1 feature set implemented and tested
+
+### Previously Completed (14 January 2026)
+- ✅ PendingFollowRequestsList component for notifications page
+- ✅ PendingFollowRequestItem component with conditional UI (Accept/Reject buttons vs status badges)
+- ✅ Notification badge showing pending follow request count (desktop + mobile nav)
+- ✅ Follow request history tracking (shows accepted/rejected with timestamps)
+- ✅ Follow requests sorted by most recent action (updatedAt DESC)
+- ✅ Follower field resolver on Follow type for user details
+- ✅ ReadFollowRequests query for all statuses (Pending/Accepted/Rejected)
+
+### Previously Completed (13 January 2026)
 - ✅ FollowPolicy enum (Public/RequireApproval) for Users and Organizations
 - ✅ Follow resolver respects target's followPolicy
 - ✅ followersCount computed via FieldResolver (not stored in DB)

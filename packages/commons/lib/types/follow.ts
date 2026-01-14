@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import {Field, ID, InputType, ObjectType, registerEnumType} from 'type-graphql';
 import {index, modelOptions, prop, Severity} from '@typegoose/typegoose';
-
 import {SOCIAL_DESCRIPTIONS} from '../constants';
+import {User} from './user';
+import {Organization} from './organization';
 
 export enum FollowTargetType {
     User = 'User',
@@ -67,9 +68,20 @@ export class Follow {
     @Field(() => ID, {description: SOCIAL_DESCRIPTIONS.FOLLOW.FOLLOWER_USER_ID})
     followerUserId: string;
 
+    // Computed field - resolved via @FieldResolver in FollowResolver (no @prop, not stored in DB)
+    @Field(() => User, {description: 'The user who is following. Resolved via FieldResolver.'})
+    follower?: User;
+
     @prop({required: true, enum: FollowTargetType, type: () => String})
     @Field(() => FollowTargetType, {description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_TYPE})
     targetType: FollowTargetType;
+
+    // Computed fields - resolved via @FieldResolver in FollowResolver (no @prop, not stored in DB)
+    @Field(() => User, {nullable: true, description: 'The target user if targetType is User. Resolved via FieldResolver.'})
+    targetUser?: User;
+
+    @Field(() => Organization, {nullable: true, description: 'The target organization if targetType is Organization. Resolved via FieldResolver.'})
+    targetOrganization?: Organization;
 
     @prop({required: true, type: () => String})
     @Field(() => ID, {description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_ID})
@@ -86,6 +98,9 @@ export class Follow {
     @prop({type: () => Date, default: () => new Date()})
     @Field(() => Date, {description: 'When the follow was created'})
     createdAt: Date;
+
+    @Field(() => Date, {description: 'When the follow was last updated'})
+    updatedAt?: Date;
 }
 
 @InputType('FollowNotificationPreferencesInput', {description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES_INPUT})

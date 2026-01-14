@@ -18,7 +18,7 @@ import {
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Save as SaveIcon } from '@mui/icons-material';
-import { Gender, User } from '@/data/graphql/types/graphql';
+import { Gender, User, FollowPolicy } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
 import dayjs from 'dayjs';
@@ -30,6 +30,7 @@ interface PersonalSettings {
   showPhoneNumber: boolean;
   birthdate: string;
   gender: Gender | null;
+  followPolicy: FollowPolicy;
 }
 
 export default function PersonalSettingsPage({ user }: { user: User }) {
@@ -42,6 +43,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
     showPhoneNumber: false,
     birthdate: user.birthdate,
     gender: user.gender || null,
+    followPolicy: user.followPolicy || FollowPolicy.Public,
   });
 
   const handleToggleChange = (name: keyof PersonalSettings) => {
@@ -95,6 +97,9 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         </Box>
 
         <Box component="form" action={formAction} noValidate>
+          {/* Hidden field to submit followPolicy value with form data */}
+          <input type="hidden" name="followPolicy" value={settings.followPolicy} />
+          
           {/* Personal Details */}
           <Card
             elevation={0}
@@ -161,6 +166,37 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
             </Typography>
 
             <Stack spacing={2}>
+              <Box sx={{ py: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.followPolicy === FollowPolicy.RequireApproval}
+                      onChange={() =>
+                        setSettings(prev => ({
+                          ...prev,
+                          followPolicy:
+                            prev.followPolicy === FollowPolicy.Public
+                              ? FollowPolicy.RequireApproval
+                              : FollowPolicy.Public,
+                        }))
+                      }
+                      color="secondary"
+                      name="followPolicy"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" fontWeight={600}>
+                        Private Account
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Require your approval before someone can follow you
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+
               <Box sx={{ py: 1 }}>
                 <FormControlLabel
                   control={

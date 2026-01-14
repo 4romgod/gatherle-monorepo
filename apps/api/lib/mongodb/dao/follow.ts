@@ -1,6 +1,4 @@
 import {GraphQLError} from 'graphql';
-import type {UpdateQuery} from 'mongoose';
-import {Types} from 'mongoose';
 import type {
   Follow as FollowEntity,
   CreateFollowInput,
@@ -20,9 +18,12 @@ class FollowDAO {
       let follow = await FollowModel.findOne({followerUserId, targetType, targetId}).exec();
       
       if (follow) {
-        // Update existing follow
+        // Update existing follow (e.g., re-following after rejection)
         follow.targetType = targetType;
         follow.targetId = targetId;
+        if (approvalStatus !== undefined) {
+          follow.approvalStatus = approvalStatus;
+        }
         if (notificationPreferences?.contentVisibility !== undefined) {
           follow.notificationPreferences = follow.notificationPreferences || {};
           follow.notificationPreferences.contentVisibility = notificationPreferences.contentVisibility;
@@ -119,6 +120,21 @@ class FollowDAO {
     }
   }
 
+  static async readFollowRequests(targetUserId: string, targetType: FollowTargetType): Promise<FollowEntity[]> {
+    try {
+      const follows = await FollowModel.find({
+        targetId: targetUserId,
+        targetType,
+      })
+        .sort({updatedAt: -1})
+        .exec();
+      return follows.map((f) => f.toObject());
+    } catch (error) {
+      logger.error('Error reading follow requests', error);
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readFollowingForUser(followerUserId: string): Promise<FollowEntity[]> {
     try {
       const follows = await FollowModel.find({followerUserId}).sort({createdAt: -1}).exec();
@@ -131,7 +147,13 @@ class FollowDAO {
 
   static async readFollowers(targetType: FollowTargetType, targetId: string): Promise<FollowEntity[]> {
     try {
-      const follows = await FollowModel.find({targetType, targetId}).sort({createdAt: -1}).exec();
+      const follows = await FollowModel.find({
+        targetType,
+        targetId,
+        approvalStatus: FollowApprovalStatus.Accepted,
+      })
+        .sort({createdAt: -1})
+        .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
       logger.error('Error reading followers', error);

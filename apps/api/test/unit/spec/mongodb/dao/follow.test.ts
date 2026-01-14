@@ -91,6 +91,37 @@ describe('FollowDAO', () => {
       expect(createArg.notificationPreferences).toBeUndefined();
     });
 
+    it('updates existing follow when re-following after rejection', async () => {
+      const existingRejectedFollow = {
+        followId: 'follow-1',
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.User,
+        targetId: 'user-2',
+        approvalStatus: FollowApprovalStatus.Rejected,
+        notificationPreferences: {contentVisibility: FollowContentVisibility.Active},
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: () => ({...existingRejectedFollow, approvalStatus: FollowApprovalStatus.Pending}),
+      };
+
+      (FollowModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingRejectedFollow));
+
+      await FollowDAO.upsert({
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.User,
+        targetId: 'user-2',
+        approvalStatus: FollowApprovalStatus.Pending,
+      });
+
+      expect(FollowModel.findOne).toHaveBeenCalledWith({
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.User,
+        targetId: 'user-2',
+      });
+      expect(existingRejectedFollow.save).toHaveBeenCalled();
+      expect(existingRejectedFollow.approvalStatus).toBe(FollowApprovalStatus.Pending);
+      expect(FollowModel.create).not.toHaveBeenCalled();
+    });
+
     it('rethrows GraphQLError', async () => {
       const graphQLError = new GraphQLError('GraphQL Error');
       (FollowModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
@@ -146,7 +177,11 @@ describe('FollowDAO', () => {
 
       const result = await FollowDAO.readFollowers(FollowTargetType.User, 'user-2');
 
-      expect(FollowModel.find).toHaveBeenCalledWith({targetType: FollowTargetType.User, targetId: 'user-2'});
+      expect(FollowModel.find).toHaveBeenCalledWith({
+        targetType: FollowTargetType.User,
+        targetId: 'user-2',
+        approvalStatus: FollowApprovalStatus.Accepted,
+      });
       expect(result).toEqual([mockFollow]);
     });
 

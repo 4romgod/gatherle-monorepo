@@ -53,7 +53,8 @@ export default function FollowButton({
     }
 
     try {
-      if (followStatus) {
+      // Only unfollow if Accepted or Pending, not if Rejected or null
+      if (isFollowing || isPending) {
         await unfollow(targetType, targetId);
       } else {
         await follow(targetType, targetId);
@@ -62,7 +63,7 @@ export default function FollowButton({
       logger.error('Error toggling follow status:', error);
       setToastProps({
         open: true,
-        message: followStatus
+        message: (isFollowing || isPending)
           ? `Failed to unfollow ${targetLabel}. Please try again.`
           : `Failed to follow ${targetLabel}. Please try again.`,
         severity: 'error',

@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import type {User, EventCategory} from '@ntlango/commons/types';
+import type {User, EventCategory, Organization} from '@ntlango/commons/types';
 import type {ServerContext} from '@/graphql';
 
 /**
@@ -11,6 +11,7 @@ export const createMockContext = (
   mockData?: {
     users?: Map<string, User>;
     categories?: Map<string, EventCategory>;
+    organizations?: Map<string, Organization>;
   },
 ): ServerContext => {
   const userLoader = new DataLoader<string, User | null>(async (keys) => {
@@ -21,6 +22,10 @@ export const createMockContext = (
     return keys.map((key) => mockData?.categories?.get(key) ?? null);
   });
 
+  const organizationLoader = new DataLoader<string, Organization | null>(async (keys) => {
+    return keys.map((key) => mockData?.organizations?.get(key) ?? null);
+  });
+
   return {
     token: undefined,
     req: undefined,
@@ -28,6 +33,7 @@ export const createMockContext = (
     loaders: {
       user: userLoader,
       eventCategory: categoryLoader,
+      organization: organizationLoader,
     },
     ...overrides,
   };

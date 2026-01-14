@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   Box,
   Button,
+  Badge,
   Divider,
   Drawer,
   IconButton,
@@ -23,11 +24,21 @@ import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc } from '@/lib/utils';
+import { useFollowRequests } from '@/hooks';
+import { FollowTargetType, FollowApprovalStatus } from '@/data/graphql/types/graphql';
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+
+  // Get pending follow requests count for notification badge (only count pending, not accepted/rejected)
+  const followRequestsResult = isAuthN
+    ? useFollowRequests(FollowTargetType.User)
+    : { requests: [] as { approvalStatus?: FollowApprovalStatus }[] };
+  const pendingCount =
+    followRequestsResult.requests?.filter(
+      (req) => req.approvalStatus === FollowApprovalStatus.Pending
+    ).length || 0;
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
@@ -113,7 +124,20 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
               <Link href={ROUTES.ACCOUNT.NOTIFICATIONS}>
                 <ListItemButton>
                   <ListItemIcon>
-                    <NotificationsOutlined />
+                    <Badge
+                      badgeContent={pendingCount}
+                      color="error"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          fontSize: '0.65rem',
+                          height: 16,
+                          minWidth: 16,
+                          fontWeight: 700,
+                        },
+                      }}
+                    >
+                      <NotificationsOutlined />
+                    </Badge>
                   </ListItemIcon>
                   <ListItemText primary={'Notifications'} />
                 </ListItemButton>

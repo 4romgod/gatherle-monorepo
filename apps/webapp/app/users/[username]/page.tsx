@@ -210,6 +210,7 @@ export default async function UserPage(props: Props) {
               {/* Stats */}
               <UserFollowStats
                 userId={user.userId}
+                displayName={`${user.given_name} ${user.family_name}`.trim()}
                 initialFollowersCount={user.followersCount ?? 0}
                 organizedEventsCount={organizedEvents.length}
                 rsvpdEventsCount={rsvpdEvents.length}

@@ -6,7 +6,7 @@ import {
   UnfollowDocument,
   GetFollowingDocument,
   GetFollowersDocument,
-  GetPendingFollowRequestsDocument,
+  GetFollowRequestsDocument,
   AcceptFollowRequestDocument,
   RejectFollowRequestDocument,
   UpdateFollowNotificationPreferencesDocument,
@@ -20,7 +20,8 @@ export function useFollow() {
   const token = session?.user?.token;
 
   const [followMutation, { loading: followLoading }] = useMutation(FollowDocument, {
-    refetchQueries: ['GetFollowing'],
+    refetchQueries: ['GetFollowing', 'GetFollowRequests'],
+    awaitRefetchQueries: true,
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -29,7 +30,8 @@ export function useFollow() {
   });
 
   const [unfollowMutation, { loading: unfollowLoading }] = useMutation(UnfollowDocument, {
-    refetchQueries: ['GetFollowing'],
+    refetchQueries: ['GetFollowing', 'GetFollowRequests'],
+    awaitRefetchQueries: true,
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -72,7 +74,8 @@ export function useFollowing() {
 
   const { data, loading, error, refetch } = useQuery(GetFollowingDocument, {
     skip: !token,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'network-only',
+    nextFetchPolicy: 'cache-first',
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -124,7 +127,7 @@ export function useFollowRequests(targetType: FollowTargetType) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading: queryLoading, error, refetch } = useQuery(GetPendingFollowRequestsDocument, {
+  const { data, loading: queryLoading, error, refetch } = useQuery(GetFollowRequestsDocument, {
     variables: { targetType },
     context: {
       headers: {
@@ -134,7 +137,7 @@ export function useFollowRequests(targetType: FollowTargetType) {
   });
 
   const [acceptRequest, { loading: acceptLoading }] = useMutation(AcceptFollowRequestDocument, {
-    refetchQueries: ['GetPendingFollowRequests', 'GetFollowers'],
+    refetchQueries: ['GetFollowRequests', 'GetFollowers'],
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -143,7 +146,7 @@ export function useFollowRequests(targetType: FollowTargetType) {
   });
 
   const [rejectRequest, { loading: rejectLoading }] = useMutation(RejectFollowRequestDocument, {
-    refetchQueries: ['GetPendingFollowRequests'],
+    refetchQueries: ['GetFollowRequests'],
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -164,7 +167,7 @@ export function useFollowRequests(targetType: FollowTargetType) {
   };
 
   return {
-    requests: data?.readPendingFollowRequests ?? [],
+    requests: data?.readFollowRequests ?? [],
     loading: queryLoading,
     error,
     refetch,

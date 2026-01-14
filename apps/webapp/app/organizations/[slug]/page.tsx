@@ -1,7 +1,7 @@
-import { Avatar, Box, Button, Container, Card, CardContent, Divider, Stack, Typography, Grid, Paper, Chip } from '@mui/material';
 import Link from 'next/link';
+import { Avatar, Box, Button, Container, Card, CardContent, Stack, Typography, Grid, Chip } from '@mui/material';
 import { Metadata } from 'next';
-import { Language, ArrowBack, Share, CalendarMonth } from '@mui/icons-material';
+import { Language, ArrowBack, Share } from '@mui/icons-material';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
@@ -9,7 +9,7 @@ import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
 import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import FollowStatsCard from '@/components/organization/follow-stats-card';
-import EventBoxSm from '@/components/events/event-box-sm';
+import EventCarousel from '@/components/events/carousel';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -276,23 +276,7 @@ export default async function OrganizationPage({ params }: Props) {
               }}
             >
               <CardContent sx={{ p: 4 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
-                  Upcoming Events
-                </Typography>
-                {events.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <CalendarMonth sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                    <Typography color="text.secondary">No events published yet</Typography>
-                  </Box>
-                ) : (
-                  <Grid container spacing={2}>
-                    {events.map(event => (
-                      <Grid size={{ xs: 12, sm: 6 }} key={event.eventId}>
-                        <EventBoxSm event={event} />
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
+                <EventCarousel events={events} title="Upcoming Events" viewAllEventsButton={false} />
               </CardContent>
             </Card>
           </Grid>
@@ -303,6 +287,7 @@ export default async function OrganizationPage({ params }: Props) {
               {/* Stats Card */}
               <FollowStatsCard
                 orgId={organization.orgId}
+                orgName={organization.name}
                 initialFollowersCount={organization.followersCount ?? 0}
               />
 

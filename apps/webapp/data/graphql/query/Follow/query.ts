@@ -7,6 +7,21 @@ export const GetFollowingDocument = graphql(`
       followerUserId
       targetType
       targetId
+      targetUser {
+        userId
+        username
+        email
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
+      targetOrganization {
+        orgId
+        slug
+        name
+        logo
+      }
       approvalStatus
       notificationPreferences {
         contentVisibility
@@ -21,6 +36,15 @@ export const GetFollowersDocument = graphql(`
     readFollowers(targetType: $targetType, targetId: $targetId) {
       followId
       followerUserId
+      follower {
+        userId
+        username
+        email
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
       targetType
       targetId
       approvalStatus
@@ -34,10 +58,43 @@ export const GetPendingFollowRequestsDocument = graphql(`
     readPendingFollowRequests(targetType: $targetType) {
       followId
       followerUserId
+      follower {
+        userId
+        username
+        email
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
       targetType
       targetId
       approvalStatus
       createdAt
+      updatedAt
+    }
+  }
+`);
+
+export const GetFollowRequestsDocument = graphql(`
+  query GetFollowRequests($targetType: FollowTargetType!) {
+    readFollowRequests(targetType: $targetType) {
+      followId
+      followerUserId
+      follower {
+        userId
+        username
+        email
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
+      targetType
+      targetId
+      approvalStatus
+      createdAt
+      updatedAt
     }
   }
 `);

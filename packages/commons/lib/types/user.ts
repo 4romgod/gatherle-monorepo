@@ -58,25 +58,6 @@ registerEnumType(FollowPolicy, {
     description: USER_DESCRIPTIONS.FOLLOW_POLICY,
 });
 
-@ObjectType('UserProfile')
-export class UserProfile {
-    @prop({type: () => String})
-    @Field(() => String, {nullable: true})
-    displayName?: string;
-
-    @prop({type: () => String})
-    @Field(() => String, {nullable: true})
-    bio?: string;
-
-    @prop({type: () => String})
-    @Field(() => String, {nullable: true})
-    avatar?: string;
-
-    @prop({type: () => [String], default: []})
-    @Field(() => [String], {nullable: true})
-    socialLinks?: string[];
-}
-
 @ObjectType('CommunicationPrefs')
 export class CommunicationPrefs {
     @prop({type: () => Boolean})
@@ -173,10 +154,6 @@ export class User {
     @prop({enum: SocialVisibility, type: () => String})
     @Field(() => SocialVisibility, {nullable: true})
     defaultVisibility?: SocialVisibility;
-
-    @prop({type: () => UserProfile})
-    @Field(() => UserProfile, {nullable: true})
-    profile?: UserProfile;
 
     @prop({type: () => UserPreferences})
     @Field(() => UserPreferences, {nullable: true})
