@@ -153,7 +153,7 @@ export class FollowResolver {
     @Ctx() context: ServerContext,
   ): Promise<Follow[]> {
     // Check visibility settings
-    let visibility: SocialVisibility = SocialVisibility.Public;
+    let visibility: SocialVisibility;
 
     if (targetType === FollowTargetType.User) {
       const targetUser = await UserDAO.readUserById(targetId);
