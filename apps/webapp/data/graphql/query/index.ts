@@ -10,3 +10,5 @@ export * from './Activity/query';
 export * from './Follow/query';
 export * from './Follow/types';
 export * from '../mutation/Follow/mutation';
+export * from '../mutation/User/block';
+export * from '../mutation/User/mute';

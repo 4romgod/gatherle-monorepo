@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {FollowResolver} from '@/graphql/resolvers/follow';
 import {FollowDAO, UserDAO} from '@/mongodb/dao';
 import type {CreateFollowInput, Follow, User} from '@ntlango/commons/types';
-import {FollowTargetType, FollowContentVisibility, FollowApprovalStatus, UserRole, FollowPolicy} from '@ntlango/commons/types';
+import {FollowTargetType, FollowApprovalStatus, UserRole, FollowPolicy, SocialVisibility} from '@ntlango/commons/types';
 import {Types} from 'mongoose';
 import type {ServerContext} from '@/graphql';
 
@@ -12,9 +12,9 @@ jest.mock('@/mongodb/dao', () => ({
     readFollowingForUser: jest.fn(),
     readFollowers: jest.fn(),
     remove: jest.fn(),
-    updateNotificationPreferences: jest.fn(),
     updateApprovalStatus: jest.fn(),
     readPendingFollows: jest.fn(),
+    removeFollower: jest.fn(),
   },
   UserDAO: {
     readUserById: jest.fn(),
@@ -53,9 +53,6 @@ describe('FollowResolver', () => {
       followerUserId: mockUser.userId,
       targetType: FollowTargetType.User,
       targetId: mockInput.targetId,
-      notificationPreferences: {
-        contentVisibility: FollowContentVisibility.Active,
-      },
       approvalStatus: FollowApprovalStatus.Accepted,
       createdAt: new Date(),
     };
@@ -95,42 +92,17 @@ describe('FollowResolver', () => {
 
   it('reads followers', async () => {
     const mockList: Follow[] = [];
+    const targetUserId = 'target-1';
+    const mockTargetUser = {userId: targetUserId, followersListVisibility: 'Public'};
+    
+    (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockTargetUser);
     (FollowDAO.readFollowers as jest.Mock).mockResolvedValue(mockList);
 
-    const result = await resolver.readFollowers(FollowTargetType.User, 'target-1');
+    const result = await resolver.readFollowers(FollowTargetType.User, targetUserId, mockContext as ServerContext);
 
-    expect(FollowDAO.readFollowers).toHaveBeenCalledWith(FollowTargetType.User, 'target-1');
+    expect(UserDAO.readUserById).toHaveBeenCalledWith(targetUserId);
+    expect(FollowDAO.readFollowers).toHaveBeenCalledWith(FollowTargetType.User, targetUserId);
     expect(result).toBe(mockList);
-  });
-
-  it('updates notification preferences', async () => {
-    const followId = new Types.ObjectId().toString();
-    const mockFollow: Follow = {
-      followId,
-      followerUserId: mockUser.userId,
-      targetType: FollowTargetType.User,
-      targetId: 'target-1',
-      notificationPreferences: {
-        contentVisibility: FollowContentVisibility.Muted,
-      },
-      approvalStatus: FollowApprovalStatus.Accepted,
-      createdAt: new Date(),
-    };
-
-    (FollowDAO.updateNotificationPreferences as jest.Mock).mockResolvedValue(mockFollow);
-
-    const result = await resolver.updateFollowNotificationPreferences(
-      {
-        followId,
-        notificationPreferences: {contentVisibility: FollowContentVisibility.Muted},
-      },
-      mockContext as ServerContext,
-    );
-
-    expect(FollowDAO.updateNotificationPreferences).toHaveBeenCalledWith(followId, mockUser.userId, {
-      contentVisibility: FollowContentVisibility.Muted,
-    });
-    expect(result).toEqual(mockFollow);
   });
 
   it('accepts a follow request', async () => {
@@ -140,9 +112,6 @@ describe('FollowResolver', () => {
       followerUserId: 'other-user',
       targetType: FollowTargetType.User,
       targetId: mockUser.userId,
-      notificationPreferences: {
-        contentVisibility: FollowContentVisibility.Active,
-      },
       approvalStatus: FollowApprovalStatus.Accepted,
       createdAt: new Date(),
     };
@@ -162,9 +131,6 @@ describe('FollowResolver', () => {
       followerUserId: 'other-user',
       targetType: FollowTargetType.User,
       targetId: mockUser.userId,
-      notificationPreferences: {
-        contentVisibility: FollowContentVisibility.Active,
-      },
       approvalStatus: FollowApprovalStatus.Rejected,
       createdAt: new Date(),
     };
@@ -185,5 +151,126 @@ describe('FollowResolver', () => {
 
     expect(FollowDAO.readPendingFollows).toHaveBeenCalledWith(mockUser.userId, FollowTargetType.User);
     expect(result).toBe(mockList);
+  });
+
+  describe('readFollowers visibility', () => {
+    const targetUserId = 'target-user-123';
+
+    it('returns empty array when visibility is Private and viewer is not the owner', async () => {
+      const mockTargetUser = {
+        userId: targetUserId,
+        followersListVisibility: SocialVisibility.Private,
+      };
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockTargetUser);
+
+      const result = await resolver.readFollowers(FollowTargetType.User, targetUserId, mockContext as ServerContext);
+
+      expect(result).toEqual([]);
+      expect(FollowDAO.readFollowers).not.toHaveBeenCalled();
+    });
+
+    it('returns followers when visibility is Private and viewer is the owner', async () => {
+      const mockList: Follow[] = [{} as Follow];
+      const ownerContext = {user: {...mockUser, userId: targetUserId}};
+      const mockTargetUser = {
+        userId: targetUserId,
+        followersListVisibility: SocialVisibility.Private,
+      };
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockTargetUser);
+      (FollowDAO.readFollowers as jest.Mock).mockResolvedValue(mockList);
+
+      const result = await resolver.readFollowers(FollowTargetType.User, targetUserId, ownerContext as ServerContext);
+
+      expect(FollowDAO.readFollowers).toHaveBeenCalled();
+      expect(result).toBe(mockList);
+    });
+
+    it('returns followers when visibility is Followers and viewer follows the target', async () => {
+      const mockList: Follow[] = [{} as Follow];
+      const mockTargetUser = {
+        userId: targetUserId,
+        followersListVisibility: SocialVisibility.Followers,
+      };
+      // Viewer is already a follower
+      const followingList: Follow[] = [{
+        followId: 'f1',
+        followerUserId: mockUser.userId,
+        targetType: FollowTargetType.User,
+        targetId: targetUserId,
+        approvalStatus: FollowApprovalStatus.Accepted,
+      } as Follow];
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockTargetUser);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue(followingList);
+      (FollowDAO.readFollowers as jest.Mock).mockResolvedValue(mockList);
+
+      const result = await resolver.readFollowers(FollowTargetType.User, targetUserId, mockContext as ServerContext);
+
+      expect(FollowDAO.readFollowers).toHaveBeenCalled();
+      expect(result).toBe(mockList);
+    });
+
+    it('returns empty array when visibility is Followers and viewer does not follow', async () => {
+      const mockTargetUser = {
+        userId: targetUserId,
+        followersListVisibility: SocialVisibility.Followers,
+      };
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockTargetUser);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
+
+      const result = await resolver.readFollowers(FollowTargetType.User, targetUserId, mockContext as ServerContext);
+
+      expect(result).toEqual([]);
+      expect(FollowDAO.readFollowers).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeFollower', () => {
+    it('removes a follower when called by target user', async () => {
+      const followerUserId = 'follower-123';
+      (FollowDAO.removeFollower as jest.Mock).mockResolvedValue(true);
+
+      const result = await resolver.removeFollower(followerUserId, FollowTargetType.User, mockContext as ServerContext);
+
+      expect(FollowDAO.removeFollower).toHaveBeenCalledWith(
+        mockUser.userId,
+        followerUserId,
+        FollowTargetType.User,
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('follow block enforcement', () => {
+    it('prevents following a user who has blocked the current user', async () => {
+      const blockerUserId = new Types.ObjectId().toString();
+      const mockInput: CreateFollowInput = {
+        targetType: FollowTargetType.User,
+        targetId: blockerUserId,
+      };
+      const blockerUser = {
+        userId: blockerUserId,
+        blockedUserIds: [mockUser.userId],
+        followPolicy: FollowPolicy.Public,
+      };
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(blockerUser);
+
+      await expect(resolver.follow(mockInput, mockContext as ServerContext)).rejects.toThrow('You cannot follow this user');
+    });
+
+    it('prevents following a user that the current user has blocked', async () => {
+      const targetUserId = new Types.ObjectId().toString();
+      const mockInput: CreateFollowInput = {
+        targetType: FollowTargetType.User,
+        targetId: targetUserId,
+      };
+      const targetUser = {userId: targetUserId, followPolicy: FollowPolicy.Public, blockedUserIds: []};
+      const currentUser = {...mockUser, blockedUserIds: [targetUserId]};
+      const contextWithBlock = {user: currentUser};
+      (UserDAO.readUserById as jest.Mock)
+        .mockResolvedValueOnce(targetUser) // First call for target user
+        .mockResolvedValueOnce(currentUser); // Second call for follower user
+
+      await expect(resolver.follow(mockInput, contextWithBlock as ServerContext)).rejects.toThrow('You cannot follow a blocked user');
+    });
   });
 });

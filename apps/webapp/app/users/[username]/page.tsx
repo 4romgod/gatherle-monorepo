@@ -33,8 +33,8 @@ import { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { omit } from 'lodash';
 import Link from 'next/link';
-import FollowButton from '@/components/users/follow-button';
 import UserFollowStats from '@/components/users/user-follow-stats';
+import UserProfileActions from '@/components/users/user-profile-actions';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -144,7 +144,7 @@ export default async function UserPage(props: Props) {
                     right: 20,
                   }}
                 >
-                  <FollowButton targetId={user.userId} size="small" />
+                  <UserProfileActions userId={user.userId} username={user.username} />
                 </Box>
               )}
             </Box>

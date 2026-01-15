@@ -10,11 +10,6 @@ export enum FollowTargetType {
     Organization = 'Organization',
 }
 
-export enum FollowContentVisibility {
-    Active = 'Active',
-    Muted = 'Muted',
-}
-
 export enum FollowApprovalStatus {
     Pending = 'Pending',
     Accepted = 'Accepted',
@@ -26,35 +21,10 @@ registerEnumType(FollowTargetType, {
     description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_TYPE,
 });
 
-registerEnumType(FollowContentVisibility, {
-    name: 'FollowContentVisibility',
-    description: SOCIAL_DESCRIPTIONS.FOLLOW.CONTENT_VISIBILITY,
-});
-
 registerEnumType(FollowApprovalStatus, {
     name: 'FollowApprovalStatus',
     description: SOCIAL_DESCRIPTIONS.FOLLOW.APPROVAL_STATUS,
 });
-
-@ObjectType('FollowNotificationPreferences', {description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES})
-export class FollowNotificationPreferences {
-    @prop({enum: FollowContentVisibility, default: FollowContentVisibility.Active, type: () => String})
-    @Field(() => FollowContentVisibility, {description: SOCIAL_DESCRIPTIONS.FOLLOW.CONTENT_VISIBILITY})
-    contentVisibility: FollowContentVisibility;
-
-    // Future extensibility:
-    // @prop({type: () => Boolean, default: true})
-    // @Field(() => Boolean, {description: 'Receive push notifications for new posts'})
-    // pushNotifications?: boolean;
-
-    // @prop({type: () => Boolean, default: true})
-    // @Field(() => Boolean, {description: 'Receive email notifications'})
-    // emailNotifications?: boolean;
-
-    // @prop({type: () => [String], default: []})
-    // @Field(() => [String], {description: 'Specific event types to notify about'})
-    // notifyOnEventTypes?: string[];
-}
 
 @ObjectType('Follow', {description: SOCIAL_DESCRIPTIONS.FOLLOW.TYPE})
 @modelOptions({schemaOptions: {timestamps: true}, options: {allowMixed: Severity.ALLOW}})
@@ -87,10 +57,6 @@ export class Follow {
     @Field(() => ID, {description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_ID})
     targetId: string;
 
-    @prop({type: () => FollowNotificationPreferences, default: () => ({contentVisibility: FollowContentVisibility.Active})})
-    @Field(() => FollowNotificationPreferences, {description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES})
-    notificationPreferences: FollowNotificationPreferences;
-
     @prop({enum: FollowApprovalStatus, default: FollowApprovalStatus.Accepted, type: () => String})
     @Field(() => FollowApprovalStatus, {description: SOCIAL_DESCRIPTIONS.FOLLOW.APPROVAL_STATUS})
     approvalStatus: FollowApprovalStatus;
@@ -103,12 +69,6 @@ export class Follow {
     updatedAt?: Date;
 }
 
-@InputType('FollowNotificationPreferencesInput', {description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES_INPUT})
-export class FollowNotificationPreferencesInput {
-    @Field(() => FollowContentVisibility, {nullable: true, description: SOCIAL_DESCRIPTIONS.FOLLOW.CONTENT_VISIBILITY})
-    contentVisibility?: FollowContentVisibility;
-}
-
 @InputType('CreateFollowInput', {description: SOCIAL_DESCRIPTIONS.FOLLOW.CREATE_INPUT})
 export class CreateFollowInput {
     @Field(() => FollowTargetType, {description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_TYPE})
@@ -116,16 +76,4 @@ export class CreateFollowInput {
 
     @Field(() => ID, {description: SOCIAL_DESCRIPTIONS.FOLLOW.TARGET_ID})
     targetId: string;
-
-    @Field(() => FollowNotificationPreferencesInput, {nullable: true, description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES})
-    notificationPreferences?: FollowNotificationPreferencesInput;
-}
-
-@InputType('UpdateFollowNotificationPreferencesInput', {description: 'Input for updating follow notification preferences'})
-export class UpdateFollowNotificationPreferencesInput {
-    @Field(() => ID, {description: SOCIAL_DESCRIPTIONS.FOLLOW.ID})
-    followId: string;
-
-    @Field(() => FollowNotificationPreferencesInput, {description: SOCIAL_DESCRIPTIONS.FOLLOW.NOTIFICATION_PREFERENCES})
-    notificationPreferences: FollowNotificationPreferencesInput;
 }

@@ -1,18 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, {useState} from 'react';
 import Link from 'next/link';
 import {
   Avatar,
   Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   ListItem,
   ListItemAvatar,
   ListItemText,
   Typography,
 } from '@mui/material';
+import {PersonRemove as PersonRemoveIcon} from '@mui/icons-material';
 import FollowButton from './follow-button';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
+import { useRemoveFollower } from '@/hooks';
+import { useAppContext } from '@/hooks/useAppContext';
 
 interface FollowerUser {
   userId: string;
@@ -27,13 +36,43 @@ interface FollowerUser {
 interface FollowersListItemProps {
   follower: FollowerUser;
   targetType?: FollowTargetType;
+  targetUserId?: string;
+  isOwnProfile?: boolean;
 }
 
-export default function FollowersListItem({ follower, targetType = FollowTargetType.User }: FollowersListItemProps) {
+export default function FollowersListItem({ 
+  follower, 
+  targetType = FollowTargetType.User,
+  targetUserId,
+  isOwnProfile = false 
+}: FollowersListItemProps) {
   const { data: session } = useSession();
+  const { removeFollower, loading: removeLoading } = useRemoveFollower();
+  const { setToastProps, toastProps } = useAppContext();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const isCurrentUser = session?.user?.userId === follower.userId;
   const displayName = `${follower.given_name} ${follower.family_name}`.trim();
+
+  const handleRemoveFollower = async () => {
+    try {
+      await removeFollower(follower.userId, targetType);
+      setShowConfirmDialog(false);
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'success',
+        message: 'Follower removed successfully',
+      });
+    } catch (error) {
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'error',
+        message: 'Failed to remove follower',
+      });
+    }
+  };
 
   return (
     <ListItem
@@ -100,7 +139,23 @@ export default function FollowersListItem({ follower, targetType = FollowTargetT
             </Box>
 
             {!isCurrentUser && (
-              <Box sx={{ flexShrink: 0 }}>
+              <Box sx={{ flexShrink: 0, display: 'flex', gap: 1, alignItems: 'center' }}>
+                {isOwnProfile && (
+                  <IconButton
+                    size="small"
+                    onClick={() => setShowConfirmDialog(true)}
+                    disabled={removeLoading}
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'error.main',
+                        bgcolor: 'error.lighter',
+                      },
+                    }}
+                  >
+                    <PersonRemoveIcon fontSize="small" />
+                  </IconButton>
+                )}
                 <FollowButton
                   targetId={follower.userId}
                   targetType={targetType}
@@ -129,6 +184,34 @@ export default function FollowersListItem({ follower, targetType = FollowTargetT
           )
         }
       />
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Remove Follower</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove <strong>{displayName}</strong> from your followers?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirmDialog(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleRemoveFollower} 
+            color="error" 
+            variant="contained"
+            disabled={removeLoading}
+          >
+            Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ListItem>
   );
 }

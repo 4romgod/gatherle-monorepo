@@ -6,13 +6,20 @@ import {
   Avatar,
   Box,
   Button,
+  IconButton,
   ListItem,
   ListItemAvatar,
   ListItemText,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import { PersonRemove as PersonRemoveIcon } from '@mui/icons-material';
+import {
+  PersonRemove as PersonRemoveIcon,
+  Notifications as NotificationsIcon,
+  NotificationsOff as NotificationsOffIcon,
+} from '@mui/icons-material';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
+import { useMuteUser, useMuteOrganization } from '@/hooks';
 
 interface FollowingUser {
   userId: string;
@@ -32,6 +39,7 @@ interface FollowingOrg {
 }
 
 interface FollowingTarget {
+  followId: string;
   targetType: FollowTargetType;
   targetId: string;
   targetUser?: FollowingUser;
@@ -42,17 +50,30 @@ interface FollowingListItemProps {
   following: FollowingTarget;
   onUnfollow: (targetId: string, targetType: FollowTargetType) => Promise<any>;
   isLoading?: boolean;
+  /** IDs of muted users */
+  mutedUserIds?: string[];
+  /** IDs of muted organizations */
+  mutedOrgIds?: string[];
 }
 
 export default function FollowingListItem({
   following,
   onUnfollow,
   isLoading = false,
+  mutedUserIds = [],
+  mutedOrgIds = [],
 }: FollowingListItemProps) {
   const [localLoading, setLocalLoading] = React.useState(false);
+  const { muteUser, unmuteUser, loading: muteUserLoading } = useMuteUser();
+  const { muteOrganization, unmuteOrganization, loading: muteOrgLoading } = useMuteOrganization();
 
   const isUser = following.targetType === FollowTargetType.User;
   const target = isUser ? following.targetUser : following.targetOrganization;
+  
+  // Check if muted based on the muted lists
+  const isMuted = isUser 
+    ? mutedUserIds.includes(following.targetId)
+    : mutedOrgIds.includes(following.targetId);
 
   if (!target) return null;
 
@@ -85,7 +106,25 @@ export default function FollowingListItem({
     }
   };
 
+  const handleToggleMute = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (isUser) {
+      if (isMuted) {
+        await unmuteUser(following.targetId);
+      } else {
+        await muteUser(following.targetId);
+      }
+    } else {
+      if (isMuted) {
+        await unmuteOrganization(following.targetId);
+      } else {
+        await muteOrganization(following.targetId);
+      }
+    }
+  };
+
   const loading = isLoading || localLoading;
+  const muteLoading = muteUserLoading || muteOrgLoading;
 
   return (
     <ListItem
@@ -151,7 +190,23 @@ export default function FollowingListItem({
               </Link>
             </Box>
 
-            <Box sx={{ flexShrink: 0 }}>
+            <Box sx={{ flexShrink: 0, display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Tooltip title={isMuted ? 'Unmute notifications' : 'Mute notifications'}>
+                <IconButton
+                  size="small"
+                  onClick={handleToggleMute}
+                  disabled={muteLoading}
+                  sx={{
+                    color: isMuted ? 'text.disabled' : 'text.secondary',
+                    '&:hover': {
+                      color: isMuted ? 'primary.main' : 'text.primary',
+                    },
+                  }}
+                >
+                  {isMuted ? <NotificationsOffIcon fontSize="small" /> : <NotificationsIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+              
               <Button
                 size="small"
                 variant="outlined"

@@ -13,10 +13,11 @@ The follow system has been successfully implemented for both users and organizat
 ### Core Capabilities
 - **Follow/Unfollow Users & Organizations**: Full follow support for both entity types
 - **Configurable Approval Workflow**: FollowPolicy setting (Public/RequireApproval) per user/organization
-- **Notification Preferences**: Per-follow content visibility controls (Active/Muted)
+- **User-Based Muting**: `mutedUserIds` and `mutedOrgIds` arrays on User model for muting content
 - **Query Operations**: Retrieve following lists, followers, pending requests, and follower counts
 - **Real-time Follower Counts**: Dynamically computed via FieldResolver with optimistic UI updates
 - **Pending State Management**: UI properly handles pending, accepted, and rejected states
+- **Blocking System**: `blockedUserIds` array on User model with cascade follow deletion
 
 ### Current Behavior
 - Follow requests respect the target's `followPolicy` setting:
@@ -39,10 +40,19 @@ class Follow {
   followerUserId: string
   targetType: FollowTargetType  // User | Organization
   targetId: string
-  notificationPreferences: FollowNotificationPreferences
   approvalStatus: FollowApprovalStatus  // Pending | Accepted | Rejected
   createdAt: Date
   updatedAt: Date
+}
+```
+
+**User Muting & Blocking** (`packages/commons/lib/types/user.ts`):
+```typescript
+class User {
+  // ... other fields
+  mutedUserIds?: string[]    // Users whose content is muted
+  mutedOrgIds?: string[]     // Organizations whose content is muted
+  blockedUserIds?: string[]  // Blocked users (cannot follow/be followed)
 }
 ```
 
@@ -56,13 +66,13 @@ export enum FollowPolicy {
 
 **Enums:**
 - `FollowTargetType`: User, Organization
-- `FollowContentVisibility`: Active, Muted
 - `FollowApprovalStatus`: Pending, Accepted, Rejected
 - `FollowPolicy`: Public, RequireApproval (on User and Organization types)
 
-**Notification Preferences:**
-- Nested object type with `contentVisibility` field
-- Designed for extensibility (push notifications, email, event type filters)
+**Muting Architecture:**
+- Muting is stored on the User model via `mutedUserIds` and `mutedOrgIds` arrays
+- This allows muting users/orgs independently of follow status (e.g., mute a commenter)
+- Consistent with blocking pattern using `blockedUserIds`
 - Default: `contentVisibility: Active`
 
 ### GraphQL API (`apps/api/lib/graphql/resolvers/follow.ts`)
@@ -79,17 +89,17 @@ export enum FollowPolicy {
    - Removes follow relationship (works for both pending and accepted)
    - Returns true on success
 
-3. `updateFollowNotificationPreferences(input): Follow`
-   - Updates contentVisibility (Active/Muted)
-   - User can only update their own follows
-
-4. `acceptFollowRequest(followId): Follow`
+3. `acceptFollowRequest(followId): Follow`
    - Target user accepts pending follow
    - Authorization check: only target can accept
 
-5. `rejectFollowRequest(followId): Boolean`
+4. `rejectFollowRequest(followId): Boolean`
    - Target user rejects pending follow
    - Authorization check: only target can reject
+
+5. `removeFollower(followerUserId, targetType): Boolean`
+   - Target user removes a follower from their list
+   - Authorization check: only target can remove followers
 
 **Queries:**
 1. `readFollowing(): [Follow]`
@@ -110,16 +120,16 @@ export enum FollowPolicy {
 ### Data Access Layer (`apps/api/lib/mongodb/dao/follow.ts`)
 
 **Methods:**
-- `upsert()`: Create or update follow with nested preferences and approval status
+- `upsert()`: Create or update follow with approval status
   - Uses find+save pattern (not findOneAndUpdate) to trigger Mongoose hooks
   - Accepts optional `approvalStatus` parameter based on target's policy
-- `updateNotificationPreferences()`: Update contentVisibility
 - `updateApprovalStatus()`: Accept/reject with authorization check
 - `readPendingFollows()`: Query pending requests by target user
 - `readFollowingForUser()`: Query user's following list
 - `readFollowers()`: Query followers of user/org (accepted only)
 - `countFollowers()`: Efficient count using `countDocuments` with accepted status filter
 - `remove()`: Delete follow relationship
+- `removeFollower()`: Remove a follower from the target's follower list
 
 **Authorization:**
 - `updateApprovalStatus()` verifies caller is the target user
@@ -131,10 +141,9 @@ All DAO operations now use the find+save pattern instead of findOneAndUpdate to 
 ### Validation (`apps/api/lib/validation/zod/social.ts`)
 
 **Schemas:**
-- `CreateFollowInputSchema`: Validates targetType, targetId, optional preferences
-- `UpdateFollowNotificationPreferencesInputSchema`: Validates followId and preferences
+- `CreateFollowInputSchema`: Validates targetType, targetId
 - Uses MongoDB ObjectId validation for IDs
-- Enum validation for targetType and contentVisibility
+- Enum validation for targetType
 
 ## Frontend Implementation
 
@@ -150,7 +159,7 @@ All DAO operations now use the find+save pattern instead of findOneAndUpdate to 
 - `UnfollowDocument`: Remove follow
 - `AcceptFollowRequestDocument`: Accept pending request
 - `RejectFollowRequestDocument`: Reject pending request
-- `UpdateFollowNotificationPreferencesDocument`: Update preferences
+- `RemoveFollowerDocument`: Remove a follower
 
 **Type Exports** (`apps/webapp/data/graphql/query/Follow/types.ts`):
 - `Following`: Type alias for following list items
@@ -306,11 +315,13 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 ## Testing & Validation
 
 ### Automated Testing
-- ✅ 504 unit tests passing (including updated DAO tests for find+save pattern)
+- ✅ 526 unit tests passing (including Phase 2 tests for privacy, blocking, and remove follower)
 - ✅ Integration tests for social resolvers (follow, intent, activity)
-- ✅ Unit tests for FollowResolver (with FollowPolicy handling)
+- ✅ Unit tests for FollowResolver (with FollowPolicy and visibility handling)
 - ✅ Unit tests for Organization followersCount FieldResolver
-- ✅ Authorization checks for accept/reject mutations
+- ✅ Authorization checks for accept/reject/removeFollower mutations
+- ✅ Tests for block/unblock cascade effects
+- ✅ Tests for follow prevention when blocked
 - ✅ Validation schemas working (Zod)
 
 ### Manual Testing Completed
@@ -350,11 +361,11 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 - [x] Add loading skeleton for follow lists
 - [x] Add FollowPolicy toggle to user/org settings page
 
-### Phase 2: Privacy & Control (Medium Priority)
-- [ ] Add "Remove Follower" functionality
-- [ ] Block/unblock users feature
-- [ ] Hide followers/following lists based on privacy settings
-- [ ] Mute notifications from specific followers
+### Phase 2: Privacy & Control (Medium Priority) ✅
+- [x] Add "Remove Follower" functionality
+- [x] Block/unblock users feature
+- [x] Hide followers/following lists based on privacy settings
+- [x] Mute notifications from specific followers
 
 ### Phase 3: Advanced Features (Low Priority)
 - [ ] Push notification preferences per follow
@@ -372,6 +383,36 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 - [ ] Virtual scrolling for large lists
 
 ## Completed Features ✅
+
+### Phase 2 Complete (15 January 2026)
+- ✅ **List visibility controls**: Uses `SocialVisibility` enum (Public/Followers/Private)
+  - Users can control who sees their followers and following lists via settings
+  - readFollowers/readFollowing resolvers enforce visibility rules
+  - Organizations also support `followersListVisibility` setting
+- ✅ **Remove follower capability**: New `removeFollower` mutation
+  - Only target user can remove followers from their list
+  - FollowDAO.removeFollower method with proper authorization
+  - UI with confirmation dialog to prevent accidental removals
+- ✅ **Block/unblock system**: Complete user blocking functionality
+  - `blockedUserIds` array on User model
+  - `blockUser`/`unblockUser` mutations with cascade follow deletion
+  - Blocked users automatically unfollowed in both directions
+  - Follow mutation checks block status and prevents blocked users from following
+  - BlockedUsersList component to manage blocked users
+  - "Block User" option in user profile menu
+  - FollowButton shows "Blocked" state when target is blocked
+- ✅ **Notification muting**: User-based muting using `mutedUserIds` and `mutedOrgIds`
+  - `muteUser`/`unmuteUser` mutations on User resolver
+  - `muteOrganization`/`unmuteOrganization` mutations for organizations
+  - Mute/unmute icon button with tooltip on following-list-item
+  - MutedFollowersList component shows all muted users with unmute option
+  - Visual indicator shows muted state (notifications off icon)
+- ✅ **Comprehensive tests**: Added unit tests for all new features
+  - Tests for visibility rules (Public/Followers/Private enforcement)
+  - Tests for removeFollower authorization
+  - Tests for block/unblock cascade effects
+  - Tests for follow prevention when blocked
+  - All 526 API tests passing
 
 ### Latest Updates (14 January 2026 - Evening)
 - ✅ **Re-follow after rejection fix**: Updated FollowDAO.upsert to properly handle re-following after rejection
@@ -538,6 +579,21 @@ The system supports both public (auto-accept) and private (approval-required) fo
 - [Project Brief](../project-brief.md)
 
 ## Change Log
+
+### 15 January 2026 - Phase 2 Privacy & Control
+- Uses `SocialVisibility` enum (Public/Followers/Private) for User and Organization visibility settings
+- readFollowers/readFollowing resolvers now check visibility settings before returning data
+- Added `removeFollower` mutation with proper authorization (target user only)
+- Implemented complete block/unblock system with cascade follow deletion
+- `blockUser` and `unblockUser` mutations in UserResolver
+- Block checks in `follow` mutation prevent blocked users from following
+- Created `useBlock` and `useBlockedUsers` hooks for frontend
+- Added BlockedUsersList component for managing blocked users
+- Created UserProfileActions component with block menu option
+- Updated FollowButton to show "Blocked" state
+- Enhanced following-list-item with mute/unmute toggle button
+- Added comprehensive unit tests for all new features (526 tests passing)
+- Used `CustomError` pattern consistently for error handling in follow resolver
 
 ### 13 January 2026 - FollowPolicy & Optimistic Updates
 - Added `FollowPolicy` enum (Public/RequireApproval) to User and Organization types

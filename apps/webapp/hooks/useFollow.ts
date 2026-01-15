@@ -9,10 +9,15 @@ import {
   GetFollowRequestsDocument,
   AcceptFollowRequestDocument,
   RejectFollowRequestDocument,
-  UpdateFollowNotificationPreferencesDocument,
+  RemoveFollowerDocument,
+  MuteUserDocument,
+  UnmuteUserDocument,
+  GetMutedUsersDocument,
+  MuteOrganizationDocument,
+  UnmuteOrganizationDocument,
+  GetMutedOrganizationIdsDocument,
 } from '@/data/graphql/query';
 import type { FollowTargetType } from '@/data/graphql/types/graphql';
-import { FollowContentVisibility } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 
 export function useFollow() {
@@ -129,6 +134,7 @@ export function useFollowRequests(targetType: FollowTargetType) {
 
   const { data, loading: queryLoading, error, refetch } = useQuery(GetFollowRequestsDocument, {
     variables: { targetType },
+    skip: !token,
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -179,12 +185,16 @@ export function useFollowRequests(targetType: FollowTargetType) {
   };
 }
 
-export function useUpdateFollowPreferences() {
+/**
+ * Hook to mute/unmute users.
+ * Muted users' content will be hidden from your feed.
+ */
+export function useMuteUser() {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const [updatePreferences, { loading }] = useMutation(UpdateFollowNotificationPreferencesDocument, {
-    refetchQueries: ['GetFollowing'],
+  const [muteMutation, { loading: muteLoading }] = useMutation(MuteUserDocument, {
+    refetchQueries: ['GetMutedUsers'],
     context: {
       headers: {
         ...(token ? { token } : {}),
@@ -192,35 +202,152 @@ export function useUpdateFollowPreferences() {
     },
   });
 
-  const muteFollow = async (followId: string) => {
-    return updatePreferences({
-      variables: {
-        input: {
-          followId,
-          notificationPreferences: {
-            contentVisibility: FollowContentVisibility.Muted,
-          },
-        },
+  const [unmuteMutation, { loading: unmuteLoading }] = useMutation(UnmuteUserDocument, {
+    refetchQueries: ['GetMutedUsers'],
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
       },
+    },
+  });
+
+  const muteUser = async (userId: string) => {
+    return muteMutation({
+      variables: { mutedUserId: userId },
     });
   };
 
-  const unmuteFollow = async (followId: string) => {
-    return updatePreferences({
+  const unmuteUser = async (userId: string) => {
+    return unmuteMutation({
+      variables: { mutedUserId: userId },
+    });
+  };
+
+  return {
+    muteUser,
+    unmuteUser,
+    loading: muteLoading || unmuteLoading,
+  };
+}
+
+/**
+ * Hook to get the list of muted users.
+ */
+export function useMutedUsers() {
+  const { data: session } = useSession();
+  const token = session?.user?.token;
+
+  const { data, loading, error, refetch } = useQuery(GetMutedUsersDocument, {
+    skip: !token,
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
+      },
+    },
+  });
+
+  return {
+    mutedUsers: data?.readMutedUsers ?? [],
+    loading,
+    error,
+    refetch,
+  };
+}
+
+/**
+ * Hook to mute/unmute organizations.
+ * Muted organizations' content will be hidden from your feed.
+ */
+export function useMuteOrganization() {
+  const { data: session } = useSession();
+  const token = session?.user?.token;
+
+  const [muteMutation, { loading: muteLoading }] = useMutation(MuteOrganizationDocument, {
+    refetchQueries: ['GetMutedOrganizationIds'],
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
+      },
+    },
+  });
+
+  const [unmuteMutation, { loading: unmuteLoading }] = useMutation(UnmuteOrganizationDocument, {
+    refetchQueries: ['GetMutedOrganizationIds'],
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
+      },
+    },
+  });
+
+  const muteOrganization = async (organizationId: string) => {
+    return muteMutation({
+      variables: { organizationId },
+    });
+  };
+
+  const unmuteOrganization = async (organizationId: string) => {
+    return unmuteMutation({
+      variables: { organizationId },
+    });
+  };
+
+  return {
+    muteOrganization,
+    unmuteOrganization,
+    loading: muteLoading || unmuteLoading,
+  };
+}
+
+/**
+ * Hook to get the list of muted organization IDs.
+ */
+export function useMutedOrganizations() {
+  const { data: session } = useSession();
+  const token = session?.user?.token;
+
+  const { data, loading, error, refetch } = useQuery(GetMutedOrganizationIdsDocument, {
+    skip: !token,
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
+      },
+    },
+  });
+
+  return {
+    mutedOrgIds: data?.readMutedOrganizationIds ?? [],
+    loading,
+    error,
+    refetch,
+  };
+}
+
+export function useRemoveFollower() {
+  const { data: session } = useSession();
+  const token = session?.user?.token;
+
+  const [removeFollowerMutation, { loading }] = useMutation(RemoveFollowerDocument, {
+    refetchQueries: ['GetFollowers'],
+    awaitRefetchQueries: true,
+    context: {
+      headers: {
+        ...(token ? { token } : {}),
+      },
+    },
+  });
+
+  const removeFollower = async (followerUserId: string, targetType: FollowTargetType) => {
+    return removeFollowerMutation({
       variables: {
-        input: {
-          followId,
-          notificationPreferences: {
-            contentVisibility: FollowContentVisibility.Active,
-          },
-        },
+        followerUserId,
+        targetType,
       },
     });
   };
 
   return {
-    muteFollow,
-    unmuteFollow,
+    removeFollower,
     loading,
   };
 }

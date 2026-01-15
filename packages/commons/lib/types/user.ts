@@ -176,12 +176,24 @@ export class User {
     mutedUserIds?: string[];
 
     @prop({default: [], type: () => [String]})
+    @Field(() => [String], {nullable: true, description: 'IDs of organizations whose content is muted'})
+    mutedOrgIds?: string[];
+
+    @prop({default: [], type: () => [String]})
     @Field(() => [String], {nullable: true})
     blockedUserIds?: string[];
 
     @prop({enum: FollowPolicy, default: FollowPolicy.Public, type: () => String})
     @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
     followPolicy?: FollowPolicy;
+
+    @prop({enum: SocialVisibility, default: SocialVisibility.Public, type: () => String})
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your followers list'})
+    followersListVisibility?: SocialVisibility;
+
+    @prop({enum: SocialVisibility, default: SocialVisibility.Public, type: () => String})
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your following list'})
+    followingListVisibility?: SocialVisibility;
 
     // Computed field - resolved via @FieldResolver in UserResolver (no @prop, not stored in DB)
     @Field(() => Number, {description: USER_DESCRIPTIONS.FOLLOWERS_COUNT})
@@ -256,6 +268,9 @@ export class CreateUserInput {
     @Field(() => [String], {nullable: true})
     mutedUserIds?: string[];
 
+    @Field(() => [String], {nullable: true, description: 'IDs of organizations whose content is muted'})
+    mutedOrgIds?: string[];
+
     @Field(() => [String], {nullable: true})
     blockedUserIds?: string[];
 
@@ -264,6 +279,12 @@ export class CreateUserInput {
 
     @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
     followPolicy?: FollowPolicy;
+
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your followers list'})
+    followersListVisibility?: SocialVisibility;
+
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your following list'})
+    followingListVisibility?: SocialVisibility;
 }
 
 @InputType('UpdateUserInput', {description: USER_DESCRIPTIONS.UPDATE_INPUT})
@@ -335,6 +356,9 @@ export class UpdateUserInput {
     @Field(() => [String], {nullable: true})
     mutedUserIds?: string[];
 
+    @Field(() => [String], {nullable: true, description: 'IDs of organizations whose content is muted'})
+    mutedOrgIds?: string[];
+
     @Field(() => [String], {nullable: true})
     blockedUserIds?: string[];
 
@@ -343,6 +367,12 @@ export class UpdateUserInput {
 
     @Field(() => FollowPolicy, {nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY})
     followPolicy?: FollowPolicy;
+
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your followers list'})
+    followersListVisibility?: SocialVisibility;
+
+    @Field(() => SocialVisibility, {nullable: true, description: 'Who can see your following list'})
+    followingListVisibility?: SocialVisibility;
 }
 
 @InputType('LoginUserInput', {description: USER_DESCRIPTIONS.LOGIN_INPUT})

@@ -23,9 +23,6 @@ export const GetFollowingDocument = graphql(`
         logo
       }
       approvalStatus
-      notificationPreferences {
-        contentVisibility
-      }
       createdAt
     }
   }

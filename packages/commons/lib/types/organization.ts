@@ -4,7 +4,7 @@ import {index, modelOptions, prop, Severity} from '@typegoose/typegoose';
 
 import {EventVisibility} from './event';
 import {OrganizationMembership} from './organizationMembership';
-import {FollowPolicy} from './user';
+import {FollowPolicy, SocialVisibility} from './user';
 import {ORGANIZATION_DESCRIPTIONS, ORGANIZATION_LINK_DESCRIPTIONS} from '../constants';
 
 export enum OrganizationTicketAccess {
@@ -142,6 +142,10 @@ export class Organization {
     @Field(() => FollowPolicy, {nullable: true, description: ORGANIZATION_DESCRIPTIONS.FOLLOW_POLICY})
     followPolicy?: FollowPolicy;
 
+    @prop({enum: SocialVisibility, default: SocialVisibility.Public, type: () => String})
+    @Field(() => SocialVisibility, {nullable: true, description: "Who can see this organization's followers list"})
+    followersListVisibility?: SocialVisibility;
+
     @prop({type: () => [String], default: []})
     @Field(() => [String], {nullable: true, description: ORGANIZATION_DESCRIPTIONS.TAGS})
     tags?: string[];
@@ -223,4 +227,10 @@ export class UpdateOrganizationInput {
 
     @Field(() => [String], {nullable: true, description: ORGANIZATION_DESCRIPTIONS.TAGS})
     tags?: string[];
+
+    @Field(() => FollowPolicy, {nullable: true, description: ORGANIZATION_DESCRIPTIONS.FOLLOW_POLICY})
+    followPolicy?: FollowPolicy;
+
+    @Field(() => SocialVisibility, {nullable: true, description: "Who can see this organization's followers list"})
+    followersListVisibility?: SocialVisibility;
 }

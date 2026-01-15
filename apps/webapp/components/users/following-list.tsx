@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Close as CloseIcon, PersonOutline as PersonOutlineIcon } from '@mui/icons-material';
-import { useFollowing, useFollow } from '@/hooks';
+import { useFollowing, useFollow, useMutedUsers, useMutedOrganizations } from '@/hooks';
 import { FollowTargetType, FollowApprovalStatus } from '@/data/graphql/types/graphql';
 import FollowingListItem from './following-list-item';
 import FollowListSkeleton from './follow-list-skeleton';
@@ -29,6 +29,11 @@ export default function FollowingList({
 }: FollowingListProps) {
   const { following, loading, error } = useFollowing();
   const { unfollow, unfollowLoading } = useFollow();
+  const { mutedUsers } = useMutedUsers();
+  const { mutedOrgIds } = useMutedOrganizations();
+
+  // Extract muted user IDs from the muted users list
+  const mutedUserIds = mutedUsers.map(u => u.userId);
 
   const dialogTitle = title || 'Following';
 
@@ -118,6 +123,8 @@ export default function FollowingList({
                 following={item}
                 onUnfollow={handleUnfollow}
                 isLoading={unfollowLoading}
+                mutedUserIds={mutedUserIds}
+                mutedOrgIds={mutedOrgIds}
               />
             ))}
           </List>

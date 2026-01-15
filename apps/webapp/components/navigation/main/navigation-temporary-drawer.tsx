@@ -21,7 +21,6 @@ import { Clear, Login, Menu, ControlPointOutlined, MailOutline, NotificationsOut
 import { useSession } from 'next-auth/react';
 import NavLinksList from '@/components/navigation/main/nav-links-list';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
-import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc } from '@/lib/utils';
 import { useFollowRequests } from '@/hooks';
@@ -32,11 +31,10 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const { data: session } = useSession();
 
   // Get pending follow requests count for notification badge (only count pending, not accepted/rejected)
-  const followRequestsResult = isAuthN
-    ? useFollowRequests(FollowTargetType.User)
-    : { requests: [] as { approvalStatus?: FollowApprovalStatus }[] };
+  // Hook is always called but query is skipped internally when not authenticated
+  const { requests: followRequests } = useFollowRequests(FollowTargetType.User);
   const pendingCount =
-    followRequestsResult.requests?.filter(
+    followRequests?.filter(
       (req) => req.approvalStatus === FollowApprovalStatus.Pending
     ).length || 0;
 

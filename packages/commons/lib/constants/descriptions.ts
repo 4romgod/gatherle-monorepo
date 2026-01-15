@@ -246,8 +246,7 @@ export const RESOLVER_DESCRIPTIONS = {
     FOLLOW: {
         follow: 'Create or re-activate a follow connection from the authenticated user.',
         unfollow: 'Remove a follow connection initiated by the authenticated user.',
-        updateFollowNotificationPreferences: 'Update notification preferences for a follow relationship (e.g., mute/unmute content).',
-        acceptFollowRequest: 'Accept a pending follow request (called by the user being followed).',
+        acceptFollowRequest: 'Accept a pending follow request (called by the user being followed)',
         rejectFollowRequest: 'Reject a pending follow request (called by the user being followed).',
         readFollowing: 'List the users and organizations that the authenticated user follows.',
         readFollowers: 'List followers for a specific user or organization.',

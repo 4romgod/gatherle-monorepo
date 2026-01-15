@@ -3,7 +3,6 @@ import type {
   Follow as FollowEntity,
   CreateFollowInput,
   FollowTargetType,
-  FollowNotificationPreferences,
 } from '@ntlango/commons/types';
 import {FollowApprovalStatus} from '@ntlango/commons/types';
 import {Follow as FollowModel} from '@/mongodb/models';
@@ -13,7 +12,7 @@ import {logger} from '@/utils/logger';
 class FollowDAO {
   static async upsert(input: CreateFollowInput & {followerUserId: string; approvalStatus?: FollowApprovalStatus}): Promise<FollowEntity> {
     try {
-      const {followerUserId, targetType, targetId, notificationPreferences, approvalStatus} = input;
+      const {followerUserId, targetType, targetId, approvalStatus} = input;
       
       let follow = await FollowModel.findOne({followerUserId, targetType, targetId}).exec();
       
@@ -24,10 +23,6 @@ class FollowDAO {
         if (approvalStatus !== undefined) {
           follow.approvalStatus = approvalStatus;
         }
-        if (notificationPreferences?.contentVisibility !== undefined) {
-          follow.notificationPreferences = follow.notificationPreferences || {};
-          follow.notificationPreferences.contentVisibility = notificationPreferences.contentVisibility;
-        }
         await follow.save();
       } else {
         // Create new follow - triggers pre-validation hooks
@@ -35,7 +30,6 @@ class FollowDAO {
           followerUserId,
           targetType,
           targetId,
-          notificationPreferences,
           approvalStatus: approvalStatus ?? FollowApprovalStatus.Pending,
         });
       }
@@ -43,35 +37,6 @@ class FollowDAO {
       return follow.toObject();
     } catch (error) {
       logger.error('Error upserting follow', error);
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
-      throw KnownCommonError(error);
-    }
-  }
-
-  static async updateNotificationPreferences(
-    followId: string,
-    userId: string,
-    notificationPreferences: Partial<FollowNotificationPreferences>,
-  ): Promise<FollowEntity> {
-    try {
-      const follow = await FollowModel.findOne({followId, followerUserId: userId}).exec();
-
-      if (!follow) {
-        throw CustomError('Follow not found or user not authorized', ErrorTypes.NOT_FOUND);
-      }
-      
-      if (notificationPreferences.contentVisibility !== undefined) {
-        follow.notificationPreferences = follow.notificationPreferences || {};
-        follow.notificationPreferences.contentVisibility = notificationPreferences.contentVisibility;
-      }
-      
-      await follow.save();
-
-      return follow.toObject();
-    } catch (error) {
-      logger.error('Error updating notification preferences', error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -174,6 +139,16 @@ class FollowDAO {
     }
   }
 
+  /**
+   * Unfollow a target (user or organization).
+   * Called by the follower when they want to stop following someone.
+   * Removes the follow edge regardless of approval status.
+   * @param params.followerUserId - The user who is unfollowing
+   * @param params.targetType - The type of entity being unfollowed (User or Organization)
+   * @param params.targetId - The ID of the entity being unfollowed
+   * @returns true if the follow was removed
+   * @throws NOT_FOUND if no follow edge exists
+   */
   static async remove(params: {followerUserId: string; targetType: FollowTargetType; targetId: string}): Promise<boolean> {
     try {
       const removed = await FollowModel.findOneAndDelete(params).exec();
@@ -183,6 +158,39 @@ class FollowDAO {
       return true;
     } catch (error) {
       logger.error('Error removing follow', error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Remove a follower from your followers list.
+   * Called by the target user when they want to remove someone who follows them.
+   * Only removes accepted follows (not pending requests).
+   * @param targetUserId - The user who is removing the follower (the one being followed)
+   * @param followerUserId - The follower to remove
+   * @param targetType - The type of target (User or Organization)
+   * @returns true if the follower was removed
+   * @throws NOT_FOUND if no accepted follow exists
+   */
+  static async removeFollower(targetUserId: string, followerUserId: string, targetType: FollowTargetType): Promise<boolean> {
+    try {
+      const removed = await FollowModel.findOneAndDelete({
+        followerUserId,
+        targetType,
+        targetId: targetUserId,
+        approvalStatus: FollowApprovalStatus.Accepted,
+      }).exec();
+      
+      if (!removed) {
+        throw CustomError('Follower not found or not authorized', ErrorTypes.NOT_FOUND);
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Error removing follower', error);
       if (error instanceof GraphQLError) {
         throw error;
       }

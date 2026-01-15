@@ -1,10 +1,11 @@
 import 'reflect-metadata';
-import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx} from 'type-graphql';
+import {Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, ID} from 'type-graphql';
 import {FollowDAO, UserDAO} from '@/mongodb/dao';
 import {User, CreateUserInput, UpdateUserInput, LoginUserInput, UserRole, UserWithToken, QueryOptionsInput, EventCategory, FollowTargetType} from '@ntlango/commons/types';
 import {CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema} from '@/validation/zod';
 import {ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername} from '@/validation';
 import {RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS} from '@/constants';
+import {getAuthenticatedUser} from '@/utils';
 import type {ServerContext} from '@/graphql';
 
 @Resolver(() => User)
@@ -97,5 +98,87 @@ export class UserResolver {
     const categoryIds = user.interests.map((ref) => (typeof ref === 'string' ? ref : (ref as any)._id?.toString() || ref.toString()));
     const categories = await Promise.all(categoryIds.map((id) => context.loaders.eventCategory.load(id)));
     return categories.filter((c): c is EventCategory => c !== null);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Block a user'})
+  async blockUser(@Arg('blockedUserId', () => ID) blockedUserId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(blockedUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', blockedUserId));
+    
+    // Remove any follow relationships in both directions (ignore if they don't exist)
+    await FollowDAO.remove({followerUserId: user.userId, targetType: FollowTargetType.User, targetId: blockedUserId}).catch(() => {
+      /* Ignore error if follow relationship doesn't exist */
+    });
+    await FollowDAO.remove({followerUserId: blockedUserId, targetType: FollowTargetType.User, targetId: user.userId}).catch(() => {
+      /* Ignore error if follow relationship doesn't exist */
+    });
+
+    return UserDAO.blockUser(user.userId, blockedUserId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Unblock a user'})
+  async unblockUser(@Arg('blockedUserId', () => ID) blockedUserId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(blockedUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', blockedUserId));
+    return UserDAO.unblockUser(user.userId, blockedUserId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [User], {description: 'Get blocked users'})
+  async readBlockedUsers(@Ctx() context: ServerContext): Promise<User[]> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.readBlockedUsers(user.userId);
+  }
+
+  // ============ MUTE USER MUTATIONS ============
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Mute a user to hide their content from your feed'})
+  async muteUser(@Arg('mutedUserId', () => ID) mutedUserId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(mutedUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', mutedUserId));
+    return UserDAO.muteUser(user.userId, mutedUserId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Unmute a user to show their content in your feed again'})
+  async unmuteUser(@Arg('mutedUserId', () => ID) mutedUserId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(mutedUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', mutedUserId));
+    return UserDAO.unmuteUser(user.userId, mutedUserId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [User], {description: 'Get muted users'})
+  async readMutedUsers(@Ctx() context: ServerContext): Promise<User[]> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.readMutedUsers(user.userId);
+  }
+
+  // ============ MUTE ORGANIZATION MUTATIONS ============
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Mute an organization to hide their content from your feed'})
+  async muteOrganization(@Arg('organizationId', () => ID) organizationId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(organizationId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', organizationId));
+    return UserDAO.muteOrganization(user.userId, organizationId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, {description: 'Unmute an organization to show their content in your feed again'})
+  async unmuteOrganization(@Arg('organizationId', () => ID) organizationId: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    validateMongodbId(organizationId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', organizationId));
+    return UserDAO.unmuteOrganization(user.userId, organizationId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [String], {description: 'Get muted organization IDs'})
+  async readMutedOrganizationIds(@Ctx() context: ServerContext): Promise<string[]> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.readMutedOrganizationIds(user.userId);
   }
 }

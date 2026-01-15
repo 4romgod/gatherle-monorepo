@@ -347,7 +347,6 @@ async function seedFollows(seedData: FollowSeed[], userIds: string[], organizati
       followerUserId,
       targetType: seed.targetType,
       targetId,
-      notificationPreferences: seed.notificationPreferences,
       approvalStatus: seed.approvalStatus,
     });
   }

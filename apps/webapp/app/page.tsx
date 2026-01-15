@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { JSX } from 'react';
 import { auth } from '@/auth';
-import { AutoAwesome, DynamicFeed, Explore, People, PersonAdd, RocketLaunch, ShieldMoon } from '@mui/icons-material';
-import { Box, Button, Card, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
+import { AutoAwesome, DynamicFeed, Explore, People, PersonAdd, RocketLaunch, ShieldMoon, Event as EventIcon, Person, Business } from '@mui/icons-material';
+import { Avatar, Box, Button, Card, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import { Metadata } from 'next';
 import CustomContainer from '@/components/custom-container';
 import EventsCarousel from '@/components/events/carousel';
@@ -104,7 +104,7 @@ const socialHighlights: SocialHighlight[] = [
 
 const verbLabels: Record<string, string> = {
   Followed: 'followed',
-  RSVPd: "RSVP'd",
+  RSVPd: "RSVP'd to",
   Commented: 'commented on',
   Published: 'published',
   CreatedOrg: 'created',
@@ -112,38 +112,72 @@ const verbLabels: Record<string, string> = {
   Invited: 'invited someone to',
 };
 
-const formatActivityDate = (value?: string | null): string | null => {
+const formatActivityDate = (value?: string | Date | null): string | null => {
   if (!value) {
     return null;
   }
-  const date = new Date(value);
+  const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) {
     return null;
   }
-  return date.toLocaleString(undefined, {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
   });
 };
 
-const getActivityObjectLabel = (activity: GetSocialFeedQuery['readFeed'][number]): string => {
-  const metadata = activity.metadata as Record<string, any> | undefined;
-  if (activity.objectType === 'Event' && metadata?.eventTitle) {
-    return metadata.eventTitle;
-  }
-  if (activity.objectType === 'Organization' && metadata?.name) {
-    return metadata.name;
-  }
-  return activity.objectType.toLowerCase();
-};
+type FeedActivity = GetSocialFeedQuery['readFeed'][number];
 
-const getActorLabel = (activity: GetSocialFeedQuery['readFeed'][number]): string => {
-  if (activity.actorId) {
-    return `User ${activity.actorId.slice(0, 6)}`;
+const getActorDisplayName = (activity: FeedActivity): string => {
+  if (activity.actor) {
+    const { given_name, family_name, username } = activity.actor;
+    if (given_name || family_name) {
+      return [given_name, family_name].filter(Boolean).join(' ');
+    }
+    return username || 'Someone';
   }
   return 'Someone';
+};
+
+const getObjectLabel = (activity: FeedActivity): string => {
+  if (activity.objectType === 'Event' && activity.objectEvent) {
+    return activity.objectEvent.title || 'an event';
+  }
+  if (activity.objectType === 'User' && activity.objectUser) {
+    const { given_name, family_name, username } = activity.objectUser;
+    if (given_name || family_name) {
+      return [given_name, family_name].filter(Boolean).join(' ');
+    }
+    return `@${username}` || 'a user';
+  }
+  if (activity.objectType === 'Organization' && activity.objectOrganization) {
+    return activity.objectOrganization.name || 'an organization';
+  }
+  return activity.objectType?.toLowerCase() || 'something';
+};
+
+const getObjectLink = (activity: FeedActivity): string | null => {
+  if (activity.objectType === 'Event' && activity.objectEvent?.slug) {
+    return ROUTES.EVENTS.EVENT(activity.objectEvent.slug);
+  }
+  if (activity.objectType === 'User' && activity.objectUser?.username) {
+    return ROUTES.USERS.USER(activity.objectUser.username);
+  }
+  if (activity.objectType === 'Organization' && activity.objectOrganization?.slug) {
+    return ROUTES.ORGANIZATIONS.ORG(activity.objectOrganization.slug);
+  }
+  return null;
 };
 
 export default async function HomePage() {
@@ -624,42 +658,122 @@ export default async function HomePage() {
                 <Stack spacing={2} flexGrow={1}>
                   {isAuth && socialFeed.length > 0 ? (
                     socialFeed.map(activity => {
-                      const objectLabel = getActivityObjectLabel(activity);
+                      const actorName = getActorDisplayName(activity);
+                      const objectLabel = getObjectLabel(activity);
+                      const objectLink = getObjectLink(activity);
                       const verbLabel = verbLabels[activity.verb] ?? activity.verb;
-                      const timestampLabel = formatActivityDate(activity.eventAt ?? activity.metadata?.timestamp);
+                      const timestampLabel = formatActivityDate(activity.createdAt ?? activity.eventAt);
+                      const actorLink = activity.actor?.username ? ROUTES.USERS.USER(activity.actor.username) : null;
+                      
+                      // Get activity type icon
+                      const getActivityIcon = () => {
+                        if (activity.objectType === 'Event') return <EventIcon sx={{ fontSize: 14 }} />;
+                        if (activity.objectType === 'User') return <Person sx={{ fontSize: 14 }} />;
+                        if (activity.objectType === 'Organization') return <Business sx={{ fontSize: 14 }} />;
+                        return null;
+                      };
+
                       return (
-                        <Paper
+                        <Box
                           key={activity.activityId}
-                          variant="outlined"
                           sx={{
-                            borderRadius: 3,
-                            px: 2,
-                            py: 1.5,
-                            backgroundColor: 'background.paper',
+                            display: 'flex',
+                            gap: 1.5,
+                            p: 1.5,
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'background.paper',
+                            transition: 'border-color 0.2s',
+                            '&:hover': {
+                              borderColor: 'text.secondary',
+                            },
                           }}
                         >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              mb: 0.75,
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {getActorLabel(activity)}
-                            </Typography>
-                            <Chip size="small" label={activity.visibility} />
-                          </Box>
-                          <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                            {`${verbLabel} ${objectLabel}`}
-                          </Typography>
-                          {timestampLabel && (
-                            <Typography variant="caption" color="text.secondary">
-                              {timestampLabel}
-                            </Typography>
+                          {/* Actor Avatar */}
+                          {actorLink ? (
+                            <Link href={actorLink} style={{ textDecoration: 'none' }}>
+                              <Avatar
+                                src={activity.actor?.profile_picture || undefined}
+                                alt={actorName}
+                                sx={{
+                                  width: 36,
+                                  height: 36,
+                                  bgcolor: 'action.selected',
+                                  fontSize: '0.875rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {actorName.charAt(0).toUpperCase()}
+                              </Avatar>
+                            </Link>
+                          ) : (
+                            <Avatar
+                              sx={{
+                                width: 36,
+                                height: 36,
+                                bgcolor: 'action.selected',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              {actorName.charAt(0).toUpperCase()}
+                            </Avatar>
                           )}
-                        </Paper>
+
+                          {/* Activity Content */}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                              {actorLink ? (
+                                <Link href={actorLink} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                  <Typography component="span" sx={{ fontWeight: 600, '&:hover': { color: 'primary.main' } }}>
+                                    {actorName}
+                                  </Typography>
+                                </Link>
+                              ) : (
+                                <Typography component="span" sx={{ fontWeight: 600 }}>
+                                  {actorName}
+                                </Typography>
+                              )}{' '}
+                              <Typography component="span" color="text.secondary">
+                                {verbLabel}
+                              </Typography>{' '}
+                              {objectLink ? (
+                                <Link href={objectLink} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                  <Typography component="span" sx={{ fontWeight: 600, '&:hover': { color: 'primary.main' } }}>
+                                    {objectLabel}
+                                  </Typography>
+                                </Link>
+                              ) : (
+                                <Typography component="span" sx={{ fontWeight: 600 }}>
+                                  {objectLabel}
+                                </Typography>
+                              )}
+                            </Typography>
+
+                            {/* Timestamp & Type */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                              {timestampLabel && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {timestampLabel}
+                                </Typography>
+                              )}
+                              {activity.objectType && (
+                                <Chip
+                                  size="small"
+                                  icon={getActivityIcon() || undefined}
+                                  label={activity.objectType}
+                                  sx={{
+                                    height: 20,
+                                    fontSize: '0.65rem',
+                                    bgcolor: 'action.selected',
+                                    '& .MuiChip-icon': { fontSize: 12, ml: 0.5 },
+                                    '& .MuiChip-label': { px: 0.75 },
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
                       );
                     })
                   ) : (

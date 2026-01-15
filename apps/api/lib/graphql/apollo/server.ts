@@ -13,7 +13,7 @@ import {HttpStatusCode} from '@/constants';
 import {ERROR_MESSAGES} from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
-import type {User, EventCategory, Organization} from '@ntlango/commons/types';
+import type {User, EventCategory, Organization, Event} from '@ntlango/commons/types';
 
 export interface ServerContext {
   token?: string;
@@ -23,6 +23,7 @@ export interface ServerContext {
   loaders: {
     user: DataLoader<string, User | null>;
     eventCategory: DataLoader<string, EventCategory | null>;
+    event: DataLoader<string, Event | null>;
     organization: DataLoader<string, Organization | null>;
   };
 }

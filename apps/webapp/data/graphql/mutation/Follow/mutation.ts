@@ -8,9 +8,6 @@ export const FollowDocument = graphql(`
       targetType
       targetId
       approvalStatus
-      notificationPreferences {
-        contentVisibility
-      }
     }
   }
 `);
@@ -39,13 +36,8 @@ export const RejectFollowRequestDocument = graphql(`
   }
 `);
 
-export const UpdateFollowNotificationPreferencesDocument = graphql(`
-  mutation UpdateFollowNotificationPreferences($input: UpdateFollowNotificationPreferencesInput!) {
-    updateFollowNotificationPreferences(input: $input) {
-      followId
-      notificationPreferences {
-        contentVisibility
-      }
-    }
+export const RemoveFollowerDocument = graphql(`
+  mutation RemoveFollower($followerUserId: ID!, $targetType: FollowTargetType) {
+    removeFollower(followerUserId: $followerUserId, targetType: $targetType)
   }
 `);

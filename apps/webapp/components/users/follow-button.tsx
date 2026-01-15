@@ -1,8 +1,8 @@
 'use client';
 
 import { Button, CircularProgress } from '@mui/material';
-import { PersonAdd, PersonRemove, HourglassEmpty } from '@mui/icons-material';
-import { useFollow, useFollowing } from '@/hooks';
+import { PersonAdd, PersonRemove, HourglassEmpty, Block } from '@mui/icons-material';
+import { useFollow, useFollowing, useBlockedUsers } from '@/hooks';
 import { FollowTargetType, FollowApprovalStatus } from '@/data/graphql/types/graphql';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -32,10 +32,14 @@ export default function FollowButton({
   const { setToastProps } = useAppContext();
   const { follow, unfollow, isLoading: isMutating } = useFollow();
   const { following, loading: isLoadingFollowing } = useFollowing();
+  const { blockedUsers } = useBlockedUsers();
   const [followStatus, setFollowStatus] = useState<FollowApprovalStatus | null>(null);
 
   const targetLabel = targetType === FollowTargetType.Organization ? 'organization' : 'user';
   const isLoading = isMutating || isLoadingFollowing;
+  
+  // Check if target user is blocked (only for User target type)
+  const isBlocked = targetType === FollowTargetType.User && blockedUsers?.some((u: { userId: string }) => u.userId === targetId);
 
   useEffect(() => {
     const existingFollow = following.find(f => f.targetType === targetType && f.targetId === targetId);
@@ -59,13 +63,27 @@ export default function FollowButton({
       } else {
         await follow(targetType, targetId);
       }
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error toggling follow status:', error);
+      
+      // Extract error message from Apollo/GraphQL error
+      // Apollo errors can have graphQLErrors array or networkError with result
+      let errorMessage: string;
+      if (error?.graphQLErrors?.length > 0) {
+        errorMessage = error.graphQLErrors[0].message;
+      } else if (error?.networkError?.result?.errors?.length > 0) {
+        errorMessage = error.networkError.result.errors[0].message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = (isFollowing || isPending)
+          ? `Failed to unfollow ${targetLabel}. Please try again.`
+          : `Failed to follow ${targetLabel}. Please try again.`;
+      }
+      
       setToastProps({
         open: true,
-        message: (isFollowing || isPending)
-          ? `Failed to unfollow ${targetLabel}. Please try again.`
-          : `Failed to follow ${targetLabel}. Please try again.`,
+        message: errorMessage,
         severity: 'error',
         anchorOrigin: { vertical: 'top', horizontal: 'right' },
         autoHideDuration: 4000,
@@ -75,12 +93,14 @@ export default function FollowButton({
 
   const getButtonIcon = () => {
     if (isLoading) return <CircularProgress size={16} />;
+    if (isBlocked) return <Block />;
     if (isFollowing) return <PersonRemove />;
     if (isPending) return <HourglassEmpty />;
     return <PersonAdd />;
   };
 
   const getButtonLabel = () => {
+    if (isBlocked) return 'Blocked';
     if (isFollowing) return 'Following';
     if (isPending) return 'Requested';
     return 'Follow';
@@ -92,7 +112,7 @@ export default function FollowButton({
       variant="contained"
       size={size}
       fullWidth={fullWidth}
-      disabled={isLoading}
+      disabled={isLoading || isBlocked}
       startIcon={getButtonIcon()}
       sx={
         variant === 'primary'

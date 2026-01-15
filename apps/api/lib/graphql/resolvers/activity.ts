@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import {Arg, Authorized, Ctx, Int, Mutation, Query, Resolver} from 'type-graphql';
-import {CreateActivityInput, FollowTargetType, Activity, UserRole} from '@ntlango/commons/types';
+import {Arg, Authorized, Ctx, FieldResolver, Int, Mutation, Query, Resolver, Root} from 'type-graphql';
+import {CreateActivityInput, FollowTargetType, Activity, UserRole, User, Event, Organization, ActivityObjectType} from '@ntlango/commons/types';
 import {CreateActivityInputSchema} from '@/validation/zod';
 import {validateInput} from '@/validation';
 import {ActivityDAO, FollowDAO} from '@/mongodb/dao';
@@ -10,6 +10,46 @@ import {getAuthenticatedUser} from '@/utils';
 
 @Resolver(() => Activity)
 export class ActivityResolver {
+  @FieldResolver(() => User, {nullable: true, description: 'The user who performed the action'})
+  async actor(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<User | null> {
+    if (!activity.actorId) return null;
+    try {
+      return await context.loaders.user.load(activity.actorId);
+    } catch {
+      return null;
+    }
+  }
+
+  @FieldResolver(() => User, {nullable: true, description: 'The target user if objectType is User'})
+  async objectUser(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<User | null> {
+    if (activity.objectType !== ActivityObjectType.User) return null;
+    try {
+      return await context.loaders.user.load(activity.objectId);
+    } catch {
+      return null;
+    }
+  }
+
+  @FieldResolver(() => Event, {nullable: true, description: 'The target event if objectType is Event'})
+  async objectEvent(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<Event | null> {
+    if (activity.objectType !== ActivityObjectType.Event) return null;
+    try {
+      return await context.loaders.event.load(activity.objectId);
+    } catch {
+      return null;
+    }
+  }
+
+  @FieldResolver(() => Organization, {nullable: true, description: 'The target organization if objectType is Organization'})
+  async objectOrganization(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<Organization | null> {
+    if (activity.objectType !== ActivityObjectType.Organization) return null;
+    try {
+      return await context.loaders.organization.load(activity.objectId);
+    } catch {
+      return null;
+    }
+  }
+
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Activity, {description: RESOLVER_DESCRIPTIONS.ACTIVITY.logActivity})
   async logActivity(@Arg('input', () => CreateActivityInput) input: CreateActivityInput, @Ctx() context: ServerContext): Promise<Activity> {

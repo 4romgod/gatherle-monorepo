@@ -628,4 +628,160 @@ describe('UserDAO', () => {
       expect(User.findById).toHaveBeenCalledWith('anyId');
     });
   });
+
+  describe('blockUser', () => {
+    it('should add a user to blocked list and return updated user', async () => {
+      const userId = 'mockUserId';
+      const blockedUserId = 'userToBlock';
+      const mockUser = {
+        userId,
+        blockedUserIds: [],
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId,
+          blockedUserIds: [blockedUserId],
+        }),
+      };
+
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
+      );
+
+      const result = await UserDAO.blockUser(userId, blockedUserId);
+
+      expect(User.findById).toHaveBeenCalledWith(userId);
+      expect(mockUser.save).toHaveBeenCalled();
+      expect(result).toEqual({
+        userId,
+        blockedUserIds: [blockedUserId],
+      });
+    });
+
+    it('should return existing user if already blocked', async () => {
+      const userId = 'mockUserId';
+      const blockedUserId = 'userToBlock';
+      const mockUser = {
+        userId,
+        blockedUserIds: [blockedUserId],
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId,
+          blockedUserIds: [blockedUserId],
+        }),
+      };
+
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
+      );
+
+      const result = await UserDAO.blockUser(userId, blockedUserId);
+
+      expect(mockUser.save).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        userId,
+        blockedUserIds: [blockedUserId],
+      });
+    });
+
+    it('should throw NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.blockUser('nonExistingId', 'userToBlock')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExistingId'), ErrorTypes.NOT_FOUND),
+      );
+    });
+  });
+
+  describe('unblockUser', () => {
+    it('should remove a user from blocked list and return updated user', async () => {
+      const userId = 'mockUserId';
+      const blockedUserId = 'userToUnblock';
+      const mockUser = {
+        userId,
+        blockedUserIds: [blockedUserId],
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId,
+          blockedUserIds: [],
+        }),
+      };
+
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
+      );
+
+      const result = await UserDAO.unblockUser(userId, blockedUserId);
+
+      expect(User.findById).toHaveBeenCalledWith(userId);
+      expect(mockUser.save).toHaveBeenCalled();
+      expect(result).toEqual({
+        userId,
+        blockedUserIds: [],
+      });
+    });
+
+    it('should throw NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.unblockUser('nonExistingId', 'userToUnblock')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExistingId'), ErrorTypes.NOT_FOUND),
+      );
+    });
+  });
+
+  describe('readBlockedUsers', () => {
+    it('should return list of blocked users', async () => {
+      const userId = 'mockUserId';
+      const blockedUserIds = ['blocked1', 'blocked2'];
+      const mockUser = {
+        userId,
+        blockedUserIds,
+      };
+      const blockedUserDocs = [
+        {userId: 'blocked1', username: 'user1', toObject: jest.fn().mockReturnValue({userId: 'blocked1', username: 'user1'})},
+        {userId: 'blocked2', username: 'user2', toObject: jest.fn().mockReturnValue({userId: 'blocked2', username: 'user2'})},
+      ];
+
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
+      );
+      (User.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(blockedUserDocs),
+      );
+
+      const result = await UserDAO.readBlockedUsers(userId);
+
+      expect(User.findById).toHaveBeenCalledWith(userId);
+      expect(User.find).toHaveBeenCalledWith({userId: {$in: blockedUserIds}});
+      expect(result).toEqual([
+        {userId: 'blocked1', username: 'user1'},
+        {userId: 'blocked2', username: 'user2'},
+      ]);
+    });
+
+    it('should return empty array when user has no blocked users', async () => {
+      const userId = 'mockUserId';
+      const mockUser = {
+        userId,
+        blockedUserIds: [],
+      };
+
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mockUser),
+      );
+
+      const result = await UserDAO.readBlockedUsers(userId);
+
+      expect(result).toEqual([]);
+      expect(User.find).not.toHaveBeenCalled();
+    });
+
+    it('should throw NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.readBlockedUsers('nonExistingId')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExistingId'), ErrorTypes.NOT_FOUND),
+      );
+    });
+  });
 });

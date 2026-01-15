@@ -4,6 +4,9 @@ import {Field, ID, InputType, ObjectType, registerEnumType} from 'type-graphql';
 import {index, modelOptions, prop, Severity} from '@typegoose/typegoose';
 
 import {SOCIAL_DESCRIPTIONS} from '../constants';
+import {User} from './user';
+import {Event} from './event';
+import {Organization} from './organization';
 
 export enum ActivityVerb {
     Followed = 'Followed',
@@ -91,6 +94,19 @@ export class Activity {
     @prop({type: () => Date, default: () => new Date()})
     @Field(() => Date, {description: 'Timestamp for when the activity was created'})
     createdAt: Date;
+
+    // Computed fields - resolved via @FieldResolver (no @prop, not stored in DB)
+    @Field(() => User, {nullable: true, description: 'The user who performed the action'})
+    actor?: User;
+
+    @Field(() => User, {nullable: true, description: 'The target user if objectType is User'})
+    objectUser?: User;
+
+    @Field(() => Event, {nullable: true, description: 'The target event if objectType is Event'})
+    objectEvent?: Event;
+
+    @Field(() => Organization, {nullable: true, description: 'The target organization if objectType is Organization'})
+    objectOrganization?: Organization;
 }
 
 @InputType('CreateActivityInput', {description: SOCIAL_DESCRIPTIONS.ACTIVITY.CREATE_INPUT})

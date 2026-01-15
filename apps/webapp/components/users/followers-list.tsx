@@ -15,6 +15,7 @@ import { useFollowers } from '@/hooks';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
 import FollowersListItem from './followers-list-item';
 import FollowListSkeleton from './follow-list-skeleton';
+import { useSession } from 'next-auth/react';
 
 interface FollowersListProps {
   targetId: string;
@@ -31,9 +32,11 @@ export default function FollowersList({
   onClose,
   title,
 }: FollowersListProps) {
+  const { data: session } = useSession();
   const { followers, loading, error } = useFollowers(targetType, targetId);
 
   const dialogTitle = title || 'Followers';
+  const isOwnProfile = session?.user?.userId === targetId;
 
   // Convert null to undefined for type safety
   const mappedFollowers = followers.map((item) => ({
@@ -106,7 +109,9 @@ export default function FollowersList({
               <FollowersListItem
                 key={follower.followId}
                 follower={follower.follower}
-                targetType={FollowTargetType.User}
+                targetType={targetType}
+                targetUserId={targetId}
+                isOwnProfile={isOwnProfile}
               />
             ))}
           </List>
