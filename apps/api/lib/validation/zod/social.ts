@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import {z} from 'zod';
-import {FollowTargetType, FollowApprovalStatus} from '@ntlango/commons/types/follow';
+import {FollowTargetType} from '@ntlango/commons/types/follow';
 import {IntentSource, IntentStatus, IntentVisibility} from '@ntlango/commons/types/intent';
 import {ActivityObjectType, ActivityVerb, ActivityVisibility} from '@ntlango/commons/types/activity';
 import {ERROR_MESSAGES} from '@/validation';
