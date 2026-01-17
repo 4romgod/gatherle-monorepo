@@ -26,15 +26,29 @@ const LocationSchema = z.object({
 const InterestsSchema = z.array(z.string()).optional();
 
 /**
- * Safely parse JSON with Zod validation
+ * Safely parse JSON with Zod validation.
+ * Logs errors for debugging while returning undefined for graceful degradation.
  */
-function safeJsonParse<T>(jsonStr: string | undefined, schema: z.ZodType<T>): T | undefined {
+function safeJsonParse<T>(jsonStr: string | undefined, schema: z.ZodType<T>, fieldName: string): T | undefined {
   if (!jsonStr) return undefined;
   try {
     const parsed = JSON.parse(jsonStr);
     const result = schema.safeParse(parsed);
-    return result.success ? result.data : undefined;
-  } catch {
+    if (!result.success) {
+      logger.warn(`Invalid ${fieldName} data submitted`, {
+        field: fieldName,
+        errors: result.error.flatten(),
+        input: jsonStr.substring(0, 200), // Truncate to avoid logging huge payloads
+      });
+      return undefined;
+    }
+    return result.data;
+  } catch (error) {
+    logger.warn(`Failed to parse ${fieldName} JSON`, {
+      field: fieldName,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      input: jsonStr.substring(0, 200),
+    });
     return undefined;
   }
 }
@@ -65,8 +79,8 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   const interestsStr = formData.get('interests')?.toString();
   
   // Safely parse JSON fields with validation
-  const location = safeJsonParse(locationStr, LocationSchema);
-  const interests = safeJsonParse(interestsStr, InterestsSchema);
+  const location = safeJsonParse(locationStr, LocationSchema, 'location');
+  const interests = safeJsonParse(interestsStr, InterestsSchema, 'interests');
 
   let inputData: UpdateUserInput = {
     userId: userId,

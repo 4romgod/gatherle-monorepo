@@ -187,17 +187,21 @@ describe('createLocationMatchStage', () => {
     };
     const stages = createLocationMatchStage(location);
 
-    // Should produce 3 stages: $addFields (distance calc), $match (distance filter), $project (cleanup)
-    expect(stages).toHaveLength(3);
-    expect(stages[0]).toHaveProperty('$addFields._distanceKm');
-    expect(stages[1]).toEqual({
+    // Should produce 4 stages: coordinate existence check, $addFields (distance calc), $match (distance filter), $project (cleanup)
+    expect(stages).toHaveLength(4);
+    expect(stages[0]).toEqual({
       $match: {
-        _distanceKm: {$lte: 50}, // Default 50km
-        'location.coordinates.latitude': {$exists: true},
-        'location.coordinates.longitude': {$exists: true},
+        'location.coordinates.latitude': {$exists: true, $ne: null},
+        'location.coordinates.longitude': {$exists: true, $ne: null},
       },
     });
-    expect(stages[2]).toEqual({$project: {_distanceKm: 0}});
+    expect(stages[1]).toHaveProperty('$addFields._distanceKm');
+    expect(stages[2]).toEqual({
+      $match: {
+        _distanceKm: {$lte: 50}, // Default 50km
+      },
+    });
+    expect(stages[3]).toEqual({$project: {_distanceKm: 0}});
   });
 
   it('should filter by geospatial proximity with custom radius', () => {
@@ -208,17 +212,21 @@ describe('createLocationMatchStage', () => {
     };
     const stages = createLocationMatchStage(location);
 
-    // Should produce 3 stages: $addFields (distance calc), $match (distance filter), $project (cleanup)
-    expect(stages).toHaveLength(3);
-    expect(stages[0]).toHaveProperty('$addFields._distanceKm');
-    expect(stages[1]).toEqual({
+    // Should produce 4 stages: coordinate existence check, $addFields (distance calc), $match (distance filter), $project (cleanup)
+    expect(stages).toHaveLength(4);
+    expect(stages[0]).toEqual({
       $match: {
-        _distanceKm: {$lte: 25}, // Custom 25km radius
-        'location.coordinates.latitude': {$exists: true},
-        'location.coordinates.longitude': {$exists: true},
+        'location.coordinates.latitude': {$exists: true, $ne: null},
+        'location.coordinates.longitude': {$exists: true, $ne: null},
       },
     });
-    expect(stages[2]).toEqual({$project: {_distanceKm: 0}});
+    expect(stages[1]).toHaveProperty('$addFields._distanceKm');
+    expect(stages[2]).toEqual({
+      $match: {
+        _distanceKm: {$lte: 25}, // Custom 25km radius
+      },
+    });
+    expect(stages[3]).toEqual({$project: {_distanceKm: 0}});
   });
 
   it('should combine text and geospatial filters with $and (all must match)', () => {
@@ -230,22 +238,26 @@ describe('createLocationMatchStage', () => {
     };
     const stages = createLocationMatchStage(location);
 
-    // Should produce 4 stages: text $match, $addFields, distance $match, $project
-    expect(stages).toHaveLength(4);
+    // Should produce 5 stages: text $match, coordinate existence check, $addFields, distance $match, $project
+    expect(stages).toHaveLength(5);
     expect(stages[0]).toEqual({
       $match: {
         'location.address.country': {$regex: 'UK', $options: 'i'},
       },
     });
-    expect(stages[1]).toHaveProperty('$addFields._distanceKm');
-    expect(stages[2]).toEqual({
+    expect(stages[1]).toEqual({
       $match: {
-        _distanceKm: {$lte: 100},
-        'location.coordinates.latitude': {$exists: true},
-        'location.coordinates.longitude': {$exists: true},
+        'location.coordinates.latitude': {$exists: true, $ne: null},
+        'location.coordinates.longitude': {$exists: true, $ne: null},
       },
     });
-    expect(stages[3]).toEqual({$project: {_distanceKm: 0}});
+    expect(stages[2]).toHaveProperty('$addFields._distanceKm');
+    expect(stages[3]).toEqual({
+      $match: {
+        _distanceKm: {$lte: 100},
+      },
+    });
+    expect(stages[4]).toEqual({$project: {_distanceKm: 0}});
   });
 
   it('should combine multiple text fields with geospatial filter', () => {
@@ -259,8 +271,8 @@ describe('createLocationMatchStage', () => {
     };
     const stages = createLocationMatchStage(location);
 
-    // Should produce 4 stages: text $match, $addFields, distance $match, $project
-    expect(stages).toHaveLength(4);
+    // Should produce 5 stages: text $match, coordinate existence check, $addFields, distance $match, $project
+    expect(stages).toHaveLength(5);
     expect(stages[0]).toEqual({
       $match: {
         'location.address.city': {$regex: 'London', $options: 'i'},
@@ -268,15 +280,19 @@ describe('createLocationMatchStage', () => {
         'location.address.country': {$regex: 'UK', $options: 'i'},
       },
     });
-    expect(stages[1]).toHaveProperty('$addFields._distanceKm');
-    expect(stages[2]).toEqual({
+    expect(stages[1]).toEqual({
       $match: {
-        _distanceKm: {$lte: 50},
-        'location.coordinates.latitude': {$exists: true},
-        'location.coordinates.longitude': {$exists: true},
+        'location.coordinates.latitude': {$exists: true, $ne: null},
+        'location.coordinates.longitude': {$exists: true, $ne: null},
       },
     });
-    expect(stages[3]).toEqual({$project: {_distanceKm: 0}});
+    expect(stages[2]).toHaveProperty('$addFields._distanceKm');
+    expect(stages[3]).toEqual({
+      $match: {
+        _distanceKm: {$lte: 50},
+      },
+    });
+    expect(stages[4]).toEqual({$project: {_distanceKm: 0}});
   });
 
   it('should ignore coordinates if only latitude is provided (no longitude)', () => {

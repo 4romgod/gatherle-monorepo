@@ -11,7 +11,7 @@ export const transformEventOptionsToPipeline = (options?: EventsQueryOptionsInpu
   pipeline.push(...createEventLookupStages());
 
   if (options) {
-    const {filters, sort, pagination,  location} = options;
+    const {filters, sort, pagination, location} = options;
 
     if (location) {
       pipeline.push(...createLocationMatchStage(location));

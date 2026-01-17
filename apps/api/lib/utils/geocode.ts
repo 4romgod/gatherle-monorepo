@@ -1,7 +1,36 @@
 import {logger} from './logger';
 
+/**
+ * Geocoding utilities using OpenStreetMap Nominatim API.
+ * 
+ * IMPORTANT: Rate Limiting Requirements
+ * =====================================
+ * Nominatim has a strict usage policy: MAX 1 request per second.
+ * See: https://operations.osmfoundation.org/policies/nominatim/
+ * 
+ * These utilities do NOT implement internal rate limiting. Callers are
+ * responsible for enforcing rate limits when:
+ * - Processing multiple addresses in a loop
+ * - Handling bulk event creation/updates
+ * - Running migration scripts
+ * 
+ * Note: geocodeAddress() uses progressive fallback and may make up to 3
+ * requests per call (full address → city+state+country → city+country).
+ * Account for this when calculating delays between calls.
+ * 
+ * Example rate-limited usage:
+ * ```typescript
+ * const DELAY_MS = 1100; // 1.1s minimum between request starts
+ * for (const event of events) {
+ *   const start = Date.now();
+ *   await enrichLocationWithCoordinates(event.location);
+ *   const elapsed = Date.now() - start;
+ *   if (elapsed < DELAY_MS) await sleep(DELAY_MS - elapsed);
+ * }
+ * ```
+ */
+
 // Nominatim API configuration
-// See usage policy: https://operations.osmfoundation.org/policies/nominatim/
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 const NOMINATIM_USER_AGENT = 'Ntlango-EventsAPI/1.0 (info@mapapa.co.za)';
 
@@ -75,10 +104,14 @@ async function makeGeocodingRequest(params: URLSearchParams): Promise<GeocodingR
 
 /**
  * Geocodes an address to coordinates using OpenStreetMap Nominatim API.
- * Free tier, no API key required, but has rate limits (1 request/second).
+ * Free tier, no API key required.
  * 
  * Uses progressive fallback: tries full address first, then city+state+country,
  * then just city+country if the street address is not found.
+ *
+ * @warning This function may make up to 3 HTTP requests (progressive fallback).
+ * Nominatim requires max 1 request/second. Callers must implement rate limiting
+ * when calling this function in loops or bulk operations.
  *
  * @param address - The address to geocode
  * @returns Coordinates or null if geocoding fails
@@ -154,6 +187,10 @@ const hasValidCoordinates = (location: Record<string, any>): boolean =>
 /**
  * Enriches a location object with coordinates if it has an address but no coordinates.
  * Mutates the input location object.
+ *
+ * @warning Calls geocodeAddress() internally, which may make up to 3 HTTP requests.
+ * Nominatim requires max 1 request/second. Callers must implement rate limiting
+ * when calling this function in loops or bulk operations.
  *
  * @param location - Event location object (may be modified)
  * @returns The same location object, potentially with coordinates added

@@ -7,10 +7,8 @@ import {
   GetAllEventsDocument,
   GetSocialFeedDocument,
   GetSocialFeedQuery,
-  GetUserByIdDocument,
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
-import { verifyAndDecodeToken } from '@/lib/utils';
 import { HeroSection, FeaturedEvents, CategoryExplorer, SocialFeed } from '@/components/home';
 
 export const metadata: Metadata = {
@@ -32,73 +30,77 @@ const SOCIAL_FEED_LIMIT = 4;
 
 export default async function HomePage() {
   const session = await auth();
+  const isAuth = !!session?.user;
   const token = session?.user?.token;
-  
-  // Verify and decode token in one step
-  const decoded = await verifyAndDecodeToken(token);
-  const isAuth = decoded !== null;
-  const userId = decoded?.userId ?? null;
 
-  // Fetch user data for personalization (if authenticated)
-  let userLocation: { city?: string; country?: string; latitude?: number; longitude?: number } | null = null;
-  let userInterestIds: string[] = [];
-
-  if (isAuth && userId) {
-    try {
-      const userResponse = await getClient().query({
-        query: GetUserByIdDocument,
-        variables: { userId },
-        context: { headers: { token } },
-      });
-      const user = userResponse.data.readUserById;
-      if (user?.location) {
-        userLocation = {
-          city: user.location.city,
-          country: user.location.country,
-          latitude: user.location.coordinates?.latitude,
-          longitude: user.location.coordinates?.longitude,
-        };
-      }
-      if (user?.interests && user.interests.length > 0) {
-        userInterestIds = user.interests.map((i: { eventCategoryId: string }) => i.eventCategoryId);
-      }
-    } catch (error) {
-      console.error('Unable to fetch user data for personalization', error);
-    }
-  }
+  // Get user data from session for personalization (populated at login)
+  const sessionUser = session?.user;
+  const userLocation = sessionUser?.location ? {
+    city: sessionUser.location.city,
+    country: sessionUser.location.country,
+    latitude: sessionUser.location.coordinates?.latitude,
+    longitude: sessionUser.location.coordinates?.longitude,
+  } : null;
+  const userInterestIds = sessionUser?.interests?.map(i => i.eventCategoryId) ?? [];
 
   // Fetch events - personalized for authenticated users with location, all events otherwise
   let eventList: EventPreview[] = [];
+  let personalizedFetchSucceeded = false;
 
   if (isAuth && userLocation) {
     // Fetch events filtered by user's location
     try {
-      const eventsResponse = await getClient().query({
-        query: GetAllEventsDocument,
-        variables: {
-          options: {
-            location: {
-              city: userLocation.city,
-              country: userLocation.country,
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
+      const locationFilter = {
+        city: userLocation.city,
+        country: userLocation.country,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+      };
+
+      // Strategy 1: Try location + interests (most relevant)
+      if (userInterestIds.length > 0) {
+        const eventsResponse = await getClient().query({
+          query: GetAllEventsDocument,
+          variables: {
+            options: {
+              location: locationFilter,
+              filters: [{ field: 'eventCategories.eventCategoryId', value: userInterestIds }],
+              pagination: { limit: 20 },
             },
-            filters: userInterestIds.length > 0 
-              ? [{ field: 'eventCategories', value: userInterestIds }]
-              : undefined,
-            pagination: { limit: 20 },
           },
-        },
-        context: { headers: { token } },
-      });
-      eventList = (eventsResponse.data.readEvents ?? []) as EventPreview[];
+          context: { headers: { token } },
+        });
+        eventList = (eventsResponse.data.readEvents ?? []) as EventPreview[];
+      }
+
+      // Strategy 2: If no results with interests, fallback to location-only
+      if (eventList.length === 0) {
+        const eventsResponse = await getClient().query({
+          query: GetAllEventsDocument,
+          variables: {
+            options: {
+              location: locationFilter,
+              pagination: { limit: 20 },
+            },
+          },
+          context: { headers: { token } },
+        });
+        eventList = (eventsResponse.data.readEvents ?? []) as EventPreview[];
+      }
+
+      personalizedFetchSucceeded = true;
     } catch (error) {
       console.error('Unable to fetch personalized events, falling back to all events', error);
     }
   }
 
-  // Fallback to all events if personalization fails or user has no location
-  if (eventList.length === 0) {
+  // Fallback to all events only if:
+  // 1. User is not authenticated or has no location preferences, OR
+  // 2. Personalized fetch failed (error state)
+  // Do NOT fallback if personalized fetch succeeded but returned empty results
+  // (user with location preferences should see no events rather than irrelevant global ones)
+  const shouldFetchAllEvents = !isAuth || !userLocation || !personalizedFetchSucceeded;
+  if (shouldFetchAllEvents) {
     const eventsResponse = await getClient().query({ query: GetAllEventsDocument });
     eventList = (eventsResponse.data.readEvents ?? []) as EventPreview[];
   }

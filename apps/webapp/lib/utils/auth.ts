@@ -1,4 +1,4 @@
-import { jwtVerify, decodeJwt } from 'jose';
+import { jwtVerify } from 'jose';
 import { JWT_SECRET } from '@/lib/constants/environment-variables';
 
 export const isAuthenticated = async (token: string | undefined): Promise<boolean> => {
@@ -36,24 +36,6 @@ export const verifyAndDecodeToken = async (token: string | undefined): Promise<D
   try {
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    return payload as DecodedToken;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Decode a JWT token without verifying it.
- * WARNING: Only use for non-security-critical purposes (e.g., displaying user info).
- * For secure operations, use verifyAndDecodeToken instead.
- */
-export const decodeToken = (token: string): DecodedToken | null => {
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const payload = decodeJwt(token);
     return payload as DecodedToken;
   } catch {
     return null;

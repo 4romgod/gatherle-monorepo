@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, MenuItem, Checkbox, ListItemText, ListItemIcon, Popover, Box, TextField, Button, Stack, Typography, Slider, Divider } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -232,6 +232,14 @@ export function DateMenu({
   );
 }
 
+/**
+ * Location filter menu component.
+ * 
+ * Note: This is a controlled component. The parent is responsible for closing
+ * the menu (setting anchorEl to null) after handling onApply/onClear callbacks.
+ * This ensures parent state is updated before the menu closes, preventing
+ * stale state if the menu is quickly reopened.
+ */
 interface LocationMenuProps {
   anchorEl: HTMLElement | null;
   currentLocation: LocationFilter;
@@ -259,6 +267,20 @@ export function LocationMenu({
       ? { lat: currentLocation.latitude, lng: currentLocation.longitude }
       : null
   );
+
+  // Sync internal state when currentLocation prop changes (e.g., filters cleared externally)
+  useEffect(() => {
+    setCity(currentLocation.city || '');
+    setState(currentLocation.state || '');
+    setCountry(currentLocation.country || '');
+    setRadiusKm(currentLocation.radiusKm || 50);
+    setUseMyLocation(!!currentLocation.latitude);
+    setCoords(
+      currentLocation.latitude && currentLocation.longitude
+        ? { lat: currentLocation.latitude, lng: currentLocation.longitude }
+        : null
+    );
+  }, [currentLocation]);
 
   const showError = (message: string) => {
     setToastProps({
@@ -306,8 +328,8 @@ export function LocationMenu({
       location.radiusKm = radiusKm;
     }
     
+    // Let parent handle closing after state update to avoid race condition
     onApply(location);
-    onClose();
   };
 
   const handleClear = () => {
@@ -317,8 +339,8 @@ export function LocationMenu({
     setUseMyLocation(false);
     setCoords(null);
     setRadiusKm(50);
+    // Let parent handle closing after state update to avoid race condition
     onClear();
-    onClose();
   };
 
   const hasValues = city || state || country || useMyLocation;
@@ -418,6 +440,15 @@ export function LocationMenu({
                 valueLabelFormat={(value) => `${value} km`}
                 size="small"
               />
+              {radiusKm > 100 && (
+                <Typography 
+                  variant="caption" 
+                  color="warning.main" 
+                  sx={{ display: 'block', mt: 0.5 }}
+                >
+                  Large radius may include less precise results
+                </Typography>
+              )}
             </Box>
           )}
         </Box>

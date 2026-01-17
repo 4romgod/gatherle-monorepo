@@ -42,6 +42,15 @@ export const LoginUserDocument = graphql(`
       profile_picture
       userRole
       token
+      location {
+        city
+        state
+        country
+        coordinates {
+          latitude
+          longitude
+        }
+      }
       interests {
         eventCategoryId
         slug

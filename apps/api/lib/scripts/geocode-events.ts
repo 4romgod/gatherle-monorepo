@@ -8,11 +8,11 @@
 
 import {getConfigValue, MongoDbClient} from '@/clients';
 import {Event as EventModel} from '@/mongodb/models';
-import {enrichLocationWithCoordinates} from '@/utils/geocode';
+import {geocodeAddress} from '@/utils/geocode';
 import {logger} from '@/utils/logger';
 import {SECRET_KEYS} from '@/constants';
 
-const DELAY_MS = 1100; // 1.1 seconds between requests to respect Nominatim rate limit
+const TARGET_INTERVAL_MS = 1100; // Target 1.1 seconds between request starts to respect Nominatim rate limit
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -52,8 +52,8 @@ async function geocodeExistingEvents() {
     logger.info(`Found ${events.length} events to geocode`);
     
     // Show estimated time
-    const estimatedMs = events.length * DELAY_MS;
-    logger.info(`Estimated time: ${formatDuration(estimatedMs)} (at ${DELAY_MS}ms per request)`);
+    const estimatedMs = events.length * TARGET_INTERVAL_MS;
+    logger.info(`Estimated time: ${formatDuration(estimatedMs)} (at ~${TARGET_INTERVAL_MS}ms per request)`);
     logger.info('');
 
     const startTime = Date.now();
@@ -63,11 +63,12 @@ async function geocodeExistingEvents() {
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
       const address = event.location?.address;
+      const requestStartTime = Date.now();
       
       // Calculate progress and ETA
       const progress = ((i + 1) / events.length * 100).toFixed(1);
       const elapsed = Date.now() - startTime;
-      const avgTimePerEvent = i > 0 ? elapsed / i : DELAY_MS;
+      const avgTimePerEvent = i > 0 ? elapsed / i : TARGET_INTERVAL_MS;
       const remainingEvents = events.length - i - 1;
       const eta = formatDuration(remainingEvents * avgTimePerEvent);
       
@@ -75,20 +76,23 @@ async function geocodeExistingEvents() {
       logger.info(`  Address: ${address?.city}, ${address?.state}, ${address?.country}`);
 
       try {
-        // Create a mutable copy of the location
-        const locationCopy = JSON.parse(JSON.stringify(event.location));
-        
-        // Enrich with coordinates
-        await enrichLocationWithCoordinates(locationCopy);
+        // Geocode the address directly
+        const coordinates = await geocodeAddress({
+          street: address?.street,
+          city: address?.city,
+          state: address?.state,
+          zipCode: address?.zipCode,
+          country: address?.country,
+        });
 
-        if (locationCopy.coordinates?.latitude && locationCopy.coordinates?.longitude) {
+        if (coordinates) {
           // Update the event in the database
           await EventModel.updateOne(
             {_id: event._id},
-            {$set: {'location.coordinates': locationCopy.coordinates}}
+            {$set: {'location.coordinates': coordinates}}
           );
           
-          logger.info(`  ✓ Geocoded to: ${locationCopy.coordinates.latitude}, ${locationCopy.coordinates.longitude}`);
+          logger.info(`  ✓ Geocoded to: ${coordinates.latitude}, ${coordinates.longitude}`);
           successCount++;
         } else {
           logger.warn(`  ✗ Could not geocode address`);
@@ -99,9 +103,14 @@ async function geocodeExistingEvents() {
         failCount++;
       }
 
-      // Respect rate limit (except for last item)
+      // Respect rate limit: sleep only for remaining time to reach target interval
+      // If request took 500ms and target is 1100ms, sleep for 600ms
       if (i < events.length - 1) {
-        await sleep(DELAY_MS);
+        const requestDuration = Date.now() - requestStartTime;
+        const remainingDelay = Math.max(0, TARGET_INTERVAL_MS - requestDuration);
+        if (remainingDelay > 0) {
+          await sleep(remainingDelay);
+        }
       }
     }
 

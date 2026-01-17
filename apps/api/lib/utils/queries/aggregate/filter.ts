@@ -15,7 +15,16 @@ const buildOperatorSymbol = (operator?: FilterOperatorInput) => {
  * Filter modes:
  * - Text only (city/state/country): Matches events by address text (case-insensitive)
  * - Geospatial only (lat/lng + radius): Matches events within radius (requires stored coordinates)
- * - Both: Uses $and - events must match BOTH proximity AND text criteria
+ * - Both: Uses AND logic - events must match BOTH proximity AND text criteria
+ * 
+ * AND behavior note:
+ * When combining text and geospatial filters, events must satisfy ALL conditions.
+ * Example: city="London" + radius=50km will only return events within 50km that ALSO
+ * have "London" in their city field. Events in suburbs (e.g., "Croydon") within 50km
+ * will NOT match. This is by design for precision filtering.
+ * 
+ * For broader "nearby OR matching city" results, use separate queries or consider
+ * adding a `combineMode: 'AND' | 'OR'` option to LocationFilterInput in the future.
  */
 export const createLocationMatchStage = (location: LocationFilterInput): PipelineStage[] => {
   const {city, state, country, latitude, longitude, radiusKm} = location;
@@ -38,10 +47,19 @@ export const createLocationMatchStage = (location: LocationFilterInput): Pipelin
     stages.push({$match: textConditions});
   }
 
-  // Geospatial filtering using Haversine formula approximation
+  // Geospatial filtering using equirectangular approximation
   // Works with coordinates stored as {latitude, longitude} object
   if (latitude !== undefined && longitude !== undefined) {
     const radiusKmValue = radiusKm || 50; // Default 50km radius
+
+    // Filter out events without coordinates BEFORE distance calculation
+    // This avoids computing distance for events we can't locate
+    stages.push({
+      $match: {
+        'location.coordinates.latitude': {$exists: true, $ne: null},
+        'location.coordinates.longitude': {$exists: true, $ne: null},
+      },
+    });
 
     // Convert degrees to radians for the formula
     const userLatRad = (latitude * Math.PI) / 180;
@@ -49,7 +67,12 @@ export const createLocationMatchStage = (location: LocationFilterInput): Pipelin
 
     // Use $addFields to calculate distance, then filter
     // Equirectangular approximation: d = R * sqrt(Δlat² + (cos(midLat) * Δlng)²)
-    // Accurate within ~0.5% for distances under 200km at mid-latitudes, sufficient for event filtering
+    // 
+    // Accuracy notes:
+    // - Within ~0.5% error for distances under 100km at mid-latitudes (30°-60°)
+    // - Error increases to ~1-2% at 200km or near equator/poles
+    // - Acceptable for event discovery (not navigation-grade precision)
+    // - For extreme latitudes (>70°) or distances >200km, consider Haversine
     stages.push({
       $addFields: {
         _distanceKm: {
@@ -57,8 +80,8 @@ export const createLocationMatchStage = (location: LocationFilterInput): Pipelin
             vars: {
               lat1: userLatRad,
               lng1: userLngRad,
-              lat2: {$multiply: [{$ifNull: ['$location.coordinates.latitude', 0]}, Math.PI / 180]},
-              lng2: {$multiply: [{$ifNull: ['$location.coordinates.longitude', 0]}, Math.PI / 180]},
+              lat2: {$multiply: ['$location.coordinates.latitude', Math.PI / 180]},
+              lng2: {$multiply: ['$location.coordinates.longitude', Math.PI / 180]},
             },
             in: {
               $multiply: [
@@ -92,8 +115,6 @@ export const createLocationMatchStage = (location: LocationFilterInput): Pipelin
     stages.push({
       $match: {
         _distanceKm: {$lte: radiusKmValue},
-        'location.coordinates.latitude': {$exists: true},
-        'location.coordinates.longitude': {$exists: true},
       },
     });
 
