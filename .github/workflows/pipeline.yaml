@@ -48,6 +48,28 @@ jobs:
     - name: Run Webapp lint
       run: npm run lint -w @ntlango/webapp
 
+    - name: Generate GraphQL schema file
+      run: npm run emit-schema -w @ntlango/api
+      env:
+        STAGE: Dev
+        MONGO_DB_URL: mongodb://placeholder
+        JWT_SECRET: placeholder-for-schema-generation
+
+    - name: Run Webapp codegen
+      run: npm run codegen -w @ntlango/webapp
+
+    - name: Build Webapp TypeScript
+      run: npm run build:ts -w @ntlango/webapp
+
+    - name: Build Webapp Next.js
+      run: npm run build:next -w @ntlango/webapp
+      env:
+        NEXT_PUBLIC_GRAPHQL_URL: https://c11y1xrbo8.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
+        NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+    - name: Run Webapp unit tests
+      run: npm run test:unit -w @ntlango/webapp
+
   api-deploy:
     if: github.event_name == 'push' # TODO change to 'push' for production deploys
     runs-on: ubuntu-latest
@@ -98,14 +120,6 @@ jobs:
         cat $GITHUB_OUTPUT
 
     # TODO enable integration tests
-    # - name: Run integration tests
-    #   env:
-    #     STAGE: ${{ env.STAGE }}
-    #     NTLANGO_SECRET_ARN: ${{ env.STAGE }}/ntlango/graphql-api
-    #     GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
-    #   run: |
-    #     echo "The graphql url is ${{ env.GRAPHQL_URL }}"
-    #     npm run test:integration -w @ntlango/api
 
   webapp-preview-deploy:
     if: github.event_name == 'push' # TODO change to 'push' for production deploys
