@@ -51,8 +51,8 @@ export const UpdateUserInputSchema = z.object({
     // Preferences (communication, notifications)
     preferences: z.object({
         communicationPrefs: z.object({
-            emailNotifications: z.boolean(),
-            pushNotifications: z.boolean(),
+            emailEnabled: z.boolean(),
+            pushEnabled: z.boolean(),
         }).optional(),
     }).optional(),
 });

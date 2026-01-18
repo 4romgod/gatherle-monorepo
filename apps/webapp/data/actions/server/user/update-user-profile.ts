@@ -28,8 +28,8 @@ const InterestsSchema = z.array(z.string()).optional();
 
 // Preferences schema - matches the structure used in EventSettingsPage
 const CommunicationPrefsSchema = z.object({
-  emailNotifications: z.boolean(),
-  pushNotifications: z.boolean(),
+  emailEnabled: z.boolean(),
+  pushEnabled: z.boolean(),
 }).optional();
 
 const PreferencesSchema = z.object({
