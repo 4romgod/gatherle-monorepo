@@ -7,7 +7,8 @@ import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
 import { ApolloError } from '@apollo/client';
 import { getApolloErrorMessage } from '@/data/actions/types';
-import { logger } from '@/lib/utils';
+import { safeJsonParse } from '@/lib/utils/json-parse';
+import { logger } from '@/lib/utils/logger';
 import type { ActionState } from '@/data/actions/types';
 
 // Zod schemas for validating JSON-parsed fields (matches UserLocationInput GraphQL type)
@@ -24,34 +25,6 @@ const LocationSchema = z.object({
 }).optional();
 
 const InterestsSchema = z.array(z.string()).optional();
-
-/**
- * Safely parse JSON with Zod validation.
- * Logs errors for debugging while returning undefined for graceful degradation.
- */
-function safeJsonParse<T>(jsonStr: string | undefined, schema: z.ZodType<T>, fieldName: string): T | undefined {
-  if (!jsonStr) return undefined;
-  try {
-    const parsed = JSON.parse(jsonStr);
-    const result = schema.safeParse(parsed);
-    if (!result.success) {
-      logger.warn(`Invalid ${fieldName} data submitted`, {
-        field: fieldName,
-        errors: result.error.flatten(),
-        input: jsonStr.substring(0, 200), // Truncate to avoid logging huge payloads
-      });
-      return undefined;
-    }
-    return result.data;
-  } catch (error) {
-    logger.warn(`Failed to parse ${fieldName} JSON`, {
-      field: fieldName,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      input: jsonStr.substring(0, 200),
-    });
-    return undefined;
-  }
-}
 
 export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();

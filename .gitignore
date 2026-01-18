@@ -21,3 +21,4 @@ test-results.txt
 **/test/**/reports/
 .github/prompts/
 
+packages/commons/schema.graphql

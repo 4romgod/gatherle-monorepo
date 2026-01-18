@@ -12,7 +12,11 @@ import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventFilters, LocationFilter } from '@/components/events/filters/event-filter-context';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 
-const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
+/**
+ * Builds GraphQL filter inputs from event filters.
+ * Exported for testing.
+ */
+export const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   const inputs: FilterInput[] = [];
 
   if (filters.categories.length > 0) {
@@ -34,7 +38,11 @@ const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   return inputs;
 };
 
-const buildDateFilterParams = (filters: EventFilters): { dateFilterOption?: string; customDate?: string } => {
+/**
+ * Builds date filter parameters from event filters.
+ * Exported for testing.
+ */
+export const buildDateFilterParams = (filters: EventFilters): { dateFilterOption?: string; customDate?: string } => {
   if (!filters.dateRange.start || !filters.dateRange.end) {
     return {};
   }
@@ -52,7 +60,11 @@ const buildDateFilterParams = (filters: EventFilters): { dateFilterOption?: stri
   };
 };
 
-const buildLocationFilter = (location: LocationFilter): LocationFilterInput | undefined => {
+/**
+ * Builds location filter input from location filter state.
+ * Exported for testing.
+ */
+export const buildLocationFilter = (location: LocationFilter): LocationFilterInput | undefined => {
   const hasLocation = !!(location.city || location.state || location.country || location.latitude);
   if (!hasLocation) {
     return undefined;

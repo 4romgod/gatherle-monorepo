@@ -8,6 +8,7 @@
     "build": "npm-run-all lint build:ts test:unit",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:node": "node -r ts-node/register",
+    "emit-schema": "ts-node lib/scripts/emit-schema.ts",
     "build:image": "docker build -t ntlango-backend .",
     "dev": "nodemon lib/scripts/startServer.ts",
     "start:ts": "ts-node lib/scripts/startServer.ts",
