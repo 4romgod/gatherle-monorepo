@@ -12,8 +12,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
       const tokenString = token?.token as string | undefined;
       if (tokenString) {
-        // Log token for debugging (first 50 chars only for security)
-        logger.debug('[Auth] Validating token:', tokenString.substring(0, 50) + '...');
+        logger.debug('[Auth] Validating token');
         const isValid = await isAuthenticated(tokenString);
         logger.debug('[Auth] Token valid:', isValid);
         if (!isValid) {
