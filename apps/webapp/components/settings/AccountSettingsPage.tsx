@@ -15,7 +15,7 @@ import {
   Card,
   CircularProgress,
 } from '@mui/material';
-import { Delete as DeleteIcon, Save as SaveIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
 import { useAppContext } from '@/hooks/useAppContext';
