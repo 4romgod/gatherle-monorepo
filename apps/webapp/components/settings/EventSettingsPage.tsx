@@ -11,7 +11,6 @@ import {
   Card,
   CircularProgress,
 } from '@mui/material';
-import { Save as SaveIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
