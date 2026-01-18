@@ -50,67 +50,6 @@ export default function FilterButtons({
         msOverflowStyle: 'none', // IE and Edge
       }}
     >
-      {/* Category Filter Button */}
-      <Button
-        variant="outlined"
-        onClick={onCategoryClick}
-        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-        startIcon={<TuneIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-        className="glass-button"
-        sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: categoryCount > 0 ? 2 : 1,
-          borderColor: categoryCount > 0 ? 'primary.main' : 'divider',
-          bgcolor: categoryCount > 0 ? 'action.selected' : 'background.paper',
-          color: 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            bgcolor: 'action.hover',
-            borderColor: 'primary.main',
-            transform: 'translateY(-1px)',
-          },
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {categoryCount > 0 ? `Categories (${categoryCount})` : 'Categories'}
-      </Button>
-
-      {/* Status Filter Button */}
-      <Button
-        variant="outlined"
-        onClick={onStatusClick}
-        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-        className="glass-button"
-        sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: statusCount > 0 ? 2 : 1,
-          borderColor: statusCount > 0 ? 'secondary.main' : 'divider',
-          bgcolor: statusCount > 0 ? 'action.selected' : 'background.paper',
-          color: 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            bgcolor: 'action.hover',
-            borderColor: 'secondary.main',
-            transform: 'translateY(-1px)',
-          },
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {statusCount > 0 ? `Status (${statusCount})` : 'Status'}
-      </Button>
-
       {/* Date Filter Button */}
       <Button
         variant="outlined"
@@ -171,6 +110,67 @@ export default function FilterButtons({
         }}
       >
         {locationLabel || 'Location'}
+      </Button>
+
+      {/* Category Filter Button */}
+      <Button
+        variant="outlined"
+        onClick={onCategoryClick}
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        startIcon={<TuneIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: categoryCount > 0 ? 2 : 1,
+          borderColor: categoryCount > 0 ? 'primary.main' : 'divider',
+          bgcolor: categoryCount > 0 ? 'action.selected' : 'background.paper',
+          color: 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            bgcolor: 'action.hover',
+            borderColor: 'primary.main',
+            transform: 'translateY(-1px)',
+          },
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {categoryCount > 0 ? `Categories (${categoryCount})` : 'Categories'}
+      </Button>
+
+      {/* Status Filter Button */}
+      <Button
+        variant="outlined"
+        onClick={onStatusClick}
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: statusCount > 0 ? 2 : 1,
+          borderColor: statusCount > 0 ? 'secondary.main' : 'divider',
+          bgcolor: statusCount > 0 ? 'action.selected' : 'background.paper',
+          color: 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            bgcolor: 'action.hover',
+            borderColor: 'secondary.main',
+            transform: 'translateY(-1px)',
+          },
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {statusCount > 0 ? `Status (${statusCount})` : 'Status'}
       </Button>
 
       {/* Clear All Button */}

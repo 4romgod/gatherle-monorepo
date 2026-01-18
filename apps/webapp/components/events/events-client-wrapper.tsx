@@ -48,18 +48,18 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
   const locationLabel = useMemo(() => {
     const { location } = filters;
     if (!location) return null;
-    
+
     // If using geolocation (lat/lng), show "Near me" with radius
     if (location.latitude && location.longitude) {
       return `Near me (${location.radiusKm || 50}km)`;
     }
-    
+
     // Build label from city/state/country
     const parts: string[] = [];
     if (location.city) parts.push(location.city);
     if (location.state) parts.push(location.state);
     if (location.country) parts.push(location.country);
-    
+
     return parts.length > 0 ? parts.join(', ') : null;
   }, [filters.location]);
 
@@ -136,8 +136,8 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
       const jsDate = date.toDate();
       setCustomDateValue(jsDate);
       // Format the date for display
-      const formattedDate = jsDate.toLocaleDateString('en-US', { 
-        month: 'short', 
+      const formattedDate = jsDate.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
@@ -156,111 +156,117 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
 
   return (
     <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
-      <CustomContainer>
-        <Grid container spacing={3}>
-          {/* Main Content - Events List */}
-          <Grid size={{ xs: 12, lg: 8 }}>
-            <EventsHeader 
-              eventCount={filteredEvents.length}
-              eventTitles={eventTitles}
-              onSearch={setSearchQuery}
-            />
+      <Grid container spacing={3}>
+        {/* Main Content - Events List */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <EventsHeader
+            eventCount={filteredEvents.length}
+            eventTitles={eventTitles}
+            onSearch={setSearchQuery}
+          />
 
-            <FilterButtons
-              categoryCount={filters.categories.length}
-              statusCount={filters.statuses.length}
-              selectedDateOption={selectedDateOption}
+          <FilterButtons
+            categoryCount={filters.categories.length}
+            statusCount={filters.statuses.length}
+            selectedDateOption={selectedDateOption}
+            locationLabel={locationLabel}
+            hasActiveFilters={hasActiveFilters}
+            onCategoryClick={(e) => setCategoryAnchor(e.currentTarget)}
+            onStatusClick={(e) => setStatusAnchor(e.currentTarget)}
+            onDateClick={(e) => setDateAnchor(e.currentTarget)}
+            onLocationClick={(e) => setLocationAnchor(e.currentTarget)}
+            onClearAll={resetFilters}
+          />
+
+          {hasActiveFilters && (
+            <ActiveFiltersPills
+              categories={filters.categories}
+              statuses={filters.statuses}
+              dateLabel={selectedDateOption}
               locationLabel={locationLabel}
-              hasActiveFilters={hasActiveFilters}
-              onCategoryClick={(e) => setCategoryAnchor(e.currentTarget)}
-              onStatusClick={(e) => setStatusAnchor(e.currentTarget)}
-              onDateClick={(e) => setDateAnchor(e.currentTarget)}
-              onLocationClick={(e) => setLocationAnchor(e.currentTarget)}
-              onClearAll={resetFilters}
+              onRemoveCategory={removeCategory}
+              onRemoveStatus={removeStatus}
+              onRemoveDate={() => {
+                setDateRange(null, null);
+                setSelectedDateOption(null);
+                setCustomDateValue(null);
+              }}
+              onRemoveLocation={clearLocation}
             />
+          )}
 
-            {hasActiveFilters && (
-              <ActiveFiltersPills
-                categories={filters.categories}
-                statuses={filters.statuses}
-                onRemoveCategory={removeCategory}
-                onRemoveStatus={removeStatus}
-              />
-            )}
+          <CategoryMenu
+            anchorEl={categoryAnchor}
+            categories={categories}
+            selectedCategories={filters.categories}
+            onClose={() => setCategoryAnchor(null)}
+            onToggle={handleCategoryToggle}
+          />
 
-            <CategoryMenu
-              anchorEl={categoryAnchor}
-              categories={categories}
-              selectedCategories={filters.categories}
-              onClose={() => setCategoryAnchor(null)}
-              onToggle={handleCategoryToggle}
-            />
+          <StatusMenu
+            anchorEl={statusAnchor}
+            statuses={statuses}
+            selectedStatuses={filters.statuses}
+            onClose={() => setStatusAnchor(null)}
+            onToggle={handleStatusToggle}
+          />
 
-            <StatusMenu
-              anchorEl={statusAnchor}
-              statuses={statuses}
-              selectedStatuses={filters.statuses}
-              onClose={() => setStatusAnchor(null)}
-              onToggle={handleStatusToggle}
-            />
+          <DateMenu
+            anchorEl={dateAnchor}
+            dateOptions={dateOptions}
+            selectedOption={selectedDateOption}
+            customDateAnchor={customDateAnchor}
+            onClose={() => setDateAnchor(null)}
+            onSelect={handleDateSelect}
+            onCustomDateChange={handleCustomDateChange}
+            onCustomDateClose={handleCustomDateClose}
+          />
 
-            <DateMenu
-              anchorEl={dateAnchor}
-              dateOptions={dateOptions}
-              selectedOption={selectedDateOption}
-              customDateAnchor={customDateAnchor}
-              onClose={() => setDateAnchor(null)}
-              onSelect={handleDateSelect}
-              onCustomDateChange={handleCustomDateChange}
-              onCustomDateClose={handleCustomDateClose}
-            />
+          <LocationMenu
+            anchorEl={locationAnchor}
+            currentLocation={filters.location || undefined}
+            onClose={() => setLocationAnchor(null)}
+            onApply={handleLocationApply}
+            onClear={handleLocationClear}
+          />
 
-            <LocationMenu
-              anchorEl={locationAnchor}
-              currentLocation={filters.location || undefined}
-              onClose={() => setLocationAnchor(null)}
-              onApply={handleLocationApply}
-              onClear={handleLocationClear}
-            />
+          <EventsList
+            events={filteredEvents}
+            loading={loading}
+            error={error}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={resetFilters}
+          />
+        </Grid>
 
-            <EventsList
-              events={filteredEvents}
-              loading={loading}
-              error={error}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={resetFilters}
-            />
-          </Grid>
-
-          {/* Sidebar - Discovery Widgets */}
-          <Grid 
-            size={{ xs: 12, lg: 4 }}
+        {/* Sidebar - Discovery Widgets */}
+        <Grid
+          size={{ xs: 12, lg: 4 }}
+          sx={{
+            display: { xs: 'none', lg: 'block' },
+          }}
+        >
+          <Box
             sx={{
-              display: { xs: 'none', lg: 'block' },
+              position: 'sticky',
+              top: 80, // Account for header height
+              maxHeight: 'calc(100vh - 96px)', // Prevent sidebar from being taller than viewport
+              overflowY: 'auto',
+              '&::-webkit-scrollbar': {
+                display: 'none',
+              },
+              msOverflowStyle: 'none', // IE and Edge
+              scrollbarWidth: 'none', // Firefox
             }}
           >
-            <Box
-              sx={{
-                position: 'sticky',
-                top: 80, // Account for header height
-                maxHeight: 'calc(100vh - 96px)', // Prevent sidebar from being taller than viewport
-                overflowY: 'auto',
-                '&::-webkit-scrollbar': {
-                  display: 'none',
-                },
-                msOverflowStyle: 'none', // IE and Edge
-                scrollbarWidth: 'none', // Firefox
-              }}
-            >
-              <EventsSidebar 
-                popularOrganization={popularOrganization} 
-                stats={stats}
-                trendingCategories={categories.slice(0, 6)}
-              />
-            </Box>
-          </Grid>
+            <EventsSidebar
+              popularOrganization={popularOrganization}
+              stats={stats}
+              trendingCategories={categories.slice(0, 6)}
+            />
+          </Box>
         </Grid>
-      </CustomContainer>
+      </Grid>
     </Box>
   );
 }

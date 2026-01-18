@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { getClient } from '@/data/graphql';
 import { EventCategory } from '@/data/graphql/types/graphql';
+import { Container } from '@mui/material';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument, GetPopularOrganizationsDocument } from '@/data/graphql/query';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { PopularOrganization } from '@/components/events/popular-organizer-box';
@@ -52,11 +53,13 @@ export default async function Events() {
   };
 
   return (
-    <EventsClientWrapper
-      events={eventsList}
-      categories={categoryList}
-      popularOrganization={popularOrganization}
-      stats={stats}
-    />
+    <Container>
+      <EventsClientWrapper
+        events={eventsList}
+        categories={categoryList}
+        popularOrganization={popularOrganization}
+        stats={stats}
+      />
+    </Container>
   );
 }

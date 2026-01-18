@@ -106,7 +106,6 @@ export default function EventBox({ event }: { event: EventPreview }) {
               left: 12,
               fontWeight: 600,
               backdropFilter: 'blur(8px)',
-              backgroundColor: 'rgba(255,255,255,0.9)',
             }}
           />
         )}
