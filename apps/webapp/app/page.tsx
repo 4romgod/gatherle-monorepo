@@ -114,7 +114,9 @@ export default async function HomePage() {
 
   // Fetch social feed for authenticated users with valid tokens
   let socialFeed: GetSocialFeedQuery['readFeed'] = [];
-  const hasValidToken = token && typeof token === 'string' && token.includes('.');
+
+  const hasValidToken = token && typeof token === 'string' && token.split('.').length === 3;
+
   if (isAuth && hasValidToken) {
     try {
       const feedResponse = await getClient().query<GetSocialFeedQuery>({
