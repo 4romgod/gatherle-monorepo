@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {ERROR_MESSAGES, REGEX_PHONE_NUMBER} from '../constants';
 import {validateDate, validateMongodbId} from '../utils';
-import {Gender} from '../types';
+import {Gender, FollowPolicy, SocialVisibility} from '../types';
 
 export const CreateUserInputSchema = z.object({
     address: z
@@ -39,6 +39,22 @@ export const UpdateUserInputSchema = z.object({
     phone_number: z.string().regex(REGEX_PHONE_NUMBER, {message: ERROR_MESSAGES.INVALID_PHONE_NUMBER}).optional(),
     profile_picture: z.string().optional(),
     username: z.string().optional(),
+    // Privacy settings
+    followPolicy: z.nativeEnum(FollowPolicy).optional(),
+    followersListVisibility: z.nativeEnum(SocialVisibility).optional(),
+    followingListVisibility: z.nativeEnum(SocialVisibility).optional(),
+    defaultVisibility: z.nativeEnum(SocialVisibility).optional(),
+    socialVisibility: z.nativeEnum(SocialVisibility).optional(),
+    shareRSVPByDefault: z.boolean().optional(),
+    shareCheckinsByDefault: z.boolean().optional(),
+    primaryTimezone: z.string().optional(),
+    // Preferences (communication, notifications)
+    preferences: z.object({
+        communicationPrefs: z.object({
+            emailNotifications: z.boolean(),
+            pushNotifications: z.boolean(),
+        }).optional(),
+    }).optional(),
 });
 
 export const LoginUserInputSchema = z.object({

@@ -101,16 +101,17 @@ export default async function SettingsPage() {
         />,
         description: 'Change your password',
       },
-      {
-        name: 'Social Media',
-        content: <SocialMediaSettingsPage />,
-        icon: <PermMedia
-          key="social-icon"
-          fontSize="small"
-          sx={{ marginRight: 1 }}
-        />,
-        description: 'Connect your social accounts',
-      },
+      // TODO We will  bring this back when we have the functionality to connect to social media
+      // {
+      //   name: 'Social Media',
+      //   content: <SocialMediaSettingsPage />,
+      //   icon: <PermMedia
+      //     key="social-icon"
+      //     fontSize="small"
+      //     sx={{ marginRight: 1 }}
+      //   />,
+      //   description: 'Connect your social accounts',
+      // },
     ],
   };
 

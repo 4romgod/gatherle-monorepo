@@ -16,14 +16,15 @@ import {
   TextField,
   InputAdornment,
   Stack,
-  Alert,
   Card,
+  CircularProgress,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user';
 import { signIn, useSession } from 'next-auth/react';
 import EventCategoryChip from '@/components/events/category/chip';
+import { useAppContext } from '@/hooks/useAppContext';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES, EMPTY_STATE_STYLES, EMPTY_STATE_ICON_STYLES } from '@/lib/constants';
 
 type InterestsSettingsPageProps = {
@@ -31,6 +32,7 @@ type InterestsSettingsPageProps = {
   eventCategoryGroups: EventCategoryGroup[];
 };
 export default function InterestsSettingsPage({ user, eventCategoryGroups }: InterestsSettingsPageProps) {
+  const { setToastProps, toastProps } = useAppContext();
   const [selectedInterests, setSelectedInterests] = useState<EventCategory[]>(user.interests ? user.interests : []);
   const [tempInterests, setTempInterests] = useState<EventCategory[]>([]);
   const [openModal, setOpenModal] = useState(false);
@@ -84,6 +86,15 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
 
   // Update local state and session when action succeeds
   useEffect(() => {
+    if (state.apiError) {
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'error',
+        message: state.apiError,
+      });
+    }
+
     if (state.data && !state.apiError && session?.user?.token) {
       const updatedUser = state.data as User;
 
@@ -94,28 +105,20 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           redirect: false,
         });
         setOpenModal(false);
+        setToastProps({
+          ...toastProps,
+          open: true,
+          severity: 'success',
+          message: 'Your interests have been updated successfully!',
+        });
       };
 
       refreshSession();
     }
   }, [state.data, state.apiError]);
 
-  const hasSuccess = !!state.data && !state.apiError;
-
   return (
     <Box>
-      {state.apiError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {state.apiError}
-        </Alert>
-      )}
-
-      {hasSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          Your interests have been updated successfully!
-        </Alert>
-      )}
-
       <Stack spacing={3}>
         {/* Page Header */}
         <Stack
@@ -334,11 +337,17 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 2, gap: 1 }}>
-          <Button onClick={() => setOpenModal(false)} variant="outlined" size="large" sx={{ ...BUTTON_STYLES, px: 3 }}>
+          <Button
+            onClick={() => setOpenModal(false)}
+            variant="outlined"
+            size="large"
+            disabled={isPending}
+            sx={{ ...BUTTON_STYLES, px: 3 }}
+          >
             Cancel
           </Button>
           <Button
-            startIcon={<SaveIcon />}
+            startIcon={isPending ? <CircularProgress size={20} color="inherit" /> : undefined}
             onClick={handleSaveInterests}
             color="primary"
             variant="contained"

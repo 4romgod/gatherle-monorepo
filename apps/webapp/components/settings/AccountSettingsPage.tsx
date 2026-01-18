@@ -11,23 +11,41 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Stack,
   Card,
+  CircularProgress,
 } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Save as SaveIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
 import { useAppContext } from '@/hooks/useAppContext';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
+import { signIn, useSession } from 'next-auth/react';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { useFormStatus } from 'react-dom';
 
 interface AccountSettings {
   username: string;
   email: string;
+}
+
+// Separate submit button component to use useFormStatus
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button
+      type="submit"
+      variant="contained"
+      color="primary"
+      size="large"
+      disabled={pending}
+      startIcon={pending ? <CircularProgress size={20} color="inherit" /> : undefined}
+      sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
+    >
+      {pending ? 'Saving...' : 'Save Changes'}
+    </Button>
+  );
 }
 
 export default function AccountSettingsPage({ user }: { user: User }) {
@@ -35,12 +53,23 @@ export default function AccountSettingsPage({ user }: { user: User }) {
   const [updateUserFormState, updateUserFormAction] = useActionState(updateUserProfileAction, {});
   const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, {});
   const [isPending, startTransition] = useTransition();
+  const { data: session } = useSession();
   const [settings, setSettings] = useState<AccountSettings>({
     username: user.username,
     email: user.email,
   });
 
   const [openDeleteAccountDialog, setOpenDeleteAccountDialog] = useState(false);
+
+  // Sync local state with session when it updates
+  useEffect(() => {
+    if (session?.user) {
+      setSettings({
+        username: session.user.username,
+        email: session.user.email,
+      });
+    }
+  }, [session?.user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,23 +89,6 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     await logoutUserAction();
   };
 
-  const languages = [
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' },
-    { value: 'de', label: 'German' },
-    { value: 'pt', label: 'Portuguese' },
-  ];
-
-  const timeZones = [
-    { value: 'America/New_York', label: 'Eastern Time (New York)' },
-    { value: 'America/Chicago', label: 'Central Time (Chicago)' },
-    { value: 'America/Denver', label: 'Mountain Time (Denver)' },
-    { value: 'America/Los_Angeles', label: 'Pacific Time (Los Angeles)' },
-    { value: 'America/Anchorage', label: 'Alaska Time (Anchorage)' },
-    { value: 'Pacific/Honolulu', label: 'Hawaii Time (Honolulu)' },
-  ];
-
   useEffect(() => {
     if (updateUserFormState.apiError) {
       setToastProps({
@@ -87,12 +99,27 @@ export default function AccountSettingsPage({ user }: { user: User }) {
       });
     }
 
-    if (updateUserFormState.data) {
+    if (updateUserFormState.data && session?.user?.token) {
+      const updatedUser = updateUserFormState.data as User;
+      
+      // Update local state immediately
+      setSettings({
+        username: updatedUser.username,
+        email: updatedUser.email,
+      });
+      
+      // Refresh the session with updated user data
+      signIn('refresh-session', {
+        userData: JSON.stringify(updatedUser),
+        token: session.user.token,
+        redirect: false,
+      });
+      
       setToastProps({
         ...toastProps,
         open: true,
         severity: 'success',
-        message: 'Account Settings updated successfully!',
+        message: 'Account settings updated successfully!',
       });
     }
   }, [updateUserFormState]);
@@ -114,7 +141,6 @@ export default function AccountSettingsPage({ user }: { user: User }) {
         severity: 'success',
         message: 'Account deleted successfully!',
       });
-      // TODO: Redirect to login or home page after successful deletion
     }
   }, [deleteUserFormState]);
 
@@ -125,7 +151,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
           Account Management
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-          Manage your account settings and preferences
+          Manage your account settings
         </Typography>
       </Box>
 
@@ -136,7 +162,9 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             elevation={0}
             sx={{
               borderRadius: 3,
-              p: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              p: { xs: 3, md: 4 },
               mb: 3,
             }}
           >
@@ -145,13 +173,13 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             </Typography>
 
             <Grid container spacing={{ xs: 2, sm: 3 }}>
-              <Grid size={{ xs: 12 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
+                  id="account-username"
                   fullWidth
                   label="Username"
                   name="username"
                   value={settings.username}
-                  onChange={handleInputChange}
                   variant="outlined"
                   slotProps={{
                     input: {
@@ -160,15 +188,16 @@ export default function AccountSettingsPage({ user }: { user: User }) {
                   }}
                   color="secondary"
                   disabled
-                  helperText="Your username cannot be changed"
                 />
               </Grid>
 
-              <Grid size={{ xs: 12 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
+                  id="account-email"
                   fullWidth
                   label="Email"
                   name="email"
+                  type="email"
                   value={settings.email}
                   onChange={handleInputChange}
                   variant="outlined"
@@ -178,71 +207,8 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             </Grid>
           </Card>
 
-          {/* Preferences Card */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-              mb: 3,
-            }}
-          >
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Preferences
-            </Typography>
-
-            <Grid container spacing={{ xs: 2, sm: 3 }}>
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel color="secondary">Language</InputLabel>
-                  <Select
-                    name="language"
-                    // TODO value={settings.language}
-                    onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
-                    label="Language"
-                    color="secondary"
-                  >
-                    {languages.map(lang => (
-                      <MenuItem key={lang.value} value={lang.value}>
-                        {lang.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel color="secondary">Time Zone</InputLabel>
-                  <Select
-                    name="timeZone"
-                    // TODO value={settings.timeZone}
-                    onChange={e => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
-                    label="Time Zone"
-                    color="secondary"
-                  >
-                    {timeZones.map(zone => (
-                      <MenuItem key={zone.value} value={zone.value}>
-                        {zone.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Card>
-
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end">
-            <Button
-              variant="contained"
-              color="primary"
-              type="submit"
-              disabled={isPending}
-              size="large"
-              sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
-            >
-              Save Changes
-            </Button>
+            <SubmitButton />
           </Stack>
         </Box>
 

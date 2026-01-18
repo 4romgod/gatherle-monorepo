@@ -21,12 +21,14 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { FormErrors } from '@/components/form-errors';
 import LocationForm from '@/components/forms/input-location';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function EditProfilePage({ user }: { user: User }) {
   const [isEditing, setIsEditing] = useState(false);
   const { setToastProps, toastProps } = useAppContext();
   const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const [loading, setLoading] = useState(false);
+  const { data: session } = useSession();
 
   const [profile, setProfile] = useState<UpdateUserInput>({
     userId: user.userId,
@@ -34,11 +36,24 @@ export default function EditProfilePage({ user }: { user: User }) {
     family_name: user.family_name,
     profile_picture: user.profile_picture,
     bio: user.bio,
-    phone_number: user.phone_number,
-    birthdate: user.birthdate,
     username: user.username,
     location: user.location,
   });
+
+  // Sync local state with session when it updates (e.g., after tab switch)
+  useEffect(() => {
+    if (session?.user) {
+      setProfile({
+        userId: session.user.userId,
+        given_name: session.user.given_name,
+        family_name: session.user.family_name,
+        profile_picture: session.user.profile_picture,
+        bio: session.user.bio,
+        username: session.user.username,
+        location: session.user.location,
+      });
+    }
+  }, [session?.user]);
 
   useEffect(() => {
     setLoading(false);
@@ -52,7 +67,27 @@ export default function EditProfilePage({ user }: { user: User }) {
       });
     }
 
-    if (formState.data) {
+    if (formState.data && session?.user?.token) {
+      const updatedUser = formState.data as User;
+      
+      // Update local state immediately with the returned data
+      setProfile({
+        userId: updatedUser.userId,
+        given_name: updatedUser.given_name,
+        family_name: updatedUser.family_name,
+        profile_picture: updatedUser.profile_picture,
+        bio: updatedUser.bio,
+        username: updatedUser.username,
+        location: updatedUser.location,
+      });
+      
+      // Refresh the session with updated user data
+      signIn('refresh-session', {
+        userData: JSON.stringify(updatedUser),
+        token: session.user.token,
+        redirect: false,
+      });
+      
       setToastProps({
         ...toastProps,
         open: true,
@@ -112,6 +147,13 @@ export default function EditProfilePage({ user }: { user: User }) {
       </Stack>
 
       <Box component="form" action={formAction} noValidate>
+        {/* Hidden inputs to ensure form data is submitted */}
+        <input type="hidden" name="given_name" value={profile.given_name || ''} />
+        <input type="hidden" name="family_name" value={profile.family_name || ''} />
+        <input type="hidden" name="username" value={profile.username || ''} />
+        <input type="hidden" name="bio" value={profile.bio || ''} />
+        <input type="hidden" name="location" value={JSON.stringify(profile.location || {})} />
+        
         {/* Profile Picture Section */}
         <Card
           elevation={0}
@@ -177,6 +219,7 @@ export default function EditProfilePage({ user }: { user: User }) {
           <Grid container spacing={{ xs: 2, sm: 3 }}>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
+                id="profile-given-name"
                 fullWidth
                 label="First Name"
                 name="given_name"
@@ -190,6 +233,7 @@ export default function EditProfilePage({ user }: { user: User }) {
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
+                id="profile-family-name"
                 fullWidth
                 label="Last Name"
                 name="family_name"
@@ -203,6 +247,7 @@ export default function EditProfilePage({ user }: { user: User }) {
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField
+                id="profile-username"
                 fullWidth
                 label="Username"
                 name="username"
@@ -216,38 +261,7 @@ export default function EditProfilePage({ user }: { user: User }) {
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField
-                fullWidth
-                label="Phone Number"
-                name="phone_number"
-                value={profile.phone_number || ''}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                variant="outlined"
-                color="secondary"
-              />
-              <FormErrors error={formState?.zodErrors?.phone_number} />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Date of Birth"
-                name="birthdate"
-                type="date"
-                value={profile.birthdate || ''}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                variant="outlined"
-                color="secondary"
-                slotProps={{
-                  inputLabel: {
-                    shrink: true,
-                  },
-                }}
-              />
-              <FormErrors error={formState?.zodErrors?.birthdate} />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TextField
+                id="profile-bio"
                 fullWidth
                 label="Bio"
                 name="bio"
@@ -295,7 +309,7 @@ export default function EditProfilePage({ user }: { user: User }) {
               Cancel
             </Button>
             <Button
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : undefined}
               variant="contained"
               color="primary"
               type="submit"

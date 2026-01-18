@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {REGEX_PHONE_NUMBER} from '@/constants';
-import {Gender} from '@ntlango/commons/types/user';
+import {Gender, FollowPolicy, SocialVisibility} from '@ntlango/commons/types/user';
 import {ERROR_MESSAGES, validateDate} from '@/validation/common';
 import mongoose from 'mongoose';
 
@@ -39,6 +39,23 @@ export const UserSchema = z.object({
   profile_picture: z.string().optional(),
 
   username: z.string().min(3, `username ${ERROR_MESSAGES.TOO_SHORT}`).optional(),
+
+  // Privacy settings
+  followPolicy: z.nativeEnum(FollowPolicy).optional(),
+  followersListVisibility: z.nativeEnum(SocialVisibility).optional(),
+  followingListVisibility: z.nativeEnum(SocialVisibility).optional(),
+  defaultVisibility: z.nativeEnum(SocialVisibility).optional(),
+  socialVisibility: z.nativeEnum(SocialVisibility).optional(),
+  shareRSVPByDefault: z.boolean().optional(),
+  shareCheckinsByDefault: z.boolean().optional(),
+  primaryTimezone: z.string().optional(),
+  // Preferences (communication, notifications)
+  preferences: z.object({
+    communicationPrefs: z.object({
+      emailNotifications: z.boolean(),
+      pushNotifications: z.boolean(),
+    }).optional(),
+  }).optional(),
 });
 
 export const CreateUserInputSchema = UserSchema.extend({

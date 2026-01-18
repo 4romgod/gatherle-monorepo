@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isValid, parseISO } from 'date-fns'; // TODO replace with datejs???
-import { Gender, UserRole } from '../graphql/types/graphql';
+import { Gender, UserRole, FollowPolicy, SocialVisibility } from '../graphql/types/graphql';
 
 const InputMaybe = z.union([z.string(), z.undefined()]);
 
@@ -38,6 +38,23 @@ export const UpdateUserInputSchema = z.object({
   gender: z.nativeEnum(Gender).optional(),
   userRole: z.nativeEnum(UserRole).optional(),
   interests: z.array(z.string()).optional().nullable(),
+  // Privacy fields
+  followPolicy: z.nativeEnum(FollowPolicy).optional(),
+  followersListVisibility: z.nativeEnum(SocialVisibility).optional(),
+  followingListVisibility: z.nativeEnum(SocialVisibility).optional(),
+  defaultVisibility: z.nativeEnum(SocialVisibility).optional(),
+  socialVisibility: z.nativeEnum(SocialVisibility).optional(),
+  shareRSVPByDefault: z.boolean().optional(),
+  shareCheckinsByDefault: z.boolean().optional(),
+  // Timezone
+  primaryTimezone: z.string().optional(),
+  // Preferences (communication, notifications)
+  preferences: z.object({
+    communicationPrefs: z.object({
+      emailNotifications: z.boolean(),
+      pushNotifications: z.boolean(),
+    }).optional(),
+  }).optional(),
 });
 
 export const LoginUserInputSchema = z.object({

@@ -77,6 +77,24 @@ export const UpdateUserDocument = graphql(`
       phone_number
       profile_picture
       userRole
+      location {
+        city
+        state
+        country
+      }
+      followPolicy
+      followersListVisibility
+      followingListVisibility
+      defaultVisibility
+      shareRSVPByDefault
+      shareCheckinsByDefault
+      preferences {
+        communicationPrefs {
+          emailEnabled
+          pushEnabled
+        }
+        notificationPrefs
+      }
       interests {
         eventCategoryId
         slug

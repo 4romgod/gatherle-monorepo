@@ -1,12 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { UpdateUserInput, UpdateUserDocument, Gender } from '@/data/graphql/types/graphql';
+import { UpdateUserInput, UpdateUserDocument, Gender, FollowPolicy, SocialVisibility } from '@/data/graphql/types/graphql';
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
-import { ApolloError } from '@apollo/client';
-import { getApolloErrorMessage } from '@/data/actions/types';
+import { extractApolloErrorMessage } from '@/lib/utils/apollo-error';
 import { safeJsonParse } from '@/lib/utils/json-parse';
 import { logger } from '@/lib/utils/logger';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -26,6 +25,16 @@ const LocationSchema = z.object({
 }).optional();
 
 const InterestsSchema = z.array(z.string()).optional();
+
+// Preferences schema - matches the structure used in EventSettingsPage
+const CommunicationPrefsSchema = z.object({
+  emailNotifications: z.boolean(),
+  pushNotifications: z.boolean(),
+}).optional();
+
+const PreferencesSchema = z.object({
+  communicationPrefs: CommunicationPrefsSchema,
+}).optional();
 
 export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
@@ -56,6 +65,41 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   const location = safeJsonParse(locationStr, LocationSchema, 'location');
   const interests = safeJsonParse(interestsStr, InterestsSchema, 'interests');
 
+  // Parse privacy fields
+  const followPolicyStr = formData.get('followPolicy')?.toString();
+  const followPolicy = Object.values(FollowPolicy).includes(followPolicyStr as FollowPolicy) 
+    ? (followPolicyStr as FollowPolicy) 
+    : undefined;
+  
+  const followersListVisibilityStr = formData.get('followersListVisibility')?.toString();
+  const followersListVisibility = Object.values(SocialVisibility).includes(followersListVisibilityStr as SocialVisibility) 
+    ? (followersListVisibilityStr as SocialVisibility) 
+    : undefined;
+  
+  const followingListVisibilityStr = formData.get('followingListVisibility')?.toString();
+  const followingListVisibility = Object.values(SocialVisibility).includes(followingListVisibilityStr as SocialVisibility) 
+    ? (followingListVisibilityStr as SocialVisibility) 
+    : undefined;
+
+  const defaultVisibilityStr = formData.get('defaultVisibility')?.toString();
+  const defaultVisibility = Object.values(SocialVisibility).includes(defaultVisibilityStr as SocialVisibility)
+    ? (defaultVisibilityStr as SocialVisibility)
+    : undefined;
+
+  // Parse boolean fields (from hidden inputs, they come as strings)
+  const shareRSVPStr = formData.get('shareRSVPByDefault')?.toString();
+  const shareRSVPByDefault = shareRSVPStr !== undefined ? shareRSVPStr === 'true' : undefined;
+  
+  const shareCheckinsStr = formData.get('shareCheckinsByDefault')?.toString();
+  const shareCheckinsByDefault = shareCheckinsStr !== undefined ? shareCheckinsStr === 'true' : undefined;
+
+  // Parse timezone
+  const primaryTimezone = formData.get('primaryTimezone')?.toString() || undefined;
+
+  // Parse preferences JSON (for communication prefs, notification prefs, etc.)
+  const preferencesStr = formData.get('preferences')?.toString();
+  const preferences = safeJsonParse(preferencesStr, PreferencesSchema, 'preferences');
+
   let inputData: UpdateUserInput = {
     userId: userId,
     given_name: formData.get('given_name')?.toString() || undefined,
@@ -69,6 +113,15 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
     gender: gender,
     location: location,
     interests: interests,
+    // Privacy fields
+    followPolicy: followPolicy,
+    followersListVisibility: followersListVisibility,
+    followingListVisibility: followingListVisibility,
+    defaultVisibility: defaultVisibility,
+    shareRSVPByDefault: shareRSVPByDefault,
+    shareCheckinsByDefault: shareCheckinsByDefault,
+    primaryTimezone: primaryTimezone,
+    preferences: preferences,
   };
 
   inputData = Object.fromEntries(Object.entries(inputData).filter(([_, v]) => v !== undefined)) as UpdateUserInput;
@@ -107,20 +160,12 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
     };
   } catch (error) {
     logger.error('Failed to update user profile', { error, userId });
-    const errorMessage = getApolloErrorMessage(error as ApolloError);
+    const errorMessage = extractApolloErrorMessage(error, 'An error occurred while updating your profile');
 
-    if (errorMessage) {
-      logger.error('GraphQL error message', { errorMessage });
-      return {
-        ...prevState,
-        apiError: errorMessage,
-        zodErrors: null,
-      };
-    }
-
+    logger.error('GraphQL error message', { errorMessage });
     return {
       ...prevState,
-      apiError: 'An error occurred while updating your profile',
+      apiError: errorMessage,
       zodErrors: null,
     };
   }

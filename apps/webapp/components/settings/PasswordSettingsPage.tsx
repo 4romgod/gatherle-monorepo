@@ -4,18 +4,17 @@ import React, { useState, useEffect, useTransition } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   TextField,
   Button,
-  Alert,
   IconButton,
   InputAdornment,
   LinearProgress,
   Stack,
   Card,
 } from '@mui/material';
-import { Visibility, VisibilityOff, Security as SecurityIcon } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
+import { useAppContext } from '@/hooks/useAppContext';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
 interface PasswordSettings {
@@ -33,6 +32,7 @@ interface PasswordStrength {
 import type { ActionState } from '@/data/actions/types';
 
 export default function PasswordSettingsPage() {
+  const { setToastProps, toastProps } = useAppContext();
   const [settings, setSettings] = useState<PasswordSettings>({
     currentPassword: '',
     newPassword: '',
@@ -42,8 +42,6 @@ export default function PasswordSettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [isPending, startTransition] = useTransition();
   const [actionState, setActionState] = useState<ActionState>({});
 
@@ -98,16 +96,24 @@ export default function PasswordSettingsPage() {
 
   useEffect(() => {
     if (actionState.success) {
-      setSuccessMessage('Password changed successfully!');
-      setPasswordError('');
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'success',
+        message: 'Password changed successfully!',
+      });
       setSettings({
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: '',
       });
     } else if (actionState.apiError) {
-      setPasswordError(actionState.apiError);
-      setSuccessMessage('');
+      setToastProps({
+        ...toastProps,
+        open: true,
+        severity: 'error',
+        message: actionState.apiError,
+      });
     }
   }, [actionState]);
 
@@ -118,44 +124,51 @@ export default function PasswordSettingsPage() {
       [name]: value,
     }));
 
-    setPasswordError('');
-    setSuccessMessage('');
     setActionState({});
+  };
+
+  const showError = (message: string) => {
+    setToastProps({
+      ...toastProps,
+      open: true,
+      severity: 'error',
+      message,
+    });
   };
 
   const validatePasswords = (): boolean => {
     if (!settings.currentPassword.trim()) {
-      setPasswordError('Current password is required');
+      showError('Current password is required');
       return false;
     }
 
     if (!settings.newPassword.trim()) {
-      setPasswordError('New password is required');
+      showError('New password is required');
       return false;
     }
 
     if (settings.newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters long');
+      showError('New password must be at least 8 characters long');
       return false;
     }
 
     if (settings.currentPassword === settings.newPassword) {
-      setPasswordError('New password must be different from current password');
+      showError('New password must be different from current password');
       return false;
     }
 
     if (!settings.confirmNewPassword.trim()) {
-      setPasswordError('Please confirm your new password');
+      showError('Please confirm your new password');
       return false;
     }
 
     if (settings.newPassword !== settings.confirmNewPassword) {
-      setPasswordError('New passwords do not match');
+      showError('New passwords do not match');
       return false;
     }
 
     if (passwordStrength.score < 40) {
-      setPasswordError('Password is too weak. Please follow the suggestions to strengthen it.');
+      showError('Password is too weak. Please follow the suggestions to strengthen it.');
       return false;
     }
 
@@ -168,9 +181,6 @@ export default function PasswordSettingsPage() {
     if (!validatePasswords()) {
       return;
     }
-
-    setPasswordError('');
-    setSuccessMessage('');
 
     const formData = new FormData();
     formData.append('currentPassword', settings.currentPassword);
@@ -193,8 +203,8 @@ export default function PasswordSettingsPage() {
     settings.currentPassword && settings.newPassword && settings.confirmNewPassword && passwordStrength.score >= 40;
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ mb: 3, width: '100%', maxWidth: 600, textAlign: { xs: 'center', sm: 'left' } }}>
         <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Password Management
         </Typography>
@@ -203,53 +213,55 @@ export default function PasswordSettingsPage() {
         </Typography>
       </Box>
 
-      <form onSubmit={handleChangePassword}>
+      <form onSubmit={handleChangePassword} style={{ width: '100%', maxWidth: 600 }}>
         <Card
           elevation={0}
           sx={{
             borderRadius: 3,
-            p: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            p: { xs: 3, md: 4 },
           }}
         >
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Change Password
           </Typography>
 
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Current Password"
-                type={showCurrentPassword ? 'text' : 'password'}
-                name="currentPassword"
-                value={settings.currentPassword}
-                onChange={handleInputChange}
-                variant="outlined"
-                disabled={isPending}
-                error={passwordError.includes('Current password') || !!actionState.zodErrors?.currentPassword}
-                helperText={actionState.zodErrors?.currentPassword?.[0]}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          edge="end"
-                          disabled={isPending}
-                        >
-                          {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                color="secondary"
-              />
-            </Grid>
+          <Stack spacing={{ xs: 2, sm: 3 }}>
+            <TextField
+              id="password-current"
+              fullWidth
+              label="Current Password"
+              type={showCurrentPassword ? 'text' : 'password'}
+              name="currentPassword"
+              value={settings.currentPassword}
+              onChange={handleInputChange}
+              variant="outlined"
+              disabled={isPending}
+              error={!!actionState.zodErrors?.currentPassword}
+              helperText={actionState.zodErrors?.currentPassword?.[0]}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        edge="end"
+                        disabled={isPending}
+                      >
+                        {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              color="secondary"
+            />
 
-            <Grid size={{ xs: 12 }}>
+            <Box>
               <TextField
+                id="password-new"
                 fullWidth
                 label="New Password"
                 type={showNewPassword ? 'text' : 'password'}
@@ -258,11 +270,7 @@ export default function PasswordSettingsPage() {
                 onChange={handleInputChange}
                 variant="outlined"
                 disabled={isPending}
-                error={
-                  passwordError.includes('New password') ||
-                  passwordError.includes('Password is too weak') ||
-                  !!actionState.zodErrors?.newPassword
-                }
+                error={!!actionState.zodErrors?.newPassword}
                 helperText={actionState.zodErrors?.newPassword?.[0]}
                 slotProps={{
                   input: {
@@ -344,56 +352,39 @@ export default function PasswordSettingsPage() {
                   )}
                 </Box>
               )}
-            </Grid>
+            </Box>
 
-            <Grid size={{ xs: 12 }}>
-              <TextField
-                fullWidth
-                label="Confirm New Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmNewPassword"
-                value={settings.confirmNewPassword}
-                onChange={handleInputChange}
-                variant="outlined"
-                disabled={isPending}
-                error={
-                  passwordError.includes('do not match') ||
-                  passwordError.includes('confirm') ||
-                  !!actionState.zodErrors?.confirmNewPassword
-                }
-                helperText={actionState.zodErrors?.confirmNewPassword?.[0]}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          edge="end"
-                          disabled={isPending}
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                color="secondary"
-              />
-            </Grid>
-          </Grid>
-
-          {passwordError && (
-            <Alert severity="error" sx={{ mt: 3, borderRadius: 2 }}>
-              {passwordError}
-            </Alert>
-          )}
-
-          {successMessage && (
-            <Alert severity="success" sx={{ mt: 3, borderRadius: 2 }}>
-              {successMessage}
-            </Alert>
-          )}
+            <TextField
+              id="password-confirm"
+              fullWidth
+              label="Confirm New Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              name="confirmNewPassword"
+              value={settings.confirmNewPassword}
+              onChange={handleInputChange}
+              variant="outlined"
+              disabled={isPending}
+              error={!!actionState.zodErrors?.confirmNewPassword}
+              helperText={actionState.zodErrors?.confirmNewPassword?.[0]}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                        disabled={isPending}
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              color="secondary"
+            />
+          </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
             <Button

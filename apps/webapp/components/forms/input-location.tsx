@@ -46,6 +46,7 @@ export default function LocationForm({
 
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
+          id={`${name}-city`}
           fullWidth
           label="City"
           name={`${name}_city`}
@@ -60,6 +61,7 @@ export default function LocationForm({
 
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
+          id={`${name}-state`}
           fullWidth
           label="State/Province"
           name={`${name}_state`}
@@ -74,6 +76,7 @@ export default function LocationForm({
 
       <Grid size={{ xs: 12 }}>
         <TextField
+          id={`${name}-country`}
           fullWidth
           label="Country"
           name={`${name}_country`}

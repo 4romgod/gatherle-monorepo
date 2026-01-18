@@ -2,9 +2,9 @@
 
 import { DeleteUserByIdDocument, getClient } from '@/data/graphql';
 import { auth } from '@/auth';
-import { ApolloError } from '@apollo/client';
 import type { ActionState } from '@/data/actions/types';
-import { getApolloErrorMessage } from '@/data/actions/types';
+import { extractApolloErrorMessage } from '@/lib/utils/apollo-error';
+import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from '@/lib/utils';
 
 export async function deleteUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -30,13 +30,10 @@ export async function deleteUserProfileAction(prevState: ActionState, formData: 
         userId: userId,
       },
       context: {
-        headers: {
-          token: token,
-        },
+        headers: getAuthHeader(token),
       },
     });
 
-    // TODO after deleting, logout the user
     logger.info('User profile deleted successfully', { userId });
     const responseData = deleteResponse.data?.deleteUserById;
     return {
@@ -47,20 +44,11 @@ export async function deleteUserProfileAction(prevState: ActionState, formData: 
     };
   } catch (error) {
     logger.error('Failed to delete user profile', { error, userId });
-    const errorMessage = getApolloErrorMessage(error as ApolloError);
-
-    if (errorMessage) {
-      console.error('Error Message', errorMessage);
-      return {
-        ...prevState,
-        apiError: errorMessage,
-        zodErrors: null,
-      };
-    }
+    const errorMessage = extractApolloErrorMessage(error, 'An error occurred while deleting your profile');
 
     return {
       ...prevState,
-      apiError: 'An error occurred while deleting your profile',
+      apiError: errorMessage,
       zodErrors: null,
     };
   }
