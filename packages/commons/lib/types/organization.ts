@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
-import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
+import { modelOptions, prop, Severity } from '@typegoose/typegoose';
 
 import { EventVisibility } from './event';
 import { OrganizationMembership } from './organizationMembership';

@@ -6,7 +6,6 @@ import { EventDAO, EventCategoryDAO, UserDAO } from '@/mongodb/dao';
 import { eventsMockData, usersMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken, CreateUserInput } from '@ntlango/commons/types';
 import { SortOrderInput } from '@ntlango/commons/types';
-import { ERROR_MESSAGES } from '@/validation';
 import {
   getCreateEventMutation,
   getDeleteEventByIdMutation,
@@ -28,7 +27,7 @@ describe('Event Resolver', () => {
   const testEventDescription = 'Test Event Description';
 
   const baseEventData = (() => {
-    const { orgIndex, venueIndex, ...rest } = eventsMockData[0];
+    const { orgIndex: _orgIndex, venueIndex: _venueIndex, ...rest } = eventsMockData[0];
     return rest;
   })();
 

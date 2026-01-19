@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
-    "build": "npm-run-all format build:ts",
+    "build": "npm-run-all lint build:ts",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
-    "format": "prettier --no-error-on-unmatched-pattern --config .prettierrc.json 'lib/**/*.{js,ts}' --write",
     "lint": "eslint \"lib/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"lib/**/*.{ts,tsx}\" --fix",
     "typecheck": "tsc --noEmit --pretty"
   },
   "dependencies": {
@@ -20,5 +20,8 @@
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.1",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "eslint-plugin-unused-imports": "^4.3.0"
   }
 }

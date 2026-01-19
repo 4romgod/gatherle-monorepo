@@ -1,4 +1,5 @@
-import { GraphQLScalarType, Kind, ValueNode } from 'graphql';
+import type { ValueNode } from 'graphql';
+import { GraphQLScalarType, Kind } from 'graphql';
 
 import { COMMON_DESCRIPTIONS } from '../constants';
 

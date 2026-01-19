@@ -2,7 +2,8 @@ import { InputType, Field, Int, registerEnumType } from 'type-graphql';
 
 import { QUERY_DESCRIPTIONS } from '../constants';
 import { AnyType } from './customTypes';
-import { DATE_FILTER_OPTIONS, DateFilterOption } from '../constants';
+import type { DateFilterOption } from '../constants';
+import { DATE_FILTER_OPTIONS } from '../constants';
 
 export enum SortOrderInput {
   asc = 'asc',
@@ -59,28 +60,28 @@ registerEnumType(DateFilterOptionEnum, {
 
 @InputType('PaginationInput', { description: QUERY_DESCRIPTIONS.PAGINATION.INPUT })
 export class PaginationInput {
-  @Field((type) => Int, { nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.LIMIT })
+  @Field(() => Int, { nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.LIMIT })
   limit?: number;
 
-  @Field((type) => Int, { nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.SKIP })
+  @Field(() => Int, { nullable: true, description: QUERY_DESCRIPTIONS.PAGINATION.SKIP })
   skip?: number;
 }
 
 @InputType('SortInput', { description: QUERY_DESCRIPTIONS.SORT.INPUT })
 export class SortInput {
-  @Field((type) => String, { description: QUERY_DESCRIPTIONS.SORT.FIELD })
+  @Field(() => String, { description: QUERY_DESCRIPTIONS.SORT.FIELD })
   field: string;
 
-  @Field((type) => SortOrderInput, { defaultValue: SortOrderInput.asc, description: QUERY_DESCRIPTIONS.SORT.ORDER })
+  @Field(() => SortOrderInput, { defaultValue: SortOrderInput.asc, description: QUERY_DESCRIPTIONS.SORT.ORDER })
   order: SortOrderInput;
 }
 
 @InputType('FilterInput', { description: QUERY_DESCRIPTIONS.FILTER.INPUT })
 export class FilterInput {
-  @Field((type) => String, { description: QUERY_DESCRIPTIONS.FILTER.FIELD })
+  @Field(() => String, { description: QUERY_DESCRIPTIONS.FILTER.FIELD })
   field: string;
 
-  @Field((type) => AnyType, { description: QUERY_DESCRIPTIONS.FILTER.VALUE })
+  @Field(() => AnyType, { description: QUERY_DESCRIPTIONS.FILTER.VALUE })
   value: string | number | boolean | Array<string | number | boolean>;
 
   @Field(() => FilterOperatorInput, {

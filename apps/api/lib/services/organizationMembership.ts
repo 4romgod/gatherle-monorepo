@@ -1,10 +1,9 @@
-import {
+import type {
   OrganizationMembership,
   CreateOrganizationMembershipInput,
   UpdateOrganizationMembershipInput,
-  NotificationType,
-  NotificationTargetType,
 } from '@ntlango/commons/types';
+import { NotificationType, NotificationTargetType } from '@ntlango/commons/types';
 import { OrganizationMembershipDAO, OrganizationDAO } from '@/mongodb/dao';
 import NotificationService from './notification';
 import { logger } from '@/utils/logger';

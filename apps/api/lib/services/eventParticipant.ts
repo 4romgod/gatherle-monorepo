@@ -1,12 +1,10 @@
-import {
+import type {
   EventParticipant,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
-  ParticipantStatus,
-  NotificationType,
-  NotificationTargetType,
   Event,
 } from '@ntlango/commons/types';
+import { ParticipantStatus, NotificationType, NotificationTargetType } from '@ntlango/commons/types';
 import { EventParticipantDAO, EventDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import NotificationService from './notification';

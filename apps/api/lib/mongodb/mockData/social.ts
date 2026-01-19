@@ -1,5 +1,6 @@
 import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@ntlango/commons/types/activity';
-import { FollowTargetType, FollowApprovalStatus } from '@ntlango/commons/types/follow';
+import type { FollowApprovalStatus } from '@ntlango/commons/types/follow';
+import { FollowTargetType } from '@ntlango/commons/types/follow';
 import { IntentVisibility, IntentSource, IntentStatus } from '@ntlango/commons/types/intent';
 
 export type FollowSeed = {

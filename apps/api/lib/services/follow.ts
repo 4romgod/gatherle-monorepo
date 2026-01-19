@@ -1,9 +1,8 @@
+import type { Follow, CreateFollowInput } from '@ntlango/commons/types';
 import {
-  Follow,
   FollowTargetType,
   FollowApprovalStatus,
   FollowPolicy,
-  CreateFollowInput,
   NotificationType,
   NotificationTargetType,
 } from '@ntlango/commons/types';

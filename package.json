@@ -12,7 +12,7 @@
     "dev:api": "npm --workspace @ntlango/api run dev",
     "dev:web": "npm --workspace @ntlango/webapp run dev",
     "lint": "npm --workspaces --if-present run lint",
-    "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\"",
+    "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\" && npm --workspaces --if-present run lint:fix",
     "typecheck": "npm --workspaces --if-present run typecheck",
     "test": "npm --workspaces --if-present run test"
   },

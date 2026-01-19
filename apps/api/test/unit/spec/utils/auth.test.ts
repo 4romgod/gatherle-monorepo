@@ -106,7 +106,7 @@ describe('Auth Utilities', () => {
     });
 
     it('should handle various organizer ID formats - ObjectId', async () => {
-      const mockObjectId = new Types.ObjectId('507f1f77bcf86cd799439011');
+      const _mockObjectId = new Types.ObjectId('507f1f77bcf86cd799439011');
       (EventDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: '507f1f77bcf86cd799439011', role: 'Host' }],
       });

@@ -1,8 +1,7 @@
 import { GraphQLError } from 'graphql';
-import { Types } from 'mongoose';
 import type { Intent as IntentEntity, UpsertIntentInput } from '@ntlango/commons/types';
 import { Intent as IntentModel } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
+import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';
 
 class IntentDAO {
