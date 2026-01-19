@@ -5,8 +5,7 @@
 
 // Mock @/lib/utils before imports to avoid ESM issues with jose
 jest.mock('@/lib/utils', () => ({
-  getAuthHeader: (token: string | undefined | null) =>
-    token ? { Authorization: `Bearer ${token}` } : {},
+  getAuthHeader: (token: string | undefined | null) => (token ? { Authorization: `Bearer ${token}` } : {}),
 }));
 
 import { renderHook, act } from '@testing-library/react';
@@ -58,7 +57,7 @@ jest.mock('next-auth/react', () => ({
 
 // Mock @apollo/client
 jest.mock('@apollo/client', () => ({
-  useMutation: jest.fn((document) => {
+  useMutation: jest.fn(document => {
     // Determine which mutation based on document reference
     const docName = document?.definitions?.[0]?.name?.value || '';
     if (docName.includes('Cancel')) {
@@ -95,7 +94,7 @@ describe('useRsvp Hook', () => {
 
     it('should return isAuthenticated as false when user is not logged in', () => {
       (useSession as jest.Mock).mockReturnValueOnce({ data: null, status: 'unauthenticated' });
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.isAuthenticated).toBe(false);
     });
@@ -105,7 +104,7 @@ describe('useRsvp Hook', () => {
         data: { user: { token: mockToken }, expires: '2026-12-31' },
         status: 'authenticated',
       });
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.isAuthenticated).toBe(false);
     });
@@ -158,12 +157,10 @@ describe('useRsvp Hook', () => {
 
     it('should throw error when user is not logged in', async () => {
       (useSession as jest.Mock).mockReturnValueOnce({ data: null, status: 'unauthenticated' });
-      
+
       const { result } = renderHook(() => useRsvp());
 
-      await expect(result.current.rsvpToEvent(mockEventId)).rejects.toThrow(
-        'User must be logged in to RSVP'
-      );
+      await expect(result.current.rsvpToEvent(mockEventId)).rejects.toThrow('User must be logged in to RSVP');
       expect(mockRsvpMutate).not.toHaveBeenCalled();
     });
 
@@ -273,12 +270,10 @@ describe('useRsvp Hook', () => {
 
     it('should throw error when user is not logged in', async () => {
       (useSession as jest.Mock).mockReturnValueOnce({ data: null, status: 'unauthenticated' });
-      
+
       const { result } = renderHook(() => useRsvp());
 
-      await expect(result.current.cancelRsvp(mockEventId)).rejects.toThrow(
-        'User must be logged in to cancel RSVP'
-      );
+      await expect(result.current.cancelRsvp(mockEventId)).rejects.toThrow('User must be logged in to cancel RSVP');
       expect(mockCancelMutate).not.toHaveBeenCalled();
     });
 
@@ -306,7 +301,7 @@ describe('useRsvp Hook', () => {
   describe('loading states', () => {
     it('should return rsvpLoading from mutation', () => {
       (useMutation as jest.Mock).mockReturnValue([mockRsvpMutate, { loading: true, error: null }]);
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.rsvpLoading).toBe(true);
     });
@@ -317,7 +312,7 @@ describe('useRsvp Hook', () => {
         .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
         // Second call for Cancel mutation
         .mockReturnValueOnce([mockCancelMutate, { loading: true, error: null }]);
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.cancelLoading).toBe(true);
     });
@@ -326,7 +321,7 @@ describe('useRsvp Hook', () => {
       (useMutation as jest.Mock)
         .mockReturnValueOnce([mockRsvpMutate, { loading: true, error: null }])
         .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }]);
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.isLoading).toBe(true);
     });
@@ -335,7 +330,7 @@ describe('useRsvp Hook', () => {
       (useMutation as jest.Mock)
         .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
         .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }]);
-      
+
       const { result } = renderHook(() => useRsvp());
       expect(result.current.isLoading).toBe(false);
     });
@@ -354,13 +349,13 @@ describe('useRsvp Hook', () => {
               Authorization: 'Bearer ' + mockToken,
             },
           },
-        })
+        }),
       );
     });
 
     it('should configure mutations without Authorization header when not authenticated', () => {
       (useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' });
-      
+
       renderHook(() => useRsvp());
 
       // Check that useMutation was called with empty headers
@@ -370,7 +365,7 @@ describe('useRsvp Hook', () => {
           context: {
             headers: {},
           },
-        })
+        }),
       );
     });
   });
@@ -403,7 +398,7 @@ describe('useMyRsvpStatus Hook', () => {
             Authorization: 'Bearer ' + mockToken,
           },
         },
-      })
+      }),
     );
     expect(result.current.rsvp).toEqual(mockRsvpResponse);
     expect(result.current.status).toBe(ParticipantStatus.Going);
@@ -418,7 +413,7 @@ describe('useMyRsvpStatus Hook', () => {
       expect.anything(),
       expect.objectContaining({
         skip: true,
-      })
+      }),
     );
   });
 
@@ -429,7 +424,7 @@ describe('useMyRsvpStatus Hook', () => {
       expect.anything(),
       expect.objectContaining({
         skip: true,
-      })
+      }),
     );
   });
 
@@ -521,7 +516,7 @@ describe('useMyRsvps Hook', () => {
             Authorization: 'Bearer ' + mockToken,
           },
         },
-      })
+      }),
     );
     expect(result.current.rsvps).toEqual(mockRsvps);
   });
@@ -540,7 +535,7 @@ describe('useMyRsvps Hook', () => {
       expect.anything(),
       expect.objectContaining({
         variables: { includeCancelled: true },
-      })
+      }),
     );
   });
 
@@ -553,7 +548,7 @@ describe('useMyRsvps Hook', () => {
       expect.anything(),
       expect.objectContaining({
         skip: true,
-      })
+      }),
     );
   });
 
@@ -667,7 +662,7 @@ describe('useEventParticipants Hook', () => {
             Authorization: 'Bearer ' + mockToken,
           },
         },
-      })
+      }),
     );
     expect(result.current.participants).toEqual(mockParticipants);
   });
@@ -679,7 +674,7 @@ describe('useEventParticipants Hook', () => {
       expect.anything(),
       expect.objectContaining({
         skip: true,
-      })
+      }),
     );
   });
 
@@ -755,7 +750,7 @@ describe('useEventParticipants Hook', () => {
         context: {
           headers: {},
         },
-      })
+      }),
     );
     expect(result.current.participants).toEqual(mockParticipants);
   });

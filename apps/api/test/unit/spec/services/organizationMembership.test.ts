@@ -35,6 +35,9 @@ jest.mock('@/mongodb/dao', () => ({
         delete: jest.fn(),
         readMembershipById: jest.fn(),
     },
+    OrganizationDAO: {
+        readOrganizationById: jest.fn(),
+    },
 }));
 
 jest.mock('@/services/notification', () => ({
@@ -51,9 +54,9 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import {OrganizationMembershipService} from '@/services';
-import {OrganizationMembershipDAO} from '@/mongodb/dao';
+import {OrganizationMembershipDAO, OrganizationDAO} from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
-import type {OrganizationMembership} from '@ntlango/commons/types';
+import type {OrganizationMembership, Organization} from '@ntlango/commons/types';
 import {OrganizationRole, NotificationType, NotificationTargetType} from '@ntlango/commons/types';
 
 describe('OrganizationMembershipService', () => {
@@ -64,6 +67,17 @@ describe('OrganizationMembershipService', () => {
         role: OrganizationRole.Member,
         joinedAt: new Date('2024-01-01T00:00:00Z'),
     };
+
+    const mockOrganization: Partial<Organization> = {
+        orgId: 'org-1',
+        name: 'Test Org',
+        slug: 'test-org',
+    };
+
+    beforeEach(() => {
+        // Mock OrganizationDAO for notification URL generation
+        (OrganizationDAO.readOrganizationById as jest.Mock).mockResolvedValue(mockOrganization);
+    });
 
     afterEach(() => {
         jest.clearAllMocks();
@@ -93,7 +107,7 @@ describe('OrganizationMembershipService', () => {
                 recipientUserId: 'user-1',
                 actorUserId: 'admin-user',
                 targetType: NotificationTargetType.Organization,
-                targetId: 'org-1',
+                targetSlug: 'test-org',
             });
         });
 
@@ -175,7 +189,7 @@ describe('OrganizationMembershipService', () => {
                 recipientUserId: 'user-1',
                 actorUserId: 'admin-user',
                 targetType: NotificationTargetType.Organization,
-                targetId: 'org-1',
+                targetSlug: 'test-org',
             });
         });
 

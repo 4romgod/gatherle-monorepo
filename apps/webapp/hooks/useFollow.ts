@@ -125,7 +125,12 @@ export function useFollowRequests(targetType: FollowTargetType) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading: queryLoading, error, refetch } = useQuery(GetFollowRequestsDocument, {
+  const {
+    data,
+    loading: queryLoading,
+    error,
+    refetch,
+  } = useQuery(GetFollowRequestsDocument, {
     variables: { targetType },
     skip: !token,
     context: {

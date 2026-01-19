@@ -27,7 +27,7 @@ describe('Auth Utilities - Behavioral Tests', () => {
 
   describe('isAuthenticated', () => {
     it('should return false for undefined token', async () => {
-      mockIsAuthenticated.mockImplementation(async (token) => {
+      mockIsAuthenticated.mockImplementation(async token => {
         if (!token) return false;
         return true;
       });
@@ -38,7 +38,7 @@ describe('Auth Utilities - Behavioral Tests', () => {
     });
 
     it('should return false for empty string token', async () => {
-      mockIsAuthenticated.mockImplementation(async (token) => {
+      mockIsAuthenticated.mockImplementation(async token => {
         if (!token) return false;
         return true;
       });
@@ -78,7 +78,7 @@ describe('Auth Utilities - Behavioral Tests', () => {
 
   describe('verifyAndDecodeToken', () => {
     it('should return null for undefined token', async () => {
-      mockVerifyAndDecodeToken.mockImplementation(async (token) => {
+      mockVerifyAndDecodeToken.mockImplementation(async token => {
         if (!token) return null;
         return { userId: '123' };
       });
@@ -89,7 +89,7 @@ describe('Auth Utilities - Behavioral Tests', () => {
     });
 
     it('should return null for empty string token', async () => {
-      mockVerifyAndDecodeToken.mockImplementation(async (token) => {
+      mockVerifyAndDecodeToken.mockImplementation(async token => {
         if (!token) return null;
         return { userId: '123' };
       });

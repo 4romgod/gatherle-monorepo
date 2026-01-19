@@ -61,10 +61,12 @@ describe('safeJsonParse Utility', () => {
     it('should parse nested objects', () => {
       const schema = z.object({
         city: z.string(),
-        coordinates: z.object({
-          latitude: z.number(),
-          longitude: z.number(),
-        }).optional(),
+        coordinates: z
+          .object({
+            latitude: z.number(),
+            longitude: z.number(),
+          })
+          .optional(),
       });
       const json = '{"city":"New York","coordinates":{"latitude":40.7128,"longitude":-74.006}}';
       const result = safeJsonParse(json, schema, 'location');

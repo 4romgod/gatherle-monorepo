@@ -10,11 +10,7 @@ import { logger } from '@/lib/utils/logger';
  * @param fieldName - The name of the field (for logging purposes)
  * @returns The validated and parsed data, or undefined if parsing/validation fails
  */
-export function safeJsonParse<T>(
-  jsonStr: string | undefined,
-  schema: z.ZodType<T>,
-  fieldName: string,
-): T | undefined {
+export function safeJsonParse<T>(jsonStr: string | undefined, schema: z.ZodType<T>, fieldName: string): T | undefined {
   if (!jsonStr) return undefined;
   try {
     const parsed = JSON.parse(jsonStr);

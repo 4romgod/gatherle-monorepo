@@ -87,11 +87,7 @@ describe('Logger Utilities', () => {
       initLogger(LogLevel.DEBUG);
       const extraData = { userId: '123' };
       logger.debug('Debug with data', extraData);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.any(String),
-        'Debug with data',
-        extraData,
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(expect.any(String), 'Debug with data', extraData);
     });
   });
 

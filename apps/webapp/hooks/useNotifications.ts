@@ -132,7 +132,7 @@ export function useNotificationActions() {
         variables: { notificationId },
       });
     },
-    [markReadMutation]
+    [markReadMutation],
   );
 
   const markAllAsRead = useCallback(async () => {
@@ -145,7 +145,7 @@ export function useNotificationActions() {
         variables: { notificationId },
       });
     },
-    [deleteMutation]
+    [deleteMutation],
   );
 
   return {

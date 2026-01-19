@@ -62,7 +62,7 @@ describe('useEventFilters Hook', () => {
     it('should throw error when used outside EventFilterProvider', () => {
       // Suppress console.error for this test
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
-      
+
       // Set context to undefined to simulate missing provider
       mockContext = undefined;
       const { useContext } = require('react');

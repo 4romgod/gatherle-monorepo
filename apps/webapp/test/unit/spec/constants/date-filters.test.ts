@@ -61,7 +61,7 @@ describe('Date Filter Constants', () => {
       const filterOptions = Object.values(DATE_FILTER_OPTIONS);
       const labelKeys = Object.keys(DATE_FILTER_LABELS);
 
-      filterOptions.forEach((option) => {
+      filterOptions.forEach(option => {
         expect(labelKeys).toContain(option);
         expect(DATE_FILTER_LABELS[option as keyof typeof DATE_FILTER_LABELS]).toBeDefined();
       });
@@ -70,7 +70,7 @@ describe('Date Filter Constants', () => {
     it('should have human-readable labels (capitalized, space-separated)', () => {
       const labels = Object.values(DATE_FILTER_LABELS);
 
-      labels.forEach((label) => {
+      labels.forEach(label => {
         // Each label should start with an uppercase letter
         expect(label[0]).toBe(label[0].toUpperCase());
         // Labels should not be all uppercase (should be readable)

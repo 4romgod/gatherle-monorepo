@@ -1,12 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@apollo/client';
-import {
-  FollowDocument,
-  UnfollowDocument,
-  GetSavedEventsDocument,
-  IsEventSavedDocument,
-} from '@/data/graphql/query';
+import { FollowDocument, UnfollowDocument, GetSavedEventsDocument, IsEventSavedDocument } from '@/data/graphql/query';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';

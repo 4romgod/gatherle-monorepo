@@ -14,17 +14,17 @@ export interface ApolloErrorLike {
 
 /**
  * Extracts a user-friendly error message from an Apollo error.
- * 
+ *
  * Checks in order:
  * 1. GraphQL errors (server-side validation/business logic errors)
  * 2. Network errors with embedded error messages
  * 3. General error message
  * 4. Falls back to the provided default message
- * 
+ *
  * @param error - The caught error (unknown type for safety)
  * @param defaultMessage - Fallback message if no specific error can be extracted
  * @returns A user-friendly error message string
- * 
+ *
  * @example
  * ```ts
  * try {
@@ -37,7 +37,7 @@ export interface ApolloErrorLike {
  */
 export function extractApolloErrorMessage(
   error: unknown,
-  defaultMessage = 'An unexpected error occurred. Please try again.'
+  defaultMessage = 'An unexpected error occurred. Please try again.',
 ): string {
   const apolloError = error as ApolloErrorLike;
 
@@ -67,16 +67,16 @@ export function extractApolloErrorMessage(
 
 /**
  * Checks if an Apollo error is an authentication error.
- * 
+ *
  * @param error - The caught error
  * @returns true if the error indicates an authentication failure
  */
 export function isApolloAuthError(error: unknown): boolean {
   const apolloError = error as ApolloErrorLike;
-  
+
   return (
     apolloError?.graphQLErrors?.some(
-      (e) => e.extensions?.code === 'UNAUTHENTICATED' || e.message?.includes('logged in')
+      e => e.extensions?.code === 'UNAUTHENTICATED' || e.message?.includes('logged in'),
     ) ?? false
   );
 }

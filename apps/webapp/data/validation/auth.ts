@@ -49,12 +49,16 @@ export const UpdateUserInputSchema = z.object({
   // Timezone
   primaryTimezone: z.string().optional(),
   // Preferences (communication, notifications)
-  preferences: z.object({
-    communicationPrefs: z.object({
-      emailEnabled: z.boolean(),
-      pushEnabled: z.boolean(),
-    }).optional(),
-  }).optional(),
+  preferences: z
+    .object({
+      communicationPrefs: z
+        .object({
+          emailEnabled: z.boolean(),
+          pushEnabled: z.boolean(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export const LoginUserInputSchema = z.object({

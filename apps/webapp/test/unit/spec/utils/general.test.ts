@@ -6,8 +6,7 @@ import { UserWithToken, User } from '@/data/graphql/types/graphql';
  * Uses Record<string, unknown> to bypass strict type checking for test fixtures.
  */
 const createTestUser = (fields: Record<string, unknown>): User => fields as User;
-const createTestUserWithToken = (fields: Record<string, unknown>): UserWithToken =>
-  fields as UserWithToken;
+const createTestUserWithToken = (fields: Record<string, unknown>): UserWithToken => fields as UserWithToken;
 
 describe('General Utilities', () => {
   describe('getAvatarSrc', () => {

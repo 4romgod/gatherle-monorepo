@@ -15,14 +15,15 @@ const config: Config = {
     '^@ntlango/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
   },
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.json',
-    }],
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.json',
+      },
+    ],
   },
   // Transform ESM modules from node_modules
-  transformIgnorePatterns: [
-    '/node_modules/(?!(jose)/)',
-  ],
+  transformIgnorePatterns: ['/node_modules/(?!(jose)/)'],
   setupFilesAfterEnv: ['<rootDir>/test/unit/setup.ts'],
   globalTeardown: '<rootDir>/test/unit/teardown.ts',
   collectCoverage: true,

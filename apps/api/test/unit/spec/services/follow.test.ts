@@ -28,24 +28,7 @@ jest.mock('@/constants', () => ({
     },
 }));
 
-jest.mock('@/utils', () => {
-    const {GraphQLError} = require('graphql');
-    return {
-        CustomError: jest.fn((message: string, errorType: any) => {
-            return new GraphQLError(message, {
-                extensions: {code: errorType?.errorCode, http: {status: errorType?.errorStatus}},
-            });
-        }),
-        ErrorTypes: {
-            BAD_USER_INPUT: {errorCode: 'BAD_USER_INPUT', errorStatus: 400},
-            BAD_REQUEST: {errorCode: 'BAD_REQUEST', errorStatus: 400},
-            CONFLICT: {errorCode: 'CONFLICT', errorStatus: 409},
-            NOT_FOUND: {errorCode: 'NOT_FOUND', errorStatus: 404},
-            UNAUTHENTICATED: {errorCode: 'UNAUTHENTICATED', errorStatus: 401},
-            UNAUTHORIZED: {errorCode: 'UNAUTHORIZED', errorStatus: 403},
-        },
-    };
-});
+jest.mock('@/utils');
 
 jest.mock('@/mongodb/dao', () => ({
     FollowDAO: {
@@ -81,9 +64,28 @@ jest.mock('@/utils/logger', () => ({
 import {FollowService} from '@/services';
 import {FollowDAO, UserDAO, OrganizationDAO, EventDAO} from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
+import {CustomError, ErrorTypes} from '@/utils';
 import type {Follow, User, Organization, Event} from '@ntlango/commons/types';
-import {FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType, NotificationTargetType} from '@ntlango/commons/types';
+import {FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType} from '@ntlango/commons/types';
 import {GraphQLError} from 'graphql';
+
+// Set up mock implementations after imports so we can use GraphQLError
+const mockCustomError = CustomError as jest.MockedFunction<typeof CustomError>;
+mockCustomError.mockImplementation((message: string, errorType: {errorCode?: string; errorStatus?: number}) => {
+    return new GraphQLError(message, {
+        extensions: {code: errorType?.errorCode, http: {status: errorType?.errorStatus}},
+    });
+});
+
+const mockErrorTypes = ErrorTypes as jest.Mocked<typeof ErrorTypes>;
+Object.assign(mockErrorTypes, {
+    BAD_USER_INPUT: {errorCode: 'BAD_USER_INPUT', errorStatus: 400},
+    BAD_REQUEST: {errorCode: 'BAD_REQUEST', errorStatus: 400},
+    CONFLICT: {errorCode: 'CONFLICT', errorStatus: 409},
+    NOT_FOUND: {errorCode: 'NOT_FOUND', errorStatus: 404},
+    UNAUTHENTICATED: {errorCode: 'UNAUTHENTICATED', errorStatus: 401},
+    UNAUTHORIZED: {errorCode: 'UNAUTHORIZED', errorStatus: 403},
+});
 
 describe('FollowService', () => {
     const mockFollow: Follow = {

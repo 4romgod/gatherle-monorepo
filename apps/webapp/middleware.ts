@@ -11,7 +11,7 @@ export default auth(async req => {
   // Check if there's a valid auth session with a valid token
   const token = req.auth?.user?.token;
   const isLoggedIn = Boolean(req.auth?.user) && Boolean(token) && (await isAuthenticated(token));
-  
+
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname) || isPublicDynamicRoute(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);

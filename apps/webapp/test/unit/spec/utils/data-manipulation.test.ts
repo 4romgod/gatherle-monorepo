@@ -76,9 +76,9 @@ describe('groupEventsByCategory', () => {
     const festivalCategory = createMockCategory('Festival');
 
     const events = [
-      createMockEvent({ 
-        eventId: '1', 
-        eventCategories: [musicCategory, festivalCategory] 
+      createMockEvent({
+        eventId: '1',
+        eventCategories: [musicCategory, festivalCategory],
       }),
     ];
 
@@ -109,9 +109,7 @@ describe('groupEventsByCategory', () => {
 
   it('should fallback to "All events" when no grouping occurred but events exist', () => {
     // Edge case: events with null/undefined categories that don't match the forEach logic
-    const events = [
-      createMockEvent({ eventId: '1', eventCategories: null as any }),
-    ];
+    const events = [createMockEvent({ eventId: '1', eventCategories: null as any })];
 
     const result = groupEventsByCategory(events);
 

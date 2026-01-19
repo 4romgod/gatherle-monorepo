@@ -5,7 +5,6 @@ import {
     ParticipantStatus,
     NotificationType,
     NotificationTargetType,
-    EventOrganizerRole,
     Event,
 } from '@ntlango/commons/types';
 import {EventParticipantDAO, EventDAO} from '@/mongodb/dao';

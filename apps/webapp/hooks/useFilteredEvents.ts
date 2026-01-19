@@ -69,7 +69,7 @@ export const buildLocationFilter = (location: LocationFilter): LocationFilterInp
   if (!hasLocation) {
     return undefined;
   }
-  
+
   return {
     city: location.city,
     state: location.state,
@@ -151,6 +151,10 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
     events,
     loading,
     error,
-    hasFilterInputs: filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate || !!locationFilter,
+    hasFilterInputs:
+      filterInputs.length > 0 ||
+      !!dateFilterParams.dateFilterOption ||
+      !!dateFilterParams.customDate ||
+      !!locationFilter,
   };
 };

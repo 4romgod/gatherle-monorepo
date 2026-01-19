@@ -11,14 +11,12 @@ import { logger } from './lib/utils/logger';
 const schemaFilePath = path.resolve(__dirname, '../../packages/commons/schema.graphql');
 const schemaFileExists = fs.existsSync(schemaFilePath);
 
-const schemaSource = schemaFileExists
-  ? schemaFilePath
-  : process.env.NEXT_PUBLIC_GRAPHQL_URL;
+const schemaSource = schemaFileExists ? schemaFilePath : process.env.NEXT_PUBLIC_GRAPHQL_URL;
 
 if (!schemaSource) {
   throw new Error(
     'No schema source available. Either run `npm run emit-schema -w @ntlango/api` to generate the schema file, ' +
-    'or set NEXT_PUBLIC_GRAPHQL_URL to a running GraphQL server.'
+      'or set NEXT_PUBLIC_GRAPHQL_URL to a running GraphQL server.',
   );
 }
 

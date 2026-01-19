@@ -1,7 +1,13 @@
 'use server';
 
 import { z } from 'zod';
-import { UpdateUserInput, UpdateUserDocument, Gender, FollowPolicy, SocialVisibility } from '@/data/graphql/types/graphql';
+import {
+  UpdateUserInput,
+  UpdateUserDocument,
+  Gender,
+  FollowPolicy,
+  SocialVisibility,
+} from '@/data/graphql/types/graphql';
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
@@ -12,29 +18,37 @@ import { getAuthHeader } from '@/lib/utils/auth';
 import type { ActionState } from '@/data/actions/types';
 
 // Zod schemas for validating JSON-parsed fields (matches UserLocationInput GraphQL type)
-const CoordinatesSchema = z.object({
-  latitude: z.number(),
-  longitude: z.number(),
-}).optional();
+const CoordinatesSchema = z
+  .object({
+    latitude: z.number(),
+    longitude: z.number(),
+  })
+  .optional();
 
-const LocationSchema = z.object({
-  city: z.string(),
-  state: z.string().optional(),
-  country: z.string(),
-  coordinates: CoordinatesSchema,
-}).optional();
+const LocationSchema = z
+  .object({
+    city: z.string(),
+    state: z.string().optional(),
+    country: z.string(),
+    coordinates: CoordinatesSchema,
+  })
+  .optional();
 
 const InterestsSchema = z.array(z.string()).optional();
 
 // Preferences schema - matches the structure used in EventSettingsPage
-const CommunicationPrefsSchema = z.object({
-  emailEnabled: z.boolean(),
-  pushEnabled: z.boolean(),
-}).optional();
+const CommunicationPrefsSchema = z
+  .object({
+    emailEnabled: z.boolean(),
+    pushEnabled: z.boolean(),
+  })
+  .optional();
 
-const PreferencesSchema = z.object({
-  communicationPrefs: CommunicationPrefsSchema,
-}).optional();
+const PreferencesSchema = z
+  .object({
+    communicationPrefs: CommunicationPrefsSchema,
+  })
+  .optional();
 
 export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
@@ -60,25 +74,29 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   const genderStr = formData.get('gender')?.toString();
   const gender = Object.values(Gender).includes(genderStr as Gender) ? (genderStr as Gender) : undefined;
   const interestsStr = formData.get('interests')?.toString();
-  
+
   // Safely parse JSON fields with validation
   const location = safeJsonParse(locationStr, LocationSchema, 'location');
   const interests = safeJsonParse(interestsStr, InterestsSchema, 'interests');
 
   // Parse privacy fields
   const followPolicyStr = formData.get('followPolicy')?.toString();
-  const followPolicy = Object.values(FollowPolicy).includes(followPolicyStr as FollowPolicy) 
-    ? (followPolicyStr as FollowPolicy) 
+  const followPolicy = Object.values(FollowPolicy).includes(followPolicyStr as FollowPolicy)
+    ? (followPolicyStr as FollowPolicy)
     : undefined;
-  
+
   const followersListVisibilityStr = formData.get('followersListVisibility')?.toString();
-  const followersListVisibility = Object.values(SocialVisibility).includes(followersListVisibilityStr as SocialVisibility) 
-    ? (followersListVisibilityStr as SocialVisibility) 
+  const followersListVisibility = Object.values(SocialVisibility).includes(
+    followersListVisibilityStr as SocialVisibility,
+  )
+    ? (followersListVisibilityStr as SocialVisibility)
     : undefined;
-  
+
   const followingListVisibilityStr = formData.get('followingListVisibility')?.toString();
-  const followingListVisibility = Object.values(SocialVisibility).includes(followingListVisibilityStr as SocialVisibility) 
-    ? (followingListVisibilityStr as SocialVisibility) 
+  const followingListVisibility = Object.values(SocialVisibility).includes(
+    followingListVisibilityStr as SocialVisibility,
+  )
+    ? (followingListVisibilityStr as SocialVisibility)
     : undefined;
 
   const defaultVisibilityStr = formData.get('defaultVisibility')?.toString();
@@ -89,7 +107,7 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   // Parse boolean fields (from hidden inputs, they come as strings)
   const shareRSVPStr = formData.get('shareRSVPByDefault')?.toString();
   const shareRSVPByDefault = shareRSVPStr !== undefined ? shareRSVPStr === 'true' : undefined;
-  
+
   const shareCheckinsStr = formData.get('shareCheckinsByDefault')?.toString();
   const shareCheckinsByDefault = shareCheckinsStr !== undefined ? shareCheckinsStr === 'true' : undefined;
 
