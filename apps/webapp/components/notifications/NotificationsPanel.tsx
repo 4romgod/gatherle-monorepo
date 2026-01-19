@@ -96,8 +96,17 @@ export default function NotificationsPage() {
   return (
     <Box sx={{ py: 6 }}>
       <Container maxWidth="md">
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h4" fontWeight={700}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'flex-start', md: 'center' },
+            justifyContent: { xs: 'flex-start', md: 'space-between' },
+            mb: 3,
+            gap: { xs: 1, md: 0 },
+          }}
+        >
+          <Typography variant="h4" fontWeight={700} sx={{ mb: { xs: 1, md: 0 } }}>
             Notifications
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
