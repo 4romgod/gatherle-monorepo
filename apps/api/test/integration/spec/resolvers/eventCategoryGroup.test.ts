@@ -110,7 +110,7 @@ describe('EventCategoryGroup Resolver', () => {
       expect(createdGroup.eventCategories).toHaveLength(categories.length);
 
       // Each item should be a full EventCategory object with all fields
-      createdGroup.eventCategories.forEach((category: any, index: number) => {
+      createdGroup.eventCategories.forEach((category: any) => {
         expect(category).toHaveProperty('eventCategoryId');
         expect(category).toHaveProperty('name');
         expect(category).toHaveProperty('slug');

@@ -1,5 +1,5 @@
-import { RsvpInput, UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@ntlango/commons/types';
-import { PipelineStage } from 'mongoose';
+import type { RsvpInput, UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@ntlango/commons/types';
+import type { PipelineStage } from 'mongoose';
 import { EventDAO, EventParticipantDAO } from '@/mongodb/dao';
 import { Event as EventModel } from '@/mongodb/models';
 import { SortOrderInput } from '@ntlango/commons/types';

@@ -1,4 +1,5 @@
-import { User, FollowTargetType } from '@ntlango/commons/types';
+import type { User } from '@ntlango/commons/types';
+import { FollowTargetType } from '@ntlango/commons/types';
 import { UserDAO, FollowDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 

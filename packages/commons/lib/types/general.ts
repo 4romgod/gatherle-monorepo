@@ -1,4 +1,4 @@
-import { typeToFlattenedError } from 'zod';
+import type { typeToFlattenedError } from 'zod';
 
 export type ZodFieldErrors<T, U = string> = typeToFlattenedError<T, U>['fieldErrors'];
 

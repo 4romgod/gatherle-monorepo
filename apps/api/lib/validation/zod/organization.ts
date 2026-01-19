@@ -72,7 +72,7 @@ export const UpdateOrganizationInputSchema = z
   .merge(updatableOrganizationFields)
   .refine(
     (data) => {
-      const { orgId, ...rest } = data;
+      const { orgId: _orgId, ...rest } = data;
       return Object.values(rest).some((value) => typeof value !== 'undefined');
     },
     { message: 'At least one field must be updated' },

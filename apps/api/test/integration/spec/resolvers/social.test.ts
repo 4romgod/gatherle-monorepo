@@ -4,8 +4,8 @@ import { startIntegrationServer, stopIntegrationServer } from '@/test/integratio
 import { EventCategoryDAO, EventDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';
 import { Activity, Follow, Intent } from '@/mongodb/models';
 import { usersMockData, eventsMockData } from '@/mongodb/mockData';
+import type { CreateUserInput } from '@ntlango/commons/types';
 import {
-  CreateUserInput,
   SocialVisibility,
   FollowTargetType,
   FollowPolicy,

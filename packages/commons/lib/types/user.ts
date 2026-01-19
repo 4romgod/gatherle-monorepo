@@ -1,12 +1,13 @@
 import 'reflect-metadata';
-import z from 'zod';
+import type z from 'zod';
 import GraphQLJSON from 'graphql-type-json';
 import { Authorized, Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
-import { modelOptions, prop, Ref, Severity } from '@typegoose/typegoose';
+import type { Ref } from '@typegoose/typegoose';
+import { modelOptions, prop, Severity } from '@typegoose/typegoose';
 
 import { EVENT_DESCRIPTIONS, USER_DESCRIPTIONS } from '../constants';
 import { EventCategory } from './eventCategory';
-import {
+import type {
   CreateUserInputSchema,
   ForgotPasswordInputTypeSchema,
   LoginUserInputSchema,
@@ -149,15 +150,15 @@ export class UserLocationInput {
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
 export class User {
   @prop({ required: true, unique: true, index: true, type: () => String })
-  @Field((type) => ID, { description: USER_DESCRIPTIONS.ID })
+  @Field(() => ID, { description: USER_DESCRIPTIONS.ID })
   userId: string;
 
   @prop({ required: true, unique: true, index: true, lowercase: true, type: () => String })
-  @Field((type) => String, { description: USER_DESCRIPTIONS.EMAIL })
+  @Field(() => String, { description: USER_DESCRIPTIONS.EMAIL })
   email: string;
 
   @prop({ required: true, unique: true, index: true, type: () => String })
-  @Field((type) => String, { description: USER_DESCRIPTIONS.USERNAME })
+  @Field(() => String, { description: USER_DESCRIPTIONS.USERNAME })
   username: string;
 
   @prop({ type: () => UserLocation })
@@ -165,35 +166,35 @@ export class User {
   location?: UserLocation;
 
   @prop({ required: true, type: () => String })
-  @Field((type) => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
+  @Field(() => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
   birthdate: string;
 
   @prop({ required: true, type: () => String })
-  @Field((type) => String, { description: USER_DESCRIPTIONS.GIVEN_NAME })
+  @Field(() => String, { description: USER_DESCRIPTIONS.GIVEN_NAME })
   given_name: string;
 
   @prop({ required: true, type: () => String })
-  @Field((type) => String, { description: USER_DESCRIPTIONS.FAMILY_NAME })
+  @Field(() => String, { description: USER_DESCRIPTIONS.FAMILY_NAME })
   family_name: string;
 
   @prop({ enum: Gender, type: () => String })
-  @Field((type) => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
+  @Field(() => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
   gender?: Gender;
 
   @prop({ type: () => String })
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
   phone_number?: string;
 
   @prop({ type: () => String })
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
   profile_picture?: string;
 
   @prop({ type: () => String })
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
   bio?: string;
 
   @prop({ enum: UserRole, default: UserRole.User, required: true, type: () => String })
-  @Field((type) => UserRole, { description: USER_DESCRIPTIONS.USER_ROLE })
+  @Field(() => UserRole, { description: USER_DESCRIPTIONS.USER_ROLE })
   userRole: UserRole;
 
   @prop({ type: () => [String], enum: UserRole, default: [UserRole.User] })
@@ -262,16 +263,16 @@ export class User {
 
 @ObjectType('UserWithToken', { description: USER_DESCRIPTIONS.WITH_TOKEN })
 export class UserWithToken extends User {
-  @Field((type) => String, { description: USER_DESCRIPTIONS.TOKEN })
+  @Field(() => String, { description: USER_DESCRIPTIONS.TOKEN })
   token: string;
 }
 
 @InputType('CreateUserInput', { description: USER_DESCRIPTIONS.CREATE_INPUT })
 export class CreateUserInput {
-  @Field((type) => String, { description: USER_DESCRIPTIONS.EMAIL })
+  @Field(() => String, { description: USER_DESCRIPTIONS.EMAIL })
   email: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.USERNAME })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.USERNAME })
   username?: string;
 
   @Field(() => UserLocationInput, {
@@ -280,28 +281,28 @@ export class CreateUserInput {
   })
   location?: UserLocationInput;
 
-  @Field((type) => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
+  @Field(() => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
   birthdate: string;
 
-  @Field((type) => String, { description: USER_DESCRIPTIONS.GIVEN_NAME })
+  @Field(() => String, { description: USER_DESCRIPTIONS.GIVEN_NAME })
   given_name: string;
 
-  @Field((type) => String, { description: USER_DESCRIPTIONS.FAMILY_NAME })
+  @Field(() => String, { description: USER_DESCRIPTIONS.FAMILY_NAME })
   family_name: string;
 
-  @Field((type) => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
+  @Field(() => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
   gender?: Gender;
 
-  @Field((type) => String, { description: USER_DESCRIPTIONS.PASSWORD })
+  @Field(() => String, { description: USER_DESCRIPTIONS.PASSWORD })
   password: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
   phone_number?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
   profile_picture?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
   bio?: string;
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -352,13 +353,13 @@ export class CreateUserInput {
 
 @InputType('UpdateUserInput', { description: USER_DESCRIPTIONS.UPDATE_INPUT })
 export class UpdateUserInput {
-  @Field((type) => ID, { description: USER_DESCRIPTIONS.ID })
+  @Field(() => ID, { description: USER_DESCRIPTIONS.ID })
   userId: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.EMAIL })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.EMAIL })
   email?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.USERNAME })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.USERNAME })
   username?: string;
 
   @Field(() => UserLocationInput, {
@@ -367,32 +368,32 @@ export class UpdateUserInput {
   })
   location?: UserLocationInput;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.BIRTHDATE })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIRTHDATE })
   birthdate?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.GIVEN_NAME })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.GIVEN_NAME })
   given_name?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.FAMILY_NAME })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.FAMILY_NAME })
   family_name?: string;
 
-  @Field((type) => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
+  @Field(() => Gender, { nullable: true, description: USER_DESCRIPTIONS.GENDER })
   gender?: Gender;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PASSWORD })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PASSWORD })
   password?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PHONE_NUMBER })
   phone_number?: string;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.PROFILE_PICTURE })
   profile_picture?: string;
 
   @Authorized([UserRole.Admin])
   @Field(() => UserRole, { nullable: true, description: USER_DESCRIPTIONS.USER_ROLE })
   userRole?: UserRole;
 
-  @Field((type) => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
   bio?: string;
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -443,10 +444,10 @@ export class UpdateUserInput {
 
 @InputType('LoginUserInput', { description: USER_DESCRIPTIONS.LOGIN_INPUT })
 export class LoginUserInput {
-  @Field((type) => String, { description: USER_DESCRIPTIONS.EMAIL })
+  @Field(() => String, { description: USER_DESCRIPTIONS.EMAIL })
   email: string;
 
-  @Field((type) => String, { description: USER_DESCRIPTIONS.PASSWORD })
+  @Field(() => String, { description: USER_DESCRIPTIONS.PASSWORD })
   password: string;
 }
 

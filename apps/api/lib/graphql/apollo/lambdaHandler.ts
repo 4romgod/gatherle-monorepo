@@ -11,7 +11,7 @@ import {
   createOrganizationLoader,
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
-import { User } from '@ntlango/commons';
+import type { User } from '@ntlango/commons';
 
 // TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
 const CORS_HEADERS = {

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, Int } from 'type-graphql';
+import type { User } from '@ntlango/commons/types';
 import {
   CreateEventInput,
   Event,
@@ -8,7 +9,6 @@ import {
   EventsQueryOptionsInput,
   EventCategory,
   EventOrganizer,
-  User,
   EventParticipant,
   ParticipantStatus,
 } from '@ntlango/commons/types';

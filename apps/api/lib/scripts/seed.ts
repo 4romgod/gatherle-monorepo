@@ -205,7 +205,7 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
         continue;
       }
 
-      const { orgIndex, ...venueFields } = venueSeed;
+      const { orgIndex: _orgIndex, ...venueFields } = venueSeed;
       const venueInput: CreateVenueInput = {
         ...venueFields,
         orgId: organization.orgId,
@@ -292,7 +292,7 @@ async function seedEvents(
           ? event.eventCategories
           : getRandomUniqueItems(eventCategoryIds, 5);
 
-      const { orgIndex, venueIndex, ...eventBase } = event;
+      const { orgIndex: _orgIndex, venueIndex: _venueIndex, ...eventBase } = event;
       const eventInput: CreateEventInput = {
         ...eventBase,
         organizers: organizerIds.map((userId, index) => ({

@@ -1,6 +1,6 @@
 import { createEventPipelineStages, createLocationMatchStage } from '@/utils';
-import { PipelineStage } from 'mongoose';
-import { FilterInput, LocationFilterInput } from '@ntlango/commons/types';
+import type { PipelineStage } from 'mongoose';
+import type { FilterInput, LocationFilterInput } from '@ntlango/commons/types';
 import { FilterOperatorInput } from '@ntlango/commons/types';
 
 describe('createEventPipelineStages', () => {

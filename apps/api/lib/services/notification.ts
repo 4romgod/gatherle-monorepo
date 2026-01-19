@@ -1,10 +1,5 @@
-import {
-  Notification,
-  NotificationType,
-  NotificationTargetType,
-  CreateNotificationInput,
-  ParticipantStatus,
-} from '@ntlango/commons/types';
+import type { Notification, NotificationTargetType, CreateNotificationInput } from '@ntlango/commons/types';
+import { NotificationType, ParticipantStatus } from '@ntlango/commons/types';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 

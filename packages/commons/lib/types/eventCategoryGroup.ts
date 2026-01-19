@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { ID, Field, InputType, ObjectType } from 'type-graphql';
-import { modelOptions, prop, Ref } from '@typegoose/typegoose';
+import type { Ref } from '@typegoose/typegoose';
+import { modelOptions, prop } from '@typegoose/typegoose';
 
 import { EVENT_CATEGORY_DESCRIPTIONS, EVENT_DESCRIPTIONS } from '../constants';
 import { EventCategory } from './eventCategory';
@@ -9,15 +10,15 @@ import { EventCategory } from './eventCategory';
 @ObjectType('EventCategoryGroup', { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.TYPE })
 export class EventCategoryGroup {
   @prop({ required: true, unique: true, index: true, type: () => String })
-  @Field((type) => ID, { description: EVENT_CATEGORY_DESCRIPTIONS.ID })
+  @Field(() => ID, { description: EVENT_CATEGORY_DESCRIPTIONS.ID })
   eventCategoryGroupId: string;
 
   @prop({ required: true, unique: true, type: () => String })
-  @Field((type) => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
+  @Field(() => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
   name: string;
 
   @prop({ required: true, unique: true, index: true, type: () => String })
-  @Field((type) => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
+  @Field(() => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
   slug: string;
 
   @prop({ type: () => [String], ref: () => EventCategory, required: true })
@@ -27,10 +28,10 @@ export class EventCategoryGroup {
 
 @InputType('UpdateEventCategoryGroupInput', { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.UPDATE_INPUT })
 export class UpdateEventCategoryGroupInput {
-  @Field((type) => ID, { description: EVENT_CATEGORY_DESCRIPTIONS.ID })
+  @Field(() => ID, { description: EVENT_CATEGORY_DESCRIPTIONS.ID })
   eventCategoryGroupId: string;
 
-  @Field((type) => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
+  @Field(() => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
   name: string;
 
   @Field(() => [String], { description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -39,7 +40,7 @@ export class UpdateEventCategoryGroupInput {
 
 @InputType('CreateEventCategoryGroupInput', { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.CREATE_INPUT })
 export class CreateEventCategoryGroupInput {
-  @Field((type) => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
+  @Field(() => String, { description: EVENT_CATEGORY_DESCRIPTIONS.GROUP.NAME })
   name: string;
 
   @Field(() => [String], { description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })

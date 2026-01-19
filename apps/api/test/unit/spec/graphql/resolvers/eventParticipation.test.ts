@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { EventParticipantResolver } from '@/graphql/resolvers/eventParticipant';
-import { EventParticipantDAO, UserDAO } from '@/mongodb/dao';
+import { EventParticipantDAO } from '@/mongodb/dao';
 import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
