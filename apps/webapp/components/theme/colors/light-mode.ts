@@ -97,7 +97,7 @@ const lightModeColors: PaletteOptions = {
   text: {
     primary: '#111827', // Gray 900 - excellent contrast
     secondary: '#6b7280', // Gray 500 - clear secondary text
-    disabled: '#d1d5db', // Gray 300 - disabled states
+    disabled: '#e5e8ec', // Gray 300 - disabled states
   },
   divider: '#e5e7eb', // Gray 200 - subtle divisions
   hero: {
