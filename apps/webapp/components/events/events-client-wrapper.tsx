@@ -119,48 +119,70 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
             </Box>
           )}
 
-          <CategoryMenu
-            categories={categories}
-            selectedCategories={filters.categories}
-            onToggle={(category) => {
-              if (filters.categories.includes(category)) {
-                setCategories(filters.categories.filter((c) => c !== category));
-              } else {
-                setCategories([...filters.categories, category]);
-              }
+          {/* Horizontally scrollable filter bar on mobile */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: 2,
+              overflowX: 'auto',
+              pb: 1,
+              mb: 2,
+              // Hide scrollbar for all browsers
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none', // IE and Edge
+              scrollbarWidth: 'none', // Firefox
+              // On desktop, no scroll, just normal layout
+              '@media (min-width: 900px)': {
+                overflowX: 'visible',
+                flexWrap: 'wrap',
+                gap: 2,
+              },
             }}
-          />
-          <StatusMenu
-            statuses={statuses}
-            selectedStatuses={filters.statuses}
-            onToggle={(status) => {
-              if (filters.statuses.includes(status)) {
-                setStatuses(filters.statuses.filter((s) => s !== status));
-              } else {
-                setStatuses([...filters.statuses, status]);
-              }
-            }}
-          />
-          <DateMenu
-            dateOptions={dateOptions}
-            selectedOption={filters.dateRange?.filterOption || null}
-            onChange={(option) => {
-              if (option === DATE_FILTER_OPTIONS.CUSTOM) {
-                setDateRange(null, null, option);
-              } else {
-                const { start, end, filterOption } = getDateRangeForOption(option);
-                setDateRange(start, end, filterOption);
-              }
-            }}
-            onCustomDateChange={(date) => {
-              if (date) {
-                setDateRange(date, date, DATE_FILTER_OPTIONS.CUSTOM);
-              } else {
-                setDateRange(null, null, DATE_FILTER_OPTIONS.CUSTOM);
-              }
-            }}
-          />
-          <LocationMenu currentLocation={filters.location} onApply={setLocation} onClear={clearLocation} />
+          >
+            <CategoryMenu
+              categories={categories}
+              selectedCategories={filters.categories}
+              onToggle={(category) => {
+                if (filters.categories.includes(category)) {
+                  setCategories(filters.categories.filter((c) => c !== category));
+                } else {
+                  setCategories([...filters.categories, category]);
+                }
+              }}
+            />
+            <StatusMenu
+              statuses={statuses}
+              selectedStatuses={filters.statuses}
+              onToggle={(status) => {
+                if (filters.statuses.includes(status)) {
+                  setStatuses(filters.statuses.filter((s) => s !== status));
+                } else {
+                  setStatuses([...filters.statuses, status]);
+                }
+              }}
+            />
+            <DateMenu
+              dateOptions={dateOptions}
+              selectedOption={filters.dateRange?.filterOption || null}
+              onChange={(option) => {
+                if (option === DATE_FILTER_OPTIONS.CUSTOM) {
+                  setDateRange(null, null, option);
+                } else {
+                  const { start, end, filterOption } = getDateRangeForOption(option);
+                  setDateRange(start, end, filterOption);
+                }
+              }}
+              onCustomDateChange={(date) => {
+                if (date) {
+                  setDateRange(date, date, DATE_FILTER_OPTIONS.CUSTOM);
+                } else {
+                  setDateRange(null, null, DATE_FILTER_OPTIONS.CUSTOM);
+                }
+              }}
+            />
+            <LocationMenu currentLocation={filters.location} onApply={setLocation} onClear={clearLocation} />
+          </Box>
 
           {hasActiveFilters && (
             <ActiveFiltersPills
