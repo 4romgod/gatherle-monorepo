@@ -1,17 +1,6 @@
 import { Metadata } from 'next';
-import { getClient } from '@/data/graphql';
-import { EventCategory } from '@/data/graphql/types/graphql';
 import { Container } from '@mui/material';
-import {
-  GetAllEventCategoriesDocument,
-  GetAllEventsDocument,
-  GetPopularOrganizationsDocument,
-} from '@/data/graphql/query';
-import { EventPreview } from '@/data/graphql/query/Event/types';
-import { PopularOrganization } from '@/components/events/PopularOrganizerBox';
-import EventsClientWrapper from '@/components/events/EventsClientWrapper';
-import { auth } from '@/auth';
-import { getAuthHeader } from '@/lib/utils';
+import EventsPageClient from '@/components/events/EventsPageClient';
 
 export const metadata: Metadata = {
   title: {
@@ -28,51 +17,9 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function Events() {
-  const session = await auth();
-  const token = session?.user?.token;
-
-  const [{ data: events }, { data: eventCategories }, { data: organizations }] = await Promise.all([
-    getClient().query({
-      query: GetAllEventsDocument,
-      context: {
-        headers: getAuthHeader(token),
-      },
-    }),
-    getClient().query({
-      query: GetAllEventCategoriesDocument,
-    }),
-    // TODO Fetching all organizations just to find the most popular one is inefficient
-    getClient().query({
-      query: GetPopularOrganizationsDocument,
-    }),
-  ]);
-
-  const categoryList: EventCategory[] = eventCategories.readEventCategories;
-  const eventsList: EventPreview[] = events.readEvents ?? [];
-  const orgsList = organizations.readOrganizations ?? [];
-
-  const popularOrganization: PopularOrganization | null =
-    orgsList.length > 0
-      ? (orgsList as PopularOrganization[]).reduce((prev: PopularOrganization, current: PopularOrganization) => {
-          const prevFollowers = prev.followersCount ?? 0;
-          const currentFollowers = current.followersCount ?? 0;
-          return prevFollowers > currentFollowers ? prev : current;
-        })
-      : null;
-
-  const stats = {
-    totalEvents: eventsList.length,
-    activeOrganizations: orgsList.length,
-  };
-
   return (
     <Container>
-      <EventsClientWrapper
-        events={eventsList}
-        categories={categoryList}
-        popularOrganization={popularOrganization}
-        stats={stats}
-      />
+      <EventsPageClient />
     </Container>
   );
 }

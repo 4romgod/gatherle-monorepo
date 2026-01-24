@@ -1,11 +1,12 @@
 'use client';
 import { Box, Typography, Card, CardContent, Skeleton, Avatar, Stack } from '@mui/material';
-import OrganizationCard from '@/components/organization/card';
+import OrganizationCard from '@/components/organization/organizationBox';
 import { useQuery } from '@apollo/client';
 import { GetAllOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { GetAllUsersDocument } from '@/data/graphql/query/User/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
+import OrganizationBoxSkeleton from '../organization/organizationBox/OrganizationBoxSkeleton';
 
 export default function RecommendedSection() {
   const { data: session } = useSession();
@@ -37,23 +38,7 @@ export default function RecommendedSection() {
       {loading ? (
         <Stack direction="row" spacing={{ xs: 1.5, md: 2 }} sx={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
           {[1, 2, 3].map((i) => (
-            <Card
-              key={i}
-              variant="outlined"
-              sx={{
-                borderRadius: 3,
-                width: { xs: 140, md: 120 },
-                minWidth: { xs: 120, md: 120 },
-                p: 1,
-                flex: '0 0 auto',
-              }}
-            >
-              <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 1 }}>
-                <Avatar sx={{ width: 48, height: 48, mb: 1 }} />
-                <Skeleton variant="text" width={80} height={18} />
-                <Skeleton variant="text" width={60} height={14} />
-              </CardContent>
-            </Card>
+            <OrganizationBoxSkeleton key={i} />
           ))}
         </Stack>
       ) : orgs.length + users.length === 0 ? (

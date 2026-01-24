@@ -1,10 +1,11 @@
 'use client';
-import { Box, Typography, Card, CardContent, Skeleton, Stack } from '@mui/material';
-import EventCarousel from '@/components/events/carousel';
+import { Box, Typography, Stack } from '@mui/material';
 import { useQuery } from '@apollo/client';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
+import EventCarousel from '@/components/events/carousel';
+import EventCarouselSkeleton from '@/components/events/carousel/EventCarouselSkeleton';
 
 // Helper: get this weekend's date range
 function getThisWeekendRange() {
@@ -49,6 +50,7 @@ export default function NearbyEventsSection() {
   });
 
   const events = data?.readEvents ?? [];
+  const isLoading = loading || !data;
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
@@ -59,18 +61,8 @@ export default function NearbyEventsSection() {
       >
         Nearby / This Weekend
       </Typography>
-      {loading || !data ? (
-        <Stack gap={{ xs: 1.5, md: 2 }}>
-          {[1, 2].map((i) => (
-            <Card key={i} variant="outlined" sx={{ borderRadius: 3, p: { xs: 1.5, md: 3 } }}>
-              <CardContent>
-                <Skeleton variant="text" width="40%" height={28} />
-                <Skeleton variant="text" width="80%" height={20} />
-                <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1 }} />
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+      {isLoading ? (
+        <EventCarouselSkeleton itemCount={3} />
       ) : error ? (
         <Typography color="error">Failed to load nearby events.</Typography>
       ) : events.length === 0 ? (

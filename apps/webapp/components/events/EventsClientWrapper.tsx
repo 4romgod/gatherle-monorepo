@@ -243,7 +243,6 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
               position: 'sticky',
               top: 80,
               maxHeight: 'calc(100vh - 96px)', // Prevent sidebar from being taller than viewport
-              overflowY: 'auto',
               '&::-webkit-scrollbar': {
                 display: 'none',
               },

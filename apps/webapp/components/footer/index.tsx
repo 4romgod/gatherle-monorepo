@@ -11,7 +11,6 @@ import { ROUTES } from '@/lib/constants';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
 const Footer = () => {
-  const theme = useTheme();
   const { themeMode, setThemeMode } = useAppContext();
 
   const currentYear = new Date().getFullYear();

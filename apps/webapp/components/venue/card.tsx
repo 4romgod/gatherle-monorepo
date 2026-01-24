@@ -9,15 +9,15 @@ export type VenueCardProps = {
   venueId?: string;
   name?: string;
   type?: string;
-  capacity?: number;
-  url?: string;
+  capacity?: number | null;
+  url?: string | null;
   address?: {
-    street?: string;
-    city?: string;
-    region?: string;
-    country?: string;
-  };
-  amenities?: string[];
+    street?: string | null;
+    city?: string | null;
+    region?: string | null;
+    country?: string | null;
+  } | null;
+  amenities?: string[] | null;
 };
 
 const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueCardProps) => {
