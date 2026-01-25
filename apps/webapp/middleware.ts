@@ -16,17 +16,22 @@ export default auth(async (req) => {
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname) || isPublicDynamicRoute(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
-  // 0. Block access to '/' for authenticated users, redirect to '/home'
+  // Block access to '/' for authenticated users, redirect to '/home'
   if (isLoggedIn && nextUrl.pathname === ROUTES.ROOT) {
     return NextResponse.redirect(new URL(ROUTES.HOME, nextUrl));
   }
 
-  // 1. Allow all API auth routes
+  // Block access to '/home' for unauthenticated users, redirect to '/'
+  if (!isLoggedIn && nextUrl.pathname === ROUTES.HOME) {
+    return NextResponse.redirect(new URL(ROUTES.ROOT, nextUrl));
+  }
+
+  // Allow all API auth routes
   if (isApiAuthRoute) {
     return NextResponse.next();
   }
 
-  // 2. Allow all auth routes for unauthenticated users
+  // Allow all auth routes for unauthenticated users
   if (isAuthRoute) {
     if (isLoggedIn) {
       return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
@@ -34,7 +39,7 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
-  // 3. Deny all NON public routes for unauthenticated users
+  // Deny all NON public routes for unauthenticated users
   if (!isLoggedIn && !isPublicRoute) {
     logger.warn('[Middleware] Redirecting to login - token invalid or expired');
     return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, nextUrl));

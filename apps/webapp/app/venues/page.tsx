@@ -1,30 +1,9 @@
-import { Container, Typography, Box, Button, Grid } from '@mui/material';
+import { Container, Typography, Box, Button } from '@mui/material';
 import Link from 'next/link';
-import React from 'react';
-import { getClient } from '@/data/graphql';
-import { GetAllVenuesDocument } from '@/data/graphql/query';
-import VenueCard from '@/components/venue/card';
-import { ROUTES } from '@/lib/constants';
 import type { Metadata } from 'next';
 import { LocationOn, Add } from '@mui/icons-material';
-
-type VenueSummary = {
-  venueId: string;
-  name?: string;
-  type?: string;
-  capacity?: number;
-  address?: {
-    street?: string;
-    city?: string;
-    region?: string;
-    country?: string;
-  };
-  amenities?: string[];
-};
-
-type VenuesResponse = {
-  readVenues: VenueSummary[] | null;
-};
+import VenuesClient from '@/components/venue/VenuesClient';
+import { ROUTES } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Venues · Ntlango',
@@ -33,12 +12,7 @@ export const metadata: Metadata = {
 // Enable ISR with 120-second revalidation (venues change less frequently)
 export const revalidate = 120;
 
-export default async function VenuesPage() {
-  const { data } = await getClient().query<VenuesResponse>({
-    query: GetAllVenuesDocument,
-  });
-  const venues = data.readVenues ?? [];
-
+export default function VenuesPage() {
   return (
     <Box>
       {/* Hero Section */}
@@ -125,43 +99,7 @@ export default async function VenuesPage() {
       </Box>
 
       {/* Venues Grid */}
-      <Container sx={{ py: 6 }}>
-        {venues.length > 0 ? (
-          <Grid container spacing={3}>
-            {venues.map((venue) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={venue.venueId}>
-                <VenueCard {...venue} />
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 12,
-            }}
-          >
-            <LocationOn sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-              No venues yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Be the first to add a venue to the network
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              sx={{
-                fontWeight: 600,
-                textTransform: 'none',
-                px: 3,
-              }}
-            >
-              Add Venue
-            </Button>
-          </Box>
-        )}
-      </Container>
+      <VenuesClient />
     </Box>
   );
 }

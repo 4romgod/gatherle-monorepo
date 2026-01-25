@@ -2,18 +2,54 @@
 
 import Link from 'next/link';
 import { Explore } from '@mui/icons-material';
-import { Box, Button, Card, Chip, Grid, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Grid, Typography, Skeleton } from '@mui/material';
 import CustomContainer from '@/components/core/layout/CustomContainer';
-import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES } from '@/lib/constants';
+import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES, RANDOM_IMAGE_LINK } from '@/lib/constants';
 import { RRule } from 'rrule';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 
 interface HeroSectionProps {
   heroEvent: EventPreview | null;
+  isLoading?: boolean;
 }
 
-export default function HeroSection({ heroEvent }: HeroSectionProps) {
+export default function HeroSection({ heroEvent, isLoading = false }: HeroSectionProps) {
   const heroEventRsvps = heroEvent?.participants?.length ?? 0;
+  const showSkeleton = isLoading && !heroEvent;
+
+  const renderSkeletonCard = () => (
+    <Card
+      elevation={0}
+      sx={(theme) => ({
+        p: { xs: 3, md: 4 },
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'hero.cardBorder',
+        backgroundColor: 'hero.cardBg',
+        color: 'hero.textSecondary',
+        boxShadow: theme.shadows[4],
+      })}
+    >
+      <Skeleton variant="text" width={140} height={16} sx={{ mb: 1 }} />
+      <Skeleton variant="text" width="60%" height={32} sx={{ fontWeight: 700, mb: 1 }} />
+      <Skeleton variant="text" width="70%" height={18} sx={{ mb: 2 }} />
+      <Box
+        sx={{
+          mt: 1,
+          borderRadius: 3,
+          overflow: 'hidden',
+          border: '1px solid',
+          borderColor: 'hero.cardBorder',
+        }}
+      >
+        <Skeleton variant="rectangular" width="100%" height={140} />
+      </Box>
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton variant="text" width={90} height={18} />
+        <Skeleton variant="rectangular" width={100} height={32} sx={{ borderRadius: 2 }} />
+      </Box>
+    </Card>
+  );
 
   return (
     <Box
@@ -101,72 +137,74 @@ export default function HeroSection({ heroEvent }: HeroSectionProps) {
           </Grid>
 
           <Grid size={{ xs: 12, md: 5 }}>
-            {heroEvent && (
-              <Card
-                elevation={0}
-                sx={{
-                  p: { xs: 3, md: 4 },
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'hero.cardBorder',
-                  backgroundColor: 'hero.cardBg',
-                  color: 'hero.textSecondary',
-                  boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
-                }}
-              >
-                <Typography variant="overline" sx={{ color: 'hero.textSecondary', opacity: 0.7, letterSpacing: 1 }}>
-                  Featured gathering
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: 'hero.text', mt: 1 }}>
-                  {heroEvent.title}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'hero.textSecondary', opacity: 0.75, mt: 1.5 }}>
-                  {heroEvent.recurrenceRule && RRule.fromString(heroEvent.recurrenceRule).toText()}
-                </Typography>
-                <Box
-                  sx={{
-                    mt: 3,
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: 'hero.cardBorder',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      position: 'relative',
-                      paddingTop: '60%',
-                      backgroundImage: `url(${heroEvent.media?.featuredImageUrl || 'https://images.unsplash.com/photo-1464375117522-1311d6a5b81f?auto=format&fit=crop&w=1200&q=80'})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  />
-                </Box>
-                <Box
-                  sx={{
-                    mt: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                  }}
-                >
-                  <Typography variant="body1" sx={{ color: 'hero.text', fontWeight: 600 }}>
-                    {heroEventRsvps} RSVPs
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    size="small"
-                    component={Link}
-                    href={ROUTES.EVENTS.EVENT(heroEvent.slug)}
-                    sx={BUTTON_STYLES}
+            {showSkeleton
+              ? renderSkeletonCard()
+              : heroEvent && (
+                  <Card
+                    elevation={0}
+                    sx={(theme) => ({
+                      p: { xs: 3, md: 4 },
+                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'hero.cardBorder',
+                      backgroundColor: 'hero.cardBg',
+                      color: 'hero.textSecondary',
+                      boxShadow: theme.shadows[4],
+                    })}
                   >
-                    View details
-                  </Button>
-                </Box>
-              </Card>
-            )}
+                    <Typography variant="overline" sx={{ color: 'hero.textSecondary', opacity: 0.7, letterSpacing: 1 }}>
+                      Featured gathering
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'hero.text', mt: 1 }}>
+                      {heroEvent.title}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'hero.textSecondary', opacity: 0.75, mt: 1.5 }}>
+                      {heroEvent.recurrenceRule && RRule.fromString(heroEvent.recurrenceRule).toText()}
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 3,
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        border: '1px solid',
+                        borderColor: 'hero.cardBorder',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          paddingTop: '60%',
+                          backgroundImage: `url(${heroEvent.media?.featuredImageUrl || RANDOM_IMAGE_LINK})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
+                      />
+                    </Box>
+                    <Box
+                      sx={{
+                        mt: 3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ color: 'hero.text', fontWeight: 600 }}>
+                        {heroEventRsvps} RSVPs
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        size="small"
+                        component={Link}
+                        href={ROUTES.EVENTS.EVENT(heroEvent.slug)}
+                        sx={BUTTON_STYLES}
+                      >
+                        View details
+                      </Button>
+                    </Box>
+                  </Card>
+                )}
           </Grid>
         </Grid>
       </CustomContainer>

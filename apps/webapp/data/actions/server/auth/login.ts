@@ -34,6 +34,7 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
       email,
       password,
       redirectTo: DEFAULT_LOGIN_REDIRECT,
+      redirect: true,
     });
 
     logger.info('User logged in successfully', { email });

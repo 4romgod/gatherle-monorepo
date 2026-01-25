@@ -6,6 +6,7 @@ import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import EventTileGrid from '../events/EventTileGrid';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
+import EventBoxSkeleton from '../events/eventBox/EventBoxSkeleton';
 
 export default function TrendingEventsSection() {
   const { data: session } = useSession();
@@ -20,6 +21,7 @@ export default function TrendingEventsSection() {
   });
 
   const events = (data?.readEvents ?? []).slice().sort((a, b) => (b.rsvpCount ?? 0) - (a.rsvpCount ?? 0));
+  const isLoading = loading || !data;
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
@@ -35,16 +37,10 @@ export default function TrendingEventsSection() {
           </Button>
         </Box>
       </Typography>
-      {loading || !data ? (
+      {isLoading ? (
         <Stack gap={{ xs: 1.5, md: 2 }}>
           {[1, 2].map((i) => (
-            <Card key={i} variant="outlined" sx={{ borderRadius: 3, p: { xs: 1.5, md: 3 } }}>
-              <CardContent>
-                <Skeleton variant="text" width="40%" height={28} />
-                <Skeleton variant="text" width="80%" height={20} />
-                <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1 }} />
-              </CardContent>
-            </Card>
+            <EventBoxSkeleton key={i} />
           ))}
         </Stack>
       ) : error ? (

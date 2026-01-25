@@ -1,27 +1,9 @@
-import { Container, Typography, Box, Button, Grid } from '@mui/material';
-import React from 'react';
-import { getClient } from '@/data/graphql';
-import { GetAllOrganizationsDocument } from '@/data/graphql/query';
-import OrganizationCard from '@/components/organization/card';
+import { Container, Typography, Box, Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Groups, Add } from '@mui/icons-material';
-
-type OrganizationSummary = {
-  orgId: string;
-  slug?: string;
-  name?: string;
-  description?: string;
-  logo?: string;
-  tags?: string[];
-  followersCount?: number;
-  isFollowable?: boolean;
-};
-
-type OrganizationsResponse = {
-  readOrganizations: OrganizationSummary[] | null;
-};
+import OrganizationsClient from '@/components/organization/organizationsPageClient';
 
 export const metadata: Metadata = {
   title: 'Organizations · Ntlango',
@@ -31,11 +13,6 @@ export const metadata: Metadata = {
 export const revalidate = 120;
 
 export default async function OrganizationsPage() {
-  const { data } = await getClient().query<OrganizationsResponse>({
-    query: GetAllOrganizationsDocument,
-  });
-  const organizations = data.readOrganizations ?? [];
-
   return (
     <Box>
       {/* Hero Section */}
@@ -122,43 +99,7 @@ export default async function OrganizationsPage() {
       </Box>
 
       {/* Organizations Grid */}
-      <Container sx={{ py: 6 }}>
-        {organizations.length > 0 ? (
-          <Grid container spacing={3}>
-            {organizations.map((organization) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={organization.orgId}>
-                <OrganizationCard {...organization} />
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 12,
-            }}
-          >
-            <Groups sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-              No organizations yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Be the first to create a community space on Ntlango
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              sx={{
-                fontWeight: 600,
-                textTransform: 'none',
-                px: 3,
-              }}
-            >
-              Create Organization
-            </Button>
-          </Box>
-        )}
-      </Container>
+      <OrganizationsClient />
     </Box>
   );
 }

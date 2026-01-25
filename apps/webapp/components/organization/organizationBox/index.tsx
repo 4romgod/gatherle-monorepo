@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography, useTheme } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import Surface from '@/components/core/Surface';
 
@@ -22,6 +24,7 @@ const OrganizationCard = ({
   followersCount,
   isFollowable,
 }: OrganizationCardProps) => {
+  const theme = useTheme();
   return (
     <Surface
       component={Card}
@@ -35,7 +38,7 @@ const OrganizationCard = ({
           borderColor: 'primary.main',
           bgcolor: 'action.hover',
           transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          boxShadow: theme.shadows[4],
         },
       }}
     >

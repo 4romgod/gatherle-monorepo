@@ -1,4 +1,4 @@
-import { PaletteMode, ThemeOptions } from '@mui/material';
+import { alpha, PaletteMode, ThemeOptions } from '@mui/material';
 import { plusJakarta, spaceGrotesk } from '@/components/theme/fonts';
 import darkModeColors from '@/components/theme/colors/DarkMode';
 import lightModeColors from '@/components/theme/colors/LightMode';
@@ -84,6 +84,27 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       styleOverrides: {
         root: {
           borderRadius: 14,
+        },
+      },
+    },
+    MuiSkeleton: {
+      styleOverrides: {
+        root: ({ theme }) => {
+          const baseLight = alpha(theme.palette.text.primary, 0.3);
+          const waveLight = alpha(theme.palette.text.primary, 0.3);
+          const baseDark = alpha(theme.palette.common.white, 0.3);
+          const waveDark = alpha(theme.palette.common.white, 0.3);
+
+          const background = theme.palette.mode === 'light' ? baseLight : baseDark;
+          const wave = theme.palette.mode === 'light' ? waveLight : waveDark;
+
+          return {
+            backgroundColor: background,
+            borderRadius: 2,
+            '&::before': {
+              backgroundImage: `linear-gradient(90deg, transparent, ${wave}, transparent)`,
+            },
+          };
         },
       },
     },
