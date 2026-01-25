@@ -12,7 +12,6 @@ import { ROUTES } from '@/lib/constants';
 import EventCarousel from '@/components/events/carousel';
 import FollowStatsCard from '@/components/organization/FollowStatsCard';
 import OrganizationPageSkeleton from '@/components/organization/organizationDetailPageClient/OrganizationDetailPageSkeleton';
-import { GetOrganizationBySlugQuery } from '@/data/graphql/types/graphql';
 
 interface OrganizationPageClientProps {
   slug: string;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import {
   Avatar,
   Box,
@@ -45,11 +45,20 @@ import {
 import { omit } from 'lodash';
 import Link from 'next/link';
 import { getAvatarSrc, logger, isApolloAuthError, getAuthHeader } from '@/lib/utils';
+import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import { redirect } from 'next/navigation';
 
-export default async function UserPublicProfile() {
+export default function UserPublicProfile() {
+  return (
+    <Suspense fallback={<UserProfilePageSkeleton />}>
+      <AuthenticatedProfileContent />
+    </Suspense>
+  );
+}
+
+async function AuthenticatedProfileContent() {
   const session = await auth();
-  if (!session) return;
+  if (!session) return null;
   const sessionUser = omit(session.user, ['token', '__typename']);
   const token = session.user.token;
   logger.debug('[Profile] Token present:', !!token, 'Username:', sessionUser.username);
@@ -60,7 +69,7 @@ export default async function UserPublicProfile() {
     variables: { username: sessionUser.username },
   });
   const user = userData.readUserByUsername;
-  if (!user) return;
+  if (!user) return null;
 
   // Query events (public) and saved events (requires auth)
   const { data: events } = await getClient().query({

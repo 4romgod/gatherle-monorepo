@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -51,8 +51,8 @@ function NotificationsSkeleton() {
 }
 
 export default function NotificationsPage() {
-  const [tabValue, setTabValue] = React.useState(0);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { notifications, loading, error, hasMore, loadMore, refetch, unreadCount } = useNotifications({ limit: 20 });
   const { markAsRead, markAllAsRead, deleteNotification, isLoading: actionsLoading } = useNotificationActions();
 

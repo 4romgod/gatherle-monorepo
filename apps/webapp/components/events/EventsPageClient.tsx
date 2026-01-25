@@ -49,13 +49,11 @@ export default function EventsPageClient() {
   const popularOrganization: PopularOrganization | null = useMemo(
     () =>
       orgs.length > 0
-        ? (orgs as PopularOrganization[]).reduce(
-            (prev: PopularOrganization, current: PopularOrganization) => {
-              const prevFollowers = prev.followersCount ?? 0;
-              const currentFollowers = current.followersCount ?? 0;
-              return prevFollowers > currentFollowers ? prev : current;
-            },
-          )
+        ? (orgs as PopularOrganization[]).reduce((prev: PopularOrganization, current: PopularOrganization) => {
+            const prevFollowers = prev.followersCount ?? 0;
+            const currentFollowers = current.followersCount ?? 0;
+            return prevFollowers > currentFollowers ? prev : current;
+          })
         : null,
     [orgs],
   );

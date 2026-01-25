@@ -87,6 +87,48 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    MuiInputBase: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '&.Mui-disabled': {
+            opacity: 1,
+            color: theme.palette.text.primary,
+            WebkitTextFillColor: theme.palette.text.primary,
+            backgroundColor: theme.palette.action.disabledBackground,
+          },
+          '& .MuiInputBase-input::placeholder, & .MuiInputBase-input:-webkit-autofill': {
+            color: theme.palette.text.secondary,
+          },
+          '&.Mui-disabled .MuiInputBase-input': {
+            color: theme.palette.grey[500],
+            WebkitTextFillColor: theme.palette.grey[500],
+          },
+          '& .MuiInputBase-input': {
+            color: theme.palette.text.primary,
+          },
+        }),
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '&.Mui-disabled .MuiOutlinedInput-notchedOutline': {
+            borderColor: theme.palette.divider,
+            borderStyle: 'solid',
+            borderWidth: 1,
+          },
+        }),
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '&.Mui-disabled': {
+            color: theme.palette.text.secondary,
+          },
+        }),
+      },
+    },
     MuiSkeleton: {
       styleOverrides: {
         root: ({ theme }) => {

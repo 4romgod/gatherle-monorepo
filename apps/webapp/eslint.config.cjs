@@ -4,7 +4,14 @@ const unusedImports = require('eslint-plugin-unused-imports');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', '.next/**', 'dist/**', 'build/**', '.vercel/**'],
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'dist/**',
+      'build/**',
+      '.vercel/**',
+      'test/**/coverage/**',
+    ],
   },
   {
     plugins: {

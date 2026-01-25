@@ -35,7 +35,10 @@ export default function HomeClient() {
       >
         <Container>
           {eventsLoading ? (
-            <EventCarouselSkeleton title="Featured Events" />
+            <EventCarouselSkeleton
+              title="Featured Events"
+              itemCount={5}
+            />
           ) : (
             <EventCarousel
               events={featuredEvents}

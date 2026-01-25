@@ -1,36 +1,56 @@
 'use client';
+import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { Avatar, Box, Button, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  LocationOn as LocationIcon,
-  Cake as CakeIcon,
-  Event as EventIcon,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  Stack,
+  Typography,
+} from '@mui/material';
+import {
   Badge as BadgeIcon,
   CalendarMonth,
+  Cake as CakeIcon,
+  CheckCircle as RSVPIcon,
+  Email as EmailIcon,
+  Event as EventIcon,
+  LocationOn as LocationIcon,
+  Phone as PhoneIcon,
+  Bookmark as BookmarkIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import {
   GetAllEventsDocument,
   GetSavedEventsDocument,
   GetUserByUsernameDocument,
-  GetUserByUsernameQuery,
-  User,
 } from '@/data/graphql/types/graphql';
-import { getAuthHeader } from '@/lib/utils/auth';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import EventsCarousel from '@/components/events/carousel';
 import EventCategoryBadge from '@/components/events/category/EventCategoryBadge';
-import { EventPreview } from '@/data/graphql/query/Event/types';
-import { ROUTES } from '@/lib/constants';
-import Link from 'next/link';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
+import {
+  ROUTES,
+  CARD_STYLES,
+  BUTTON_STYLES,
+  SECTION_TITLE_STYLES,
+  EMPTY_STATE_ICON_STYLES,
+  EMPTY_STATE_STYLES,
+  SPACING,
+} from '@/lib/constants';
+import { getAuthHeader } from '@/lib/utils/auth';
+import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { differenceInYears, format } from 'date-fns';
-import { getDisplayName } from '@/lib/utils';
 
 interface UserProfilePageClientProps {
   username: string;
@@ -41,23 +61,13 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   const token = session?.user?.token;
   const isOwnProfile = session?.user?.username === username;
 
-  const {
-    data: userData,
-    loading: userLoading,
-    error: userError,
-  } = useQuery<GetUserByUsernameQuery>(GetUserByUsernameDocument, {
+  const { data: userData, loading: userLoading, error: userError } = useQuery(GetUserByUsernameDocument, {
     variables: { username },
     fetchPolicy: 'cache-and-network',
   });
-
-  const {
-    data: eventsData,
-    loading: eventsLoading,
-    error: eventsError,
-  } = useQuery(GetAllEventsDocument, {
+  const { data: eventsData, loading: eventsLoading, error: eventsError } = useQuery(GetAllEventsDocument, {
     fetchPolicy: 'cache-and-network',
   });
-
   const { data: savedData, loading: savedLoading } = useQuery(GetSavedEventsDocument, {
     skip: !isOwnProfile || !token,
     context: { headers: getAuthHeader(token) },
@@ -68,7 +78,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   const events = (eventsData?.readEvents ?? []) as EventPreview[];
   const savedEvents = (savedData?.readSavedEvents ?? [])
     .map((follow) => follow.targetEvent)
-    .filter((event): event is NonNullable<typeof event> => Boolean(event)) as EventPreview[];
+    .filter((event) => Boolean(event)) as EventPreview[];
 
   const rsvpdEvents = useMemo(
     () => events.filter((event) => event.participants?.some((p) => p.userId === user?.userId)),
@@ -99,58 +109,98 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   }
 
   const InfoItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1.5 }}>
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 2 }}>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           borderRadius: 2,
-          bgcolor: 'secondary.main',
-          color: 'secondary.contrastText',
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
         }}
       >
         {icon}
       </Box>
       <Box sx={{ flex: 1 }}>
-        <Typography variant="caption" color="text.secondary" display="block">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          sx={{ fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem' }}
+        >
           {label}
         </Typography>
-        <Typography variant="body2" fontWeight={500}>
+        <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
           {value}
         </Typography>
       </Box>
     </Stack>
   );
 
+  const locationText = user.location ? `${user.location.city}, ${user.location.country}` : 'Not provided';
+  const birthdayText = formattedDOB ? `${formattedDOB} (${age} years old)` : 'Not provided';
+
+  const emptyCreatedCTA = isOwnProfile ? (
+    <Button
+      variant="contained"
+      color="secondary"
+      component={Link}
+      href={ROUTES.ACCOUNT.EVENTS.CREATE}
+      sx={{ ...BUTTON_STYLES, mt: 2 }}
+    >
+      Create Your First Event
+    </Button>
+  ) : (
+    <Button
+      variant="contained"
+      color="secondary"
+      component={Link}
+      href={ROUTES.EVENTS.ROOT}
+      sx={{ ...BUTTON_STYLES, mt: 2 }}
+    >
+      Explore Events
+    </Button>
+  );
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
       <Container maxWidth="lg">
-        <Stack spacing={4}>
-          <Paper
+        <Stack spacing={SPACING.relaxed}>
+          <Card
             elevation={0}
-            sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}
+            sx={{
+              borderRadius: 3,
+              overflow: 'hidden',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
           >
-            <Box sx={{ height: 200, position: 'relative', bgcolor: 'primary.main' }}>
+            <Box
+              sx={{
+                height: { xs: 180, md: 240 },
+                position: 'relative',
+                bgcolor: 'primary.main',
+              }}
+            >
               {isOwnProfile ? (
                 <Link href={ROUTES.ACCOUNT.ROOT}>
                   <Button
                     startIcon={<EditIcon />}
-                    variant="contained"
+                    variant="outlined"
                     size="small"
                     sx={{
+                      ...BUTTON_STYLES,
                       position: 'absolute',
                       top: 20,
                       right: 20,
-                      borderRadius: 2,
                       bgcolor: 'background.paper',
-                      color: 'text.primary',
-                      boxShadow: 2,
+                      borderColor: 'divider',
                       '&:hover': {
                         bgcolor: 'background.default',
-                        boxShadow: 4,
+                        borderColor: 'text.secondary',
                       },
                     }}
                   >
@@ -170,31 +220,30 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
               )}
             </Box>
 
-            <Box sx={{ px: { xs: 3, sm: 4 }, pb: 4 }}>
+            <CardContent sx={{ pt: 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-end', mt: -8 }}>
                 <Box sx={{ position: 'relative' }}>
                   <Avatar
-                    src={user.profile_picture || '/api/placeholder/120/120'}
+                    src={getAvatarSrc(user)}
                     alt={`${user.given_name} ${user.family_name}`}
                     sx={{
-                      width: 140,
-                      height: 140,
-                      border: '5px solid',
-                      borderColor: 'background.paper',
-                      boxShadow: 3,
+                      width: { xs: 120, md: 140 },
+                      height: { xs: 120, md: 140 },
+                      border: '4px solid',
+                      borderColor: 'common.white',
                     }}
                   />
                   <Box
                     sx={{
                       position: 'absolute',
-                      bottom: 10,
-                      right: 10,
-                      width: 24,
-                      height: 24,
+                      bottom: { xs: 8, md: 10 },
+                      right: { xs: 8, md: 10 },
+                      width: { xs: 20, md: 24 },
+                      height: { xs: 20, md: 24 },
                       bgcolor: 'success.main',
                       borderRadius: '50%',
                       border: '3px solid',
-                      borderColor: 'background.paper',
+                      borderColor: 'common.white',
                     }}
                   />
                 </Box>
@@ -204,90 +253,287 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                       icon={<BadgeIcon />}
                       label={user.userRole}
                       size="small"
-                      color="secondary"
-                      sx={{ borderRadius: 1.5, fontWeight: 600 }}
+                      color="primary"
+                      sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'capitalize' }}
                     />
                   </Stack>
                 </Box>
               </Box>
-            </Box>
-          </Paper>
 
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 8 }}>
-              <Stack spacing={3}>
-                <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    <InfoItem icon={<LocationIcon />} label="Location" value={user.location?.city || 'Unknown'} />
-                    <InfoItem icon={<EmailIcon />} label="Email" value={user.email || 'Not available'} />
-                    <InfoItem icon={<PhoneIcon />} label="Phone" value={user.phone_number ?? 'Not shared'} />
-                  </Box>
-                </Paper>
-                <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                  <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-                    About {getDisplayName(user)}
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: '1.75rem', md: '2.25rem' },
+                    mb: 1,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {user.given_name} {user.family_name}
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500, mb: 2 }}>
+                  @{user.username}
+                </Typography>
+                {user.bio && (
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600, lineHeight: 1.6 }}>
+                    {user.bio}
                   </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                    {user.bio || 'No bio yet.'}
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                    {interests.map((interest) => (
-                      <EventCategoryBadge key={interest.name} category={interest} />
-                    ))}
-                  </Stack>
-                  <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-                    <InfoItem icon={<EventIcon />} label="RSVPs" value={`${rsvpdEvents.length}`} />
-                    <InfoItem icon={<CalendarMonth />} label="Age" value={age ? `${age}` : 'N/A'} />
-                    {formattedDOB && <InfoItem icon={<CakeIcon />} label="Born" value={formattedDOB} />}
-                  </Stack>
-                </Paper>
-                {rsvpdEvents.length > 0 && (
-                  <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
-                      RSVPed Events
-                    </Typography>
-                    <EventsCarousel events={rsvpdEvents} title="" showIndicators={false} viewAllEventsButton={false} />
-                  </Paper>
                 )}
-                {organizedEvents.length > 0 && (
-                  <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
-                      Organized Events
+              </Box>
+
+              <UserProfileStats
+                userId={user.userId}
+                displayName={getDisplayName(user)}
+                initialFollowersCount={user.followersCount ?? 0}
+                initialFollowingCount={0}
+                organizedEventsCount={organizedEvents.length}
+                rsvpdEventsCount={rsvpdEvents.length}
+                savedEventsCount={savedEvents.length}
+                interestsCount={interests.length}
+                isOwnProfile={isOwnProfile}
+              />
+            </CardContent>
+          </Card>
+
+          <Grid container spacing={SPACING.standard}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card
+                elevation={0}
+                sx={{
+                  ...CARD_STYLES,
+                  height: '100%',
+                }}
+              >
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
+                      Personal Information
                     </Typography>
-                    <EventsCarousel
-                      events={organizedEvents}
-                      title=""
-                      showIndicators={false}
-                      viewAllEventsButton={false}
-                    />
-                  </Paper>
-                )}
-              </Stack>
+                    <Divider />
+                    <Stack spacing={0} divider={<Divider />}>
+                      <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
+                      <InfoItem
+                        icon={<PhoneIcon fontSize="small" />}
+                        label="Phone"
+                        value={user.phone_number || 'Not provided'}
+                      />
+                      <InfoItem icon={<LocationIcon fontSize="small" />} label="Location" value={locationText} />
+                      <InfoItem icon={<CakeIcon fontSize="small" />} label="Birthday" value={birthdayText} />
+                      <InfoItem
+                        icon={<EventIcon fontSize="small" />}
+                        label="Gender"
+                        value={user.gender || 'Not specified'}
+                      />
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Stack spacing={3}>
-                <UserProfileStats
-                  userId={user.userId}
-                  displayName={getDisplayName(user)}
-                  initialFollowersCount={user.followersCount ?? 0}
-                  initialFollowingCount={0}
-                  organizedEventsCount={organizedEvents.length}
-                  rsvpdEventsCount={rsvpdEvents.length}
-                  savedEventsCount={savedEvents.length}
-                  interestsCount={interests.length}
-                  isOwnProfile={isOwnProfile}
-                />
-                {savedEvents.length > 0 && (
-                  <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
-                      Saved Events
+
+            <Grid id="interests" size={{ xs: 12, md: 6 }}>
+              <Card
+                elevation={0}
+                sx={{
+                  ...CARD_STYLES,
+                  height: '100%',
+                }}
+              >
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
+                      Interests
                     </Typography>
-                    <EventsCarousel events={savedEvents} title="" showIndicators={false} viewAllEventsButton={false} />
-                  </Paper>
-                )}
-              </Stack>
+                    <Divider />
+                    {interests.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
+                        {interests
+                          .filter((interest) => interest.eventCategoryId != null)
+                          .map((interest) => (
+                            <EventCategoryBadge
+                              key={interest.eventCategoryId}
+                              category={interest}
+                            />
+                          ))}
+                      </Box>
+                    ) : (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No interests selected yet
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
             </Grid>
           </Grid>
+
+          <Box id="events-created">
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: 'primary.main',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  letterSpacing: '0.1em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1,
+                }}
+              >
+                <EventIcon sx={{ fontSize: 20 }} />
+                MY EVENTS
+              </Typography>
+              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
+                Events Created
+              </Typography>
+            </Box>
+            {organizedEvents.length > 0 ? (
+              <EventsCarousel
+                events={organizedEvents}
+                title=""
+                autoplay
+                autoplayInterval={6000}
+                itemWidth={350}
+                showIndicators
+                viewAllEventsButton={false}
+              />
+            ) : (
+              <Card elevation={0} sx={CARD_STYLES}>
+                <Box sx={EMPTY_STATE_STYLES}>
+                  <Box sx={EMPTY_STATE_ICON_STYLES}>
+                    <CalendarMonth sx={{ fontSize: 48, color: 'text.secondary' }} />
+                  </Box>
+                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+                    No events created yet
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
+                    Start hosting events and they'll appear here
+                  </Typography>
+                  {emptyCreatedCTA}
+                </Box>
+              </Card>
+            )}
+          </Box>
+
+          <Box id="events-attending">
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: 'primary.main',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  letterSpacing: '0.1em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1,
+                }}
+              >
+                <RSVPIcon sx={{ fontSize: 20 }} />
+                ATTENDING
+              </Typography>
+              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
+                Events Attending
+              </Typography>
+            </Box>
+            {rsvpdEvents.length > 0 ? (
+              <EventsCarousel
+                events={rsvpdEvents}
+                title=""
+                autoplay
+                autoplayInterval={6000}
+                itemWidth={350}
+                showIndicators
+                viewAllEventsButton={false}
+              />
+            ) : (
+              <Card elevation={0} sx={CARD_STYLES}>
+                <Box sx={EMPTY_STATE_STYLES}>
+                  <Box sx={EMPTY_STATE_ICON_STYLES}>
+                    <RSVPIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+                  </Box>
+                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+                    No RSVPs yet
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
+                    Browse events and RSVP to ones you're interested in
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    component={Link}
+                    href={ROUTES.EVENTS.ROOT}
+                    sx={{ ...BUTTON_STYLES, mt: 2 }}
+                  >
+                    Explore Events
+                  </Button>
+                </Box>
+              </Card>
+            )}
+          </Box>
+
+          <Box id="saved-events">
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: 'primary.main',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  letterSpacing: '0.1em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1,
+                }}
+              >
+                <BookmarkIcon sx={{ fontSize: 20 }} />
+                SAVED
+              </Typography>
+              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
+                Saved Events
+              </Typography>
+            </Box>
+            {savedEvents.length > 0 ? (
+              <EventsCarousel
+                events={savedEvents}
+                title=""
+                autoplay
+                autoplayInterval={6000}
+                itemWidth={350}
+                showIndicators
+                viewAllEventsButton={false}
+              />
+            ) : (
+              <Card elevation={0} sx={CARD_STYLES}>
+                <Box sx={EMPTY_STATE_STYLES}>
+                  <Box sx={EMPTY_STATE_ICON_STYLES}>
+                    <BookmarkIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
+                  </Box>
+                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+                    No saved events yet
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
+                    Save events you're interested in to view them later
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    component={Link}
+                    href={ROUTES.EVENTS.ROOT}
+                    sx={{ ...BUTTON_STYLES, mt: 2 }}
+                  >
+                    Explore Events
+                  </Button>
+                </Box>
+              </Card>
+            )}
+          </Box>
         </Stack>
       </Container>
     </Box>

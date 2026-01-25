@@ -245,10 +245,11 @@ describe('Organization Resolver', () => {
 
     it('returns conflict when duplicate organization name is used', async () => {
       const orgName = 'Duplicate Org';
-      await request(url)
+      const createdOrganization = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
         .send(getCreateOrganizationMutation(buildOrganizationInput(orgName)));
+      createdOrgIds.push(createdOrganization.body.data.createOrganization.orgId);
 
       const duplicateResponse = await request(url)
         .post('')
