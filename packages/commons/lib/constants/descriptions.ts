@@ -73,10 +73,11 @@ export const EVENT_CATEGORY_DESCRIPTIONS = {
 };
 
 export const USER_DESCRIPTIONS = {
-  TYPE: 'Represents a user with personal details and roles within the system.',
+  TYPE: 'Represents a user with personal details and the primary role within the system.',
   WITH_TOKEN: 'Represents a user along with an authentication token, including user details and the token string.',
-  CREATE_INPUT: 'Input type for creating a new user with personal details and roles within the system.',
-  UPDATE_INPUT: 'Input type for updating an existing user with personal details and roles within the system.',
+  CREATE_INPUT: 'Input type for creating a new user with personal details and the primary role within the system.',
+  UPDATE_INPUT:
+    'Input type for updating an existing user with personal details and the primary role within the system.',
   LOGIN_INPUT: 'Input type for user login, including fields for email and password.',
   ID: "Unique identifier for the user (e.g., '123e4567-e89b-12d3-a456-426614174000')",
   LOCATION: "User's location with city, state, country, and optional coordinates for personalized recommendations",
@@ -240,6 +241,9 @@ export const VENUE_DESCRIPTIONS = {
 };
 
 export const RESOLVER_DESCRIPTIONS = {
+  ADMIN: {
+    readAdminDashboardStats: 'Read high-level admin dashboard statistics (events, categories, users).',
+  },
   EVENT: {
     createEvent: 'Create a new event. Requires input data for creating a new event and returns the created event.',
     updateEvent: 'Update an existing event. Requires input data for updating the event and returns the updated event.',

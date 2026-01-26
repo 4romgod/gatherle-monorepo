@@ -445,6 +445,15 @@ class UserDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async count(filter: Record<string, unknown> = {}): Promise<number> {
+    try {
+      return UserModel.countDocuments(filter).exec();
+    } catch (error) {
+      logger.error('Error counting users', error);
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default UserDAO;

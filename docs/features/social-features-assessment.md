@@ -94,7 +94,8 @@ export enum FollowPolicy {
    - Checks target's `followPolicy` to determine initial approval status
    - Returns `Accepted` for Public targets, `Pending` for RequireApproval
    - Validates input with Zod schema
-   - Requires authentication (Admin, Host, User roles)
+
+- Requires authentication (userRole set to Admin, Host, or User)
 
 2. `unfollow(targetType, targetId): Boolean`
    - Removes follow relationship (works for both pending and accepted)

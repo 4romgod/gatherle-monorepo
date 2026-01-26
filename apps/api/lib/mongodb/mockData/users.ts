@@ -23,7 +23,7 @@ const users: CreateUserInput[] = [
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
-    roles: [UserRole.User],
+    userRole: UserRole.User,
     shareRSVPByDefault: true,
   },
   {
@@ -48,7 +48,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
     followPolicy: FollowPolicy.RequireApproval,
-    roles: [UserRole.Host],
+    userRole: UserRole.Host,
     shareRSVPByDefault: true,
   },
   {
@@ -73,7 +73,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
     followPolicy: FollowPolicy.Public,
-    roles: [UserRole.User],
+    userRole: UserRole.User,
     shareRSVPByDefault: true,
   },
   {
@@ -98,7 +98,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
     followPolicy: FollowPolicy.RequireApproval,
-    roles: [UserRole.Host, UserRole.User],
+    userRole: UserRole.Admin,
     shareRSVPByDefault: false,
   },
   {
@@ -123,7 +123,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
     followPolicy: FollowPolicy.Public,
-    roles: [UserRole.User],
+    userRole: UserRole.User,
     shareRSVPByDefault: true,
   },
   {
@@ -148,7 +148,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Followers,
     socialVisibility: SocialVisibility.Followers,
     followPolicy: FollowPolicy.Public,
-    roles: [UserRole.User],
+    userRole: UserRole.User,
     shareRSVPByDefault: false,
   },
   {
@@ -173,7 +173,7 @@ const users: CreateUserInput[] = [
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
     followPolicy: FollowPolicy.RequireApproval,
-    roles: [UserRole.User],
+    userRole: UserRole.User,
     shareRSVPByDefault: true,
   },
 ];

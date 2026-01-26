@@ -1,4 +1,5 @@
 export * from './customTypes';
+export * from './admin';
 export * from './activity';
 export * from './follow';
 export * from './intent';

@@ -103,12 +103,8 @@ export default function UserDetails({ user, isOwnProfile = false }: UserDetailsP
           <Typography variant="body1" color="text.secondary" gutterBottom>
             @{user.username}
           </Typography>
-          {user.roles && user.roles.length > 0 && (
-            <Stack direction="row" spacing={1} mt={1.5}>
-              {user.roles.map((role) => (
-                <Chip key={role} label={role} size="small" color="primary" />
-              ))}
-            </Stack>
+          {user.userRole && (
+            <Chip label={user.userRole} size="small" color="primary" sx={{ mt: 1.5, textTransform: 'capitalize' }} />
           )}
         </Box>
 

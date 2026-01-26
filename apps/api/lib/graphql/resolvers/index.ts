@@ -1,3 +1,4 @@
+export * from './admin';
 export * from './event';
 export * from './eventCategory';
 export * from './eventCategoryGroup';

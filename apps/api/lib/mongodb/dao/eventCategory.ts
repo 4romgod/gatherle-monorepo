@@ -118,6 +118,15 @@ class EventCategoryDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async count(filter: Record<string, unknown> = {}): Promise<number> {
+    try {
+      return EventCategoryModel.countDocuments(filter).exec();
+    } catch (error) {
+      logger.error('Error counting event categories', error);
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventCategoryDAO;

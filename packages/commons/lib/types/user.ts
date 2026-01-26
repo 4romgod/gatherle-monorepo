@@ -4,7 +4,6 @@ import GraphQLJSON from 'graphql-type-json';
 import { Authorized, Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
 import type { Ref } from '@typegoose/typegoose';
 import { modelOptions, prop, Severity } from '@typegoose/typegoose';
-
 import { EVENT_DESCRIPTIONS, USER_DESCRIPTIONS } from '../constants';
 import { EventCategory } from './eventCategory';
 import type {
@@ -197,10 +196,6 @@ export class User {
   @Field(() => UserRole, { description: USER_DESCRIPTIONS.USER_ROLE })
   userRole: UserRole;
 
-  @prop({ type: () => [String], enum: UserRole, default: [UserRole.User] })
-  @Field(() => [UserRole], { nullable: true, description: 'Multiple roles supported' })
-  roles?: UserRole[];
-
   @prop({ required: true, select: false, type: () => String })
   password: string;
 
@@ -305,6 +300,9 @@ export class CreateUserInput {
   @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
   bio?: string;
 
+  @Field(() => UserRole, { nullable: true, description: USER_DESCRIPTIONS.USER_ROLE })
+  userRole?: UserRole;
+
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: string[];
 
@@ -337,9 +335,6 @@ export class CreateUserInput {
 
   @Field(() => [String], { nullable: true })
   blockedUserIds?: string[];
-
-  @Field(() => [UserRole], { nullable: true })
-  roles?: UserRole[];
 
   @Field(() => FollowPolicy, { nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY })
   followPolicy?: FollowPolicy;
@@ -425,12 +420,6 @@ export class UpdateUserInput {
 
   @Field(() => [String], { nullable: true, description: 'IDs of organizations whose content is muted' })
   mutedOrgIds?: string[];
-
-  @Field(() => [String], { nullable: true })
-  blockedUserIds?: string[];
-
-  @Field(() => [UserRole], { nullable: true })
-  roles?: UserRole[];
 
   @Field(() => FollowPolicy, { nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY })
   followPolicy?: FollowPolicy;

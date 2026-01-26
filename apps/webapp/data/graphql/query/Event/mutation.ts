@@ -36,3 +36,15 @@ export const DeleteEventByIdDocument = graphql(`
     }
   }
 `);
+
+export const UpdateEventDocument = graphql(`
+  mutation UpdateEvent($input: UpdateEventInput!) {
+    updateEvent(input: $input) {
+      eventId
+      title
+      status
+      lifecycleStatus
+      visibility
+    }
+  }
+`);

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useMemo, ReactNode } from 'react';
+import { createContext, useState, useMemo, ReactNode, createElement } from 'react';
 import { AlertProps, PaletteMode, SnackbarProps, Theme } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { getDesignTokens } from '@/components/theme/DesignTokens';
@@ -36,17 +36,17 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
   const theme = useMemo(() => createTheme(getDesignTokens(themeMode)), [themeMode]);
   const [toastProps, setToastProps] = useState<ToastProps>(toastDefaultProps);
 
-  return (
-    <CustomAppContext.Provider
-      value={{
+  return createElement(
+    CustomAppContext.Provider,
+    {
+      value: {
         themeMode,
         setThemeMode,
         appTheme: theme,
         toastProps,
         setToastProps,
-      }}
-    >
-      {children}
-    </CustomAppContext.Provider>
+      },
+    },
+    children,
   );
 };
