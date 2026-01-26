@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { buildSchemaSync } from 'type-graphql';
 import {
+  AdminResolver,
   EventCategoryResolver,
   EventCategoryGroupResolver,
   EventResolver,
@@ -20,6 +21,7 @@ import { ResolveTime } from '@/utils';
 const createSchema = () => {
   const schema = buildSchemaSync({
     resolvers: [
+      AdminResolver,
       EventCategoryResolver,
       EventCategoryGroupResolver,
       EventResolver,

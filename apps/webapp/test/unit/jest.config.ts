@@ -13,12 +13,18 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@ntlango/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
     '^@ntlango/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    'next/font/google$': '<rootDir>/test/unit/mocks/nextFontMock.ts',
   },
   transform: {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',
       {
         tsconfig: '<rootDir>/tsconfig.json',
+        tsconfigRaw: {
+          compilerOptions: {
+            jsx: 'react-jsx',
+          },
+        },
       },
     ],
   },

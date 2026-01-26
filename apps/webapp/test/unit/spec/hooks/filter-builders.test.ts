@@ -1,8 +1,16 @@
-import { buildFilterInputs, buildDateFilterParams, buildLocationFilter } from '@/hooks/useFilteredEvents';
+import {
+  buildFilterInputs,
+  buildDateFilterParams,
+  buildLocationFilter,
+  useFilteredEvents,
+} from '@/hooks/useFilteredEvents';
 import { EventFilters, LocationFilter } from '@/components/events/filters/EventFilterContext';
 import { FilterOperatorInput, EventStatus } from '@/data/graphql/types/graphql';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
+import { renderHook, waitFor } from '@testing-library/react';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import dayjs from 'dayjs';
+import * as apolloClient from '@apollo/client';
 
 // Factory for creating EventFilters with defaults
 const createFilters = (overrides: Partial<EventFilters> = {}): EventFilters => ({
@@ -13,6 +21,63 @@ const createFilters = (overrides: Partial<EventFilters> = {}): EventFilters => (
   searchQuery: '',
   location: {},
   ...overrides,
+});
+
+describe('useFilteredEvents hook', () => {
+  const initialEvents: EventPreview[] = [
+    {
+      eventId: 'base-event',
+    } as EventPreview,
+  ];
+  let useLazyQuerySpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    useLazyQuerySpy = jest.spyOn(apolloClient, 'useLazyQuery');
+  });
+
+  afterEach(() => {
+    useLazyQuerySpy.mockRestore();
+  });
+
+  it('returns initial events when no filters are applied', () => {
+    useLazyQuerySpy.mockReturnValue([jest.fn(), { loading: false }]);
+    const filters = createFilters();
+
+    const { result } = renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    expect(result.current.events).toEqual(initialEvents);
+    expect(result.current.hasFilterInputs).toBe(false);
+  });
+
+  it('fetches filtered events when filters are provided', async () => {
+    const loadEvents = jest.fn().mockResolvedValue({
+      data: { readEvents: [{ eventId: 'filtered-event' }] },
+    });
+    useLazyQuerySpy.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters = createFilters({
+      categories: ['Music'],
+    });
+
+    const { result } = renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    await waitFor(() => expect(result.current.events).toEqual([{ eventId: 'filtered-event' }]));
+    expect(result.current.hasFilterInputs).toBe(true);
+  });
+
+  it('handles loadEvents errors gracefully', async () => {
+    const error = new Error('network');
+    const loadEvents = jest.fn().mockRejectedValue(error);
+    useLazyQuerySpy.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters = createFilters({
+      categories: ['Sports'],
+    });
+
+    const { result } = renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    await waitFor(() => expect(result.current.error).toContain('Unable to apply filters'));
+  });
 });
 
 describe('buildFilterInputs', () => {

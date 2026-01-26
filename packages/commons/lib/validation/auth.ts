@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
 import { validateDate, validateMongodbId } from '../utils';
-import { Gender, FollowPolicy, SocialVisibility } from '../types';
+import { Gender, FollowPolicy, SocialVisibility, UserRole } from '../types';
 
 export const CreateUserInputSchema = z.object({
   address: z
@@ -17,6 +17,7 @@ export const CreateUserInputSchema = z.object({
   phone_number: z.string().regex(REGEX_PHONE_NUMBER, { message: ERROR_MESSAGES.INVALID_PHONE_NUMBER }),
   profile_picture: z.string().optional(),
   username: z.string().min(3, `username ${ERROR_MESSAGES.TOO_SHORT}`).optional(),
+  userRole: z.nativeEnum(UserRole).optional(),
 });
 
 export const UpdateUserInputSchema = z.object({

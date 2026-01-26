@@ -117,7 +117,7 @@ classDiagram
 The `User` model represents every person that authenticates with the platform—it drives access control, identity, and
 personalized behavior (feeds, RSVPs, follows) so other collections can tie metadata back to a real person.
 
-- `userId`, `email`, `username`, `userRole`, optional `roles[]`.
+- `userId`, `email`, `username`, `userRole`.
 - Profile fields: `given_name`, `family_name`, `birthdate`, `gender`, `phone_number`, `profile_picture`, `bio`.
 - `location { city, state, country, coordinates { latitude, longitude } }` for personalized event recommendations, plus
   `interests` (EventCategory refs).

@@ -11,6 +11,7 @@ import { printSchema } from 'graphql';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+  AdminResolver,
   EventCategoryResolver,
   EventCategoryGroupResolver,
   EventResolver,
@@ -31,6 +32,7 @@ const emitSchema = () => {
 
   const schema = buildSchemaSync({
     resolvers: [
+      AdminResolver,
       EventCategoryResolver,
       EventCategoryGroupResolver,
       EventResolver,

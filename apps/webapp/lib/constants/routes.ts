@@ -39,4 +39,7 @@ export const ROUTES = {
   VENUES: {
     ROOT: '/venues',
   },
+  ADMIN: {
+    ROOT: '/admin',
+  },
 };

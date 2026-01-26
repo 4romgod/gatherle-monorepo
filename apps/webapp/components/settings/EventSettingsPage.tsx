@@ -8,6 +8,7 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { signIn, useSession } from 'next-auth/react';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { useFormStatus } from 'react-dom';
+import UserEventsList from '@/components/account/UserEventsList';
 
 interface CommunicationPrefs {
   emailEnabled: boolean;
@@ -208,6 +209,10 @@ export default function EventSettingsPage({ user }: { user: User }) {
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
           <SubmitButton />
         </Stack>
+      </Box>
+
+      <Box sx={{ mt: 6 }}>
+        <UserEventsList userId={user.userId} />
       </Box>
     </Box>
   );

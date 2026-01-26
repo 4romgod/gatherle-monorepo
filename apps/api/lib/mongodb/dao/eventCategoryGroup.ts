@@ -115,6 +115,15 @@ class EventCategoryGroupDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async count(filter: Record<string, unknown> = {}): Promise<number> {
+    try {
+      return EventCategoryGroupModel.countDocuments(filter).exec();
+    } catch (error) {
+      logger.error('Error counting event category groups', error);
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventCategoryGroupDAO;

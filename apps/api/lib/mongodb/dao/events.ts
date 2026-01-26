@@ -241,6 +241,15 @@ class EventDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async count(filter: Record<string, unknown> = {}): Promise<number> {
+    try {
+      return EventModel.countDocuments(filter).exec();
+    } catch (error) {
+      logger.error('Error counting events', error);
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventDAO;
