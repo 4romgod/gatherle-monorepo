@@ -180,8 +180,8 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
         <Typography color="text.secondary">Group related categories together to drive curated navigation.</Typography>
       </Box>
 
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
-        <CardContent>
+      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
           <Stack spacing={2}>
             <Typography variant="h6">Create group</Typography>
             <Grid container spacing={2}>
@@ -189,6 +189,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                 <TextField
                   label="Name"
                   value={groupForm.name}
+                  fullWidth
                   onChange={(event) => setGroupForm((prev) => ({ ...prev, name: event.target.value }))}
                 />
               </Grid>
@@ -229,6 +230,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                   color="secondary"
                   onClick={handleCreate}
                   disabled={creating}
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
                 >
                   Create group
                 </Button>
@@ -251,10 +253,15 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
       {data?.readEventCategoryGroups?.map((group) => {
         const state = groupState[group.slug];
         return (
-          <Card key={group.slug} elevation={0} sx={{ borderRadius: 3 }}>
-            <CardContent>
+          <Card key={group.slug} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
               <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={{ xs: 1.5, sm: 0 }}
+                >
                   <Box>
                     <Typography variant="subtitle1" fontWeight={700}>
                       {group.name}
@@ -263,7 +270,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                       {group.slug}
                     </Typography>
                   </Box>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
                     <Button
                       size="small"
                       variant="outlined"
@@ -271,6 +278,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                       startIcon={<Delete />}
                       onClick={() => requestDelete(group.slug, group.name ?? 'group')}
                       disabled={Boolean(pendingGroupDelete)}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
                     >
                       Delete
                     </Button>
@@ -280,6 +288,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                       startIcon={<Save />}
                       onClick={() => handleUpdate(group.eventCategoryGroupId, group.slug)}
                       disabled={!state || savingSlug === group.slug}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
                     >
                       {savingSlug === group.slug ? 'Saving' : 'Save'}
                     </Button>

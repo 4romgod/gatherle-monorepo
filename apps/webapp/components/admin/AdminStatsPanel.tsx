@@ -35,8 +35,8 @@ export default function AdminStatsPanel({ token }: AdminStatsPanelProps) {
 
   return (
     <Stack spacing={3}>
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
-        <CardContent>
+      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
           <Stack spacing={2}>
             <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
               Overview
@@ -70,9 +70,9 @@ export default function AdminStatsPanel({ token }: AdminStatsPanelProps) {
 
       <Grid container spacing={2}>
         {SUMMARY_METRICS.map((metric) => (
-          <Grid size={{ xs: 6, md: 4 }} key={metric.key}>
-            <Card elevation={0} sx={{ borderRadius: 3 }}>
-              <CardContent>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={metric.key}>
+            <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                 <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
                   {metric.label}
                 </Typography>

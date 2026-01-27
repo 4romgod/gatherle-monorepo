@@ -140,7 +140,12 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={{ xs: 1, sm: 0 }}
+      >
         <Typography variant="h5" fontWeight={700}>
           Events
         </Typography>
@@ -162,10 +167,19 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
           {events.map((event) => {
             const formState = eventFormState[event.eventId];
             return (
-              <Card key={event.eventId} elevation={0} sx={{ borderRadius: 3 }}>
-                <CardContent>
+              <Card
+                key={event.eventId}
+                elevation={0}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+              >
+                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                   <Stack spacing={2}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between">
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      justifyContent="space-between"
+                      spacing={{ xs: 1.5, sm: 0 }}
+                    >
                       <Stack spacing={0.3}>
                         <Typography variant="subtitle1" fontWeight={700}>
                           {event.title}
@@ -174,7 +188,7 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
                           {event.slug}
                         </Typography>
                       </Stack>
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
                         <Button
                           size="small"
                           variant="outlined"
@@ -182,6 +196,7 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
                           color="error"
                           onClick={() => requestDelete({ eventId: event.eventId, title: event.title })}
                           disabled={Boolean(pendingDeleteEvent)}
+                          sx={{ width: { xs: '100%', sm: 'auto' } }}
                         >
                           Delete
                         </Button>
@@ -191,6 +206,7 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
                           startIcon={<Save />}
                           onClick={() => handleUpdate(event.eventId)}
                           disabled={!formState || savingEventId === event.eventId}
+                          sx={{ width: { xs: '100%', sm: 'auto' } }}
                         >
                           {savingEventId === event.eventId ? <CircularProgress size={16} /> : 'Save'}
                         </Button>

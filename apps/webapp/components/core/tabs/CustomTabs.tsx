@@ -65,16 +65,16 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
       sx={{
         display: 'flex',
         flexDirection: effectiveOrientation === 'vertical' ? 'row' : 'column',
-        minHeight: effectiveOrientation === 'vertical' ? '100vh' : 'auto',
-        gap: { xs: 0, md: 3 },
+        minHeight: { xs: 'auto', md: effectiveOrientation === 'vertical' ? '100vh' : 'auto' },
+        gap: { xs: 2, md: 3 },
       }}
     >
       {/* Sidebar Navigation */}
       <Card
         elevation={0}
         sx={{
-          borderRadius: { xs: 0, md: 3 },
-          border: { xs: 'none', md: '1px solid' },
+          borderRadius: { xs: 3, md: 3 },
+          border: '1px solid',
           borderColor: 'divider',
           display: 'flex',
           flexDirection: 'column',
@@ -114,7 +114,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
             },
           }}
           sx={{
-            p: effectiveOrientation === 'vertical' ? 1 : 0,
+            p: effectiveOrientation === 'vertical' ? 1 : { xs: 1, sm: 0 },
             minHeight: effectiveOrientation === 'horizontal' ? 56 : 'auto',
             width: '100%',
             borderBottom: effectiveOrientation === 'horizontal' ? 'none' : 'unset',
@@ -199,11 +199,11 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         elevation={0}
         sx={{
           flex: 1,
-          borderRadius: { xs: 0, md: 3 },
-          border: { xs: 0, md: '1px solid' },
+          borderRadius: { xs: 3, md: 3 },
+          border: '1px solid',
           borderColor: 'divider',
           backgroundColor: 'background.paper',
-          minHeight: '100vh',
+          minHeight: { xs: 'auto', md: '100vh' },
         }}
       >
         <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>{tabPanels}</Box>
