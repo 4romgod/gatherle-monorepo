@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Stack, Typography } from '@mui/material';
+import { alpha, Box, Stack, Typography } from '@mui/material';
 import SearchBox from '@/components/search/SearchBox';
 
 interface EventsHeaderProps {
@@ -17,7 +17,12 @@ export default function EventsHeader({ eventCount, eventTitles, onSearch }: Even
           <Typography variant="h3" fontWeight={700} className="glow-text" sx={{ mb: 1 }}>
             Discover Events
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+          <Typography
+            variant="body1"
+            sx={(theme) => ({
+              color: alpha(theme.palette.common.white, 0.7),
+            })}
+          >
             Find the perfect event for you from {eventCount} available events
           </Typography>
         </Box>

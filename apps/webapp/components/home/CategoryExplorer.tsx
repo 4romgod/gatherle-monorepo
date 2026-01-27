@@ -6,9 +6,16 @@ import { EventCategory } from '@/data/graphql/types/graphql';
 interface CategoryExplorerProps {
   categories?: EventCategory[];
   isLoading?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export default function CategoryExplorer({ categories = [], isLoading = false }: CategoryExplorerProps) {
+export default function CategoryExplorer({
+  categories = [],
+  isLoading = false,
+  title,
+  description,
+}: CategoryExplorerProps) {
   const shouldRender = isLoading || categories.length > 0;
   if (!shouldRender) {
     return null;
@@ -32,20 +39,24 @@ export default function CategoryExplorer({ categories = [], isLoading = false }:
           </>
         ) : (
           <>
-            <Typography
-              variant="h4"
-              sx={{
-                ...SECTION_TITLE_STYLES,
-                mb: 1,
-                textAlign: 'center',
-                fontSize: { xs: '1.5rem', md: '2rem' },
-              }}
-            >
-              Choose your kind of magic
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
-              Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.
-            </Typography>
+            {title && (
+              <Typography
+                variant="h4"
+                sx={{
+                  ...SECTION_TITLE_STYLES,
+                  mb: 1,
+                  textAlign: 'center',
+                  fontSize: { xs: '1.5rem', md: '2rem' },
+                }}
+              >
+                {title}
+              </Typography>
+            )}
+            {description && (
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
+                {description}
+              </Typography>
+            )}
           </>
         )}
 

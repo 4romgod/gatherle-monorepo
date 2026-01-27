@@ -2,9 +2,8 @@
 
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
-import { Avatar, AvatarGroup, CardContent, Typography, Tooltip, Stack } from '@mui/material';
+import { alpha, Avatar, AvatarGroup, Box, CardContent, Typography, Tooltip, Stack } from '@mui/material';
 import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
-import { Box } from '@mui/material';
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import Link from 'next/link';
@@ -67,7 +66,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
     <Link href={href || `/events/${event.slug}`}>
       <Surface
         component={Card}
-        sx={{
+        sx={(theme) => ({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
@@ -75,10 +74,11 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
           borderRadius: 2,
           overflow: 'hidden',
           minHeight: 240,
+          boxShadow: theme.shadows[1],
           '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            boxShadow: theme.shadows[4],
           },
-        }}
+        })}
       >
         <Box sx={{ position: 'relative', paddingTop: '52%', overflow: 'hidden' }}>
           <CardMedia
@@ -95,27 +95,27 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
             }}
           />
           <Box
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.4)',
-            }}
+              backgroundColor: alpha(theme.palette.common.black, 0.4),
+            })}
           />
           <Box
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               top: 8,
               left: 8,
               px: 1,
               py: 0.5,
               borderRadius: 2,
-              backgroundColor: 'rgba(255,255,255,0.92)',
+              backgroundColor: alpha(theme.palette.common.white, 0.92),
               color: 'primary.dark',
               fontWeight: 700,
               fontSize: '0.7rem',
               letterSpacing: 0.4,
               textTransform: 'uppercase',
-            }}
+            })}
           >
             {cityLabel}
           </Box>
