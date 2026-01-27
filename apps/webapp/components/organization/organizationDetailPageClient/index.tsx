@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@apollo/client';
-import { Avatar, Box, Button, Card, CardContent, Chip, Container, Grid, Stack, Typography } from '@mui/material';
+import { alpha, Avatar, Box, Button, Card, CardContent, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { ArrowBack, Language, Share } from '@mui/icons-material';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
@@ -101,14 +100,14 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
             }}
           />
           <Box
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
               height: '45%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-            }}
+              background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.8)} 0%, transparent 100%)`,
+            })}
           />
 
           <Button
@@ -166,12 +165,12 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
                 <Typography
                   variant="h3"
                   fontWeight={800}
-                  sx={{
+                  sx={(theme) => ({
                     color: 'common.white',
                     fontSize: { xs: '1.625rem', sm: '2rem', md: '2.5rem' },
-                    textShadow: '0 2px 20px rgba(0,0,0,0.5)',
+                    textShadow: `0 2px 20px ${alpha(theme.palette.common.black, 0.5)}`,
                     lineHeight: 1.2,
-                  }}
+                  })}
                 >
                   {name}
                 </Typography>

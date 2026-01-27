@@ -186,8 +186,8 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
         <Typography color="text.secondary">Add, update, or remove categories that power the explorer.</Typography>
       </Box>
 
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
-        <CardContent>
+      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
           <Stack spacing={2}>
             <Typography variant="h6">Create new category</Typography>
             <Grid container spacing={2}>
@@ -195,6 +195,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                 <TextField
                   label="Name"
                   value={newCategory.name}
+                  fullWidth
                   onChange={(event) => setNewCategory((prev) => ({ ...prev, name: event.target.value }))}
                 />
               </Grid>
@@ -202,6 +203,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                 <TextField
                   label="Slug"
                   value={newCategory.slug}
+                  fullWidth
                   onChange={(event) => setNewCategory((prev) => ({ ...prev, slug: event.target.value }))}
                 />
               </Grid>
@@ -209,6 +211,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                 <TextField
                   label="Icon name"
                   value={newCategory.iconName}
+                  fullWidth
                   onChange={(event) => setNewCategory((prev) => ({ ...prev, iconName: event.target.value }))}
                 />
               </Grid>
@@ -217,6 +220,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                   label="Color"
                   placeholder="#FF5733"
                   value={newCategory.color}
+                  fullWidth
                   onChange={(event) => setNewCategory((prev) => ({ ...prev, color: event.target.value }))}
                 />
               </Grid>
@@ -237,6 +241,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                   color="secondary"
                   onClick={handleCreate}
                   disabled={creating}
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
                 >
                   Create category
                 </Button>
@@ -269,10 +274,19 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
           {categories.map((category) => {
             const state = categoryState[category.eventCategoryId];
             return (
-              <Card key={category.eventCategoryId} elevation={0} sx={{ borderRadius: 3 }}>
-                <CardContent>
+              <Card
+                key={category.eventCategoryId}
+                elevation={0}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+              >
+                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                   <Stack spacing={2}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      spacing={{ xs: 1.5, sm: 0 }}
+                    >
                       <Box>
                         <Typography variant="subtitle1" fontWeight={700}>
                           {category.name}
@@ -281,7 +295,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                           {category.eventCategoryId}
                         </Typography>
                       </Box>
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
                         <Button
                           size="small"
                           variant="outlined"
@@ -289,6 +303,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                           startIcon={<Delete />}
                           onClick={() => requestDelete(category.eventCategoryId, category.name ?? 'category')}
                           disabled={Boolean(pendingCategoryDelete)}
+                          sx={{ width: { xs: '100%', sm: 'auto' } }}
                         >
                           Delete
                         </Button>
@@ -298,6 +313,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                           startIcon={<Save />}
                           onClick={() => handleUpdate(category.eventCategoryId)}
                           disabled={!state || savingCategoryId === category.eventCategoryId}
+                          sx={{ width: { xs: '100%', sm: 'auto' } }}
                         >
                           {savingCategoryId === category.eventCategoryId ? 'Saving' : 'Save'}
                         </Button>
@@ -309,6 +325,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                         <TextField
                           label="Name"
                           value={state?.name ?? ''}
+                          fullWidth
                           onChange={(event) =>
                             setCategoryState((prev) => ({
                               ...prev,
@@ -324,6 +341,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                         <TextField
                           label="Slug"
                           value={state?.slug ?? ''}
+                          fullWidth
                           onChange={(event) =>
                             setCategoryState((prev) => ({
                               ...prev,
@@ -339,6 +357,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                         <TextField
                           label="Icon"
                           value={state?.iconName ?? ''}
+                          fullWidth
                           onChange={(event) =>
                             setCategoryState((prev) => ({
                               ...prev,
@@ -355,6 +374,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
                           label="Color"
                           placeholder="#FF5733"
                           value={state?.color ?? ''}
+                          fullWidth
                           onChange={(event) =>
                             setCategoryState((prev) => ({
                               ...prev,

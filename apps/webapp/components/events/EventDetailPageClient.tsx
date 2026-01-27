@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
+  alpha,
   Box,
   Button,
   Card,
@@ -147,15 +148,18 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           width: '100%',
           overflow: 'hidden',
           bgcolor: 'grey.900',
-          '&::after': {
+          '&::after': (theme) => ({
             content: '""',
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
             height: '45%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 60%, transparent 100%)',
-          },
+            background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.65)} 0%, ${alpha(
+              theme.palette.common.black,
+              0.25,
+            )} 60%, transparent 100%)`,
+          }),
         }}
       >
         <Box
@@ -283,7 +287,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                         >
                           <Paper
                             elevation={0}
-                            sx={{
+                            sx={(theme) => ({
                               p: 2.5,
                               border: '1px solid',
                               borderColor: 'divider',
@@ -294,9 +298,9 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                                 borderColor: 'primary.main',
                                 bgcolor: 'action.hover',
                                 transform: 'translateY(-2px)',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                boxShadow: theme.shadows[3],
                               },
-                            }}
+                            })}
                           >
                             <Stack direction="row" spacing={2} alignItems="center">
                               <Avatar

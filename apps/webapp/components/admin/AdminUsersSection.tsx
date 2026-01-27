@@ -9,15 +9,13 @@ import {
   MenuItem,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
-  Paper,
   Skeleton,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  Divider,
 } from '@mui/material';
 import { Delete, Save } from '@mui/icons-material';
 import { useAppContext } from '@/hooks';
@@ -29,6 +27,8 @@ import { UpdateUserDocument, DeleteUserByIdDocument } from '@/data/graphql/query
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 export default function AdminUsersSection({ token, currentUserId }: AdminUsersSectionProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setToastProps } = useAppContext();
   const { data, loading, error, refetch } = useQuery(GetAllUsersDocument, {
     context: { headers: getAuthHeader(token) },
@@ -138,78 +138,75 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
           ))}
         </Stack>
       ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.userId}>
-                  <TableCell>
-                    <Typography variant="subtitle2" fontWeight={600}>
+        <Stack spacing={2}>
+          {users.map((user) => (
+            <Card
+              key={user.userId}
+              elevation={0}
+              sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+            >
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Stack spacing={2}>
+                  <Stack spacing={0.5}>
+                    <Typography variant="subtitle1" fontWeight={700}>
                       {user.given_name} {user.family_name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       @{user.username}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2">{user.email}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Select
-                        value={roleState[user.userId] || user.userRole || UserRole.User}
-                        onChange={(event) =>
-                          setRoleState((prev) => ({
-                            ...prev,
-                            [user.userId]: event.target.value as UserRole,
-                          }))
-                        }
-                        size="small"
-                      >
-                        {Object.values(UserRole).map((role) => (
-                          <MenuItem key={role} value={role}>
-                            {role}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </Stack>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button
-                        startIcon={<Save />}
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleUpdate(user.userId)}
-                        disabled={savingId === user.userId}
-                      >
-                        {savingId === user.userId ? <CircularProgress size={16} /> : 'Save'}
-                      </Button>
-                      <Button
-                        startIcon={<Delete />}
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => requestDelete(user.userId, `${user.given_name} ${user.family_name}`)}
-                        disabled={Boolean(pendingUserDelete) || currentUserId === user.userId}
-                      >
-                        Delete
-                      </Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  </Stack>
+                  <Divider />
+                  <Stack spacing={1}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Role
+                    </Typography>
+                    <Select
+                      value={roleState[user.userId] || user.userRole || UserRole.User}
+                      onChange={(event) =>
+                        setRoleState((prev) => ({
+                          ...prev,
+                          [user.userId]: event.target.value as UserRole,
+                        }))
+                      }
+                      size="small"
+                      fullWidth
+                    >
+                      {Object.values(UserRole).map((role) => (
+                        <MenuItem key={role} value={role}>
+                          {role}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button
+                      startIcon={<Save />}
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleUpdate(user.userId)}
+                      disabled={savingId === user.userId}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      {savingId === user.userId ? <CircularProgress size={16} /> : 'Save'}
+                    </Button>
+                    <Button
+                      startIcon={<Delete />}
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={() => requestDelete(user.userId, `${user.given_name} ${user.family_name}`)}
+                      disabled={Boolean(pendingUserDelete) || currentUserId === user.userId}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
       )}
 
       <ConfirmDialog

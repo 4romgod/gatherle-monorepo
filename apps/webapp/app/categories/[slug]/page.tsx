@@ -1,12 +1,17 @@
 import Link from 'next/link';
-import { alpha, Box, Button, Container, Stack, Typography } from '@mui/material';
+import { alpha, Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
-import { GetAllEventsDocument, GetEventCategoryBySlugDocument } from '@/data/graphql/types/graphql';
+import {
+  GetAllEventCategoryGroupsDocument,
+  GetAllEventsDocument,
+  GetEventCategoryBySlugDocument,
+} from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import { ROUTES } from '@/lib/constants';
 import { getEventCategoryIcon } from '@/lib/constants';
+import { CategoryExplorer } from '@/components/home';
 
 export const metadata: Metadata = {
   title: 'Categories · Ntlango',
@@ -27,7 +32,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   const { slug } = await params;
   const client = getClient();
 
-  const [{ data: categoryData }, { data: eventsData }] = await Promise.all([
+  const [{ data: categoryData }, { data: eventsData }, { data: categoryGroupsData }] = await Promise.all([
     client.query({
       query: GetEventCategoryBySlugDocument,
       variables: { slug },
@@ -41,6 +46,9 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         },
       },
     }),
+    client.query({
+      query: GetAllEventCategoryGroupsDocument,
+    }),
   ]);
 
   const category = categoryData?.readEventCategoryBySlug;
@@ -53,6 +61,12 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   const categoryColor = category.color;
   const avatarBackground = categoryColor ? alpha(categoryColor, 0.15) : 'action.selected';
   const iconColor = categoryColor ?? 'text.primary';
+  const categoryGroups = categoryGroupsData?.readEventCategoryGroups ?? [];
+  const categoryGroup = categoryGroups.find((group) =>
+    (group.eventCategories ?? []).some((eventCategory) => eventCategory.slug === slug),
+  );
+  const relatedCategories =
+    categoryGroup?.eventCategories?.filter((relatedCategory) => relatedCategory.slug !== slug) ?? [];
 
   return (
     <Box component="section" sx={{ py: { xs: 6, md: 8 } }}>
@@ -106,10 +120,21 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
 
           <Stack spacing={2}>
             <Typography variant="subtitle1" fontWeight={600}>
-              {events.length} event{events.length === 1 ? '' : 's'} matching {category.name}
+              {events.length} Event{events.length === 1 ? '' : 's'} matching {category.name}
             </Typography>
             <EventTileGrid events={events} skeletonCount={3} />
           </Stack>
+          {relatedCategories.length > 0 && (
+            <Box sx={{ pt: 5 }}>
+              <Typography variant="h6" fontWeight={700}>
+                Related Categories
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {relatedCategories.length} related {relatedCategories.length === 1 ? 'category' : 'categories'}
+              </Typography>
+              <CategoryExplorer categories={relatedCategories} />
+            </Box>
+          )}
         </Stack>
       </Container>
     </Box>

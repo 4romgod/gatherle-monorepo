@@ -1,7 +1,8 @@
+'use client';
 import Link from 'next/link';
+import { alpha, Box, Button, Typography } from '@mui/material';
 import { EventCategory } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
-import { Box, Button, Typography } from '@mui/material';
 
 export default function CategoryCardSm({ eventCategory }: { eventCategory: EventCategory }) {
   const IconComponent = getEventCategoryIcon(eventCategory.iconName);
@@ -9,8 +10,8 @@ export default function CategoryCardSm({ eventCategory }: { eventCategory: Event
   return (
     <Button
       component={Link}
-      href={`/events#${eventCategory.name}`}
-      sx={{
+      href={`/categories/${eventCategory.slug}`}
+      sx={(theme) => ({
         width: '100%',
         height: '100%',
         minHeight: 110,
@@ -20,21 +21,21 @@ export default function CategoryCardSm({ eventCategory }: { eventCategory: Event
         justifyContent: 'center',
         textAlign: 'center',
         position: 'relative',
-        backgroundColor: 'background.paper',
+        backgroundColor: theme.palette.background.paper,
         borderRadius: 3,
         border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 10px 28px rgba(0,0,0,0.08)',
+        borderColor: theme.palette.divider,
+        boxShadow: theme.shadows[0],
         transition: 'transform 0.3s, box-shadow 0.3s, border-color 0.3s',
         '&:hover': {
-          boxShadow: '0 10px 15px rgba(0,0,0,0.12)',
+          boxShadow: theme.shadows[4],
           borderColor: 'secondary.main',
         },
         p: 1.5,
-      }}
+      })}
     >
       <Box
-        sx={{
+        sx={(theme) => ({
           fontSize: '2rem',
           mb: 1,
           width: 42,
@@ -43,10 +44,10 @@ export default function CategoryCardSm({ eventCategory }: { eventCategory: Event
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '50%',
-          background: 'rgba(255,255,255,0.7)',
+          backgroundColor: alpha(theme.palette.common.white, 0.7),
           marginBottom: 2,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
-        }}
+          boxShadow: `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.6)}`,
+        })}
       >
         <IconComponent color={eventCategory.color || ''} height={24} width={24} />
       </Box>

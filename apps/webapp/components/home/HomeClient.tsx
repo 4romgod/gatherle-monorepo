@@ -53,7 +53,12 @@ export default function HomeClient() {
           )}
         </Container>
       </Box>
-      <CategoryExplorer categories={eventCategories} isLoading={categoriesLoading} />
+      <CategoryExplorer
+        title={'Choose your kind of magic'}
+        description={'Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.'}
+        categories={eventCategories}
+        isLoading={categoriesLoading}
+      />
     </Box>
   );
 }

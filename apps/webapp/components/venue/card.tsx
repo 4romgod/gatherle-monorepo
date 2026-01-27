@@ -27,19 +27,20 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
   return (
     <Surface
       component={Card}
-      sx={{
+      sx={(theme) => ({
         borderRadius: 3,
         minHeight: 280,
         display: 'flex',
         flexDirection: 'column',
         transition: 'all 0.2s ease',
+        boxShadow: theme.shadows[2],
         '&:hover': {
           borderColor: 'primary.main',
           bgcolor: 'action.hover',
           transform: 'translateY(-2px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          boxShadow: theme.shadows[4],
         },
-      }}
+      })}
     >
       <CardContent sx={{ flexGrow: 1, p: 3 }}>
         <Box sx={{ mb: 2 }}>
