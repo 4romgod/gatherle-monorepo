@@ -9,14 +9,7 @@ import {
   MenuItem,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
-  Paper,
   Skeleton,
   useMediaQuery,
   useTheme,
@@ -144,13 +137,13 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
             <Skeleton key={index} variant="rectangular" height={80} />
           ))}
         </Stack>
-      ) : isMobile ? (
+      ) : (
         <Stack spacing={2}>
           {users.map((user) => (
             <Card
               key={user.userId}
               elevation={0}
-              sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+              sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
             >
               <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                 <Stack spacing={2}>
@@ -214,83 +207,6 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
             </Card>
           ))}
         </Stack>
-      ) : (
-        <TableContainer
-          component={Paper}
-          elevation={0}
-          sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.userId}>
-                  <TableCell>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      {user.given_name} {user.family_name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      @{user.username}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{user.email}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Select
-                        value={roleState[user.userId] || user.userRole || UserRole.User}
-                        onChange={(event) =>
-                          setRoleState((prev) => ({
-                            ...prev,
-                            [user.userId]: event.target.value as UserRole,
-                          }))
-                        }
-                        size="small"
-                      >
-                        {Object.values(UserRole).map((role) => (
-                          <MenuItem key={role} value={role}>
-                            {role}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </Stack>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button
-                        startIcon={<Save />}
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleUpdate(user.userId)}
-                        disabled={savingId === user.userId}
-                      >
-                        {savingId === user.userId ? <CircularProgress size={16} /> : 'Save'}
-                      </Button>
-                      <Button
-                        startIcon={<Delete />}
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => requestDelete(user.userId, `${user.given_name} ${user.family_name}`)}
-                        disabled={Boolean(pendingUserDelete) || currentUserId === user.userId}
-                      >
-                        Delete
-                      </Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
       )}
 
       <ConfirmDialog

@@ -80,32 +80,30 @@ export default function AdminDashboard() {
   }
 
   return (
-    <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>
-      <Container maxWidth="lg">
-        <Stack spacing={6}>
-          <Stack spacing={1}>
-            <Typography variant="overline" sx={{ letterSpacing: 4, color: 'primary.main', fontWeight: 700 }}>
-              ADMIN CONSOLE
-            </Typography>
-            <Typography variant="h3" fontWeight={800}>
-              Manage everything in one secure dashboard
-            </Typography>
-            <Typography color="text.secondary" sx={{ maxWidth: 640 }}>
-              Review site-wide activity, curate event categories, and keep the community healthy from a single control
-              panel. Changes apply immediately across the platform.
-            </Typography>
-          </Stack>
-          <CustomTabs
-            tabsProps={{
-              tabsTitle: 'Admin control panels',
-              tabs,
-              defaultTab: 0,
-              variant: 'scrollable',
-              id: 'admin-console-tabs',
-            }}
-          />
+    <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+      <Stack spacing={6}>
+        <Stack spacing={1}>
+          <Typography variant="overline" sx={{ letterSpacing: 4, color: 'primary.main', fontWeight: 700 }}>
+            ADMIN CONSOLE
+          </Typography>
+          <Typography variant="h3" fontWeight={800}>
+            Manage everything in one secure dashboard
+          </Typography>
+          <Typography color="text.secondary" sx={{ maxWidth: 640 }}>
+            Review site-wide activity, curate event categories, and keep the community healthy from a single control
+            panel. Changes apply immediately across the platform.
+          </Typography>
         </Stack>
-      </Container>
-    </Box>
+        <CustomTabs
+          tabsProps={{
+            tabsTitle: 'Admin control panels',
+            tabs,
+            defaultTab: 0,
+            variant: 'scrollable',
+            id: 'admin-console-tabs',
+          }}
+        />
+      </Stack>
+    </Container>
   );
 }

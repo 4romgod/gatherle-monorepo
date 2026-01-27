@@ -253,7 +253,11 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
       {data?.readEventCategoryGroups?.map((group) => {
         const state = groupState[group.slug];
         return (
-          <Card key={group.slug} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+          <Card
+            key={group.slug}
+            elevation={0}
+            sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+          >
             <CardContent sx={{ p: { xs: 3, md: 4 } }}>
               <Stack spacing={2}>
                 <Stack

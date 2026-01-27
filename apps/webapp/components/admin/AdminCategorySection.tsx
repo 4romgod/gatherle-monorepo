@@ -277,7 +277,7 @@ export default function AdminCategorySection({ token }: AdminSectionProps) {
               <Card
                 key={category.eventCategoryId}
                 elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
               >
                 <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                   <Stack spacing={2}>

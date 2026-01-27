@@ -206,7 +206,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
           minHeight: { xs: 'auto', md: '100vh' },
         }}
       >
-        <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>{tabPanels}</Box>
+        {tabPanels}
       </Card>
     </Box>
   );

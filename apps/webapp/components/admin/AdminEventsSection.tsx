@@ -170,7 +170,7 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
               <Card
                 key={event.eventId}
                 elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
               >
                 <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                   <Stack spacing={2}>
