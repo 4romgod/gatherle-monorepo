@@ -104,7 +104,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
               Ntlango is the modern layer for community-led events—discover inspiring gatherings or host your own with
               gorgeous, human-first pages.
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 4 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Button
                 variant="contained"
                 color="secondary"
@@ -114,14 +114,14 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 startIcon={<Explore />}
                 sx={{ ...BUTTON_PRIMARY_STYLES }}
               >
-                Explore events
+                Browse events
               </Button>
               <Button
                 variant="outlined"
                 color="inherit"
                 size="large"
                 component={Link}
-                href={ROUTES.ACCOUNT.EVENTS.CREATE}
+                href={ROUTES.AUTH.REGISTER}
                 sx={{
                   ...BUTTON_STYLES,
                   px: 4,
@@ -131,9 +131,18 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                   '&:hover': { borderColor: 'hero.text', backgroundColor: 'hero.cardBg' },
                 }}
               >
-                Host with Ntlango
+                Sign up
               </Button>
             </Box>
+            <Button
+              variant="text"
+              color="secondary"
+              component={Link}
+              href={ROUTES.ACCOUNT.EVENTS.CREATE}
+              sx={{ fontWeight: 600 }}
+            >
+              Host with Ntlango
+            </Button>
           </Grid>
 
           <Grid size={{ xs: 12, md: 5 }}>

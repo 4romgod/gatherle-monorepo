@@ -270,6 +270,19 @@ export class Event {
       'Resolved participants populated via $lookup aggregation (not persisted in Event document; queried from EventParticipant collection)',
   })
   participants?: EventParticipant[];
+
+  // Computed fields populated via aggregation helpers (not persisted on the document)
+  @Field(() => Number, {
+    nullable: true,
+    description: 'Number of users who have saved the event (computed via follows lookup)',
+  })
+  savedByCount?: number;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'Number of RSVPs (Going or Interested) computed during aggregation',
+  })
+  rsvpCount?: number;
 }
 
 @InputType('CreateEventInput', { description: EVENT_DESCRIPTIONS.EVENT.CREATE_INPUT })

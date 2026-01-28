@@ -115,6 +115,8 @@ class EventDAO {
         const { startDate, endDate } = dateRangeToUse;
         logger.debug('Applying date range filter:', { startDate, endDate });
 
+        // TODO: Consider moving RRULE date filtering into the aggregation pipeline so pagination/sorting
+        // respect the date constraints before skip/limit stages execute.
         events = events.filter((event) => {
           if (!event.recurrenceRule) {
             return false;

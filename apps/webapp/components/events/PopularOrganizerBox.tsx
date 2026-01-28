@@ -12,11 +12,11 @@ export type PopularOrganization = {
   orgId: string;
   slug?: string;
   name?: string;
-  description?: string;
-  logo?: string;
+  description?: string | null;
+  logo?: string | null;
   followersCount: number;
   isFollowable?: boolean;
-  tags?: string[];
+  tags?: string[] | null;
 };
 
 export type PopularOrganizerBoxProps = {
@@ -52,7 +52,7 @@ export default function PopularOrganizerBox({ organization }: PopularOrganizerBo
         {/* Organization Details */}
         <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
           <Avatar
-            src={logo}
+            src={logo ?? undefined}
             alt={name || 'Organization'}
             sx={{
               width: 56,

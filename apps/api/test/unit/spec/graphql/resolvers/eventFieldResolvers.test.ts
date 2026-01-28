@@ -212,6 +212,15 @@ describe('EventResolver Field Resolvers', () => {
       expect(FollowDAO.countSavesForEvent).toHaveBeenCalledWith('event1');
       expect(result).toBe(0);
     });
+
+    it('prefers pipeline-supplied savedByCount when available', async () => {
+      const event = { eventId: 'event1', savedByCount: 13 } as Event;
+
+      const result = await resolver.savedByCount(event);
+
+      expect(FollowDAO.countSavesForEvent).not.toHaveBeenCalled();
+      expect(result).toBe(13);
+    });
   });
 
   describe('isSavedByMe field resolver', () => {
@@ -281,6 +290,15 @@ describe('EventResolver Field Resolvers', () => {
         ParticipantStatus.Interested,
       ]);
       expect(result).toBe(0);
+    });
+
+    it('uses precomputed rsvpCount when the pipeline already provided one', async () => {
+      const event = { eventId: 'event1', rsvpCount: 18 } as Event;
+
+      const result = await resolver.rsvpCount(event);
+
+      expect(EventParticipantDAO.countByEvent).not.toHaveBeenCalled();
+      expect(result).toBe(18);
     });
   });
 

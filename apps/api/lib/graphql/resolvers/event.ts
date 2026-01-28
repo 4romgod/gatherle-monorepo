@@ -158,6 +158,10 @@ export class EventResolver {
    */
   @FieldResolver(() => Int, { description: 'Number of users who have saved this event' })
   async savedByCount(@Root() event: Event): Promise<number> {
+    if (typeof event.savedByCount === 'number') {
+      return event.savedByCount;
+    }
+
     return FollowDAO.countSavesForEvent(event.eventId);
   }
 
@@ -179,6 +183,10 @@ export class EventResolver {
    */
   @FieldResolver(() => Int, { description: "Number of people who have RSVP'd to this event" })
   async rsvpCount(@Root() event: Event): Promise<number> {
+    if (typeof event.rsvpCount === 'number') {
+      return event.rsvpCount;
+    }
+
     return EventParticipantDAO.countByEvent(event.eventId, [ParticipantStatus.Going, ParticipantStatus.Interested]);
   }
 

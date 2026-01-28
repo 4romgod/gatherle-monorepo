@@ -14,7 +14,8 @@ describe('createEventLookupStages', () => {
     // - eventCategories: $lookup
     // - organizers: $lookup users, $addFields (create map), $addFields (reconstruct organizers), $project
     // - participants: $lookup participants, $lookup users, $addFields (create map), $addFields (enrich participants), $project
-    expect(lookupStages.length).toBe(10);
+    // - savedBy counts: $lookup follows, $addFields (rsvpCount + savedByCount), $project
+    expect(lookupStages.length).toBe(12);
   });
 
   it('should contain the correct fields in the eventCategories lookup stage', () => {
@@ -71,5 +72,22 @@ describe('createEventLookupStages', () => {
     expect(pipeline).toBeDefined();
     expect(pipeline.length).toBeGreaterThan(0);
     expect(pipeline[0]).toHaveProperty('$match');
+  });
+
+  it('should compute savedByCount via follows lookup stage', () => {
+    const lookupStages = createEventLookupStages();
+    const savedByLookupStage = lookupStages[9] as PipelineStage.Lookup;
+
+    expect(savedByLookupStage.$lookup.from).toBe('follows');
+    expect(savedByLookupStage.$lookup.let).toBeDefined();
+    expect(savedByLookupStage.$lookup.pipeline).toBeDefined();
+  });
+
+  it('adds rsvpCount and savedByCount fields', () => {
+    const lookupStages = createEventLookupStages();
+    const addFieldsStage = lookupStages[10] as PipelineStage.AddFields;
+
+    expect(addFieldsStage.$addFields).toHaveProperty('rsvpCount');
+    expect(addFieldsStage.$addFields).toHaveProperty('savedByCount');
   });
 });

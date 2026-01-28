@@ -11,9 +11,21 @@ interface EventsListProps {
   error: string | null;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
-export default function EventsList({ events, loading, error, hasActiveFilters, onClearFilters }: EventsListProps) {
+export default function EventsList({
+  events,
+  loading,
+  error,
+  hasActiveFilters,
+  onClearFilters,
+  hasMore = false,
+  onLoadMore,
+  loadingMore = false,
+}: EventsListProps) {
   const showSkeletons = loading;
 
   if (error) {
@@ -61,6 +73,24 @@ export default function EventsList({ events, loading, error, hasActiveFilters, o
         </Typography>
       </Stack>
       <EventTileGrid events={events} loading={showSkeletons} />
+      {hasMore && onLoadMore && (
+        <Box
+          sx={{
+            mt: 4,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={onLoadMore}
+            disabled={loading || loadingMore}
+            sx={{ textTransform: 'none', px: 4, py: 1.5 }}
+          >
+            {loadingMore ? 'Loading more events…' : 'Load more events'}
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

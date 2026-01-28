@@ -67,7 +67,11 @@ reduces accidental data loss, and can later be extended to **support cross-devic
 5. Document the preserved keys/pattern in `docs/session-state-plan.md` plus any new README additions for future
    contributors.
 
-## Cross-device continuity
+---
+
+## Features that depend on session state
+
+### Cross-device continuity
 
 - Once the client-side persistence proves reliable, we can sync a subset of the saved state (tab selection, active
   draft, filters) to the backend so the user sees the same state across devices.
@@ -78,3 +82,17 @@ reduces accidental data loss, and can later be extended to **support cross-devic
 - On hydration, read from the server first (if available), fall back to `localStorage`, and write through the hook when
   the user changes the state again.
 - Provide a migration/clear path so stale or corrupted server-side state can be reset without impacting the local draft.
+
+### Location-based onboarding
+
+- When a new visitor lands on the site, we can ask for browser geolocation permission and, if granted, save the
+  coordinates + consent flag via the persistence hook so we can apply location filters for future sessions without
+  re-prompting.
+- Store a `(permissionGranted, { latitude, longitude })` tuple alongside other session state keys so we know whether to
+  auto-apply `EventsQueryOptionsInput.location` when building the initial feed (the backend already supports this via
+  `createLocationMatchStage`).
+- If the user denies permission, persist that decision and keep showing the global (non-location-filtered) view, but
+  surface a “Enable location discovery” CTA later so they can grant access and reset the saved preference.
+- Treat the stored location as non-sensitive (no auth tokens); clear it when the user explicitly signs out or revokes
+  the preference. Include a UI affordance to “Forget my location” so the hook can drop the entry and re-prompt on next
+  visit.

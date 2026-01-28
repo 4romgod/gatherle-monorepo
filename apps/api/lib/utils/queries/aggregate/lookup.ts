@@ -1,6 +1,9 @@
 import type { PipelineStage } from 'mongoose';
+import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@ntlango/commons/types';
 
 export const createEventLookupStages = (): PipelineStage[] => {
+  const rsvpStatusesForCount = [ParticipantStatus.Going, ParticipantStatus.Interested];
+
   return [
     {
       $lookup: {
@@ -139,9 +142,47 @@ export const createEventLookupStages = (): PipelineStage[] => {
       },
     },
     {
+      $lookup: {
+        from: 'follows',
+        let: { eventId: '$eventId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$targetType', FollowTargetType.Event] },
+                  { $eq: ['$targetId', '$$eventId'] },
+                  { $eq: ['$approvalStatus', FollowApprovalStatus.Accepted] },
+                ],
+              },
+            },
+          },
+          { $count: 'count' },
+        ],
+        as: 'savedByCountAggregation',
+      },
+    },
+    {
+      $addFields: {
+        rsvpCount: {
+          $size: {
+            $filter: {
+              input: { $ifNull: ['$participants', []] },
+              as: 'participant',
+              cond: { $in: ['$$participant.status', rsvpStatusesForCount] },
+            },
+          },
+        },
+        savedByCount: {
+          $ifNull: [{ $arrayElemAt: ['$savedByCountAggregation.count', 0] }, 0],
+        },
+      },
+    },
+    {
       $project: {
         participantsUsersMap: 0,
         participantsUserMap: 0,
+        savedByCountAggregation: 0,
       },
     },
   ];
