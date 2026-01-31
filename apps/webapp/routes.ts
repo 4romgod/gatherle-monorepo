@@ -57,7 +57,7 @@ export const isPublicDynamicRoute = (pathname: string): boolean => {
   return dynamicRoutesBases.some((base) => pathname.startsWith(base));
 };
 
-export const protectedRouteBases = [ROUTES.ACCOUNT.ROOT, ROUTES.ADMIN.ROOT] as const;
+export const protectedRouteBases = [ROUTES.ACCOUNT.ROOT, ROUTES.ADMIN.ROOT, ROUTES.VENUES.ADD] as const;
 
 export const isProtectedRoute = (pathname: string): boolean =>
   protectedRouteBases.some((base) => pathname.startsWith(base));

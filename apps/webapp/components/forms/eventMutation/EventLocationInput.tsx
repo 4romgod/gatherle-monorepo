@@ -1,86 +1,174 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { TextField, Grid, Box, FormControl, Card } from '@mui/material';
-import { LocationInputProps } from '@/lib/constants';
-import { Location } from '@/data/graphql/types/graphql';
+import Link from 'next/link';
+import React, { useCallback, useMemo } from 'react';
+import { useQuery } from '@apollo/client';
+import { Autocomplete, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
+import { Add } from '@mui/icons-material';
+import { GetAllVenuesDocument } from '@/data/graphql/query';
+import { GetVenuesQuery, Location } from '@/data/graphql/types/graphql';
+import { LocationInputProps, ROUTES } from '@/lib/constants';
 import LocationTypeRadioButtons from '@/components/buttons/LocationTypeRadioButton';
 
-const defaultAddress = {
-  street: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  country: '',
+type VenueOption = GetVenuesQuery['readVenues'][number];
+
+const formatVenueLabel = (venue: VenueOption) => {
+  const region = venue.address?.region;
+  const city = venue.address?.city;
+  const locationSegment = [region, city].filter(Boolean).join(', ');
+  return locationSegment ? `${venue.name} • ${locationSegment}` : venue.name;
 };
 
-const EventLocationInput: React.FC<LocationInputProps> = ({ onChange }) => {
-  const [locationType, setLocationType] = useState<string>('venue');
+const buildLocationFromVenue = (venue: VenueOption): Location => {
+  const address =
+    venue.address && venue.address.city && venue.address.country
+      ? {
+          city: venue.address.city,
+          country: venue.address.country,
+            state: venue.address.region ?? '', // always string
+            zipCode: venue.address.postalCode ?? '', // always string
+          street: venue.address.street ?? undefined,
+        }
+      : undefined;
 
-  const [locationDetails, setLocationDetails] = useState<Location>({
-    locationType,
-    address: locationType === 'venue' ? { ...defaultAddress } : undefined,
-    details: locationType !== 'venue' ? '' : undefined,
+  const coordinates =
+    venue.geo && typeof venue.geo.latitude === 'number' && typeof venue.geo.longitude === 'number'
+      ? {
+          latitude: venue.geo.latitude,
+          longitude: venue.geo.longitude,
+        }
+      : undefined;
+
+  return {
+    locationType: 'venue',
+    address,
+    coordinates,
+  };
+};
+
+const buildDefaultLocation = (type: Location['locationType']): Location =>
+  type === 'venue' ? { locationType: 'venue' } : { locationType: type, details: '' };
+
+export default function EventLocationInput({ onChange, value, venueId, onVenueChange }: LocationInputProps) {
+  const { data, loading } = useQuery(GetAllVenuesDocument, {
+    fetchPolicy: 'cache-and-network',
   });
 
-  useEffect(() => {
-    onChange(locationDetails);
-  }, [locationDetails]);
+  const venues = data?.readVenues ?? [];
+  const currentLocation = value ?? ({ locationType: 'venue' } as Location);
+  const selectedVenue = useMemo(() => venues.find((venue) => venue.venueId === venueId) ?? null, [venues, venueId]);
 
-  const handleLocationTypeChange = useCallback((type: string) => {
-    setLocationType(type);
-    setLocationDetails({
-      locationType: type,
-      address: type === 'venue' ? { ...defaultAddress } : undefined,
-      details: type !== 'venue' ? '' : undefined,
-    });
-  }, []);
+  const handleLocationTypeChange = useCallback(
+    (type: string) => {
+      const locationType = type as Location['locationType'];
+      onChange(buildDefaultLocation(locationType));
+      if (locationType !== 'venue') {
+        onVenueChange?.(undefined);
+      }
+    },
+    [onChange, onVenueChange],
+  );
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLocationDetails((prev) => ({
-      ...prev,
-      address: prev.address ? { ...prev.address, [name]: value } : undefined,
-    }));
-  }, []);
+  const handleVenueChange = useCallback(
+    (_: React.SyntheticEvent, option: VenueOption | null) => {
+      if (option) {
+        onChange(buildLocationFromVenue(option));
+        onVenueChange?.(option.venueId);
+        return;
+      }
+      onChange(buildDefaultLocation('venue'));
+      onVenueChange?.(undefined);
+    },
+    [onChange, onVenueChange],
+  );
 
-  const addressFields = [
-    { label: 'Street', name: 'street' },
-    { label: 'City', name: 'city' },
-    { label: 'State', name: 'state' },
-    { label: 'Zip Code', name: 'zipCode' },
-    { label: 'Country', name: 'country' },
-  ];
+  const handleDetailChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({
+        ...currentLocation,
+        details: event.target.value,
+      });
+    },
+    [currentLocation, onChange],
+  );
+
+  const detailLabel =
+    currentLocation.locationType === 'online'
+      ? 'Online location (link, platform, or room info)'
+      : 'Additional details (optional)';
 
   return (
-    <Box>
-      <FormControl component="fieldset" sx={{ width: '100%', mb: 3 }}>
-        <LocationTypeRadioButtons selectedType={locationType} onChange={handleLocationTypeChange} />
-      </FormControl>
+    <Stack spacing={2}>
+      <LocationTypeRadioButtons selectedType={currentLocation.locationType} onChange={handleLocationTypeChange} />
 
-      {/* TODO use the address input component */}
-      {locationType === 'venue' && (
-        <Card elevation={0} sx={{ borderRadius: 2, p: 2, bgcolor: 'background.default' }}>
-          <Grid container spacing={2}>
-            {addressFields.map(({ label, name }) => (
-              <Grid size={{ xs: 12, sm: 6 }} key={name}>
-                <TextField
-                  fullWidth
-                  label={label}
-                  name={name}
-                  size="small"
-                  onChange={handleInputChange}
-                  required
-                  color="secondary"
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Card>
+      {currentLocation.locationType === 'venue' ? (
+        <Stack spacing={1.5}>
+          <Autocomplete
+            value={selectedVenue}
+            options={venues}
+            loading={loading}
+            getOptionLabel={formatVenueLabel}
+            isOptionEqualToValue={(option, value) => option.venueId === value?.venueId}
+            onChange={handleVenueChange}
+            noOptionsText="No venues found"
+            disableClearable={false}
+            clearOnEscape
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select a venue"
+                placeholder={loading ? 'Loading venues…' : 'Search by name or city'}
+                size="small"
+                color="secondary"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loading && <CircularProgress size={20} />}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
+          />
+
+          {selectedVenue && (
+            <Typography variant="body2" color="text.secondary">
+              {selectedVenue.address?.street ? `${selectedVenue.address.street}, ` : ''}
+              {selectedVenue.address?.city ?? selectedVenue.name}
+            </Typography>
+          )}
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="body2" color="text.secondary">
+              Need a new venue?
+            </Typography>
+            <Button
+              component={Link}
+              href={ROUTES.VENUES.ADD}
+              variant="text"
+              startIcon={<Add />}
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+            >
+              Add venue
+            </Button>
+          </Stack>
+        </Stack>
+      ) : (
+        <TextField
+          label={detailLabel}
+          value={currentLocation.details ?? ''}
+          onChange={handleDetailChange}
+          size="small"
+          color="secondary"
+          multiline
+          rows={currentLocation.locationType === 'online' ? 2 : 1}
+          fullWidth
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+        />
       )}
-    </Box>
+    </Stack>
   );
-};
-
-export default EventLocationInput;
+}

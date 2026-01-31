@@ -33,6 +33,17 @@ import { logger } from './logger';
 // Nominatim API configuration
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 const NOMINATIM_USER_AGENT = 'Ntlango-EventsAPI/1.0 (info@mapapa.co.za)';
+const RATE_LIMIT_DELAY_MS = 1100;
+let lastGeocodeRequestAt = 0;
+
+const waitForRateLimit = async () => {
+  const now = Date.now();
+  const nextAllowed = lastGeocodeRequestAt + RATE_LIMIT_DELAY_MS;
+  if (now < nextAllowed) {
+    await new Promise((resolve) => setTimeout(resolve, nextAllowed - now));
+  }
+  lastGeocodeRequestAt = Date.now();
+};
 
 interface GeocodingResult {
   latitude: number;
@@ -72,34 +83,49 @@ const buildGeocodingParams = (address: Address): URLSearchParams => {
 async function makeGeocodingRequest(params: URLSearchParams): Promise<GeocodingResult | null> {
   const url = `${NOMINATIM_BASE_URL}/search?${params.toString()}`;
 
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': NOMINATIM_USER_AGENT,
-      'Accept-Language': 'en',
-    },
-  });
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    await waitForRateLimit();
 
-  if (!response.ok) {
-    logger.warn(`[geocodeAddress] Geocoding API returned ${response.status}: ${response.statusText}`);
-    return null;
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': NOMINATIM_USER_AGENT,
+          'Accept-Language': 'en',
+        },
+      });
+
+      if (!response.ok) {
+        logger.warn(`[geocodeAddress] Geocoding API returned ${response.status}: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        return null;
+      }
+
+      const { lat, lon } = data[0];
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lon);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        logger.warn(`[geocodeAddress] Invalid coordinates returned: lat=${lat}, lon=${lon}`);
+        return null;
+      }
+
+      return { latitude, longitude };
+    } catch (error) {
+      if (attempt === 2) {
+        logger.warn('[geocodeAddress] Request failed after retry:', error);
+        return null;
+      }
+      logger.debug('[geocodeAddress] Request failed, retrying shortly', { attempt, error });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   }
 
-  const data = await response.json();
-
-  if (!Array.isArray(data) || data.length === 0) {
-    return null;
-  }
-
-  const { lat, lon } = data[0];
-  const latitude = parseFloat(lat);
-  const longitude = parseFloat(lon);
-
-  if (isNaN(latitude) || isNaN(longitude)) {
-    logger.warn(`[geocodeAddress] Invalid coordinates returned: lat=${lat}, lon=${lon}`);
-    return null;
-  }
-
-  return { latitude, longitude };
+  return null;
 }
 
 /**

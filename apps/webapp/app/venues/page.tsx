@@ -78,6 +78,8 @@ export default function VenuesPage() {
                 variant="outlined"
                 size="large"
                 startIcon={<Add />}
+                component={Link}
+                href={ROUTES.VENUES.ADD}
                 sx={{
                   fontWeight: 600,
                   textTransform: 'none',

@@ -22,6 +22,7 @@ export const GetAllVenuesDocument = graphql(`
         latitude
         longitude
       }
+      featuredImageUrl
       images
     }
   }
@@ -49,6 +50,7 @@ export const GetVenueBySlugDocument = graphql(`
         latitude
         longitude
       }
+      featuredImageUrl
       images
     }
   }

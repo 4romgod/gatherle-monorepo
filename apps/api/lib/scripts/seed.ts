@@ -39,6 +39,7 @@ import type {
   Event,
   EventCategory,
   Organization,
+  UpdateVenueInput,
   Venue,
 } from '@ntlango/commons/types';
 import { SECRET_KEYS } from '@/constants';
@@ -185,6 +186,35 @@ async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: str
   return created;
 }
 
+function buildLocationFromVenue(venue: Venue): CreateEventInput['location'] {
+  const address = venue.address
+    ? {
+        street: venue.address.street ?? '',
+        city: venue.address.city,
+        state: venue.address.region ?? '',
+        zipCode: venue.address.postalCode ?? '',
+        country: venue.address.country,
+      }
+    : undefined;
+
+  const location: CreateEventInput['location'] = {
+    locationType: 'venue',
+  };
+
+  if (address) {
+    location.address = address;
+  }
+
+  if (venue.geo) {
+    location.coordinates = {
+      latitude: venue.geo.latitude,
+      longitude: venue.geo.longitude,
+    };
+  }
+
+  return location;
+}
+
 async function seedVenues(seedData: VenueSeedData[], organizations: Organization[]) {
   logger.info('Starting to seed venue data...');
   const createdVenues: Venue[] = [];
@@ -199,13 +229,19 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
 
       // Check if venue with this name already exists
       const found = existingVenues.find((v) => v.name === venueSeed.name);
+      const { orgIndex: _orgIndex, ...venueFields } = venueSeed;
       if (found) {
-        logger.info(`   Venue "${venueSeed.name}" already exists, using existing...`);
-        createdVenues.push(found);
+        const updateInput: UpdateVenueInput = {
+          venueId: found.venueId,
+          ...venueFields,
+          orgId: organization.orgId,
+        };
+        const updatedVenue = await VenueDAO.update(updateInput);
+        createdVenues.push(updatedVenue);
+        logger.info(`   Updated Venue "${venueSeed.name}" with id: ${updatedVenue.venueId}`);
         continue;
       }
 
-      const { orgIndex: _orgIndex, ...venueFields } = venueSeed;
       const venueInput: CreateVenueInput = {
         ...venueFields,
         orgId: organization.orgId,
@@ -293,8 +329,15 @@ async function seedEvents(
           : getRandomUniqueItems(eventCategoryIds, 5);
 
       const { orgIndex: _orgIndex, venueIndex: _venueIndex, ...eventBase } = event;
+      const locationFromVenue = venue ? buildLocationFromVenue(venue) : undefined;
+      const resolvedLocation = locationFromVenue ?? eventBase.location;
+
+      if (!resolvedLocation) {
+        throw new Error(`Event "${event.title}" is missing a location`);
+      }
       const eventInput: CreateEventInput = {
         ...eventBase,
+        location: resolvedLocation,
         organizers: organizerIds.map((userId, index) => ({
           user: userId,
           role: index === 0 ? 'Host' : 'CoHost',

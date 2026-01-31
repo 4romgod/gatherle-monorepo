@@ -1,15 +1,37 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
-import { alpha, Box, Button, Chip, Container, Divider, Grid, Stack, Typography } from '@mui/material';
-import { ArrowBack, Language, LocationOn, People } from '@mui/icons-material';
-import { GetVenueBySlugDocument } from '@/data/graphql/query';
+import {
+  alpha,
+  Box,
+  Button,
+  Chip,
+  Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  Skeleton,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { ArrowBack, Close, Language, LocationOn, People, PhotoLibrary } from '@mui/icons-material';
+import { GetEventsByVenueDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
 import type { GetVenueBySlugQuery, Location } from '@/data/graphql/types/graphql';
+import type { EventPreview } from '@/data/graphql/query/Event/types';
 import EventLocationMap from '@/components/events/EventLocationMap';
+import EventBoxSm from '@/components/events/eventBoxSm';
 import ErrorPage from '@/components/errors/ErrorPage';
+import VenueDetailSkeleton from '@/components/venue/VenueDetailSkeleton';
 import { ROUTES } from '@/lib/constants';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
+
+import Carousel from '@/components/carousel';
+import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 
 const DEFAULT_VENUE_IMAGE =
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2000&q=80';
@@ -50,7 +72,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
   });
 
   const venue = data?.readVenueBySlug;
-  const heroImage = venue?.images?.[0] ?? DEFAULT_VENUE_IMAGE;
+  const heroImage = venue?.featuredImageUrl ?? venue?.images?.[0] ?? DEFAULT_VENUE_IMAGE;
   const addressParts = [
     venue?.address?.street,
     venue?.address?.city,
@@ -58,7 +80,58 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
     venue?.address?.country,
   ].filter(Boolean);
   const addressLabel = addressParts.join(', ');
-  const galleryImages = venue?.images?.slice(1, 4) ?? [];
+  const galleryImages = (venue?.images ?? []).filter((img) => img && img !== heroImage).slice(0, 4) ?? [];
+  const eventFilterOptions = useMemo(() => {
+    if (!venue?.venueId) return undefined;
+    return {
+      pagination: { limit: 6 },
+      filters: [{ field: 'venueId', value: venue.venueId }],
+    };
+  }, [venue?.venueId]);
+
+  const { data: venueEventsData, loading: eventsLoading } = useQuery(GetEventsByVenueDocument, {
+    skip: !eventFilterOptions,
+    variables: { options: eventFilterOptions },
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const venueEvents = (venueEventsData?.readEvents ?? []) as EventPreview[];
+  const hasVenueEvents = venueEvents.length > 0;
+  const galleryItems = useMemo(() => {
+    const seen = new Set<string>();
+    const items: string[] = [];
+    [heroImage, ...(venue?.images ?? [])].forEach((img) => {
+      if (img && !seen.has(img)) {
+        seen.add(img);
+        items.push(img);
+      }
+    });
+    return items;
+  }, [heroImage, venue?.images]);
+
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeImage && galleryItems.length > 0) {
+      setActiveImage(galleryItems[0]);
+    }
+  }, [activeImage, galleryItems]);
+
+  const handleGalleryOpen = useCallback(
+    (image?: string) => {
+      const nextImage = image ?? galleryItems[0];
+      if (nextImage) {
+        setActiveImage(nextImage);
+        setGalleryOpen(true);
+      }
+    },
+    [galleryItems],
+  );
+
+  const handleGalleryClose = useCallback(() => {
+    setGalleryOpen(false);
+  }, []);
 
   const notFoundError = isNotFoundGraphQLError(error);
 
@@ -77,13 +150,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
   const isLoading = loading || (!venue && !error);
 
   if (isLoading) {
-    return (
-      <Container sx={{ py: 8, textAlign: 'center' }}>
-        <Typography variant="h5" fontWeight={600}>
-          Loading venue details…
-        </Typography>
-      </Container>
-    );
+    return <VenueDetailSkeleton />;
   }
 
   if (error || !venue) {
@@ -139,26 +206,43 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
             pb: { xs: 4, md: 6 },
           }}
         >
-          <Button
-            component={Link}
-            href={ROUTES.VENUES.ROOT}
-            startIcon={<ArrowBack />}
-            variant="contained"
-            color="primary"
-            sx={{
-              alignSelf: 'flex-start',
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: 2,
-              '&:hover': {
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              component={Link}
+              href={ROUTES.VENUES.ROOT}
+              startIcon={<ArrowBack />}
+              variant="contained"
+              color="primary"
+              sx={{
                 bgcolor: 'background.paper',
-              },
-            }}
-          >
-            Back to venues
-          </Button>
+                color: 'text.primary',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: 'background.paper',
+                },
+              }}
+            >
+              Back to venues
+            </Button>
+            {galleryItems.length > 0 && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<PhotoLibrary />}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  borderColor: 'rgba(255, 255, 255, 0.6)',
+                }}
+                onClick={() => handleGalleryOpen()}
+              >
+                View gallery
+              </Button>
+            )}
+          </Stack>
           <Box>
             <Typography
               variant="h3"
@@ -288,11 +372,11 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
                 </Stack>
               </Box>
 
-              {galleryImages.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                    Gallery
-                  </Typography>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Gallery
+                </Typography>
+                {galleryImages.length > 0 ? (
                   <Stack direction="row" spacing={1}>
                     {galleryImages.map((image) => (
                       <Box
@@ -307,16 +391,104 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
                           borderRadius: 2,
                           objectFit: 'cover',
                           objectPosition: 'center',
+                          cursor: 'pointer',
                         }}
+                        onClick={() => handleGalleryOpen(image)}
                       />
                     ))}
                   </Stack>
-                </Box>
-              )}
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    More photos coming soon.
+                  </Typography>
+                )}
+              </Box>
             </Stack>
           </Grid>
         </Grid>
+        <Box sx={{ mt: 6 }}>
+          {eventsLoading && !hasVenueEvents ? (
+            <CarouselSkeleton title="Events hosted here" itemCount={3} />
+          ) : hasVenueEvents ? (
+            <Carousel
+              title="Events hosted here"
+              items={venueEvents}
+              itemWidth={320}
+              viewAllButton={{
+                href: ROUTES.EVENTS.ROOT,
+                label: 'Browse events',
+              }}
+              itemKey={(event) => event.eventId}
+              renderItem={(event) => (
+                <Box>
+                  <EventBoxSm event={event} href={ROUTES.EVENTS.EVENT(event.slug)} />
+                </Box>
+              )}
+            />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              This venue has not hosted any events yet.
+            </Typography>
+          )}
+        </Box>
       </Container>
+
+      <Dialog fullWidth maxWidth="lg" open={galleryOpen} onClose={handleGalleryClose}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          Venue photos
+          <IconButton onClick={handleGalleryClose} size="large">
+            <Close fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            pb: 3,
+            textAlign: 'center',
+          }}
+        >
+          {activeImage && (
+            <Box
+              component="img"
+              src={activeImage}
+              alt="Venue photo"
+              sx={{
+                width: '100%',
+                maxHeight: 480,
+                borderRadius: 3,
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+            />
+          )}
+          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" mt={2}>
+            {galleryItems.map((image) => (
+              <Box
+                key={image}
+                component="img"
+                src={image}
+                alt="Venue thumbnail"
+                onClick={() => setActiveImage(image)}
+                sx={{
+                  width: 100,
+                  height: 80,
+                  borderRadius: 2,
+                  objectFit: 'cover',
+                  objectPosition: 'center',
+                  border: (theme) =>
+                    activeImage === image ? `2px solid ${theme.palette.primary.main}` : '2px solid transparent',
+                  cursor: 'pointer',
+                }}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
       <Divider />
     </Box>

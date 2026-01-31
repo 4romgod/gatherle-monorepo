@@ -119,6 +119,10 @@ export class Venue {
   @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.AMENITIES })
   amenities?: string[];
 
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.FEATURED_IMAGE_URL })
+  featuredImageUrl?: string;
+
   @prop({ type: () => [String], default: [] })
   @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
   images?: string[];
@@ -149,6 +153,9 @@ export class CreateVenueInput {
 
   @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
   images?: string[];
+
+  @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.FEATURED_IMAGE_URL })
+  featuredImageUrl?: string;
 
   @Field(() => Number, { nullable: true, description: VENUE_DESCRIPTIONS.CAPACITY })
   capacity?: number;
@@ -185,6 +192,9 @@ export class UpdateVenueInput {
 
   @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
   images?: string[];
+
+  @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.FEATURED_IMAGE_URL })
+  featuredImageUrl?: string;
 
   @Field(() => Number, { nullable: true, description: VENUE_DESCRIPTIONS.CAPACITY })
   capacity?: number;

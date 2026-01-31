@@ -40,6 +40,7 @@ export const ROUTES = {
   VENUES: {
     ROOT: '/venues',
     VENUE: (slug: string) => `/venues/${slug}`,
+    ADD: '/venues/add',
   },
   ADMIN: {
     ROOT: '/admin',

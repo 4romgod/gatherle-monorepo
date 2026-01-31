@@ -14,6 +14,9 @@ export type EventMutationFormProps = {
 
 export type LocationInputProps = {
   onChange: (newLocation: Location) => void;
+  value?: Location;
+  venueId?: string | null;
+  onVenueChange?: (venueId?: string | null) => void;
 };
 
 export type RecurrenceInputProps = {

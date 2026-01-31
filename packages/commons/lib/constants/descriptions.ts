@@ -240,6 +240,7 @@ export const VENUE_DESCRIPTIONS = {
   AMENITIES: 'List of amenities offered at the venue.',
   SLUG: 'URL-friendly identifier (kebab-case) used for venue detail routes.',
   IMAGES: 'List of image URLs that showcase the venue.',
+  FEATURED_IMAGE_URL: 'Primary image used to highlight the venue in listings and detail pages.',
 };
 
 export const RESOLVER_DESCRIPTIONS = {

@@ -20,11 +20,22 @@ export type VenueCardProps = {
   amenities?: string[] | null;
   slug?: string;
   images?: string[] | null;
+  featuredImageUrl?: string | null;
 };
 
-const VenueCard = ({ venueId, name, type, capacity, address, amenities, slug, images }: VenueCardProps) => {
+const VenueCard = ({
+  venueId,
+  name,
+  type,
+  capacity,
+  address,
+  amenities,
+  slug,
+  images,
+  featuredImageUrl,
+}: VenueCardProps) => {
   const addressLabel = [address?.city, address?.region, address?.country].filter(Boolean).join(', ');
-  const heroImageUrl = images?.[0];
+  const heroImageUrl = featuredImageUrl ?? images?.[0];
   const detailsHref = slug
     ? ROUTES.VENUES.VENUE(slug)
     : venueId

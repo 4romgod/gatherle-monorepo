@@ -49,7 +49,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     title: event?.title ?? '',
     summary: event?.summary ?? '',
     description: event?.description ?? '',
-    location: event?.location ?? {},
+    location: event?.location ?? ({ locationType: 'venue' } as Location),
     recurrenceRule: event?.recurrenceRule ?? '',
     status: event?.status ?? EventStatus.Upcoming,
     lifecycleStatus: event?.lifecycleStatus ?? EventLifecycleStatus.Draft,
@@ -71,7 +71,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     eventLink: event?.eventLink ?? '',
     heroImage: event?.heroImage ?? '',
     orgId: undefined,
-    venueId: undefined,
+    venueId: event?.venueId,
     locationSnapshot: undefined,
     primarySchedule: undefined,
   });
@@ -79,7 +79,11 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleLocationChange = (newLocation: Location) => {
-    setEventData({ ...eventData, location: newLocation });
+    setEventData((prev) => ({ ...prev, location: newLocation }));
+  };
+
+  const handleVenueChange = (venueId?: string | null) => {
+    setEventData((prev) => ({ ...prev, venueId: venueId ?? undefined }));
   };
 
   const handleEventDateChange = (rrule: string) => {
@@ -299,7 +303,12 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
               <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
                 Where is it happening? *
               </Typography>
-              <EventLocationInput onChange={handleLocationChange} />
+              <EventLocationInput
+                onChange={handleLocationChange}
+                value={eventData.location}
+                venueId={eventData.venueId}
+                onVenueChange={handleVenueChange}
+              />
             </Box>
           </Stack>
         </Card>

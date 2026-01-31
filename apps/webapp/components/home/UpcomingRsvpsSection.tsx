@@ -24,14 +24,13 @@ export default function UpcomingRsvpsSection() {
 
   const rsvps = data?.myRsvps ?? [];
   const rsvpEvents = rsvps.map((rsvp) => rsvp.event).filter((event) => !!event);
-  const isLoading = loading || !data;
 
   return (
     <Box sx={{ mt: 4, mb: 2 }}>
       <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
         Your Upcoming RSVPs
       </Typography>
-      {isLoading ? (
+      {loading ? (
         <CarouselSkeleton itemCount={3} renderSkeletonItem={() => <EventBoxSmSkeleton />} />
       ) : error ? (
         <Typography color="error">Failed to load your RSVPs.</Typography>
