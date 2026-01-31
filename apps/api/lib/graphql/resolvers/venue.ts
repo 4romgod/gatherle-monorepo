@@ -37,6 +37,11 @@ export class VenueResolver {
     return VenueDAO.readVenueById(venueId);
   }
 
+  @Query(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.readVenueBySlug })
+  async readVenueBySlug(@Arg('slug', () => String) slug: string): Promise<Venue> {
+    return VenueDAO.readVenueBySlug(slug);
+  }
+
   @Query(() => [Venue], { description: RESOLVER_DESCRIPTIONS.VENUE.readVenues })
   async readVenues(
     @Arg('options', () => QueryOptionsInput, { nullable: true }) options?: QueryOptionsInput,

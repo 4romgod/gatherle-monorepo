@@ -14,75 +14,42 @@ import {
   Container,
   Divider,
   Grid,
-  Paper,
   Stack,
+  Theme,
   Typography,
-  Avatar,
-  Tooltip,
 } from '@mui/material';
 import { CalendarMonth, LocationOn, Share, ConfirmationNumber, Groups, Language, ArrowBack } from '@mui/icons-material';
-import { GetEventBySlugDocument, GetEventBySlugQuery, Location, ParticipantStatus } from '@/data/graphql/types/graphql';
+import {
+  FollowApprovalStatus,
+  FollowTargetType,
+  GetEventBySlugDocument,
+  ParticipantStatus,
+} from '@/data/graphql/types/graphql';
+import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import CopyLinkButton from '@/components/events/CopyLinkButton';
 import EventDetailActions from '@/components/events/EventDetailActions';
 import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
-import { RRule } from 'rrule';
-import { upperFirst } from 'lodash';
+import EventLocationMap from '@/components/events/EventLocationMap';
+import { formatLocationText } from '@/components/events/location-utils';
+import {
+  EventParticipant,
+  getParticipantChipColor,
+  getParticipantDisplayName,
+  getParticipantStatusLabel,
+  canViewerSeeParticipant,
+  getVisibilityLabel,
+} from '@/components/events/participant-utils';
+import { formatRecurrenceRule } from '@/components/events/date-utils';
+import UserPreviewItem from '@/components/users/UserPreviewItem';
+import { useFollowing } from '@/hooks/useFollow';
+import ErrorPage from '@/components/errors/ErrorPage';
+import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 
 interface EventDetailPageClientProps {
   slug: string;
 }
-
-type EventDetailParticipant = NonNullable<NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']>[number];
-
-const getParticipantDisplayName = (participant: EventDetailParticipant) => {
-  const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
-  const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
-  return nameParts.length ? nameParts.join(' ') : fallbackName;
-};
-
-const getParticipantInitial = (participant: EventDetailParticipant) =>
-  participant.user?.given_name?.charAt(0) ??
-  participant.user?.username?.charAt(0) ??
-  participant.userId?.charAt(0) ??
-  '?';
-
-const getParticipantStatusLabel = (participant: EventDetailParticipant) =>
-  participant.status ?? ParticipantStatus.Going;
-
-const getLocationText = (location: Location): string => {
-  switch (location.locationType) {
-    case 'venue':
-      return [
-        location.address?.street,
-        location.address?.city,
-        location.address?.state,
-        location.address?.zipCode,
-        location.address?.country,
-      ]
-        .filter(Boolean)
-        .join(', ');
-    case 'online':
-      return 'This event will be held online.';
-    case 'tba':
-      return 'The location will be announced soon.';
-    default:
-      return '';
-  }
-};
-
-const getRecurrenceText = (rule?: string | null): string => {
-  if (!rule) {
-    return 'Schedule coming soon';
-  }
-  try {
-    return upperFirst(RRule.fromString(rule).toText());
-  } catch (error) {
-    console.error('Unable to parse recurrence rule', error);
-    return 'Schedule coming soon';
-  }
-};
 
 export default function EventDetailPageClient({ slug }: EventDetailPageClientProps) {
   const { data: session } = useSession();
@@ -96,7 +63,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   });
 
   const event = data?.readEventBySlug;
-  const participantList = (event?.participants ?? []) as EventDetailParticipant[];
+  const participantList = (event?.participants ?? []) as EventParticipant[];
 
   const goingCount = participantList.filter(
     (p) => p.status === ParticipantStatus.Going || p.status === ParticipantStatus.CheckedIn,
@@ -111,7 +78,59 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     return `${window.location.origin}/events/${slug}`;
   }, [slug]);
 
-  const isLoading = loading || !event;
+  const attendeePreview = participantList.slice(0, 3);
+  const attendeeRoute = ROUTES.EVENTS.ATTENDEES(slug);
+  const previewPaperSx = (theme: Theme) => ({
+    p: 2.5,
+    border: '1px solid',
+    borderColor: 'divider',
+    borderRadius: 2,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      borderColor: 'primary.main',
+      bgcolor: 'action.hover',
+      transform: 'translateY(-2px)',
+      boxShadow: theme.shadows[3],
+    },
+  });
+  const previewPaperProps = {
+    elevation: 0,
+    sx: previewPaperSx,
+  };
+  const contentPadding = { xs: 1, md: 2 };
+  const { following } = useFollowing();
+  const viewerUserId = session?.user?.userId;
+  const followingUserIds = useMemo(() => {
+    const set = new Set<string>();
+    following.forEach((follow) => {
+      if (
+        follow.targetType === FollowTargetType.User &&
+        follow.approvalStatus === FollowApprovalStatus.Accepted &&
+        follow.targetId
+      ) {
+        set.add(follow.targetId);
+      }
+    });
+    return set;
+  }, [following]);
+  const canViewAttendee = (user?: EventParticipant['user']) =>
+    canViewerSeeParticipant(user, viewerUserId, followingUserIds);
+
+  const notFoundError = isNotFoundGraphQLError(error);
+  const isLoading = loading || (!event && !error);
+
+  if (notFoundError) {
+    return (
+      <ErrorPage
+        statusCode={404}
+        title="Event not found"
+        message="We couldn’t find an event with that slug. It may have been removed or the link is incorrect."
+        ctaLabel="Browse events"
+        ctaHref={ROUTES.EVENTS.ROOT}
+      />
+    );
+  }
 
   if (isLoading) {
     return <EventDetailSkeleton />;
@@ -213,7 +232,16 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       </Box>
 
       {/* Main Content */}
-      <Container maxWidth="lg" sx={{ mt: { xs: -4.5, md: -5.5 }, mb: 8, position: 'relative', zIndex: 1 }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          mt: { xs: -4.5, md: -5.5 },
+          mb: 8,
+          position: 'relative',
+          zIndex: 1,
+          px: { xs: 0.5, sm: 1.5, md: 2 },
+        }}
+      >
         <Grid container spacing={4}>
           {/* Left Column */}
           <Grid size={{ xs: 12, md: 8 }}>
@@ -228,7 +256,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 overflow: 'visible',
               }}
             >
-              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              <CardContent sx={{ p: contentPadding }}>
                 <Typography
                   variant="h3"
                   component="h1"
@@ -236,7 +264,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     fontWeight: 800,
                     fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.25rem' },
                     lineHeight: 1.2,
-                    mb: 3,
+                    m: 2,
                   }}
                 >
                   {title}
@@ -252,7 +280,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
             {/* About */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: contentPadding }}>
                 <Typography variant="h5" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
                   About This Event
                 </Typography>
@@ -268,7 +296,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
             {/* Organizers */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: contentPadding }}>
                 <Typography variant="h5" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
                   Organized By
                 </Typography>
@@ -278,66 +306,25 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   <Stack spacing={2}>
                     {organizerData
                       .filter((organizer) => organizer.user)
-                      .map((organizer) => (
-                        <Link
-                          key={organizer.user.userId}
-                          href={`/users/${organizer.user.username}`}
-                          passHref
-                          style={{ textDecoration: 'none' }}
-                        >
-                          <Paper
-                            elevation={0}
-                            sx={(theme) => ({
-                              p: 2.5,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              borderRadius: 2,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                borderColor: 'primary.main',
-                                bgcolor: 'action.hover',
-                                transform: 'translateY(-2px)',
-                                boxShadow: theme.shadows[3],
-                              },
-                            })}
-                          >
-                            <Stack direction="row" spacing={2} alignItems="center">
-                              <Avatar
-                                src={organizer.user.profile_picture || undefined}
-                                alt={`${organizer.user.given_name || organizer.user.username}`}
-                                sx={{ width: 64, height: 64 }}
-                              >
-                                {!organizer.user.profile_picture &&
-                                  (
-                                    organizer.user.given_name?.charAt(0) ||
-                                    organizer.user.username?.charAt(0) ||
-                                    '?'
-                                  ).toUpperCase()}
-                              </Avatar>
-                              <Box sx={{ flex: 1 }}>
-                                <Typography variant="h6" fontWeight={700}>
-                                  {organizer.user.given_name && organizer.user.family_name
-                                    ? `${organizer.user.given_name} ${organizer.user.family_name}`
-                                    : organizer.user.username || 'Unknown User'}
-                                </Typography>
-                                {organizer.user.username &&
-                                  (organizer.user.given_name || organizer.user.family_name) && (
-                                    <Typography variant="body2" color="text.secondary">
-                                      @{organizer.user.username}
-                                    </Typography>
-                                  )}
-                                <Chip
-                                  label={organizer.role}
-                                  size="small"
-                                  color="primary"
-                                  sx={{ mt: 1, fontWeight: 600 }}
-                                />
-                              </Box>
-                            </Stack>
-                          </Paper>
-                        </Link>
-                      ))}
+                      .map((organizer) => {
+                        const user = organizer.user!;
+                        const displayName =
+                          user.given_name && user.family_name
+                            ? `${user.given_name} ${user.family_name}`
+                            : user.username || 'Unknown User';
+                        return (
+                          <UserPreviewItem
+                            key={user.userId}
+                            paperProps={previewPaperProps}
+                            name={displayName}
+                            username={user.username}
+                            avatarUrl={user.profile_picture || undefined}
+                            chipLabel={organizer.role}
+                            chipColor="secondary"
+                            chipVariant="filled"
+                          />
+                        );
+                      })}
                   </Stack>
                 )}
               </CardContent>
@@ -345,7 +332,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
             {/* Participants */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: contentPadding }}>
                 <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
                   <Typography variant="h5" fontWeight={700}>
                     Who&apos;s Attending
@@ -367,37 +354,37 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   </Box>
                 ) : (
                   <>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
-                      {participantList.slice(0, 12).map((participant) => (
-                        <Tooltip
-                          key={participant.participantId}
-                          title={`${getParticipantDisplayName(participant)} · ${getParticipantStatusLabel(participant)}`}
-                          arrow
-                        >
-                          <Avatar
-                            src={participant.user?.profile_picture || undefined}
-                            sx={{
-                              width: 56,
-                              height: 56,
-                              border: '3px solid',
-                              borderColor: 'background.paper',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                transform: 'scale(1.1)',
-                                borderColor: 'primary.main',
-                                zIndex: 1,
-                              },
-                            }}
-                          >
-                            {getParticipantInitial(participant)}
-                          </Avatar>
-                        </Tooltip>
-                      ))}
-                    </Box>
-                    {participantList.length > 12 && (
-                      <Button variant="text" sx={{ fontWeight: 600 }}>
-                        View all {participantList.length} participants
+                    <Stack spacing={2} sx={{ mb: 3 }}>
+                      {attendeePreview
+                        .filter(
+                          (
+                            participant,
+                          ): participant is EventParticipant & {
+                            user: NonNullable<EventParticipant['user']>;
+                          } => Boolean(participant.user),
+                        )
+                        .map((participant) => {
+                          const isVisible = canViewAttendee(participant.user);
+                          const visibilityLabel = getVisibilityLabel(participant.user.defaultVisibility);
+                          return (
+                            <UserPreviewItem
+                              key={participant.participantId}
+                              paperProps={previewPaperProps}
+                              name={getParticipantDisplayName(participant)}
+                              username={participant.user.username}
+                              avatarUrl={participant.user.profile_picture || undefined}
+                              chipLabel={getParticipantStatusLabel(participant)}
+                              chipColor={getParticipantChipColor(participant.status)}
+                              chipVariant="outlined"
+                              masked={!isVisible}
+                              maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
+                            />
+                          );
+                        })}
+                    </Stack>
+                    {participantList.length > attendeePreview.length && (
+                      <Button component={Link} href={attendeeRoute} variant="text" sx={{ fontWeight: 600 }}>
+                        View all {participantList.length} attendees
                       </Button>
                     )}
                   </>
@@ -410,7 +397,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: 'sticky', top: 24 }}>
               <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: contentPadding }}>
                   <Stack spacing={2.5}>
                     <Box>
                       <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 1 }}>
@@ -425,7 +412,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                             Date & Time
                           </Typography>
                           <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                            {getRecurrenceText(recurrenceRule)}
+                            {formatRecurrenceRule(recurrenceRule)}
                           </Typography>
                         </Box>
                       </Stack>
@@ -455,7 +442,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                                 sx={{ fontWeight: 600 }}
                               />
                             )}
-                            {location.locationType !== 'online' && getLocationText(location)}
+                            {location.locationType !== 'online' && formatLocationText(location)}
                           </Typography>
                         </Box>
                       </Stack>
@@ -540,9 +527,11 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </CardContent>
               </Card>
 
+              {location.locationType === 'venue' && <EventLocationMap location={location} />}
+
               {eventCategories.length > 0 && (
                 <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent sx={{ p: contentPadding }}>
                     <Typography
                       variant="overline"
                       color="text.secondary"
@@ -564,7 +553,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 elevation={0}
                 sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}
               >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                <CardContent sx={{ p: contentPadding, textAlign: 'center' }}>
                   <Share sx={{ fontSize: 32, color: 'text.secondary', mb: 1 }} />
                   <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>
                     Share this event with friends

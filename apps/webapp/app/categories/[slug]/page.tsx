@@ -7,11 +7,15 @@ import {
   GetAllEventCategoryGroupsDocument,
   GetAllEventsDocument,
   GetEventCategoryBySlugDocument,
+  GetEventCategoryBySlugQuery,
+  GetAllEventsQuery,
+  GetAllEventCategoryGroupsQuery,
 } from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import { ROUTES } from '@/lib/constants';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { CategoryExplorer } from '@/components/home';
+import { isGraphQLErrorNotFound } from '@/lib/utils/error-utils';
 
 export const metadata: Metadata = {
   title: 'Categories · Ntlango',
@@ -32,36 +36,51 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   const { slug } = await params;
   const client = getClient();
 
-  const [{ data: categoryData }, { data: eventsData }, { data: categoryGroupsData }] = await Promise.all([
-    client.query({
-      query: GetEventCategoryBySlugDocument,
-      variables: { slug },
-    }),
-    client.query({
-      query: GetAllEventsDocument,
-      variables: {
-        options: {
-          filters: [{ field: 'eventCategories.slug', value: slug }],
-          pagination: { limit: 40 },
-        },
-      },
-    }),
-    client.query({
-      query: GetAllEventCategoryGroupsDocument,
-    }),
-  ]);
+  let categoryData: GetEventCategoryBySlugQuery['readEventCategoryBySlug'] | null | undefined;
+  let eventsData: GetAllEventsQuery['readEvents'] | null | undefined;
+  let categoryGroupsData: GetAllEventCategoryGroupsQuery['readEventCategoryGroups'] | null | undefined;
 
-  const category = categoryData?.readEventCategoryBySlug;
+  try {
+    const [categoryResult, eventsResult, categoryGroupsResult] = await Promise.all([
+      client.query<GetEventCategoryBySlugQuery>({
+        query: GetEventCategoryBySlugDocument,
+        variables: { slug },
+      }),
+      client.query<GetAllEventsQuery>({
+        query: GetAllEventsDocument,
+        variables: {
+          options: {
+            filters: [{ field: 'eventCategories.slug', value: slug }],
+            pagination: { limit: 40 },
+          },
+        },
+      }),
+      client.query<GetAllEventCategoryGroupsQuery>({
+        query: GetAllEventCategoryGroupsDocument,
+      }),
+    ]);
+
+    categoryData = categoryResult.data.readEventCategoryBySlug;
+    eventsData = eventsResult.data.readEvents;
+    categoryGroupsData = categoryGroupsResult.data.readEventCategoryGroups;
+  } catch (error: unknown) {
+    if (isGraphQLErrorNotFound(error)) {
+      notFound();
+    }
+    throw error;
+  }
+
+  const category = categoryData;
   if (!category) {
     notFound();
   }
 
-  const events = eventsData?.readEvents ?? [];
+  const events = eventsData ?? [];
   const IconComponent = getEventCategoryIcon(category.iconName);
   const categoryColor = category.color;
   const avatarBackground = categoryColor ? alpha(categoryColor, 0.15) : 'action.selected';
   const iconColor = categoryColor ?? 'text.primary';
-  const categoryGroups = categoryGroupsData?.readEventCategoryGroups ?? [];
+  const categoryGroups = categoryGroupsData ?? [];
   const categoryGroup = categoryGroups.find((group) =>
     (group.eventCategories ?? []).some((eventCategory) => eventCategory.slug === slug),
   );

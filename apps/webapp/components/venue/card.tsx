@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Box, Button, Card, CardActions, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
+import { alpha, Box, Button, Card, CardActions, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PeopleIcon from '@mui/icons-material/People';
 import { ROUTES } from '@/lib/constants';
@@ -18,11 +18,18 @@ export type VenueCardProps = {
     country?: string | null;
   } | null;
   amenities?: string[] | null;
+  slug?: string;
+  images?: string[] | null;
 };
 
-const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueCardProps) => {
+const VenueCard = ({ venueId, name, type, capacity, address, amenities, slug, images }: VenueCardProps) => {
   const addressLabel = [address?.city, address?.region, address?.country].filter(Boolean).join(', ');
-  const detailsHref = venueId ? `${ROUTES.VENUES.ROOT}/${venueId}` : ROUTES.VENUES.ROOT;
+  const heroImageUrl = images?.[0];
+  const detailsHref = slug
+    ? ROUTES.VENUES.VENUE(slug)
+    : venueId
+      ? `${ROUTES.VENUES.ROOT}/${venueId}`
+      : ROUTES.VENUES.ROOT;
 
   return (
     <Surface
@@ -33,6 +40,7 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
         display: 'flex',
         flexDirection: 'column',
         transition: 'all 0.2s ease',
+        overflow: 'hidden',
         boxShadow: theme.shadows[2],
         '&:hover': {
           borderColor: 'primary.main',
@@ -42,7 +50,32 @@ const VenueCard = ({ venueId, name, type, capacity, address, amenities }: VenueC
         },
       })}
     >
-      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+      {heroImageUrl && (
+        <Box
+          sx={{
+            width: '100%',
+            height: 160,
+            position: 'relative',
+          }}
+        >
+          <Box
+            component="img"
+            src={heroImageUrl}
+            alt={name ?? 'Venue image'}
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+          />
+          <Box
+            sx={(theme) => ({
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.7)} 0%, transparent 60%)`,
+            })}
+          />
+        </Box>
+      )}
+
+      <CardContent sx={{ flexGrow: 1, p: 3, pt: heroImageUrl ? 2 : 3 }}>
         <Box sx={{ mb: 2 }}>
           <Chip
             label={type ?? 'Venue'}

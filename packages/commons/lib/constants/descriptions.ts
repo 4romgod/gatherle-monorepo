@@ -238,6 +238,8 @@ export const VENUE_DESCRIPTIONS = {
   URL: 'Optional link for virtual venues or website.',
   CAPACITY: 'Maximum number of guests the venue can hold.',
   AMENITIES: 'List of amenities offered at the venue.',
+  SLUG: 'URL-friendly identifier (kebab-case) used for venue detail routes.',
+  IMAGES: 'List of image URLs that showcase the venue.',
 };
 
 export const RESOLVER_DESCRIPTIONS = {
@@ -332,6 +334,7 @@ export const RESOLVER_DESCRIPTIONS = {
     updateVenue: 'Update an existing venue with new address or capacity data.',
     deleteVenueById: 'Delete a venue by its ID. Requires the venue ID and returns the deleted venue.',
     readVenueById: 'Read a venue by its ID. Returns the venue or a 404 Error if not found.',
+    readVenueBySlug: 'Read a venue by its slug. Returns the venue or a 404 Error if not found.',
     readVenues: 'Read a list of venues. Supports optional query options for filtering and pagination.',
     readVenuesByOrgId: 'Read venues scoped to an organization. Requires the organization ID.',
   },

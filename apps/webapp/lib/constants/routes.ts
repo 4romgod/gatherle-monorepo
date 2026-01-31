@@ -21,6 +21,7 @@ export const ROUTES = {
   EVENTS: {
     EVENT: (slug: string) => `/events/${slug}`,
     ROOT: '/events',
+    ATTENDEES: (slug: string) => `/events/${slug}/attendees`,
   },
   CATEGORIES: {
     ROOT: '/categories',
@@ -38,6 +39,7 @@ export const ROUTES = {
   },
   VENUES: {
     ROOT: '/venues',
+    VENUE: (slug: string) => `/venues/${slug}`,
   },
   ADMIN: {
     ROOT: '/admin',

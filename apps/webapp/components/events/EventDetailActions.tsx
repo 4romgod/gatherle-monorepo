@@ -39,7 +39,7 @@ export default function EventDetailActions({ eventId, eventUrl, isSavedByMe, myR
         borderRadius: 3,
       }}
     >
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'row' }} spacing={2}>
         <RsvpButton
           eventId={eventId}
           currentStatus={rsvpStatus}

@@ -12,7 +12,7 @@ export const publicRoutes: string[] = [
   ROUTES.ORGANIZATIONS.ROOT,
   ROUTES.VENUES.ROOT,
   ROUTES.CATEGORIES.ROOT,
-  '/home',
+  ROUTES.HOME,
 ];
 
 /**
@@ -45,12 +45,19 @@ export const DEFAULT_LOGIN_REDIRECT: string = ROUTES.HOME;
  * @param {string} pathname - The pathname to check
  * @returns {boolean} - True if the route matches the dynamic pattern, false otherwise
  */
-export const isPublicDynamicRoute = (pathname: string): Boolean => {
-  const startsWithDynamicBase =
-    pathname.startsWith(ROUTES.EVENTS.ROOT) ||
-    pathname.startsWith(ROUTES.USERS.ROOT) ||
-    pathname.startsWith(ROUTES.ORGANIZATIONS.ROOT) ||
-    pathname.startsWith(ROUTES.VENUES.ROOT) ||
-    pathname.startsWith(ROUTES.CATEGORIES.ROOT);
-  return startsWithDynamicBase && pathname.split('/').length === 3;
+export const dynamicRoutesBases = [
+  ROUTES.EVENTS.ROOT,
+  ROUTES.USERS.ROOT,
+  ROUTES.ORGANIZATIONS.ROOT,
+  ROUTES.VENUES.ROOT,
+  ROUTES.CATEGORIES.ROOT,
+] as const;
+
+export const isPublicDynamicRoute = (pathname: string): boolean => {
+  return dynamicRoutesBases.some((base) => pathname.startsWith(base));
 };
+
+export const protectedRouteBases = [ROUTES.ACCOUNT.ROOT, ROUTES.ADMIN.ROOT] as const;
+
+export const isProtectedRoute = (pathname: string): boolean =>
+  protectedRouteBases.some((base) => pathname.startsWith(base));

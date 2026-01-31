@@ -1,7 +1,6 @@
 'use client';
 
 import { Box, Container, Typography, Stack, Grid } from '@mui/material';
-import FriendsGoingSection from './FriendsGoingSection';
 import TrendingEventsSection from './TrendingEventsSection';
 import NearbyEventsSection from './NearbyEventsSection';
 import RecommendedSection from './RecommendedSection';
@@ -41,9 +40,6 @@ export default function PersonalizedHome({ user }: PersonalizedHomeProps) {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TrendingEventsSection />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <FriendsGoingSection />
           </Grid>
           <Grid size={{ xs: 12 }}>
             <NearbyEventsSection />

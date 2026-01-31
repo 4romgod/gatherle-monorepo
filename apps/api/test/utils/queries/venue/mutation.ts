@@ -4,6 +4,7 @@ export const getCreateVenueMutation = (input: any) => ({
       createVenue(input: $input) {
         venueId
         name
+        slug
         orgId
         type
       }

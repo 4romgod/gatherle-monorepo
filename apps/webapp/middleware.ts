@@ -1,6 +1,13 @@
 // Inspired by https://www.youtube.com/watch?v=1MTyCvS05V4
 import { auth } from '@/auth';
-import { apiAuthPrefix, authRoutes, DEFAULT_LOGIN_REDIRECT, isPublicDynamicRoute, publicRoutes } from '@/routes';
+import {
+  apiAuthPrefix,
+  authRoutes,
+  DEFAULT_LOGIN_REDIRECT,
+  isPublicDynamicRoute,
+  isProtectedRoute,
+  publicRoutes,
+} from '@/routes';
 import { ROUTES } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 import { isAuthenticated, logger } from './lib/utils';
@@ -14,6 +21,7 @@ export default auth(async (req) => {
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname) || isPublicDynamicRoute(nextUrl.pathname);
+  const isProtectedPath = isProtectedRoute(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
   // Block access to '/' for authenticated users, redirect to '/home'
@@ -39,8 +47,8 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
-  // Deny all NON public routes for unauthenticated users
-  if (!isLoggedIn && !isPublicRoute) {
+  // Deny only protected routes for unauthenticated users
+  if (!isLoggedIn && isProtectedPath) {
     logger.warn('[Middleware] Redirecting to login - token invalid or expired');
     return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, nextUrl));
   }

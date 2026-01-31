@@ -7,7 +7,7 @@ scope. Pages are grouped by purpose and access level.
 
 ## 1. Public Pages (No Authentication Required)
 
-### 1. Landing Page
+### 1. Landing Page (done)
 
 **Route:** `/`
 
@@ -18,7 +18,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 2. Browse Events
+### 2. Browse Events (done)
 
 **Route:** `/events`
 
@@ -30,17 +30,31 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 3. Event Detail Page (Public View)
+### 3. Event Detail Page (Public View) (done)
 
 **Route:** `/events/[slug]`
 
 - Event hero image
 - Event details (date, time, location)
+- Embedded map preview that opens native navigation when clicked (with fallback button)
 - Host & organizer info
 - Attendee count
 - CTAs:
   - Log in to RSVP
   - Save / Share
+- Attendee preview showing up to three confirmed guests with visible names plus a link to the full RSVP list
+
+---
+
+### 3.1. Attendees List (done)
+
+**Route:** `/events/[slug]/attendees`
+
+- Hero summary from the parent event with shortcut back to the main detail view.
+- Status overview chips for Going, Interested, and Waitlisted counts.
+- Full RSVP list with avatars, usernames, and status chips so names are visible at all times.
+- Private attendees are blurred unless you follow them, honoring each profile's default visibility.
+- Easy path to continue interacting (share, back to event, or connect with attendees later).
 
 ---
 
@@ -187,6 +201,22 @@ scope. Pages are grouped by purpose and access level.
 
 - Event creation form
 - Draft / Publish flow
+
+---
+
+## 30. Error Pages
+
+### `/404`
+
+- Not found (missing route or asset)
+
+### `/403`
+
+- Access denied (unauthorized resource)
+
+### `/500`
+
+- Unexpected server error; friendly retry/return-home CTA
 
 ---
 
@@ -344,3 +374,6 @@ scope. Pages are grouped by purpose and access level.
 - **Including Admin & Future:** ~30+
 
 This structure balances ambition with realism for a solo-built, 3-month MVP.
+
+- Easy path to continue interacting (share, back to event, or message attendees later).
+- Easy path to continue interacting (share, back to event, or connect with attendees later).

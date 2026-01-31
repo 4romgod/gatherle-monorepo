@@ -4,6 +4,7 @@ export const getReadVenueByIdQuery = (venueId: string) => ({
       readVenueById(venueId: $venueId) {
         venueId
         name
+        slug
         capacity
         orgId
       }
@@ -20,6 +21,7 @@ export const getReadVenuesQuery = () => ({
       readVenues {
         venueId
         name
+        slug
         orgId
       }
     }
@@ -32,11 +34,28 @@ export const getReadVenuesByOrgIdQuery = (orgId: string) => ({
       readVenuesByOrgId(orgId: $orgId) {
         venueId
         name
+        slug
         orgId
       }
     }
   `,
   variables: {
     orgId,
+  },
+});
+
+export const getReadVenueBySlugQuery = (slug: string) => ({
+  query: `
+    query ReadVenueBySlug($slug: String!) {
+      readVenueBySlug(slug: $slug) {
+        venueId
+        name
+        slug
+        orgId
+      }
+    }
+  `,
+  variables: {
+    slug,
   },
 });

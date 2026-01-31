@@ -58,6 +58,7 @@ export const GetAllEventsDocument = graphql(`
           given_name
           family_name
           profile_picture
+          defaultVisibility
         }
       }
       participants {
@@ -73,6 +74,7 @@ export const GetAllEventsDocument = graphql(`
           given_name
           family_name
           profile_picture
+          defaultVisibility
         }
       }
       savedByCount
@@ -145,6 +147,7 @@ export const GetEventBySlugDocument = graphql(`
           given_name
           family_name
           profile_picture
+          defaultVisibility
         }
       }
       participants {
@@ -160,6 +163,7 @@ export const GetEventBySlugDocument = graphql(`
           given_name
           family_name
           profile_picture
+          defaultVisibility
         }
       }
       savedByCount

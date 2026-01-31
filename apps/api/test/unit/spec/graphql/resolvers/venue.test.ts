@@ -11,6 +11,7 @@ jest.mock('@/mongodb/dao', () => ({
     update: jest.fn(),
     delete: jest.fn(),
     readVenueById: jest.fn(),
+    readVenueBySlug: jest.fn(),
     readVenues: jest.fn(),
     readVenuesByOrgId: jest.fn(),
   },
@@ -38,6 +39,7 @@ describe('VenueResolver', () => {
     venueId: 'venue-001',
     type: VenueType.Physical,
     name: 'Test Venue',
+    slug: 'test-venue',
   };
 
   beforeEach(() => {
@@ -128,6 +130,17 @@ describe('VenueResolver', () => {
       expect(validation.validateMongodbId).toHaveBeenCalledWith(orgId, expect.stringContaining('Organization'));
       expect(VenueDAO.readVenuesByOrgId).toHaveBeenCalledWith(orgId);
       expect(result).toEqual([mockVenue]);
+    });
+  });
+
+  describe('readVenueBySlug', () => {
+    it('returns venue when slug exists', async () => {
+      (VenueDAO.readVenueBySlug as jest.Mock).mockResolvedValue(mockVenue);
+
+      const result = await resolver.readVenueBySlug(mockVenue.slug);
+
+      expect(VenueDAO.readVenueBySlug).toHaveBeenCalledWith(mockVenue.slug);
+      expect(result).toEqual(mockVenue);
     });
   });
 });

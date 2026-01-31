@@ -1,11 +1,17 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
+import { kebabCase } from 'lodash';
 import { Venue as VenueEntity } from '@ntlango/commons/types';
 
 @pre<VenueModel>('validate', function (next) {
   try {
     if (!this.venueId && this._id) {
       this.venueId = this._id.toString();
+    }
+    if (this.isNew || !this.slug) {
+      this.slug = kebabCase(this.name ?? this.venueId ?? 'venue');
+    } else {
+      this.slug = kebabCase(this.slug);
     }
     next();
   } catch (error) {

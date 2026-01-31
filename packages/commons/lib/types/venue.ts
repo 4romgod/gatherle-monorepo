@@ -87,6 +87,10 @@ export class Venue {
   @Field(() => ID, { nullable: true, description: VENUE_DESCRIPTIONS.ORGANIZATION_ID })
   orgId?: string;
 
+  @prop({ required: true, unique: true, index: true, type: () => String })
+  @Field(() => String, { description: VENUE_DESCRIPTIONS.SLUG })
+  slug: string;
+
   @prop({ required: true, enum: VenueType, type: () => String })
   @Field(() => VenueType, { description: VENUE_DESCRIPTIONS.TYPE })
   type: VenueType;
@@ -114,6 +118,10 @@ export class Venue {
   @prop({ type: () => [String], default: [] })
   @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.AMENITIES })
   amenities?: string[];
+
+  @prop({ type: () => [String], default: [] })
+  @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
+  images?: string[];
 }
 
 @InputType('CreateVenueInput', { description: VENUE_DESCRIPTIONS.CREATE_INPUT })
@@ -135,6 +143,12 @@ export class CreateVenueInput {
 
   @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.URL })
   url?: string;
+
+  @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.SLUG })
+  slug?: string;
+
+  @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
+  images?: string[];
 
   @Field(() => Number, { nullable: true, description: VENUE_DESCRIPTIONS.CAPACITY })
   capacity?: number;
@@ -165,6 +179,12 @@ export class UpdateVenueInput {
 
   @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.URL })
   url?: string;
+
+  @Field(() => String, { nullable: true, description: VENUE_DESCRIPTIONS.SLUG })
+  slug?: string;
+
+  @Field(() => [String], { nullable: true, description: VENUE_DESCRIPTIONS.IMAGES })
+  images?: string[];
 
   @Field(() => Number, { nullable: true, description: VENUE_DESCRIPTIONS.CAPACITY })
   capacity?: number;

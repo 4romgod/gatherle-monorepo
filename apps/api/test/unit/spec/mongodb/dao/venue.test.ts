@@ -42,6 +42,7 @@ describe('VenueDAO', () => {
       country: 'Test Country',
       postalCode: '12345',
     },
+    slug: 'test-venue',
   };
 
   afterEach(() => {
@@ -126,6 +127,44 @@ describe('VenueDAO', () => {
       (VenueModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(VenueDAO.readVenueById('venue-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('readVenueBySlug', () => {
+    it('reads venue by slug', async () => {
+      (VenueModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({
+          toObject: () => mockVenue,
+        }),
+      );
+
+      const result = await VenueDAO.readVenueBySlug('test-venue');
+
+      expect(VenueModel.findOne).toHaveBeenCalledWith({ slug: 'test-venue' });
+      expect(result).toEqual(mockVenue);
+    });
+
+    it('throws not found error', async () => {
+      (VenueModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(VenueDAO.readVenueBySlug('missing')).rejects.toThrow(
+        CustomError('Venue with slug missing not found', ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('rethrows GraphQLError', async () => {
+      const graphQLError = new GraphQLError('GraphQL Error');
+      (VenueModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(graphQLError));
+
+      await expect(VenueDAO.readVenueBySlug('test-venue')).rejects.toThrow(graphQLError);
+    });
+
+    it('wraps unknown errors', async () => {
+      (VenueModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(VenueDAO.readVenueBySlug('test-venue')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });

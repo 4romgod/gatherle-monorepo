@@ -12,6 +12,7 @@ import {
   getCreateVenueMutation,
   getDeleteVenueByIdMutation,
   getReadVenueByIdQuery,
+  getReadVenueBySlugQuery,
   getReadVenuesByOrgIdQuery,
   getReadVenuesQuery,
   getUpdateVenueMutation,
@@ -147,6 +148,15 @@ describe('Venue Resolver', () => {
       const byOrgResponse = await request(url).post('').send(getReadVenuesByOrgIdQuery(organization.orgId));
       expect(byOrgResponse.status).toBe(200);
       expect(byOrgResponse.body.data.readVenuesByOrgId[0].orgId).toBe(organization.orgId);
+    });
+
+    it('reads venue by slug', async () => {
+      const organization = await createOrganization('Venue Org Slug');
+      const venue = await createVenue(organization.orgId);
+
+      const slugResponse = await request(url).post('').send(getReadVenueBySlugQuery(venue.slug));
+      expect(slugResponse.status).toBe(200);
+      expect(slugResponse.body.data.readVenueBySlug.venueId).toBe(venue.venueId);
     });
 
     it('creates venues with different types', async () => {

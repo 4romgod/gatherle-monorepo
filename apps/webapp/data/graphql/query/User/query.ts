@@ -13,6 +13,7 @@ export const GetAllUsersDocument = graphql(`
       given_name
       phone_number
       profile_picture
+      defaultVisibility
       userRole
       followersCount
       location {
@@ -49,6 +50,7 @@ export const GetUserByUsernameDocument = graphql(`
       given_name
       phone_number
       profile_picture
+      defaultVisibility
       userRole
       followersCount
       location {
@@ -85,6 +87,7 @@ export const GetUserByIdDocument = graphql(`
       given_name
       phone_number
       profile_picture
+      defaultVisibility
       userRole
       location {
         city

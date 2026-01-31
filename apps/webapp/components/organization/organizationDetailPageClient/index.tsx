@@ -4,14 +4,16 @@ import Link from 'next/link';
 import { useQuery } from '@apollo/client';
 import { alpha, Avatar, Box, Button, Card, CardContent, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { ArrowBack, Language, Share } from '@mui/icons-material';
-import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
-import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
-import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import Carousel from '@/components/carousel';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import FollowStatsCard from '@/components/organization/FollowStatsCard';
 import OrganizationPageSkeleton from '@/components/organization/organizationDetailPageClient/OrganizationDetailPageSkeleton';
+import ErrorPage from '@/components/errors/ErrorPage';
+import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
+import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
+import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
+import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 
 interface OrganizationPageClientProps {
   slug: string;
@@ -52,12 +54,25 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
   const events = eventsData?.readEvents ?? [];
   const isLoading = orgLoading || (orgId ? eventsLoading : false);
   const hasError = orgError || eventsError;
+  const notFoundError = isNotFoundGraphQLError(orgError);
 
   if (isLoading) {
     return <OrganizationPageSkeleton />;
   }
 
-  if (hasError || !organization) {
+  if (notFoundError || !organization) {
+    return (
+      <ErrorPage
+        statusCode={404}
+        title="Organization not found"
+        message="We could not find that organization. It may have been removed or the slug is invalid."
+        ctaLabel="Browse organizations"
+        ctaHref={ROUTES.ORGANIZATIONS.ROOT}
+      />
+    );
+  }
+
+  if (hasError) {
     return (
       <Box sx={{ textAlign: 'center', py: 6 }}>
         <Typography variant="h6" color="error">

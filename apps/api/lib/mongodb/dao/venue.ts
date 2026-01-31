@@ -1,14 +1,26 @@
+import { kebabCase } from 'lodash';
 import { Venue as VenueModel } from '@/mongodb/models';
 import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@ntlango/commons/types';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 
+const buildVenueSlug = (venue: Partial<Venue>) => {
+  const fallbackSource = venue.name ?? venue.venueId ?? 'venue';
+  return kebabCase(fallbackSource);
+};
+
+const ensureVenueSlug = (venue: Partial<Venue>): Venue =>
+  ({
+    ...venue,
+    slug: venue.slug ?? buildVenueSlug(venue),
+  }) as Venue;
+
 class VenueDAO {
   static async create(input: CreateVenueInput): Promise<Venue> {
     try {
       const venue = await VenueModel.create(input);
-      return venue.toObject();
+      return ensureVenueSlug(venue.toObject());
     } catch (error) {
       logger.error('Error creating venue', error);
       throw KnownCommonError(error);
@@ -22,9 +34,26 @@ class VenueDAO {
       if (!venue) {
         throw CustomError(`Venue with id ${venueId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return venue.toObject();
+      return ensureVenueSlug(venue.toObject());
     } catch (error) {
       logger.error(`Error reading venue ${venueId}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readVenueBySlug(slug: string): Promise<Venue> {
+    try {
+      const query = VenueModel.findOne({ slug });
+      const venue = await query.exec();
+      if (!venue) {
+        throw CustomError(`Venue with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+      }
+      return ensureVenueSlug(venue.toObject());
+    } catch (error) {
+      logger.error(`Error reading venue slug ${slug}`, error);
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -36,7 +65,7 @@ class VenueDAO {
     try {
       const query = options ? transformOptionsToQuery(VenueModel, options) : VenueModel.find({});
       const venues = await query.exec();
-      return venues.map((venue) => venue.toObject());
+      return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
       logger.error('Error reading venues', error);
       throw KnownCommonError(error);
@@ -46,7 +75,7 @@ class VenueDAO {
   static async readVenuesByOrgId(orgId: string): Promise<Venue[]> {
     try {
       const venues = await VenueModel.find({ orgId }).exec();
-      return venues.map((venue) => venue.toObject());
+      return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
       logger.error(`Error reading venues for org ${orgId}`, error);
       throw KnownCommonError(error);
@@ -66,7 +95,7 @@ class VenueDAO {
       Object.assign(venue, fieldsToUpdate);
       await venue.save();
 
-      return venue.toObject();
+      return ensureVenueSlug(venue.toObject());
     } catch (error) {
       logger.error(`Error updating venue ${input.venueId}`, error);
       if (error instanceof GraphQLError) {
@@ -82,7 +111,7 @@ class VenueDAO {
       if (!deletedVenue) {
         throw CustomError(`Venue with id ${venueId} not found`, ErrorTypes.NOT_FOUND);
       }
-      return deletedVenue.toObject();
+      return ensureVenueSlug(deletedVenue.toObject());
     } catch (error) {
       logger.error(`Error deleting venue ${venueId}`, error);
       if (error instanceof GraphQLError) {
