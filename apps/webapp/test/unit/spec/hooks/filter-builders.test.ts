@@ -15,7 +15,6 @@ import * as apolloClient from '@apollo/client';
 // Factory for creating EventFilters with defaults
 const createFilters = (overrides: Partial<EventFilters> = {}): EventFilters => ({
   categories: [],
-  priceRange: [0, 500],
   dateRange: { start: null, end: null },
   statuses: [],
   searchQuery: '',

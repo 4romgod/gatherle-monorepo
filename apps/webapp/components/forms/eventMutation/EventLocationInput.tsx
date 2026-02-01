@@ -25,8 +25,8 @@ const buildLocationFromVenue = (venue: VenueOption): Location => {
       ? {
           city: venue.address.city,
           country: venue.address.country,
-            state: venue.address.region ?? '', // always string
-            zipCode: venue.address.postalCode ?? '', // always string
+          state: venue.address.region ?? '', // always string
+          zipCode: venue.address.postalCode ?? '', // always string
           street: venue.address.street ?? undefined,
         }
       : undefined;

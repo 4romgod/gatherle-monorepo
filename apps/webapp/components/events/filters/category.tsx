@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   FormControl,
@@ -19,9 +19,19 @@ import CategoryIcon from '@mui/icons-material/Category';
 import { CategoryFilterProps, getEventCategoryIcon } from '@/lib/constants';
 import { useEventFilters } from '@/hooks/useEventFilters';
 
-export default function CategoryFilter({ categoryList, sxProps, onChange }: CategoryFilterProps) {
+export default function CategoryFilter({ categoryList, sxProps, onChange, value = [] }: CategoryFilterProps) {
   const contextFilters = onChange ? null : useEventFilters();
-  const [localCategories, setLocalCategories] = useState<string[]>([]);
+  const [localCategories, setLocalCategories] = useState<string[]>(
+    onChange ? value : (contextFilters?.filters.categories ?? []),
+  );
+
+  useEffect(() => {
+    if (!onChange) {
+      return;
+    }
+
+    setLocalCategories(value);
+  }, [onChange, value]);
 
   const selectedCategories = onChange ? localCategories : contextFilters?.filters.categories || [];
 

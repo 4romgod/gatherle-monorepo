@@ -19,12 +19,7 @@ const config: Config = {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',
       {
-        tsconfig: '<rootDir>/tsconfig.json',
-        tsconfigRaw: {
-          compilerOptions: {
-            jsx: 'react-jsx',
-          },
-        },
+        tsconfig: '<rootDir>/tsconfig.jest.json',
       },
     ],
   },

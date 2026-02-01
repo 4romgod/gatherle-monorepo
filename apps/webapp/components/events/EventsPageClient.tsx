@@ -21,7 +21,7 @@ import EventsHeader from '@/components/events/filters/EventsHeader';
 import ActiveFiltersPills from '@/components/events/filters/ActiveFiltersPills';
 import EventsList from '@/components/events/filters/EventsList';
 import { CategoryMenu, DateMenu, LocationMenu, StatusMenu } from '@/components/events/filters/FilterMenus';
-import { EventFilterProvider } from '@/components/events/filters/EventFilterContext';
+import { EventFilterProvider, initialFilters } from '@/components/events/filters/EventFilterContext';
 import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 
@@ -30,6 +30,7 @@ const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'rsvpCount', order: SortOrder
 export default function EventsPageClient() {
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const userId = session?.user?.userId;
   const authContext = { headers: getAuthHeader(token) };
 
   const {
@@ -101,7 +102,7 @@ export default function EventsPageClient() {
       {isLoading && eventsList.length === 0 ? (
         <EventTileSkeleton count={4} />
       ) : (
-        <EventFilterProvider>
+        <EventFilterProvider userId={userId} token={token}>
           <EventsContent
             categories={categories}
             initialEvents={eventsList}
@@ -134,9 +135,12 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
     setDateRange,
     setLocation,
     clearLocation,
+    isHydrated,
   } = useEventFilters();
 
-  const { events: serverEvents, loading, error } = useFilteredEvents(filters, initialEvents);
+  // Wait for filters to hydrate before applying them to prevent double-fetch on page load
+  const filtersToUse = isHydrated ? filters : initialFilters;
+  const { events: serverEvents, loading, error } = useFilteredEvents(filtersToUse, initialEvents);
 
   const filteredEvents = useMemo(() => {
     const query = filters.searchQuery.trim().toLowerCase();

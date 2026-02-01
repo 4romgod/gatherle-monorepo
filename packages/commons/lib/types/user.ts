@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type z from 'zod';
 import GraphQLJSON from 'graphql-type-json';
-import { Authorized, Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
+import { Authorized, Field, ID, InputType, Int, ObjectType, registerEnumType } from 'type-graphql';
 import type { Ref } from '@typegoose/typegoose';
 import { modelOptions, prop, Severity } from '@typegoose/typegoose';
 import { EVENT_DESCRIPTIONS, USER_DESCRIPTIONS } from '../constants';
@@ -73,6 +73,26 @@ export class CommunicationPrefs {
   pushEnabled?: boolean;
 }
 
+@ObjectType('SessionState', { description: 'Serialized UI state for cross-device continuity' })
+@modelOptions({ options: { allowMixed: Severity.ALLOW } })
+export class SessionState {
+  @prop({ type: () => String })
+  @Field(() => String, { description: 'State key (e.g., filters, tabs, drafts)' })
+  key!: string;
+
+  @prop({ type: () => Object })
+  @Field(() => GraphQLJSON, { description: 'Serialized state value' })
+  value!: Record<string, any>;
+
+  @prop({ type: () => Number })
+  @Field(() => Int, { description: 'Schema version for migration support', defaultValue: 1 })
+  version?: number;
+
+  @prop({ type: () => Date })
+  @Field(() => Date, { description: 'When this state was last updated' })
+  updatedAt!: Date;
+}
+
 @ObjectType('UserPreferences')
 @modelOptions({ options: { allowMixed: Severity.ALLOW } })
 export class UserPreferences {
@@ -83,6 +103,10 @@ export class UserPreferences {
   @prop({ type: () => Object })
   @Field(() => GraphQLJSON, { nullable: true })
   notificationPrefs?: Record<string, any>;
+
+  @prop({ type: () => [SessionState] })
+  @Field(() => [SessionState], { nullable: true, description: 'Persisted UI state for cross-device sync' })
+  sessionState?: SessionState[];
 }
 
 @ObjectType('UserLocationCoordinates', { description: 'Geographic coordinates for user location' })
@@ -429,6 +453,18 @@ export class UpdateUserInput {
 
   @Field(() => SocialVisibility, { nullable: true, description: 'Who can see your following list' })
   followingListVisibility?: SocialVisibility;
+}
+
+@InputType('SessionStateInput', { description: 'Input for saving session state' })
+export class SessionStateInput {
+  @Field(() => String, { description: 'State key (e.g., filters, tabs, drafts)' })
+  key!: string;
+
+  @Field(() => GraphQLJSON, { description: 'Serialized state value' })
+  value!: Record<string, any>;
+
+  @Field(() => Int, { nullable: true, description: 'Schema version', defaultValue: 1 })
+  version?: number;
 }
 
 @InputType('LoginUserInput', { description: USER_DESCRIPTIONS.LOGIN_INPUT })

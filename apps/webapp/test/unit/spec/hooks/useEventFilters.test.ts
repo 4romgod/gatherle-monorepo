@@ -22,7 +22,6 @@ const mockContextValue = {
     },
   },
   setCategories: jest.fn(),
-  setPriceRange: jest.fn(),
   setDateRange: jest.fn(),
   setStatuses: jest.fn(),
   setSearchQuery: jest.fn(),

@@ -31,6 +31,7 @@ export type CategoryFilterProps = {
   sxProps?: SxProps<Theme>;
   categoryList: EventCategory[];
   onChange?: (eventCategories: string[]) => void;
+  value?: string[];
 };
 
 export type EventDateInputProps = {

@@ -11,6 +11,8 @@ import {
   QueryOptionsInput,
   EventCategory,
   FollowTargetType,
+  SessionState,
+  SessionStateInput,
 } from '@ntlango/commons/types';
 import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
@@ -195,5 +197,48 @@ export class UserResolver {
   async readMutedOrganizationIds(@Ctx() context: ServerContext): Promise<string[]> {
     const user = getAuthenticatedUser(context);
     return UserDAO.readMutedOrganizationIds(user.userId);
+  }
+
+  // ============ SESSION STATE MUTATIONS ============
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, { description: 'Save session state for cross-device continuity' })
+  async saveSessionState(
+    @Arg('input', () => SessionStateInput) input: SessionStateInput,
+    @Ctx() context: ServerContext,
+  ): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.saveSessionState(user.userId, input);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => SessionState, { nullable: true, description: 'Retrieve session state for a specific key' })
+  async readSessionState(
+    @Arg('key', () => String) key: string,
+    @Ctx() context: ServerContext,
+  ): Promise<SessionState | null> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.readSessionState(user.userId, key);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [SessionState], { description: 'Retrieve all session states for the current user' })
+  async readAllSessionStates(@Ctx() context: ServerContext): Promise<SessionState[]> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.readAllSessionStates(user.userId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, { description: 'Clear session state for a specific key' })
+  async clearSessionState(@Arg('key', () => String) key: string, @Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.clearSessionState(user.userId, key);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => User, { description: 'Clear all session states for the current user' })
+  async clearAllSessionStates(@Ctx() context: ServerContext): Promise<User> {
+    const user = getAuthenticatedUser(context);
+    return UserDAO.clearAllSessionStates(user.userId);
   }
 }

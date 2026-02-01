@@ -6,6 +6,8 @@ import type {
   QueryOptionsInput,
   LoginUserInput,
   UserWithToken,
+  SessionStateInput,
+  SessionState,
 } from '@ntlango/commons/types';
 import { UserRole } from '@ntlango/commons/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
@@ -451,6 +453,141 @@ class UserDAO {
       return UserModel.countDocuments(filter).exec();
     } catch (error) {
       logger.error('Error counting users', error);
+      throw KnownCommonError(error);
+    }
+  }
+
+  // ============ SESSION STATE METHODS ============
+
+  static async saveSessionState(userId: string, input: SessionStateInput): Promise<User> {
+    try {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
+        throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+      }
+
+      // Initialize preferences.sessionState if it doesn't exist
+      if (!user.preferences) {
+        user.preferences = { sessionState: [] };
+      }
+      if (!user.preferences.sessionState) {
+        user.preferences.sessionState = [];
+      }
+
+      // Find existing state with this key
+      const existingIndex = user.preferences.sessionState.findIndex((state) => state.key === input.key);
+
+      const sessionState: SessionState = {
+        key: input.key,
+        value: input.value,
+        version: input.version || 1,
+        updatedAt: new Date(),
+      };
+
+      if (existingIndex >= 0) {
+        // Update existing state
+        user.preferences.sessionState[existingIndex] = sessionState;
+      } else {
+        // Add new state
+        user.preferences.sessionState.push(sessionState);
+      }
+
+      // NOTE: We are mutating a nested object/array on `preferences` in place.
+      // Mongoose does not always detect deep changes on mixed or nested structures,
+      // so without explicitly marking `preferences` as modified these updates may
+      // be silently ignored when saving the document.
+      // Do not remove this call unless you also change how `preferences` is updated
+      // and have verified that Mongoose change tracking still persists the changes.
+      user.markModified('preferences');
+      await user.save();
+
+      return user.toObject();
+    } catch (error) {
+      logger.error(`Error saving session state for userId ${userId}, key ${input.key}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readSessionState(userId: string, key: string): Promise<SessionState | null> {
+    try {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
+        throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+      }
+
+      const state = user.preferences?.sessionState?.find((s) => s.key === key);
+      return state || null;
+    } catch (error) {
+      logger.error(`Error reading session state for userId ${userId}, key ${key}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readAllSessionStates(userId: string): Promise<SessionState[]> {
+    try {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
+        throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+      }
+
+      return user.preferences?.sessionState || [];
+    } catch (error) {
+      logger.error(`Error reading all session states for userId ${userId}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async clearSessionState(userId: string, key: string): Promise<User> {
+    try {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
+        throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+      }
+
+      if (user.preferences?.sessionState) {
+        user.preferences.sessionState = user.preferences.sessionState.filter((s) => s.key !== key);
+        user.markModified('preferences');
+        await user.save();
+      }
+
+      return user.toObject();
+    } catch (error) {
+      logger.error(`Error clearing session state for userId ${userId}, key ${key}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async clearAllSessionStates(userId: string): Promise<User> {
+    try {
+      const user = await UserModel.findById(userId).exec();
+      if (!user) {
+        throw CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId), ErrorTypes.NOT_FOUND);
+      }
+
+      if (user.preferences) {
+        user.preferences.sessionState = [];
+        user.markModified('preferences');
+        await user.save();
+      }
+
+      return user.toObject();
+    } catch (error) {
+      logger.error(`Error clearing all session states for userId ${userId}`, error);
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
       throw KnownCommonError(error);
     }
   }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, SyntheticEvent, useMemo } from 'react';
+import { SyntheticEvent, useMemo } from 'react';
 import { Tabs, Tab, Box, Typography, Card, useTheme, useMediaQuery } from '@mui/material';
 import { CustomTabPanel } from './CustomTabsPanel';
+import { StorageType, usePersistentState } from '@/hooks/usePersistentState';
 
 export type CustomTabItem = {
   name: string;
@@ -10,6 +11,16 @@ export type CustomTabItem = {
   icon?: React.ReactElement;
   description: string;
   disabled?: boolean;
+};
+
+export type TabPersistenceConfig = {
+  key: string;
+  namespace?: string;
+  userId?: string;
+  ttl?: number;
+  storageType?: StorageType;
+  syncToBackend?: boolean;
+  token?: string;
 };
 
 export type CustomTabsProps = {
@@ -20,6 +31,7 @@ export type CustomTabsProps = {
   variant?: 'scrollable' | 'standard' | 'fullWidth';
   orientation?: 'vertical' | 'horizontal';
   onTabChange?: (index: number) => void;
+  persistence?: TabPersistenceConfig;
 };
 
 export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }) {
@@ -31,11 +43,24 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
     variant = 'scrollable',
     orientation = 'vertical',
     onTabChange,
+    persistence,
   } = tabsProps;
 
-  const [value, setValue] = useState(defaultTab);
+  const persistenceKey = persistence?.key ?? `${id}-tab-index`;
+  const { value, setValue, isHydrated } = usePersistentState<number>(persistenceKey, defaultTab, {
+    namespace: persistence?.namespace,
+    userId: persistence?.userId,
+    storageType: persistence?.storageType,
+    ttl: persistence?.ttl,
+    disabled: !Boolean(persistence?.key),
+    syncToBackend: persistence?.syncToBackend,
+    token: persistence?.token,
+  });
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Use default value during SSR and initial render to prevent hydration mismatch
+  const displayValue = isHydrated ? value : defaultTab;
 
   // Use horizontal orientation on mobile for more content space
   const effectiveOrientation = isSmallScreen ? 'horizontal' : orientation;
@@ -44,11 +69,11 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
   const tabPanels = useMemo(
     () =>
       tabs.map(({ content }, index) => (
-        <CustomTabPanel key={`${id}-panel-content-${index}`} value={value} index={index} id={id}>
+        <CustomTabPanel key={`${id}-panel-content-${index}`} value={displayValue} index={index} id={id}>
           {content}
         </CustomTabPanel>
       )),
-    [tabs, value, id],
+    [tabs, displayValue, id],
   );
 
   const handleChange = (_event: SyntheticEvent, newValue: number) => {
@@ -99,7 +124,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         <Tabs
           orientation={effectiveOrientation}
           variant={variant}
-          value={value}
+          value={displayValue}
           onChange={handleChange}
           aria-label={`${tabsTitle} tabs`}
           textColor="inherit"

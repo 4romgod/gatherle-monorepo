@@ -8,6 +8,7 @@ import EventIcon from '@mui/icons-material/Event';
 import CategoryIcon from '@mui/icons-material/Category';
 import LayersIcon from '@mui/icons-material/Layers';
 import PeopleIcon from '@mui/icons-material/People';
+import StorageIcon from '@mui/icons-material/Storage';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
@@ -16,6 +17,7 @@ import AdminEventsSection from '@/components/admin/AdminEventsSection';
 import AdminCategorySection from '@/components/admin/AdminCategorySection';
 import AdminCategoryGroupSection from '@/components/admin/AdminCategoryGroupSection';
 import AdminUsersSection from '@/components/admin/AdminUsersSection';
+import SessionStateManager from '@/components/admin/SessionStateManager';
 import CustomTabs, { CustomTabItem } from '@/components/core/tabs/CustomTabs';
 
 export default function AdminDashboard() {
@@ -55,6 +57,12 @@ export default function AdminDashboard() {
         description: 'Promote/demote roles and delete problematic accounts.',
         icon: <PeopleIcon fontSize="small" />,
         content: <AdminUsersSection token={token} currentUserId={currentUserId} />,
+      },
+      {
+        name: 'Session States',
+        description: 'View and manage user session states for debugging and support.',
+        icon: <StorageIcon fontSize="small" />,
+        content: <SessionStateManager token={token} userId={currentUserId} />,
       },
     ],
     [token, currentUserId],
@@ -101,6 +109,12 @@ export default function AdminDashboard() {
             defaultTab: 0,
             variant: 'scrollable',
             id: 'admin-console-tabs',
+            persistence: {
+              key: 'admin-console-tabs',
+              userId: currentUserId,
+              syncToBackend: false,
+              token,
+            },
           }}
         />
       </Stack>

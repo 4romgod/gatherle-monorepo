@@ -1,14 +1,14 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, PermMedia } from '@mui/icons-material';
+import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, Storage } from '@mui/icons-material';
 import { Box, Container } from '@mui/material';
-import CustomTabs, { CustomTabsProps } from '@/components/core/tabs/CustomTabs';
+import CustomTabs from '@/components/core/tabs/CustomTabs';
 import EditProfilePage from '@/components/settings/EditProfilePage';
 import PersonalSettingsPage from '@/components/settings/PersonalSettingsPage';
 import InterestsSettingsPage from '@/components/settings/InterestsSettingsPage';
 import EventSettingsPage from '@/components/settings/EventSettingsPage';
 import AccountSettingsPage from '@/components/settings/AccountSettingsPage';
-import SocialMediaSettingsPage from '@/components/settings/SocialMediaSettingsPage';
+import SessionStateSettings from '@/components/settings/SessionStateSettings';
 import PasswordSettingsPage from '@/components/settings/PasswordSettingsPage';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
@@ -38,63 +38,67 @@ export default async function SettingsPage() {
 
   const user = omit(session.user, ['token', '__typename']);
 
-  const tabsProps: CustomTabsProps = {
-    tabsTitle: 'Settings',
-    tabs: [
-      {
-        name: 'Profile',
-        content: <EditProfilePage user={user} />,
-        icon: <PersonOutlined sx={{ marginRight: 1 }} key="profile-icon" fontSize="small" />,
-        description: 'Customize your public profile',
-      },
-      {
-        name: 'Personal',
-        content: <PersonalSettingsPage user={user} />,
-        icon: <Person key="personal-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-        description: 'Personal details and privacy',
-      },
-      {
-        name: 'Interests',
-        content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
-        icon: <Interests key="interests-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-        description: 'Manage your event interests',
-      },
-      {
-        name: 'Events',
-        content: <EventSettingsPage user={user} />,
-        icon: <Event key="events-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-        description: 'Event preferences and notifications',
-      },
-      {
-        name: 'Account',
-        content: <AccountSettingsPage user={user} />,
-        icon: <ManageAccounts key="account-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-        description: 'Account security and settings',
-      },
-      {
-        name: 'Password',
-        content: <PasswordSettingsPage />,
-        icon: <Password key="password-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-        description: 'Change your password',
-      },
-      // TODO We will bring this back when we have the functionality to connect to social media
-      // {
-      //   name: 'Social Media',
-      //   content: <SocialMediaSettingsPage />,
-      //   icon: <PermMedia
-      //     key="social-icon"
-      //     fontSize="small"
-      //     sx={{ marginRight: 1 }}
-      //   />,
-      //   description: 'Connect your social accounts',
-      // },
-    ],
-  };
+  const tabs = [
+    {
+      name: 'Profile',
+      content: <EditProfilePage user={user} />,
+      icon: <PersonOutlined sx={{ marginRight: 1 }} key="profile-icon" fontSize="small" />,
+      description: 'Customize your public profile',
+    },
+    {
+      name: 'Personal',
+      content: <PersonalSettingsPage user={user} />,
+      icon: <Person key="personal-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Personal details and privacy',
+    },
+    {
+      name: 'Interests',
+      content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
+      icon: <Interests key="interests-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Manage your event interests',
+    },
+    {
+      name: 'Events',
+      content: <EventSettingsPage user={user} />,
+      icon: <Event key="events-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Event preferences and notifications',
+    },
+    {
+      name: 'Account',
+      content: <AccountSettingsPage user={user} />,
+      icon: <ManageAccounts key="account-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Account security and settings',
+    },
+    {
+      name: 'Password',
+      content: <PasswordSettingsPage />,
+      icon: <Password key="password-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Change your password',
+    },
+    {
+      name: 'Session Data',
+      content: <SessionStateSettings token={session.user.token} />,
+      icon: <Storage key="session-icon" fontSize="small" sx={{ marginRight: 1 }} />,
+      description: 'Manage saved filters and drafts',
+    },
+    // TODO We will bring this back when we have the functionality to connect to social media (SocialMediaSettingsPage)
+  ];
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 0, md: 4 } }}>
       <Container maxWidth="lg" sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
-        <CustomTabs tabsProps={tabsProps} />
+        <CustomTabs
+          tabsProps={{
+            tabsTitle: 'Settings',
+            tabs,
+            persistence: {
+              key: 'account-settings-tabs',
+              userId: user.userId,
+              syncToBackend: false,
+              token: session.user.token,
+            },
+          }}
+        />
       </Container>
     </Box>
   );

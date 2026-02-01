@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useMemo, ReactNode } from 'react';
 import { EventStatus } from '@/data/graphql/types/graphql';
 import dayjs, { Dayjs } from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 dayjs.extend(isBetween);
 
@@ -18,7 +19,6 @@ export interface LocationFilter {
 
 export interface EventFilters {
   categories: string[];
-  priceRange: [number, number];
   dateRange: {
     start: Dayjs | null;
     end: Dayjs | null;
@@ -32,7 +32,6 @@ export interface EventFilters {
 export interface EventFilterContextType {
   filters: EventFilters;
   setCategories: (categories: string[]) => void;
-  setPriceRange: (range: [number, number]) => void;
   setDateRange: (start: Dayjs | null, end: Dayjs | null, filterOption?: string) => void;
   setStatuses: (statuses: EventStatus[]) => void;
   setSearchQuery: (query: string) => void;
@@ -42,13 +41,13 @@ export interface EventFilterContextType {
   removeCategory: (category: string) => void;
   removeStatus: (status: EventStatus) => void;
   hasActiveFilters: boolean;
+  isHydrated: boolean;
 }
 
 export const EventFilterContext = createContext<EventFilterContextType | undefined>(undefined);
 
-const initialFilters: EventFilters = {
+export const initialFilters: EventFilters = {
   categories: [],
-  priceRange: [0, 500],
   dateRange: { start: null, end: null },
   statuses: [],
   searchQuery: '',
@@ -57,17 +56,67 @@ const initialFilters: EventFilters = {
 
 interface EventFilterProviderProps {
   children: ReactNode;
+  userId?: string;
+  token?: string;
 }
 
-export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ children }) => {
-  const [filters, setFilters] = useState<EventFilters>(initialFilters);
+// Serializable version of EventFilters for localStorage
+interface SerializedEventFilters {
+  categories: string[];
+  dateRange: {
+    start: string | null; // ISO string
+    end: string | null; // ISO string
+    filterOption?: string;
+  };
+  statuses: EventStatus[];
+  searchQuery: string;
+  location: LocationFilter;
+}
+
+// Helper to serialize EventFilters (Dayjs → ISO strings)
+const serializeFilters = (filters: EventFilters): SerializedEventFilters => ({
+  categories: filters.categories,
+  dateRange: {
+    start: filters.dateRange.start ? filters.dateRange.start.toISOString() : null,
+    end: filters.dateRange.end ? filters.dateRange.end.toISOString() : null,
+    filterOption: filters.dateRange.filterOption,
+  },
+  statuses: filters.statuses,
+  searchQuery: filters.searchQuery,
+  location: filters.location,
+});
+
+// Helper to deserialize EventFilters (ISO strings → Dayjs)
+const deserializeFilters = (serialized: SerializedEventFilters): EventFilters => ({
+  categories: serialized.categories ?? [],
+  dateRange: {
+    start: serialized.dateRange?.start ? dayjs(serialized.dateRange.start) : null,
+    end: serialized.dateRange?.end ? dayjs(serialized.dateRange.end) : null,
+    filterOption: serialized.dateRange?.filterOption,
+  },
+  statuses: serialized.statuses || [],
+  searchQuery: serialized.searchQuery || '',
+  location: serialized.location ?? {},
+});
+
+export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ children, userId, token }) => {
+  const {
+    value: filters,
+    setValue: setFilters,
+    clearStorage,
+    isHydrated,
+  } = usePersistentState<EventFilters>('events-filter-state', initialFilters, {
+    namespace: 'filters',
+    userId,
+    ttl: 1000 * 60 * 60 * 24 * 7, // 7 days
+    serialize: serializeFilters,
+    deserialize: deserializeFilters,
+    syncToBackend: false,
+    token,
+  });
 
   const setCategories = (categories: string[]) => {
     setFilters((prev) => ({ ...prev, categories }));
-  };
-
-  const setPriceRange = (range: [number, number]) => {
-    setFilters((prev) => ({ ...prev, priceRange: range }));
   };
 
   const setDateRange = (start: Dayjs | null, end: Dayjs | null, filterOption?: string) => {
@@ -91,7 +140,7 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
   };
 
   const resetFilters = () => {
-    setFilters(initialFilters);
+    clearStorage(); // This already resets state to initialFilters internally
   };
 
   const removeCategory = (category: string) => {
@@ -110,10 +159,10 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
 
   const hasActiveFilters = useMemo(() => {
     const hasLocation = !!(
-      filters.location.city ||
-      filters.location.state ||
-      filters.location.country ||
-      filters.location.latitude
+      filters.location?.city ||
+      filters.location?.state ||
+      filters.location?.country ||
+      filters.location?.latitude
     );
     return (
       filters.categories.length > 0 ||
@@ -121,8 +170,6 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
       filters.searchQuery !== '' ||
       filters.dateRange.start !== null ||
       filters.dateRange.end !== null ||
-      filters.priceRange[0] !== initialFilters.priceRange[0] ||
-      filters.priceRange[1] !== initialFilters.priceRange[1] ||
       hasLocation
     );
   }, [filters]);
@@ -130,7 +177,6 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
   const value: EventFilterContextType = {
     filters,
     setCategories,
-    setPriceRange,
     setDateRange,
     setStatuses,
     setSearchQuery,
@@ -140,6 +186,7 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
     removeCategory,
     removeStatus,
     hasActiveFilters,
+    isHydrated,
   };
 
   return <EventFilterContext.Provider value={value}>{children}</EventFilterContext.Provider>;

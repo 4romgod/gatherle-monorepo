@@ -133,7 +133,11 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
         ) : (
           <Stack spacing={2}>
             {events.map((event) => (
-              <Card key={event.eventId} elevation={0} sx={{ borderRadius: 3 }}>
+              <Card
+                key={event.eventId}
+                elevation={0}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+              >
                 <CardContent>
                   <Stack spacing={1}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
