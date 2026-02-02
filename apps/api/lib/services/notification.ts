@@ -335,6 +335,13 @@ class NotificationService {
   }
 
   /**
+   * Mark follow request notifications as read for the recipient
+   */
+  static async markFollowRequestNotificationsAsRead(recipientUserId: string, actorUserId: string): Promise<number> {
+    return NotificationDAO.markFollowRequestNotificationsAsRead(recipientUserId, actorUserId);
+  }
+
+  /**
    * Future: Dispatch notification to appropriate channels (email, push) based on user preferences
    */
   // private static async dispatchToChannels(

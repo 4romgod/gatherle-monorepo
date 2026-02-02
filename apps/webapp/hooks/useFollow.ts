@@ -139,14 +139,14 @@ export function useFollowRequests(targetType: FollowTargetType) {
   });
 
   const [acceptRequest, { loading: acceptLoading }] = useMutation(AcceptFollowRequestDocument, {
-    refetchQueries: ['GetFollowRequests', 'GetFollowers'],
+    refetchQueries: ['GetFollowRequests', 'GetFollowers', 'GetNotifications', 'GetUnreadNotificationCount'],
     context: {
       headers: getAuthHeader(token),
     },
   });
 
   const [rejectRequest, { loading: rejectLoading }] = useMutation(RejectFollowRequestDocument, {
-    refetchQueries: ['GetFollowRequests'],
+    refetchQueries: ['GetFollowRequests', 'GetNotifications', 'GetUnreadNotificationCount'],
     context: {
       headers: getAuthHeader(token),
     },

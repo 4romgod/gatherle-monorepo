@@ -50,6 +50,7 @@ jest.mock('@/mongodb/dao', () => ({
 
 jest.mock('@/services/notification', () => ({
   notify: jest.fn().mockResolvedValue({}),
+  markFollowRequestNotificationsAsRead: jest.fn().mockResolvedValue(0),
 }));
 
 jest.mock('@/utils/logger', () => ({

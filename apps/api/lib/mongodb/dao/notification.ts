@@ -4,6 +4,7 @@ import type {
   CreateNotificationInput,
   NotificationConnection,
 } from '@ntlango/commons/types';
+import { NotificationType } from '@ntlango/commons';
 import { Notification as NotificationModel } from '@/mongodb/models';
 import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';
@@ -143,6 +144,30 @@ class NotificationDAO {
       return result.modifiedCount;
     } catch (error) {
       logger.error('Error marking all notifications as read', error);
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Mark the follow request notification associated with a follower as read.
+   */
+  static async markFollowRequestNotificationsAsRead(recipientUserId: string, actorUserId: string): Promise<number> {
+    try {
+      const result = await NotificationModel.updateMany(
+        {
+          recipientUserId,
+          actorUserId,
+          type: NotificationType.FOLLOW_REQUEST,
+          isRead: false,
+        },
+        {
+          isRead: true,
+          readAt: new Date(),
+        },
+      ).exec();
+      return result.modifiedCount;
+    } catch (error) {
+      logger.error('Error marking follow request notifications as read', error);
       throw KnownCommonError(error);
     }
   }

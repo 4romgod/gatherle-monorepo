@@ -95,6 +95,10 @@ class FollowService {
   static async acceptFollowRequest(followId: string, targetUserId: string): Promise<Follow> {
     const follow = await FollowDAO.updateApprovalStatus(followId, targetUserId, FollowApprovalStatus.Accepted);
 
+    NotificationService.markFollowRequestNotificationsAsRead(targetUserId, follow.followerUserId).catch((err) => {
+      logger.warn('Failed to mark follow request notification as read', err);
+    });
+
     // Notify the follower that their request was accepted
     NotificationService.notify({
       type: NotificationType.FOLLOW_ACCEPTED,
@@ -114,7 +118,10 @@ class FollowService {
    * No notification sent for rejections (by design - avoid negative notifications)
    */
   static async rejectFollowRequest(followId: string, targetUserId: string): Promise<boolean> {
-    await FollowDAO.updateApprovalStatus(followId, targetUserId, FollowApprovalStatus.Rejected);
+    const follow = await FollowDAO.updateApprovalStatus(followId, targetUserId, FollowApprovalStatus.Rejected);
+    NotificationService.markFollowRequestNotificationsAsRead(targetUserId, follow.followerUserId).catch((err) => {
+      logger.warn('Failed to mark follow request notification as read', err);
+    });
     return true;
   }
 

@@ -58,7 +58,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 4. Public User Profile
+### 4. Public User Profile (done)
 
 **Route:** `/u/[username]`
 
@@ -112,7 +112,7 @@ scope. Pages are grouped by purpose and access level.
 
 ## 3. Core Authenticated User Pages
 
-### 9. Home / Feed
+### 9. Home / Feed (done)
 
 **Route:** `/home`
 
@@ -173,7 +173,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 15. My Profile (Settings)
+### 15. My Profile (Settings) (done)
 
 **Route:** `/me/profile`
 
@@ -204,7 +204,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-## 30. Error Pages
+## 30. Error Pages (done)
 
 ### `/404`
 

@@ -318,11 +318,16 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
               position: 'sticky',
               top: 80,
               maxHeight: 'calc(100vh - 96px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              paddingBottom: 2,
               '&::-webkit-scrollbar': {
                 display: 'none',
               },
               msOverflowStyle: 'none',
               scrollbarWidth: 'none',
+              overflowY: 'auto',
             }}
           >
             <EventsSidebar

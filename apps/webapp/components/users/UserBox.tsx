@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Grid, Avatar, Box, Stack, Chip, Button } from '@mui/material';
+import { Typography, Grid, Avatar, Box, Stack, Chip, Button, Card } from '@mui/material';
 import { LocationOn, People } from '@mui/icons-material';
 import { User, FollowTargetType } from '@/data/graphql/types/graphql';
 import Link from 'next/link';
@@ -8,7 +8,6 @@ import { ROUTES } from '@/lib/constants';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils';
 import FollowButton from './FollowButton';
 import { useSession } from 'next-auth/react';
-import Surface from '@/components/core/Surface';
 import { alpha, useTheme } from '@mui/material/styles';
 
 interface UserBoxProps {
@@ -29,22 +28,27 @@ export default function UserBox({ user }: UserBoxProps) {
 
   return (
     <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
-      <Surface
-        component="div"
+      <Card
+        elevation={0}
         sx={{
           height: '100%',
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
           overflow: 'hidden',
-          backgroundColor: 'background.paper',
           display: 'flex',
           flexDirection: 'column',
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            borderColor: 'primary.main',
+            boxShadow: theme.shadows[4],
+          },
         }}
       >
         <Box
           sx={{
-            background: `${theme.palette.primary.main}`,
+            bgcolor: 'primary.main',
             px: 2,
             py: 2,
             position: 'relative',
@@ -62,8 +66,9 @@ export default function UserBox({ user }: UserBoxProps) {
                 sx={{
                   width: 58,
                   height: 58,
-                  border: `3px solid ${theme.palette.background.paper}`,
-                  boxShadow: 3,
+                  border: '3px solid',
+                  borderColor: 'common.white',
+                  boxShadow: theme.shadows[3],
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
                 }}
               >
@@ -85,7 +90,6 @@ export default function UserBox({ user }: UserBoxProps) {
                   sx={{
                     color: 'primary.contrastText',
                     opacity: 0.9,
-                    textTransform: 'none',
                   }}
                 >
                   @{user.username}
@@ -96,7 +100,7 @@ export default function UserBox({ user }: UserBoxProps) {
 
           {typeof user.followersCount === 'number' && (
             <Stack direction="row" alignItems="center" spacing={0.5}>
-              <People fontSize="small" color="inherit" />
+              <People fontSize="small" sx={{ color: 'primary.contrastText' }} />
               <Typography variant="caption" fontWeight={600} color="primary.contrastText">
                 {(user.followersCount || 0).toLocaleString()} {user.followersCount === 1 ? 'follower' : 'followers'}
               </Typography>
@@ -104,14 +108,14 @@ export default function UserBox({ user }: UserBoxProps) {
           )}
         </Box>
 
-        <Box sx={{ p: 3, pt: 2 }}>
+        <Box sx={{ p: 3, pt: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           {user.bio && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 48 }}>
               {user.bio}
             </Typography>
           )}
 
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" sx={{ mb: 'auto' }}>
             {location && (
               <Chip
                 icon={<LocationOn />}
@@ -121,7 +125,7 @@ export default function UserBox({ user }: UserBoxProps) {
                   pl: 0.6,
                   fontWeight: 600,
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  color: theme.palette.text.primary,
+                  color: 'text.primary',
                   border: 'none',
                 }}
               />
@@ -138,7 +142,7 @@ export default function UserBox({ user }: UserBoxProps) {
                       fontSize: '0.75rem',
                       bgcolor: alpha(theme.palette.secondary.main, 0.12),
                       border: 'none',
-                      color: theme.palette.text.primary,
+                      color: 'text.primary',
                     }}
                   />
                 ))}
@@ -159,14 +163,18 @@ export default function UserBox({ user }: UserBoxProps) {
                 fullWidth
                 component={Link}
                 href={ROUTES.USERS.USER(user.username)}
-                sx={{ textTransform: 'none' }}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                }}
               >
                 View profile
               </Button>
             </Box>
           )}
         </Box>
-      </Surface>
+      </Card>
     </Grid>
   );
 }

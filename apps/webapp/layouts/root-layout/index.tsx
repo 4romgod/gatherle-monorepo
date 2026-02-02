@@ -26,13 +26,15 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
   useEffect(() => {
     logger.debug('RootLayout session updated', { isAuthN });
   }, [isAuthN]);
+  // Force SessionProvider remount when the NextAuth token changes so client hooks get the up-to-date session (fixes the need to refresh after login).
+  const sessionProviderKey = session?.user?.token ?? 'guest-session';
 
   return (
     <html lang="en">
       <body>
         <ApolloWrapper>
           <AppRouterCacheProvider>
-            <SessionProvider session={session}>
+            <SessionProvider key={sessionProviderKey} session={session}>
               <CustomAppContextProvider>
                 <CustomThemeProvider>
                   <ToastProvider />
