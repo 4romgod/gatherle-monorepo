@@ -8,13 +8,13 @@
     "infra"
   ],
   "scripts": {
-    "build": "npm --workspaces --if-present run build",
+    "build": "npm run build -w @ntlango/commons && npm run build -w @ntlango/api && npm run build -w @ntlango/webapp && npm run build -w @ntlango/cdk",
     "dev:api": "npm --workspace @ntlango/api run dev",
     "dev:web": "npm --workspace @ntlango/webapp run dev",
     "lint": "npm --workspaces --if-present run lint",
     "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\" && npm --workspaces --if-present run lint:fix",
     "typecheck": "npm --workspaces --if-present run typecheck",
-    "test:unit": "npm --workspaces --if-present run test:unit"
+    "test:unit": "npm run test:unit -w @ntlango/api && npm run test:unit -w @ntlango/webapp"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.6",

@@ -215,6 +215,7 @@ export const ORGANIZATION_MEMBERSHIP_DESCRIPTIONS = {
   USER_ID: 'User id that belongs to the organization.',
   ROLE: 'Role granted to the user inside the organization.',
   JOINED_AT: 'Timestamp when the membership was created.',
+  USERNAME: 'Resolved username for the member (mirrors the user record).',
 };
 
 export const VENUE_DESCRIPTIONS = {

@@ -46,12 +46,11 @@ import {
   CreateOrganizationMembershipDocument,
   UpdateOrganizationMembershipDocument,
   DeleteOrganizationMembershipDocument,
-  GetUserByIdDocument,
   GetAllUsersDocument,
 } from '@/data/graphql/query';
 import { Organization, OrganizationMembership, OrganizationRole, User } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
-import { getAuthHeader } from '@/lib/utils';
+import { getAuthHeader, logger } from '@/lib/utils';
 
 interface OrganizationSettingsClientProps {
   slug: string;
@@ -84,7 +83,6 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   const [addMemberRole, setAddMemberRole] = useState<OrganizationRole>(OrganizationRole.Member);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [memberUsernames, setMemberUsernames] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
   const [userOptions, setUserOptions] = useState<User[]>([]);
 
@@ -111,7 +109,6 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
     },
   );
 
-  const [getUserById] = useLazyQuery(GetUserByIdDocument);
   const [searchUsers, { loading: searchLoading }] = useLazyQuery<{ readUsers: User[] }>(GetAllUsersDocument, {
     fetchPolicy: 'network-only',
   });
@@ -119,8 +116,6 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   // Debounced user search - only query when user types (min 2 chars)
   useEffect(() => {
     const searchTerm = searchInput.trim();
-
-    // Only search if input is at least 2 characters
     if (searchTerm.length < 2) {
       setUserOptions([]);
       return;
@@ -151,7 +146,7 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
           setUserOptions(filtered);
         }
       } catch (err) {
-        console.error('Error searching users:', err);
+        logger.error('Error searching users:', err);
         setUserOptions([]);
       }
     }, 300);
@@ -160,31 +155,6 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   }, [searchInput, searchUsers]);
 
   const allUsers = userOptions;
-
-  // Fetch usernames for all members
-  useEffect(() => {
-    const fetchUsernames = async () => {
-      const memberships = membershipsData?.readOrganizationMembershipsByOrgId || [];
-      if (memberships.length === 0) return;
-
-      const usernameMap: Record<string, string> = {};
-
-      for (const membership of memberships) {
-        try {
-          const { data } = await getUserById({ variables: { userId: membership.userId } });
-          if (data?.readUserById?.username) {
-            usernameMap[membership.userId] = data.readUserById.username;
-          }
-        } catch (err) {
-          console.error(`Failed to fetch username for ${membership.userId}:`, err);
-        }
-      }
-
-      setMemberUsernames(usernameMap);
-    };
-
-    fetchUsernames();
-  }, [membershipsData, getUserById]);
 
   const memberships = membershipsData?.readOrganizationMembershipsByOrgId ?? [];
 
@@ -616,56 +586,55 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {memberships.map((membership) => (
-                        <TableRow key={membership.membershipId}>
-                          <TableCell>
-                            <Stack direction="row" spacing={2} alignItems="center">
-                              <Avatar sx={{ width: 32, height: 32 }}>
-                                {(memberUsernames[membership.userId] || membership.userId).charAt(0).toUpperCase()}
-                              </Avatar>
-                              <Typography variant="body2">
-                                {memberUsernames[membership.userId] || membership.userId}
+                      {memberships.map((membership) => {
+                        const displayName = membership.username || membership.userId || 'Member';
+                        return (
+                          <TableRow key={membership.membershipId}>
+                            <TableCell>
+                              <Stack direction="row" spacing={2} alignItems="center">
+                                <Avatar sx={{ width: 32, height: 32 }}>{displayName.charAt(0).toUpperCase()}</Avatar>
+                                <Typography variant="body2">{displayName}</Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              {membership.userId === session?.user?.userId ? (
+                                <Chip label={membership.role} size="small" color="primary" />
+                              ) : (
+                                <Select
+                                  value={membership.role}
+                                  onChange={(e) =>
+                                    handleUpdateMemberRole(membership.membershipId, e.target.value as OrganizationRole)
+                                  }
+                                  size="small"
+                                  sx={{ minWidth: 120 }}
+                                >
+                                  <MenuItem value={OrganizationRole.Member}>Member</MenuItem>
+                                  <MenuItem value={OrganizationRole.Moderator}>Moderator</MenuItem>
+                                  <MenuItem value={OrganizationRole.Host}>Host</MenuItem>
+                                  <MenuItem value={OrganizationRole.Admin}>Admin</MenuItem>
+                                  <MenuItem value={OrganizationRole.Owner}>Owner</MenuItem>
+                                </Select>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary">
+                                {new Date(membership.joinedAt).toLocaleDateString()}
                               </Typography>
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            {membership.userId === session?.user?.userId ? (
-                              <Chip label={membership.role} size="small" color="primary" />
-                            ) : (
-                              <Select
-                                value={membership.role}
-                                onChange={(e) =>
-                                  handleUpdateMemberRole(membership.membershipId, e.target.value as OrganizationRole)
-                                }
-                                size="small"
-                                sx={{ minWidth: 120 }}
-                              >
-                                <MenuItem value={OrganizationRole.Member}>Member</MenuItem>
-                                <MenuItem value={OrganizationRole.Moderator}>Moderator</MenuItem>
-                                <MenuItem value={OrganizationRole.Host}>Host</MenuItem>
-                                <MenuItem value={OrganizationRole.Admin}>Admin</MenuItem>
-                                <MenuItem value={OrganizationRole.Owner}>Owner</MenuItem>
-                              </Select>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              {new Date(membership.joinedAt).toLocaleDateString()}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            {membership.userId !== session?.user?.userId && (
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleRemoveMember(membership.membershipId)}
-                              >
-                                <Close />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell align="right">
+                              {membership.userId !== session?.user?.userId && (
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleRemoveMember(membership.membershipId)}
+                                >
+                                  <Close />
+                                </IconButton>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

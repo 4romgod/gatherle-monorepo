@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Arg, Mutation, Resolver, Query, Authorized, Ctx } from 'type-graphql';
+import { Arg, Mutation, Resolver, Query, Authorized, Ctx, FieldResolver, Root } from 'type-graphql';
 import {
   CreateOrganizationMembershipInput,
   DeleteOrganizationMembershipInput,
@@ -22,6 +22,12 @@ import { getAuthenticatedUser } from '@/utils';
 
 @Resolver(() => OrganizationMembership)
 export class OrganizationMembershipResolver {
+  @FieldResolver(() => String, { nullable: true })
+  async username(@Root() membership: OrganizationMembership, @Ctx() context: ServerContext): Promise<string | null> {
+    const user = await context.loaders.user.load(membership.userId);
+    return user?.username ?? null;
+  }
+
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => OrganizationMembership, {
     description: RESOLVER_DESCRIPTIONS.ORGANIZATION_MEMBERSHIP.createOrganizationMembership,

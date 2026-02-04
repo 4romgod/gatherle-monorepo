@@ -2,7 +2,7 @@
   "name": "@ntlango/webapp",
   "private": true,
   "scripts": {
-    "build": "npm-run-all codegen lint clean:types build:ts build:next",
+    "build": "npm-run-all codegen lint build:ts build:next",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:next": "NEXT_SKIP_ESLINT=1 next build -d",
     "clean:types": "rm -rf .next",

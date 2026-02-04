@@ -33,6 +33,12 @@ export class OrganizationMembership {
   @Field(() => ID, { description: ORGANIZATION_MEMBERSHIP_DESCRIPTIONS.USER_ID })
   userId: string;
 
+  @Field(() => String, {
+    nullable: true,
+    description: ORGANIZATION_MEMBERSHIP_DESCRIPTIONS.USERNAME,
+  })
+  username?: string;
+
   @prop({ required: true, enum: OrganizationRole, type: () => String })
   @Field(() => OrganizationRole, { description: ORGANIZATION_MEMBERSHIP_DESCRIPTIONS.ROLE })
   role: OrganizationRole;

@@ -6,6 +6,7 @@ export const GetOrganizationMembershipsByOrgIdDocument = graphql(`
       membershipId
       orgId
       userId
+      username
       role
       joinedAt
     }
@@ -18,6 +19,7 @@ export const GetOrganizationMembershipByIdDocument = graphql(`
       membershipId
       orgId
       userId
+      username
       role
       joinedAt
     }

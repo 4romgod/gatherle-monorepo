@@ -60,7 +60,7 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
   const user = context.user;
   const operationName = info.fieldName;
 
-  logger.info(`[authChecker] ${operationName}: token present=${!!token}, user present=${!!context.user}`);
+  logger.debug(`[authChecker] ${operationName}: token present=${!!token}, user present=${!!context.user}`);
 
   if (token && user) {
     const userRole = user.userRole;
