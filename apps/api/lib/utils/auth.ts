@@ -2,29 +2,44 @@ import type { ServerContext } from '@/graphql';
 import type { ArgsDictionary, ResolverData } from 'type-graphql';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import { ERROR_MESSAGES } from '@/validation';
-import { OPERATION_NAMES, SECRET_KEYS } from '@/constants';
+import { OPERATIONS, SECRET_KEYS } from '@/constants';
 import type { User } from '@ntlango/commons/types';
-import { UserRole } from '@ntlango/commons/types';
+import { UserRole, OrganizationRole } from '@ntlango/commons/types';
 import { verify, sign } from 'jsonwebtoken';
 import type { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
-import { EventDAO, EventParticipantDAO } from '@/mongodb/dao';
+import { EventDAO, EventParticipantDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import { getConfigValue } from '@/clients';
 import { Types } from 'mongoose';
 import { logger } from '@/utils/logger';
 
-const operationsRequiringOwnership = new Set([
-  OPERATION_NAMES.UPDATE_USER,
-  OPERATION_NAMES.DELETE_USER_BY_ID,
-  OPERATION_NAMES.DELETE_USER_BY_EMAIL,
-  OPERATION_NAMES.DELETE_USER_BY_USERNAME,
-  OPERATION_NAMES.UPDATE_EVENT,
-  OPERATION_NAMES.DELETE_EVENT,
-  OPERATION_NAMES.DELETE_EVENT_BY_SLUG,
-  OPERATION_NAMES.CREATE_EVENT,
-  OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT,
-  OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT,
-  OPERATION_NAMES.READ_EVENT_PARTICIPANTS,
+const operationsRequiringOwnership = new Set<string>([
+  // User operations
+  OPERATIONS.USER.UPDATE_USER,
+  OPERATIONS.USER.DELETE_USER_BY_ID,
+  OPERATIONS.USER.DELETE_USER_BY_EMAIL,
+  OPERATIONS.USER.DELETE_USER_BY_USERNAME,
+  // Event operations
+  OPERATIONS.EVENT.UPDATE_EVENT,
+  OPERATIONS.EVENT.DELETE_EVENT,
+  OPERATIONS.EVENT.DELETE_EVENT_BY_SLUG,
+  OPERATIONS.EVENT.CREATE_EVENT,
+  // Event participant operations
+  OPERATIONS.EVENT_PARTICIPANT.UPSERT_EVENT_PARTICIPANT,
+  OPERATIONS.EVENT_PARTICIPANT.CANCEL_EVENT_PARTICIPANT,
+  OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
+  // Organization operations
+  OPERATIONS.ORGANIZATION.CREATE_ORGANIZATION,
+  OPERATIONS.ORGANIZATION.UPDATE_ORGANIZATION,
+  OPERATIONS.ORGANIZATION.DELETE_ORGANIZATION,
+  // Organization membership operations
+  OPERATIONS.ORGANIZATION_MEMBERSHIP.CREATE_ORGANIZATION_MEMBERSHIP,
+  OPERATIONS.ORGANIZATION_MEMBERSHIP.UPDATE_ORGANIZATION_MEMBERSHIP,
+  OPERATIONS.ORGANIZATION_MEMBERSHIP.DELETE_ORGANIZATION_MEMBERSHIP,
+  // Venue operations
+  OPERATIONS.VENUE.CREATE_VENUE,
+  OPERATIONS.VENUE.UPDATE_VENUE,
+  OPERATIONS.VENUE.DELETE_VENUE,
 ]);
 
 /**
@@ -42,11 +57,13 @@ const operationsRequiringOwnership = new Set([
 export const authChecker = async (resolverData: ResolverData<ServerContext>, roles: string[]) => {
   const { context, args, info } = resolverData;
   const token = context.token;
+  const user = context.user;
+  const operationName = info.fieldName;
 
-  if (token) {
-    const user = await verifyToken(token);
+  logger.debug(`[authChecker] ${operationName}: token present=${!!token}, user present=${!!context.user}`);
+
+  if (token && user) {
     const userRole = user.userRole;
-    const operationName = info.fieldName;
 
     // Attach verified user to context so resolvers can access it
     context.user = user;
@@ -95,8 +112,8 @@ export const generateToken = async (user: User, secret?: string, expiresIn?: str
   if (!jwtSecret) {
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }
-  // TODO 1 hour is for testing, consider longer expiry for production
-  const tokenExpiry: StringValue | number = (expiresIn ?? '1h') as StringValue | number;
+  // TODO: 1 day is for testing, consider longer expiry for production
+  const tokenExpiry: StringValue | number = (expiresIn ?? '1d') as StringValue | number;
   const signOptions: SignOptions = { expiresIn: tokenExpiry };
   return sign(user, jwtSecret as Secret, signOptions);
 };
@@ -126,26 +143,49 @@ export const isAuthorizedByOperation = async (
   user: User,
 ): Promise<boolean> => {
   switch (operationName) {
-    case OPERATION_NAMES.UPDATE_USER:
+    // User operations
+    case OPERATIONS.USER.UPDATE_USER:
       return args.input.userId == user.userId;
-    case OPERATION_NAMES.DELETE_USER_BY_ID:
+    case OPERATIONS.USER.DELETE_USER_BY_ID:
       return args.userId == user.userId;
-    case OPERATION_NAMES.DELETE_USER_BY_EMAIL:
+    case OPERATIONS.USER.DELETE_USER_BY_EMAIL:
       return args.email == user.email;
-    case OPERATION_NAMES.DELETE_USER_BY_USERNAME:
+    case OPERATIONS.USER.DELETE_USER_BY_USERNAME:
       return args.username == user.username;
-    case OPERATION_NAMES.UPDATE_EVENT:
-    case OPERATION_NAMES.DELETE_EVENT:
+    // Event operations
+    case OPERATIONS.EVENT.UPDATE_EVENT:
+    case OPERATIONS.EVENT.DELETE_EVENT:
       return await isAuthorizedByEventId(args.eventId ?? args.input?.eventId, user);
-    case OPERATION_NAMES.DELETE_EVENT_BY_SLUG:
+    case OPERATIONS.EVENT.DELETE_EVENT_BY_SLUG:
       return await isAuthorizedByEventSlug(args.slug, user);
-    case OPERATION_NAMES.CREATE_EVENT:
+    case OPERATIONS.EVENT.CREATE_EVENT:
       return true;
-    case OPERATION_NAMES.UPSERT_EVENT_PARTICIPANT:
-    case OPERATION_NAMES.CANCEL_EVENT_PARTICIPANT:
+    // Event participant operations
+    case OPERATIONS.EVENT_PARTICIPANT.UPSERT_EVENT_PARTICIPANT:
+    case OPERATIONS.EVENT_PARTICIPANT.CANCEL_EVENT_PARTICIPANT:
       return args.input?.userId === user.userId;
-    case OPERATION_NAMES.READ_EVENT_PARTICIPANTS:
+    case OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS:
       return await isAuthorizedToReadEventParticipants(args.eventId, user);
+    // Organization operations
+    case OPERATIONS.ORGANIZATION.CREATE_ORGANIZATION:
+      return true; // Any authenticated user can create an organization
+    case OPERATIONS.ORGANIZATION.UPDATE_ORGANIZATION:
+      return await isAuthorizedToManageOrganization(args.input?.orgId, user);
+    case OPERATIONS.ORGANIZATION.DELETE_ORGANIZATION:
+      return await isAuthorizedToManageOrganization(args.orgId, user);
+    // Organization membership operations
+    case OPERATIONS.ORGANIZATION_MEMBERSHIP.CREATE_ORGANIZATION_MEMBERSHIP:
+      return await isAuthorizedToManageOrganization(args.input?.orgId, user);
+    case OPERATIONS.ORGANIZATION_MEMBERSHIP.UPDATE_ORGANIZATION_MEMBERSHIP:
+    case OPERATIONS.ORGANIZATION_MEMBERSHIP.DELETE_ORGANIZATION_MEMBERSHIP:
+      return await isAuthorizedToManageMembership(args.input?.membershipId, user);
+    // Venue operations
+    case OPERATIONS.VENUE.CREATE_VENUE:
+      return await isAuthorizedToManageOrganization(args.input?.orgId, user);
+    case OPERATIONS.VENUE.UPDATE_VENUE:
+      return await isAuthorizedToManageVenue(args.input?.venueId, user);
+    case OPERATIONS.VENUE.DELETE_VENUE:
+      return await isAuthorizedToManageVenue(args.venueId, user);
     default:
       return false;
   }
@@ -221,6 +261,93 @@ const getOrganizerIdsFromEvent = (event: { organizers?: Array<{ user?: any }> })
 const isUserOrganizer = (event: { organizers?: Array<{ user?: any }> }, user: User) => {
   const organizerIds = getOrganizerIdsFromEvent(event);
   return organizerIds.includes(user.userId);
+};
+
+/**
+ * Check if a user is authorized to manage an organization (update/delete).
+ * User is authorized if they are:
+ * - The organization owner (ownerId matches user.userId)
+ * - An Admin member of the organization
+ *
+ * @param orgId - The organization ID to check
+ * @param user - The user attempting the operation
+ * @returns true if authorized, false otherwise
+ */
+const isAuthorizedToManageOrganization = async (orgId: string | undefined, user: User): Promise<boolean> => {
+  if (!orgId) {
+    return false;
+  }
+
+  try {
+    // Check if user is the owner
+    const organization = await OrganizationDAO.readOrganizationById(orgId);
+    if (organization.ownerId === user.userId) {
+      return true;
+    }
+
+    // Check if user has Admin role in the organization
+    const memberships = await OrganizationMembershipDAO.readMembershipsByOrgId(orgId);
+    const userMembership = memberships.find((m) => m.userId === user.userId);
+
+    return userMembership?.role === OrganizationRole.Owner || userMembership?.role === OrganizationRole.Admin;
+  } catch (error) {
+    logger.debug(`Error checking organization authorization for user ${user.userId} on org ${orgId}`, error);
+    return false;
+  }
+};
+
+/**
+ * Check if a user is authorized to manage a venue (update/delete).
+ * Fetches the venue to find the orgId, then checks if user can manage that organization.
+ *
+ * @param venueId - The venue ID to check
+ * @param user - The user attempting the operation
+ * @returns true if authorized, false otherwise
+ */
+const isAuthorizedToManageVenue = async (venueId: string | undefined, user: User): Promise<boolean> => {
+  if (!venueId) {
+    return false;
+  }
+
+  try {
+    const { VenueDAO } = await import('@/mongodb/dao');
+    const venue = await VenueDAO.readVenueById(venueId);
+
+    // If venue has no organization, only admins can manage it
+    if (!venue.orgId) {
+      return false;
+    }
+
+    return await isAuthorizedToManageOrganization(venue.orgId, user);
+  } catch (error) {
+    logger.debug(`Error checking venue authorization for user ${user.userId} on venue ${venueId}`, error);
+    return false;
+  }
+};
+
+/**
+ * Check if a user is authorized to manage a membership (update/delete).
+ * Fetches the membership to find the orgId, then checks if user can manage that organization.
+ *
+ * @param membershipId - The membership ID to check
+ * @param user - The user attempting the operation
+ * @returns true if authorized, false otherwise
+ */
+const isAuthorizedToManageMembership = async (membershipId: string | undefined, user: User): Promise<boolean> => {
+  if (!membershipId) {
+    return false;
+  }
+
+  try {
+    const membership = await OrganizationMembershipDAO.readMembershipById(membershipId);
+    return await isAuthorizedToManageOrganization(membership.orgId, user);
+  } catch (error) {
+    logger.debug(
+      `Error checking membership authorization for user ${user.userId} on membership ${membershipId}`,
+      error,
+    );
+    return false;
+  }
 };
 
 const isAuthorizedByEventId = async (eventId: string | undefined, user: User) => {

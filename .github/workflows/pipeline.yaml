@@ -71,7 +71,7 @@ jobs:
       run: npm run test:unit -w @ntlango/webapp
 
   api-deploy:
-    if: github.event_name == 'push' # TODO change to 'push' for production deploys
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       graphql_url: ${{ steps.get_endpoint.outputs.graphql_url }}
@@ -122,7 +122,7 @@ jobs:
     # TODO enable integration tests
 
   webapp-preview-deploy:
-    if: github.event_name == 'push' # TODO change to 'push' for production deploys
+    if: github.event_name == 'push'
     needs: api-deploy
     runs-on: ubuntu-latest
     steps:

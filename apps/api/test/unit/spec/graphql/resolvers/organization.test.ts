@@ -9,8 +9,9 @@ import type {
   UpdateOrganizationInput,
 } from '@ntlango/commons/types';
 import { FollowTargetType, OrganizationRole } from '@ntlango/commons/types';
-import { OrganizationTicketAccess } from '@ntlango/commons/types';
 import * as validation from '@/validation';
+import type { ServerContext } from '@/graphql';
+import { OrganizationMembershipService } from '@/services';
 
 jest.mock('@/mongodb/dao', () => ({
   OrganizationDAO: {
@@ -44,6 +45,12 @@ jest.mock('@/validation', () => ({
   },
 }));
 
+jest.mock('@/services', () => ({
+  OrganizationMembershipService: {
+    addMember: jest.fn(),
+  },
+}));
+
 describe('OrganizationResolver', () => {
   let resolver: OrganizationResolver;
 
@@ -52,9 +59,12 @@ describe('OrganizationResolver', () => {
     slug: 'org-001',
     name: 'Ntlango Lab',
     ownerId: 'user-001',
-    allowedTicketAccess: OrganizationTicketAccess.Public,
     isFollowable: true,
   };
+
+  const mockContext = {
+    user: { userId: 'user-001', email: 'test@test.com' },
+  } as ServerContext;
 
   beforeEach(() => {
     resolver = new OrganizationResolver();
@@ -110,16 +120,32 @@ describe('OrganizationResolver', () => {
     const createInput: CreateOrganizationInput = {
       name: 'New Org',
       ownerId: 'user-001',
-      allowedTicketAccess: OrganizationTicketAccess.Public,
     };
 
     it('validates input and delegates to DAO', async () => {
       (OrganizationDAO.create as jest.Mock).mockResolvedValue(mockOrganization);
+      (OrganizationMembershipService.addMember as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: mockOrganization.orgId,
+        userId: 'user-001',
+        role: OrganizationRole.Owner,
+        joinedAt: new Date(),
+      });
 
-      const result = await resolver.createOrganization(createInput);
+      const result = await resolver.createOrganization(createInput, mockContext);
 
       expect(validation.validateInput).toHaveBeenCalled();
-      expect(OrganizationDAO.create).toHaveBeenCalledWith(createInput);
+      expect(OrganizationDAO.create).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'New Org', ownerId: 'user-001' }),
+      );
+      expect(OrganizationMembershipService.addMember).toHaveBeenCalledWith(
+        {
+          orgId: mockOrganization.orgId,
+          userId: 'user-001',
+          role: OrganizationRole.Owner,
+        },
+        'user-001',
+      );
       expect(result).toEqual(mockOrganization);
     });
   });

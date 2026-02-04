@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import 'nprogress/nprogress.css';
 
 #nprogress {
   z-index: 1200; /* Ensure it's above the AppBar */

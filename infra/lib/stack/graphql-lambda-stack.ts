@@ -21,13 +21,17 @@ const pathRoot = join(__dirname, '../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
 const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'graphql', 'apollo', 'lambdaHandler.js');
 
+export interface GraphQLStackProps extends StackProps {
+  s3BucketName?: string;
+}
+
 export class GraphQLStack extends Stack {
   readonly graphqlLambda: NodejsFunction;
   readonly graphqlApi: RestApi;
   readonly graphql: ResourceBase;
   readonly graphqlApiPathOutput: CfnOutput;
 
-  constructor(scope: Construct, id: string, props: StackProps) {
+  constructor(scope: Construct, id: string, props: GraphQLStackProps) {
     super(scope, id, props);
 
     const ntlangoSecret = Secret.fromSecretNameV2(this, 'ImportedSecret', `${process.env.STAGE}/ntlango/graphql-api`);
@@ -52,6 +56,7 @@ export class GraphQLStack extends Stack {
       environment: {
         STAGE: `${process.env.STAGE}`, // TODO fix CI/CD to pass this env variable
         NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
+        S3_BUCKET_NAME: props.s3BucketName || '',
         NODE_OPTIONS: '--enable-source-maps',
       },
     });

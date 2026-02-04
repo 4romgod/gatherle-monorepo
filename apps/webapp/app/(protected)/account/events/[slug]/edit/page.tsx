@@ -7,7 +7,7 @@ import { GetAllEventCategoriesDocument, GetEventBySlugDocument } from '@/data/gr
 import EventMutationForm from '@/components/forms/eventMutation';
 import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
-import Link from 'next/link';
+import LinkComponent from '@/components/navigation/LinkComponent';
 import { auth } from '@/auth';
 
 interface Props {
@@ -65,7 +65,7 @@ export default async function Page(props: Props) {
       >
         <Container maxWidth="lg">
           <Button
-            component={Link}
+            component={LinkComponent}
             href={ROUTES.ACCOUNT.EVENTS.EVENT(params.slug)}
             startIcon={<ArrowBack />}
             sx={{ ...BUTTON_STYLES, mb: 2 }}

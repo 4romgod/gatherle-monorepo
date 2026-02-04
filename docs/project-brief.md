@@ -171,7 +171,7 @@ Users can discover events through:
 
 ### Long Term
 
-- Percentage of ticket sales
+- Percentage of sales
 - Premium tools for hosts
 - Featured placements and sponsorships
 

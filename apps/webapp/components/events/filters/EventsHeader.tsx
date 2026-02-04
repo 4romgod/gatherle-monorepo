@@ -1,15 +1,13 @@
 'use client';
 
 import { alpha, Box, Stack, Typography } from '@mui/material';
-import SearchBox from '@/components/search/SearchBox';
+import EventSearchBar from '@/components/search/EventSearchBar';
 
 interface EventsHeaderProps {
   eventCount: number;
-  eventTitles: string[];
-  onSearch: (query: string) => void;
 }
 
-export default function EventsHeader({ eventCount, eventTitles, onSearch }: EventsHeaderProps) {
+export default function EventsHeader({ eventCount }: EventsHeaderProps) {
   return (
     <Box mb={4}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
@@ -28,14 +26,7 @@ export default function EventsHeader({ eventCount, eventTitles, onSearch }: Even
         </Box>
       </Stack>
 
-      <SearchBox
-        itemList={eventTitles}
-        onSearch={onSearch}
-        sx={{
-          maxWidth: 600,
-          mb: 3,
-        }}
-      />
+      <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />
     </Box>
   );
 }

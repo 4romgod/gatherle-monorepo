@@ -10,7 +10,6 @@ export const GetAllOrganizationsDocument = graphql(`
       description
       logo
       defaultVisibility
-      allowedTicketAccess
       followersCount
       isFollowable
       tags
@@ -24,7 +23,6 @@ export const GetAllOrganizationsDocument = graphql(`
         remindersEnabled
         waitlistEnabled
         allowGuestPlusOnes
-        ticketAccess
       }
     }
   }
@@ -42,7 +40,6 @@ export const GetOrganizationBySlugDocument = graphql(`
       isFollowable
       tags
       domainsAllowed
-      allowedTicketAccess
       ownerId
       links {
         label
@@ -53,7 +50,6 @@ export const GetOrganizationBySlugDocument = graphql(`
         remindersEnabled
         waitlistEnabled
         allowGuestPlusOnes
-        ticketAccess
       }
     }
   }
@@ -69,7 +65,6 @@ export const GetPopularOrganizationsDocument = graphql(`
       description
       logo
       defaultVisibility
-      allowedTicketAccess
       followersCount
       isFollowable
       tags
@@ -83,7 +78,6 @@ export const GetPopularOrganizationsDocument = graphql(`
         remindersEnabled
         waitlistEnabled
         allowGuestPlusOnes
-        ticketAccess
       }
     }
   }

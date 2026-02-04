@@ -9,6 +9,7 @@
   - `STAGE` (default `Dev`).
   - `AWS_REGION` (defaults to `eu-west-1`).
   - `MONGO_DB_URL` & `JWT_SECRET` (used directly from the file).
+  - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
@@ -25,6 +26,7 @@
   - `STAGE` (from CI/CD).
   - `NTLANGO_SECRET_ARN` (required ARN, not just the string `${STAGE}/ntlango/graphql-api`; the ARN is passed verbatim).
   - `AWS_REGION` (should align with where the stack is deployed).
+  - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
 ### Integration tests (post-deploy)

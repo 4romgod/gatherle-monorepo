@@ -18,7 +18,6 @@ import {
   EventStatus,
   EventVisibility,
   EventLifecycleStatus,
-  OrganizationTicketAccess,
   type EventCategory,
   type User,
   type UserWithToken,
@@ -316,7 +315,6 @@ describe('Social resolver integration', () => {
       name: `Follow Org ${Date.now()}`,
       description: 'Org for following',
       ownerId: actorUser.userId,
-      allowedTicketAccess: OrganizationTicketAccess.Public,
     });
     const followResponse = await request(url)
       .post('')

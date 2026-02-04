@@ -11,3 +11,4 @@ export * from './follow';
 export * from './intent';
 export * from './activity';
 export * from './notification';
+export * from './image';

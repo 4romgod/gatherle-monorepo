@@ -20,7 +20,6 @@ export enum IntentVisibility {
 
 export enum IntentSource {
   Manual = 'Manual',
-  Ticket = 'Ticket',
   Invite = 'Invite',
   OrgAnnouncement = 'OrgAnnouncement',
 }

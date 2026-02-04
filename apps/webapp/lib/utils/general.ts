@@ -9,3 +9,7 @@ export const getDisplayName = (user: UserWithToken | User | undefined) => {
   if (!user) return 'Account';
   return [user.given_name, user.family_name].filter(Boolean).join(' ');
 };
+
+export const getFileExtension = (file: File) => {
+  return file.name.split('.').pop()?.toLowerCase() || '';
+};

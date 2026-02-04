@@ -45,6 +45,7 @@ import {
 } from '@/lib/constants';
 import { omit } from 'lodash';
 import Link from 'next/link';
+import LinkComponent from '@/components/navigation/LinkComponent';
 import { getAvatarSrc, logger, isApolloAuthError, getAuthHeader } from '@/lib/utils';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import { redirect } from 'next/navigation';
@@ -398,7 +399,7 @@ async function AuthenticatedProfileContent() {
                   <Button
                     variant="contained"
                     color="secondary"
-                    component={Link}
+                    component={LinkComponent}
                     href={ROUTES.ACCOUNT.EVENTS.CREATE}
                     sx={{ ...BUTTON_STYLES, mt: 2 }}
                   >
@@ -457,7 +458,7 @@ async function AuthenticatedProfileContent() {
                   <Button
                     variant="contained"
                     color="secondary"
-                    component={Link}
+                    component={LinkComponent}
                     href={ROUTES.EVENTS.ROOT}
                     sx={{ ...BUTTON_STYLES, mt: 2 }}
                   >
@@ -516,7 +517,7 @@ async function AuthenticatedProfileContent() {
                   <Button
                     variant="contained"
                     color="secondary"
-                    component={Link}
+                    component={LinkComponent}
                     href={ROUTES.EVENTS.ROOT}
                     sx={{ ...BUTTON_STYLES, mt: 2 }}
                   >

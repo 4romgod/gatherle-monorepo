@@ -184,7 +184,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
     <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
-          <EventsHeader eventCount={filteredEvents.length} eventTitles={eventTitles} onSearch={setSearchQuery} />
+          <EventsHeader eventCount={filteredEvents.length} />
 
           {hasActiveFilters && (
             <Box sx={{ mb: 2 }}>

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Divider, ListItemIcon, ListItemText } from '@mui/material';
-import { AccountCircle, Logout, Settings } from '@mui/icons-material';
+import { AccountCircle, Logout, Settings, Business } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import NProgress from 'nprogress';
@@ -68,6 +68,20 @@ export default function ProfilesMenu({
             }}
           >
             Profile
+          </ListItemText>
+        </MenuItem>
+      </Link>
+      <Link href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT} onClick={() => handleNavClick(ROUTES.ACCOUNT.ORGANIZATIONS.ROOT)}>
+        <MenuItem>
+          <ListItemIcon>
+            <Business fontSize="medium" />
+          </ListItemIcon>
+          <ListItemText
+            slotProps={{
+              primary: { fontSize: '1rem' },
+            }}
+          >
+            Organizations
           </ListItemText>
         </MenuItem>
       </Link>

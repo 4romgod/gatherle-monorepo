@@ -1,22 +1,11 @@
 import 'reflect-metadata';
-import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
+import { Field, ID, InputType, ObjectType } from 'type-graphql';
 import { modelOptions, prop, Severity } from '@typegoose/typegoose';
 
 import { EventVisibility } from './event';
 import { OrganizationMembership } from './organizationMembership';
 import { FollowPolicy, SocialVisibility } from './user';
 import { ORGANIZATION_DESCRIPTIONS, ORGANIZATION_LINK_DESCRIPTIONS } from '../constants';
-
-export enum OrganizationTicketAccess {
-  Public = 'Public',
-  Members = 'Members',
-  InviteOnly = 'InviteOnly',
-}
-
-registerEnumType(OrganizationTicketAccess, {
-  name: 'OrganizationTicketAccess',
-  description: ORGANIZATION_DESCRIPTIONS.TICKET_ACCESS,
-});
 
 @ObjectType('OrganizationLink', { description: ORGANIZATION_LINK_DESCRIPTIONS.TYPE })
 export class OrganizationLink {
@@ -55,13 +44,6 @@ export class OrganizationEventDefaults {
   @prop({ type: () => Boolean, default: false })
   @Field(() => Boolean, { nullable: true, description: ORGANIZATION_DESCRIPTIONS.EVENT_DEFAULT_PLUS_ONES })
   allowGuestPlusOnes?: boolean;
-
-  @prop({ enum: OrganizationTicketAccess, type: () => String })
-  @Field(() => OrganizationTicketAccess, {
-    nullable: true,
-    description: ORGANIZATION_DESCRIPTIONS.EVENT_DEFAULT_TICKET_ACCESS,
-  })
-  ticketAccess?: OrganizationTicketAccess;
 }
 
 @InputType('OrganizationEventDefaultsInput')
@@ -77,12 +59,6 @@ export class OrganizationEventDefaultsInput {
 
   @Field(() => Boolean, { nullable: true, description: ORGANIZATION_DESCRIPTIONS.EVENT_DEFAULT_PLUS_ONES })
   allowGuestPlusOnes?: boolean;
-
-  @Field(() => OrganizationTicketAccess, {
-    nullable: true,
-    description: ORGANIZATION_DESCRIPTIONS.EVENT_DEFAULT_TICKET_ACCESS,
-  })
-  ticketAccess?: OrganizationTicketAccess;
 }
 
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
@@ -131,10 +107,6 @@ export class Organization {
   @prop({ type: () => OrganizationEventDefaults, default: () => ({}) })
   @Field(() => OrganizationEventDefaults, { nullable: true, description: ORGANIZATION_DESCRIPTIONS.EVENT_DEFAULTS })
   eventDefaults?: OrganizationEventDefaults;
-
-  @prop({ enum: OrganizationTicketAccess, type: () => String, default: OrganizationTicketAccess.Public })
-  @Field(() => OrganizationTicketAccess, { description: ORGANIZATION_DESCRIPTIONS.TICKET_ACCESS })
-  allowedTicketAccess: OrganizationTicketAccess;
 
   // Computed field - resolved via @FieldResolver in OrganizationResolver (no @prop, not stored in DB)
   @Field(() => Number, { description: ORGANIZATION_DESCRIPTIONS.FOLLOWERS_COUNT })
@@ -195,9 +167,6 @@ export class CreateOrganizationInput {
   })
   eventDefaults?: OrganizationEventDefaultsInput;
 
-  @Field(() => OrganizationTicketAccess, { description: ORGANIZATION_DESCRIPTIONS.TICKET_ACCESS })
-  allowedTicketAccess: OrganizationTicketAccess;
-
   @Field(() => [String], { nullable: true, description: ORGANIZATION_DESCRIPTIONS.TAGS })
   tags?: string[];
 }
@@ -234,9 +203,6 @@ export class UpdateOrganizationInput {
   })
   eventDefaults?: OrganizationEventDefaultsInput;
 
-  @Field(() => OrganizationTicketAccess, { nullable: true, description: ORGANIZATION_DESCRIPTIONS.TICKET_ACCESS })
-  allowedTicketAccess?: OrganizationTicketAccess;
-
   @Field(() => [String], { nullable: true, description: ORGANIZATION_DESCRIPTIONS.TAGS })
   tags?: string[];
 
@@ -245,4 +211,21 @@ export class UpdateOrganizationInput {
 
   @Field(() => SocialVisibility, { nullable: true, description: "Who can see this organization's followers list" })
   followersListVisibility?: SocialVisibility;
+}
+
+@ObjectType('ImageUploadUrl', { description: 'Pre-signed URL for uploading images directly to S3' })
+export class ImageUploadUrl {
+  @Field(() => String, { description: 'Pre-signed URL for uploading' })
+  uploadUrl: string;
+
+  @Field(() => String, { description: 'S3 key/path where the file will be stored' })
+  key: string;
+
+  @Field(() => String, { description: 'Final public URL after upload completes' })
+  publicUrl: string;
+
+  @Field(() => String, {
+    description: 'Pre-signed URL for reading the uploaded image',
+  })
+  readUrl: string;
 }

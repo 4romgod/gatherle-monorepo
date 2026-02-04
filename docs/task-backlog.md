@@ -31,7 +31,7 @@ are easy to locate.
 
 ### Planned API expansions (from product scope)
 
-- Add TicketType, Invitation, WaitlistEntry collections + DAOs + resolvers.
+- Add Invitation, WaitlistEntry collections + DAOs + resolvers.
 - Replace `Event.comments` JSON with `Comment` + `Reaction` collections.
 - Add audit trail storage and read APIs.
 
@@ -53,7 +53,6 @@ are easy to locate.
 | WEB-012 | Export GraphQL mutations for categories     | P3       | Backlog | `apps/webapp/data/graphql/query/index.ts`                                                       | Uncomment mutation exports.                        |
 | WEB-013 | Clean up MessagesPanel selected state       | P3       | Backlog | `apps/webapp/components/messages/MessagesPanel.tsx`                                             | Implement selection state.                         |
 | WEB-014 | Fill footer routes or remove placeholders   | P3       | Backlog | `apps/webapp/components/footer/NavigationItems.tsx`                                             | Ensure routes exist.                               |
-| WEB-015 | Ticket type support in PurchaseCard         | P2       | Backlog | `apps/webapp/components/PurchaseCard.tsx`                                                       | Support multiple ticket types.                     |
 | WEB-016 | Replace hardcoded theme colors              | P3       | Backlog | `apps/webapp/components/global.css`                                                             | Align with design system.                          |
 | WEB-017 | Add redirect logic on auth forms            | P2       | Backlog | `apps/webapp/components/forms/auth/Login.tsx`, `apps/webapp/components/forms/auth/Register.tsx` | Redirect after auth.                               |
 | WEB-018 | Add address input component                 | P3       | Backlog | `apps/webapp/components/forms/eventMutation/EventLocationInput.tsx`                             | Replace TODO placeholder.                          |

@@ -1,9 +1,9 @@
 import { Container, Typography, Box, Button } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Groups, Add } from '@mui/icons-material';
 import OrganizationsClient from '@/components/organization/organizationsPageClient';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export const metadata: Metadata = {
   title: 'Organizations · Ntlango',
@@ -61,7 +61,7 @@ export default async function OrganizationsPage() {
               <Button
                 variant="contained"
                 size="large"
-                component={Link}
+                component={LinkComponent}
                 href={ROUTES.EVENTS.ROOT}
                 sx={{
                   fontWeight: 700,
@@ -77,6 +77,8 @@ export default async function OrganizationsPage() {
               <Button
                 variant="outlined"
                 size="large"
+                component={LinkComponent}
+                href={ROUTES.ACCOUNT.ORGANIZATIONS.CREATE}
                 startIcon={<Add />}
                 sx={{
                   fontWeight: 600,

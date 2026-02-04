@@ -45,12 +45,6 @@ export const GetAllEventsDocument = graphql(`
       media {
         featuredImageUrl
       }
-      mediaAssets {
-        url
-        alt
-        type
-        order
-      }
       organizers {
         role
         user {
@@ -135,12 +129,6 @@ export const GetEventBySlugDocument = graphql(`
       media {
         featuredImageUrl
       }
-      mediaAssets {
-        url
-        alt
-        type
-        order
-      }
       organizers {
         role
         user {
@@ -224,12 +212,6 @@ export const GetEventsByVenueDocument = graphql(`
       heroImage
       media {
         featuredImageUrl
-      }
-      mediaAssets {
-        url
-        alt
-        type
-        order
       }
       organizers {
         role

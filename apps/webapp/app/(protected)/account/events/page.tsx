@@ -3,9 +3,9 @@ import { FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
 import { ROUTES } from '@/lib/constants';
-import Link from 'next/link';
 import { Box, Button, Container, Grid, Typography } from '@mui/material';
 import { Add, Event as EventIcon } from '@mui/icons-material';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export default async function EventsPage() {
   const session = await auth();
@@ -76,7 +76,7 @@ export default async function EventsPage() {
             <Button
               variant="contained"
               size="large"
-              component={Link}
+              component={LinkComponent}
               href={ROUTES.ACCOUNT.EVENTS.CREATE}
               startIcon={<Add />}
               sx={{
@@ -120,7 +120,7 @@ export default async function EventsPage() {
             </Typography>
             <Button
               variant="contained"
-              component={Link}
+              component={LinkComponent}
               href={ROUTES.ACCOUNT.EVENTS.CREATE}
               startIcon={<Add />}
               sx={{

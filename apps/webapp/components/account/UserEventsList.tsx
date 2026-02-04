@@ -47,7 +47,9 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
   });
 
   const events = data?.readEvents ?? [];
-  const [deleteEvent] = useMutation(DeleteEventByIdDocument);
+  const [deleteEvent] = useMutation(DeleteEventByIdDocument, {
+    context: { headers: getAuthHeader(token) },
+  });
 
   const notify = (message: string, severity: 'success' | 'error' = 'success') => {
     setToastProps((prev) => ({
@@ -72,7 +74,6 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
     try {
       await deleteEvent({
         variables: { eventId: pendingDeleteEvent.eventId },
-        context: { headers: getAuthHeader(token) },
       });
       await refetch();
       notify('Event deleted.');

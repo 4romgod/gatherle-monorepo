@@ -80,37 +80,6 @@ export class Media {
   otherMediaData?: Record<string, any>;
 }
 
-@ObjectType('MediaAsset', { description: 'Rich media asset associated with an event' })
-export class MediaAsset {
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  mediaId?: string;
-
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  type?: string;
-
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  url?: string;
-
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  alt?: string;
-
-  @prop({ type: () => Number })
-  @Field(() => Number, { nullable: true })
-  width?: number;
-
-  @prop({ type: () => Number })
-  @Field(() => Number, { nullable: true })
-  height?: number;
-
-  @prop({ type: () => Number })
-  @Field(() => Number, { nullable: true })
-  order?: number;
-}
-
 @ObjectType('EventSchedule')
 export class EventSchedule {
   @prop({ type: () => Date })
@@ -236,10 +205,6 @@ export class Event {
   @Field(() => Media, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.MEDIA })
   media?: Media;
 
-  @prop({ type: () => [MediaAsset], default: [] })
-  @Field(() => [MediaAsset], { nullable: true, description: 'Additional media assets' })
-  mediaAssets?: MediaAsset[];
-
   @prop({ type: () => Object, default: {} })
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ADDITIONAL_DETAILS })
   additionalDetails?: Record<string, any>;
@@ -348,9 +313,6 @@ export class CreateEventInput {
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.MEDIA })
   media?: Record<string, any>;
 
-  @Field(() => [GraphQLJSON], { nullable: true, description: 'Additional media assets' })
-  mediaAssets?: Record<string, any>[];
-
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ADDITIONAL_DETAILS })
   additionalDetails?: Record<string, any>;
 
@@ -438,9 +400,6 @@ export class UpdateEventInput {
 
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.MEDIA })
   media?: Record<string, any>;
-
-  @Field(() => [GraphQLJSON], { nullable: true, description: 'Additional media assets' })
-  mediaAssets?: Record<string, any>[];
 
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ADDITIONAL_DETAILS })
   additionalDetails?: Record<string, any>;

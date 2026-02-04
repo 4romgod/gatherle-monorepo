@@ -23,7 +23,6 @@ export enum ActivityObjectType {
   Organization = 'Organization',
   Event = 'Event',
   Comment = 'Comment',
-  TicketType = 'TicketType',
 }
 
 export enum ActivityVisibility {

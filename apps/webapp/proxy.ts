@@ -12,7 +12,7 @@ import { ROUTES } from '@/lib/constants';
 import { NextResponse } from 'next/server';
 import { isAuthenticated, logger } from './lib/utils';
 
-export default auth(async (req) => {
+export const proxy = auth(async (req: { nextUrl: any; auth?: any }) => {
   const { nextUrl } = req;
 
   // Check if there's a valid auth session with a valid token
@@ -49,7 +49,7 @@ export default auth(async (req) => {
 
   // Deny only protected routes for unauthenticated users
   if (!isLoggedIn && isProtectedPath) {
-    logger.warn('[Middleware] Redirecting to login - token invalid or expired');
+    logger.warn('[Proxy] Redirecting to login - token invalid or expired');
     return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, nextUrl));
   }
 

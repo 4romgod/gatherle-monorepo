@@ -6,7 +6,7 @@ import { generateToken } from '@/utils/auth';
 import { usersMockData } from '@/mongodb/mockData';
 import type { User, UserWithToken } from '@ntlango/commons/types';
 import { OrganizationDAO } from '@/mongodb/dao';
-import { UserRole, OrganizationRole, OrganizationTicketAccess } from '@ntlango/commons/types';
+import { UserRole, OrganizationRole } from '@ntlango/commons/types';
 import {
   getCreateOrganizationMembershipMutation,
   getDeleteOrganizationMembershipMutation,
@@ -32,7 +32,6 @@ describe('OrganizationMembership Resolver', () => {
         getCreateOrganizationMutation({
           name,
           ownerId: adminUser.userId,
-          allowedTicketAccess: OrganizationTicketAccess.Public,
         }),
       );
 

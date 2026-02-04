@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { alpha, Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -16,6 +15,7 @@ import { ROUTES } from '@/lib/constants';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { CategoryExplorer } from '@/components/home';
 import { isGraphQLErrorNotFound } from '@/lib/utils/error-utils';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export const metadata: Metadata = {
   title: 'Categories · Ntlango',
@@ -123,7 +123,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
             </Stack>
 
             <Button
-              component={Link}
+              component={LinkComponent}
               href={ROUTES.CATEGORIES.ROOT}
               variant="outlined"
               sx={{ borderRadius: 10, textTransform: 'none', fontWeight: 600 }}

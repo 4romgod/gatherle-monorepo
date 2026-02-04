@@ -194,7 +194,7 @@ export default function PendingFollowRequestItem({
                 {follower.bio}
               </Typography>
             )}
-            <Typography variant="caption" color="text.disabled">
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
               {formatDistanceToNow(timestamp, { addSuffix: true })}
             </Typography>
           </Box>

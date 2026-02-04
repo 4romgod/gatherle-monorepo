@@ -1,5 +1,5 @@
 import type { CreateOrganizationInput } from '@ntlango/commons/types';
-import { EventVisibility, OrganizationTicketAccess } from '@ntlango/commons/types';
+import { EventVisibility } from '@ntlango/commons/types';
 import { FollowPolicy } from '@ntlango/commons/types/user';
 
 export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'> & {
@@ -13,14 +13,12 @@ const organizations: OrganizationSeedData[] = [
     logo: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=400&q=80',
     defaultVisibility: EventVisibility.Public,
     billingEmail: 'hello@signalstudios.co.za',
-    allowedTicketAccess: OrganizationTicketAccess.Public,
     tags: ['art', 'tech', 'curated', 'festival'],
     eventDefaults: {
       visibility: EventVisibility.Public,
       remindersEnabled: true,
       waitlistEnabled: false,
       allowGuestPlusOnes: false,
-      ticketAccess: OrganizationTicketAccess.Public,
     },
     links: [
       { label: 'Website', url: 'https://signalstudios.co.za' },
@@ -35,14 +33,12 @@ const organizations: OrganizationSeedData[] = [
     logo: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=400&q=80',
     defaultVisibility: EventVisibility.Private,
     billingEmail: 'partners@harbourcollective.live',
-    allowedTicketAccess: OrganizationTicketAccess.Members,
     tags: ['music', 'coastal', 'late-night'],
     eventDefaults: {
       visibility: EventVisibility.Private,
       remindersEnabled: true,
       waitlistEnabled: true,
       allowGuestPlusOnes: true,
-      ticketAccess: OrganizationTicketAccess.Members,
     },
     links: [
       { label: 'Soundcloud', url: 'https://soundcloud.com/harbourcollective' },
@@ -58,14 +54,12 @@ const organizations: OrganizationSeedData[] = [
     logo: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80',
     defaultVisibility: EventVisibility.Unlisted,
     billingEmail: 'studio@emergentlabs.studio',
-    allowedTicketAccess: OrganizationTicketAccess.InviteOnly,
     tags: ['innovation', 'startup', 'workshop'],
     eventDefaults: {
       visibility: EventVisibility.Unlisted,
       remindersEnabled: true,
       waitlistEnabled: false,
       allowGuestPlusOnes: false,
-      ticketAccess: OrganizationTicketAccess.InviteOnly,
     },
     links: [
       { label: 'Website', url: 'https://emergentlabs.studio' },
@@ -81,14 +75,12 @@ const organizations: OrganizationSeedData[] = [
     logo: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80',
     defaultVisibility: EventVisibility.Public,
     billingEmail: 'hello@streetcarsociety.io',
-    allowedTicketAccess: OrganizationTicketAccess.Members,
     tags: ['immersive', 'transit', 'community'],
     eventDefaults: {
       visibility: EventVisibility.Public,
       remindersEnabled: true,
       waitlistEnabled: true,
       allowGuestPlusOnes: false,
-      ticketAccess: OrganizationTicketAccess.Members,
     },
     links: [
       { label: 'Discord', url: 'https://discord.gg/streetcarsociety' },
@@ -103,14 +95,12 @@ const organizations: OrganizationSeedData[] = [
     logo: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=80',
     defaultVisibility: EventVisibility.Unlisted,
     billingEmail: 'retreats@veldwellness.africa',
-    allowedTicketAccess: OrganizationTicketAccess.InviteOnly,
     tags: ['wellness', 'retreat', 'nature'],
     eventDefaults: {
       visibility: EventVisibility.Private,
       remindersEnabled: true,
       waitlistEnabled: true,
       allowGuestPlusOnes: true,
-      ticketAccess: OrganizationTicketAccess.InviteOnly,
     },
     links: [
       { label: 'Website', url: 'https://veldwellness.africa' },

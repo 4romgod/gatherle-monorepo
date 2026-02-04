@@ -1,9 +1,9 @@
 import { Container, Typography, Box, Button } from '@mui/material';
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { LocationOn, Add } from '@mui/icons-material';
 import VenuesClient from '@/components/venue/VenuesClient';
 import { ROUTES } from '@/lib/constants';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export const metadata: Metadata = {
   title: 'Venues · Ntlango',
@@ -61,7 +61,7 @@ export default function VenuesPage() {
               <Button
                 variant="contained"
                 size="large"
-                component={Link}
+                component={LinkComponent}
                 href={ROUTES.EVENTS.ROOT}
                 sx={{
                   fontWeight: 700,
@@ -78,7 +78,7 @@ export default function VenuesPage() {
                 variant="outlined"
                 size="large"
                 startIcon={<Add />}
-                component={Link}
+                component={LinkComponent}
                 href={ROUTES.VENUES.ADD}
                 sx={{
                   fontWeight: 600,

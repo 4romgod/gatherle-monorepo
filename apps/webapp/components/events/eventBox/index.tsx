@@ -5,7 +5,7 @@ import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, IconButton, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
 import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { Box } from '@mui/material';
-import { CalendarIcon, MapPinIcon, TicketIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { ShareRounded, PeopleOutline } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import { SaveEventButton, RsvpButton } from '@/components/events';
@@ -188,13 +188,6 @@ export default function EventBox({ event }: { event: EventPreview }) {
                 sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
                 {locationText}
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <TicketIcon height={14} width={14} style={{ color: 'inherit', opacity: 0.7, flexShrink: 0 }} />
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                Free
               </Typography>
             </Box>
           </Stack>

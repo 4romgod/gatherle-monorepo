@@ -5,7 +5,7 @@ import { startIntegrationServer, stopIntegrationServer } from '@/test/integratio
 import { generateToken } from '@/utils/auth';
 import { usersMockData } from '@/mongodb/mockData';
 import type { User, UserWithToken } from '@ntlango/commons/types';
-import { UserRole, VenueType, OrganizationTicketAccess } from '@ntlango/commons/types';
+import { UserRole, VenueType } from '@ntlango/commons/types';
 import { OrganizationDAO } from '@/mongodb/dao';
 import { getCreateOrganizationMutation } from '@/test/utils';
 import {
@@ -34,7 +34,6 @@ describe('Venue Resolver', () => {
         getCreateOrganizationMutation({
           name,
           ownerId: adminUser.userId,
-          allowedTicketAccess: OrganizationTicketAccess.Public,
         }),
       );
 

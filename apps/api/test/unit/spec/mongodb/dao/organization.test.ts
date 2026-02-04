@@ -7,7 +7,6 @@ import type {
   QueryOptionsInput,
   UpdateOrganizationInput,
 } from '@ntlango/commons/types';
-import { OrganizationTicketAccess } from '@ntlango/commons/types';
 import { CustomError, ErrorTypes, transformOptionsToQuery } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';
@@ -42,7 +41,6 @@ describe('OrganizationDAO', () => {
     slug: 'test-org',
     description: 'Test Org Description',
     ownerId: 'owner-1',
-    allowedTicketAccess: OrganizationTicketAccess.Public,
     isFollowable: true,
   };
 
@@ -60,7 +58,6 @@ describe('OrganizationDAO', () => {
         name: 'Test Org',
         description: 'Test Org Description',
         ownerId: 'owner-1',
-        allowedTicketAccess: OrganizationTicketAccess.Public,
       };
 
       const result = await OrganizationDAO.create(input);
@@ -77,7 +74,6 @@ describe('OrganizationDAO', () => {
           name: 'Test Org',
           description: 'Test Org Description',
           ownerId: 'owner-1',
-          allowedTicketAccess: OrganizationTicketAccess.Public,
         }),
       ).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
     });

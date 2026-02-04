@@ -55,8 +55,12 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
   const [pendingDeleteEvent, setPendingDeleteEvent] = useState<{ eventId: string; title: string } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const [updateEvent] = useMutation(UpdateEventDocument, { context: { headers: getAuthHeader(token) } });
-  const [deleteEvent] = useMutation(DeleteEventByIdDocument, { context: { headers: getAuthHeader(token) } });
+  const [updateEvent] = useMutation(UpdateEventDocument, {
+    context: { headers: getAuthHeader(token) },
+  });
+  const [deleteEvent] = useMutation(DeleteEventByIdDocument, {
+    context: { headers: getAuthHeader(token) },
+  });
 
   useEffect(() => {
     if (events.length > 0) {
@@ -119,7 +123,9 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
 
     setConfirmLoading(true);
     try {
-      await deleteEvent({ variables: { eventId: pendingDeleteEvent.eventId } });
+      await deleteEvent({
+        variables: { eventId: pendingDeleteEvent.eventId },
+      });
       await refetch();
       notify('Event deleted.');
       setPendingDeleteEvent(null);

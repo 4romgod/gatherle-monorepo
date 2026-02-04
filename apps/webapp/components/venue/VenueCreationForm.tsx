@@ -471,8 +471,8 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
               <Typography color="text.secondary" variant="body2" sx={{ flex: 1 }}>
-                Venues power the location experience for events, maps, and ticketing. Keep the data accurate so every
-                event can reuse it.
+                Venues power the location experience for events, and maps. Keep the data accurate so every event can
+                reuse it.
               </Typography>
               <Stack direction="row" spacing={2}>
                 <Button variant="outlined" color="secondary" onClick={handleDiscardDraft} disabled={loading}>

@@ -3,10 +3,11 @@ import type {
   CreateOrganizationMembershipInput,
   UpdateOrganizationMembershipInput,
 } from '@ntlango/commons/types';
-import { NotificationType, NotificationTargetType } from '@ntlango/commons/types';
+import { NotificationType, NotificationTargetType, OrganizationRole } from '@ntlango/commons/types';
 import { OrganizationMembershipDAO, OrganizationDAO } from '@/mongodb/dao';
 import NotificationService from './notification';
 import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 /**
  * Organization membership service for operations with side effects
@@ -77,6 +78,26 @@ class OrganizationMembershipService {
     // Get the existing membership to find the userId and orgId
     const existingMembership = await OrganizationMembershipDAO.readMembershipById(input.membershipId);
 
+    // Security: Prevent users from modifying their own role
+    if (existingMembership.userId === updatedByUserId) {
+      throw CustomError(
+        'Users cannot modify their own role. Another organization admin must change your role.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    // Security: Re-verify authorization to prevent race conditions (TOCTOU)
+    // Between authChecker and this point, the user's role could have changed
+    if (updatedByUserId) {
+      const isStillAuthorized = await this.verifyOrganizationAdminAccess(existingMembership.orgId, updatedByUserId);
+      if (!isStillAuthorized) {
+        throw CustomError(
+          'You no longer have permission to manage this organization. Your role may have changed.',
+          ErrorTypes.UNAUTHORIZED,
+        );
+      }
+    }
+
     // Update the membership
     const updatedMembership = await OrganizationMembershipDAO.update(input);
 
@@ -112,10 +133,70 @@ class OrganizationMembershipService {
    * Remove a member from an organization
    * - Deletes the membership record
    * - Does not send notification (removal is final)
+   *
+   * @param membershipId - ID of the membership to remove
+   * @param removedByUserId - Optional user ID of who is removing the member
    */
-  static async removeMember(membershipId: string): Promise<OrganizationMembership> {
+  static async removeMember(membershipId: string, removedByUserId?: string): Promise<OrganizationMembership> {
     logger.debug(`[OrganizationMembershipService.removeMember] Removing membership ${membershipId}`);
+
+    // Get the existing membership to find the userId
+    const existingMembership = await OrganizationMembershipDAO.readMembershipById(membershipId);
+
+    // Security: Prevent users from removing themselves
+    // Users should use a "leave organization" flow instead
+    if (existingMembership.userId === removedByUserId) {
+      throw CustomError(
+        'Users cannot remove themselves from an organization. Use the leave organization feature instead.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    // Security: Re-verify authorization to prevent race conditions (TOCTOU)
+    // Between authChecker and this point, the user's role could have changed
+    if (removedByUserId) {
+      const isStillAuthorized = await this.verifyOrganizationAdminAccess(existingMembership.orgId, removedByUserId);
+      if (!isStillAuthorized) {
+        throw CustomError(
+          'You no longer have permission to manage this organization. Your role may have changed.',
+          ErrorTypes.UNAUTHORIZED,
+        );
+      }
+    }
+
     return OrganizationMembershipDAO.delete(membershipId);
+  }
+
+  /**
+   * Verify that a user still has admin access to an organization.
+   * This is used to prevent TOCTOU race conditions where authorization is checked
+   * in authChecker but the user's role changes before the service method executes.
+   *
+   * @param orgId - Organization ID to check
+   * @param userId - User ID to verify
+   * @returns true if user is owner or has Owner/Admin role, false otherwise
+   */
+  private static async verifyOrganizationAdminAccess(orgId: string, userId: string): Promise<boolean> {
+    try {
+      // Check if user is the organization owner
+      const organization = await OrganizationDAO.readOrganizationById(orgId);
+      if (organization.ownerId === userId) {
+        return true;
+      }
+
+      // Check if user has Owner or Admin role in the organization
+      const memberships = await OrganizationMembershipDAO.readMembershipsByOrgId(orgId);
+      const userMembership = memberships.find((m) => m.userId === userId);
+
+      return userMembership?.role === OrganizationRole.Owner || userMembership?.role === OrganizationRole.Admin;
+    } catch (error) {
+      // Fail closed: If we can't verify authorization, deny access
+      logger.error(
+        `[OrganizationMembershipService.verifyOrganizationAdminAccess] Error verifying admin access for user ${userId} on org ${orgId}`,
+        error,
+      );
+      return false;
+    }
   }
 }
 

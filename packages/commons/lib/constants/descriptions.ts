@@ -123,7 +123,7 @@ export const SOCIAL_DESCRIPTIONS = {
     EVENT_ID: 'ID of the event that the intent references.',
     STATUS: 'Current status of the intent (Interested, Going, Maybe, Declined).',
     VISIBILITY: 'Visibility policy for the intent (Public, Followers, Private).',
-    SOURCE: 'Origin of the intent data (Manual, Ticket, Invite, OrgAnnouncement).',
+    SOURCE: 'Origin of the intent data (Manual, Invite, OrgAnnouncement).',
     PARTICIPANT_ID: 'Optional EventParticipant ID tied to the intent.',
     METADATA: 'Additional metadata to describe the intent.',
   },
@@ -192,13 +192,11 @@ export const ORGANIZATION_DESCRIPTIONS = {
   BILLING_EMAIL: 'Email address used for billing or payouts.',
   LINKS: 'List of helpful links (website, socials) for the organization.',
   DOMAINS: 'Domains that are allowed to create events on behalf of the organization.',
-  EVENT_DEFAULTS: 'Default settings (visibility, reminders, ticket) applied to events.',
+  EVENT_DEFAULTS: 'Default settings (visibility, reminders) applied to events.',
   EVENT_DEFAULT_VISIBILITY: 'Visibility default applied to events created under this org.',
   EVENT_DEFAULT_REMINDERS: 'Whether reminders should be on by default.',
   EVENT_DEFAULT_WAITLIST: 'Whether waitlists should be enabled by default.',
   EVENT_DEFAULT_PLUS_ONES: 'Whether guest + ones are allowed by default.',
-  EVENT_DEFAULT_TICKET_ACCESS: 'Default ticket access policy for newcomers.',
-  TICKET_ACCESS: 'Ticket access policy enforced by the organization.',
   FOLLOWERS_COUNT: 'Number of accepted followers for the organization.',
   FOLLOWABLE: 'Toggle to determine if the organization can be followed.',
   FOLLOW_POLICY:
@@ -217,6 +215,7 @@ export const ORGANIZATION_MEMBERSHIP_DESCRIPTIONS = {
   USER_ID: 'User id that belongs to the organization.',
   ROLE: 'Role granted to the user inside the organization.',
   JOINED_AT: 'Timestamp when the membership was created.',
+  USERNAME: 'Resolved username for the member (mirrors the user record).',
 };
 
 export const VENUE_DESCRIPTIONS = {

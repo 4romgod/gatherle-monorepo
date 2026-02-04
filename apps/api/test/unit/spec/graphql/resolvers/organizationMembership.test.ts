@@ -114,11 +114,14 @@ describe('OrganizationMembershipResolver', () => {
     it('validates id before deleting via service', async () => {
       (OrganizationMembershipService.removeMember as jest.Mock).mockResolvedValue(mockMembership);
 
-      const result = await resolver.deleteOrganizationMembership(deleteInput);
+      const result = await resolver.deleteOrganizationMembership(deleteInput, mockContext);
 
       expect(validation.validateInput).toHaveBeenCalled();
       expect(validation.validateMongodbId).toHaveBeenCalledWith(deleteInput.membershipId, expect.any(String));
-      expect(OrganizationMembershipService.removeMember).toHaveBeenCalledWith(deleteInput.membershipId);
+      expect(OrganizationMembershipService.removeMember).toHaveBeenCalledWith(
+        deleteInput.membershipId,
+        'admin-user-001',
+      );
       expect(result).toEqual(mockMembership);
     });
   });

@@ -7,7 +7,6 @@ import { usersMockData } from '@/mongodb/mockData';
 import { generateToken } from '@/utils/auth';
 import type { User, UserWithToken } from '@ntlango/commons/types';
 import { UserRole } from '@ntlango/commons/types';
-import { OrganizationTicketAccess } from '@ntlango/commons/types';
 import {
   getCreateOrganizationMutation,
   getReadOrganizationByIdQuery,
@@ -27,7 +26,6 @@ describe('Organization Resolver', () => {
   const buildOrganizationInput = (name: string) => ({
     name,
     ownerId: adminUser.userId,
-    allowedTicketAccess: OrganizationTicketAccess.Public,
   });
 
   const createOrganizationOnServer = async () => {
@@ -174,23 +172,6 @@ describe('Organization Resolver', () => {
       }
     });
 
-    it('updates organization ticket access setting', async () => {
-      const createdOrganization = await createOrganizationOnServer();
-
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + adminUser.token)
-        .send(
-          getUpdateOrganizationMutation({
-            orgId: createdOrganization.orgId,
-            allowedTicketAccess: OrganizationTicketAccess.Members,
-          }),
-        );
-
-      expect(response.status).toBe(200);
-      expect(response.body.data.updateOrganization.allowedTicketAccess).toBe(OrganizationTicketAccess.Members);
-    });
-
     it('validates organization name is returned correctly', async () => {
       const testName = 'Test Organization Name';
       const response = await request(url)
@@ -221,7 +202,6 @@ describe('Organization Resolver', () => {
           getCreateOrganizationMutation({
             name: '',
             ownerId: adminUser.userId,
-            allowedTicketAccess: OrganizationTicketAccess.Public,
           }),
         );
 
@@ -236,7 +216,6 @@ describe('Organization Resolver', () => {
           getCreateOrganizationMutation({
             name: 'Invalid Owner',
             ownerId: 'invalid-id',
-            allowedTicketAccess: OrganizationTicketAccess.Public,
           }),
         );
 

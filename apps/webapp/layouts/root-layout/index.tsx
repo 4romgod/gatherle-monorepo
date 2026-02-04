@@ -1,8 +1,9 @@
 'use client';
 
 import '@/components/global.css';
+import 'nprogress/nprogress.css';
 import dynamic from 'next/dynamic';
-import React, { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { CustomAppContextProvider } from '@/components/context/AppContext';
 import { ApolloWrapper } from '@/data/graphql/apollo-wrapper';

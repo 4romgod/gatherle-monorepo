@@ -69,7 +69,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       organizers: event?.organizers?.map((o) => o.user.userId) ?? [],
       tags: event?.tags ?? {},
       media: event?.media ?? {},
-      mediaAssets: [],
       additionalDetails: {},
       comments: {},
       privacySetting: event?.privacySetting ?? EventPrivacySetting.Public,
@@ -424,7 +423,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   Event Link
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Add a link to your event website or ticketing page
+                  Add a link to your event website or registration page
                 </Typography>
                 <TextField
                   fullWidth

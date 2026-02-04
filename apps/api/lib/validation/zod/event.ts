@@ -97,8 +97,6 @@ export const EventSchema = z.object({
     .optional()
     .describe('Media related to the event, including the featured image URL and other media data.'),
 
-  mediaAssets: z.array(z.record(z.any())).optional().describe('Additional media assets'),
-
   additionalDetails: z.record(z.any()).optional().describe('Any additional details about the event.'),
 
   comments: z.record(z.any()).optional().describe('Comments related to the event.'),

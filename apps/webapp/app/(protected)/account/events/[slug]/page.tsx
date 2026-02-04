@@ -37,6 +37,7 @@ import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import CopyLinkButton from '@/components/events/CopyLinkButton';
 import { auth } from '@/auth';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -177,7 +178,7 @@ export default async function Page(props: Props) {
           }}
         >
           <Button
-            component={Link}
+            component={LinkComponent}
             href={ROUTES.ACCOUNT.EVENTS.ROOT}
             startIcon={<ArrowBack />}
             sx={{
@@ -203,7 +204,7 @@ export default async function Page(props: Props) {
           </Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
-              component={Link}
+              component={LinkComponent}
               href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(params.slug)}
               startIcon={<Edit />}
               variant="contained"

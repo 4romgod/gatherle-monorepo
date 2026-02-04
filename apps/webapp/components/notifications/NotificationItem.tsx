@@ -17,6 +17,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import type { Notification } from '@/hooks/useNotifications';
 import { NotificationType } from '@/data/graphql/types/graphql';
+import { logger } from '@/lib/utils';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -88,6 +89,10 @@ export default function NotificationItem({
   const { icon, color } = getNotificationStyle(notification.type);
   const timestamp =
     typeof notification.createdAt === 'string' ? new Date(notification.createdAt) : notification.createdAt;
+
+  if (!notification.createdAt || (timestamp && isNaN(timestamp.getTime()))) {
+    logger.warn('Invalid or missing timestamp for notification:', notification.notificationId, notification.createdAt);
+  }
 
   const handleMarkRead = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -196,7 +201,7 @@ export default function NotificationItem({
           </Box>
         }
         secondary={
-          <Typography variant="caption" color="text.disabled" component="span">
+          <Typography variant="caption" color="text.secondary" component="span" sx={{ fontWeight: 500 }}>
             {formatDistanceToNow(timestamp, { addSuffix: true })}
           </Typography>
         }

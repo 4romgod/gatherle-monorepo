@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { Button, Container, Stack, Typography } from '@mui/material';
 import { auth } from '@/auth';
 import { ROUTES } from '@/lib/constants';
 import { UserRole } from '@/data/graphql/types/graphql';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export const metadata: Metadata = {
   title: 'Admin Console · Ntlango',
@@ -27,7 +27,7 @@ export default async function AdminPage() {
             This section is restricted to administrators. If you believe you should have access, reach out to another
             admin. Otherwise, head back to the homepage.
           </Typography>
-          <Button component={Link} href={ROUTES.HOME} variant="contained" color="secondary">
+          <Button component={LinkComponent} href={ROUTES.HOME} variant="contained" color="secondary">
             Return home
           </Button>
         </Stack>

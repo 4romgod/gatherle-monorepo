@@ -6,7 +6,7 @@ import { getClient } from '@/data/graphql';
 import { GetAllEventCategoriesDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
 import { ROUTES } from '@/lib/constants';
-import Link from 'next/link';
+import LinkComponent from '@/components/navigation/LinkComponent';
 
 export const metadata: Metadata = {
   title: {
@@ -50,7 +50,7 @@ export default async function CreateEvent() {
             <Box>
               <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
                 <Button
-                  component={Link}
+                  component={LinkComponent}
                   href={ROUTES.ACCOUNT.EVENTS.ROOT}
                   startIcon={<ArrowBack />}
                   sx={{

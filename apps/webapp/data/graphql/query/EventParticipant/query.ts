@@ -75,12 +75,6 @@ export const GetMyRsvpsDocument = graphql(`
         media {
           featuredImageUrl
         }
-        mediaAssets {
-          url
-          alt
-          type
-          order
-        }
         organizers {
           role
           user {

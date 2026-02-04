@@ -6,7 +6,6 @@ export const getCreateOrganizationMutation = (input: any) => ({
         slug
         name
         ownerId
-        allowedTicketAccess
       }
     }
   `,
@@ -22,7 +21,6 @@ export const getUpdateOrganizationMutation = (input: any) => ({
         orgId
         name
         description
-        allowedTicketAccess
       }
     }
   `,

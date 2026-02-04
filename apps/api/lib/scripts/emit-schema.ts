@@ -6,51 +6,15 @@
  * Usage: npm run emit-schema -w @ntlango/api
  */
 import 'reflect-metadata';
-import { buildSchemaSync } from 'type-graphql';
 import { printSchema } from 'graphql';
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  AdminResolver,
-  EventCategoryResolver,
-  EventCategoryGroupResolver,
-  EventResolver,
-  UserResolver,
-  EventParticipantResolver,
-  OrganizationResolver,
-  OrganizationMembershipResolver,
-  VenueResolver,
-  FollowResolver,
-  IntentResolver,
-  ActivityResolver,
-  NotificationResolver,
-} from '@/graphql/resolvers';
-import { authChecker } from '@/utils/auth';
+import createSchema from '@/graphql/schema';
 
 const emitSchema = () => {
   console.log('Building GraphQL schema...');
 
-  const schema = buildSchemaSync({
-    resolvers: [
-      AdminResolver,
-      EventCategoryResolver,
-      EventCategoryGroupResolver,
-      EventResolver,
-      UserResolver,
-      EventParticipantResolver,
-      FollowResolver,
-      IntentResolver,
-      ActivityResolver,
-      OrganizationResolver,
-      OrganizationMembershipResolver,
-      VenueResolver,
-      NotificationResolver,
-    ],
-    validate: true,
-    emitSchemaFile: false,
-    authChecker,
-  });
-
+  const schema = createSchema();
   const schemaString = printSchema(schema);
 
   // Output to packages/commons so it can be shared

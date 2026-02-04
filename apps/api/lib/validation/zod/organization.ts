@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
-import { EventVisibility, OrganizationTicketAccess } from '@ntlango/commons/types';
+import { EventVisibility } from '@ntlango/commons/types';
 import { ERROR_MESSAGES } from '@/validation';
 
 const mongoIdValidator = (value: string) => mongoose.Types.ObjectId.isValid(value);
@@ -15,7 +15,6 @@ const eventDefaultsSchema = z.object({
   remindersEnabled: z.boolean().optional(),
   waitlistEnabled: z.boolean().optional(),
   allowGuestPlusOnes: z.boolean().optional(),
-  ticketAccess: z.nativeEnum(OrganizationTicketAccess).optional(),
 });
 
 const domainSchema = z
@@ -39,7 +38,6 @@ export const CreateOrganizationInputSchema = z.object({
   links: z.array(organizationLinkSchema).optional(),
   domainsAllowed: z.array(domainSchema).optional(),
   eventDefaults: eventDefaultsSchema.optional(),
-  allowedTicketAccess: z.nativeEnum(OrganizationTicketAccess),
   tags: z.array(z.string()).optional(),
 });
 
@@ -61,7 +59,6 @@ const updatableOrganizationFields = z.object({
   links: z.array(organizationLinkSchema).optional(),
   domainsAllowed: z.array(domainSchema).optional(),
   eventDefaults: eventDefaultsSchema.optional(),
-  allowedTicketAccess: z.nativeEnum(OrganizationTicketAccess).optional(),
   tags: z.array(z.string()).optional(),
 });
 

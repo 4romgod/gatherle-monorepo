@@ -6,6 +6,12 @@ export const ROUTES = {
       ROOT: '/account/events',
       CREATE: '/account/events/create',
     },
+    ORGANIZATIONS: {
+      ROOT: '/account/organizations',
+      ORG: (slug: string) => `/account/organizations/${slug}`,
+      SETTINGS: (slug: string) => `/account/organizations/${slug}/settings`,
+      CREATE: '/account/organizations/create',
+    },
     MESSAGES: '/account/messages',
     NOTIFICATIONS: '/account/notifications',
     PROFILE: '/account/profile',

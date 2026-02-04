@@ -788,7 +788,7 @@ Informational (Dashboard Only):
 
 **Capacity:** 100K users, 10K events  
 **Infrastructure:** Add Redis, migrate to M30, implement caching  
-**Features:** Enhanced search, waitlists, paid tickets  
+**Features:** Enhanced search, waitlists, paid events  
 **Timeline:** 6-9 months
 
 ### Phase 3: National Scale

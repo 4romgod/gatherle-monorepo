@@ -9,14 +9,14 @@ import { ERROR_MESSAGES } from '@/validation';
 
 @Resolver(() => Venue)
 export class VenueResolver {
-  @Authorized([UserRole.Admin])
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.createVenue })
   async createVenue(@Arg('input', () => CreateVenueInput) input: CreateVenueInput): Promise<Venue> {
     validateInput<CreateVenueInput>(CreateVenueInputSchema, input);
     return VenueDAO.create(input);
   }
 
-  @Authorized([UserRole.Admin])
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.updateVenue })
   async updateVenue(@Arg('input', () => UpdateVenueInput) input: UpdateVenueInput): Promise<Venue> {
     validateInput<UpdateVenueInput>(UpdateVenueInputSchema, input);
@@ -24,7 +24,7 @@ export class VenueResolver {
     return VenueDAO.update(input);
   }
 
-  @Authorized([UserRole.Admin])
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.deleteVenueById })
   async deleteVenueById(@Arg('venueId', () => String) venueId: string): Promise<Venue> {
     validateMongodbId(venueId, ERROR_MESSAGES.NOT_FOUND('Venue', 'ID', venueId));

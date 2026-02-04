@@ -7,8 +7,8 @@ near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/T
 ## Core Goals
 
 - Support individuals and organizations hosting repeatable and one-off experiences.
-- Keep participation (RSVP/tickets) auditable over time.
-- Allow growth into paid tickets, invites, waitlists, and richer engagement.
+- Keep participation (RSVPs) auditable over time.
+- Allow growth into paid events, invites, waitlists, and richer engagement.
 - Enable a social layer that creates FOMO: users see where friends and followed orgs are going, with privacy-aware
   visibility.
 
@@ -23,7 +23,7 @@ near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/T
 
 **Planned/partial**
 
-- TicketType, Invitation, WaitlistEntry
+- Invitation, WaitlistEntry
 - Comment, Reaction, Audit Trail
 
 ## Entities (Current Implementation)
@@ -133,8 +133,7 @@ individuals can operate together without mixing personas.
 
 - `orgId`, `slug`, `name`, `description`, `logo`, `ownerId`.
 - `defaultVisibility`, `billingEmail`, `links[]`, `domainsAllowed[]`.
-- `eventDefaults { visibility, remindersEnabled, waitlistEnabled, allowGuestPlusOnes, ticketAccess }`.
-- `allowedTicketAccess` (Public|Members|InviteOnly).
+- `eventDefaults { visibility, remindersEnabled, waitlistEnabled, allowGuestPlusOnes }`.
 - Social: `followersCount`, `isFollowable`, `tags[]`.
 - Memberships are stored in `OrganizationMembership` (see below) and resolved in GraphQL.
 
@@ -186,7 +185,7 @@ The `Event` document is the heart of the platform—taking organizer intent, loc
 it as a single source of truth for listing feeds and resolver pipelines.
 
 - Identity: `eventId`, `slug`, `orgId?`.
-- Content: `title`, `summary`, `description`, `heroImage`, `media`, `mediaAssets[]`.
+- Content: `title`, `summary`, `description`, `heroImage`, `media`.
 - Status: `status` (Cancelled|Completed|Ongoing|Upcoming).
 - Lifecycle: `lifecycleStatus` (Draft|Published|Cancelled|Completed).
 - Visibility: `visibility` (Public|Private|Unlisted|Invitation), `privacySetting` (Public|Private|Invitation).
@@ -232,11 +231,11 @@ relationships without denormalizing user objects.
 ### Intent
 
 Intents are lightweight signals (Interested, Going, etc.) that are cheaper to write/read than EventParticipant rows and
-feed the UI before tickets are confirmed.
+feed the UI before RSVPs are confirmed.
 
 - `intentId`, `userId`, `eventId`, optional `participantId`.
 - `status` (Interested|Going|Maybe|Declined).
-- `visibility` (Public|Followers|Private), `source` (Manual|Ticket|Invite|OrgAnnouncement).
+- `visibility` (Public|Followers|Private), `source` (Manual|Invite|OrgAnnouncement).
 - `metadata` (JSON), `createdAt`, `updatedAt`.
 
 ### Activity
@@ -245,15 +244,10 @@ Activities capture actions taken by actors (users/orgs) so the feed knows what h
 should be.
 
 - `activityId`, `actorId`, `verb` (Followed|RSVPd|Commented|Published|CreatedOrg|CheckedIn|Invited).
-- `objectType` (User|Organization|Event|Comment|TicketType), `objectId`.
+- `objectType` (User|Organization|Event|Comment), `objectId`.
 - `targetType?`, `targetId?`, `visibility` (Public|Followers|Private), `eventAt`, `metadata`.
 
 ## Planned Entities & Extensions
-
-### TicketType (planned)
-
-- Price and access controls to formalize paid tickets: `ticketTypeId`, `eventId`, `name`, `description`, `price`,
-  `currency`, `capacity`, `salesWindow`, `access`, `perUserLimit`, `refundableUntil`, `addons`.
 
 ### Invitation / WaitlistEntry (planned)
 
@@ -377,7 +371,7 @@ const user = await context.loaders.user.load(participant.userId);
 ## Feed & FOMO Flow
 
 1. User follows User/Organization → `Follow` created, `Activity: Followed`.
-2. User marks Going/Interested → `Intent` created/updated; if RSVP/ticketed, `EventParticipant` is upserted.
+2. User marks Going/Interested → `Intent` created/updated; `EventParticipant` is upserted.
 3. Feed query pulls Activities where:
    - actor is in my follow set, and
    - activity visibility allows (Public or Followers when I follow), and
@@ -402,6 +396,6 @@ const user = await context.loaders.user.load(participant.userId);
 ## Suggested Next Steps
 
 - Replace `Event.comments` JSON with `Comment` and `Reaction` collections and wire up resolvers.
-- Introduce `TicketType`, `Invitation`, and `WaitlistEntry` types + DAOs + resolvers.
+- Introduce `Invitation`, and `WaitlistEntry` types + DAOs + resolvers.
 - Add projections/denormed summary fields for high-traffic reads (event title/org info on Activity).
 - Capture `locationSnapshot` consistently for published events to preserve historical data.
