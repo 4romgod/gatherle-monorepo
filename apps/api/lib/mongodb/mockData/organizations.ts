@@ -3,6 +3,7 @@ import { EventVisibility } from '@ntlango/commons/types';
 import { FollowPolicy } from '@ntlango/commons/types/user';
 
 export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'> & {
+  ownerEmail: string;
   followPolicy?: FollowPolicy;
 };
 
@@ -26,6 +27,7 @@ const organizations: OrganizationSeedData[] = [
     ],
     domainsAllowed: ['signalstudios.co.za'],
     followPolicy: FollowPolicy.Public,
+    ownerEmail: 'user001@gmail.com',
   },
   {
     name: 'Harbour Collective',
@@ -47,6 +49,7 @@ const organizations: OrganizationSeedData[] = [
     ],
     domainsAllowed: ['harbourcollective.live'],
     followPolicy: FollowPolicy.RequireApproval,
+    ownerEmail: 'jay@rocknation.com',
   },
   {
     name: 'Emergent Labs',
@@ -68,6 +71,7 @@ const organizations: OrganizationSeedData[] = [
     ],
     domainsAllowed: ['emergentlabs.studio'],
     followPolicy: FollowPolicy.Public,
+    ownerEmail: 'Jeff@amazon.com',
   },
   {
     name: 'Streetcar Society',
@@ -88,6 +92,7 @@ const organizations: OrganizationSeedData[] = [
     ],
     domainsAllowed: ['streetcarsociety.io'],
     followPolicy: FollowPolicy.Public,
+    ownerEmail: 'celin@yahoo.com',
   },
   {
     name: 'Veld Wellness Collective',
@@ -108,6 +113,7 @@ const organizations: OrganizationSeedData[] = [
     ],
     domainsAllowed: ['veldwellness.africa'],
     followPolicy: FollowPolicy.RequireApproval,
+    ownerEmail: 'jay@rocknation.com',
   },
 ];
 

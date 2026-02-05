@@ -27,7 +27,7 @@ describe('Event Resolver', () => {
   const testEventDescription = 'Test Event Description';
 
   const baseEventData = (() => {
-    const { orgIndex: _orgIndex, venueIndex: _venueIndex, ...rest } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
     return rest;
   })();
 

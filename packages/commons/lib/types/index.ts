@@ -15,3 +15,4 @@ export * from './user';
 export * from './organization';
 export * from './organizationMembership';
 export * from './venue';
+export * from './myOrganization';

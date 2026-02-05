@@ -40,6 +40,7 @@ import type {
   EventCategory,
   Organization,
   UpdateVenueInput,
+  User,
   Venue,
 } from '@ntlango/commons/types';
 import { SECRET_KEYS } from '@/constants';
@@ -153,7 +154,7 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
   logger.info('Completed seeding user data.');
 }
 
-async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: string[]) {
+async function seedOrganizations(seedData: OrganizationSeedData[], usersByEmail: Map<string, User>) {
   logger.info('Starting to seed organization data...');
   const created: Organization[] = [];
   const existingOrgs = await OrganizationDAO.readOrganizations();
@@ -161,19 +162,27 @@ async function seedOrganizations(seedData: OrganizationSeedData[], ownerIds: str
   for (let i = 0; i < seedData.length; i++) {
     try {
       const config = seedData[i];
-      const ownerId = ownerIds[i % ownerIds.length];
+      const { ownerEmail, ...organizationPayload } = config;
+      const ownerKey = ownerEmail.toLowerCase();
+      const owner = usersByEmail.get(ownerKey);
+      if (!owner) {
+        logger.warn(
+          `   Skipping organization "${organizationPayload.name}" because owner email "${ownerEmail}" was not found`,
+        );
+        continue;
+      }
 
       // Check if organization with this name already exists
-      const found = existingOrgs.find((o) => o.name === config.name);
+      const found = existingOrgs.find((o) => o.name === organizationPayload.name);
       if (found) {
-        logger.info(`   Organization "${config.name}" already exists, using existing...`);
+        logger.info(`   Organization "${organizationPayload.name}" already exists, using existing...`);
         created.push(found);
         continue;
       }
 
       const organizationInput: CreateOrganizationInput = {
-        ...config,
-        ownerId,
+        ...organizationPayload,
+        ownerId: owner.userId,
       };
       const organization = await OrganizationDAO.create(organizationInput);
       created.push(organization);
@@ -222,19 +231,20 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
 
   for (const venueSeed of seedData) {
     try {
-      const organization = organizations[venueSeed.orgIndex];
+      const { orgSlug, slug, ...venueFields } = venueSeed;
+      const organization = organizations.find((org) => org.slug === orgSlug);
       if (!organization) {
-        throw new Error(`Organization not found for venue index ${venueSeed.orgIndex}`);
+        throw new Error(`Organization not found for venue slug ${orgSlug}`);
       }
 
       // Check if venue with this name already exists
       const found = existingVenues.find((v) => v.name === venueSeed.name);
-      const { orgIndex: _orgIndex, ...venueFields } = venueSeed;
       if (found) {
         const updateInput: UpdateVenueInput = {
           venueId: found.venueId,
           ...venueFields,
           orgId: organization.orgId,
+          slug,
         };
         const updatedVenue = await VenueDAO.update(updateInput);
         createdVenues.push(updatedVenue);
@@ -245,6 +255,7 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
       const venueInput: CreateVenueInput = {
         ...venueFields,
         orgId: organization.orgId,
+        slug,
       };
       const venue = await VenueDAO.create(venueInput);
       createdVenues.push(venue);
@@ -260,35 +271,38 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
 async function seedOrganizationMemberships(
   seedData: OrganizationMembershipSeed[],
   organizations: Organization[],
-  userIds: string[],
+  usersByEmail: Map<string, User>,
 ) {
   logger.info('Starting to seed organization membership data...');
 
   for (const membership of seedData) {
     try {
-      const organization = organizations[membership.orgIndex];
+      const organization = organizations.find((org) => org.slug === membership.orgSlug);
       if (!organization) {
-        throw new Error(`Organization not found for membership orgIndex ${membership.orgIndex}`);
+        throw new Error(`Organization not found for slug ${membership.orgSlug}`);
       }
-      const userId = userIds[membership.userIndex % userIds.length];
+      const user = usersByEmail.get(membership.userEmail.toLowerCase());
+      if (!user) {
+        throw new Error(`User not found for email ${membership.userEmail}`);
+      }
 
       // Check if membership already exists by querying for this specific org
       const existingMemberships = await OrganizationMembershipDAO.readMembershipsByOrgId(organization.orgId);
-      const found = existingMemberships.find((m) => m.userId === userId);
+      const found = existingMemberships.find((m) => m.userId === user.userId);
 
       if (found) {
         logger.info(
-          `   OrganizationMembership for user ${userId} in org ${organization.orgId} already exists, skipping...`,
+          `   OrganizationMembership for user ${user.userId} in org ${organization.orgId} already exists, skipping...`,
         );
         continue;
       }
 
       await OrganizationMembershipDAO.create({
         orgId: organization.orgId,
-        userId,
+        userId: user.userId,
         role: membership.role,
       });
-      logger.info(`   Created OrganizationMembership for user ${userId}`);
+      logger.info(`   Created OrganizationMembership for user ${user.userId}`);
     } catch (error) {
       logger.warn(`   Failed to create OrganizationMembership:`, error);
     }
@@ -317,8 +331,8 @@ async function seedEvents(
         continue;
       }
 
-      const organization = typeof event.orgIndex === 'number' ? organizations[event.orgIndex] : undefined;
-      const venue = typeof event.venueIndex === 'number' ? venues[event.venueIndex] : undefined;
+      const organization = event.orgSlug ? organizations.find((org) => org.slug === event.orgSlug) : undefined;
+      const venue = event.venueSlug ? venues.find((venueItem) => venueItem.slug === event.venueSlug) : undefined;
 
       const organizerIds = getRandomUniqueItems(userIds, 2);
       const participantCount = Math.floor(Math.random() * 5) + 2; // Random number between 2 and 6
@@ -328,7 +342,7 @@ async function seedEvents(
           ? event.eventCategories
           : getRandomUniqueItems(eventCategoryIds, 5);
 
-      const { orgIndex: _orgIndex, venueIndex: _venueIndex, ...eventBase } = event;
+      const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...eventBase } = event;
       const locationFromVenue = venue ? buildLocationFromVenue(venue) : undefined;
       const resolvedLocation = locationFromVenue ?? eventBase.location;
 
@@ -384,24 +398,23 @@ async function seedEvents(
   return createdEvents;
 }
 
-async function seedFollows(seedData: FollowSeed[], userIds: string[], organizations: Organization[]) {
+async function seedFollows(seedData: FollowSeed[], usersByEmail: Map<string, User>, organizations: Organization[]) {
   logger.info('Starting to seed follow edges...');
   for (const seed of seedData) {
-    const followerUserId = userIds[seed.followerIndex];
-    const targetId =
-      seed.targetUserIndex !== undefined
-        ? userIds[seed.targetUserIndex]
-        : seed.targetOrgIndex !== undefined
-          ? organizations[seed.targetOrgIndex]?.orgId
-          : undefined;
+    const followerUser = usersByEmail.get(seed.followerEmail.toLowerCase());
+    const targetUser = seed.targetUserEmail ? usersByEmail.get(seed.targetUserEmail.toLowerCase()) : undefined;
+    const targetOrganization = seed.targetOrgSlug
+      ? organizations.find((org) => org.slug === seed.targetOrgSlug)
+      : undefined;
+    const targetId = targetUser?.userId ?? targetOrganization?.orgId;
 
-    if (!followerUserId || !targetId) {
+    if (!followerUser || !targetId) {
       logger.warn('Skipping follow seed due to missing IDs', seed);
       continue;
     }
 
     await FollowDAO.upsert({
-      followerUserId,
+      followerUserId: followerUser.userId,
       targetType: seed.targetType,
       targetId,
       approvalStatus: seed.approvalStatus,
@@ -410,18 +423,18 @@ async function seedFollows(seedData: FollowSeed[], userIds: string[], organizati
   logger.info('Completed seeding follow edges.');
 }
 
-async function seedIntents(seedData: IntentSeed[], userIds: string[], events: Event[]) {
+async function seedIntents(seedData: IntentSeed[], usersByEmail: Map<string, User>, events: Event[]) {
   logger.info('Starting to seed intents...');
   for (const seed of seedData) {
-    const userId = userIds[seed.userIndex];
-    const event = events[seed.eventIndex];
-    if (!userId || !event?.eventId) {
+    const user = usersByEmail.get(seed.userEmail.toLowerCase());
+    const event = events.find((candidate) => candidate.title === seed.eventTitle);
+    if (!user || !event?.eventId) {
       logger.warn('Skipping intent seed due to missing IDs', seed);
       continue;
     }
 
     await IntentDAO.upsert({
-      userId,
+      userId: user.userId,
       eventId: event.eventId,
       status: seed.status,
       visibility: seed.visibility,
@@ -432,27 +445,36 @@ async function seedIntents(seedData: IntentSeed[], userIds: string[], events: Ev
   logger.info('Completed seeding intents.');
 }
 
-async function seedActivities(seedData: ActivitySeed[], userIds: string[], events: Event[]) {
+async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string, User>, events: Event[]) {
   logger.info('Starting to seed activity feed...');
   for (const seed of seedData) {
-    const actorId = userIds[seed.actorIndex];
-    const objectId = seed.objectRef === 'event' ? events[seed.objectIndex]?.eventId : userIds[seed.objectIndex];
-    if (!actorId || !objectId) {
+    const actor = usersByEmail.get(seed.actorEmail.toLowerCase());
+    let objectId: string | undefined;
+    if (seed.objectRef === 'event') {
+      objectId = events.find((event) => event.title === seed.objectIdentifier)?.eventId;
+    } else {
+      objectId = usersByEmail.get(seed.objectIdentifier.toLowerCase())?.userId;
+    }
+    if (!actor || !objectId) {
       logger.warn('Skipping activity seed due to missing IDs', seed);
       continue;
     }
 
     let metadata = seed.metadata;
     if (!metadata && seed.objectRef === 'event') {
-      metadata = { eventTitle: events[seed.objectIndex]?.title };
+      metadata = { eventTitle: events.find((event) => event.title === seed.objectIdentifier)?.title };
     }
     let targetId: string | undefined;
-    if (seed.targetIndex !== undefined) {
-      targetId = seed.targetRef === 'event' ? events[seed.targetIndex]?.eventId : userIds[seed.targetIndex];
+    if (seed.targetIdentifier) {
+      if (seed.targetRef === 'event') {
+        targetId = events.find((event) => event.title === seed.targetIdentifier)?.eventId;
+      } else if (seed.targetRef === 'user') {
+        targetId = usersByEmail.get(seed.targetIdentifier.toLowerCase())?.userId;
+      }
     }
 
     await ActivityDAO.create({
-      actorId,
+      actorId: actor.userId,
       verb: seed.verb,
       objectType: seed.objectType,
       objectId,
@@ -479,11 +501,18 @@ async function main() {
   await seedEventCategoryGroups(eventCategoryGroupMockData, allEventCategories);
 
   await seedUsers(usersMockData, allEventCategoriesIds);
-  const allUserIds = (await UserDAO.readUsers()).map((user) => user.userId);
+  const allUsers = await UserDAO.readUsers();
+  const userByEmail = new Map<string, User>();
+  allUsers.forEach((user) => {
+    if (user.email) {
+      userByEmail.set(user.email.toLowerCase(), user);
+    }
+  });
+  const allUserIds = allUsers.map((user) => user.userId);
 
-  const createdOrganizations = await seedOrganizations(organizationsData, allUserIds);
+  const createdOrganizations = await seedOrganizations(organizationsData, userByEmail);
   const createdVenues = await seedVenues(venuesData, createdOrganizations);
-  await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, allUserIds);
+  await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, userByEmail);
 
   const createdEvents = await seedEvents(
     eventsMockData,
@@ -493,9 +522,9 @@ async function main() {
     createdVenues,
   );
 
-  await seedFollows(followSeedData, allUserIds, createdOrganizations);
-  await seedIntents(intentSeedData, allUserIds, createdEvents);
-  await seedActivities(activitySeedData, allUserIds, createdEvents);
+  await seedFollows(followSeedData, userByEmail, createdOrganizations);
+  await seedIntents(intentSeedData, userByEmail, createdEvents);
+  await seedActivities(activitySeedData, userByEmail, createdEvents);
   logger.info('Completed seeding data into the database.');
   await MongoDbClient.disconnectFromDatabase();
 }

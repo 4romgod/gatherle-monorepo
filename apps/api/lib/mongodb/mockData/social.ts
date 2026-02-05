@@ -4,16 +4,16 @@ import { FollowTargetType } from '@ntlango/commons/types/follow';
 import { IntentVisibility, IntentSource, IntentStatus } from '@ntlango/commons/types/intent';
 
 export type FollowSeed = {
-  followerIndex: number;
+  followerEmail: string;
   targetType: FollowTargetType;
-  targetUserIndex?: number;
-  targetOrgIndex?: number;
+  targetUserEmail?: string;
+  targetOrgSlug?: string;
   approvalStatus?: FollowApprovalStatus;
 };
 
 export type IntentSeed = {
-  userIndex: number;
-  eventIndex: number;
+  userEmail: string;
+  eventTitle: string;
   status?: IntentStatus;
   visibility?: IntentVisibility;
   source?: IntentSource;
@@ -21,45 +21,53 @@ export type IntentSeed = {
 };
 
 export type ActivitySeed = {
-  actorIndex: number;
+  actorEmail: string;
   verb: ActivityVerb;
   objectType: ActivityObjectType;
   objectRef: 'event' | 'user';
-  objectIndex: number;
+  objectIdentifier: string;
   targetType?: ActivityObjectType;
   targetRef?: 'event' | 'user';
-  targetIndex?: number;
+  targetIdentifier?: string;
   visibility?: ActivityVisibility;
   eventAt?: string;
   metadata?: Record<string, any>;
 };
 
 export const followSeedData: FollowSeed[] = [
-  { followerIndex: 0, targetType: FollowTargetType.User, targetUserIndex: 1 },
-  { followerIndex: 0, targetType: FollowTargetType.Organization, targetOrgIndex: 0 },
   {
-    followerIndex: 2,
+    followerEmail: 'user001@gmail.com',
     targetType: FollowTargetType.User,
-    targetUserIndex: 0,
+    targetUserEmail: 'jay@rocknation.com',
   },
   {
-    followerIndex: 1,
+    followerEmail: 'user001@gmail.com',
+    targetType: FollowTargetType.Organization,
+    targetOrgSlug: 'signal-studios',
+  },
+  {
+    followerEmail: 'celin@yahoo.com',
     targetType: FollowTargetType.User,
-    targetUserIndex: 2,
+    targetUserEmail: 'user001@gmail.com',
+  },
+  {
+    followerEmail: 'jay@rocknation.com',
+    targetType: FollowTargetType.User,
+    targetUserEmail: 'celin@yahoo.com',
   },
 ];
 
 export const intentSeedData: IntentSeed[] = [
   {
-    userIndex: 0,
-    eventIndex: 0,
+    userEmail: 'user001@gmail.com',
+    eventTitle: 'Signal Studios Urban Maker Fair',
     status: IntentStatus.Going,
     visibility: IntentVisibility.Public,
     source: IntentSource.Manual,
   },
   {
-    userIndex: 1,
-    eventIndex: 1,
+    userEmail: 'jay@rocknation.com',
+    eventTitle: 'Harbour Collective: Salt City Night Market',
     status: IntentStatus.Interested,
     visibility: IntentVisibility.Followers,
     source: IntentSource.Invite,
@@ -68,19 +76,19 @@ export const intentSeedData: IntentSeed[] = [
 
 export const activitySeedData: ActivitySeed[] = [
   {
-    actorIndex: 0,
+    actorEmail: 'user001@gmail.com',
     verb: ActivityVerb.Followed,
     objectType: ActivityObjectType.User,
     objectRef: 'user',
-    objectIndex: 1,
+    objectIdentifier: 'jay@rocknation.com',
     visibility: ActivityVisibility.Public,
   },
   {
-    actorIndex: 1,
+    actorEmail: 'jay@rocknation.com',
     verb: ActivityVerb.RSVPd,
     objectType: ActivityObjectType.Event,
     objectRef: 'event',
-    objectIndex: 0,
+    objectIdentifier: 'Signal Studios Urban Maker Fair',
     visibility: ActivityVisibility.Public,
   },
 ];

@@ -18,7 +18,16 @@ import {
   Theme,
   Typography,
 } from '@mui/material';
-import { CalendarMonth, LocationOn, Share, ConfirmationNumber, Groups, Language, ArrowBack } from '@mui/icons-material';
+import {
+  CalendarMonth,
+  LocationOn,
+  Share,
+  ConfirmationNumber,
+  Groups,
+  Language,
+  ArrowBack,
+  Business,
+} from '@mui/icons-material';
 import {
   FollowApprovalStatus,
   FollowTargetType,
@@ -229,6 +238,37 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             Back to Events
           </Button>
         </Box>
+        {event.organization && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 16,
+              right: 16,
+              zIndex: 2,
+            }}
+          >
+            <Button
+              component={Link}
+              href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
+              variant="contained"
+              size="small"
+              startIcon={<Business />}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                fontWeight: 600,
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                boxShadow: 2,
+                '&:hover': {
+                  bgcolor: 'background.paper',
+                },
+              }}
+            >
+              {event.organization.name}
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Main Content */}

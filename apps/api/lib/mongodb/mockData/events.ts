@@ -2,8 +2,8 @@ import type { CreateEventInput } from '@ntlango/commons/types';
 import { EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility } from '@ntlango/commons/types/event';
 
 export type EventSeedData = CreateEventInput & {
-  orgIndex?: number;
-  venueIndex?: number;
+  orgSlug?: string;
+  venueSlug?: string;
 };
 
 const events: EventSeedData[] = [
@@ -37,8 +37,8 @@ const events: EventSeedData[] = [
     additionalDetails: { floorPlan: 'Main + Studio 2' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 0,
-    venueIndex: 0,
+    orgSlug: 'signal-studios',
+    venueSlug: 'signal-loft',
   },
   {
     title: 'Harbour Collective: Salt City Night Market',
@@ -70,8 +70,8 @@ const events: EventSeedData[] = [
     additionalDetails: { featuredChef: 'Mandla Okafor', afterparty: 'Harbour Rooftop' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 1,
-    venueIndex: 1,
+    orgSlug: 'harbour-collective',
+    venueSlug: 'harbour-house',
   },
   {
     title: 'Harbour Collective Rooftop Afterparty',
@@ -103,8 +103,8 @@ const events: EventSeedData[] = [
     additionalDetails: { hostedBy: 'Harbour Collective Membership' },
     comments: {},
     privacySetting: EventPrivacySetting.Private,
-    orgIndex: 1,
-    venueIndex: 1,
+    orgSlug: 'harbour-collective',
+    venueSlug: 'harbour-house',
   },
   {
     title: 'Emergent Labs: Innovation Summit',
@@ -130,8 +130,8 @@ const events: EventSeedData[] = [
     additionalDetails: { featuredSpeakers: ['Nia Dlamini', 'Marcelo Adeyemi'] },
     comments: {},
     privacySetting: EventPrivacySetting.Private,
-    orgIndex: 2,
-    venueIndex: 2,
+    orgSlug: 'emergent-labs',
+    venueSlug: 'emergent-labs-digital-studio',
   },
   {
     title: 'Emergent Labs Founders Studio Day',
@@ -163,8 +163,8 @@ const events: EventSeedData[] = [
     additionalDetails: { kit: 'Rapid Prototype Pack' },
     comments: {},
     privacySetting: EventPrivacySetting.Private,
-    orgIndex: 2,
-    venueIndex: 2,
+    orgSlug: 'emergent-labs',
+    venueSlug: 'emergent-labs-digital-studio',
   },
   {
     title: 'Cape Town Wellness Immersion',
@@ -196,8 +196,8 @@ const events: EventSeedData[] = [
     additionalDetails: { wellnessLeads: ['Amina Ngcobo', 'Ethan Mokoena'] },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 0,
-    venueIndex: 0,
+    orgSlug: 'signal-studios',
+    venueSlug: 'signal-loft',
   },
   {
     title: 'Streetcar Platform: Transit Stories',
@@ -230,8 +230,8 @@ const events: EventSeedData[] = [
     additionalDetails: { curators: ['Nandi Motuba', 'Tumi Thusi'], tram: 'Platform 3' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 3,
-    venueIndex: 3,
+    orgSlug: 'streetcar-society',
+    venueSlug: 'streetcar-platform',
   },
   {
     title: 'Veld Wellness Immersion',
@@ -264,8 +264,8 @@ const events: EventSeedData[] = [
     additionalDetails: { lodging: 'Safari tents', meals: 'Farm-to-table harvest' },
     comments: {},
     privacySetting: EventPrivacySetting.Private,
-    orgIndex: 4,
-    venueIndex: 4,
+    orgSlug: 'veld-wellness-collective',
+    venueSlug: 'veld-field-pavilion',
   },
   // Non-recurring events with dynamic dates for testing date filters
   {
@@ -305,8 +305,8 @@ const events: EventSeedData[] = [
     additionalDetails: { dress: 'Smart casual', parking: 'Street parking available' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 0,
-    venueIndex: 1,
+    orgSlug: 'signal-studios',
+    venueSlug: 'harbour-house',
   },
   {
     title: 'Startup Pitch Night',
@@ -346,8 +346,8 @@ const events: EventSeedData[] = [
     additionalDetails: { judges: ['Thabo Mbeki', 'Sarah Chen', 'Amina Patel'] },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 2,
-    venueIndex: 2,
+    orgSlug: 'emergent-labs',
+    venueSlug: 'emergent-labs-digital-studio',
   },
   {
     title: 'Wednesday Coffee & Code',
@@ -390,8 +390,8 @@ const events: EventSeedData[] = [
     additionalDetails: { wifi: 'High-speed available', drinks: 'Coffee and tea provided' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 0,
-    venueIndex: 0,
+    orgSlug: 'signal-studios',
+    venueSlug: 'signal-loft',
   },
   {
     title: 'Weekend Food Festival',
@@ -434,8 +434,8 @@ const events: EventSeedData[] = [
     additionalDetails: { parking: 'Ample parking', accessibility: 'Wheelchair accessible' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 1,
-    venueIndex: 1,
+    orgSlug: 'harbour-collective',
+    venueSlug: 'harbour-house',
   },
   {
     title: 'Monthly Book Club: African Literature',
@@ -479,8 +479,8 @@ const events: EventSeedData[] = [
     additionalDetails: { currentBook: 'The Hairdresser of Harare', dresscode: 'Casual' },
     comments: {},
     privacySetting: EventPrivacySetting.Public,
-    orgIndex: 0,
-    venueIndex: 4,
+    orgSlug: 'signal-studios',
+    venueSlug: 'veld-field-pavilion',
   },
 ];
 

@@ -82,3 +82,17 @@ export const GetPopularOrganizationsDocument = graphql(`
     }
   }
 `);
+
+export const GetMyOrganizationsDocument = graphql(`
+  query GetMyOrganizations {
+    readMyOrganizations {
+      organization {
+        orgId
+        slug
+        name
+        logo
+      }
+      role
+    }
+  }
+`);

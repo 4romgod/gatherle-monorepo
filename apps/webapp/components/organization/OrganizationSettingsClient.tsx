@@ -71,6 +71,16 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+type MembershipAction =
+  | { type: 'add' }
+  | { type: 'update'; membershipId: string }
+  | { type: 'remove'; membershipId: string };
+
+type PendingMembershipConfirmation =
+  | { type: 'add'; user: User; role: OrganizationRole }
+  | { type: 'role'; membership: OrganizationMembership; newRole: OrganizationRole }
+  | { type: 'remove'; membership: OrganizationMembership };
+
 export default function OrganizationSettingsClient({ slug }: OrganizationSettingsClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -85,6 +95,9 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [userOptions, setUserOptions] = useState<User[]>([]);
+  const [membershipAction, setMembershipAction] = useState<MembershipAction | null>(null);
+  const [pendingMembershipConfirmation, setPendingMembershipConfirmation] =
+    useState<PendingMembershipConfirmation | null>(null);
 
   const { data: orgData, loading: orgLoading } = useQuery<{ readOrganizationBySlug: Organization }>(
     GetOrganizationBySlugDocument,
@@ -195,6 +208,15 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
     context: { headers: getAuthHeader(token) },
   });
 
+  const isMembershipActionInProgress = Boolean(membershipAction);
+  const membershipActionLabel = membershipAction
+    ? membershipAction.type === 'add'
+      ? 'Inviting member...'
+      : membershipAction.type === 'update'
+        ? 'Updating role...'
+        : 'Removing member...'
+    : null;
+
   const handleSave = async () => {
     if (!organization) return;
 
@@ -241,16 +263,17 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
     }
   };
 
-  const handleAddMember = async () => {
-    if (!organization?.orgId || !selectedUser?.email) return;
+  const executeAddMember = async (user: User, role: OrganizationRole) => {
+    if (!organization?.orgId) return;
+    setMembershipAction({ type: 'add' });
 
     try {
       await createMembership({
         variables: {
           input: {
             orgId: organization.orgId,
-            userId: selectedUser.userId,
-            role: addMemberRole,
+            userId: user.userId,
+            role,
           },
         },
       });
@@ -261,10 +284,14 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to add member');
+    } finally {
+      setMembershipAction((prev) => (prev?.type === 'add' ? null : prev));
     }
   };
 
-  const handleUpdateMemberRole = async (membershipId: string, newRole: OrganizationRole) => {
+  const executeRoleChange = async (membershipId: string, newRole: OrganizationRole) => {
+    setMembershipAction({ type: 'update', membershipId });
+
     try {
       await updateMembership({
         variables: {
@@ -277,10 +304,14 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
       await refetchMemberships();
     } catch (err: any) {
       setError(err.message || 'Failed to update member role');
+    } finally {
+      setMembershipAction((prev) => (prev?.type === 'update' && prev.membershipId === membershipId ? null : prev));
     }
   };
 
-  const handleRemoveMember = async (membershipId: string) => {
+  const executeRemoveMember = async (membershipId: string) => {
+    setMembershipAction({ type: 'remove', membershipId });
+
     try {
       await deleteMembership({
         variables: {
@@ -290,6 +321,53 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
       await refetchMemberships();
     } catch (err: any) {
       setError(err.message || 'Failed to remove member');
+    } finally {
+      setMembershipAction((prev) => (prev?.type === 'remove' && prev.membershipId === membershipId ? null : prev));
+    }
+  };
+
+  const promptAddMember = () => {
+    if (!selectedUser?.email || isMembershipActionInProgress) return;
+    setPendingMembershipConfirmation({
+      type: 'add',
+      user: selectedUser,
+      role: addMemberRole,
+    });
+  };
+
+  const promptRoleChange = (membership: OrganizationMembership, newRole: OrganizationRole) => {
+    if (membership.role === newRole || isMembershipActionInProgress) return;
+    setPendingMembershipConfirmation({
+      type: 'role',
+      membership,
+      newRole,
+    });
+  };
+
+  const promptRemoveMember = (membership: OrganizationMembership) => {
+    if (isMembershipActionInProgress) return;
+    setPendingMembershipConfirmation({
+      type: 'remove',
+      membership,
+    });
+  };
+
+  const confirmMembershipChange = async () => {
+    if (!pendingMembershipConfirmation) return;
+
+    try {
+      if (pendingMembershipConfirmation.type === 'add') {
+        await executeAddMember(pendingMembershipConfirmation.user, pendingMembershipConfirmation.role);
+      } else if (pendingMembershipConfirmation.type === 'role') {
+        await executeRoleChange(
+          pendingMembershipConfirmation.membership.membershipId,
+          pendingMembershipConfirmation.newRole,
+        );
+      } else if (pendingMembershipConfirmation.type === 'remove') {
+        await executeRemoveMember(pendingMembershipConfirmation.membership.membershipId);
+      }
+    } finally {
+      setPendingMembershipConfirmation(null);
     }
   };
 
@@ -545,12 +623,14 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
                     size="small"
                     isOptionEqualToValue={(option, value) => option.userId === value.userId}
                     filterOptions={(x) => x}
+                    disabled={isMembershipActionInProgress}
                   />
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <FormControl size="small" sx={{ minWidth: 150 }} disabled={isMembershipActionInProgress}>
                     <InputLabel>Role</InputLabel>
                     <Select
                       value={addMemberRole}
                       onChange={(e) => setAddMemberRole(e.target.value as OrganizationRole)}
+                      disabled={isMembershipActionInProgress}
                     >
                       <MenuItem value={OrganizationRole.Member}>Member</MenuItem>
                       <MenuItem value={OrganizationRole.Moderator}>Moderator</MenuItem>
@@ -561,10 +641,11 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
                   <Button
                     variant="contained"
                     startIcon={<PersonAdd />}
-                    onClick={handleAddMember}
+                    onClick={promptAddMember}
                     sx={{ fontWeight: 600, textTransform: 'none', whiteSpace: 'nowrap' }}
+                    disabled={!selectedUser?.email || isMembershipActionInProgress}
                   >
-                    Invite
+                    {membershipAction?.type === 'add' ? 'Inviting...' : 'Invite'}
                   </Button>
                 </Stack>
               </Card>
@@ -573,74 +654,164 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
               {membershipsLoading ? (
                 <CircularProgress />
               ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 700 }}>Member</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          Actions
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {memberships.map((membership) => {
-                        const displayName = membership.username || membership.userId || 'Member';
-                        return (
-                          <TableRow key={membership.membershipId}>
-                            <TableCell>
-                              <Stack direction="row" spacing={2} alignItems="center">
-                                <Avatar sx={{ width: 32, height: 32 }}>{displayName.charAt(0).toUpperCase()}</Avatar>
-                                <Typography variant="body2">{displayName}</Typography>
-                              </Stack>
-                            </TableCell>
-                            <TableCell>
-                              {membership.userId === session?.user?.userId ? (
-                                <Chip label={membership.role} size="small" color="primary" />
-                              ) : (
-                                <Select
-                                  value={membership.role}
-                                  onChange={(e) =>
-                                    handleUpdateMemberRole(membership.membershipId, e.target.value as OrganizationRole)
-                                  }
-                                  size="small"
-                                  sx={{ minWidth: 120 }}
-                                >
-                                  <MenuItem value={OrganizationRole.Member}>Member</MenuItem>
-                                  <MenuItem value={OrganizationRole.Moderator}>Moderator</MenuItem>
-                                  <MenuItem value={OrganizationRole.Host}>Host</MenuItem>
-                                  <MenuItem value={OrganizationRole.Admin}>Admin</MenuItem>
-                                  <MenuItem value={OrganizationRole.Owner}>Owner</MenuItem>
-                                </Select>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                {new Date(membership.joinedAt).toLocaleDateString()}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              {membership.userId !== session?.user?.userId && (
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleRemoveMember(membership.membershipId)}
-                                >
-                                  <Close />
-                                </IconButton>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <>
+                  {membershipActionLabel && (
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                      <CircularProgress size={20} />
+                      <Typography variant="body2" color="text.secondary">
+                        {membershipActionLabel}
+                      </Typography>
+                    </Stack>
+                  )}
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 700 }}>Member</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 700 }}>
+                            Actions
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {memberships.map((membership) => {
+                          const displayName = membership.username || membership.userId || 'Member';
+                          return (
+                            <TableRow key={membership.membershipId}>
+                              <TableCell>
+                                <Stack direction="row" spacing={2} alignItems="center">
+                                  <Avatar sx={{ width: 32, height: 32 }}>{displayName.charAt(0).toUpperCase()}</Avatar>
+                                  <Typography variant="body2">{displayName}</Typography>
+                                </Stack>
+                              </TableCell>
+                              <TableCell>
+                                {membership.userId === session?.user?.userId ? (
+                                  <Chip label={membership.role} size="small" color="primary" />
+                                ) : (
+                                  <Select
+                                    value={membership.role}
+                                    onChange={(e) => promptRoleChange(membership, e.target.value as OrganizationRole)}
+                                    disabled={isMembershipActionInProgress}
+                                    size="small"
+                                    sx={{ minWidth: 120 }}
+                                  >
+                                    <MenuItem value={OrganizationRole.Member}>Member</MenuItem>
+                                    <MenuItem value={OrganizationRole.Moderator}>Moderator</MenuItem>
+                                    <MenuItem value={OrganizationRole.Host}>Host</MenuItem>
+                                    <MenuItem value={OrganizationRole.Admin}>Admin</MenuItem>
+                                    <MenuItem value={OrganizationRole.Owner}>Owner</MenuItem>
+                                  </Select>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="text.secondary">
+                                  {new Date(membership.joinedAt).toLocaleDateString()}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                {membership.userId !== session?.user?.userId && (
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => promptRemoveMember(membership)}
+                                    disabled={isMembershipActionInProgress}
+                                  >
+                                    <Close />
+                                  </IconButton>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
               )}
             </CardContent>
           </TabPanel>
+
+          <Dialog
+            open={Boolean(pendingMembershipConfirmation)}
+            onClose={() => setPendingMembershipConfirmation(null)}
+            maxWidth="xs"
+            fullWidth
+          >
+            <DialogTitle>
+              {pendingMembershipConfirmation?.type === 'add'
+                ? 'Confirm invite'
+                : pendingMembershipConfirmation?.type === 'remove'
+                  ? 'Confirm removal'
+                  : 'Confirm role change'}
+            </DialogTitle>
+            <DialogContent>
+              {pendingMembershipConfirmation?.type === 'add' && (
+                <>
+                  <Typography variant="body2">
+                    You are about to invite{' '}
+                    <strong>
+                      {pendingMembershipConfirmation.user.username ||
+                        pendingMembershipConfirmation.user.email ||
+                        'this user'}
+                    </strong>{' '}
+                    as <strong>{pendingMembershipConfirmation.role}</strong>.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    They will receive access to the organization immediately after the invite succeeds.
+                  </Typography>
+                </>
+              )}
+              {pendingMembershipConfirmation?.type === 'role' && (
+                <>
+                  <Typography variant="body2">
+                    You are about to change{' '}
+                    <strong>
+                      {pendingMembershipConfirmation.membership.username ||
+                        pendingMembershipConfirmation.membership.userId ||
+                        'this member'}
+                    </strong>{' '}
+                    from <strong>{pendingMembershipConfirmation.membership.role}</strong> to{' '}
+                    <strong>{pendingMembershipConfirmation.newRole}</strong>.
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    This will update their permissions inside the organization.
+                  </Typography>
+                </>
+              )}
+              {pendingMembershipConfirmation?.type === 'remove' && (
+                <>
+                  <Typography variant="body2">
+                    You are about to remove{' '}
+                    <strong>
+                      {pendingMembershipConfirmation.membership.username ||
+                        pendingMembershipConfirmation.membership.userId ||
+                        'this member'}
+                    </strong>
+                    .
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Removing them revokes all organization access—this cannot be undone.
+                  </Typography>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setPendingMembershipConfirmation(null)} disabled={isMembershipActionInProgress}>
+                Cancel
+              </Button>
+              <Button onClick={confirmMembershipChange} variant="contained" disabled={isMembershipActionInProgress}>
+                {membershipAction?.type === 'add'
+                  ? 'Inviting...'
+                  : membershipAction?.type === 'remove'
+                    ? 'Removing...'
+                    : membershipAction?.type === 'update'
+                      ? 'Updating...'
+                      : 'Confirm'}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Danger Zone Tab */}
           <TabPanel value={activeTab} index={2}>

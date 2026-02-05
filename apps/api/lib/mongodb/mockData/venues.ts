@@ -1,7 +1,8 @@
 import { VenueType } from '@ntlango/commons/types';
 
 export type VenueSeedData = {
-  orgIndex: number;
+  orgSlug: string;
+  slug: string;
   type: VenueType;
   name: string;
   address?: {
@@ -24,7 +25,8 @@ export type VenueSeedData = {
 
 const venues: VenueSeedData[] = [
   {
-    orgIndex: 0,
+    orgSlug: 'signal-studios',
+    slug: 'signal-loft',
     type: VenueType.Physical,
     name: 'Signal Loft',
     address: {
@@ -48,7 +50,8 @@ const venues: VenueSeedData[] = [
     ],
   },
   {
-    orgIndex: 1,
+    orgSlug: 'harbour-collective',
+    slug: 'harbour-house',
     type: VenueType.Hybrid,
     name: 'Harbour House',
     address: {
@@ -69,7 +72,8 @@ const venues: VenueSeedData[] = [
     ],
   },
   {
-    orgIndex: 2,
+    orgSlug: 'emergent-labs',
+    slug: 'emergent-labs-digital-studio',
     type: VenueType.Virtual,
     name: 'Emergent Labs Digital Studio',
     address: {
@@ -89,7 +93,8 @@ const venues: VenueSeedData[] = [
     ],
   },
   {
-    orgIndex: 3,
+    orgSlug: 'streetcar-society',
+    slug: 'streetcar-platform',
     type: VenueType.Physical,
     name: 'Streetcar Platform',
     address: {
@@ -113,7 +118,8 @@ const venues: VenueSeedData[] = [
     ],
   },
   {
-    orgIndex: 4,
+    orgSlug: 'veld-wellness-collective',
+    slug: 'veld-field-pavilion',
     type: VenueType.Physical,
     name: 'Veld Field Pavilion',
     address: {
