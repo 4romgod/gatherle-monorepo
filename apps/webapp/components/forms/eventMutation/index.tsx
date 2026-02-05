@@ -10,6 +10,7 @@ import {
   Select,
   InputLabel,
   FormControl,
+  FormHelperText,
   Box,
   SelectChangeEvent,
   Card,
@@ -29,6 +30,7 @@ import {
   Link as LinkIcon,
   Save,
 } from '@mui/icons-material';
+import { useQuery } from '@apollo/client';
 import {
   CreateEventInput,
   EventPrivacySetting,
@@ -36,6 +38,7 @@ import {
   EventVisibility,
   EventLifecycleStatus,
   Location,
+  OrganizationRole,
 } from '@/data/graphql/types/graphql';
 import { EventMutationFormProps, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import CategoryFilter from '@/components/events/filters/category';
@@ -44,10 +47,21 @@ import EventDateInput from './EventDateInput';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { usePersistentState } from '@/hooks';
 import { useSession } from 'next-auth/react';
+import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
+import { getAuthHeader } from '@/lib/utils/auth';
+
+const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
 export default function EventMutationForm({ categoryList, event }: EventMutationFormProps) {
   const isEditMode = !!event;
   const { data: sessionData, status: sessionStatus } = useSession();
+  const { data: myOrganizationsData, loading: myOrganizationsLoading } = useQuery(GetMyOrganizationsDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip: sessionStatus !== 'authenticated',
+    context: {
+      headers: getAuthHeader(sessionData?.user?.token),
+    },
+  });
 
   const defaultEventData = useMemo<CreateEventInput>(() => {
     return {
@@ -74,7 +88,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       privacySetting: event?.privacySetting ?? EventPrivacySetting.Public,
       eventLink: event?.eventLink ?? '',
       heroImage: event?.heroImage ?? '',
-      orgId: undefined,
+      orgId: event?.orgId ?? undefined,
       venueId: event?.venueId,
       locationSnapshot: undefined,
       primarySchedule: undefined,
@@ -97,6 +111,24 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
   // Use default data during SSR and initial render to prevent hydration mismatch
   const displayEventData = isHydrated ? eventData : defaultEventData;
+
+  const eligibleOrganizations = (myOrganizationsData?.readMyOrganizations ?? []).filter((membership) =>
+    EVENT_ORGANIZATION_ROLES.has(membership.role),
+  );
+
+  const organizationHelperText = myOrganizationsLoading
+    ? 'Loading your organizations...'
+    : eligibleOrganizations.length > 0
+      ? 'Owner, Admin, or Host roles can attach this organization to the event.'
+      : 'No organizations with the required role were found.';
+
+  const handleOrganizationChange = (event: SelectChangeEvent<string>) => {
+    const value = event.target.value;
+    setEventData((prev) => ({
+      ...prev,
+      orgId: value || undefined,
+    }));
+  };
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDiscardDialogOpen, setDiscardDialogOpen] = useState(false);
@@ -207,6 +239,27 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 : 'Fill in the details below to create an amazing event that people will love to attend'}
             </Typography>
           </Box>
+
+          <FormControl fullWidth disabled={myOrganizationsLoading}>
+            <InputLabel id="organization-select-label">Organization</InputLabel>
+            <Select
+              labelId="organization-select-label"
+              label="Organization"
+              value={displayEventData.orgId ?? ''}
+              onChange={handleOrganizationChange}
+              sx={{ minWidth: 120 }}
+            >
+              <MenuItem value="">
+                <em>No organization (personal event)</em>
+              </MenuItem>
+              {eligibleOrganizations.map(({ organization, role }) => (
+                <MenuItem key={organization.orgId} value={organization.orgId}>
+                  {organization.name} ({role})
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>{organizationHelperText}</FormHelperText>
+          </FormControl>
 
           {Object.keys(errors).length > 0 && (
             <Alert severity="error" sx={{ borderRadius: 2 }}>

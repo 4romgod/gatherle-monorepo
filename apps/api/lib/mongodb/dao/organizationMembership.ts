@@ -46,6 +46,26 @@ class OrganizationMembershipDAO {
     }
   }
 
+  static async readMembershipsByUserId(userId: string): Promise<OrganizationMembership[]> {
+    try {
+      const memberships = await OrganizationMembershipModel.find({ userId }).exec();
+      return memberships.map((membership) => membership.toObject());
+    } catch (error) {
+      logger.error(`Error reading memberships for user ${userId}`, error);
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readMembershipByOrgIdAndUser(orgId: string, userId: string): Promise<OrganizationMembership | null> {
+    try {
+      const membership = await OrganizationMembershipModel.findOne({ orgId, userId }).exec();
+      return membership ? membership.toObject() : null;
+    } catch (error) {
+      logger.error(`Error reading membership for user ${userId} in org ${orgId}`, error);
+      throw KnownCommonError(error);
+    }
+  }
+
   static async update(input: UpdateOrganizationMembershipInput): Promise<OrganizationMembership> {
     try {
       const { membershipId, ...rest } = input;

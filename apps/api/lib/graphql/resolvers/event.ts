@@ -11,27 +11,47 @@ import {
   EventOrganizer,
   EventParticipant,
   ParticipantStatus,
+  Organization,
+  OrganizationRole,
 } from '@ntlango/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
-import { EventDAO, FollowDAO, EventParticipantDAO } from '@/mongodb/dao';
+import { EventDAO, FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
+import { getAuthenticatedUser } from '@/utils/auth';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
+
+const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
 @Resolver(() => Event)
 export class EventResolver {
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Event, { description: RESOLVER_DESCRIPTIONS.EVENT.createEvent })
-  async createEvent(@Arg('input', () => CreateEventInput) input: CreateEventInput): Promise<Event> {
+  async createEvent(
+    @Arg('input', () => CreateEventInput) input: CreateEventInput,
+    @Ctx() context: ServerContext,
+  ): Promise<Event> {
     validateInput<CreateEventInput>(CreateEventInputSchema, input);
+    const user = getAuthenticatedUser(context);
+    if (input.orgId) {
+      await this.ensureUserCanUseOrganization(input.orgId, user.userId);
+    }
     return EventDAO.create(input);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Event, { description: RESOLVER_DESCRIPTIONS.EVENT.updateEvent })
-  async updateEvent(@Arg('input', () => UpdateEventInput) input: UpdateEventInput): Promise<Event> {
+  async updateEvent(
+    @Arg('input', () => UpdateEventInput) input: UpdateEventInput,
+    @Ctx() context: ServerContext,
+  ): Promise<Event> {
     validateInput<UpdateEventInput>(UpdateEventInputSchema, input);
+    const user = getAuthenticatedUser(context);
+    if (input.orgId) {
+      await this.ensureUserCanUseOrganization(input.orgId, user.userId);
+    }
     return EventDAO.updateEvent(input);
   }
 
@@ -123,6 +143,14 @@ export class EventResolver {
     ) as any;
   }
 
+  @FieldResolver(() => Organization, { nullable: true })
+  async organization(@Root() event: Event, @Ctx() context: ServerContext): Promise<Organization | null> {
+    if (!event.orgId) {
+      return null;
+    }
+    return context.loaders.organization.load(event.orgId);
+  }
+
   /**
    * Field resolver to get participants for this event.
    * If already populated via aggregation pipeline, returns as-is.
@@ -200,5 +228,15 @@ export class EventResolver {
       return null;
     }
     return EventParticipantDAO.readByEventAndUser(event.eventId, context.user.userId);
+  }
+
+  private async ensureUserCanUseOrganization(orgId: string, userId: string): Promise<void> {
+    const membership = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser(orgId, userId);
+    if (!membership || !EVENT_ORGANIZATION_ROLES.has(membership.role)) {
+      throw CustomError(
+        'You do not have permission to create or update events for that organization.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
   }
 }

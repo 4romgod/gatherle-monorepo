@@ -65,6 +65,19 @@ class OrganizationDAO {
     }
   }
 
+  static async readOrganizationsByIds(orgIds: string[]): Promise<Organization[]> {
+    if (orgIds.length === 0) {
+      return [];
+    }
+    try {
+      const organizations = await OrganizationModel.find({ orgId: { $in: orgIds } }).exec();
+      return organizations.map((organization) => organization.toObject());
+    } catch (error) {
+      logger.error('Error reading organizations by ids', error);
+      throw KnownCommonError(error);
+    }
+  }
+
   static async updateOrganization(input: UpdateOrganizationInput): Promise<Organization> {
     try {
       const { orgId, ...rest } = input;

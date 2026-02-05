@@ -3,6 +3,7 @@ import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx } 
 import {
   CreateOrganizationInput,
   FollowTargetType,
+  MyOrganization,
   Organization,
   OrganizationMembership,
   OrganizationRole,
@@ -141,5 +142,35 @@ export class OrganizationResolver {
     @Arg('options', () => QueryOptionsInput, { nullable: true }) options?: QueryOptionsInput,
   ): Promise<Organization[]> {
     return OrganizationDAO.readOrganizations(options);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [MyOrganization], {
+    description: 'Read organizations that the current user belongs to, along with their role.',
+  })
+  async readMyOrganizations(@Ctx() context: ServerContext): Promise<MyOrganization[]> {
+    const user = getAuthenticatedUser(context);
+    const memberships = await OrganizationMembershipDAO.readMembershipsByUserId(user.userId);
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    const organizations = await OrganizationDAO.readOrganizationsByIds(
+      memberships.map((membership) => membership.orgId),
+    );
+    const organizationMap = new Map(organizations.map((organization) => [organization.orgId, organization]));
+
+    return memberships
+      .map((membership) => {
+        const organization = organizationMap.get(membership.orgId);
+        if (!organization) {
+          return null;
+        }
+        return {
+          organization,
+          role: membership.role,
+        };
+      })
+      .filter((entry): entry is MyOrganization => Boolean(entry));
   }
 }

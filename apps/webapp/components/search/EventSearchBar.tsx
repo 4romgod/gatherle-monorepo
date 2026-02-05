@@ -65,6 +65,8 @@ export default function EventSearchBar({
   autoFocus = false,
   variant = 'outlined',
 }: EventSearchBarProps) {
+  const inputId = 'event-search-input';
+  const helperTextId = `${inputId}-helper-text`;
   const [searchInput, setSearchInput] = useState('');
   const [eventOptions, setEventOptions] = useState<Event[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -143,6 +145,8 @@ export default function EventSearchBar({
     <ClickAwayListener onClickAway={handleClickAway}>
       <Box ref={containerRef} sx={{ position: 'relative', width: fullWidth ? '100%' : 'auto' }}>
         <TextField
+          id={inputId}
+          FormHelperTextProps={{ id: helperTextId }}
           value={searchInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
