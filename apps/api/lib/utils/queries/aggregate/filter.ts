@@ -29,7 +29,8 @@ const buildOperatorSymbol = (operator?: FilterOperatorInput) => {
 export const createLocationMatchStage = (location: LocationFilterInput): PipelineStage[] => {
   const { city, state, country, latitude, longitude, radiusKm } = location;
   const stages: PipelineStage[] = [];
-  const textConditions: Record<string, any> = {};
+  type TextCondition = { $regex: string; $options: 'i' };
+  const textConditions: Record<string, TextCondition> = {};
 
   // City/state/country text-based filtering (case-insensitive regex)
   if (city) {

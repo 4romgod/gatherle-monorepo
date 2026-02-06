@@ -9,6 +9,7 @@ import { EventCategory } from './eventCategory';
 import { Location } from './location';
 import { User } from './user';
 import { EventParticipant } from './eventParticipant';
+import { Organization } from './organization';
 
 export enum EventPrivacySetting {
   Public = 'Public',
@@ -224,6 +225,12 @@ export class Event {
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: 'Organization owning the event' })
   orgId?: string;
+
+  @Field(() => Organization, {
+    nullable: true,
+    description: 'Organization that owns this event (resolved via field resolver)',
+  })
+  organization?: Organization;
 
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: 'Hero image for the event' })

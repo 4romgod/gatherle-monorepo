@@ -278,6 +278,10 @@ const isAuthorizedToManageOrganization = async (orgId: string | undefined, user:
     return false;
   }
 
+  if (user.userRole === UserRole.Admin) {
+    return true;
+  }
+
   try {
     // Check if user is the owner
     const organization = await OrganizationDAO.readOrganizationById(orgId);

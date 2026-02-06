@@ -16,7 +16,7 @@ import {
 } from '@ntlango/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
-import { RESOLVER_DESCRIPTIONS } from '@/constants';
+import { HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
 import { EventDAO, FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
@@ -49,7 +49,11 @@ export class EventResolver {
   ): Promise<Event> {
     validateInput<UpdateEventInput>(UpdateEventInputSchema, input);
     const user = getAuthenticatedUser(context);
-    if (input.orgId) {
+    const existingEvent = await EventDAO.readEventById(input.eventId);
+    if (existingEvent.orgId) {
+      await this.ensureUserCanUseOrganization(existingEvent.orgId, user.userId);
+    }
+    if (input.orgId && input.orgId !== existingEvent.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
     return EventDAO.updateEvent(input);
@@ -230,12 +234,13 @@ export class EventResolver {
     return EventParticipantDAO.readByEventAndUser(event.eventId, context.user.userId);
   }
 
-  private async ensureUserCanUseOrganization(orgId: string, userId: string): Promise<void> {
+  public async ensureUserCanUseOrganization(orgId: string, userId: string): Promise<void> {
     const membership = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser(orgId, userId);
     if (!membership || !EVENT_ORGANIZATION_ROLES.has(membership.role)) {
       throw CustomError(
         'You do not have permission to create or update events for that organization.',
         ErrorTypes.UNAUTHORIZED,
+        { http: { status: HttpStatusCode.UNAUTHORIZED } },
       );
     }
   }

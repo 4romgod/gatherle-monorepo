@@ -2,10 +2,11 @@ import request from 'supertest';
 import { kebabCase } from 'lodash';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventDAO, EventCategoryDAO, UserDAO } from '@/mongodb/dao';
+import { EventDAO, EventCategoryDAO, UserDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import { eventsMockData, usersMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken, CreateUserInput } from '@ntlango/commons/types';
-import { SortOrderInput } from '@ntlango/commons/types';
+import { SortOrderInput, OrganizationRole } from '@ntlango/commons/types';
+import { generateToken } from '@/utils/auth';
 import {
   getCreateEventMutation,
   getDeleteEventByIdMutation,
@@ -25,6 +26,12 @@ describe('Event Resolver', () => {
   const testEventTitle = 'Test Event Title';
   const testEventSlug = kebabCase(testEventTitle);
   const testEventDescription = 'Test Event Description';
+  const createdOrgIds: string[] = [];
+  const createdMembershipIds: string[] = [];
+  const cleanupUserEmails: string[] = [];
+  const randomId = () => Math.random().toString(36).slice(2, 7);
+  const uniqueEmail = (prefix: string) => `${prefix}-${Date.now()}-${randomId()}@example.com`;
+  const uniqueUsername = (prefix: string) => `${prefix}-${randomId()}`;
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
@@ -70,6 +77,11 @@ describe('Event Resolver', () => {
   afterAll(async () => {
     await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategory.slug);
     await UserDAO.deleteUserByEmail(testUser.email).catch(() => {});
+    await Promise.all(
+      createdMembershipIds.map((membershipId) => OrganizationMembershipDAO.delete(membershipId).catch(() => {})),
+    );
+    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
+    await Promise.all(cleanupUserEmails.map((email) => UserDAO.deleteUserByEmail(email).catch(() => {})));
     await stopIntegrationServer(server);
   });
 
@@ -442,6 +454,101 @@ describe('Event Resolver', () => {
       expect(response.status).toBe(403);
 
       await UserDAO.deleteUserByEmail(otherUser.email).catch(() => {});
+    });
+  });
+
+  describe('organization authorization guards', () => {
+    it('returns UNAUTHORIZED when user does not have the required org role and succeeds after upgrading the role', async () => {
+      const orgOwner = await UserDAO.create({
+        ...usersMockData[4],
+        email: uniqueEmail('org-owner'),
+        username: uniqueUsername('orgOwner'),
+      });
+      cleanupUserEmails.push(orgOwner.email);
+
+      const organization = await OrganizationDAO.create({
+        name: `org-guard-${randomId()}`,
+        ownerId: orgOwner.userId,
+      });
+      createdOrgIds.push(organization.orgId);
+
+      const membership = await OrganizationMembershipDAO.create({
+        orgId: organization.orgId,
+        userId: testUser.userId,
+        role: OrganizationRole.Member,
+      });
+      createdMembershipIds.push(membership.membershipId);
+
+      const input = buildEventInput();
+      input.orgId = organization.orgId;
+
+      const unauthorizedResponse = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + testUser.token)
+        .send(getCreateEventMutation(input));
+      expect(unauthorizedResponse.status).toBe(403);
+      expect(unauthorizedResponse.body.errors?.[0]?.extensions?.code).toBe('UNAUTHORIZED');
+
+      await OrganizationMembershipDAO.update({
+        membershipId: membership.membershipId,
+        role: OrganizationRole.Host,
+      });
+
+      const allowedResponse = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + testUser.token)
+        .send(getCreateEventMutation(input));
+      expect(allowedResponse.status).toBe(200);
+    });
+
+    it('prevents users who lack membership in the current org from removing it from an event', async () => {
+      const orgOwner = await UserDAO.create({
+        ...usersMockData[5],
+        email: uniqueEmail('org-owner'),
+        username: uniqueUsername('orgOwner'),
+      });
+      cleanupUserEmails.push(orgOwner.email);
+
+      const organization = await OrganizationDAO.create({
+        name: `org-guard-remove-${randomId()}`,
+        ownerId: orgOwner.userId,
+      });
+      createdOrgIds.push(organization.orgId);
+
+      const hostMembership = await OrganizationMembershipDAO.create({
+        orgId: organization.orgId,
+        userId: testUser.userId,
+        role: OrganizationRole.Host,
+      });
+      createdMembershipIds.push(hostMembership.membershipId);
+
+      const createdEvent = (
+        await request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + testUser.token)
+          .send(getCreateEventMutation({ ...buildEventInput(), orgId: organization.orgId }))
+      ).body.data.createEvent;
+
+      const otherUser = await UserDAO.create({
+        ...usersMockData[6],
+        email: uniqueEmail('other-user'),
+        username: uniqueUsername('otherUser'),
+      });
+      cleanupUserEmails.push(otherUser.email);
+      const otherToken = await generateToken(otherUser);
+
+      const removeOrgResponse = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + otherToken)
+        .send(
+          getUpdateEventMutation({
+            eventId: createdEvent.eventId,
+            orgId: null,
+          }),
+        );
+
+      expect(removeOrgResponse.status).toBe(403);
+      expect(removeOrgResponse.body.errors?.[0]?.extensions?.code).toBe('UNAUTHORIZED');
     });
   });
 });

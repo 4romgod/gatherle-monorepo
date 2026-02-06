@@ -2,13 +2,14 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { OrganizationDAO } from '@/mongodb/dao';
+import { OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import { usersMockData } from '@/mongodb/mockData';
 import { generateToken } from '@/utils/auth';
 import type { User, UserWithToken } from '@ntlango/commons/types';
-import { UserRole } from '@ntlango/commons/types';
+import { UserRole, OrganizationRole } from '@ntlango/commons/types';
 import {
   getCreateOrganizationMutation,
+  getReadMyOrganizationsQuery,
   getReadOrganizationByIdQuery,
   getReadOrganizationBySlugQuery,
   getReadOrganizationsQuery,
@@ -22,6 +23,8 @@ describe('Organization Resolver', () => {
   const TEST_PORT = 5003;
   let adminUser: UserWithToken;
   const createdOrgIds: string[] = [];
+  const createdMembershipIds: string[] = [];
+  const randomId = () => Math.random().toString(36).slice(2, 8);
 
   const buildOrganizationInput = (name: string) => ({
     name,
@@ -62,6 +65,10 @@ describe('Organization Resolver', () => {
   });
 
   afterEach(async () => {
+    await Promise.all(
+      createdMembershipIds.map((membershipId) => OrganizationMembershipDAO.delete(membershipId).catch(() => {})),
+    );
+    createdMembershipIds.length = 0;
     await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
     createdOrgIds.length = 0;
   });
@@ -183,6 +190,54 @@ describe('Organization Resolver', () => {
       expect(response.body.data.createOrganization.name).toBe(testName);
       createdOrgIds.push(response.body.data.createOrganization.orgId);
     });
+
+    it('returns the user’s organizations with associated roles', async () => {
+      const org1 = await OrganizationDAO.create({
+        name: `read-my-org-1-${randomId()}`,
+        ownerId: adminUser.userId,
+      });
+      createdOrgIds.push(org1.orgId);
+
+      const membership1 = await OrganizationMembershipDAO.create({
+        orgId: org1.orgId,
+        userId: adminUser.userId,
+        role: OrganizationRole.Admin,
+      });
+      createdMembershipIds.push(membership1.membershipId);
+
+      const org2 = await OrganizationDAO.create({
+        name: `read-my-org-2-${randomId()}`,
+        ownerId: adminUser.userId,
+      });
+      createdOrgIds.push(org2.orgId);
+
+      const membership2 = await OrganizationMembershipDAO.create({
+        orgId: org2.orgId,
+        userId: adminUser.userId,
+        role: OrganizationRole.Member,
+      });
+      createdMembershipIds.push(membership2.membershipId);
+
+      const response = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + adminUser.token)
+        .send(getReadMyOrganizationsQuery());
+
+      expect(response.status).toBe(200);
+      const myOrgs = response.body.data.readMyOrganizations;
+      expect(myOrgs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: OrganizationRole.Admin,
+            organization: expect.objectContaining({ orgId: org1.orgId }),
+          }),
+          expect.objectContaining({
+            role: OrganizationRole.Member,
+            organization: expect.objectContaining({ orgId: org2.orgId }),
+          }),
+        ]),
+      );
+    });
   });
 
   describe('Negative', () => {
@@ -208,18 +263,21 @@ describe('Organization Resolver', () => {
       expect(response.status).toBe(400);
     });
 
-    it('returns validation error for invalid ownerId', async () => {
+    it('overrides provided ownerId with the authenticated user', async () => {
       const response = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
         .send(
           getCreateOrganizationMutation({
-            name: 'Invalid Owner',
+            name: 'Invalid Owner Override',
             ownerId: 'invalid-id',
           }),
         );
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(200);
+      const organization = response.body.data.createOrganization;
+      expect(organization.ownerId).toBe(adminUser.userId);
+      createdOrgIds.push(organization.orgId);
     });
 
     it('returns conflict when duplicate organization name is used', async () => {

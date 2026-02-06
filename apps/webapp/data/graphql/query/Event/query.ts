@@ -49,12 +49,6 @@ export const GetAllEventsDocument = graphql(`
         name
         logo
       }
-      organization {
-        orgId
-        slug
-        name
-        logo
-      }
       media {
         featuredImageUrl
       }
@@ -230,6 +224,13 @@ export const GetEventsByVenueDocument = graphql(`
       }
       recurrenceRule
       heroImage
+      orgId
+      organization {
+        orgId
+        slug
+        name
+        logo
+      }
       media {
         featuredImageUrl
       }

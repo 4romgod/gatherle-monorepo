@@ -54,3 +54,18 @@ export const getReadOrganizationsWithOptionsQuery = (options: any) => ({
     options,
   },
 });
+
+export const getReadMyOrganizationsQuery = () => ({
+  query: `
+    query ReadMyOrganizations {
+      readMyOrganizations {
+        role
+        organization {
+          orgId
+          slug
+          name
+        }
+      }
+    }
+  `,
+});

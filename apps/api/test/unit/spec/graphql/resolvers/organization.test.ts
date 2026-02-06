@@ -21,9 +21,11 @@ jest.mock('@/mongodb/dao', () => ({
     readOrganizationById: jest.fn(),
     readOrganizationBySlug: jest.fn(),
     readOrganizations: jest.fn(),
+    readOrganizationsByIds: jest.fn(),
   },
   OrganizationMembershipDAO: {
     readMembershipsByOrgId: jest.fn(),
+    readMembershipsByUserId: jest.fn(),
   },
   FollowDAO: {
     countFollowers: jest.fn(),
@@ -219,6 +221,39 @@ describe('OrganizationResolver', () => {
 
       expect(OrganizationDAO.readOrganizations).toHaveBeenCalledWith(options);
       expect(result).toEqual([mockOrganization]);
+    });
+  });
+
+  describe('readMyOrganizations', () => {
+    it('returns an empty array when the user has no memberships', async () => {
+      (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
+
+      const result = await resolver.readMyOrganizations(mockContext);
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns organizations paired with user roles', async () => {
+      const memberships = [
+        {
+          membershipId: 'membership-1',
+          orgId: mockOrganization.orgId,
+          userId: mockContext.user?.userId ?? '',
+          role: OrganizationRole.Host,
+          joinedAt: new Date(),
+        },
+      ];
+      const organizations: Organization[] = [mockOrganization];
+      (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue(memberships);
+      (OrganizationDAO.readOrganizationsByIds as jest.Mock).mockResolvedValue(organizations);
+
+      const result = await resolver.readMyOrganizations(mockContext);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        role: OrganizationRole.Host,
+        organization: mockOrganization,
+      });
     });
   });
 });

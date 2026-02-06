@@ -46,12 +46,16 @@ export const CustomError = (
   errorType: CustomErrorType,
   extensions?: GraphQLErrorExtensions,
 ): GraphQLError => {
+  const httpExtension = (extensions?.http ?? {}) as Record<string, unknown> & { status?: number };
+  const overrideHttpStatus = httpExtension.status;
+  const httpStatus = typeof overrideHttpStatus === 'number' ? overrideHttpStatus : errorType.errorStatus;
   return new GraphQLError(errorMessage, {
     extensions: {
       ...(extensions && { ...extensions }),
       code: errorType.errorCode,
       http: {
-        status: errorType.errorStatus,
+        ...httpExtension,
+        status: httpStatus,
       },
     },
   });

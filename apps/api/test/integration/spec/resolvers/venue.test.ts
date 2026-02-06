@@ -25,6 +25,7 @@ describe('Venue Resolver', () => {
   let adminUser: UserWithToken;
   const createdVenueIds: string[] = [];
   const createdOrgIds: string[] = [];
+  const randomId = () => Math.random().toString(36).slice(2, 7);
 
   const createOrganization = async (name: string) => {
     const response = await request(url)
@@ -50,7 +51,7 @@ describe('Venue Resolver', () => {
         getCreateVenueMutation({
           orgId,
           type: VenueType.Physical,
-          name: 'Integration Venue',
+          name: `Integration Venue ${randomId()}`,
           address: {
             city: 'Cape Town',
             country: 'South Africa',

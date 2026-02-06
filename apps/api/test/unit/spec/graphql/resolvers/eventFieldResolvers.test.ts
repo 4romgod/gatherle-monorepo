@@ -1,7 +1,7 @@
 import { EventResolver } from '@/graphql/resolvers/event';
-import { FollowDAO, EventParticipantDAO } from '@/mongodb/dao';
-import type { Event, EventCategory, User, EventParticipant } from '@ntlango/commons/types';
-import { ParticipantStatus } from '@ntlango/commons/types';
+import { FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import type { Event, EventCategory, User, EventParticipant, OrganizationMembership } from '@ntlango/commons/types';
+import { ParticipantStatus, OrganizationRole } from '@ntlango/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
 
@@ -13,6 +13,9 @@ jest.mock('@/mongodb/dao', () => ({
   EventParticipantDAO: {
     countByEvent: jest.fn(),
     readByEventAndUser: jest.fn(),
+  },
+  OrganizationMembershipDAO: {
+    readMembershipByOrgIdAndUser: jest.fn(),
   },
 }));
 
@@ -346,6 +349,57 @@ describe('EventResolver Field Resolvers', () => {
 
       expect(EventParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
       expect(result).toBeNull();
+    });
+  });
+
+  describe('ensureUserCanUseOrganization helper', () => {
+    const orgId = 'org-123';
+    const userId = 'user-123';
+    let ensureAccess: (orgId: string, userId: string) => Promise<void>;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      ensureAccess = resolver.ensureUserCanUseOrganization.bind(resolver);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('throws when the user has no membership for the org', async () => {
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue(null);
+
+      await expect(ensureAccess(orgId, userId)).rejects.toThrow(
+        'You do not have permission to create or update events for that organization.',
+      );
+    });
+
+    it('throws when the membership role is not allowed', async () => {
+      const membership: OrganizationMembership = {
+        membershipId: 'membership-1',
+        orgId,
+        userId,
+        role: OrganizationRole.Member,
+        joinedAt: new Date(),
+      };
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue(membership);
+
+      await expect(ensureAccess(orgId, userId)).rejects.toThrow(
+        'You do not have permission to create or update events for that organization.',
+      );
+    });
+
+    it('resolves when the membership role is allowed', async () => {
+      const membership: OrganizationMembership = {
+        membershipId: 'membership-2',
+        orgId,
+        userId,
+        role: OrganizationRole.Host,
+        joinedAt: new Date(),
+      };
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue(membership);
+
+      await expect(ensureAccess(orgId, userId)).resolves.toBeUndefined();
     });
   });
 });
