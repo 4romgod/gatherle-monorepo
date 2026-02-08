@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import Surface from '@/components/core/Surface';
 import { Organization, OrganizationRole } from '@/data/graphql/types/graphql';
@@ -13,10 +13,10 @@ export type OrganizationCardProps = {
 };
 
 const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => {
-  const theme = useTheme();
   const { name, slug, description, logo, tags, followersCount, isFollowable } = organization;
   const canManage =
     Boolean(slug) && Boolean(userRole) && (userRole === OrganizationRole.Owner || userRole === OrganizationRole.Admin);
+
   const manageHref = slug ? ROUTES.ACCOUNT.ORGANIZATIONS.SETTINGS(slug) : ROUTES.ACCOUNT.ORGANIZATIONS.ROOT;
   const roleColor = userRole === OrganizationRole.Owner ? 'primary' : 'secondary';
   return (

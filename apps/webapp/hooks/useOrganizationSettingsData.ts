@@ -18,7 +18,6 @@ import type {
   QueryOptionsInput,
   User,
 } from '@/data/graphql/types/graphql';
-import { FilterOperatorInput } from '@/data/graphql/types/graphql';
 import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
 import { getAuthHeader } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -168,13 +167,10 @@ export default function useOrganizationSettingsData(slug: string) {
 
       const options: QueryOptionsInput = {
         pagination: { limit: 50 },
-        filters: [
-          {
-            field: 'username,email,given_name,family_name',
-            operator: FilterOperatorInput.Search,
-            value: trimmed,
-          },
-        ],
+        search: {
+          fields: ['username', 'email', 'given_name', 'family_name'],
+          value: trimmed,
+        },
       };
 
       const { data } = await searchUsersQuery({

@@ -1,5 +1,5 @@
 import * as HeroIcons from '@heroicons/react/24/solid';
-import { Event, Business, Place, People, Category, Security } from '@mui/icons-material';
+import { Event, Business, Place, People, Category } from '@mui/icons-material';
 import { ROUTES } from './routes';
 
 export type EventCategoryIconComponents = {

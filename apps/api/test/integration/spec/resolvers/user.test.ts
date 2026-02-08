@@ -198,6 +198,20 @@ describe('User Resolver', () => {
         const found = users.find((user: any) => user.userId === createdUser.userId);
         expect(found).toBeDefined();
       });
+
+      it('should retrieve users with text search options', async () => {
+        const options: QueryOptionsInput = {
+          search: {
+            fields: ['username', 'email'],
+            value: testUsername.toLowerCase(),
+          },
+        };
+        const response = await request(url).post('').send(getReadUsersWithOptionsQuery(options));
+        expect(response.status).toBe(200);
+        const users = response.body.data.readUsers;
+        const found = users.find((user: any) => user.userId === createdUser.userId);
+        expect(found).toBeDefined();
+      });
     });
 
     describe('Read User Queries', () => {

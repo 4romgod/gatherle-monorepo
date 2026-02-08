@@ -361,10 +361,17 @@ export const QUERY_DESCRIPTIONS = {
   },
   FILTER: {
     INPUT: 'Filter options for querying specific fields',
-    OPERATOR: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte', 'search')",
+    OPERATOR: "The operator to apply ('eq', 'ne', 'gt', 'lt', 'gte', 'lte')",
     SELECTOR_OPERATOR: "The selector operator to apply ('and', 'nor', 'or', 'search', 'caseSensitive')",
     FIELD: 'The field to filter by',
     VALUE: 'The value to filter by, (e.g. {"field": "name", "value": "Midoriya"})',
+  },
+  SEARCH: {
+    INPUT: 'Text search options for matching a value across multiple fields (case-insensitive by default).',
+    OPTIONS: 'Text search metadata for free-text queries.',
+    FIELDS: 'Fields to search within (provide at least one).',
+    VALUE: 'Text to match against the provided fields.',
+    CASE_SENSITIVE: 'Set to true to force case-sensitive matching.',
   },
   PAGINATION: {
     INPUT: 'Pagination options for limiting and skipping results',

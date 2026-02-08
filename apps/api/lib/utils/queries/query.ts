@@ -1,7 +1,30 @@
-import type { FilterInput, PaginationInput, QueryOptionsInput, SortInput } from '@ntlango/commons/types';
+import type {
+  FilterInput,
+  PaginationInput,
+  QueryOptionsInput,
+  SortInput,
+  TextSearchInput,
+} from '@ntlango/commons/types';
 import type { Model, Query } from 'mongoose';
+import { CustomError, ErrorTypes } from '../exceptions';
+import { buildTextSearchRegex } from './text-search';
 
-const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const addTextSearchToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, textSearch: TextSearchInput) => {
+  const trimmed = textSearch.value?.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const terms = textSearch.fields.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+
+  if (terms.length === 0) {
+    throw CustomError('Text search requires at least one field to search against.', ErrorTypes.BAD_REQUEST);
+  }
+  
+  const regex = buildTextSearchRegex(trimmed, textSearch.caseSensitive);
+
+  query.or(terms.map((targetField) => ({ [targetField]: regex })));
+};
 
 export const addSortToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, sortInput: SortInput[]) => {
   const sortOptions: Record<string, 1 | -1> = {};
@@ -47,25 +70,6 @@ export const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, 
         case 'lte':
           query.lte(field, value);
           break;
-        case 'search': {
-          if (typeof value !== 'string' || value.trim().length === 0) {
-            break;
-          }
-
-          const terms = field
-            .split(',')
-            .map((entry) => entry.trim())
-            .filter(Boolean);
-          const regex = new RegExp(escapeRegex(value.trim()), 'i');
-
-          if (terms.length <= 1) {
-            const targetField = terms[0] ?? field;
-            query.where(targetField).regex(regex);
-          } else {
-            query.or(terms.map((targetField) => ({ [targetField]: regex })));
-          }
-          break;
-        }
         default:
           query.where(field).equals(value);
           break;
@@ -81,6 +85,10 @@ export const transformOptionsToQuery = <T>(model: Model<T>, options: QueryOption
 
   if (filters) {
     addFiltersToQuery(query, filters);
+  }
+
+  if (options.search) {
+    addTextSearchToQuery(query, options.search);
   }
 
   if (sort) {

@@ -1,6 +1,6 @@
-import { createEventPipelineStages, createLocationMatchStage } from '@/utils';
+import { createEventPipelineStages, createLocationMatchStage, createTextSearchMatchStage } from '@/utils';
 import type { PipelineStage } from 'mongoose';
-import type { FilterInput, LocationFilterInput } from '@ntlango/commons/types';
+import type { FilterInput, LocationFilterInput, TextSearchInput } from '@ntlango/commons/types';
 import { FilterOperatorInput } from '@ntlango/commons/types';
 
 describe('createEventPipelineStages', () => {
@@ -326,5 +326,51 @@ describe('createLocationMatchStage', () => {
         },
       },
     ]);
+  });
+});
+
+describe('createTextSearchMatchStage', () => {
+  it('should return null when the search value is empty', () => {
+    const search: TextSearchInput = { fields: ['title'], value: '   ' };
+
+    const stage = createTextSearchMatchStage(search);
+
+    expect(stage).toBeNull();
+  });
+
+  it('should throw when no fields are provided', () => {
+    const search: TextSearchInput = { fields: ['   ', ''], value: 'Jazz' };
+
+    expect(() => createTextSearchMatchStage(search)).toThrow(
+      'Text search requires at least one field to search against.',
+    );
+  });
+
+  it('should build a match stage for a single field', () => {
+    const search: TextSearchInput = { fields: ['title'], value: 'Jazz' };
+
+    const stage = createTextSearchMatchStage(search) as PipelineStage.Match;
+
+    expect(stage.$match).toHaveProperty('title');
+    expect(stage.$match.title).toBeInstanceOf(RegExp);
+    expect((stage.$match.title as RegExp).flags).toContain('i');
+  });
+
+  it('should build an $or match for multiple fields with case sensitivity', () => {
+    const search: TextSearchInput = {
+      fields: ['title', 'description'],
+      value: 'Jazz',
+      caseSensitive: true,
+    };
+
+    const stage = createTextSearchMatchStage(search) as PipelineStage.Match;
+
+    expect(stage.$match).toHaveProperty('$or');
+    expect(stage.$match.$or).toHaveLength(2);
+    const [first, second] = stage.$match.$or as Array<Record<string, RegExp>>;
+    expect(first.title).toBeInstanceOf(RegExp);
+    expect(first.title.flags).toBe('');
+    expect(second.description).toBeInstanceOf(RegExp);
+    expect(second.description.flags).toBe('');
   });
 });

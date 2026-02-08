@@ -136,21 +136,6 @@ describe('Query', () => {
       expect(mockQuery.where).toHaveBeenCalledWith('status');
       expect(mockQuery.equals).toHaveBeenCalledWith('Completed');
     });
-
-    it('should add "search" filter with multi-field OR', () => {
-      const mockQuery = { or: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
-      const filters: FilterInput[] = [
-        {
-          field: 'username,email',
-          value: 'Ali',
-          operator: FilterOperatorInput.search,
-        },
-      ];
-
-      addFiltersToQuery(mockQuery, filters);
-
-      expect(mockQuery.or).toHaveBeenCalledWith([{ username: expect.any(RegExp) }, { email: expect.any(RegExp) }]);
-    });
   });
 
   describe('transformOptionsToQuery', () => {
@@ -161,14 +146,20 @@ describe('Query', () => {
       select: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       equals: jest.fn().mockReturnThis(),
+      regex: jest.fn().mockReturnThis(),
       sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
     });
-    const find = jest.fn().mockReturnValue(createMockSuccessMongooseQuery({}));
-    const mockModel = { find } as unknown as Model<any>;
+    const buildMockModel = () => {
+      const mockQuery = createMockSuccessMongooseQuery({});
+      const find = jest.fn().mockReturnValue(mockQuery);
+      return { mockModel: { find } as unknown as Model<any>, mockQuery };
+    };
 
     it('should add filters, sort, and pagination to the query', () => {
+      const { mockModel } = buildMockModel();
       const options = {
         filters: [
           {
@@ -191,9 +182,69 @@ describe('Query', () => {
     });
 
     it('should handle missing options gracefully', () => {
+      const { mockModel } = buildMockModel();
       const options = {};
       transformOptionsToQuery(mockModel, options);
       expect(mockModel.find).toHaveBeenCalled();
+    });
+
+    it('should apply text search when provided', () => {
+      const { mockModel, mockQuery } = buildMockModel();
+      const options = {
+        search: {
+          fields: ['username', 'email'],
+          value: 'Ali',
+        },
+      };
+
+      transformOptionsToQuery(mockModel, options);
+
+      expect(mockQuery.or).toHaveBeenCalledWith([{ username: expect.any(RegExp) }, { email: expect.any(RegExp) }]);
+    });
+
+    it('should apply text search via or for a single field', () => {
+      const { mockModel, mockQuery } = buildMockModel();
+      const options = {
+        search: {
+          fields: ['username'],
+          value: 'Ali',
+        },
+      };
+
+      transformOptionsToQuery(mockModel, options);
+
+      expect(mockQuery.or).toHaveBeenCalledWith([{ username: expect.any(RegExp) }]);
+      expect(mockQuery.where).not.toHaveBeenCalled();
+      expect(mockQuery.regex).not.toHaveBeenCalled();
+    });
+
+    it('should skip text search when value is blank', () => {
+      const { mockModel, mockQuery } = buildMockModel();
+      const options = {
+        search: {
+          fields: ['username'],
+          value: '   ',
+        },
+      };
+
+      transformOptionsToQuery(mockModel, options);
+
+      expect(mockQuery.or).not.toHaveBeenCalled();
+      expect(mockQuery.where).not.toHaveBeenCalled();
+    });
+
+    it('should throw when text search fields are empty', () => {
+      const { mockModel } = buildMockModel();
+      const options = {
+        search: {
+          fields: ['   '],
+          value: 'Ali',
+        },
+      };
+
+      expect(() => transformOptionsToQuery(mockModel, options)).toThrow(
+        'Text search requires at least one field to search against.',
+      );
     });
   });
 });
