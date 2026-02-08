@@ -1,5 +1,5 @@
 import * as HeroIcons from '@heroicons/react/24/solid';
-import { Event, Business, Place, People, Category, Security } from '@mui/icons-material';
+import { Event, Business, Place, People, Category } from '@mui/icons-material';
 import { ROUTES } from './routes';
 
 export type EventCategoryIconComponents = {
@@ -31,12 +31,6 @@ export const NAV_LINKS = [
   { label: 'Venues', href: ROUTES.VENUES.ROOT, icon: Place },
   { label: 'Community', href: ROUTES.USERS.ROOT, icon: People },
 ];
-
-export const ADMIN_NAV_LINK = {
-  label: 'Admin',
-  href: ROUTES.ADMIN.ROOT,
-  icon: Security,
-};
 
 export const RANDOM_IMAGE_LINK =
   'https://images.unsplash.com/photo-1525286116112-b59af11adad1?auto=format&fit=crop&w=1200&q=80';

@@ -1,5 +1,30 @@
-import type { FilterInput, PaginationInput, QueryOptionsInput, SortInput } from '@ntlango/commons/types';
+import type {
+  FilterInput,
+  PaginationInput,
+  QueryOptionsInput,
+  SortInput,
+  TextSearchInput,
+} from '@ntlango/commons/types';
 import type { Model, Query } from 'mongoose';
+import { CustomError, ErrorTypes } from '../exceptions';
+import { buildTextSearchRegex } from './text-search';
+
+const addTextSearchToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, textSearch: TextSearchInput) => {
+  const trimmed = textSearch.value?.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const terms = textSearch.fields.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+
+  if (terms.length === 0) {
+    throw CustomError('Text search requires at least one field to search against.', ErrorTypes.BAD_REQUEST);
+  }
+  
+  const regex = buildTextSearchRegex(trimmed, textSearch.caseSensitive);
+
+  query.or(terms.map((targetField) => ({ [targetField]: regex })));
+};
 
 export const addSortToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, sortInput: SortInput[]) => {
   const sortOptions: Record<string, 1 | -1> = {};
@@ -60,6 +85,10 @@ export const transformOptionsToQuery = <T>(model: Model<T>, options: QueryOption
 
   if (filters) {
     addFiltersToQuery(query, filters);
+  }
+
+  if (options.search) {
+    addTextSearchToQuery(query, options.search);
   }
 
   if (sort) {

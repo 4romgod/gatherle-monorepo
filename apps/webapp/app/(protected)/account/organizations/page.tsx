@@ -5,7 +5,7 @@ import { getClient } from '@/data/graphql';
 import { GetOrganizationMembershipsByOrgIdDocument } from '@/data/graphql/query/OrganizationMembership/query';
 import { GetAllOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { ROUTES } from '@/lib/constants';
-import OrganizationManagementCard from '@/components/organization/OrganizationManagementCard';
+import OrganizationCard from '@/components/organization/organizationBox';
 import { Organization, OrganizationMembership } from '@/data/graphql/types/graphql';
 import LinkComponent from '@/components/navigation/LinkComponent';
 
@@ -141,7 +141,7 @@ export default async function AccountOrganizationsPage() {
           <Grid container spacing={3}>
             {userOrganizations.map(({ org, membership }) => (
               <Grid size={{ xs: 12, md: 6, lg: 4 }} key={org.orgId}>
-                <OrganizationManagementCard organization={org} userRole={membership?.role} />
+                <OrganizationCard organization={org} userRole={membership?.role} />
               </Grid>
             ))}
           </Grid>

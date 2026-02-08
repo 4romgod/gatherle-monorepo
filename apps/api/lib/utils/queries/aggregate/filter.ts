@@ -1,10 +1,41 @@
-import type { FilterInput, LocationFilterInput } from '@ntlango/commons/types';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
+import type { FilterInput, LocationFilterInput, TextSearchInput } from '@ntlango/commons/types';
 import { FilterOperatorInput } from '@ntlango/commons/types';
 import type { PipelineStage } from 'mongoose';
+import { buildTextSearchRegex } from '../text-search';
 
 const buildOperatorSymbol = (operator?: FilterOperatorInput) => {
   const normalized = operator || FilterOperatorInput.eq;
   return `$${normalized}` as `$${FilterOperatorInput}`;
+};
+
+export const createTextSearchMatchStage = (search: TextSearchInput): PipelineStage.Match | null => {
+  const trimmedValue = search.value?.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  const terms = search.fields.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+
+  if (terms.length === 0) {
+    throw CustomError('Text search requires at least one field to search against.', ErrorTypes.BAD_REQUEST);
+  }
+
+  const regex = buildTextSearchRegex(trimmedValue, search.caseSensitive);
+
+  if (terms.length === 1) {
+    return {
+      $match: {
+        [terms[0]]: regex,
+      },
+    };
+  }
+
+  return {
+    $match: {
+      $or: terms.map((targetField) => ({ [targetField]: regex })),
+    },
+  };
 };
 
 /**

@@ -74,6 +74,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 }
 
 /**
+ * TODO: Look into Pub Sub
  * Hook to get just the unread notification count (for badge display)
  * Uses a separate lightweight query that can poll frequently
  */

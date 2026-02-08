@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Divider, ListItemIcon, ListItemText } from '@mui/material';
-import { AccountCircle, Logout, Settings, Business } from '@mui/icons-material';
+import { AccountCircle, Logout, Settings, Business, Security } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import NProgress from 'nprogress';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 type ProfilesMenuProps = {
   ProfilesMenuAnchorEl: HTMLElement | null;
@@ -24,6 +25,7 @@ export default function ProfilesMenu({
   isProfilesMenuOpen,
 }: ProfilesMenuProps) {
   const pathname = usePathname();
+  const isAdmin = useIsAdmin();
 
   const handleNavClick = (targetPath: string) => {
     // Only start progress bar if navigating to a different page
@@ -57,49 +59,64 @@ export default function ProfilesMenu({
         },
       }}
     >
-      <Link href={ROUTES.ACCOUNT.PROFILE} onClick={() => handleNavClick(ROUTES.ACCOUNT.PROFILE)}>
-        <MenuItem>
+      <MenuItem component={Link} href={ROUTES.ACCOUNT.PROFILE} onClick={() => handleNavClick(ROUTES.ACCOUNT.PROFILE)}>
+        <ListItemIcon>
+          <AccountCircle fontSize="medium" />
+        </ListItemIcon>
+        <ListItemText
+          slotProps={{
+            primary: { fontSize: '1rem' },
+          }}
+        >
+          Profile
+        </ListItemText>
+      </MenuItem>
+      <MenuItem
+        component={Link}
+        href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT}
+        onClick={() => handleNavClick(ROUTES.ACCOUNT.ORGANIZATIONS.ROOT)}
+      >
+        <ListItemIcon>
+          <Business fontSize="medium" />
+        </ListItemIcon>
+        <ListItemText
+          slotProps={{
+            primary: { fontSize: '1rem' },
+          }}
+        >
+          My Organizations
+        </ListItemText>
+      </MenuItem>
+      <MenuItem component={Link} href={ROUTES.ACCOUNT.ROOT} onClick={() => handleNavClick(ROUTES.ACCOUNT.ROOT)}>
+        <ListItemIcon>
+          <Settings fontSize="medium" />
+        </ListItemIcon>
+        <ListItemText
+          slotProps={{
+            primary: { fontSize: '1rem' },
+          }}
+        >
+          Settings
+        </ListItemText>
+      </MenuItem>
+
+      {isAdmin && (
+        <MenuItem component={Link} href={ROUTES.ADMIN.ROOT} onClick={() => handleNavClick(ROUTES.ADMIN.ROOT)}>
           <ListItemIcon>
-            <AccountCircle fontSize="medium" />
+            <Security fontSize="medium" />
           </ListItemIcon>
           <ListItemText
             slotProps={{
               primary: { fontSize: '1rem' },
             }}
           >
-            Profile
+            Admin Portal
           </ListItemText>
         </MenuItem>
-      </Link>
-      <Link href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT} onClick={() => handleNavClick(ROUTES.ACCOUNT.ORGANIZATIONS.ROOT)}>
-        <MenuItem>
-          <ListItemIcon>
-            <Business fontSize="medium" />
-          </ListItemIcon>
-          <ListItemText
-            slotProps={{
-              primary: { fontSize: '1rem' },
-            }}
-          >
-            Organizations
-          </ListItemText>
-        </MenuItem>
-      </Link>
-      <Link href={ROUTES.ACCOUNT.ROOT} onClick={() => handleNavClick(ROUTES.ACCOUNT.ROOT)}>
-        <MenuItem>
-          <ListItemIcon>
-            <Settings fontSize="medium" />
-          </ListItemIcon>
-          <ListItemText
-            slotProps={{
-              primary: { fontSize: '1rem' },
-            }}
-          >
-            Settings
-          </ListItemText>
-        </MenuItem>
-      </Link>
+      )}
+
       <Divider />
+
       <MenuItem
         onClick={() => {
           logoutUserAction();

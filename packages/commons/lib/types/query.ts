@@ -92,6 +92,22 @@ export class FilterInput {
   operator?: FilterOperatorInput;
 }
 
+@InputType('TextSearchInput', { description: QUERY_DESCRIPTIONS.SEARCH.INPUT })
+export class TextSearchInput {
+  @Field(() => [String], { description: QUERY_DESCRIPTIONS.SEARCH.FIELDS })
+  fields: string[];
+
+  @Field(() => String, { description: QUERY_DESCRIPTIONS.SEARCH.VALUE })
+  value: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: QUERY_DESCRIPTIONS.SEARCH.CASE_SENSITIVE,
+    defaultValue: false,
+  })
+  caseSensitive?: boolean;
+}
+
 @InputType('DateRangeInput', { description: 'Date range filter for events' })
 export class DateRangeInput {
   @Field(() => Date, { nullable: true, description: 'Start date of the range' })
@@ -139,6 +155,9 @@ export class QueryOptionsInput {
 
   @Field(() => [FilterInput], { nullable: true, description: QUERY_DESCRIPTIONS.QUERY.FILTER })
   filters?: FilterInput[];
+
+  @Field(() => TextSearchInput, { nullable: true, description: QUERY_DESCRIPTIONS.SEARCH.INPUT })
+  search?: TextSearchInput;
 }
 
 /**
@@ -157,6 +176,9 @@ export class EventsQueryOptionsInput {
 
   @Field(() => [FilterInput], { nullable: true, description: QUERY_DESCRIPTIONS.QUERY.FILTER })
   filters?: FilterInput[];
+
+  @Field(() => TextSearchInput, { nullable: true, description: QUERY_DESCRIPTIONS.SEARCH.INPUT })
+  search?: TextSearchInput;
 
   @Field(() => DateRangeInput, {
     nullable: true,

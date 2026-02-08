@@ -29,8 +29,7 @@ import { auth } from '@/auth';
 import { differenceInYears, format } from 'date-fns';
 import { GetAllEventsDocument, GetUserByUsernameDocument, GetSavedEventsDocument } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
-import Carousel from '@/components/carousel';
-import EventBoxSm from '@/components/events/eventBoxSm';
+import { EventPreviewCarousel } from '@/components/carousel';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import UserProfileStats from '@/components/users/UserProfileStats';
@@ -335,7 +334,7 @@ async function AuthenticatedProfileContent() {
                     {interests.length > 0 ? (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
                         {interests.map((category, index) => (
-                          <EventCategoryBadge key={index} category={category} />
+                          <EventCategoryBadge key={`${category ?? 'interest'}-${index}`} category={category} />
                         ))}
                       </Box>
                     ) : (
@@ -375,15 +374,7 @@ async function AuthenticatedProfileContent() {
               </Typography>
             </Box>
             {organizedEvents.length > 0 ? (
-              <Carousel
-                items={organizedEvents}
-                title=""
-                autoplay={true}
-                autoplayInterval={6000}
-                itemWidth={350}
-                showIndicators={true}
-                renderItem={(event) => <EventBoxSm event={event} />}
-              />
+              <EventPreviewCarousel events={organizedEvents} />
             ) : (
               <Card elevation={0} sx={CARD_STYLES}>
                 <Box sx={EMPTY_STATE_STYLES}>
@@ -434,15 +425,7 @@ async function AuthenticatedProfileContent() {
               </Typography>
             </Box>
             {rsvpdEvents.length > 0 ? (
-              <Carousel
-                items={rsvpdEvents}
-                title=""
-                autoplay={true}
-                autoplayInterval={6000}
-                itemWidth={350}
-                showIndicators={true}
-                renderItem={(event) => <EventBoxSm event={event} />}
-              />
+              <EventPreviewCarousel events={rsvpdEvents} />
             ) : (
               <Card elevation={0} sx={CARD_STYLES}>
                 <Box sx={EMPTY_STATE_STYLES}>
@@ -493,15 +476,7 @@ async function AuthenticatedProfileContent() {
               </Typography>
             </Box>
             {savedEvents.length > 0 ? (
-              <Carousel
-                items={savedEvents}
-                title=""
-                autoplay={true}
-                autoplayInterval={6000}
-                itemWidth={350}
-                showIndicators={true}
-                renderItem={(event) => <EventBoxSm event={event} />}
-              />
+              <EventPreviewCarousel events={savedEvents} />
             ) : (
               <Card elevation={0} sx={CARD_STYLES}>
                 <Box sx={EMPTY_STATE_STYLES}>

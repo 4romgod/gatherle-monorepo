@@ -58,6 +58,57 @@ globally.
 
 ---
 
+## Marketing & Positioning
+
+### Launch Focus
+
+- Launch city: **Gauteng (Johannesburg / Pretoria)** to tap into the “hustle” lifestyle—people who work hard and expect
+  a weekend escape within hours, not weeks.
+- Roll out with a **website-first** discovery experience that leans heavily on map/heatmap views and visual, swipe-style
+  exploration instead of Meetup’s list-heavy UI.
+
+### Niche Messaging
+
+- **Weekend Warrior discovery:** focus on last-minute, hyper-local “now” events (rooftop sundowners, flash socials,
+  underground jazz, padel/pickleball mix-ins) to solve the “missing out” problem.
+- **Active & outdoors adventures:** promote curated fitness, conservancy, and trail experiences with concierge-style
+  safety features (secure routes, verified venues, Live ETA buddy systems, loadshedding-aware venue status).
+- **Creator & side-hustle pop-ups:** offer ticketed micro-workshops plus venue booking so creators can run
+  outcome-driven sessions without juggling infrastructure.
+- **Safety-first circles:** highlight programs for underrepresented or safety-conscious groups (Queer-friendly events,
+  women-only hiking), a capability that Meetup and other global platforms underestimate.
+
+### Differentiators vs. Meetup
+
+- Pricing: pay-per-event or commission vs. Meetup’s higher monthly organizer fees.
+- Focus: immediate discovery (“What’s on tonight?”) rather than long-term group management or generic communities.
+- Experience: visual-first, map-driven discovery vs. data-dense directory messaging.
+- Local context: embedded SA-specific features like loadshedding status, safe-route mapping, and Gauteng/Joburg
+  neighborhood guides.
+- Momentum: show who’s going (opt-in) and deliver FOMO, not just listings.
+
+### Competitive Landscape
+
+- **Meetup context:** founded 2002, acquired by Bending Spoons in Jan 2024; previously owned by WeWork (2017) and
+  AlleyCorp (2020). Prior to the latest sale its revenue sat around $25–30M annually, and the current parent company
+  sits between an implied $2.55B valuation (2024) and a reported $11B as it scales through acquisitions like Eventbrite
+  and Vimeo.
+- **Local peers:** Benchmark against Quicket, Fixr, Howler, and City of Joburg listings to spot UX gaps in social
+  discovery and immediate, verified experiences.
+- **Why we win:** niche focus on Gauteng energy, safety/loadshed signals, rapid event creation, and momentum-based
+  discovery (e.g., padel socials, estate brunches, secret Joburg urban explorer routes).
+
+### Tactical Next Steps
+
+1. Draft marketing story/landing hero messaging for “Weekend Warriors” and “immediate escape” experiences anchored in
+   Gauteng neighborhoods (Sandton, Rosebank, Maboneng, Victoria Yards, Midrand).
+2. Curate launch event mix (padel/pickleball socials, estate adventure brunches, pop-up joburg underside experiences) to
+   populate initial discovery feeds.
+3. Highlight safety, verified venues, Live ETA/buddy-system, and loadshedding filters in both product copy and early
+   onboarding flows.
+
+---
+
 ## Core Value Proposition
 
 - **For users:** Discover relevant events filtered by interest, location, and social proof.

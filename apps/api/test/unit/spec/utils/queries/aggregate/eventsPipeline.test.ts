@@ -62,6 +62,20 @@ describe('transformEventOptionsToPipeline', () => {
     expect(pipeline).toEqual([...filterStages]);
   });
 
+  it('should include search stage when search options are provided', () => {
+    const searchInput = { fields: ['title'], value: 'Jazz' };
+    jest.spyOn(lookupModule, 'createEventLookupStages').mockReturnValue([]);
+
+    const pipeline = transformEventOptionsToPipeline({ search: searchInput });
+
+    expect(pipeline).toHaveLength(1);
+    expect(pipeline[0]).toEqual({
+      $match: {
+        title: expect.any(RegExp),
+      },
+    });
+  });
+
   it('should combine all stages correctly', () => {
     const sortInput = [{ field: 'capacity', order: SortOrderInput.asc }];
     const paginationInput = { limit: 10, skip: 5 };

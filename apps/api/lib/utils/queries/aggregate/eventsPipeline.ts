@@ -1,6 +1,6 @@
 import type { EventsQueryOptionsInput } from '@ntlango/commons/types';
 import type { PipelineStage } from 'mongoose';
-import { createEventPipelineStages, createLocationMatchStage } from './filter';
+import { createEventPipelineStages, createLocationMatchStage, createTextSearchMatchStage } from './filter';
 import { createEventLookupStages } from './lookup';
 import { createSortStages } from './sort';
 import { createPaginationStages } from './pagination';
@@ -11,10 +11,17 @@ export const transformEventOptionsToPipeline = (options?: EventsQueryOptionsInpu
   pipeline.push(...createEventLookupStages());
 
   if (options) {
-    const { filters, sort, pagination, location } = options;
+    const { filters, sort, pagination, location, search } = options;
 
     if (location) {
       pipeline.push(...createLocationMatchStage(location));
+    }
+
+    if (search) {
+      const searchStage = createTextSearchMatchStage(search);
+      if (searchStage) {
+        pipeline.push(searchStage);
+      }
     }
 
     if (filters) {

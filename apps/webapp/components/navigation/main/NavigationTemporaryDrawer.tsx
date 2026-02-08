@@ -25,18 +25,21 @@ import {
   MailOutline,
   NotificationsOutlined,
   Settings,
+  Security,
   Logout,
+  Business,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import NavLinksList from '@/components/navigation/main/NavLinksList';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc } from '@/lib/utils';
-import { useUnreadNotificationCount } from '@/hooks';
+import { useIsAdmin, useUnreadNotificationCount } from '@/hooks';
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+  const isAdmin = useIsAdmin();
 
   // Get unread notification count for badge (polls every 30s for near-realtime updates)
   const { unreadCount } = useUnreadNotificationCount(isAuthN ? 30000 : undefined);
@@ -100,63 +103,77 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         </>
       )}
 
+      <Divider sx={{ color: 'primary', my: 1 }} />
+
       <NavLinksList variant="drawer" />
+
+      <Divider sx={{ color: 'primary', my: 1 }} />
 
       {isAuthN && (
         <>
-          <Divider sx={{ my: 1 }} />
-
           <List>
             <ListItem disablePadding>
-              <Link href={ROUTES.ACCOUNT.MESSAGES}>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <MailOutline />
-                  </ListItemIcon>
-                  <ListItemText primary={'Messages'} />
-                </ListItemButton>
-              </Link>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT}>
+                <ListItemIcon>
+                  <Business />
+                </ListItemIcon>
+                <ListItemText primary={'My Organizations'} />
+              </ListItemButton>
             </ListItem>
 
             <ListItem disablePadding>
-              <Link href={ROUTES.ACCOUNT.NOTIFICATIONS}>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <Badge
-                      badgeContent={unreadCount}
-                      color="error"
-                      sx={{
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.65rem',
-                          height: 16,
-                          minWidth: 16,
-                          fontWeight: 700,
-                        },
-                      }}
-                    >
-                      <NotificationsOutlined />
-                    </Badge>
-                  </ListItemIcon>
-                  <ListItemText primary={'Notifications'} />
-                </ListItemButton>
-              </Link>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.MESSAGES}>
+                <ListItemIcon>
+                  <MailOutline />
+                </ListItemIcon>
+                <ListItemText primary={'Messages'} />
+              </ListItemButton>
             </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.NOTIFICATIONS}>
+                <ListItemIcon>
+                  <Badge
+                    badgeContent={unreadCount}
+                    color="error"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.65rem',
+                        height: 16,
+                        minWidth: 16,
+                        fontWeight: 700,
+                      },
+                    }}
+                  >
+                    <NotificationsOutlined />
+                  </Badge>
+                </ListItemIcon>
+                <ListItemText primary={'Notifications'} />
+              </ListItemButton>
+            </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ROOT}>
+                <ListItemIcon>
+                  <Settings />
+                </ListItemIcon>
+                <ListItemText primary={'Settings'} />
+              </ListItemButton>
+            </ListItem>
+
+            {isAdmin && (
+              <ListItem disablePadding>
+                <ListItemButton component={Link} href={ROUTES.ADMIN.ROOT}>
+                  <ListItemIcon>
+                    <Security />
+                  </ListItemIcon>
+                  <ListItemText primary={'Admin Portal'} />
+                </ListItemButton>
+              </ListItem>
+            )}
           </List>
 
-          <Divider sx={{ my: 1 }} />
-
           <List>
-            <ListItem disablePadding>
-              <Link href={ROUTES.ACCOUNT.ROOT}>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <Settings />
-                  </ListItemIcon>
-                  <ListItemText primary={'Settings'} />
-                </ListItemButton>
-              </Link>
-            </ListItem>
-
             <ListItem disablePadding>
               <ListItemButton
                 onClick={async () => {

@@ -44,7 +44,7 @@ import type {
   Venue,
 } from '@ntlango/commons/types';
 import { SECRET_KEYS } from '@/constants';
-import { ParticipantStatus, ParticipantVisibility } from '@ntlango/commons/types';
+import { OrganizationRole, ParticipantStatus, ParticipantVisibility } from '@ntlango/commons/types';
 import { EventVisibility } from '@ntlango/commons/types/event';
 import { logger } from '@/utils/logger';
 
@@ -174,25 +174,51 @@ async function seedOrganizations(seedData: OrganizationSeedData[], usersByEmail:
 
       // Check if organization with this name already exists
       const found = existingOrgs.find((o) => o.name === organizationPayload.name);
+      let organization: Organization;
       if (found) {
         logger.info(`   Organization "${organizationPayload.name}" already exists, using existing...`);
-        created.push(found);
-        continue;
+        organization = found;
+      } else {
+        const organizationInput: CreateOrganizationInput = {
+          ...organizationPayload,
+          ownerId: owner.userId,
+        };
+        organization = await OrganizationDAO.create(organizationInput);
+        logger.info(`   Created Organization with id: ${organization.orgId}`);
       }
 
-      const organizationInput: CreateOrganizationInput = {
-        ...organizationPayload,
-        ownerId: owner.userId,
-      };
-      const organization = await OrganizationDAO.create(organizationInput);
       created.push(organization);
-      logger.info(`   Created Organization with id: ${organization.orgId}`);
+      await ensureOwnerMembershipForOrganization(organization);
     } catch (error) {
       logger.warn(`   Failed to create Organization:`, error);
     }
   }
   logger.info('Completed seeding organization data.');
   return created;
+}
+
+async function ensureOwnerMembershipForOrganization(organization: Organization) {
+  try {
+    const membershipExists = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser(
+      organization.orgId,
+      organization.ownerId,
+    );
+    if (membershipExists) {
+      return;
+    }
+
+    await OrganizationMembershipDAO.create({
+      orgId: organization.orgId,
+      userId: organization.ownerId,
+      role: OrganizationRole.Owner,
+    });
+    logger.info(`   Ensured owner membership for organization "${organization.name}" (${organization.orgId})`);
+  } catch (error) {
+    logger.warn(
+      `   Failed to ensure owner membership for organization "${organization.name}" (${organization.orgId})`,
+      error,
+    );
+  }
 }
 
 function buildLocationFromVenue(venue: Venue): CreateEventInput['location'] {

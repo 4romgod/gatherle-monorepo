@@ -1,23 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
 import { Button, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
-import { NAV_LINKS, ADMIN_NAV_LINK } from '@/lib/constants';
-import { useIsAdmin } from '@/hooks';
+import { NAV_LINKS } from '@/lib/constants';
 
 type Props = {
   variant?: 'toolbar' | 'drawer';
 };
 
 export default function NavLinksList({ variant = 'toolbar' }: Props) {
-  const isAdmin = useIsAdmin();
-  const links = isAdmin ? [...NAV_LINKS, ADMIN_NAV_LINK] : NAV_LINKS;
-
   if (variant === 'toolbar') {
     return (
       <>
-        {links.map((link) => (
+        {NAV_LINKS.map((link) => (
           <Button
             key={link.label}
             component={Link}
@@ -39,7 +34,7 @@ export default function NavLinksList({ variant = 'toolbar' }: Props) {
 
   return (
     <List>
-      {links.map((link) => (
+      {NAV_LINKS.map((link) => (
         <Link key={link.label} href={link.href}>
           <ListItem disablePadding>
             <ListItemButton>
