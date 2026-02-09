@@ -104,6 +104,55 @@ describe('usePersistentState', () => {
     expect(result.current.value).toBe('default');
   });
 
+  it('removes invalid JSON entries during hydration', () => {
+    const prefilledKey = `ntlango:sessionstate:${hookKey}`;
+    window.localStorage.setItem(prefilledKey, '{invalid-json');
+
+    const { result } = renderHook(() => usePersistentState(hookKey, 'default'));
+
+    expect(window.localStorage.getItem(prefilledKey)).toBeNull();
+    expect(result.current.value).toBe('default');
+  });
+
+  it('skips storage access when disabled', () => {
+    const storageProto = Object.getPrototypeOf(window.localStorage) as Storage;
+    const storageSpy = jest.spyOn(storageProto, 'setItem');
+    const { result } = renderHook(() =>
+      usePersistentState(hookKey, 'default', {
+        disabled: true,
+      }),
+    );
+
+    act(() => {
+      result.current.setValue('next');
+    });
+
+    expect(result.current.value).toBe('next');
+    expect(storageSpy).not.toHaveBeenCalled();
+    storageSpy.mockRestore();
+  });
+
+  it('falls back gracefully when storage access throws', () => {
+    const originalStorage = window.localStorage;
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('Access denied');
+      },
+    });
+
+    try {
+      const { result } = renderHook(() => usePersistentState('no-storage', 'default'));
+
+      expect(result.current.value).toBe('default');
+    } finally {
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        value: originalStorage,
+      });
+    }
+  });
+
   describe('Backend sync functionality', () => {
     it('syncs to backend when syncToBackend is enabled', async () => {
       const token = 'test-token';

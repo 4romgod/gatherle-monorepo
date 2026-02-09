@@ -30,6 +30,8 @@ import { getEventCategoryIcon } from '@/lib/constants';
 import { DATE_FILTER_LABELS, DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { useAppContext } from '@/hooks/useAppContext';
 import { LocationFilter } from '@/components/events/filters/EventFilterContext';
+import { useSavedLocation } from '@/hooks/useSavedLocation';
+import { useSession } from 'next-auth/react';
 
 // TODO: Refactor filter menu components (CategoryMenu, StatusMenu, DateMenu, LocationMenu) to avoid dual-mode (controlled/uncontrolled) complexity. Prefer either fully controlled or fully uncontrolled with callback props for clarity and maintainability.
 
@@ -423,13 +425,16 @@ export function LocationMenu({
   hideButton?: boolean;
 }) {
   const { setToastProps, toastProps } = useAppContext();
+  const { data: session } = useSession();
+  const userId = session?.user?.userId;
+  const { location: savedLocation, setLocation: setSavedLocation } = useSavedLocation(userId);
   const [internalAnchorEl, setInternalAnchorEl] = useState<null | HTMLElement>(null);
   const isControlled = typeof anchorEl !== 'undefined';
   const menuAnchor = isControlled ? anchorEl : internalAnchorEl;
   const [city, setCity] = useState(currentLocation.city || '');
   const [state, setState] = useState(currentLocation.state || '');
   const [country, setCountry] = useState(currentLocation.country || '');
-  const [radiusKm, setRadiusKm] = useState(currentLocation.radiusKm || 50);
+  const [radiusKm, setRadiusKm] = useState(currentLocation.radiusKm ?? 50);
   const [useMyLocation, setUseMyLocation] = useState(!!currentLocation.latitude);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
@@ -442,7 +447,7 @@ export function LocationMenu({
     setCity(currentLocation.city || '');
     setState(currentLocation.state || '');
     setCountry(currentLocation.country || '');
-    setRadiusKm(currentLocation.radiusKm || 50);
+    setRadiusKm(currentLocation.radiusKm ?? 50);
     setUseMyLocation(!!currentLocation.latitude);
     setCoords(
       currentLocation.latitude && currentLocation.longitude
@@ -469,6 +474,13 @@ export function LocationMenu({
   };
 
   const handleGetMyLocation = () => {
+    if (savedLocation.latitude && savedLocation.longitude) {
+      setCoords({ lat: savedLocation.latitude, lng: savedLocation.longitude });
+      setRadiusKm(savedLocation.radiusKm ?? 50);
+      setUseMyLocation(true);
+      return;
+    }
+
     if (!navigator.geolocation) {
       showError('Geolocation is not supported by your browser');
       return;
@@ -476,9 +488,15 @@ export function LocationMenu({
     setGettingLocation(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCoords({
+        const nextCoords = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
+        };
+        setCoords(nextCoords);
+        setSavedLocation({
+          latitude: nextCoords.lat,
+          longitude: nextCoords.lng,
+          radiusKm,
         });
         setUseMyLocation(true);
         setGettingLocation(false);
@@ -493,13 +511,25 @@ export function LocationMenu({
 
   const handleApply = () => {
     const location: LocationFilter = {};
+    const displayLabel = [city, state, country].filter(Boolean).join(', ');
     if (city.trim()) location.city = city.trim();
     if (state.trim()) location.state = state.trim();
     if (country.trim()) location.country = country.trim();
+    if (displayLabel) {
+      location.displayLabel = displayLabel;
+    } else if (useMyLocation && savedLocation.displayLabel) {
+      location.displayLabel = savedLocation.displayLabel;
+    }
     if (useMyLocation && coords) {
       location.latitude = coords.lat;
       location.longitude = coords.lng;
       location.radiusKm = radiusKm;
+      setSavedLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+        radiusKm,
+        displayLabel: displayLabel || savedLocation.displayLabel,
+      });
     }
     onApply(location);
     handleClose();
@@ -517,6 +547,9 @@ export function LocationMenu({
   };
 
   const hasValues = city || state || country || useMyLocation;
+  const buttonLabel = hasValues
+    ? [city, state, country].filter(Boolean).join(', ') || savedLocation.displayLabel || 'Near me'
+    : 'Location';
 
   return (
     <>
@@ -547,7 +580,7 @@ export function LocationMenu({
             },
           }}
         >
-          {hasValues ? [city, state, country].filter(Boolean).join(', ') || 'Near me' : 'Location'}
+          {buttonLabel}
         </Button>
       )}
       <Popover

@@ -166,6 +166,103 @@ describe('Logger Utilities', () => {
       expect(consoleSpy.mock.calls[1][1]).toContain('Context');
     });
 
+    describe('default log level behavior', () => {
+      let previousNodeEnv: string | undefined;
+      let previousLogLevel: string | undefined;
+
+      const setEnvVar = (key: string, value?: string) => {
+        if (typeof value === 'undefined') {
+          delete process.env[key];
+          return;
+        }
+
+        process.env[key] = value;
+      };
+
+      beforeEach(() => {
+        previousNodeEnv = process.env.NODE_ENV;
+        previousLogLevel = process.env.NEXT_PUBLIC_LOG_LEVEL;
+      });
+
+      afterEach(() => {
+        setEnvVar('NODE_ENV', previousNodeEnv);
+        setEnvVar('NEXT_PUBLIC_LOG_LEVEL', previousLogLevel);
+      });
+
+      const loadLoggerModule = (env?: string, configuredLevel?: string) => {
+        jest.resetModules();
+        setEnvVar('NODE_ENV', env);
+        setEnvVar('NEXT_PUBLIC_LOG_LEVEL', configuredLevel);
+
+        return require('@/lib/utils/logger');
+      };
+
+      it('uses configured log level when provided', () => {
+        const module = loadLoggerModule('production', 'info');
+        consoleSpy.mockClear();
+
+        module.logger.info('Visible');
+
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      it('defaults to WARN in production', () => {
+        const module = loadLoggerModule('production');
+        consoleSpy.mockClear();
+
+        module.logger.info('Hidden');
+        module.logger.warn('Visible');
+
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('defaults to ERROR in test', () => {
+        const module = loadLoggerModule('test');
+        consoleSpy.mockClear();
+
+        module.logger.warn('Hidden');
+        module.logger.error('Visible');
+
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('defaults to DEBUG in development', () => {
+        const module = loadLoggerModule('development');
+        consoleSpy.mockClear();
+
+        module.logger.debug('Visible');
+
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe('environment prefix', () => {
+      it('uses server prefix when window is undefined', () => {
+        const originalWindow = global.window;
+        Object.defineProperty(global, 'window', {
+          configurable: true,
+          value: undefined,
+        });
+        const spy = jest.spyOn(console, 'log').mockImplementation();
+
+        try {
+          jest.resetModules();
+          const module = require('@/lib/utils/logger');
+
+          module.initLogger(LogLevel.DEBUG);
+          module.logger.debug('Server log');
+
+          expect(spy.mock.calls[0][0]).toContain('[SERVER]');
+        } finally {
+          spy.mockRestore();
+          Object.defineProperty(global, 'window', {
+            configurable: true,
+            value: originalWindow,
+          });
+        }
+      });
+    });
+
     it('should not log action when level is INFO or higher', () => {
       initLogger(LogLevel.INFO);
       logger.action('updateUserProfile');

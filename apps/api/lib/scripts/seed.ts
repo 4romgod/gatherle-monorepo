@@ -66,6 +66,10 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
   return randomItems;
 }
 
+function getRandomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
   logger.info('Starting to seed event category data...');
 
@@ -361,8 +365,6 @@ async function seedEvents(
       const venue = event.venueSlug ? venues.find((venueItem) => venueItem.slug === event.venueSlug) : undefined;
 
       const organizerIds = getRandomUniqueItems(userIds, 2);
-      const participantCount = Math.floor(Math.random() * 5) + 2; // Random number between 2 and 6
-      const participantIds = getRandomUniqueItems(userIds, participantCount);
       const categorySelection =
         event.eventCategories && event.eventCategories.length
           ? event.eventCategories
@@ -389,31 +391,6 @@ async function seedEvents(
 
       const eventResponse = await EventDAO.create(eventInput);
 
-      for (const userId of participantIds) {
-        let sharedVisibility: ParticipantVisibility;
-        if (eventResponse.visibility === undefined) {
-          throw new Error(
-            `Event with id ${eventResponse.eventId} has undefined visibility. Please ensure all seed events have a visibility value set.`,
-          );
-        } else if (eventResponse.visibility === EventVisibility.Public) {
-          sharedVisibility = ParticipantVisibility.Public;
-        } else {
-          sharedVisibility = ParticipantVisibility.Followers;
-        }
-        try {
-          await EventParticipantDAO.upsert({
-            eventId: eventResponse.eventId,
-            userId,
-            status: ParticipantStatus.Going,
-            sharedVisibility,
-          });
-        } catch (err) {
-          logger.error(
-            `Failed to upsert participant (userId: ${userId}) for event (eventId: ${eventResponse.eventId}):`,
-            err,
-          );
-        }
-      }
       logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
       createdEvents.push(eventResponse);
     } catch (error) {
@@ -520,6 +497,53 @@ async function main() {
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
   await MongoDbClient.connectToDatabase(secret);
 
+  async function seedEventParticipants(events: Event[], userIds: string[]) {
+    if (events.length === 0 || userIds.length === 0) {
+      return;
+    }
+
+    logger.info('Starting to seed event participants (RSVPs)...');
+
+    const maxRsvpsPerEvent = Math.min(userIds.length, 12);
+    const batchSize = 10;
+    for (const event of events) {
+      if (!event.eventId) {
+        continue;
+      }
+
+      const rsvpCount = getRandomInt(0, maxRsvpsPerEvent);
+      const selectedUserIds = getRandomUniqueItems(userIds, rsvpCount);
+      const sharedVisibility =
+        event.visibility === undefined || event.visibility === EventVisibility.Public
+          ? ParticipantVisibility.Public
+          : ParticipantVisibility.Followers;
+      const participantInputs = selectedUserIds.map((userId) => ({
+        eventId: event.eventId,
+        userId,
+        status: Math.random() < 0.7 ? ParticipantStatus.Going : ParticipantStatus.Interested,
+        sharedVisibility,
+      }));
+
+      for (let i = 0; i < participantInputs.length; i += batchSize) {
+        const batch = participantInputs.slice(i, i + batchSize);
+        await Promise.allSettled(
+          batch.map(async (input) => {
+            try {
+              await EventParticipantDAO.upsert(input);
+            } catch (error) {
+              logger.warn('Failed to upsert event participant during seed', {
+                eventId: input.eventId,
+                userId: input.userId,
+                error,
+              });
+            }
+          }),
+        );
+      }
+    }
+
+    logger.info('Completed seeding event participants.');
+  }
   await seedEventCategories(eventCategoryMockData);
   const allEventCategories = await EventCategoryDAO.readEventCategories();
   const allEventCategoriesIds = allEventCategories.map((category) => category.eventCategoryId!);
@@ -547,6 +571,8 @@ async function main() {
     createdOrganizations,
     createdVenues,
   );
+
+  await seedEventParticipants(createdEvents, allUserIds);
 
   await seedFollows(followSeedData, userByEmail, createdOrganizations);
   await seedIntents(intentSeedData, userByEmail, createdEvents);

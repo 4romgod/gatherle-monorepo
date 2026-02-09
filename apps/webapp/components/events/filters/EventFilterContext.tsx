@@ -15,6 +15,7 @@ export interface LocationFilter {
   latitude?: number;
   longitude?: number;
   radiusKm?: number;
+  displayLabel?: string;
 }
 
 export interface EventFilters {

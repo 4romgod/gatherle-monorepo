@@ -3,7 +3,7 @@
 import { useQuery } from '@apollo/client';
 import { Box, Container, Typography } from '@mui/material';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
-import { HeroSection, CategoryExplorer, ValuePropositionSection } from '@/components/home';
+import { HeroSection, CategoryExplorer, ValuePropositionSection, NearbyEventsSection } from '@/components/home';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import EventBoxSm from '@/components/events/eventBoxSm';
@@ -65,6 +65,7 @@ export default function HomeClient() {
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'background.default' }}>
       <HeroSection heroEvent={heroEvent} isLoading={trendingEventsLoading} />
       <ValuePropositionSection />
+      <NearbyEventsSection />
 
       <Box
         id="trending-events"

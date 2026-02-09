@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Box, Button, Grid, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { useQuery } from '@apollo/client';
@@ -24,6 +24,7 @@ import { CategoryMenu, DateMenu, LocationMenu, StatusMenu } from '@/components/e
 import { EventFilterProvider, initialFilters } from '@/components/events/filters/EventFilterContext';
 import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
+import { useSavedLocation } from '@/hooks/useSavedLocation';
 
 const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'rsvpCount', order: SortOrderInput.Desc }];
 
@@ -108,6 +109,7 @@ export default function EventsPageClient() {
             initialEvents={eventsList}
             popularOrganization={popularOrganization}
             stats={stats}
+            userId={userId}
           />
         </EventFilterProvider>
       )}
@@ -120,9 +122,10 @@ interface EventsContentProps {
   initialEvents: EventPreview[];
   popularOrganization: PopularOrganization | null;
   stats: PlatformStats;
+  userId?: string;
 }
 
-function EventsContent({ categories, initialEvents, popularOrganization, stats }: EventsContentProps) {
+function EventsContent({ categories, initialEvents, popularOrganization, stats, userId }: EventsContentProps) {
   const {
     filters,
     setSearchQuery,
@@ -137,10 +140,38 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats }
     clearLocation,
     isHydrated,
   } = useEventFilters();
+  const { location: savedLocation, isHydrated: isLocationHydrated } = useSavedLocation(userId);
 
   // Wait for filters to hydrate before applying them to prevent double-fetch on page load
   const filtersToUse = isHydrated ? filters : initialFilters;
   const { events: serverEvents, loading, error } = useFilteredEvents(filtersToUse, initialEvents);
+
+  const hasCoordinates =
+    typeof filters.location?.latitude === 'number' && typeof filters.location?.longitude === 'number';
+  const hasLocation = !!(
+    filters.location?.city ||
+    filters.location?.state ||
+    filters.location?.country ||
+    hasCoordinates
+  );
+
+  useEffect(() => {
+    if (isHydrated && isLocationHydrated && !hasLocation && savedLocation.latitude && savedLocation.longitude) {
+      setLocation({
+        latitude: savedLocation.latitude,
+        longitude: savedLocation.longitude,
+        radiusKm: savedLocation.radiusKm ?? 50,
+      });
+    }
+  }, [
+    isHydrated,
+    isLocationHydrated,
+    hasLocation,
+    savedLocation.latitude,
+    savedLocation.longitude,
+    savedLocation.radiusKm,
+    setLocation,
+  ]);
 
   const filteredEvents = useMemo(() => {
     const query = filters.searchQuery.trim().toLowerCase();

@@ -245,6 +245,15 @@ describe('buildLocationFilter', () => {
     expect(result).toBeUndefined();
   });
 
+  it('should ignore displayLabel when no location data is set', () => {
+    const location: LocationFilter = {
+      displayLabel: 'Pretoria, Gauteng',
+    };
+
+    const result = buildLocationFilter(location);
+    expect(result).toBeUndefined();
+  });
+
   it('should build filter with city only', () => {
     const location: LocationFilter = {
       city: 'London',

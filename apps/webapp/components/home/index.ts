@@ -3,3 +3,4 @@ export { default as CategoryExplorer } from './CategoryExplorer';
 export { default as SocialFeed } from './SocialFeed';
 export { default as ValuePropositionSection } from './ValuePropositionSection';
 export { default as SocialProofSection } from './SocialProofSection';
+export { default as NearbyEventsSection } from './NearbyEventsSection';

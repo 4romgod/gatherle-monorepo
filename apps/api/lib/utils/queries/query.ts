@@ -20,7 +20,7 @@ const addTextSearchToQuery = <ResultType, DocType>(query: Query<ResultType, DocT
   if (terms.length === 0) {
     throw CustomError('Text search requires at least one field to search against.', ErrorTypes.BAD_REQUEST);
   }
-  
+
   const regex = buildTextSearchRegex(trimmed, textSearch.caseSensitive);
 
   query.or(terms.map((targetField) => ({ [targetField]: regex })));

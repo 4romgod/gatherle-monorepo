@@ -83,4 +83,18 @@ describe('useBlockedUsers hook', () => {
     expect(result.current.loading).toBe(false);
     expect(result.current.refetch).toBe(refetch);
   });
+
+  it('skips query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    renderHook(() => useBlockedUsers());
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+  });
 });

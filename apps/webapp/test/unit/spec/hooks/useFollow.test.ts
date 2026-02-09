@@ -6,7 +6,9 @@ import {
   useFollowing,
   useFollowers,
   useMuteUser,
+  useMuteOrganization,
   useMutedUsers,
+  useMutedOrganizations,
   useRemoveFollower,
 } from '@/hooks/useFollow';
 
@@ -155,6 +157,43 @@ describe('useFollow and related hooks', () => {
     const { result } = renderHook(() => useMutedUsers());
 
     expect(result.current.mutedUsers).toEqual([{ userId: 'muted-1' }]);
+    expect(result.current.refetch).toBe(refetch);
+  });
+
+  it('provides mute/unmute helpers for organizations', async () => {
+    const muteMutation = jest.fn().mockResolvedValue({});
+    const unmuteMutation = jest.fn().mockResolvedValue({});
+
+    useMutationMock
+      .mockImplementationOnce(() => [muteMutation, { loading: false }])
+      .mockImplementationOnce(() => [unmuteMutation, { loading: false }]);
+
+    const { result } = renderHook(() => useMuteOrganization());
+
+    await act(async () => {
+      await result.current.muteOrganization('org-1');
+    });
+    await act(async () => {
+      await result.current.unmuteOrganization('org-1');
+    });
+
+    expect(muteMutation).toHaveBeenCalledWith({ variables: { organizationId: 'org-1' } });
+    expect(unmuteMutation).toHaveBeenCalledWith({ variables: { organizationId: 'org-1' } });
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('returns muted organization ids list', () => {
+    const refetch = jest.fn();
+    useQueryMock.mockReturnValue({
+      data: { readMutedOrganizationIds: ['org-1', 'org-2'] },
+      loading: false,
+      error: undefined,
+      refetch,
+    });
+
+    const { result } = renderHook(() => useMutedOrganizations());
+
+    expect(result.current.mutedOrgIds).toEqual(['org-1', 'org-2']);
     expect(result.current.refetch).toBe(refetch);
   });
 
