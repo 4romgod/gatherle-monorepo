@@ -8,7 +8,9 @@
 - Required keys:
   - `STAGE` (default `Dev`).
   - `AWS_REGION` (defaults to `eu-west-1`).
-  - `MONGO_DB_URL` & `JWT_SECRET` (used directly from the file).
+  - `MONGO_DB_URL` **MUST include a database name** (e.g., `mongodb://localhost:27017/ntlango`) to prevent collections
+    from vanishing on reconnects. Without a database name, Mongoose defaults to the "test" database.
+  - `JWT_SECRET` (used directly from the file).
   - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.

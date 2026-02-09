@@ -47,7 +47,7 @@ describe('Auth Utilities', () => {
       (sign as jest.Mock).mockReturnValue('token');
       const token = await generateToken(mockUser);
       expect(token).toBe('token');
-      expect(sign).toHaveBeenCalledWith(mockUser, expect.any(String), { expiresIn: '1d' });
+      expect(sign).toHaveBeenCalledWith(mockUser, expect.any(String), { expiresIn: '7d' });
     });
   });
 

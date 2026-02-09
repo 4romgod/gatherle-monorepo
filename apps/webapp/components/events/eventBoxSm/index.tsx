@@ -13,7 +13,7 @@ import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
 
 export default function EventBoxSm({ event, href }: { event: EventPreview; href?: string }) {
-  const { recurrenceRule, participants, location, media, heroImage } = event;
+  const { recurrenceRule, participants, location, media } = event;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);
@@ -39,11 +39,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
     }
   })();
 
-  // TODO: This placeholder image is just for development purposes
-  const imageUrl =
-    heroImage ||
-    media?.featuredImageUrl ||
-    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
+  const imageUrl = media?.featuredImageUrl ?? null;
 
   const cityLabel = location?.address?.city || 'Featured';
   const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
@@ -81,19 +77,38 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
         })}
       >
         <Box sx={{ position: 'relative', paddingTop: '52%', overflow: 'hidden' }}>
-          <CardMedia
-            component="img"
-            image={imageUrl}
-            alt={event.title}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
+          {imageUrl ? (
+            <CardMedia
+              component="img"
+              image={imageUrl}
+              alt={event.title}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <Box
+              sx={(theme) => ({
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
+                  theme.palette.secondary.light,
+                  0.35,
+                )} 100%)`,
+                color: 'text.secondary',
+              })}
+            >
+              <CalendarToday sx={{ fontSize: 36, opacity: 0.7 }} />
+            </Box>
+          )}
           <Box
             sx={(theme) => ({
               position: 'absolute',

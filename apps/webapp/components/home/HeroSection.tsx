@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { Explore } from '@mui/icons-material';
-import { Box, Button, Card, Chip, Grid, Typography, Skeleton } from '@mui/material';
+import { alpha, Box, Button, Card, Chip, Grid, Typography, Skeleton } from '@mui/material';
 import CustomContainer from '@/components/core/layout/CustomContainer';
-import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES, RANDOM_IMAGE_LINK } from '@/lib/constants';
+import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES } from '@/lib/constants';
 import { RRule } from 'rrule';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 
@@ -16,6 +16,7 @@ interface HeroSectionProps {
 export default function HeroSection({ heroEvent, isLoading = false }: HeroSectionProps) {
   const heroEventRsvps = heroEvent?.participants?.length ?? 0;
   const showSkeleton = isLoading && !heroEvent;
+  const heroImageUrl = heroEvent?.media?.featuredImageUrl ?? null;
 
   const renderSkeletonCard = () => (
     <Card
@@ -180,14 +181,25 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                       }}
                     >
                       <Box
-                        sx={{
+                        sx={(theme) => ({
                           position: 'relative',
                           paddingTop: '60%',
-                          backgroundImage: `url(${heroEvent.media?.featuredImageUrl || RANDOM_IMAGE_LINK})`,
+                          backgroundImage: heroImageUrl
+                            ? `url(${heroImageUrl})`
+                            : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
+                                theme.palette.secondary.light,
+                                0.35,
+                              )} 100%)`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
-                        }}
-                      />
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'hero.textSecondary',
+                        })}
+                      >
+                        {!heroImageUrl && <Explore sx={{ fontSize: 48, opacity: 0.6 }} />}
+                      </Box>
                     </Box>
                     <Box
                       sx={{

@@ -10,7 +10,6 @@ export class AdminResolver {
   @Query(() => AdminDashboardStats, {
     description: RESOLVER_DESCRIPTIONS.ADMIN.readAdminDashboardStats,
   })
-  // TODO using Promise.all is nice, but we can use mongodb's aggregate pipelines to reduce the db queries
   async readAdminDashboardStats(): Promise<AdminDashboardStats> {
     const [
       totalEvents,

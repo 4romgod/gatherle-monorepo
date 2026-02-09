@@ -320,10 +320,6 @@ class NotificationService {
     const notifications = await NotificationDAO.createMany(inputs);
 
     // TODO: Future - dispatch to email/push based on user preferences
-    // for (const notification of notifications) {
-    //     await this.dispatchToChannels(notification, notification.recipientUserId);
-    // }
-
     return notifications;
   }
 

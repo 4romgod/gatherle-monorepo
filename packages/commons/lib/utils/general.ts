@@ -5,6 +5,14 @@ export const validateDate = (date: string) => {
   return isValid(parseISO(date));
 };
 
+export const isDateNotInFuture = (date: string) => {
+  const parsed = parseISO(date);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  return parsed.getTime() <= Date.now();
+};
+
 export const transformEnumToErrorMessage = (enumType: any) => {
   return Object.values(enumType).slice(0, -1).join(', ') + ', or ' + Object.values(enumType).slice(-1);
 };

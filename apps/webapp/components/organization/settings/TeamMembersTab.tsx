@@ -5,6 +5,7 @@ import { Dispatch, SetStateAction } from 'react';
 import {
   Autocomplete,
   Avatar,
+  Box,
   Button,
   Card,
   Chip,
@@ -132,7 +133,9 @@ export default function TeamMembersTab({
 
           <Button
             variant="contained"
-            startIcon={<PersonAdd />}
+            startIcon={
+              membershipAction?.type === 'add' ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />
+            }
             onClick={() => {
               if (!selectedUser?.userId) {
                 return;
@@ -151,16 +154,34 @@ export default function TeamMembersTab({
 
       {!membershipsLoading && (
         <>
-          {membershipActionLabel && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" color="text.secondary">
-                {membershipActionLabel}
-              </Typography>
-            </Stack>
-          )}
-
-          <TableContainer>
+          <TableContainer sx={{ position: 'relative' }}>
+            {isMembershipActionInProgress && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  bgcolor: (theme) => theme.palette.background.paper,
+                  opacity: 0.9,
+                  zIndex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 1,
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={24} />
+                  {membershipActionLabel && (
+                    <Typography variant="body2" color="text.secondary">
+                      {membershipActionLabel}
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            )}
             <Table>
               <TableHead>
                 <TableRow>
@@ -189,19 +210,29 @@ export default function TeamMembersTab({
                         {isCurrentUser ? (
                           <Chip label={membership.role} size="small" color="primary" />
                         ) : (
-                          <Select
-                            value={membership.role}
-                            onChange={(event) => promptRoleChange(membership, event.target.value as OrganizationRole)}
-                            disabled={isMembershipActionInProgress}
-                            size="small"
-                            sx={{ minWidth: 120 }}
-                          >
-                            {ROLE_OPTIONS.map((role) => (
-                              <MenuItem key={role} value={role}>
-                                {role}
-                              </MenuItem>
-                            ))}
-                          </Select>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Select
+                              value={membership.role}
+                              onChange={(event) => promptRoleChange(membership, event.target.value as OrganizationRole)}
+                              disabled={
+                                isMembershipActionInProgress ||
+                                (membershipAction?.type === 'update' &&
+                                  membershipAction.membershipId === membership.membershipId)
+                              }
+                              size="small"
+                              sx={{ minWidth: 120 }}
+                            >
+                              {ROLE_OPTIONS.map((role) => (
+                                <MenuItem key={role} value={role}>
+                                  {role}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {membershipAction?.type === 'update' &&
+                              membershipAction.membershipId === membership.membershipId && (
+                                <CircularProgress size={16} />
+                              )}
+                          </Stack>
                         )}
                       </TableCell>
                       <TableCell>
@@ -215,9 +246,18 @@ export default function TeamMembersTab({
                             size="small"
                             color="error"
                             onClick={() => promptRemoveMember(membership)}
-                            disabled={isMembershipActionInProgress}
+                            disabled={
+                              isMembershipActionInProgress ||
+                              (membershipAction?.type === 'remove' &&
+                                membershipAction.membershipId === membership.membershipId)
+                            }
                           >
-                            <Close />
+                            {membershipAction?.type === 'remove' &&
+                            membershipAction.membershipId === membership.membershipId ? (
+                              <CircularProgress size={20} color="error" />
+                            ) : (
+                              <Close />
+                            )}
                           </IconButton>
                         )}
                       </TableCell>

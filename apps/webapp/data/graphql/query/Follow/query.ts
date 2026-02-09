@@ -125,7 +125,6 @@ export const GetSavedEventsDocument = graphql(`
           }
           details
         }
-        heroImage
         media {
           featuredImageUrl
         }

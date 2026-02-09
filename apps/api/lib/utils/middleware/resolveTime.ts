@@ -4,7 +4,6 @@ import { getStatusCodeColor } from '@/utils';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
 
-// TODO make it work with AWS Lambda
 export const ResolveTime = async ({ context, info }: ResolverData<ServerContext>, next: NextFn) => {
   const start = Date.now();
   await next();

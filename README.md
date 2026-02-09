@@ -38,6 +38,9 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 
 - API (`apps/api`): expects `JWT_SECRET`, `MONGO_DB_URL`, `STAGE` (e.g., `dev`), `AWS_REGION`, and optional
   `NTLANGO_SECRET_ARN` for Secrets Manager.
+  - **Important:** `MONGO_DB_URL` **must include a database name** (e.g., `mongodb://localhost:27017/ntlango`). Without
+    a database name, Mongoose defaults to the "test" database, which can cause collections (RSVPs, org memberships) to
+    vanish on reconnects.
 - Web (`apps/webapp`): needs `NEXT_PUBLIC_GRAPHQL_URL` pointing at the running API for codegen/build.
 - Place env vars in a `.env` per workspace or export them before running commands.
 
@@ -67,3 +70,26 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 - Web dev server: `npm run dev:web`
 - API tests: `npm run test:unit -w @ntlango/api`
 - CDK synth: `npm run build:cdk -w @ntlango/cdk`
+- Seed database: `npm run seed -w @ntlango/api`
+
+## Troubleshooting
+
+### Collections (RSVPs, org memberships) disappear randomly
+
+This happens when `MONGO_DB_URL` doesn't include a database name. Mongoose defaults to the "test" database and may lose
+track of collections on reconnects.
+
+**Solution:** Ensure your `MONGO_DB_URL` includes a database name:
+
+```bash
+# ❌ Wrong - defaults to "test" database
+MONGO_DB_URL=mongodb://localhost:27017
+
+# ✅ Correct - explicitly uses "ntlango_dev" database
+MONGO_DB_URL=mongodb://localhost:27017/ntlango
+```
+
+After fixing the URL, check logs on startup for: `MongoDB connected to database: your_db_name`
+
+If you see reconnection warnings, your network or MongoDB instance may be unstable. The client will auto-reconnect, but
+check that the database name remains consistent in the logs.

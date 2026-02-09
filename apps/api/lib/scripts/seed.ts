@@ -513,6 +513,11 @@ async function main() {
 
       const rsvpCount = getRandomInt(0, maxRsvpsPerEvent);
       const selectedUserIds = getRandomUniqueItems(userIds, rsvpCount);
+      if (event.visibility === undefined) {
+        logger.warn('Event visibility is undefined during RSVP seed; defaulting to Public', {
+          eventId: event.eventId,
+        });
+      }
       const sharedVisibility =
         event.visibility === undefined || event.visibility === EventVisibility.Public
           ? ParticipantVisibility.Public
@@ -526,7 +531,7 @@ async function main() {
 
       for (let i = 0; i < participantInputs.length; i += batchSize) {
         const batch = participantInputs.slice(i, i + batchSize);
-        await Promise.allSettled(
+        await Promise.all(
           batch.map(async (input) => {
             try {
               await EventParticipantDAO.upsert(input);

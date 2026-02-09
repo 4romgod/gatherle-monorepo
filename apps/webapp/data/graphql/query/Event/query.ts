@@ -41,7 +41,6 @@ export const GetAllEventsDocument = graphql(`
         details
       }
       recurrenceRule
-      heroImage
       orgId
       organization {
         orgId
@@ -132,7 +131,6 @@ export const GetEventBySlugDocument = graphql(`
         details
       }
       recurrenceRule
-      heroImage
       orgId
       organization {
         orgId
@@ -223,7 +221,6 @@ export const GetEventsByVenueDocument = graphql(`
         details
       }
       recurrenceRule
-      heroImage
       orgId
       organization {
         orgId

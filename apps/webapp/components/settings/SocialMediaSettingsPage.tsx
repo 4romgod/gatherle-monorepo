@@ -26,6 +26,7 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { logger } from '@/lib/utils';
 
 interface SocialAccount {
   id: string;
@@ -94,7 +95,7 @@ export default function SocialMediaSettingsPage() {
 
   const handleSaveSettings = () => {
     // TODO: Implement actual save logic (API call, etc.)
-    console.log('Social media settings saved:', {
+    logger.info('Social media settings saved:', {
       accounts: socialAccounts,
       shareOnSocialMedia,
       customLink,

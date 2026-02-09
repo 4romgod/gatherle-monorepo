@@ -84,6 +84,21 @@ describe('User', () => {
       expect(success).toBe(true);
     });
 
+    it('should invalidate future birthdate', () => {
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const invalidInput = {
+        ...getValidUserInput(),
+        password: 'securepassword123',
+        userId: undefined,
+        birthdate: futureDate,
+      };
+      const { success, error } = CreateUserInputSchema.safeParse(invalidInput);
+      expect(success).toBe(false);
+      if (error) {
+        expect(error.errors[0].message).toBe('Birth date must be in the past');
+      }
+    });
+
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
       const { success, error } = CreateUserInputSchema.safeParse(invalidInput);
@@ -102,6 +117,19 @@ describe('User', () => {
       };
       const { success } = UpdateUserInputSchema.safeParse(validInput);
       expect(success).toBe(true);
+    });
+
+    it('should invalidate future birthdate', () => {
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const invalidInput = {
+        userId: mockID,
+        birthdate: futureDate,
+      };
+      const { success, error } = UpdateUserInputSchema.safeParse(invalidInput);
+      expect(success).toBe(false);
+      if (error) {
+        expect(error.errors[0].message).toBe('Birth date must be in the past');
+      }
     });
 
     it('should invalidate invalid id format', () => {
