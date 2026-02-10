@@ -35,7 +35,7 @@ class EventDAO {
       const event = await EventModel.create(input);
       return event.toObject();
     } catch (error) {
-      logger.error('Error creating event', error);
+      logger.error('Error creating event', { error });
       const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
 
       if (validationMessage !== 'Event validation failed') {
@@ -54,7 +54,7 @@ class EventDAO {
       }
       return events[0];
     } catch (error) {
-      logger.error('Error reading event by id', error);
+      logger.error('Error reading event by id', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -72,7 +72,7 @@ class EventDAO {
       }
       return events[0];
     } catch (error) {
-      logger.error('Error reading event by slug:', error);
+      logger.error('Error reading event by slug:', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -103,7 +103,7 @@ class EventDAO {
         };
       } else if (options?.dateFilterOption) {
         // Use predefined filter option
-        logger.debug('Calculating date range from filter option:', options.dateFilterOption);
+        logger.debug('Calculating date range from filter option:', { dateFilterOption: options.dateFilterOption });
         const calculatedRange = getDateRangeForFilter(options.dateFilterOption, undefined);
         dateRangeToUse = {
           startDate: calculatedRange.startDate,
@@ -128,7 +128,7 @@ class EventDAO {
 
       return events;
     } catch (error) {
-      logger.error('Error reading events', error);
+      logger.error('Error reading events', { error });
       throw KnownCommonError(error);
     }
   }
@@ -154,7 +154,7 @@ class EventDAO {
 
       return event.toObject();
     } catch (error) {
-      logger.error('Error updating event', error);
+      logger.error('Error updating event', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -170,7 +170,7 @@ class EventDAO {
       }
       return deletedEvent.toObject();
     } catch (error) {
-      logger.error(`Error deleting event by eventId ${eventId}`, error);
+      logger.error(`Error deleting event by eventId ${eventId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -186,7 +186,7 @@ class EventDAO {
       }
       return deletedEvent.toObject();
     } catch (error) {
-      logger.error(`Error deleting event with slug ${slug}`, error);
+      logger.error(`Error deleting event with slug ${slug}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -211,7 +211,7 @@ class EventDAO {
 
       return event.toObject();
     } catch (error) {
-      logger.error(`Error updating event RSVP's with eventId ${eventId}`, error);
+      logger.error(`Error updating event RSVP's with eventId ${eventId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -236,7 +236,7 @@ class EventDAO {
 
       return event.toObject();
     } catch (error) {
-      logger.error(`Error cancelling event RSVP's with eventId ${eventId}`, error);
+      logger.error(`Error cancelling event RSVP's with eventId ${eventId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -248,7 +248,7 @@ class EventDAO {
     try {
       return EventModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting events', error);
+      logger.error('Error counting events', { error });
       throw KnownCommonError(error);
     }
   }

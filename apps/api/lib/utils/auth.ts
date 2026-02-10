@@ -130,8 +130,8 @@ export const verifyToken = async (token: string, secret?: string) => {
     }
     const { iat: _iat, exp: _exp, ...user } = verify(token, jwtSecret) as JwtPayload;
     return user as User;
-  } catch (err) {
-    logger.debug('Error when verifying token', err);
+  } catch (error) {
+    logger.debug('Error when verifying token', { error });
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }
 };
@@ -294,7 +294,7 @@ const isAuthorizedToManageOrganization = async (orgId: string | undefined, user:
 
     return userMembership?.role === OrganizationRole.Owner || userMembership?.role === OrganizationRole.Admin;
   } catch (error) {
-    logger.debug(`Error checking organization authorization for user ${user.userId} on org ${orgId}`, error);
+    logger.debug(`Error checking organization authorization for user ${user.userId} on org ${orgId}`, { error });
     return false;
   }
 };
@@ -323,7 +323,7 @@ const isAuthorizedToManageVenue = async (venueId: string | undefined, user: User
 
     return await isAuthorizedToManageOrganization(venue.orgId, user);
   } catch (error) {
-    logger.debug(`Error checking venue authorization for user ${user.userId} on venue ${venueId}`, error);
+    logger.debug(`Error checking venue authorization for user ${user.userId} on venue ${venueId}`, { error });
     return false;
   }
 };
@@ -345,10 +345,9 @@ const isAuthorizedToManageMembership = async (membershipId: string | undefined, 
     const membership = await OrganizationMembershipDAO.readMembershipById(membershipId);
     return await isAuthorizedToManageOrganization(membership.orgId, user);
   } catch (error) {
-    logger.debug(
-      `Error checking membership authorization for user ${user.userId} on membership ${membershipId}`,
+    logger.debug(`Error checking membership authorization for user ${user.userId} on membership ${membershipId}`, {
       error,
-    );
+    });
     return false;
   }
 };

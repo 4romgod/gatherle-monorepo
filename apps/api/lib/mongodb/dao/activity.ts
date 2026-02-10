@@ -23,7 +23,7 @@ class ActivityDAO {
       });
       return activity.toObject();
     } catch (error) {
-      logger.error('Error creating activity', error);
+      logger.error('Error creating activity', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -40,7 +40,7 @@ class ActivityDAO {
         .exec();
       return activities.map((activity) => activity.toObject());
     } catch (error) {
-      logger.error('Error reading activities by actor', error);
+      logger.error('Error reading activities by actor', { error });
       throw KnownCommonError(error);
     }
   }
@@ -57,7 +57,7 @@ class ActivityDAO {
         .exec();
       return activities.map((activity) => activity.toObject());
     } catch (error) {
-      logger.error('Error reading feed activities', error);
+      logger.error('Error reading feed activities', { error });
       throw KnownCommonError(error);
     }
   }

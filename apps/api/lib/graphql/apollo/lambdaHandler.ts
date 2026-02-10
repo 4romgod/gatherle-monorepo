@@ -96,12 +96,18 @@ export const graphqlLambdaHandler = async (
   context: Context,
   callback: Callback<APIGatewayProxyResult>,
 ) => {
+  // Set request ID for all logs in this invocation
+  const requestId = context.awsRequestId;
+  logger.setRequestId(requestId);
+
   try {
-    logger.info('Lambda handler invoked');
-    logger.debug(`Request ID: ${context.awsRequestId}`);
-    logger.debug(`Path: ${event.path}`);
-    logger.debug(`HTTP Method: ${event.httpMethod}`);
-    logger.debug(`Body: ${event.body ? event.body.substring(0, 200) : 'no body'}`);
+    logger.info('Lambda handler invoked', {
+      path: event.path,
+      httpMethod: event.httpMethod,
+    });
+    logger.debug('Request details', {
+      body: event.body ? event.body.substring(0, 200) : 'no body',
+    });
 
     // Handle CORS preflight OPTIONS request
     if (event.httpMethod === 'OPTIONS') {
@@ -120,9 +126,11 @@ export const graphqlLambdaHandler = async (
     const startTime = Date.now();
     const result = await lambdaHandler(event, context, callback);
     const duration = Date.now() - startTime;
-    logger.info(`Lambda handler execution completed in ${duration}ms`);
-    logger.debug(`Result status: ${result?.statusCode}`);
-    logger.debug(`Result body length: ${result?.body?.length || 0}`);
+    logger.info('Lambda handler execution completed', { durationMs: duration });
+    logger.debug('Response details', {
+      statusCode: result?.statusCode,
+      bodyLength: result?.body?.length || 0,
+    });
     logger.info('Returning result to API Gateway...');
 
     // Handle case where result might be void
@@ -146,8 +154,7 @@ export const graphqlLambdaHandler = async (
       },
     };
   } catch (error) {
-    logger.error('Error in lambda handler:', error);
-    logger.error(`Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
+    logger.error('Error in lambda handler', { error });
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error' }),
@@ -156,5 +163,8 @@ export const graphqlLambdaHandler = async (
         ...CORS_HEADERS,
       },
     };
+  } finally {
+    // Clear request ID after handling the request
+    logger.clearRequestId();
   }
 };

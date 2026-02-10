@@ -96,7 +96,7 @@ async function geocodeExistingEvents() {
           failCount++;
         }
       } catch (error) {
-        logger.error(`  ✗ Error geocoding event:`, error);
+        logger.error(`  ✗ Error geocoding event:`, { error });
         failCount++;
       }
 

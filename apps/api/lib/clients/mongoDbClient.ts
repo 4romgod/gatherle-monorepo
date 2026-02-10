@@ -42,10 +42,10 @@ function createTimingWrapper(originalExec: QueryExecFunction) {
       }
 
       return result;
-    } catch (err) {
+    } catch (error) {
       const elapsed = Date.now() - start;
-      logger.warn(`MongoDB query failed after ${elapsed}ms`, err);
-      throw err;
+      logger.warn(`MongoDB query failed after ${elapsed}ms`, { error });
+      throw error;
     }
   };
 }
@@ -75,7 +75,7 @@ function patchMongooseQueryTiming(): void {
 
     logger.debug('Mongoose query timing instrumentation enabled');
   } catch (error) {
-    logger.warn('Failed to patch mongoose Query.exec for timing', error);
+    logger.warn('Failed to patch mongoose Query.exec for timing', { error });
   }
 }
 
@@ -95,7 +95,7 @@ class MongoDbClient {
         logger.debug('MongoDB already connected, skipping connection attempt');
       }
     } catch (error) {
-      logger.error('Failed to connect to MongoDB!', error);
+      logger.error('Failed to connect to MongoDB!', { error });
       throw error;
     }
   }
@@ -106,7 +106,7 @@ class MongoDbClient {
       mongodbConnected = false;
       logger.info('MongoDB disconnected!');
     } catch (error) {
-      logger.error('Failed to disconnect from MongoDB!', error);
+      logger.error('Failed to disconnect from MongoDB!', { error });
       throw error;
     }
   }

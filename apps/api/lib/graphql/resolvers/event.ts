@@ -87,7 +87,7 @@ export class EventResolver {
   async readEvents(
     @Arg('options', () => EventsQueryOptionsInput, { nullable: true }) options?: EventsQueryOptionsInput,
   ): Promise<Event[]> {
-    logger.debug('[readEvents] GraphQL query options:', JSON.stringify(options, null, 2));
+    logger.debug('[readEvents] GraphQL query options:', { options });
     return EventDAO.readEvents(options);
   }
 

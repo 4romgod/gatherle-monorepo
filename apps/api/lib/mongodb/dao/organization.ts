@@ -15,7 +15,7 @@ class OrganizationDAO {
       const organization = await OrganizationModel.create(input);
       return organization.toObject();
     } catch (error) {
-      logger.error('Error creating organization', error);
+      logger.error('Error creating organization', { error });
       throw KnownCommonError(error);
     }
   }
@@ -29,7 +29,7 @@ class OrganizationDAO {
       }
       return organization.toObject();
     } catch (error) {
-      logger.error(`Error reading organization by id ${orgId}`, error);
+      logger.error(`Error reading organization by id ${orgId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -46,7 +46,7 @@ class OrganizationDAO {
       }
       return organization.toObject();
     } catch (error) {
-      logger.error(`Error reading organization by slug ${slug}`, error);
+      logger.error(`Error reading organization by slug ${slug}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -60,7 +60,7 @@ class OrganizationDAO {
       const organizations = await query.exec();
       return organizations.map((organization) => organization.toObject());
     } catch (error) {
-      logger.error('Error reading organizations', error);
+      logger.error('Error reading organizations', { error });
       throw KnownCommonError(error);
     }
   }
@@ -73,7 +73,7 @@ class OrganizationDAO {
       const organizations = await OrganizationModel.find({ orgId: { $in: orgIds } }).exec();
       return organizations.map((organization) => organization.toObject());
     } catch (error) {
-      logger.error('Error reading organizations by ids', error);
+      logger.error('Error reading organizations by ids', { error });
       throw KnownCommonError(error);
     }
   }
@@ -93,7 +93,7 @@ class OrganizationDAO {
 
       return organization.toObject();
     } catch (error) {
-      logger.error(`Error updating organization ${input.orgId}`, error);
+      logger.error(`Error updating organization ${input.orgId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -109,7 +109,7 @@ class OrganizationDAO {
       }
       return deletedOrganization.toObject();
     } catch (error) {
-      logger.error(`Error deleting organization ${orgId}`, error);
+      logger.error(`Error deleting organization ${orgId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }

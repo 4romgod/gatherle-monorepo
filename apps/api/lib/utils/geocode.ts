@@ -117,7 +117,7 @@ async function makeGeocodingRequest(params: URLSearchParams): Promise<GeocodingR
       return { latitude, longitude };
     } catch (error) {
       if (attempt === 2) {
-        logger.warn('[geocodeAddress] Request failed after retry:', error);
+        logger.warn('[geocodeAddress] Request failed after retry:', { error });
         return null;
       }
       logger.debug('[geocodeAddress] Request failed, retrying shortly', { attempt, error });
@@ -199,7 +199,7 @@ export async function geocodeAddress(address: Address): Promise<GeocodingResult 
     logger.debug(`[geocodeAddress] No results found for: ${addressString}`);
     return null;
   } catch (error) {
-    logger.error('[geocodeAddress] Error geocoding address:', error);
+    logger.error('[geocodeAddress] Error geocoding address:', { error });
     return null;
   }
 }

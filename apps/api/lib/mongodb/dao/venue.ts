@@ -22,7 +22,7 @@ class VenueDAO {
       const venue = await VenueModel.create(input);
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error('Error creating venue', error);
+      logger.error('Error creating venue', { error });
       throw KnownCommonError(error);
     }
   }
@@ -36,7 +36,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error reading venue ${venueId}`, error);
+      logger.error(`Error reading venue ${venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -53,7 +53,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error reading venue slug ${slug}`, error);
+      logger.error(`Error reading venue slug ${slug}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -67,7 +67,7 @@ class VenueDAO {
       const venues = await query.exec();
       return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
-      logger.error('Error reading venues', error);
+      logger.error('Error reading venues', { error });
       throw KnownCommonError(error);
     }
   }
@@ -77,7 +77,7 @@ class VenueDAO {
       const venues = await VenueModel.find({ orgId }).exec();
       return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
-      logger.error(`Error reading venues for org ${orgId}`, error);
+      logger.error(`Error reading venues for org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -97,7 +97,7 @@ class VenueDAO {
 
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error updating venue ${input.venueId}`, error);
+      logger.error(`Error updating venue ${input.venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -113,7 +113,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(deletedVenue.toObject());
     } catch (error) {
-      logger.error(`Error deleting venue ${venueId}`, error);
+      logger.error(`Error deleting venue ${venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }

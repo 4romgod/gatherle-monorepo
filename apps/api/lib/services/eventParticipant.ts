@@ -113,8 +113,8 @@ class EventParticipantService {
         targetSlug: event.slug,
         rsvpStatus: status,
       });
-    } catch (err) {
-      logger.error('Error sending RSVP notification', err);
+    } catch (error) {
+      logger.error('Error sending RSVP notification', { error });
     }
   }
 
@@ -138,8 +138,8 @@ class EventParticipantService {
         targetType: NotificationTargetType.Event,
         targetSlug: event.slug,
       });
-    } catch (err) {
-      logger.error('Error sending check-in notification', err);
+    } catch (error) {
+      logger.error('Error sending check-in notification', { error });
     }
   }
 }

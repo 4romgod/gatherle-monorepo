@@ -46,7 +46,7 @@ class UserService {
 
         logger.debug(`[UserService.blockUser] Follow relationships cleaned up for block ${userId} -> ${blockedUserId}`);
       } catch (error) {
-        logger.error(`[UserService.blockUser] Error cleaning up follow relationships:`, error);
+        logger.error(`[UserService.blockUser] Error cleaning up follow relationships:`, { error });
       }
     };
 

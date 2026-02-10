@@ -20,7 +20,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find({ eventId: { $in: eventIds } }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading participants by events', error);
+      logger.error('Error reading participants by events', { error });
       throw KnownCommonError(error);
     }
   }
@@ -50,7 +50,7 @@ class EventParticipantDAO {
 
       return participant.toObject();
     } catch (error) {
-      logger.error('Error upserting event participant', error);
+      logger.error('Error upserting event participant', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -73,7 +73,7 @@ class EventParticipantDAO {
 
       return participant.toObject();
     } catch (error) {
-      logger.error('Error cancelling event participant', error);
+      logger.error('Error cancelling event participant', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -86,7 +86,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find({ eventId }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading participants', error);
+      logger.error('Error reading participants', { error });
       throw KnownCommonError(error);
     }
   }
@@ -104,7 +104,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find(query).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading user RSVPs', error);
+      logger.error('Error reading user RSVPs', { error });
       throw KnownCommonError(error);
     }
   }
@@ -118,7 +118,7 @@ class EventParticipantDAO {
       const participant = await EventParticipant.findOne({ eventId, userId }).exec();
       return participant ? participant.toObject() : null;
     } catch (error) {
-      logger.error('Error reading user RSVP for event', error);
+      logger.error('Error reading user RSVP for event', { error });
       throw KnownCommonError(error);
     }
   }
@@ -138,7 +138,7 @@ class EventParticipantDAO {
       }
       return await EventParticipant.countDocuments(query).exec();
     } catch (error) {
-      logger.error('Error counting event participants', error);
+      logger.error('Error counting event participants', { error });
       throw KnownCommonError(error);
     }
   }

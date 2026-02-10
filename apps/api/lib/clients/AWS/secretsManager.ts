@@ -36,9 +36,9 @@ async function getSecretValue(secretKey: string): Promise<string> {
     }
 
     return secretValue;
-  } catch (err) {
-    logger.error('Error retrieving secret:', err);
-    throw err;
+  } catch (error) {
+    logger.error('Error retrieving secret:', { error });
+    throw error;
   }
 }
 

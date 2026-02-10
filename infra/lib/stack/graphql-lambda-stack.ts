@@ -9,7 +9,7 @@ import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-l
 import { configDotenv } from 'dotenv';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
-import { LogGroup } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { APPLICATION_STAGES } from '@ntlango/commons';
@@ -30,11 +30,19 @@ export class GraphQLStack extends Stack {
   readonly graphqlApi: RestApi;
   readonly graphql: ResourceBase;
   readonly graphqlApiPathOutput: CfnOutput;
+  readonly lambdaLogGroup: LogGroup;
+  readonly apiAccessLogGroup: LogGroup;
 
   constructor(scope: Construct, id: string, props: GraphQLStackProps) {
     super(scope, id, props);
 
     const ntlangoSecret = Secret.fromSecretNameV2(this, 'ImportedSecret', `${process.env.STAGE}/ntlango/graphql-api`);
+
+    this.lambdaLogGroup = new LogGroup(this, 'GraphqlLambdaLogGroup', {
+      logGroupName: '/aws/lambda/GraphqlLambdaFunction',
+      retention: RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
 
     this.graphqlLambda = new NodejsFunction(this, 'GraphqlLambdaFunction', {
       functionName: 'GraphqlLambdaFunction',
@@ -59,13 +67,15 @@ export class GraphQLStack extends Stack {
         S3_BUCKET_NAME: props.s3BucketName || '',
         NODE_OPTIONS: '--enable-source-maps',
       },
+      logGroup: this.lambdaLogGroup,
     });
 
     ntlangoSecret.grantRead(this.graphqlLambda);
 
-    const accessLogDestination = new LogGroup(this, 'GraphqlRestApiAccessLogs', {
+    this.apiAccessLogGroup = new LogGroup(this, 'GraphqlRestApiAccessLogs', {
       logGroupName: 'GraphqlRestApiAccessLogs',
-      removalPolicy: APPLICATION_STAGES.PROD == process.env.STAGE ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+      retention: RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.RETAIN,
     });
 
     this.graphqlApi = new LambdaRestApi(this, 'GraphqlRestApiId', {
@@ -73,7 +83,7 @@ export class GraphQLStack extends Stack {
       proxy: false,
       cloudWatchRole: true,
       deployOptions: {
-        accessLogDestination: new LogGroupLogDestination(accessLogDestination),
+        accessLogDestination: new LogGroupLogDestination(this.apiAccessLogGroup),
         accessLogFormat: AccessLogFormat.clf(),
         stageName: `${process.env.STAGE}`.toLowerCase(),
       },

@@ -91,12 +91,12 @@
 - The pipeline uses GitHub Workflows (`.github/workflows/pipeline.yaml`) with two jobs: `pr-check` (lint/build/test) and
   `api-deploy` (CDK deploy + integration tests). Ensure each job runs from the root so workspace commands resolve
   correctly.
-- Global workflow env: `STAGE` defaults to `Dev`, but production pushes should override via GitHub repository variables
+- Global workflow env: `STAGE` defaults to `Beta`, but production pushes should override via GitHub repository variables
   (matching the stage naming in `packages/commons`).
 - Secrets/variables required in GitHub:
   - `ASSUME_ROLE_ARN`: Role the CDK deploy job assumes (set under repo Settings → Secrets).
   - `AWS_REGION`: Region used both for `configure-aws-credentials` and to satisfy `apps/api` env expectations.
-  - Repository `Variables`: `STAGE` (e.g., `Dev`, `Prod`) and `NTLANGO_SECRET_ARN` variants (e.g.,
+  - Repository `Variables`: `STAGE` (e.g., `Beta`, `Prod`) and `NTLANGO_SECRET_ARN` variants (e.g.,
     `${{ vars.STAGE }}/ntlango/graphql-api`) so integration tests know where to resolve secrets.
 - Workflow flow for `api-deploy`:
   1. Checkout → Install deps → CDK tools.

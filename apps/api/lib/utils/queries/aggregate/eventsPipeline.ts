@@ -37,7 +37,9 @@ export const transformEventOptionsToPipeline = (options?: EventsQueryOptionsInpu
     }
   }
 
-  logger.debug('[transformEventOptionsToPipeline] MongoDB aggregation pipeline:', JSON.stringify(pipeline, null, 2));
+  logger.debug('[transformEventOptionsToPipeline] MongoDB aggregation pipeline:', {
+    pipeline,
+  });
 
   return pipeline;
 };

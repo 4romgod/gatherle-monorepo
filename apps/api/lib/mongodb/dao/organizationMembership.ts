@@ -14,7 +14,7 @@ class OrganizationMembershipDAO {
       const membership = await OrganizationMembershipModel.create(input);
       return membership.toObject();
     } catch (error) {
-      logger.error('Error creating organization membership', error);
+      logger.error('Error creating organization membership', { error });
       throw KnownCommonError(error);
     }
   }
@@ -28,7 +28,7 @@ class OrganizationMembershipDAO {
       }
       return membership.toObject();
     } catch (error) {
-      logger.error(`Error reading membership ${membershipId}`, error);
+      logger.error(`Error reading membership ${membershipId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -41,7 +41,7 @@ class OrganizationMembershipDAO {
       const memberships = await OrganizationMembershipModel.find({ orgId }).exec();
       return memberships.map((membership) => membership.toObject());
     } catch (error) {
-      logger.error(`Error reading memberships for org ${orgId}`, error);
+      logger.error(`Error reading memberships for org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -51,7 +51,7 @@ class OrganizationMembershipDAO {
       const memberships = await OrganizationMembershipModel.find({ userId }).exec();
       return memberships.map((membership) => membership.toObject());
     } catch (error) {
-      logger.error(`Error reading memberships for user ${userId}`, error);
+      logger.error(`Error reading memberships for user ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -61,7 +61,7 @@ class OrganizationMembershipDAO {
       const membership = await OrganizationMembershipModel.findOne({ orgId, userId }).exec();
       return membership ? membership.toObject() : null;
     } catch (error) {
-      logger.error(`Error reading membership for user ${userId} in org ${orgId}`, error);
+      logger.error(`Error reading membership for user ${userId} in org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -81,7 +81,7 @@ class OrganizationMembershipDAO {
 
       return membership.toObject();
     } catch (error) {
-      logger.error(`Error updating membership ${input.membershipId}`, error);
+      logger.error(`Error updating membership ${input.membershipId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -97,7 +97,7 @@ class OrganizationMembershipDAO {
       }
       return deletedMembership.toObject();
     } catch (error) {
-      logger.error(`Error deleting membership ${membershipId}`, error);
+      logger.error(`Error deleting membership ${membershipId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }

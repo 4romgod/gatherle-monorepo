@@ -42,9 +42,9 @@ type UpdateFields = {
       this.email = this.email.toLowerCase();
     }
     next();
-  } catch (err) {
-    logger.debug('Error when pre-saving the user', err);
-    next(err as Error);
+  } catch (error) {
+    logger.debug('Error when pre-saving the user', { error });
+    next(error as Error);
   }
 })
 @pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function (next) {
@@ -71,9 +71,9 @@ type UpdateFields = {
     }
     context.setUpdate?.(updateObj);
     next();
-  } catch (err) {
-    logger.error('Error in pre-update hook', err);
-    next(err as Error);
+  } catch (error) {
+    logger.error('Error in pre-update hook', { error });
+    next(error as Error);
   }
 })
 class UserModel extends UserEntity {

@@ -6,7 +6,7 @@
 
 - Source: `.env` (e.g., `apps/api/.env.local` or root `.env` used with `dotenv` in `environmentVariables.ts`).
 - Required keys:
-  - `STAGE` (default `Dev`).
+  - `STAGE` (default `Beta`).
   - `AWS_REGION` (defaults to `eu-west-1`).
   - `MONGO_DB_URL` **MUST include a database name** (e.g., `mongodb://localhost:27017/ntlango`) to prevent collections
     from vanishing on reconnects. Without a database name, Mongoose defaults to the "test" database.
@@ -60,7 +60,7 @@
 - Secrets & vars needed in GitHub:
   1. `ASSUME_ROLE_ARN` – secret, used when configuring AWS credentials.
   2. `AWS_REGION` – can live in repository **variables** (no need to mark it as a secret).
-  3. `STAGE` – repository variable (default `Dev`, override for prod).
+  3. `STAGE` – repository variable (default `Beta`, override for prod).
   4. `NTLANGO_SECRET_ARN` – if tests or later steps run outside AWS, pass the ARN (or re-export it) so integration
      tests/webapp builds can reach the same secrets.
 - CDK deploy step passes:

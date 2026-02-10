@@ -87,7 +87,7 @@ async function seedEventCategories(categories: Array<CreateEventCategoryInput>) 
       const eventCategoryResponse = await EventCategoryDAO.create(category);
       logger.info(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
     } catch (error) {
-      logger.warn(`   Failed to create Event Category "${category.name}":`, error);
+      logger.warn(`   Failed to create Event Category "${category.name}":`, { error });
     }
   }
   logger.info('Completed seeding event category data.');
@@ -126,7 +126,7 @@ async function seedEventCategoryGroups(
 
       logger.info(`   Seeded group: ${groupInput.name}`);
     } catch (error) {
-      logger.warn(`   Failed to create Event Category Group "${groupInput.name}":`, error);
+      logger.warn(`   Failed to create Event Category Group "${groupInput.name}":`, { error });
     }
   }
 
@@ -152,7 +152,7 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
       });
       logger.info(`   Created User item with id: ${userResponse.userId}`);
     } catch (error) {
-      logger.warn(`   Failed to create User "${user.email}":`, error);
+      logger.warn(`   Failed to create User "${user.email}":`, { error });
     }
   }
   logger.info('Completed seeding user data.');
@@ -194,7 +194,7 @@ async function seedOrganizations(seedData: OrganizationSeedData[], usersByEmail:
       created.push(organization);
       await ensureOwnerMembershipForOrganization(organization);
     } catch (error) {
-      logger.warn(`   Failed to create Organization:`, error);
+      logger.warn(`   Failed to create Organization:`, { error });
     }
   }
   logger.info('Completed seeding organization data.');
@@ -220,7 +220,7 @@ async function ensureOwnerMembershipForOrganization(organization: Organization) 
   } catch (error) {
     logger.warn(
       `   Failed to ensure owner membership for organization "${organization.name}" (${organization.orgId})`,
-      error,
+      { error },
     );
   }
 }
@@ -291,7 +291,7 @@ async function seedVenues(seedData: VenueSeedData[], organizations: Organization
       createdVenues.push(venue);
       logger.info(`   Created Venue with id: ${venue.venueId}`);
     } catch (error) {
-      logger.warn(`   Failed to create Venue:`, error);
+      logger.warn(`   Failed to create Venue:`, { error });
     }
   }
   logger.info('Completed seeding venue data.');
@@ -334,7 +334,7 @@ async function seedOrganizationMemberships(
       });
       logger.info(`   Created OrganizationMembership for user ${user.userId}`);
     } catch (error) {
-      logger.warn(`   Failed to create OrganizationMembership:`, error);
+      logger.warn(`   Failed to create OrganizationMembership:`, { error });
     }
   }
   logger.info('Completed seeding organization membership data.');
@@ -394,7 +394,7 @@ async function seedEvents(
       logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
       createdEvents.push(eventResponse);
     } catch (error) {
-      logger.warn(`   Failed to create Event:`, error);
+      logger.warn(`   Failed to create Event:`, { error });
     }
   }
   logger.info('Completed seeding event data.');

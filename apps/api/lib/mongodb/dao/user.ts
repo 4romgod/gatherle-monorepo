@@ -24,7 +24,7 @@ class UserDAO {
       const token = await generateToken(tokenPayload);
       return { ...tokenPayload, token };
     } catch (error) {
-      logger.error('Error when creating a new user', error);
+      logger.error('Error when creating a new user', { error });
       throw KnownCommonError(error);
     }
   }
@@ -45,7 +45,7 @@ class UserDAO {
       const jwtToken = await generateToken(user.toObject());
       return { token: jwtToken, ...user.toObject() };
     } catch (error) {
-      logger.error('Error when user logging in', error);
+      logger.error('Error when user logging in', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -62,7 +62,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error reading user by userId ${userId}`, error);
+      logger.error(`Error reading user by userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -79,7 +79,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error reading user by username ${username}`, error);
+      logger.error(`Error reading user by username ${username}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -96,7 +96,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error reading user by email ${email}`, error);
+      logger.error(`Error reading user by email ${email}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -111,7 +111,7 @@ class UserDAO {
       const retrieved = await query.exec();
       return retrieved.map((user) => user.toObject());
     } catch (error) {
-      logger.error('Error querying users', error);
+      logger.error('Error querying users', { error });
       throw KnownCommonError(error);
     }
   }
@@ -133,7 +133,7 @@ class UserDAO {
 
       return existingUser.toObject();
     } catch (error) {
-      logger.error(`Error updating user with userId ${user.userId}`, error);
+      logger.error(`Error updating user with userId ${user.userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -150,7 +150,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      logger.error(`Error deleting user with userId ${userId}`);
+      logger.error(`Error deleting user with userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -167,7 +167,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      logger.error(`Error deleting user with email ${email}`);
+      logger.error(`Error deleting user with email ${email}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -184,7 +184,7 @@ class UserDAO {
       }
       return deletedUser.toObject();
     } catch (error) {
-      logger.error(`Error deleting user with username ${username}`, error);
+      logger.error(`Error deleting user with username ${username}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -204,7 +204,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error promoting user to Admin with userId ${userId}`, error);
+      logger.error(`Error promoting user to Admin with userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -241,7 +241,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error blocking user ${blockedUserId} for userId ${userId}`, error);
+      logger.error(`Error blocking user ${blockedUserId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -263,7 +263,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unblocking user ${blockedUserId} for userId ${userId}`, error);
+      logger.error(`Error unblocking user ${blockedUserId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -288,7 +288,7 @@ class UserDAO {
 
       return blockedUsers.map((u) => u.toObject());
     } catch (error) {
-      logger.error(`Error reading blocked users for userId ${userId}`, error);
+      logger.error(`Error reading blocked users for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -319,7 +319,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error muting user ${mutedUserId} for userId ${userId}`, error);
+      logger.error(`Error muting user ${mutedUserId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -341,7 +341,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unmuting user ${mutedUserId} for userId ${userId}`, error);
+      logger.error(`Error unmuting user ${mutedUserId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -366,7 +366,7 @@ class UserDAO {
 
       return mutedUsers.map((u) => u.toObject());
     } catch (error) {
-      logger.error(`Error reading muted users for userId ${userId}`, error);
+      logger.error(`Error reading muted users for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -401,7 +401,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error muting organization ${orgId} for userId ${userId}`, error);
+      logger.error(`Error muting organization ${orgId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -423,7 +423,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unmuting organization ${orgId} for userId ${userId}`, error);
+      logger.error(`Error unmuting organization ${orgId} for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -440,7 +440,7 @@ class UserDAO {
 
       return user.mutedOrgIds || [];
     } catch (error) {
-      logger.error(`Error reading muted organization IDs for userId ${userId}`, error);
+      logger.error(`Error reading muted organization IDs for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -452,7 +452,7 @@ class UserDAO {
     try {
       return UserModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting users', error);
+      logger.error('Error counting users', { error });
       throw KnownCommonError(error);
     }
   }
@@ -503,7 +503,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error saving session state for userId ${userId}, key ${input.key}`, error);
+      logger.error(`Error saving session state for userId ${userId}, key ${input.key}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -521,7 +521,7 @@ class UserDAO {
       const state = user.preferences?.sessionState?.find((s) => s.key === key);
       return state || null;
     } catch (error) {
-      logger.error(`Error reading session state for userId ${userId}, key ${key}`, error);
+      logger.error(`Error reading session state for userId ${userId}, key ${key}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -538,7 +538,7 @@ class UserDAO {
 
       return user.preferences?.sessionState || [];
     } catch (error) {
-      logger.error(`Error reading all session states for userId ${userId}`, error);
+      logger.error(`Error reading all session states for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -561,7 +561,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error clearing session state for userId ${userId}, key ${key}`, error);
+      logger.error(`Error clearing session state for userId ${userId}, key ${key}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -584,7 +584,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error clearing all session states for userId ${userId}`, error);
+      logger.error(`Error clearing all session states for userId ${userId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }

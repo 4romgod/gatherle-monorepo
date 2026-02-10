@@ -30,9 +30,9 @@ export async function uploadToS3(key: string, body: Buffer, contentType: string)
     const url = `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${key}`;
     logger.info('File uploaded to S3', { key, bucket: S3_BUCKET_NAME });
     return url;
-  } catch (err) {
-    logger.error('Error uploading to S3:', err);
-    throw err;
+  } catch (error) {
+    logger.error('Error uploading to S3:', { error });
+    throw error;
   }
 }
 
@@ -52,9 +52,9 @@ export async function deleteFromS3(key: string): Promise<void> {
   try {
     await getS3Client().send(command);
     logger.info('File deleted from S3', { key, bucket: S3_BUCKET_NAME });
-  } catch (err) {
-    logger.error('Error deleting from S3:', err);
-    throw err;
+  } catch (error) {
+    logger.error('Error deleting from S3:', { error });
+    throw error;
   }
 }
 
@@ -76,9 +76,9 @@ export async function getPresignedUrl(key: string, expiresIn: number = 3600): Pr
     const url = await getSignedUrl(getS3Client(), command, { expiresIn });
     logger.debug('Generated pre-signed URL', { key, expiresIn });
     return url;
-  } catch (err) {
-    logger.error('Error generating pre-signed URL:', err);
-    throw err;
+  } catch (error) {
+    logger.error('Error generating pre-signed URL:', { error });
+    throw error;
   }
 }
 
@@ -105,9 +105,9 @@ export async function getPresignedUploadUrl(
     const url = await getSignedUrl(getS3Client(), command, { expiresIn });
     logger.debug('Generated pre-signed upload URL', { key, contentType, expiresIn });
     return url;
-  } catch (err) {
-    logger.error('Error generating pre-signed upload URL:', err);
-    throw err;
+  } catch (error) {
+    logger.error('Error generating pre-signed upload URL:', { error });
+    throw error;
   }
 }
 

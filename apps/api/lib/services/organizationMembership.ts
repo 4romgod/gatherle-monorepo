@@ -52,7 +52,7 @@ class OrganizationMembershipService {
         });
         logger.debug(`[OrganizationMembershipService.addMember] Sent ORG_INVITE notification to ${input.userId}`);
       } catch (error) {
-        logger.error(`[OrganizationMembershipService.addMember] Failed to send notification:`, error);
+        logger.error(`[OrganizationMembershipService.addMember] Failed to send notification:`, { error });
       }
     };
 
@@ -119,7 +119,7 @@ class OrganizationMembershipService {
             `[OrganizationMembershipService.updateMemberRole] Sent ORG_ROLE_CHANGED notification to ${existingMembership.userId}`,
           );
         } catch (error) {
-          logger.error(`[OrganizationMembershipService.updateMemberRole] Failed to send notification:`, error);
+          logger.error(`[OrganizationMembershipService.updateMemberRole] Failed to send notification:`, { error });
         }
       };
 
@@ -193,7 +193,7 @@ class OrganizationMembershipService {
       // Fail closed: If we can't verify authorization, deny access
       logger.error(
         `[OrganizationMembershipService.verifyOrganizationAdminAccess] Error verifying admin access for user ${userId} on org ${orgId}`,
-        error,
+        { error },
       );
       return false;
     }

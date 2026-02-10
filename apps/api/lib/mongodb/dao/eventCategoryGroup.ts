@@ -26,7 +26,7 @@ class EventCategoryGroupDAO {
       const eventCategoryGroup = await EventCategoryGroupModel.create(input);
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.info('Error creating event category group', error);
+      logger.info('Error creating event category group', { error });
       throw KnownCommonError(error);
     }
   }
@@ -44,7 +44,7 @@ class EventCategoryGroupDAO {
       }
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.info(`Error reading event category by slug ${slug}`, error);
+      logger.info(`Error reading event category by slug ${slug}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -64,7 +64,7 @@ class EventCategoryGroupDAO {
       const eventCategoryGroups = await query.exec();
       return eventCategoryGroups.map((eventCategoryGroup) => eventCategoryGroup.toObject());
     } catch (error) {
-      logger.error('Error reading event category groups:', error);
+      logger.error('Error reading event category groups:', { error });
       throw KnownCommonError(error);
     }
   }
@@ -88,7 +88,9 @@ class EventCategoryGroupDAO {
 
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.info(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, error);
+      logger.info(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, {
+        error,
+      });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -108,7 +110,7 @@ class EventCategoryGroupDAO {
       }
       return deletedEventCategoryGroup.toObject();
     } catch (error) {
-      logger.error('Error deleting event category group by slug:', error);
+      logger.error('Error deleting event category group by slug:', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -120,7 +122,7 @@ class EventCategoryGroupDAO {
     try {
       return EventCategoryGroupModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting event category groups', error);
+      logger.error('Error counting event category groups', { error });
       throw KnownCommonError(error);
     }
   }

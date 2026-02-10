@@ -31,7 +31,7 @@ export const validateUserIdentifiers = async (input: RsvpInput | CancelRsvpInput
 
     return Array.from(validUserIds);
   } catch (error) {
-    logger.error('Error validating user IDs', error);
+    logger.error('Error validating user IDs', { error });
     throw error;
   }
 };

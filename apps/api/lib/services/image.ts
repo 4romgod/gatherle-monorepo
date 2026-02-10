@@ -26,7 +26,7 @@ class ImageService {
 
       return url;
     } catch (error) {
-      logger.error('Error uploading image', error);
+      logger.error('Error uploading image', { error });
       throw error;
     }
   }
@@ -44,7 +44,7 @@ class ImageService {
 
       logger.info('Image deleted successfully', { url, key });
     } catch (error) {
-      logger.error('Error deleting image', error);
+      logger.error('Error deleting image', { error });
       throw error;
     }
   }
@@ -58,7 +58,7 @@ class ImageService {
       await Promise.all(urls.map((url) => this.deleteImageByUrl(url)));
       logger.info('Multiple images deleted', { count: urls.length });
     } catch (error) {
-      logger.error('Error deleting multiple images', error);
+      logger.error('Error deleting multiple images', { error });
       throw error;
     }
   }

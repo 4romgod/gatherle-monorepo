@@ -1,5 +1,11 @@
 import { App } from 'aws-cdk-lib';
-import { GitHubActionsAwsAuthStack, GraphQLStack, SecretsManagementStack, S3BucketStack } from '../stack';
+import {
+  GitHubActionsAwsAuthStack,
+  GraphQLStack,
+  SecretsManagementStack,
+  S3BucketStack,
+  MonitoringDashboardStack,
+} from '../stack';
 import { ServiceAccount } from '../constants';
 
 export const setupServiceAccount = (app: App, account: ServiceAccount) => {
@@ -47,4 +53,18 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
 
   // Grant Lambda permissions to access S3 bucket
   s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda);
+
+  // Create monitoring dashboard
+  const monitoringStack = new MonitoringDashboardStack(app, 'MonitoringDashboardStack', {
+    env: {
+      account: account.accountNumber,
+      region: account.awsRegion,
+    },
+    lambdaFunction: graphqlStack.graphqlLambda,
+    lambdaLogGroup: graphqlStack.lambdaLogGroup,
+    apiAccessLogGroup: graphqlStack.apiAccessLogGroup,
+    description: 'This stack includes CloudWatch dashboards and alarms for monitoring the GraphQL API',
+  });
+
+  monitoringStack.addDependency(graphqlStack);
 };

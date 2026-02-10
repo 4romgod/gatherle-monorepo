@@ -34,7 +34,7 @@ class FollowDAO {
 
       return follow.toObject();
     } catch (error) {
-      logger.error('Error upserting follow', error);
+      logger.error('Error upserting follow', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -63,7 +63,7 @@ class FollowDAO {
 
       return follow.toObject();
     } catch (error) {
-      logger.error('Error updating approval status', error);
+      logger.error('Error updating approval status', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -82,7 +82,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading pending follows', error);
+      logger.error('Error reading pending follows', { error });
       throw KnownCommonError(error);
     }
   }
@@ -97,7 +97,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading follow requests', error);
+      logger.error('Error reading follow requests', { error });
       throw KnownCommonError(error);
     }
   }
@@ -107,7 +107,7 @@ class FollowDAO {
       const follows = await FollowModel.find({ followerUserId }).sort({ createdAt: -1 }).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading following list', error);
+      logger.error('Error reading following list', { error });
       throw KnownCommonError(error);
     }
   }
@@ -123,7 +123,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading followers', error);
+      logger.error('Error reading followers', { error });
       throw KnownCommonError(error);
     }
   }
@@ -136,7 +136,7 @@ class FollowDAO {
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
     } catch (error) {
-      logger.error('Error counting followers', error);
+      logger.error('Error counting followers', { error });
       throw KnownCommonError(error);
     }
   }
@@ -155,7 +155,7 @@ class FollowDAO {
       }).exec();
       return follow !== null;
     } catch (error) {
-      logger.error('Error checking follow status', error);
+      logger.error('Error checking follow status', { error });
       throw KnownCommonError(error);
     }
   }
@@ -182,7 +182,7 @@ class FollowDAO {
       }
       return true;
     } catch (error) {
-      logger.error('Error removing follow', error);
+      logger.error('Error removing follow', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -219,7 +219,7 @@ class FollowDAO {
 
       return true;
     } catch (error) {
-      logger.error('Error removing follower', error);
+      logger.error('Error removing follower', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -247,7 +247,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading saved events for user', error);
+      logger.error('Error reading saved events for user', { error });
       throw KnownCommonError(error);
     }
   }
@@ -265,7 +265,7 @@ class FollowDAO {
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
     } catch (error) {
-      logger.error('Error counting saves for event', error);
+      logger.error('Error counting saves for event', { error });
       throw KnownCommonError(error);
     }
   }
@@ -286,7 +286,7 @@ class FollowDAO {
       }).exec();
       return follow !== null;
     } catch (error) {
-      logger.error('Error checking if event is saved', error);
+      logger.error('Error checking if event is saved', { error });
       throw KnownCommonError(error);
     }
   }

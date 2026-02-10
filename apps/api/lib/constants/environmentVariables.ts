@@ -14,7 +14,7 @@ const EnvSchema = z
     MONGO_DB_URL: z.string().optional(),
     JWT_SECRET: z.string().optional(),
     AWS_REGION: z.string().default('eu-west-1'),
-    STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.DEV),
+    STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.BETA),
     NTLANGO_SECRET_ARN: z.string().optional(),
     S3_BUCKET_NAME: z.string().optional(),
     LOG_LEVEL: z
@@ -63,8 +63,7 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
-// Initialize logger with configured log level
-initLogger(env.LOG_LEVEL);
+initLogger(env.LOG_LEVEL, true);
 
 /**
  * Log configuration (excluding secrets)
