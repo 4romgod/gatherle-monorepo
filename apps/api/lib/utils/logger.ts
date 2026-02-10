@@ -171,11 +171,11 @@ class Logger {
   }
 
   /**
-   * Log GraphQL requests (uses DEBUG level)
+   * Log GraphQL requests (uses INFO level for operational visibility)
    */
   graphql(operation: string, query: string, variables?: Record<string, any>): void {
-    if (this.shouldLog(LogLevel.DEBUG)) {
-      this.debug('GraphQL request received', {
+    if (this.shouldLog(LogLevel.INFO)) {
+      this.info('GraphQL request received', {
         operation,
         query,
         variables,

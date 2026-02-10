@@ -3,8 +3,8 @@
 import { Box, Card, CardContent, Typography, Stack } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EventIcon from '@mui/icons-material/Event';
-import { EventCategory } from '@/data/graphql/types/graphql';
-import PopularOrganizerBox, { PopularOrganization } from './PopularOrganizerBox';
+import { EventCategory, Organization } from '@/data/graphql/types/graphql';
+import OrganizationCard from '@/components/organization/organizationBox';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import Surface from '../core/Surface';
 
@@ -17,7 +17,7 @@ export type PlatformStats = {
 };
 
 export type EventsSidebarProps = {
-  popularOrganization: PopularOrganization | null;
+  popularOrganization: Organization | null;
   stats: PlatformStats;
   trendingCategories: EventCategory[];
 };
@@ -25,8 +25,8 @@ export type EventsSidebarProps = {
 export default function EventsSidebar({ popularOrganization, stats, trendingCategories }: EventsSidebarProps) {
   return (
     <Stack spacing={3}>
-      {/* Popular Organizer Box */}
-      {popularOrganization && <PopularOrganizerBox organization={popularOrganization} />}
+      {/* Popular Organization Box */}
+      {popularOrganization && <OrganizationCard organization={popularOrganization} />}
 
       {/* Quick Stats Box */}
       <Surface

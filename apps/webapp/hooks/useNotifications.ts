@@ -11,7 +11,7 @@ import {
 import type { Notification, NotificationConnection } from '@/data/graphql/query/Notification/types';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 interface UseNotificationsOptions {
   limit?: number;
@@ -77,19 +77,44 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
  * TODO: Look into Pub Sub
  * Hook to get just the unread notification count (for badge display)
  * Uses a separate lightweight query that can poll frequently
+ * Only polls when the page is visible to avoid unnecessary requests
  */
 export function useUnreadNotificationCount(pollInterval?: number) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading, error, refetch } = useQuery(GetUnreadNotificationCountDocument, {
+  const { data, loading, error, refetch, startPolling, stopPolling } = useQuery(GetUnreadNotificationCountDocument, {
     skip: !token,
     fetchPolicy: 'cache-and-network',
-    pollInterval: pollInterval, // Optional polling for real-time updates
+    pollInterval: 0, // Start with polling disabled, we'll control it manually
     context: {
       headers: getAuthHeader(token),
     },
   });
+
+  useEffect(() => {
+    if (!pollInterval) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling(pollInterval);
+      }
+    };
+
+    // Set initial polling state based on current visibility
+    if (!document.hidden) {
+      startPolling(pollInterval);
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopPolling();
+    };
+  }, [pollInterval, startPolling, stopPolling]);
 
   return {
     unreadCount: data?.unreadNotificationCount ?? 0,

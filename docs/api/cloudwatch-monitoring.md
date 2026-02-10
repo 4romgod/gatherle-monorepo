@@ -27,29 +27,28 @@ The dashboard includes the following widgets:
 
 - **Invocations**: Total number of Lambda invocations over time
 - **Errors**: Lambda-level errors (5xx responses, timeouts, etc.)
-- **Duration**: Average and maximum execution time
+- **Duration**: P50, P95, and P99 percentiles for performance analysis
 
 #### **Application Errors & Warnings**
 
-- **Error Logs**: All ERROR-level logs from the last hour with request IDs, error names, and messages
-- **Warning Logs**: All WARN-level logs from the last hour
-- **Error Count Over Time**: 5-minute bins showing error frequency trends
-- **Warning Count Over Time**: 5-minute bins showing warning frequency trends
-
-#### **Error Analysis**
-
-- **Top Error Messages**: Most frequent error messages (top 10)
-- **Top Error Types**: Most common error types (e.g., `MongoError`, `ValidationError`, `GraphQLError`)
+- **Error Logs**: All ERROR-level logs with request IDs, error names, and messages
+- **Warning Logs**: All WARN-level logs with request IDs, error names, and messages
 
 #### **Request Performance**
 
-- **Error Rate Over Time**: Count of ERROR-level logs per 5-minute interval (line chart)
+- **Cold Starts Detected**: Lambda initialization overhead per 5-minute interval
 - **Lambda Throttles**: Sum of throttled Lambda requests (indicates concurrency limit issues)
+
+#### **Error Patterns**
+
+- **Error Types Distribution**: Pie chart showing proportional breakdown of all error types
 
 #### **API Gateway Metrics**
 
 - **Request Rate**: Total requests per 5-minute interval (line chart)
-- **Response Status Codes**: Distribution of HTTP status codes (200, 404, 500, etc.) as bar chart
+- **Response Status Codes**: Distribution of HTTP status codes (200, 404, 500, etc.)
+- **Response Size Distribution**: Average, max, and min response payload sizes over time
+- **Concurrent Executions**: Lambda invocations per minute to identify traffic spikes
 
 ## Log Structure
 

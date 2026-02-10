@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Box, Button, Grid, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { useQuery } from '@apollo/client';
-import { EventCategory, EventStatus, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
+import { EventCategory, EventStatus, Organization, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import {
   GetAllEventCategoriesDocument,
@@ -16,7 +16,6 @@ import { getAuthHeader } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import EventTileSkeleton from '@/components/events/EventTileSkeleton';
 import EventsSidebar, { PlatformStats } from '@/components/events/EventsSidebar';
-import { PopularOrganization } from '@/components/events/PopularOrganizerBox';
 import EventsHeader from '@/components/events/filters/EventsHeader';
 import ActiveFiltersPills from '@/components/events/filters/ActiveFiltersPills';
 import EventsList from '@/components/events/filters/EventsList';
@@ -68,11 +67,11 @@ export default function EventsPageClient() {
   const categories = (categoriesData?.readEventCategories ?? []) as EventCategory[];
   const orgs = organizationsData?.readOrganizations ?? [];
 
-  const popularOrganization: PopularOrganization | null = useMemo(() => {
+  const popularOrganization: Organization | null = useMemo(() => {
     if (orgs.length === 0) {
       return null;
     }
-    return orgs.reduce<PopularOrganization>((prev, current) => {
+    return orgs.reduce<Organization>((prev, current) => {
       const prevFollowers = prev.followersCount ?? 0;
       const currentFollowers = current.followersCount ?? 0;
       return prevFollowers > currentFollowers ? prev : current;
@@ -120,7 +119,7 @@ export default function EventsPageClient() {
 interface EventsContentProps {
   categories: EventCategory[];
   initialEvents: EventPreview[];
-  popularOrganization: PopularOrganization | null;
+  popularOrganization: Organization | null;
   stats: PlatformStats;
   userId?: string;
 }
@@ -137,10 +136,20 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
     setStatuses,
     setDateRange,
     setLocation,
-    clearLocation,
+    clearLocation: clearFilterLocation,
     isHydrated,
   } = useEventFilters();
-  const { location: savedLocation, isHydrated: isLocationHydrated } = useSavedLocation(userId);
+  const {
+    location: savedLocation,
+    clearLocation: clearSavedLocation,
+    isHydrated: isLocationHydrated,
+  } = useSavedLocation(userId);
+
+  // Combined clear function that clears both filter state and saved location
+  const clearLocation = useCallback(() => {
+    clearFilterLocation();
+    clearSavedLocation();
+  }, [clearFilterLocation, clearSavedLocation]);
 
   // Wait for filters to hydrate before applying them to prevent double-fetch on page load
   const filtersToUse = isHydrated ? filters : initialFilters;
