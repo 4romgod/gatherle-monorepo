@@ -36,8 +36,8 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 
 ## Environment
 
-- API (`apps/api`): expects `JWT_SECRET`, `MONGO_DB_URL`, `STAGE` (defaults to `Beta`; can be `Dev`, `Beta`, or `Prod`), `AWS_REGION`, and optional
-  `NTLANGO_SECRET_ARN` for Secrets Manager.
+- API (`apps/api`): expects `JWT_SECRET`, `MONGO_DB_URL`, `STAGE` (defaults to `Beta`; can be `Dev`, `Beta`, or `Prod`),
+  `AWS_REGION`, and optional `NTLANGO_SECRET_ARN` for Secrets Manager.
   - **Important:** `MONGO_DB_URL` **must include a database name** (e.g., `mongodb://localhost:27017/ntlango`). Without
     a database name, Mongoose defaults to the "test" database, which can cause collections (RSVPs, org memberships) to
     vanish on reconnects.

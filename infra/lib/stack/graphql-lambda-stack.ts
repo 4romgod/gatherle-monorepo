@@ -41,7 +41,7 @@ export class GraphQLStack extends Stack {
     this.lambdaLogGroup = new LogGroup(this, 'GraphqlLambdaLogGroup', {
       logGroupName: '/aws/lambda/GraphqlLambdaFunction',
       retention: RetentionDays.ONE_MONTH,
-      removalPolicy: RemovalPolicy.RETAIN,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     this.graphqlLambda = new NodejsFunction(this, 'GraphqlLambdaFunction', {
@@ -75,7 +75,7 @@ export class GraphQLStack extends Stack {
     this.apiAccessLogGroup = new LogGroup(this, 'GraphqlRestApiAccessLogs', {
       logGroupName: 'GraphqlRestApiAccessLogs',
       retention: RetentionDays.ONE_MONTH,
-      removalPolicy: RemovalPolicy.RETAIN,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     this.graphqlApi = new LambdaRestApi(this, 'GraphqlRestApiId', {

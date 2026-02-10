@@ -43,12 +43,13 @@ The dashboard includes the following widgets:
 
 #### **Request Performance**
 
-- **Slowest Requests**: Top 20 slowest requests with duration in milliseconds
-- **Average Request Duration**: Average and maximum request duration over time
+- **Error Rate Over Time**: Count of ERROR-level logs per 5-minute interval (line chart)
+- **Lambda Throttles**: Sum of throttled Lambda requests (indicates concurrency limit issues)
 
-#### **API Gateway Access Logs**
+#### **API Gateway Metrics**
 
-- **Recent API Requests**: Last 50 API Gateway access log entries
+- **Request Rate**: Total requests per 5-minute interval (line chart)
+- **Response Status Codes**: Distribution of HTTP status codes (200, 404, 500, etc.) as bar chart
 
 ## Log Structure
 
@@ -129,6 +130,8 @@ fields @timestamp, context.durationMs, context.operation
 
 - **Production**: 30 days
 - **Dev/Staging**: 7 days
+
+Log retention is managed by CDK and configured in the `GraphQLStack`.
 
 ## Alerting (Future Enhancement)
 

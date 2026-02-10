@@ -86,13 +86,9 @@ export class MonitoringDashboardStack extends Stack {
           'sort @timestamp desc',
           'limit 100',
         ],
-        width: 24,
+        width: 12,
         height: 8,
       }),
-    );
-
-    // Warning logs widget
-    this.dashboard.addWidgets(
       new LogQueryWidget({
         title: '⚠️ Warning Logs (Last Hour)',
         logGroupNames: [lambdaLogGroup.logGroupName],
@@ -102,7 +98,7 @@ export class MonitoringDashboardStack extends Stack {
           'sort @timestamp desc',
           'limit 100',
         ],
-        width: 24,
+        width: 12,
         height: 8,
       }),
     );
@@ -176,37 +172,31 @@ export class MonitoringDashboardStack extends Stack {
 
     this.dashboard.addWidgets(
       new LogQueryWidget({
-        title: 'Slowest Requests (Last Hour)',
+        title: 'Error Rate Over Time',
         logGroupNames: [lambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.LINE,
         queryLines: [
-          'fields @timestamp, requestId, message, context.durationMs',
-          'filter message = "Lambda handler execution completed"',
-          'sort context.durationMs desc',
-          'limit 20',
+          'fields @timestamp',
+          'filter level = "ERROR"',
+          'stats count() as errorCount by bin(5m)',
         ],
         width: 12,
         height: 6,
       }),
-      new LogQueryWidget({
-        title: 'Average Request Duration',
-        logGroupNames: [lambdaLogGroup.logGroupName],
-        view: LogQueryVisualizationType.LINE,
-        queryLines: [
-          'fields context.durationMs',
-          'filter message = "Lambda handler execution completed"',
-          'stats avg(context.durationMs) as avgDuration, max(context.durationMs) as maxDuration by bin(5m)',
-        ],
+      new GraphWidget({
+        title: 'Lambda Throttles',
+        left: [lambdaFunction.metricThrottles({ statistic: 'Sum', label: 'Throttled Requests' })],
         width: 12,
         height: 6,
       }),
     );
 
     // ============================================
-    // Row 6: API Gateway Access Logs
+    // Row 6: API Gateway Metrics
     // ============================================
     this.dashboard.addWidgets(
       new TextWidget({
-        markdown: '## API Gateway Access Logs',
+        markdown: '## API Gateway Metrics',
         width: 24,
         height: 1,
       }),
@@ -214,10 +204,26 @@ export class MonitoringDashboardStack extends Stack {
 
     this.dashboard.addWidgets(
       new LogQueryWidget({
-        title: 'Recent API Requests',
+        title: 'Request Rate (Requests per 5 minutes)',
         logGroupNames: [apiAccessLogGroup.logGroupName],
-        queryLines: ['fields @timestamp, @message', 'sort @timestamp desc', 'limit 50'],
-        width: 24,
+        view: LogQueryVisualizationType.LINE,
+        queryLines: [
+          'fields @timestamp',
+          'stats count() as requestCount by bin(5m)',
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new LogQueryWidget({
+        title: 'Response Status Codes',
+        logGroupNames: [apiAccessLogGroup.logGroupName],
+        view: LogQueryVisualizationType.BAR,
+        queryLines: [
+          'parse @message /\\s(?<status>\\d{3})\\s/',
+          'stats count() as count by status',
+          'sort count desc',
+        ],
+        width: 12,
         height: 6,
       }),
     );

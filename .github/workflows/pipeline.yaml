@@ -64,7 +64,7 @@ jobs:
     - name: Build Webapp Next.js
       run: npm run build:next -w @ntlango/webapp
       env:
-        NEXT_PUBLIC_GRAPHQL_URL: https://c11y1xrbo8.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
+        NEXT_PUBLIC_GRAPHQL_URL: https://lzltdcuhb1.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
         NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
     - name: Run Webapp unit tests
@@ -153,6 +153,6 @@ jobs:
       env:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        NEXT_PUBLIC_GRAPHQL_URL: https://c11y1xrbo8.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
+        NEXT_PUBLIC_GRAPHQL_URL: https://lzltdcuhb1.execute-api.eu-west-1.amazonaws.com/beta/graphql # TODO use output from api-deploy
         NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
       run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
