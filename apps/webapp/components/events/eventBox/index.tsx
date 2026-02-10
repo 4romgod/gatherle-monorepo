@@ -11,12 +11,11 @@ import { RRule } from 'rrule';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { useState, useEffect } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
-import { RANDOM_IMAGE_LINK } from '@/lib/constants';
 import Surface from '@/components/core/Surface';
 
 export default function EventBox({ event }: { event: EventPreview }) {
   const theme = useTheme();
-  const { title, recurrenceRule, participants, media, heroImage, location, status } = event;
+  const { title, recurrenceRule, participants, media, location, status } = event;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);
@@ -32,8 +31,7 @@ export default function EventBox({ event }: { event: EventPreview }) {
   }, [event.myRsvp?.status]);
 
   const recurrenceText = RRule.fromString(recurrenceRule).toText();
-  // TODO This placeholder image is just for development purposes
-  const imageUrl = heroImage || media?.featuredImageUrl || RANDOM_IMAGE_LINK;
+  const imageUrl = media?.featuredImageUrl ?? null;
   const participantCount = participants?.length ?? 0;
   const participantList = (participants ?? []) as EventParticipantPreview[];
   const visibleParticipants = participantList.slice(0, 3);
@@ -90,18 +88,39 @@ export default function EventBox({ event }: { event: EventPreview }) {
           overflow: 'hidden',
         }}
       >
-        <CardMedia
-          component="img"
-          image={imageUrl}
-          alt={title}
-          className="event-image"
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s ease',
-          }}
-        />
+        {imageUrl ? (
+          <CardMedia
+            component="img"
+            image={imageUrl}
+            alt={title}
+            className="event-image"
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease',
+            }}
+          />
+        ) : (
+          <Box
+            className="event-image"
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
+                theme.palette.secondary.light,
+                0.35,
+              )} 100%)`,
+              color: 'text.secondary',
+              transition: 'transform 0.3s ease',
+            }}
+          >
+            <PeopleOutline sx={{ fontSize: 40, opacity: 0.7 }} />
+          </Box>
+        )}
         <Box
           className="event-overlay"
           sx={{

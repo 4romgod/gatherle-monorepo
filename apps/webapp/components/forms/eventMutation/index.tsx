@@ -49,6 +49,7 @@ import { usePersistentState } from '@/hooks';
 import { useSession } from 'next-auth/react';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { logger } from '@/lib/utils';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
@@ -87,7 +88,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       comments: {},
       privacySetting: event?.privacySetting ?? EventPrivacySetting.Public,
       eventLink: event?.eventLink ?? '',
-      heroImage: event?.heroImage ?? '',
       orgId: event?.orgId ?? undefined,
       venueId: event?.venueId,
       locationSnapshot: undefined,
@@ -111,6 +111,8 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
   // Use default data during SSR and initial render to prevent hydration mismatch
   const displayEventData = isHydrated ? eventData : defaultEventData;
+  const featuredImageUrl =
+    (displayEventData.media as { featuredImageUrl?: string } | undefined)?.featuredImageUrl ?? '';
 
   const eligibleOrganizations = (myOrganizationsData?.readMyOrganizations ?? []).filter((membership) =>
     EVENT_ORGANIZATION_ROLES.has(membership.role),
@@ -166,6 +168,17 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFeaturedImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setEventData((prev) => ({
+      ...prev,
+      media: {
+        ...(prev.media ?? {}),
+        featuredImageUrl: value || undefined,
+      },
+    }));
+  };
+
   const handleNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setEventData((prev) => ({ ...prev, [name]: value ? parseInt(value, 10) : undefined }));
@@ -197,7 +210,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     }
 
     // TODO: Add your form submission logic here
-    console.log('eventData', eventData);
+    logger.info('eventData', eventData);
   };
 
   const handleDiscardDraft = () => {
@@ -445,19 +458,19 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Hero Image URL
+                  Featured Image URL
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Add a stunning cover image for your event
+                  Add a cover image for your event
                 </Typography>
                 <TextField
                   fullWidth
                   placeholder="https://example.com/image.jpg"
-                  name="heroImage"
+                  name="featuredImageUrl"
                   size="medium"
                   color="secondary"
-                  value={displayEventData.heroImage}
-                  onChange={handleChange}
+                  value={featuredImageUrl}
+                  onChange={handleFeaturedImageChange}
                   slotProps={{
                     input: {
                       startAdornment: (

@@ -81,7 +81,6 @@ export default async function SettingsPage() {
       icon: <Storage key="session-icon" fontSize="small" sx={{ marginRight: 1 }} />,
       description: 'Manage saved filters and drafts',
     },
-    // TODO We will bring this back when we have the functionality to connect to social media (SocialMediaSettingsPage)
   ];
 
   return (

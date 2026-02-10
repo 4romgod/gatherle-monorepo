@@ -60,19 +60,11 @@ export default function CreateOrganizationPage() {
     reader.readAsDataURL(file);
   };
 
-  /**
-   * TODO: Potential filename collision issue: Using organization name as the filename (via kebabCase) could lead to collisions
-   * if two organizations have names that kebabCase to the same slug, or if an organization is deleted and recreated.
-   * This could result in overwriting existing logos or serving stale images from CDN caches.
-   * Consider including a unique identifier in the filename:
-   *  - Use organization ID once it's created (requires upload after org creation)
-   *  - Or add a timestamp: ${slug}-${Date.now()}.${extension}
-   *  - Or use a UUID: ${slug}-${uuidv4()}.${extension}
-   */
   const uploadLogoToS3 = async (file: File, orgName: string): Promise<string> => {
     const slug = kebabCase(orgName);
     const extension = getFileExtension(file) || 'jpg';
-    const filename = `${slug}.${extension}`;
+    const uniqueSuffix = crypto.randomUUID();
+    const filename = `${slug}-${uniqueSuffix}.${extension}`;
 
     logger.info('Uploading logo:', { slug, filename, fileType: file.type, fileSize: file.size });
 

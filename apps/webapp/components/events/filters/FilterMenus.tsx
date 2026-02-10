@@ -511,10 +511,13 @@ export function LocationMenu({
 
   const handleApply = () => {
     const location: LocationFilter = {};
-    const displayLabel = [city, state, country].filter(Boolean).join(', ');
-    if (city.trim()) location.city = city.trim();
-    if (state.trim()) location.state = state.trim();
-    if (country.trim()) location.country = country.trim();
+    const cityValue = city.trim();
+    const stateValue = state.trim();
+    const countryValue = country.trim();
+    const displayLabel = [cityValue, stateValue, countryValue].filter(Boolean).join(', ');
+    if (cityValue) location.city = cityValue;
+    if (stateValue) location.state = stateValue;
+    if (countryValue) location.country = countryValue;
     if (displayLabel) {
       location.displayLabel = displayLabel;
     } else if (useMyLocation && savedLocation.displayLabel) {

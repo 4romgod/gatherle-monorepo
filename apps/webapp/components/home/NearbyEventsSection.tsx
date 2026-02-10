@@ -28,7 +28,11 @@ export default function NearbyEventsSection() {
   const token = session?.user?.token;
   const userId = session?.user?.userId;
 
-  const { location: savedLocation, setLocation: setSavedLocation } = useSavedLocation(userId);
+  const {
+    location: savedLocation,
+    setLocation: setSavedLocation,
+    isHydrated: isLocationHydrated,
+  } = useSavedLocation(userId);
 
   const [locationFilter, setLocationFilter] = useState<LocationFilterInput>();
   const [permissionState, setPermissionState] = useState<LocationPermissionState>('idle');
@@ -75,10 +79,35 @@ export default function NearbyEventsSection() {
   }, [setLocationFilter, setPermissionState, setSavedLocation, setStatusMessage]);
 
   useEffect(() => {
-    if (permissionState === 'idle') {
+    if (
+      !isLocationHydrated ||
+      locationFilter ||
+      !Number.isFinite(savedLocation.latitude) ||
+      !Number.isFinite(savedLocation.longitude)
+    ) {
+      return;
+    }
+
+    setLocationFilter({
+      latitude: savedLocation.latitude,
+      longitude: savedLocation.longitude,
+      radiusKm: savedLocation.radiusKm ?? LOCATION_RADIUS_KM,
+    });
+    setPermissionState('granted');
+    setStatusMessage('');
+  }, [isLocationHydrated, locationFilter, savedLocation.latitude, savedLocation.longitude, savedLocation.radiusKm]);
+
+  useEffect(() => {
+    if (!isLocationHydrated) {
+      return;
+    }
+
+    const hasSavedLocation = Number.isFinite(savedLocation.latitude) && Number.isFinite(savedLocation.longitude);
+
+    if (permissionState === 'idle' && !hasSavedLocation) {
       requestLocation();
     }
-  }, [permissionState, requestLocation]);
+  }, [isLocationHydrated, permissionState, requestLocation, savedLocation.latitude, savedLocation.longitude]);
 
   const helperText = useMemo(() => {
     if (permissionState === 'requesting') {

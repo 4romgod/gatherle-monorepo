@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { REGEX_PHONE_NUMBER } from '@/constants';
+import { isDateNotInFuture } from '@ntlango/commons/utils';
 import { Gender, FollowPolicy, SocialVisibility } from '@ntlango/commons/types/user';
 import { ERROR_MESSAGES, validateDate } from '@/validation/common';
 import mongoose from 'mongoose';
@@ -12,6 +13,7 @@ export const UserSchema = z.object({
   birthdate: z
     .string()
     .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}` })
+    .refine(isDateNotInFuture, { message: 'Birth date must be in the past' })
     .describe('The birth date of the user'),
 
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }),

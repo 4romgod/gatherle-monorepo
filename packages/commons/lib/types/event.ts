@@ -232,10 +232,6 @@ export class Event {
   })
   organization?: Organization;
 
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true, description: 'Hero image for the event' })
-  heroImage?: string;
-
   @Field(() => [EventParticipant], {
     nullable: true,
     description:
@@ -337,9 +333,6 @@ export class CreateEventInput {
 
   @Field(() => String, { nullable: true, description: 'Short summary' })
   summary?: string;
-
-  @Field(() => String, { nullable: true, description: 'Hero image' })
-  heroImage?: string;
 }
 
 @InputType('UpdateEventInput', { description: EVENT_DESCRIPTIONS.EVENT.UPDATE_INPUT })
@@ -425,9 +418,6 @@ export class UpdateEventInput {
 
   @Field(() => String, { nullable: true, description: 'Short summary' })
   summary?: string;
-
-  @Field(() => String, { nullable: true, description: 'Hero image' })
-  heroImage?: string;
 }
 
 @InputType('RsvpInput', { description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE })

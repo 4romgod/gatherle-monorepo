@@ -109,8 +109,6 @@ export const EventSchema = z.object({
   eventLink: z.string().optional().describe('A link to the event page or further information about the event.'),
 
   orgId: z.string().optional().describe('Organization owner'),
-
-  heroImage: z.string().optional().describe('Hero image'),
 });
 
 export const CreateEventInputSchema = EventSchema.extend({}).omit({ eventId: true, slug: true });

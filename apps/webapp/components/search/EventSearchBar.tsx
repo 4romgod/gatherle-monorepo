@@ -224,9 +224,9 @@ export default function EventSearchBar({
                     }}
                   >
                     {/* Event Image/Icon */}
-                    {event.heroImage ? (
+                    {event.media?.featuredImageUrl ? (
                       <Avatar
-                        src={event.heroImage}
+                        src={event.media.featuredImageUrl}
                         alt={event.title || ''}
                         variant="rounded"
                         sx={{ width: 60, height: 60 }}

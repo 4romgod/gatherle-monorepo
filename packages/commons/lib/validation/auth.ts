@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
-import { validateDate, validateMongodbId } from '../utils';
+import { isDateNotInFuture, validateDate, validateMongodbId } from '../utils';
 import { Gender, FollowPolicy, SocialVisibility, UserRole } from '../types';
 
 export const CreateUserInputSchema = z.object({
@@ -8,7 +8,10 @@ export const CreateUserInputSchema = z.object({
     .string()
     .min(3, { message: `Address ${ERROR_MESSAGES.TOO_SHORT}` })
     .optional(),
-  birthdate: z.string().refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID}` }), // TODO Should be greater than Date.now()
+  birthdate: z
+    .string()
+    .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID}` })
+    .refine(isDateNotInFuture, { message: 'Birth date must be in the past' }),
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }),
   family_name: z.string().min(1, { message: `Last name ${ERROR_MESSAGES.REQUIRED}` }),
   gender: z.nativeEnum(Gender, { message: ERROR_MESSAGES.INVALID_GENDER }),
@@ -25,7 +28,8 @@ export const UpdateUserInputSchema = z.object({
   address: z.string().optional(),
   birthdate: z
     .string()
-    .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}` }) // TODO Should be greater than Date.now()
+    .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}` })
+    .refine(isDateNotInFuture, { message: 'Birth date must be in the past' })
     .optional(),
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }).optional(),
   family_name: z
@@ -40,7 +44,6 @@ export const UpdateUserInputSchema = z.object({
   phone_number: z.string().regex(REGEX_PHONE_NUMBER, { message: ERROR_MESSAGES.INVALID_PHONE_NUMBER }).optional(),
   profile_picture: z.string().optional(),
   username: z.string().optional(),
-  // Privacy settings
   followPolicy: z.nativeEnum(FollowPolicy).optional(),
   followersListVisibility: z.nativeEnum(SocialVisibility).optional(),
   followingListVisibility: z.nativeEnum(SocialVisibility).optional(),
@@ -49,7 +52,6 @@ export const UpdateUserInputSchema = z.object({
   shareRSVPByDefault: z.boolean().optional(),
   shareCheckinsByDefault: z.boolean().optional(),
   primaryTimezone: z.string().optional(),
-  // Preferences (communication, notifications)
   preferences: z
     .object({
       communicationPrefs: z

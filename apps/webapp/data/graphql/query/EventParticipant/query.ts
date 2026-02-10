@@ -71,7 +71,6 @@ export const GetMyRsvpsDocument = graphql(`
           details
         }
         recurrenceRule
-        heroImage
         media {
           featuredImageUrl
         }

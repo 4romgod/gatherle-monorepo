@@ -87,7 +87,6 @@ export type UserDocument = DocumentType<UserModel>;
 const User = getModelForClass(UserModel, {
   options: { customName: 'User' },
   schemaOptions: {
-    // TODO ensure default select behavior stays in sync with commons definition
     toObject: { getters: true },
     toJSON: { getters: true },
   },
