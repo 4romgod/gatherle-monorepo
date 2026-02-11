@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { alpha, Box, Paper, Stack, Typography } from '@mui/material';
+import { Groups } from '@mui/icons-material';
+import { alpha, Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import { EventCategory } from '@/data/graphql/types/graphql';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { ROUTES } from '@/lib/constants';
@@ -13,6 +14,8 @@ type CategoryCardProps = {
 export default function CategoryCard({ category }: CategoryCardProps) {
   const IconComponent = getEventCategoryIcon(category.iconName);
   const categoryColor = category.color ?? 'text.primary';
+  const membersCount = category.interestedUsersCount ?? 0;
+  const formattedMembersCount = membersCount.toLocaleString();
 
   return (
     <Link
@@ -61,6 +64,19 @@ export default function CategoryCard({ category }: CategoryCardProps) {
             {category.name}
           </Typography>
         </Stack>
+        <Box>
+          <Chip
+            icon={<Groups fontSize="small" />}
+            label={`${formattedMembersCount} ${membersCount === 1 ? 'member' : 'members'}`}
+            size="small"
+            sx={{
+              borderRadius: 2,
+              bgcolor: 'action.selected',
+              color: 'text.primary',
+              fontWeight: 600,
+            }}
+          />
+        </Box>
 
         <Typography variant="body2" color="text.secondary" sx={{ minHeight: 48 }}>
           {category.description || 'Explore events in this category.'}

@@ -23,6 +23,7 @@ export interface ServerContext {
   loaders: {
     user: DataLoader<string, User | null>;
     eventCategory: DataLoader<string, EventCategory | null>;
+    eventCategoryInterestCount: DataLoader<string, number>;
     event: DataLoader<string, Event | null>;
     organization: DataLoader<string, Organization | null>;
     eventParticipant: DataLoader<string, EventParticipant | null>;

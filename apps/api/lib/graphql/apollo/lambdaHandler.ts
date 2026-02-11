@@ -7,6 +7,7 @@ import { logger } from '@/utils/logger';
 import {
   createUserLoader,
   createEventCategoryLoader,
+  createEventCategoryInterestCountLoader,
   createEventLoader,
   createOrganizationLoader,
   createEventParticipantLoader,
@@ -76,6 +77,7 @@ async function initializeResources() {
             loaders: {
               user: createUserLoader(),
               eventCategory: createEventCategoryLoader(),
+              eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
               event: createEventLoader(),
               organization: createOrganizationLoader(),
               eventParticipant: createEventParticipantLoader(),

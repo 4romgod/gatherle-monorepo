@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Arg, Mutation, Resolver, Query, Authorized } from 'type-graphql';
+import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, Int } from 'type-graphql';
 import {
   CreateEventCategoryInput,
   EventCategory,
@@ -10,9 +10,18 @@ import {
 import { EventCategoryDAO } from '@/mongodb/dao';
 import { CreateEventCategorySchema, UpdateEventCategorySchema, validateInput, validateMongodbId } from '@/validation';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
+import type { ServerContext } from '@/graphql';
 
-@Resolver()
+@Resolver(() => EventCategory)
 export class EventCategoryResolver {
+  @FieldResolver(() => Int, { nullable: true })
+  async interestedUsersCount(@Root() eventCategory: EventCategory, @Ctx() context: ServerContext): Promise<number> {
+    if (!eventCategory.eventCategoryId) {
+      return 0;
+    }
+    return context.loaders.eventCategoryInterestCount.load(eventCategory.eventCategoryId);
+  }
+
   @Authorized([UserRole.Admin])
   @Mutation(() => EventCategory, { description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.createEventCategory })
   async createEventCategory(

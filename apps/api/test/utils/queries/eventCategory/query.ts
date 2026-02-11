@@ -8,6 +8,7 @@ export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
                 name
                 description
                 slug
+                interestedUsersCount
             }
         }`,
     variables: {
@@ -24,6 +25,7 @@ export const getReadEventCategoryBySlugQuery = (slug: string) => {
                 name
                 description
                 slug
+                interestedUsersCount
             }
         }`,
     variables: {
@@ -40,6 +42,7 @@ export const getReadEventCategoriesQuery = () => {
                 name
                 description
                 slug
+                interestedUsersCount
             }
         }`,
   };
@@ -53,6 +56,7 @@ export const getReadEventCategoriesWithOptionsQuery = (options: QueryOptionsInpu
                 name
                 description
                 slug
+                interestedUsersCount
             }
         }`,
     variables: {

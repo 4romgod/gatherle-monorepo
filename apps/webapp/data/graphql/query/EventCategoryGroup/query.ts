@@ -13,6 +13,7 @@ export const GetAllEventCategoryGroupsDocument = graphql(`
         iconName
         description
         color
+        interestedUsersCount
       }
     }
   }

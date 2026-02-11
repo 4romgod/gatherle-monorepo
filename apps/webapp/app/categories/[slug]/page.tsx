@@ -1,4 +1,5 @@
 import { alpha, Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
+import { Groups } from '@mui/icons-material';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
@@ -14,6 +15,7 @@ import EventTileGrid from '@/components/events/EventTileGrid';
 import { ROUTES } from '@/lib/constants';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { CategoryExplorer } from '@/components/home';
+import CategoryInterestToggleButton from '@/components/categories/CategoryInterestToggleButton';
 import { isGraphQLErrorNotFound } from '@/lib/utils/error-utils';
 import LinkComponent from '@/components/navigation/LinkComponent';
 
@@ -76,6 +78,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   }
 
   const events = eventsData ?? [];
+  const interestedUsersCount = category.interestedUsersCount ?? 0;
+  const formattedInterestedUsersCount = interestedUsersCount.toLocaleString();
   const IconComponent = getEventCategoryIcon(category.iconName);
   const categoryColor = category.color;
   const avatarBackground = categoryColor ? alpha(categoryColor, 0.15) : 'action.selected';
@@ -93,49 +97,101 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         <Stack spacing={4}>
           <Stack
             direction={{ xs: 'column', md: 'row' }}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
+            alignItems={{ xs: 'stretch', md: 'flex-start' }}
             justifyContent="space-between"
             spacing={3}
           >
-            <Stack direction="row" alignItems="center" spacing={3}>
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '16px',
-                  backgroundColor: avatarBackground,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: iconColor,
-                }}
+            <Stack spacing={3} sx={{ flex: 1, minWidth: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={3}>
+                <Box
+                  sx={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: '16px',
+                    backgroundColor: avatarBackground,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: iconColor,
+                  }}
+                >
+                  <IconComponent width={26} height={26} />
+                </Box>
+                <Stack spacing={0.5}>
+                  <Typography variant="overline" sx={{ letterSpacing: 4, color: 'text.secondary' }}>
+                    EVENT CATEGORY
+                  </Typography>
+                  <Typography variant="h3" fontWeight={800}>
+                    {category.name}
+                  </Typography>
+                </Stack>
+              </Stack>
+
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 640 }}>
+                {category.description ||
+                  'Events curated for this interest will show up below. Subscribe or host your next event today.'}
+              </Typography>
+
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                alignItems={{ xs: 'stretch', sm: 'center' }}
+                sx={{ width: { xs: '100%', md: 'auto' } }}
               >
-                <IconComponent width={26} height={26} />
-              </Box>
-              <Stack spacing={0.5}>
-                <Typography variant="overline" sx={{ letterSpacing: 4, color: 'text.secondary' }}>
-                  EVENT CATEGORY
-                </Typography>
-                <Typography variant="h3" fontWeight={800}>
-                  {category.name}
-                </Typography>
+                <CategoryInterestToggleButton category={category} />
+                <Button
+                  component={LinkComponent}
+                  href={ROUTES.CATEGORIES.ROOT}
+                  variant="outlined"
+                  sx={{ borderRadius: 10, textTransform: 'none', fontWeight: 600 }}
+                >
+                  Browse all categories
+                </Button>
               </Stack>
             </Stack>
 
-            <Button
-              component={LinkComponent}
-              href={ROUTES.CATEGORIES.ROOT}
-              variant="outlined"
-              sx={{ borderRadius: 10, textTransform: 'none', fontWeight: 600 }}
+            <Box
+              sx={{
+                width: { xs: '100%', md: 300 },
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: categoryColor ? alpha(categoryColor, 0.45) : 'divider',
+                bgcolor: categoryColor ? alpha(categoryColor, 0.12) : 'background.paper',
+                px: 3,
+                py: 2.5,
+              }}
             >
-              Browse all categories
-            </Button>
+              <Typography variant="overline" sx={{ letterSpacing: 2, color: 'text.secondary' }}>
+                COMMUNITY SIZE
+              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: categoryColor ? alpha(categoryColor, 0.2) : 'action.selected',
+                  }}
+                >
+                  <Groups sx={{ color: categoryColor || 'primary.main', fontSize: 28 }} />
+                </Box>
+                <Box>
+                  <Typography variant="h4" fontWeight={800} lineHeight={1}>
+                    {formattedInterestedUsersCount}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {interestedUsersCount === 1 ? 'member' : 'members'}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                People currently following this category.
+              </Typography>
+            </Box>
           </Stack>
-
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 640 }}>
-            {category.description ||
-              'Events curated for this interest will show up below. Subscribe or host your next event today.'}
-          </Typography>
 
           <Stack spacing={2}>
             <Typography variant="subtitle1" fontWeight={600}>

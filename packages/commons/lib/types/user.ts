@@ -223,7 +223,7 @@ export class User {
   @prop({ required: true, select: false, type: () => String })
   password: string;
 
-  @prop({ type: () => [String], ref: () => EventCategory, default: [] })
+  @prop({ type: () => [String], ref: () => EventCategory, default: [], index: true })
   @Field(() => [EventCategory], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: Ref<EventCategory>[];
 

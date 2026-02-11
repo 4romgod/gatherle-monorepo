@@ -70,6 +70,7 @@ export const EVENT_CATEGORY_DESCRIPTIONS = {
   ICON_NAME: "Name of the icon representing the event category (e.g., 'music_note')",
   DESCRIPTION: "Description of the event category (e.g., 'Events featuring live music performances')",
   COLOR: "Color associated with the event category (optional) (e.g., '#FF5733')",
+  INTERESTED_USERS_COUNT: 'Number of users who have this category in their interests.',
 };
 
 export const USER_DESCRIPTIONS = {

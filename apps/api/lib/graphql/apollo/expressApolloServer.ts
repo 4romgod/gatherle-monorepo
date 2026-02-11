@@ -10,6 +10,7 @@ import { expressMiddleware } from '@apollo/server/express4';
 import {
   createUserLoader,
   createEventCategoryLoader,
+  createEventCategoryInterestCountLoader,
   createEventLoader,
   createOrganizationLoader,
   createEventParticipantLoader,
@@ -75,6 +76,7 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = { 
           loaders: {
             user: createUserLoader(),
             eventCategory: createEventCategoryLoader(),
+            eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
             event: createEventLoader(),
             organization: createOrganizationLoader(),
             eventParticipant: createEventParticipantLoader(),

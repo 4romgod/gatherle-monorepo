@@ -31,8 +31,8 @@ type MainNavigationProps = {
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
 
-  // Get unread notification count for badge (polls every 30s only when tab is visible)
-  const { unreadCount } = useUnreadNotificationCount(isAuthN ? 30000 : undefined);
+  // Get unread notification count for badge (polls every 5 minutes only when tab is visible)
+  const { unreadCount } = useUnreadNotificationCount(isAuthN ? 300000 : undefined);
 
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
