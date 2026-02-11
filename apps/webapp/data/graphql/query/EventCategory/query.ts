@@ -9,6 +9,7 @@ export const GetAllEventCategoriesDocument = graphql(`
       iconName
       description
       color
+      interestedUsersCount
     }
   }
 `);
@@ -22,6 +23,7 @@ export const GetEventCategoryBySlugDocument = graphql(`
       iconName
       description
       color
+      interestedUsersCount
     }
   }
 `);

@@ -3,10 +3,16 @@ import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventCategoryDAO } from '@/mongodb/dao';
+import { EventCategoryDAO, UserDAO } from '@/mongodb/dao';
 import { usersMockData } from '@/mongodb/mockData';
 import { generateToken } from '@/utils/auth';
-import type { CreateEventCategoryInput, QueryOptionsInput, User, UserWithToken } from '@ntlango/commons/types';
+import type {
+  CreateEventCategoryInput,
+  CreateUserInput,
+  QueryOptionsInput,
+  User,
+  UserWithToken,
+} from '@ntlango/commons/types';
 import { UserRole, SortOrderInput } from '@ntlango/commons/types';
 import {
   getCreateEventCategoryMutation,
@@ -139,6 +145,43 @@ describe('EventCategory Resolver', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.data.readEventCategoryBySlug.eventCategoryId).toBe(createdCategory.eventCategoryId);
+      });
+
+      it('should resolve interested users count for category', async () => {
+        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const nonce = Date.now();
+
+        const userInputs: CreateUserInput[] = [
+          {
+            ...usersMockData[1],
+            email: `test-event-category-interest-${nonce}-1@example.com`,
+            username: `eventCategoryInterest${nonce}a`,
+            interests: [createdCategory.eventCategoryId],
+          },
+          {
+            ...usersMockData[2],
+            email: `test-event-category-interest-${nonce}-2@example.com`,
+            username: `eventCategoryInterest${nonce}b`,
+            interests: [createdCategory.eventCategoryId],
+          },
+        ];
+
+        const createdUsers = await Promise.all(userInputs.map((input) => UserDAO.create(input)));
+
+        try {
+          const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
+
+          expect(response.status).toBe(200);
+          expect(response.body.data.readEventCategoryBySlug.interestedUsersCount).toBe(2);
+        } finally {
+          await Promise.all(
+            createdUsers.map((createdUser) =>
+              UserDAO.deleteUserById(createdUser.userId).catch(() => {
+                // best-effort cleanup in case assertions fail
+              }),
+            ),
+          );
+        }
       });
 
       it('should read categories with pagination', async () => {

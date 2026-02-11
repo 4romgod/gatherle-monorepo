@@ -11,7 +11,7 @@ import {
 import type { Notification, NotificationConnection } from '@/data/graphql/query/Notification/types';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface UseNotificationsOptions {
   limit?: number;
@@ -82,39 +82,29 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 export function useUnreadNotificationCount(pollInterval?: number) {
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const [isVisible, setIsVisible] = useState(() => typeof document !== 'undefined' && !document.hidden);
 
-  const { data, loading, error, refetch, startPolling, stopPolling } = useQuery(GetUnreadNotificationCountDocument, {
-    skip: !token,
-    fetchPolicy: 'cache-and-network',
-    pollInterval: 0, // Start with polling disabled, we'll control it manually
-    context: {
-      headers: getAuthHeader(token),
-    },
-  });
-
+  // Track page visibility
   useEffect(() => {
-    if (!pollInterval) return;
-
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        startPolling(pollInterval);
-      }
+      setIsVisible(!document.hidden);
     };
-
-    // Set initial polling state based on current visibility
-    if (!document.hidden) {
-      startPolling(pollInterval);
-    }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      stopPolling();
     };
-  }, [pollInterval, startPolling, stopPolling]);
+  }, []);
+
+  const { data, loading, error, refetch } = useQuery(GetUnreadNotificationCountDocument, {
+    skip: !token || !isVisible, // Skip query when tab is hidden
+    fetchPolicy: 'cache-and-network',
+    pollInterval: pollInterval && isVisible ? pollInterval : 0, // Only poll when visible
+    context: {
+      headers: getAuthHeader(token),
+    },
+  });
 
   return {
     unreadCount: data?.unreadNotificationCount ?? 0,

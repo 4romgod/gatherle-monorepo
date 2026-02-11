@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { ID, Field, InputType, ObjectType } from 'type-graphql';
+import { ID, Field, InputType, Int, ObjectType } from 'type-graphql';
 import { modelOptions, prop } from '@typegoose/typegoose';
 
 import { EVENT_CATEGORY_DESCRIPTIONS } from '../constants';
@@ -30,6 +30,10 @@ export class EventCategory {
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.COLOR })
   color?: string;
+
+  // Computed field - resolved via @FieldResolver in EventCategoryResolver (no @prop, not stored in DB)
+  @Field(() => Int, { nullable: true, description: EVENT_CATEGORY_DESCRIPTIONS.INTERESTED_USERS_COUNT })
+  interestedUsersCount?: number;
 }
 
 @InputType('CreateEventCategoryInput', { description: EVENT_CATEGORY_DESCRIPTIONS.CREATE_INPUT })

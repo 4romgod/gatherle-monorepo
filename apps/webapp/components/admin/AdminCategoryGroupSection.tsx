@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import {
   Box,
@@ -23,8 +23,12 @@ import { Add, Save, Delete } from '@mui/icons-material';
 import { useAppContext } from '@/hooks';
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { GetAllEventCategoryGroupsDocument } from '@/data/graphql/query/EventCategoryGroup/query';
-import { GetAllEventCategoriesDocument } from '@/data/graphql/query/EventCategory/query';
+import {
+  GetAllEventCategoryGroupsDocument,
+  GetAllEventCategoryGroupsQuery,
+  GetAllEventCategoriesDocument,
+  GetAllEventCategoriesQuery,
+} from '@/data/graphql/types/graphql';
 import {
   CreateEventCategoryGroupDocument,
   UpdateEventCategoryGroupDocument,
@@ -44,12 +48,12 @@ const DEFAULT_GROUP_FORM: GroupForm = {
 
 export default function AdminCategoryGroupSection({ token }: AdminSectionProps) {
   const { setToastProps } = useAppContext();
-  const { data, loading, error, refetch } = useQuery(GetAllEventCategoryGroupsDocument, {
+  const { data, error, refetch } = useQuery<GetAllEventCategoryGroupsQuery>(GetAllEventCategoryGroupsDocument, {
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
 
-  const { data: categoriesData } = useQuery(GetAllEventCategoriesDocument, {
+  const { data: categoriesData } = useQuery<GetAllEventCategoriesQuery>(GetAllEventCategoriesDocument, {
     context: { headers: getAuthHeader(token) },
   });
 

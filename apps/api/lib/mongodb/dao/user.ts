@@ -457,6 +457,45 @@ class UserDAO {
     }
   }
 
+  static async countByInterestCategoryIds(categoryIds: string[]): Promise<Map<string, number>> {
+    try {
+      const uniqueCategoryIds = Array.from(new Set(categoryIds.filter(Boolean)));
+      if (uniqueCategoryIds.length === 0) {
+        return new Map<string, number>();
+      }
+
+      const aggregated = await UserModel.aggregate<{ _id: string; count: number }>([
+        {
+          $match: {
+            interests: { $in: uniqueCategoryIds },
+          },
+        },
+        { $unwind: '$interests' },
+        {
+          $match: {
+            interests: { $in: uniqueCategoryIds },
+          },
+        },
+        {
+          $group: {
+            _id: '$interests',
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const countMap = new Map<string, number>(uniqueCategoryIds.map((id) => [id, 0]));
+      aggregated.forEach((row) => {
+        countMap.set(row._id, row.count);
+      });
+
+      return countMap;
+    } catch (error) {
+      logger.error('Error counting users by interest category IDs', { error, categoryIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   // ============ SESSION STATE METHODS ============
 
   static async saveSessionState(userId: string, input: SessionStateInput): Promise<User> {

@@ -28,6 +28,15 @@ export const createMockContext = (
     return keys.map((key) => mockData?.events?.get(key) ?? null);
   });
 
+  const eventCategoryInterestCountLoader = new DataLoader<string, number>(async (keys) => {
+    return keys.map((key) => {
+      const categories = mockData?.categories;
+      if (!categories) return 0;
+      const category = categories.get(key);
+      return category?.interestedUsersCount ?? 0;
+    });
+  });
+
   const organizationLoader = new DataLoader<string, Organization | null>(async (keys) => {
     return keys.map((key) => mockData?.organizations?.get(key) ?? null);
   });
@@ -55,6 +64,7 @@ export const createMockContext = (
     loaders: {
       user: userLoader,
       eventCategory: categoryLoader,
+      eventCategoryInterestCount: eventCategoryInterestCountLoader,
       event: eventLoader,
       organization: organizationLoader,
       eventParticipant: eventParticipantLoader,
