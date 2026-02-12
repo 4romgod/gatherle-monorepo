@@ -36,6 +36,7 @@ export const GetOrganizationBySlugDocument = graphql(`
       name
       description
       logo
+      billingEmail
       followersCount
       isFollowable
       tags

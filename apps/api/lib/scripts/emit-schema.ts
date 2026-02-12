@@ -4,6 +4,11 @@
  * needing a running server.
  *
  * Usage: npm run emit-schema -w @ntlango/api
+ *
+ * Note: This script does not require environment variables because:
+ * - Environment validation is lazy (only runs when validateEnv() is called)
+ * - Schema building doesn't execute the authChecker function, just declares it
+ * - No database connection or runtime resources are needed for schema emission
  */
 import 'reflect-metadata';
 import { printSchema } from 'graphql';

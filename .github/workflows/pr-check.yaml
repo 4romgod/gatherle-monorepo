@@ -1,0 +1,57 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24.x]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: NPM Security Audit
+        run: npm audit --audit-level=high
+
+      - name: API Lint
+        run: npm run lint -w @ntlango/api
+
+      - name: API TypeScript Artifacts Build
+        run: npm run build:ts -w @ntlango/api
+
+      - name: API Unit Tests
+        run: npm run test:unit -w @ntlango/api
+
+      - name: Webapp Lint
+        run: npm run lint -w @ntlango/webapp
+
+      - name: Generate GraphQL Schema File
+        run: npm run emit-schema -w @ntlango/api
+
+      - name: Webapp GraphQL Codegen
+        run: npm run codegen -w @ntlango/webapp
+
+      - name: Webapp TypeScript Build
+        run: npm run build:ts -w @ntlango/webapp
+
+      - name: Webapp Next.js Build
+        run: npm run build:next -w @ntlango/webapp
+
+      - name: Webapp Unit Tests
+        run: npm run test:unit -w @ntlango/webapp

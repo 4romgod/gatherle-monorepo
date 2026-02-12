@@ -43,7 +43,7 @@ import type {
   User,
   Venue,
 } from '@ntlango/commons/types';
-import { SECRET_KEYS } from '@/constants';
+import { SECRET_KEYS, validateEnv } from '@/constants';
 import { OrganizationRole, ParticipantStatus, ParticipantVisibility } from '@ntlango/commons/types';
 import { EventVisibility } from '@ntlango/commons/types/event';
 import { logger } from '@/utils/logger';
@@ -492,6 +492,9 @@ async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string
 }
 
 async function main() {
+  // Validate environment configuration
+  validateEnv();
+
   logger.info('Starting to seed data into the database...');
 
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
