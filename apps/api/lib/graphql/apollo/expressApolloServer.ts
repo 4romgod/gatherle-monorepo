@@ -4,7 +4,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import type { ListenOptions } from 'net';
 import { getConfigValue, MongoDbClient } from '@/clients';
-import { GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS } from '@/constants';
+import { GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS, validateEnv } from '@/constants';
 import { createApolloServer } from './server';
 import { expressMiddleware } from '@apollo/server/express4';
 import {
@@ -24,6 +24,9 @@ import type { User } from '@ntlango/commons';
 const DEV_PORT = 9000;
 
 export const startExpressApolloServer = async (listenOptions: ListenOptions = { port: DEV_PORT }) => {
+  // Validate environment configuration
+  validateEnv();
+
   const actualPort = listenOptions.port ?? DEV_PORT;
   const actualUrl = `http://localhost:${actualPort}${GRAPHQL_API_PATH}`;
   const startTime = Date.now();

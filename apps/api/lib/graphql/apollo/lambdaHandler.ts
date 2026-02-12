@@ -2,7 +2,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult, Callback, Context } f
 import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
 import { createApolloServer } from '@/graphql';
 import { getConfigValue, MongoDbClient } from '@/clients';
-import { SECRET_KEYS } from '@/constants';
+import { SECRET_KEYS, validateEnv } from '@/constants';
 import { logger } from '@/utils/logger';
 import {
   createUserLoader,
@@ -30,6 +30,11 @@ let cachedLambdaHandler: Awaited<ReturnType<typeof startServerAndCreateLambdaHan
 let isDbConnected = false;
 
 async function initializeResources() {
+  // Validate environment configuration on first invocation
+  if (!isDbConnected) {
+    validateEnv();
+  }
+
   // Initialize database connection if not already connected
   if (!isDbConnected) {
     logger.info('Initializing MongoDB connection...');

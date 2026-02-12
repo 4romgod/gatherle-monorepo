@@ -1,0 +1,99 @@
+name: Beta Deployment
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  STAGE: Beta
+
+jobs:
+  api-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      graphql_url: ${{ steps.get_endpoint.outputs.graphql_url }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install AWS CDK
+        run: npm i -g aws-cdk
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @ntlango/commons
+
+      - name: API TypeScript Artifacts Build
+        run: npm run build:ts -w @ntlango/api
+
+      - name: Synthesize AWS CDK
+        run: npm run build:cdk -w @ntlango/cdk
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy AWS CDK
+        run: npm run cdk -w @ntlango/cdk -- deploy "*" --require-approval never
+
+      - name: Get API Gateway endpoint
+        id: get_endpoint
+        run: |
+          ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphQLStack --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+          echo "Retrieved endpoint: $ENDPOINT"
+          echo "GRAPHQL_URL=$ENDPOINT" >> $GITHUB_ENV
+          echo "graphql_url=$ENDPOINT" >> $GITHUB_OUTPUT
+          echo "Verify output was set:"
+          cat $GITHUB_OUTPUT
+
+      # TODO enable integration tests
+
+  webapp-preview-deploy:
+    needs: api-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        working-directory: ./apps/webapp
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy Preview to Vercel
+        working-directory: ./apps/webapp
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.api-deploy.outputs.graphql_url }}
+          NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}

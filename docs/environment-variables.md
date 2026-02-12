@@ -1,6 +1,29 @@
 # Environment & Secrets Reference
 
+## Environment Validation Strategy
+
+The API uses a **lazy validation** approach for environment variables:
+
+- **At import time**: Environment variables are parsed with default values but NOT validated
+- **At runtime**: Validation only occurs when calling `validateEnv()` explicitly
+- **Server startup**: All server entry points (Express dev server, Lambda handler, seed script) call `validateEnv()`
+  before connecting to resources
+- **Build/schema scripts**: Scripts like `emit-schema`, TypeScript compilation, and linting work without any environment
+  variables since they don't call `validateEnv()`
+
+This approach allows build tools, schema generation, and type checking to work in CI/CD without requiring secrets, while
+ensuring production deployments fail fast if configuration is missing.
+
 ## API (`apps/api`)
+
+### Build & Schema Commands (No Env Vars Required)
+
+The following commands work without any environment variables:
+
+- `npm run emit-schema` - Generates GraphQL schema file
+- `npm run build:ts` - TypeScript compilation
+- `npm run typecheck` - Type checking
+- `npm run lint` - Linting
 
 ### Local development (Dev stage)
 
