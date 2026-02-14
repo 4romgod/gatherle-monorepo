@@ -52,7 +52,7 @@
     "@graphql-codegen/cli": "^5.0.6",
     "@graphql-codegen/client-preset": "^4.2.5",
     "@parcel/watcher": "^2.4.1",
-    "@playwright/test": "^1.51.1",
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/bcrypt": "^5.0.1",
