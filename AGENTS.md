@@ -31,6 +31,7 @@
 - API test suites: `npm run test:unit -w @ntlango/api`, `npm run test:e2e -w @ntlango/api`,
   `npm run test:canary -w @ntlango/api`.
 - Web dev: export `NEXT_PUBLIC_GRAPHQL_URL`, then `npm run dev:web`. Prod build: `npm run build -w @ntlango/webapp`.
+- Web e2e tests: `npm run test:e2e -w @ntlango/webapp` (Playwright).
 - Commons build: `npm run build -w @ntlango/commons`. CDK synth: `npm run build:cdk -w @ntlango/cdk`.
 - Repo-wide helpers: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` (scoped via workspaces).
 
@@ -50,7 +51,7 @@
   before running.
 - Aim to cover resolvers, validation, and query helpers when touching API logic; add fixtures under
   `apps/api/test/utils`.
-- Web app currently lacks automated tests—add component or e2e tests colocated with features when introducing new UI.
+- Web app e2e tests use Playwright under `apps/webapp/test/e2e`; add coverage for auth guards and critical user flows.
 
 ## Commit & Pull Request Guidelines
 
