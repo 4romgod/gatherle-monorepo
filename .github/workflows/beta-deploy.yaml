@@ -1,7 +1,7 @@
 name: Beta Deployment
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
   workflow_dispatch:
 
@@ -65,7 +65,7 @@ jobs:
           GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
           NTLANGO_SECRET_ARN: ${{ secrets.NTLANGO_SECRET_ARN }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: npm run test:e2e -w @ntlango/api
+        run: npm run test:e2e:api
 
       # Webapp Deployment
       - name: Install Vercel CLI
@@ -79,10 +79,27 @@ jobs:
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Preview to Vercel
+        id: deploy_webapp
         working-directory: ./apps/webapp
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
           NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+          DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+\.vercel\.app' deployment-url.txt | tail -n 1)
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "Failed to capture deployment URL from Vercel CLI output."
+            echo "Captured output:"
+            cat deployment-url.txt
+            exit 1
+          fi
+          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "PLAYWRIGHT_BASE_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
+          echo "Deployed URL: $DEPLOYMENT_URL"
+
+      - name: Run Webapp E2E Tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.deploy_webapp.outputs.deployment_url }}
+        run: npm run test:e2e:web

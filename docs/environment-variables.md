@@ -88,6 +88,18 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `NEXT_PUBLIC_JWT_SECRET` should be sourced from the same Secrets Manager secret or another secure vault and exposed
   only to the frontend build pipeline.
 
+### E2E tests (Playwright)
+
+- Run (workspace): `npm run test:e2e -w @ntlango/webapp`
+- Run (root alias): `npm run test:e2e:web`
+- Required: `PLAYWRIGHT_BASE_URL` must point to the deployed/running webapp URL.
+- Optional overrides:
+  - `PLAYWRIGHT_SLOW_MO` to slow browser actions for debug-friendly videos (example: `250`).
+  - `PLAYWRIGHT_DEBUG_HOLD_MS` to pause before each test closes so short-flow videos have visible duration (example:
+    `1500`).
+- Prerequisite: Playwright browsers installed (for example `npx playwright install chromium`; on Linux CI use
+  `npx playwright install --with-deps chromium`).
+
 ## CI/CD (`.github/workflows/pipeline.yaml`)
 
 - Secrets & vars needed in GitHub:

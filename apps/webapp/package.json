@@ -15,6 +15,9 @@
     "start:dev": "next dev",
     "start:prod": "next start",
     "test:unit": "jest --config=test/unit/jest.config.ts --runInBand",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -49,6 +52,7 @@
     "@graphql-codegen/cli": "^5.0.6",
     "@graphql-codegen/client-preset": "^4.2.5",
     "@parcel/watcher": "^2.4.1",
+    "@playwright/test": "^1.51.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/bcrypt": "^5.0.1",
