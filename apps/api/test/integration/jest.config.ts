@@ -15,7 +15,6 @@ const config: Config = {
     '^@ntlango/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
   },
   globalSetup: '<rootDir>/test/integration/setup.ts',
-  globalTeardown: '<rootDir>/test/integration/teardown.ts',
   detectOpenHandles: true,
   forceExit: true,
   // Enhanced reporting for clear test results

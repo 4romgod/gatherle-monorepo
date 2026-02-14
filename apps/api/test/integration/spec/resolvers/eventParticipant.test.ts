@@ -1,18 +1,17 @@
 import request from 'supertest';
-import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventDAO, EventCategoryDAO, UserDAO } from '@/mongodb/dao';
-import { EventParticipant } from '@/mongodb/models';
-import { usersMockData, eventsMockData } from '@/mongodb/mockData';
-import { generateToken } from '@/utils/auth';
-import type { User, UserWithToken, CreateEventInput, EventCategory } from '@ntlango/commons/types';
-import { ParticipantStatus, UserRole } from '@ntlango/commons/types';
+import { eventsMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
+import { ParticipantStatus } from '@ntlango/commons/types';
 import {
   getCancelEventParticipantMutation,
+  getDeleteEventByIdMutation,
   getReadEventParticipantsQuery,
   getUpsertEventParticipantMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/integration/utils/helpers';
+import { createEventOnServer } from '@/test/integration/utils/eventResolverHelpers';
 
 const TEST_PORT = 5005;
 
@@ -20,46 +19,56 @@ describe('EventParticipant Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   let participantUser: UserWithToken;
+  let participantUser2: UserWithToken;
   let eventId = '';
-  let category: EventCategory;
+  let eventCreatorToken = '';
+  let eventCategoryId = '';
+  const baseEventData = (() => {
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
+    return rest;
+  })();
+
+  const buildEventInput = (): CreateEventInput => ({
+    ...baseEventData,
+    title: `Participant Event ${Date.now()}`,
+    description: 'Testing participants',
+    eventCategories: [eventCategoryId],
+    organizers: [{ user: participantUser.userId, role: 'Host' }],
+  });
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user = {
-      ...usersMockData[1],
-      userId: new Types.ObjectId().toString(),
-      userRole: UserRole.User,
-      email: 'participant@example.com',
-      username: 'participantUser',
-      interests: undefined,
-    } as User;
-    participantUser = {
-      ...user,
-      token: await generateToken(user),
-    };
-    category = await EventCategoryDAO.create({
-      name: 'Participant Category',
-      iconName: 'icon',
-      description: 'For participants',
-    });
-    const eventInput: CreateEventInput = {
-      ...eventsMockData[0],
-      title: 'Participant Event',
-      description: 'Testing participants',
-      eventCategories: [category.eventCategoryId],
-      organizers: [{ user: participantUser.userId, role: 'Host' }],
-    };
-    const event = await EventDAO.create(eventInput);
-    eventId = event.eventId;
+
+    const seededUsers = getSeededTestUsers();
+    participantUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
+    participantUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
+
+    const category = await readFirstEventCategory(url);
+    eventCategoryId = category.eventCategoryId;
+    eventCreatorToken = participantUser.token;
+  });
+
+  beforeEach(async () => {
+    const created = await createEventOnServer(url, participantUser.token, buildEventInput(), []);
+    eventId = created.eventId;
+  });
+
+  afterEach(async () => {
+    if (eventId) {
+      await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + eventCreatorToken)
+        .send(getDeleteEventByIdMutation(eventId))
+        .catch(() => {});
+    }
+    eventId = '';
   });
 
   afterAll(async () => {
-    await EventParticipant.deleteMany({ eventId }).catch(() => {});
-    await EventDAO.deleteEventById(eventId).catch(() => {});
-    await EventCategoryDAO.deleteEventCategoryBySlug(category.slug).catch(() => {});
-    await UserDAO.deleteUserByEmail(participantUser.email).catch(() => {});
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   it('upserts a participant', async () => {
@@ -88,6 +97,7 @@ describe('EventParticipant Resolver', () => {
           status: ParticipantStatus.Going,
         }),
       );
+
     const response = await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -142,19 +152,6 @@ describe('EventParticipant Resolver', () => {
   });
 
   it('handles multiple participants for same event', async () => {
-    const user2 = {
-      ...usersMockData[2],
-      userId: new Types.ObjectId().toString(),
-      userRole: UserRole.User,
-      email: 'participant2@example.com',
-      username: 'participantUser2',
-      interests: undefined,
-    } as User;
-    const participant2: UserWithToken = {
-      ...user2,
-      token: await generateToken(user2),
-    };
-
     await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -168,11 +165,11 @@ describe('EventParticipant Resolver', () => {
 
     await request(url)
       .post('')
-      .set('Authorization', 'Bearer ' + participant2.token)
+      .set('Authorization', 'Bearer ' + participantUser2.token)
       .send(
         getUpsertEventParticipantMutation({
           eventId,
-          userId: participant2.userId,
+          userId: participantUser2.userId,
           status: ParticipantStatus.Going,
         }),
       );
@@ -184,8 +181,6 @@ describe('EventParticipant Resolver', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.readEventParticipants.length).toBeGreaterThanOrEqual(2);
-
-    await UserDAO.deleteUserByEmail(participant2.email).catch(() => {});
   });
 
   it('returns error when event ID is invalid', async () => {
@@ -210,7 +205,7 @@ describe('EventParticipant Resolver', () => {
       .send(
         getCancelEventParticipantMutation({
           eventId,
-          userId: new Types.ObjectId().toString(),
+          userId: participantUser2.userId,
         }),
       );
 

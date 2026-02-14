@@ -220,6 +220,10 @@ export class User {
   @Field(() => UserRole, { description: USER_DESCRIPTIONS.USER_ROLE })
   userRole: UserRole;
 
+  @prop({ default: false, index: true, type: () => Boolean })
+  @Field(() => Boolean, { nullable: true, description: 'Marks system-seeded test users to exclude from user lists' })
+  isTestUser?: boolean;
+
   @prop({ required: true, select: false, type: () => String })
   password: string;
 
@@ -414,6 +418,10 @@ export class UpdateUserInput {
 
   @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIO })
   bio?: string;
+
+  @Authorized([UserRole.Admin])
+  @Field(() => Boolean, { nullable: true, description: 'Marks system-seeded test users to exclude from user lists' })
+  isTestUser?: boolean;
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: string[];

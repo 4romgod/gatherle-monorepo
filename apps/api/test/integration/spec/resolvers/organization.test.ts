@@ -2,13 +2,12 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
-import { usersMockData } from '@/mongodb/mockData';
-import { generateToken } from '@/utils/auth';
-import type { User, UserWithToken } from '@ntlango/commons/types';
-import { UserRole, OrganizationRole } from '@ntlango/commons/types';
+import type { UserWithToken } from '@ntlango/commons/types';
+import { OrganizationRole } from '@ntlango/commons/types';
 import {
   getCreateOrganizationMutation,
+  getDeleteOrganizationByIdMutation,
+  getDeleteOrganizationMembershipMutation,
   getReadMyOrganizationsQuery,
   getReadOrganizationByIdQuery,
   getReadOrganizationBySlugQuery,
@@ -16,14 +15,20 @@ import {
   getReadOrganizationsWithOptionsQuery,
   getUpdateOrganizationMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import { createMembershipOnServer, createOrganizationOnServer } from '@/test/integration/utils/eventResolverHelpers';
+
+type TrackedOrg = { orgId: string; token: string };
+type TrackedMembership = { membershipId: string; token: string };
 
 describe('Organization Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5003;
   let adminUser: UserWithToken;
-  const createdOrgIds: string[] = [];
-  const createdMembershipIds: string[] = [];
+  let testUser: UserWithToken;
+  const createdOrgs: TrackedOrg[] = [];
+  const createdMemberships: TrackedMembership[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 8);
 
   const buildOrganizationInput = (name: string) => ({
@@ -31,46 +36,69 @@ describe('Organization Resolver', () => {
     ownerId: adminUser.userId,
   });
 
-  const createOrganizationOnServer = async () => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + adminUser.token)
-      .send(getCreateOrganizationMutation(buildOrganizationInput('integration-org')));
+  const trackOrg = (orgId: string, token: string) => {
+    if (!createdOrgs.some((org) => org.orgId === orgId)) {
+      createdOrgs.push({ orgId, token });
+    }
+  };
 
-    const createdOrganization = response.body.data.createOrganization;
-    createdOrgIds.push(createdOrganization.orgId);
-    return createdOrganization;
+  const trackMembership = (membershipId: string, token: string) => {
+    if (!createdMemberships.some((membership) => membership.membershipId === membershipId)) {
+      createdMemberships.push({ membershipId, token });
+    }
+  };
+
+  const createOrganization = async (token: string, ownerUserId: string, name: string) => {
+    const trackedOrgIds: string[] = [];
+    const org = await createOrganizationOnServer(url, token, ownerUserId, name, trackedOrgIds);
+    trackOrg(org.orgId, token);
+    return org;
+  };
+
+  const createMembership = async (token: string, orgId: string, userId: string, role: OrganizationRole) => {
+    const trackedMembershipIds: string[] = [];
+    const membership = await createMembershipOnServer(url, token, orgId, userId, role, trackedMembershipIds);
+    trackMembership(membership.membershipId, token);
+    return membership;
   };
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user: User = {
-      ...usersMockData[0],
-      userId: new Types.ObjectId().toString(),
-      username: 'organizationAdmin',
-      email: 'organization-admin@example.com',
-      userRole: UserRole.Admin,
-      interests: undefined,
-    } as User;
-    const token = await generateToken(user);
-    adminUser = {
-      ...user,
-      token,
-    };
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    testUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
   });
 
   afterAll(async () => {
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   afterEach(async () => {
     await Promise.all(
-      createdMembershipIds.map((membershipId) => OrganizationMembershipDAO.delete(membershipId).catch(() => {})),
+      createdMemberships.map(({ membershipId, token }) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + token)
+          .send(getDeleteOrganizationMembershipMutation({ membershipId }))
+          .catch(() => {}),
+      ),
     );
-    createdMembershipIds.length = 0;
-    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
-    createdOrgIds.length = 0;
+    createdMemberships.length = 0;
+
+    await Promise.all(
+      createdOrgs.map(({ orgId, token }) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + token)
+          .send(getDeleteOrganizationByIdMutation(orgId))
+          .catch(() => {}),
+      ),
+    );
+    createdOrgs.length = 0;
   });
 
   describe('Positive', () => {
@@ -78,29 +106,39 @@ describe('Organization Resolver', () => {
       const response = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
-        .send(getCreateOrganizationMutation(buildOrganizationInput('create-org')));
+        .send(getCreateOrganizationMutation(buildOrganizationInput(`create-org-${randomId()}`)));
 
       expect(response.status).toBe(200);
       expect(response.body.data.createOrganization).toHaveProperty('orgId');
-      createdOrgIds.push(response.body.data.createOrganization.orgId);
+      trackOrg(response.body.data.createOrganization.orgId, adminUser.token);
     });
 
     it('reads organization by id and slug after creation', async () => {
-      const createdOrganization = await createOrganizationOnServer();
+      const createdOrganization = await createOrganization(
+        adminUser.token,
+        adminUser.userId,
+        `integration-org-${randomId()}`,
+      );
+      expect(createdOrganization.slug).toBeDefined();
+      const createdSlug = createdOrganization.slug as string;
 
       const byIdResponse = await request(url).post('').send(getReadOrganizationByIdQuery(createdOrganization.orgId));
 
       expect(byIdResponse.status).toBe(200);
       expect(byIdResponse.body.data.readOrganizationById.orgId).toBe(createdOrganization.orgId);
 
-      const bySlugResponse = await request(url).post('').send(getReadOrganizationBySlugQuery(createdOrganization.slug));
+      const bySlugResponse = await request(url).post('').send(getReadOrganizationBySlugQuery(createdSlug));
 
       expect(bySlugResponse.status).toBe(200);
-      expect(bySlugResponse.body.data.readOrganizationBySlug.slug).toBe(createdOrganization.slug);
+      expect(bySlugResponse.body.data.readOrganizationBySlug.slug).toBe(createdSlug);
     });
 
     it('updates an organization with valid input', async () => {
-      const createdOrganization = await createOrganizationOnServer();
+      const createdOrganization = await createOrganization(
+        adminUser.token,
+        adminUser.userId,
+        `org-update-${randomId()}`,
+      );
 
       const response = await request(url)
         .post('')
@@ -117,7 +155,7 @@ describe('Organization Resolver', () => {
     });
 
     it('reads organizations list with and without options', async () => {
-      const createdOrganization = await createOrganizationOnServer();
+      const createdOrganization = await createOrganization(adminUser.token, adminUser.userId, `org-list-${randomId()}`);
 
       const allResponse = await request(url).post('').send(getReadOrganizationsQuery());
       expect(allResponse.status).toBe(200);
@@ -136,13 +174,8 @@ describe('Organization Resolver', () => {
     });
 
     it('reads organizations with pagination options', async () => {
-      await createOrganizationOnServer();
-      const response2 = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + adminUser.token)
-        .send(getCreateOrganizationMutation(buildOrganizationInput('org-two')));
-      const org2 = response2.body.data.createOrganization;
-      createdOrgIds.push(org2.orgId);
+      await createOrganization(adminUser.token, adminUser.userId, `org-page-1-${randomId()}`);
+      await createOrganization(adminUser.token, adminUser.userId, `org-page-2-${randomId()}`);
 
       const paginatedResponse = await request(url)
         .post('')
@@ -160,7 +193,7 @@ describe('Organization Resolver', () => {
     });
 
     it('reads organizations with sort options', async () => {
-      await createOrganizationOnServer();
+      await createOrganization(adminUser.token, adminUser.userId, `org-sort-${randomId()}`);
 
       const sortedResponse = await request(url)
         .post('')
@@ -180,7 +213,7 @@ describe('Organization Resolver', () => {
     });
 
     it('validates organization name is returned correctly', async () => {
-      const testName = 'Test Organization Name';
+      const testName = `Test Organization Name ${randomId()}`;
       const response = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
@@ -188,35 +221,15 @@ describe('Organization Resolver', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data.createOrganization.name).toBe(testName);
-      createdOrgIds.push(response.body.data.createOrganization.orgId);
+      trackOrg(response.body.data.createOrganization.orgId, adminUser.token);
     });
 
     it('returns the user’s organizations with associated roles', async () => {
-      const org1 = await OrganizationDAO.create({
-        name: `read-my-org-1-${randomId()}`,
-        ownerId: adminUser.userId,
-      });
-      createdOrgIds.push(org1.orgId);
+      const org1 = await createOrganization(testUser.token, testUser.userId, `read-my-org-1-${randomId()}`);
+      await createMembership(testUser.token, org1.orgId, adminUser.userId, OrganizationRole.Admin);
 
-      const membership1 = await OrganizationMembershipDAO.create({
-        orgId: org1.orgId,
-        userId: adminUser.userId,
-        role: OrganizationRole.Admin,
-      });
-      createdMembershipIds.push(membership1.membershipId);
-
-      const org2 = await OrganizationDAO.create({
-        name: `read-my-org-2-${randomId()}`,
-        ownerId: adminUser.userId,
-      });
-      createdOrgIds.push(org2.orgId);
-
-      const membership2 = await OrganizationMembershipDAO.create({
-        orgId: org2.orgId,
-        userId: adminUser.userId,
-        role: OrganizationRole.Member,
-      });
-      createdMembershipIds.push(membership2.membershipId);
+      const org2 = await createOrganization(testUser.token, testUser.userId, `read-my-org-2-${randomId()}`);
+      await createMembership(testUser.token, org2.orgId, adminUser.userId, OrganizationRole.Member);
 
       const response = await request(url)
         .post('')
@@ -241,10 +254,10 @@ describe('Organization Resolver', () => {
   });
 
   describe('Negative', () => {
-    it('requires admin token to create organization', async () => {
+    it('requires auth token to create organization', async () => {
       const response = await request(url)
         .post('')
-        .send(getCreateOrganizationMutation(buildOrganizationInput('unauthorized-org')));
+        .send(getCreateOrganizationMutation(buildOrganizationInput(`unauthorized-org-${randomId()}`)));
 
       expect(response.status).toBe(401);
     });
@@ -269,7 +282,7 @@ describe('Organization Resolver', () => {
         .set('Authorization', 'Bearer ' + adminUser.token)
         .send(
           getCreateOrganizationMutation({
-            name: 'Invalid Owner Override',
+            name: `owner-override-${randomId()}`,
             ownerId: 'invalid-id',
           }),
         );
@@ -277,16 +290,16 @@ describe('Organization Resolver', () => {
       expect(response.status).toBe(200);
       const organization = response.body.data.createOrganization;
       expect(organization.ownerId).toBe(adminUser.userId);
-      createdOrgIds.push(organization.orgId);
+      trackOrg(organization.orgId, adminUser.token);
     });
 
     it('returns conflict when duplicate organization name is used', async () => {
-      const orgName = 'Duplicate Org';
+      const orgName = `duplicate-org-${randomId()}`;
       const createdOrganization = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
         .send(getCreateOrganizationMutation(buildOrganizationInput(orgName)));
-      createdOrgIds.push(createdOrganization.body.data.createOrganization.orgId);
+      trackOrg(createdOrganization.body.data.createOrganization.orgId, adminUser.token);
 
       const duplicateResponse = await request(url)
         .post('')
@@ -323,7 +336,11 @@ describe('Organization Resolver', () => {
     });
 
     it('requires authentication for updating organization', async () => {
-      const createdOrganization = await createOrganizationOnServer();
+      const createdOrganization = await createOrganization(
+        adminUser.token,
+        adminUser.userId,
+        `org-no-auth-${randomId()}`,
+      );
 
       const response = await request(url)
         .post('')

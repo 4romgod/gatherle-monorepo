@@ -1,6 +1,44 @@
 import type { CreateUserInput } from '@ntlango/commons/types';
 import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@ntlango/commons/types/user';
 
+// TODO:Consider using environment variables for test user passwords
+
+export const testAdminSeedUser: CreateUserInput = {
+  email: 'test-admin@ntlango.local',
+  username: 'ntlango-test-admin',
+  birthdate: '1990-01-01',
+  family_name: 'Admin',
+  given_name: 'Test',
+  password: 'TestAdmin123!',
+  gender: Gender.Other,
+  phone_number: '+27820000000',
+  userRole: UserRole.Admin,
+};
+
+export const testUserSeedUser: CreateUserInput = {
+  email: 'test-user@ntlango.local',
+  username: 'ntlango-test-user',
+  birthdate: '1992-05-15',
+  family_name: 'User',
+  given_name: 'Test',
+  password: 'TestUser123!',
+  gender: Gender.Other,
+  phone_number: '+27820000001',
+  userRole: UserRole.User,
+};
+
+export const testUser2SeedUser: CreateUserInput = {
+  email: 'test-user2@ntlango.local',
+  username: 'ntlango-test-user2',
+  birthdate: '1991-08-21',
+  family_name: 'Other',
+  given_name: 'Test',
+  password: 'TestOtherUser123!',
+  gender: Gender.Other,
+  phone_number: '+27820000002',
+  userRole: UserRole.User,
+};
+
 const users: CreateUserInput[] = [
   {
     // id: 'user001',

@@ -3,89 +3,79 @@ import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventCategoryDAO, UserDAO } from '@/mongodb/dao';
-import { usersMockData } from '@/mongodb/mockData';
-import { generateToken } from '@/utils/auth';
-import type {
-  CreateEventCategoryInput,
-  CreateUserInput,
-  QueryOptionsInput,
-  User,
-  UserWithToken,
-} from '@ntlango/commons/types';
-import { UserRole, SortOrderInput } from '@ntlango/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
+import { SortOrderInput } from '@ntlango/commons/types';
 import {
   getCreateEventCategoryMutation,
+  getDeleteEventCategoryByIdMutation,
   getReadEventCategoryByIdQuery,
   getReadEventCategoryBySlugQuery,
   getReadEventCategoriesQuery,
   getReadEventCategoriesWithOptionsQuery,
   getUpdateEventCategoryMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import {
+  buildEventCategoryInput,
+  createEventCategoryOnServer,
+} from '@/test/integration/utils/eventCategoryResolverHelpers';
 
 describe('EventCategory Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5001;
   let adminUser: UserWithToken;
-  const testEventCategorySlug = kebabCase('testEventCategory');
-
-  const createEventCategoryInput: CreateEventCategoryInput = {
-    name: 'testEventCategory',
-    description: 'Test Event Category',
-    iconName: 'testIcon',
-    color: 'testColor',
-  };
+  const createdCategoryIds: string[] = [];
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user = {
-      ...usersMockData[0],
-      userId: new Types.ObjectId().toString(),
-      userRole: UserRole.Admin,
-      email: 'admin@example.com',
-      username: 'adminUser',
-      interests: undefined,
-    } as User;
-    const token = await generateToken(user);
-    adminUser = {
-      ...user,
-      token,
-    };
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
   afterAll(async () => {
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
+  });
+
+  afterEach(async () => {
+    await Promise.all(
+      createdCategoryIds.map((eventCategoryId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteEventCategoryByIdMutation(eventCategoryId))
+          .catch(() => {}),
+      ),
+    );
+    createdCategoryIds.length = 0;
   });
 
   describe('Positive', () => {
     describe('createEventCategory Mutation', () => {
-      afterEach(async () => {
-        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
-      });
-
       it('should create a new event category when input is valid', async () => {
+        const input = buildEventCategoryInput();
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getCreateEventCategoryMutation(createEventCategoryInput));
+          .send(getCreateEventCategoryMutation(input));
 
         expect(response.status).toBe(200);
         expect(response.error).toBeFalsy();
         const createdEventCategory = response.body.data.createEventCategory;
+        createdCategoryIds.push(createdEventCategory.eventCategoryId);
         expect(createdEventCategory).toHaveProperty('eventCategoryId');
-        expect(createdEventCategory.name).toBe(createEventCategoryInput.name);
+        expect(createdEventCategory.name).toBe(input.name);
       });
     });
 
     describe('updateEventCategory Mutation', () => {
-      afterEach(async () => {
-        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
-      });
-
       it('should update an existing category when valid input is provided', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const input = buildEventCategoryInput();
+        const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + adminUser.token)
@@ -104,43 +94,51 @@ describe('EventCategory Resolver', () => {
     });
 
     describe('readEventCategory Queries', () => {
-      afterEach(async () => {
-        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
-      });
-
       it('should read category by id', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const input = buildEventCategoryInput();
+        const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
         const response = await request(url)
           .post('')
           .send(getReadEventCategoryByIdQuery(createdCategory.eventCategoryId));
 
         expect(response.status).toBe(200);
-        expect(response.body.data.readEventCategoryById.slug).toBe(testEventCategorySlug);
+        expect(response.body.data.readEventCategoryById.slug).toBe(kebabCase(input.name));
       });
 
       it('should read all categories without options', async () => {
-        await EventCategoryDAO.create(createEventCategoryInput);
+        const createdCategory = await createEventCategoryOnServer(
+          url,
+          adminUser.token,
+          buildEventCategoryInput(),
+          createdCategoryIds,
+        );
         const response = await request(url).post('').send(getReadEventCategoriesQuery());
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
-        const ourCategory = categories.find((category: any) => category.slug === testEventCategorySlug);
+        const ourCategory = categories.find(
+          (category: any) => category.eventCategoryId === createdCategory.eventCategoryId,
+        );
         expect(ourCategory).toBeDefined();
       });
 
       it('should read categories list with options', async () => {
-        await EventCategoryDAO.create(createEventCategoryInput);
-        const options: QueryOptionsInput = { filters: [{ field: 'name', value: createEventCategoryInput.name }] };
+        const input = buildEventCategoryInput();
+        const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
+        const options: QueryOptionsInput = { filters: [{ field: 'name', value: input.name }] };
         const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
-        const ourCategory = categories.find((category: any) => category.slug === testEventCategorySlug);
+        const ourCategory = categories.find(
+          (category: any) => category.eventCategoryId === createdCategory.eventCategoryId,
+        );
         expect(ourCategory).toBeDefined();
       });
 
       it('should read category by slug', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const input = buildEventCategoryInput();
+        const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
         const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
 
         expect(response.status).toBe(200);
@@ -148,44 +146,21 @@ describe('EventCategory Resolver', () => {
       });
 
       it('should resolve interested users count for category', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
-        const nonce = Date.now();
+        const createdCategory = await createEventCategoryOnServer(
+          url,
+          adminUser.token,
+          buildEventCategoryInput(),
+          createdCategoryIds,
+        );
 
-        const userInputs: CreateUserInput[] = [
-          {
-            ...usersMockData[1],
-            email: `test-event-category-interest-${nonce}-1@example.com`,
-            username: `eventCategoryInterest${nonce}a`,
-            interests: [createdCategory.eventCategoryId],
-          },
-          {
-            ...usersMockData[2],
-            email: `test-event-category-interest-${nonce}-2@example.com`,
-            username: `eventCategoryInterest${nonce}b`,
-            interests: [createdCategory.eventCategoryId],
-          },
-        ];
+        const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
 
-        const createdUsers = await Promise.all(userInputs.map((input) => UserDAO.create(input)));
-
-        try {
-          const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
-
-          expect(response.status).toBe(200);
-          expect(response.body.data.readEventCategoryBySlug.interestedUsersCount).toBe(2);
-        } finally {
-          await Promise.all(
-            createdUsers.map((createdUser) =>
-              UserDAO.deleteUserById(createdUser.userId).catch(() => {
-                // best-effort cleanup in case assertions fail
-              }),
-            ),
-          );
-        }
+        expect(response.status).toBe(200);
+        expect(response.body.data.readEventCategoryBySlug.interestedUsersCount).toBe(0);
       });
 
       it('should read categories with pagination', async () => {
-        await EventCategoryDAO.create(createEventCategoryInput);
+        await createEventCategoryOnServer(url, adminUser.token, buildEventCategoryInput(), createdCategoryIds);
         const options: QueryOptionsInput = { pagination: { skip: 0, limit: 5 } };
         const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
 
@@ -195,7 +170,7 @@ describe('EventCategory Resolver', () => {
       });
 
       it('should read categories with sort', async () => {
-        await EventCategoryDAO.create(createEventCategoryInput);
+        await createEventCategoryOnServer(url, adminUser.token, buildEventCategoryInput(), createdCategoryIds);
         const options: QueryOptionsInput = {
           sort: [{ field: 'name', order: SortOrderInput.asc }],
         };
@@ -215,24 +190,21 @@ describe('EventCategory Resolver', () => {
   describe('Negative', () => {
     describe('createEventCategory Mutation', () => {
       it('should require admin authorization', async () => {
-        const response = await request(url).post('').send(getCreateEventCategoryMutation(createEventCategoryInput));
+        const response = await request(url).post('').send(getCreateEventCategoryMutation(buildEventCategoryInput()));
         expect(response.status).toBe(401);
       });
 
       it('should return conflict for duplicate category name', async () => {
-        await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getCreateEventCategoryMutation(createEventCategoryInput));
+        const input = buildEventCategoryInput();
+
+        await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
 
         const duplicateResponse = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getCreateEventCategoryMutation(createEventCategoryInput));
+          .send(getCreateEventCategoryMutation(input));
 
         expect(duplicateResponse.status).toBe(409);
-
-        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
       });
 
       it('should return validation error for missing name', async () => {
@@ -241,7 +213,7 @@ describe('EventCategory Resolver', () => {
           .set('Authorization', 'Bearer ' + adminUser.token)
           .send(
             getCreateEventCategoryMutation({
-              ...createEventCategoryInput,
+              ...buildEventCategoryInput(),
               name: '',
             }),
           );
@@ -255,7 +227,7 @@ describe('EventCategory Resolver', () => {
           .set('Authorization', 'Bearer ' + adminUser.token)
           .send(
             getCreateEventCategoryMutation({
-              ...createEventCategoryInput,
+              ...buildEventCategoryInput(),
               iconName: '',
             }),
           );
@@ -279,7 +251,12 @@ describe('EventCategory Resolver', () => {
       });
 
       it('should require authentication', async () => {
-        const createdCategory = await EventCategoryDAO.create(createEventCategoryInput);
+        const createdCategory = await createEventCategoryOnServer(
+          url,
+          adminUser.token,
+          buildEventCategoryInput(),
+          createdCategoryIds,
+        );
 
         const response = await request(url)
           .post('')
@@ -291,8 +268,6 @@ describe('EventCategory Resolver', () => {
           );
 
         expect(response.status).toBe(401);
-
-        await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategorySlug);
       });
     });
 

@@ -358,12 +358,20 @@ describe('UserDAO', () => {
       ];
 
       const mockResults = mockUsers.map((user) => ({ toObject: () => user }));
-      (User.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResults));
+      (transformOptionsToQuery as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockResults));
 
       const result = await UserDAO.readUsers();
 
       expect(result).toEqual(mockUsers);
-      expect(User.find).toHaveBeenCalledWith({});
+      expect(transformOptionsToQuery).toHaveBeenCalledWith(User, {
+        filters: [
+          {
+            field: 'isTestUser',
+            operator: 'ne',
+            value: true,
+          },
+        ],
+      });
     });
 
     it('should read users with options and return an array of user objects', async () => {
@@ -395,12 +403,21 @@ describe('UserDAO', () => {
       const result = await UserDAO.readUsers(options);
 
       expect(result).toEqual(mockUsers);
-      expect(transformOptionsToQuery).toHaveBeenCalledWith(User, options);
+      expect(transformOptionsToQuery).toHaveBeenCalledWith(User, {
+        ...options,
+        filters: [
+          {
+            field: 'isTestUser',
+            operator: 'ne',
+            value: true,
+          },
+        ],
+      });
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
       const mockError = new Error('Mongodb Error');
-      (User.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+      (transformOptionsToQuery as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(UserDAO.readUsers()).rejects.toThrow(KnownCommonError({}));
     });

@@ -2,12 +2,9 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { generateToken } from '@/utils/auth';
-import { usersMockData } from '@/mongodb/mockData';
-import type { User, UserWithToken } from '@ntlango/commons/types';
-import { UserRole, VenueType } from '@ntlango/commons/types';
-import { OrganizationDAO } from '@/mongodb/dao';
-import { getCreateOrganizationMutation } from '@/test/utils';
+import type { UserWithToken } from '@ntlango/commons/types';
+import { VenueType } from '@ntlango/commons/types';
+import { getDeleteOrganizationByIdMutation } from '@/test/utils';
 import {
   getCreateVenueMutation,
   getDeleteVenueByIdMutation,
@@ -17,6 +14,8 @@ import {
   getReadVenuesQuery,
   getUpdateVenueMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import { createOrganizationOnServer } from '@/test/integration/utils/eventResolverHelpers';
 
 describe('Venue Resolver', () => {
   let server: IntegrationServer;
@@ -27,21 +26,8 @@ describe('Venue Resolver', () => {
   const createdOrgIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
 
-  const createOrganization = async (name: string) => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + adminUser.token)
-      .send(
-        getCreateOrganizationMutation({
-          name,
-          ownerId: adminUser.userId,
-        }),
-      );
-
-    const organization = response.body.data.createOrganization;
-    createdOrgIds.push(organization.orgId);
-    return organization;
-  };
+  const createOrganization = (name: string) =>
+    createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
 
   const createVenue = async (orgId: string) => {
     const response = await request(url)
@@ -67,20 +53,15 @@ describe('Venue Resolver', () => {
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user: User = {
-      ...usersMockData[0],
-      userId: new Types.ObjectId().toString(),
-      username: 'venueAdmin',
-      email: 'venue-admin@example.com',
-      userRole: UserRole.Admin,
-      interests: undefined,
-    } as User;
-    const token = await generateToken(user);
-    adminUser = { ...user, token };
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
   afterAll(async () => {
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   afterEach(async () => {
@@ -93,14 +74,22 @@ describe('Venue Resolver', () => {
           .catch(() => {}),
       ),
     );
-    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
+    await Promise.all(
+      createdOrgIds.map((orgId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteOrganizationByIdMutation(orgId))
+          .catch(() => {}),
+      ),
+    );
     createdVenueIds.length = 0;
     createdOrgIds.length = 0;
   });
 
   describe('Positive', () => {
     it('creates a venue with valid input', async () => {
-      const organization = await createOrganization('Venue Org');
+      const organization = await createOrganization(`Venue Org ${randomId()}`);
 
       const response = await request(url)
         .post('')
@@ -119,7 +108,7 @@ describe('Venue Resolver', () => {
     });
 
     it('updates a venue with valid input', async () => {
-      const organization = await createOrganization('Venue Org Update');
+      const organization = await createOrganization(`Venue Org Update ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url)
@@ -132,7 +121,7 @@ describe('Venue Resolver', () => {
     });
 
     it('reads venue by id and lists venues', async () => {
-      const organization = await createOrganization('Venue Org List');
+      const organization = await createOrganization(`Venue Org List ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const readByIdResponse = await request(url).post('').send(getReadVenueByIdQuery(venue.venueId));
@@ -151,7 +140,7 @@ describe('Venue Resolver', () => {
     });
 
     it('reads venue by slug', async () => {
-      const organization = await createOrganization('Venue Org Slug');
+      const organization = await createOrganization(`Venue Org Slug ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const slugResponse = await request(url).post('').send(getReadVenueBySlugQuery(venue.slug));
@@ -160,7 +149,7 @@ describe('Venue Resolver', () => {
     });
 
     it('creates venues with different types', async () => {
-      const organization = await createOrganization('Venue Org Types');
+      const organization = await createOrganization(`Venue Org Types ${randomId()}`);
 
       const physicalVenue = await request(url)
         .post('')
@@ -196,8 +185,8 @@ describe('Venue Resolver', () => {
     });
 
     it('filters venues by organization', async () => {
-      const org1 = await createOrganization('Org1 Venues');
-      const org2 = await createOrganization('Org2 Venues');
+      const org1 = await createOrganization(`Org1 Venues ${randomId()}`);
+      const org2 = await createOrganization(`Org2 Venues ${randomId()}`);
 
       const venue1 = await createVenue(org1.orgId);
       const venue2 = await createVenue(org2.orgId);
@@ -210,7 +199,7 @@ describe('Venue Resolver', () => {
     });
 
     it('updates venue name', async () => {
-      const organization = await createOrganization('Venue Org Name');
+      const organization = await createOrganization(`Venue Org Name ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url)
@@ -230,7 +219,7 @@ describe('Venue Resolver', () => {
     });
 
     it('updates venue address', async () => {
-      const organization = await createOrganization('Venue Org Address');
+      const organization = await createOrganization(`Venue Org Address ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url)
@@ -253,7 +242,7 @@ describe('Venue Resolver', () => {
     });
 
     it('deletes venue by id', async () => {
-      const organization = await createOrganization('Venue Org Delete');
+      const organization = await createOrganization(`Venue Org Delete ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url)
@@ -270,7 +259,7 @@ describe('Venue Resolver', () => {
 
   describe('Negative', () => {
     it('requires admin token to create a venue', async () => {
-      const organization = await createOrganization('Venue Org Unauthorized');
+      const organization = await createOrganization(`Venue Org Unauthorized ${randomId()}`);
 
       const response = await request(url)
         .post('')
@@ -286,7 +275,7 @@ describe('Venue Resolver', () => {
     });
 
     it('returns validation error for missing venue name', async () => {
-      const organization = await createOrganization('Venue Org No Name');
+      const organization = await createOrganization(`Venue Org No Name ${randomId()}`);
 
       const response = await request(url)
         .post('')
@@ -346,7 +335,7 @@ describe('Venue Resolver', () => {
     });
 
     it('requires authentication for updating venue', async () => {
-      const organization = await createOrganization('Venue Org Auth');
+      const organization = await createOrganization(`Venue Org Auth ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url)
@@ -362,7 +351,7 @@ describe('Venue Resolver', () => {
     });
 
     it('requires authentication for deleting venue', async () => {
-      const organization = await createOrganization('Venue Org Delete Auth');
+      const organization = await createOrganization(`Venue Org Delete Auth ${randomId()}`);
       const venue = await createVenue(organization.orgId);
 
       const response = await request(url).post('').send(getDeleteVenueByIdMutation(venue.venueId));

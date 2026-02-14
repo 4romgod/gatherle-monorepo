@@ -54,12 +54,22 @@ The following commands work without any environment variables:
   - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
-### Integration tests (post-deploy)
+### Integration tests
 
-- Run from CI/CD after deployment.
-- Required env: `STAGE`, `NTLANGO_SECRET_ARN`, `GRAPHQL_URL` (the URL exposed by CloudFormation).
-- These tests still expect to resolve `MONGO_DB_URL` and `JWT_SECRET` via the ARN, so the secret must be in place before
-  the tests run.
+Integration tests use the `STAGE` environment variable to determine which endpoint to test against.
+
+#### Local testing (STAGE=Dev, default)
+
+- Run: `npm run test:integration -w @ntlango/api`
+- Requires: `MONGO_DB_URL`, `JWT_SECRET`, `STAGE=Dev`
+- Behavior: Spins up local server at `http://localhost:9000/v1/graphql`, runs tests, cleans up test data automatically
+
+#### Remote testing (STAGE=Beta or STAGE=Prod)
+
+- Run: `STAGE=Beta GRAPHQL_URL=<endpoint> npm run test:integration -w @ntlango/api`
+- Required env: `STAGE`, `GRAPHQL_URL`, `NTLANGO_SECRET_ARN`, `AWS_REGION`
+- Behavior: Tests against deployed endpoint without starting a server, skips automatic cleanup
+- Example: Post-deployment tests in CI/CD run against the freshly deployed API endpoint with `STAGE=Beta`
 
 ## Webapp (`apps/webapp`)
 

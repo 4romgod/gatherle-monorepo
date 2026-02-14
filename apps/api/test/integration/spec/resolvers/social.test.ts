@@ -1,14 +1,10 @@
 import request from 'supertest';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventCategoryDAO, EventDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';
-import { Activity, Follow, Intent } from '@/mongodb/models';
-import { usersMockData, eventsMockData } from '@/mongodb/mockData';
-import type { CreateUserInput } from '@ntlango/commons/types';
+import { eventsMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
 import {
-  SocialVisibility,
   FollowTargetType,
-  FollowPolicy,
   ActivityVerb,
   ActivityObjectType,
   ActivityVisibility,
@@ -18,12 +14,10 @@ import {
   EventStatus,
   EventVisibility,
   EventLifecycleStatus,
-  type EventCategory,
-  type User,
-  type UserWithToken,
-  type CreateEventInput,
 } from '@ntlango/commons/types';
 import {
+  getDeleteEventByIdMutation,
+  getDeleteOrganizationByIdMutation,
   getFollowMutation,
   getReadFollowersQuery,
   getReadFollowingQuery,
@@ -35,6 +29,8 @@ import {
   getReadIntentsByUserQuery,
   getUnfollowMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/integration/utils/helpers';
+import { createEventOnServer, createOrganizationOnServer } from '@/test/integration/utils/eventResolverHelpers';
 
 const TEST_PORT = 5010;
 
@@ -42,62 +38,74 @@ describe('Social resolver integration', () => {
   let server: IntegrationServer;
   let url = '';
   let actorUser: UserWithToken;
-  let targetUser: User;
-  let category: EventCategory;
+  let targetUser: UserWithToken;
   let eventId = '';
+  const createdEventIds: string[] = [];
+  const createdOrgIds: string[] = [];
+  const baseEventData = (() => {
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
+    return rest;
+  })();
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
 
-    const baseActorUser: CreateUserInput = {
-      ...usersMockData[0],
-      email: 'social-actor@example.com',
-      username: 'socialActor',
-      socialVisibility: SocialVisibility.Public,
-      shareRSVPByDefault: true,
-    };
-    actorUser = await UserDAO.create(baseActorUser);
+    const seededUsers = getSeededTestUsers();
+    actorUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
+    targetUser = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
 
-    targetUser = await UserDAO.create({
-      ...usersMockData[1],
-      email: 'social-target@example.com',
-      username: 'socialTarget',
-      followPolicy: FollowPolicy.Public,
-    });
-
-    category = await EventCategoryDAO.create({
-      name: 'Social Feed Category',
-      iconName: 'share',
-      description: 'Category for social feed testing',
-    });
+    const category = await readFirstEventCategory(url);
 
     const eventInput: CreateEventInput = {
-      ...eventsMockData[0],
-      title: 'Social Feed Event',
+      ...baseEventData,
+      title: `Social Feed Event ${Date.now()}`,
       description: 'A gathering for social signals',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: actorUser.userId, role: 'Host' }],
       status: EventStatus.Upcoming,
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
-      location: eventsMockData[0].location,
-      recurrenceRule: eventsMockData[0].recurrenceRule,
+      location: baseEventData.location,
+      recurrenceRule: baseEventData.recurrenceRule,
     };
 
-    const event = await EventDAO.create(eventInput);
-    eventId = event.eventId;
+    const createdEvent = await createEventOnServer(url, actorUser.token, eventInput, createdEventIds);
+    eventId = createdEvent.eventId;
+  });
+
+  afterEach(async () => {
+    await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + actorUser.token)
+      .send(getUnfollowMutation(FollowTargetType.User, targetUser.userId))
+      .catch(() => {});
   });
 
   afterAll(async () => {
-    await Follow.deleteMany({ followerUserId: actorUser.userId }).catch(() => {});
-    await Intent.deleteMany({ userId: actorUser.userId }).catch(() => {});
-    await Activity.deleteMany({ actorId: actorUser.userId }).catch(() => {});
-    await EventDAO.deleteEventById(eventId).catch(() => {});
-    await EventCategoryDAO.deleteEventCategoryBySlug(category.slug).catch(() => {});
-    await UserDAO.deleteUserById(actorUser.userId).catch(() => {});
-    await UserDAO.deleteUserById(targetUser.userId).catch(() => {});
-    await stopIntegrationServer(server);
+    await Promise.all(
+      createdOrgIds.map((orgId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + actorUser.token)
+          .send(getDeleteOrganizationByIdMutation(orgId))
+          .catch(() => {}),
+      ),
+    );
+
+    await Promise.all(
+      createdEventIds.map((id) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + actorUser.token)
+          .send(getDeleteEventByIdMutation(id))
+          .catch(() => {}),
+      ),
+    );
+
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   it('creates and cleans up follows', async () => {
@@ -130,9 +138,6 @@ describe('Social resolver integration', () => {
       .set('Authorization', 'Bearer ' + actorUser.token)
       .send(getUnfollowMutation(FollowTargetType.User, targetUser.userId));
 
-    if (unfollowResponse.status !== 200) {
-      console.error('UNFOLLOW RESPONSE ERROR', unfollowResponse.body);
-    }
     expect(unfollowResponse.status).toBe(200);
     expect(unfollowResponse.body.data.unfollow).toBe(true);
   });
@@ -216,13 +221,7 @@ describe('Social resolver integration', () => {
       .set('Authorization', 'Bearer ' + actorUser.token)
       .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
 
-    // The API may return 200 (idempotent) or 409 (conflict)
     expect([200, 409]).toContain(duplicateFollow.status);
-
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getUnfollowMutation(FollowTargetType.User, targetUser.userId));
   });
 
   it('handles intent status updates', async () => {
@@ -311,11 +310,14 @@ describe('Social resolver integration', () => {
   });
 
   it('allows following an organization', async () => {
-    const org = await OrganizationDAO.create({
-      name: `Follow Org ${Date.now()}`,
-      description: 'Org for following',
-      ownerId: actorUser.userId,
-    });
+    const org = await createOrganizationOnServer(
+      url,
+      actorUser.token,
+      actorUser.userId,
+      `Follow Org ${Date.now()}`,
+      createdOrgIds,
+    );
+
     const followResponse = await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + actorUser.token)
@@ -329,8 +331,6 @@ describe('Social resolver integration', () => {
       .post('')
       .set('Authorization', 'Bearer ' + actorUser.token)
       .send(getUnfollowMutation(FollowTargetType.Organization, org.orgId));
-
-    await OrganizationDAO.deleteOrganizationById(org.orgId).catch(() => {});
   });
 
   it('records activities with different visibility levels', async () => {

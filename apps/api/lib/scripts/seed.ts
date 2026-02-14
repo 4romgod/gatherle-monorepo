@@ -14,6 +14,9 @@ import {
 } from '@/mongodb/dao';
 import {
   usersMockData,
+  testAdminSeedUser,
+  testUserSeedUser,
+  testUser2SeedUser,
   eventsMockData,
   eventCategoryMockData,
   eventCategoryGroupMockData,
@@ -44,7 +47,7 @@ import type {
   Venue,
 } from '@ntlango/commons/types';
 import { SECRET_KEYS, validateEnv } from '@/constants';
-import { OrganizationRole, ParticipantStatus, ParticipantVisibility } from '@ntlango/commons/types';
+import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@ntlango/commons/types';
 import { EventVisibility } from '@ntlango/commons/types/event';
 import { logger } from '@/utils/logger';
 
@@ -68,6 +71,124 @@ function getRandomUniqueItems(array: Array<string>, count: number) {
 
 function getRandomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+const TEST_ADMIN_EMAIL = testAdminSeedUser.email;
+const TEST_USER_EMAIL = testUserSeedUser.email;
+const TEST_USER2_EMAIL = testUser2SeedUser.email;
+
+async function seedTestAdminUser(eventCategoryIds: Array<string>) {
+  logger.info('Seeding test admin user...');
+
+  try {
+    const existingUser = await UserDAO.readUserByEmail(TEST_ADMIN_EMAIL);
+    if (!existingUser.isTestUser) {
+      await UserDAO.updateUser({
+        userId: existingUser.userId,
+        isTestUser: true,
+        userRole: UserRole.Admin,
+      });
+      logger.info(`   Updated existing user ${TEST_ADMIN_EMAIL} to test admin.`);
+    } else {
+      logger.info(`   Test admin ${TEST_ADMIN_EMAIL} already exists, skipping...`);
+    }
+    return;
+  } catch (_error) {
+    // not found -> create below
+  }
+
+  try {
+    const createdUser = await UserDAO.create({
+      ...testAdminSeedUser,
+      interests: getRandomUniqueItems(eventCategoryIds, 5),
+    });
+
+    await UserDAO.updateUser({
+      userId: createdUser.userId,
+      userRole: UserRole.Admin,
+      isTestUser: true,
+    });
+
+    logger.info(`   Created test admin ${TEST_ADMIN_EMAIL}.`);
+  } catch (error) {
+    logger.warn(`   Failed to seed test admin ${TEST_ADMIN_EMAIL}:`, { error });
+  }
+}
+
+async function seedTestUser(eventCategoryIds: Array<string>) {
+  logger.info('Seeding test normal user...');
+
+  try {
+    const existingUser = await UserDAO.readUserByEmail(TEST_USER_EMAIL);
+    if (!existingUser.isTestUser || existingUser.userRole !== UserRole.User) {
+      await UserDAO.updateUser({
+        userId: existingUser.userId,
+        isTestUser: true,
+        userRole: UserRole.User,
+      });
+      logger.info(`   Updated existing user ${TEST_USER_EMAIL} to test user.`);
+    } else {
+      logger.info(`   Test user ${TEST_USER_EMAIL} already exists, skipping...`);
+    }
+    return;
+  } catch (_error) {
+    // not found -> create below
+  }
+
+  try {
+    const createdUser = await UserDAO.create({
+      ...testUserSeedUser,
+      interests: getRandomUniqueItems(eventCategoryIds, 5),
+    });
+
+    await UserDAO.updateUser({
+      userId: createdUser.userId,
+      userRole: UserRole.User,
+      isTestUser: true,
+    });
+
+    logger.info(`   Created test user ${TEST_USER_EMAIL}.`);
+  } catch (error) {
+    logger.warn(`   Failed to seed test user ${TEST_USER_EMAIL}:`, { error });
+  }
+}
+
+async function seedTestUser2(eventCategoryIds: Array<string>) {
+  logger.info('Seeding test user2...');
+
+  try {
+    const existingUser = await UserDAO.readUserByEmail(TEST_USER2_EMAIL);
+    if (!existingUser.isTestUser || existingUser.userRole !== UserRole.User) {
+      await UserDAO.updateUser({
+        userId: existingUser.userId,
+        isTestUser: true,
+        userRole: UserRole.User,
+      });
+      logger.info(`   Updated existing user ${TEST_USER2_EMAIL} to test user2.`);
+    } else {
+      logger.info(`   Test user ${TEST_USER2_EMAIL} already exists, skipping...`);
+    }
+    return;
+  } catch (_error) {
+    // not found -> create below
+  }
+
+  try {
+    const createdUser = await UserDAO.create({
+      ...testUser2SeedUser,
+      interests: getRandomUniqueItems(eventCategoryIds, 5),
+    });
+
+    await UserDAO.updateUser({
+      userId: createdUser.userId,
+      userRole: UserRole.User,
+      isTestUser: true,
+    });
+
+    logger.info(`   Created test user ${TEST_USER2_EMAIL}.`);
+  } catch (error) {
+    logger.warn(`   Failed to seed test user ${TEST_USER2_EMAIL}:`, { error });
+  }
 }
 
 async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
@@ -558,6 +679,9 @@ async function main() {
 
   await seedEventCategoryGroups(eventCategoryGroupMockData, allEventCategories);
 
+  await seedTestAdminUser(allEventCategoriesIds);
+  await seedTestUser(allEventCategoriesIds);
+  await seedTestUser2(allEventCategoriesIds);
   await seedUsers(usersMockData, allEventCategoriesIds);
   const allUsers = await UserDAO.readUsers();
   const userByEmail = new Map<string, User>();

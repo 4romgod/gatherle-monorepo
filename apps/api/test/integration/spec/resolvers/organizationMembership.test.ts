@@ -2,78 +2,47 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { generateToken } from '@/utils/auth';
-import { usersMockData } from '@/mongodb/mockData';
-import type { User, UserWithToken } from '@ntlango/commons/types';
-import { OrganizationDAO } from '@/mongodb/dao';
-import { UserRole, OrganizationRole } from '@ntlango/commons/types';
+import type { UserWithToken } from '@ntlango/commons/types';
+import { OrganizationRole } from '@ntlango/commons/types';
 import {
   getCreateOrganizationMembershipMutation,
   getDeleteOrganizationMembershipMutation,
   getReadOrganizationMembershipByIdQuery,
   getReadOrganizationMembershipsByOrgIdQuery,
-  getCreateOrganizationMutation,
+  getDeleteOrganizationByIdMutation,
   getUpdateOrganizationMembershipMutation,
 } from '@/test/utils';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import { createMembershipOnServer, createOrganizationOnServer } from '@/test/integration/utils/eventResolverHelpers';
 
 describe('OrganizationMembership Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5005;
   let adminUser: UserWithToken;
+  let testUser2: UserWithToken;
   const createdMembershipIds: string[] = [];
   const createdOrgIds: string[] = [];
 
-  const createOrganization = async (name: string) => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + adminUser.token)
-      .send(
-        getCreateOrganizationMutation({
-          name,
-          ownerId: adminUser.userId,
-        }),
-      );
+  const createOrganization = (name: string) =>
+    createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
 
-    const organization = response.body.data.createOrganization;
-    createdOrgIds.push(organization.orgId);
-    return organization;
-  };
-
-  const createMembership = async (orgId: string, userId: string) => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + adminUser.token)
-      .send(
-        getCreateOrganizationMembershipMutation({
-          orgId,
-          userId,
-          role: OrganizationRole.Member,
-        }),
-      );
-
-    const membership = response.body.data.createOrganizationMembership;
-    createdMembershipIds.push(membership.membershipId);
-    return membership;
-  };
+  const createMembership = (orgId: string, userId: string) =>
+    createMembershipOnServer(url, adminUser.token, orgId, userId, OrganizationRole.Member, createdMembershipIds);
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user: User = {
-      ...usersMockData[0],
-      userId: new Types.ObjectId().toString(),
-      username: 'membershipAdmin',
-      email: 'membership-admin@example.com',
-      userRole: UserRole.Admin,
-      interests: undefined,
-    } as User;
-    const token = await generateToken(user);
-    adminUser = { ...user, token };
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    testUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
   });
 
   afterAll(async () => {
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   afterEach(async () => {
@@ -86,7 +55,17 @@ describe('OrganizationMembership Resolver', () => {
           .catch(() => {}),
       ),
     );
-    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
+
+    await Promise.all(
+      createdOrgIds.map((orgId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteOrganizationByIdMutation(orgId))
+          .catch(() => {}),
+      ),
+    );
+
     createdMembershipIds.length = 0;
     createdOrgIds.length = 0;
   });
@@ -94,7 +73,7 @@ describe('OrganizationMembership Resolver', () => {
   describe('Positive', () => {
     it('creates a membership successfully', async () => {
       const organization = await createOrganization('Membership Org');
-      const membership = await createMembership(organization.orgId, new Types.ObjectId().toString());
+      const membership = await createMembership(organization.orgId, testUser2.userId);
 
       expect(membership).toHaveProperty('membershipId');
       expect(membership.orgId).toBe(organization.orgId);
@@ -102,9 +81,9 @@ describe('OrganizationMembership Resolver', () => {
 
     it('updates a membership role', async () => {
       const organization = await createOrganization('Membership Update Org');
-      const membership = await createMembership(organization.orgId, new Types.ObjectId().toString());
+      const membership = await createMembership(organization.orgId, testUser2.userId);
 
-      const response = await request(url)
+      const updateResponse = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
         .send(
@@ -114,13 +93,13 @@ describe('OrganizationMembership Resolver', () => {
           }),
         );
 
-      expect(response.status).toBe(200);
-      expect(response.body.data.updateOrganizationMembership.role).toBe(OrganizationRole.Host);
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.data.updateOrganizationMembership.role).toBe(OrganizationRole.Host);
     });
 
     it('reads membership by id and org id', async () => {
       const organization = await createOrganization('Membership Read Org');
-      const membership = await createMembership(organization.orgId, new Types.ObjectId().toString());
+      const membership = await createMembership(organization.orgId, testUser2.userId);
 
       const byIdResponse = await request(url)
         .post('')
@@ -141,7 +120,7 @@ describe('OrganizationMembership Resolver', () => {
 
     it('deletes membership via mutation', async () => {
       const organization = await createOrganization('Membership Delete Org');
-      const membership = await createMembership(organization.orgId, new Types.ObjectId().toString());
+      const membership = await createMembership(organization.orgId, testUser2.userId);
 
       const response = await request(url)
         .post('')
@@ -163,7 +142,7 @@ describe('OrganizationMembership Resolver', () => {
         .send(
           getCreateOrganizationMembershipMutation({
             orgId: organization.orgId,
-            userId: new Types.ObjectId().toString(),
+            userId: testUser2.userId,
             role: OrganizationRole.Member,
           }),
         );

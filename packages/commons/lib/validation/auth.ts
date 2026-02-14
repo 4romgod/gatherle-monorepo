@@ -44,6 +44,10 @@ export const UpdateUserInputSchema = z.object({
   phone_number: z.string().regex(REGEX_PHONE_NUMBER, { message: ERROR_MESSAGES.INVALID_PHONE_NUMBER }).optional(),
   profile_picture: z.string().optional(),
   username: z.string().optional(),
+  // NOTE: This schema only validates payload shape/type.
+  // Authorization for mutating `isTestUser` is enforced in GraphQL via @Authorized([UserRole.Admin])
+  // on UpdateUserInput and resolver guards, not at the Zod layer.
+  isTestUser: z.boolean().optional(),
   followPolicy: z.nativeEnum(FollowPolicy).optional(),
   followersListVisibility: z.nativeEnum(SocialVisibility).optional(),
   followingListVisibility: z.nativeEnum(SocialVisibility).optional(),

@@ -13,10 +13,8 @@ env:
   STAGE: Beta
 
 jobs:
-  api-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      graphql_url: ${{ steps.get_endpoint.outputs.graphql_url }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -30,6 +28,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # API Deployment
       - name: Install AWS CDK
         run: npm i -g aws-cdk
 
@@ -61,24 +60,14 @@ jobs:
           echo "Verify output was set:"
           cat $GITHUB_OUTPUT
 
-      # TODO enable integration tests
+      - name: Run API Integration Tests
+        env:
+          GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
+          NTLANGO_SECRET_ARN: ${{ secrets.NTLANGO_SECRET_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: npm run test:integration -w @ntlango/api
 
-  webapp-preview-deploy:
-    needs: api-deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-          cache: npm
-
-      - name: Install Dependencies
-        run: npm ci
-
+      # Webapp Deployment
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -94,6 +83,6 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.api-deploy.outputs.graphql_url }}
+          NEXT_PUBLIC_GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
           NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}

@@ -2,11 +2,9 @@ import request from 'supertest';
 import { kebabCase } from 'lodash';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventDAO, EventCategoryDAO, UserDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
-import { eventsMockData, usersMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken, CreateUserInput } from '@ntlango/commons/types';
+import { eventsMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
 import { SortOrderInput, OrganizationRole } from '@ntlango/commons/types';
-import { generateToken } from '@/utils/auth';
 import {
   getCreateEventMutation,
   getDeleteEventByIdMutation,
@@ -14,37 +12,44 @@ import {
   getReadEventByIdQuery,
   getReadEventBySlugQuery,
   getUpdateEventMutation,
+  getDeleteOrganizationByIdMutation,
+  getDeleteOrganizationMembershipMutation,
 } from '@/test/utils';
+import {
+  getSeededTestUsers,
+  loginSeededUser,
+  readFirstEventCategory,
+  type EventCategoryRef,
+} from '@/test/integration/utils/helpers';
+import {
+  createEventOnServer,
+  createMembershipOnServer,
+  createOrganizationOnServer,
+  untrackCreatedId,
+  updateMembershipRoleOnServer,
+} from '@/test/integration/utils/eventResolverHelpers';
 
 describe('Event Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5002;
+  let adminUser: UserWithToken;
   let testUser: UserWithToken;
-  let userInput: CreateUserInput;
-  let testEventCategory: any;
-  const testEventTitle = 'Test Event Title';
+  let testUser2: UserWithToken;
+  let testEventCategory: EventCategoryRef;
+  const testRunId = Date.now();
+  const testEventTitle = `Test Event Title ${testRunId}`;
   const testEventSlug = kebabCase(testEventTitle);
   const testEventDescription = 'Test Event Description';
+  const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
   const createdMembershipIds: string[] = [];
-  const cleanupUserEmails: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
-  const uniqueEmail = (prefix: string) => `${prefix}-${Date.now()}-${randomId()}@example.com`;
-  const uniqueUsername = (prefix: string) => `${prefix}-${randomId()}`;
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
     return rest;
   })();
-
-  const createEventOnServer = async () => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + testUser.token)
-      .send(getCreateEventMutation(buildEventInput()));
-    return response.body.data.createEvent;
-  };
 
   const buildEventInput = (): CreateEventInput => ({
     ...baseEventData,
@@ -54,61 +59,82 @@ describe('Event Resolver', () => {
     organizers: [{ user: testUser.userId, role: 'Host' }],
   });
 
+  const createEvent = (input: CreateEventInput = buildEventInput()) =>
+    createEventOnServer(url, testUser.token, input, createdEventIds);
+
+  const createOrganization = (name: string) =>
+    createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
+
+  const createMembership = (orgId: string, userId: string, role: OrganizationRole) =>
+    createMembershipOnServer(url, adminUser.token, orgId, userId, role, createdMembershipIds);
+
+  const updateMembershipRole = (membershipId: string, role: OrganizationRole) =>
+    updateMembershipRoleOnServer(url, adminUser.token, membershipId, role);
+
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    // Clean up any leftover event categories from failed test runs
-    await EventCategoryDAO.deleteEventCategoryBySlug('integration-event-category').catch(() => {});
-    testEventCategory = await EventCategoryDAO.create({
-      name: 'IntegrationEventCategory',
-      iconName: 'icon',
-      description: 'Integration test category',
-    });
-    userInput = {
-      ...usersMockData[0],
-      email: 'event@example.com',
-      username: 'eventUser',
-    };
-    // Clean up user if exists from failed test run
-    await UserDAO.deleteUserByEmail(userInput.email).catch(() => {});
-    testUser = await UserDAO.create(userInput);
+
+    const seededUsers = getSeededTestUsers();
+
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    testUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
+    testUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
+
+    testEventCategory = await readFirstEventCategory(url);
   });
 
   afterAll(async () => {
-    await EventCategoryDAO.deleteEventCategoryBySlug(testEventCategory.slug);
-    await UserDAO.deleteUserByEmail(testUser.email).catch(() => {});
-    await Promise.all(
-      createdMembershipIds.map((membershipId) => OrganizationMembershipDAO.delete(membershipId).catch(() => {})),
-    );
-    await Promise.all(createdOrgIds.map((orgId) => OrganizationDAO.deleteOrganizationById(orgId).catch(() => {})));
-    await Promise.all(cleanupUserEmails.map((email) => UserDAO.deleteUserByEmail(email).catch(() => {})));
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
   afterEach(async () => {
-    await EventDAO.deleteEventBySlug(testEventSlug).catch(() => {});
+    await Promise.all(
+      createdEventIds.map((eventId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + testUser.token)
+          .send(getDeleteEventByIdMutation(eventId))
+          .catch(() => {}),
+      ),
+    );
+    createdEventIds.length = 0;
+
+    await Promise.all(
+      createdMembershipIds.map((membershipId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteOrganizationMembershipMutation({ membershipId }))
+          .catch(() => {}),
+      ),
+    );
+    createdMembershipIds.length = 0;
+
+    await Promise.all(
+      createdOrgIds.map((orgId) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteOrganizationByIdMutation(orgId))
+          .catch(() => {}),
+      ),
+    );
+    createdOrgIds.length = 0;
   });
 
   describe('Positive', () => {
     it('creates a new event with valid input', async () => {
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(buildEventInput()));
-
-      expect(response.status).toBe(200);
-      const createdEvent = response.body.data.createEvent;
+      const createdEvent = await createEvent();
       expect(createdEvent).toHaveProperty('eventId');
       expect(createdEvent.title).toBe(testEventTitle);
     });
 
     it('reads the event by id and slug after creation', async () => {
-      const createResponse = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(buildEventInput()));
+      const createdEvent = await createEvent();
 
-      const createdEvent = createResponse.body.data.createEvent;
       const readById = await request(url).post('').send(getReadEventByIdQuery(createdEvent.eventId));
       expect(readById.status).toBe(200);
       expect(readById.body.data.readEventById.eventId).toBe(createdEvent.eventId);
@@ -120,7 +146,7 @@ describe('Event Resolver', () => {
 
     describe('updateEvent Mutation', () => {
       it('updates an event when valid input is provided', async () => {
-        const createdEvent = await createEventOnServer();
+        const createdEvent = await createEvent();
         const updatedTitle = 'Updated Event Title';
         const response = await request(url)
           .post('')
@@ -133,37 +159,37 @@ describe('Event Resolver', () => {
 
     describe('deleteEvent Mutations', () => {
       it('deletes an event by slug', async () => {
-        await createEventOnServer();
+        const createdEvent = await createEvent();
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + testUser.token)
           .send(getDeleteEventBySlugMutation(testEventSlug));
+
         expect(response.status).toBe(200);
         expect(response.body.data.deleteEventBySlug.slug).toBe(testEventSlug);
+        untrackCreatedId(createdEventIds, createdEvent.eventId);
       });
 
       it('deletes an event by id', async () => {
-        const createdEvent = await createEventOnServer();
+        const createdEvent = await createEvent();
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + testUser.token)
           .send(getDeleteEventByIdMutation(createdEvent.eventId));
+
         expect(response.status).toBe(200);
         expect(response.body.data.deleteEventById.eventId).toBe(createdEvent.eventId);
+        untrackCreatedId(createdEventIds, createdEvent.eventId);
       });
     });
   });
 
   describe('readEvents Query', () => {
     it('reads multiple events with no filters', async () => {
-      const event1 = await createEventOnServer();
+      const event1 = await createEvent();
       const input2 = buildEventInput();
       input2.title = `Test Event Two ${Date.now()}`;
-      const response2 = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(input2));
-      const event2 = response2.body.data.createEvent;
+      const event2 = await createEvent(input2);
 
       const readResponse = await request(url)
         .post('')
@@ -190,12 +216,10 @@ describe('Event Resolver', () => {
       const found2 = events.find((e: any) => e.eventId === event2.eventId);
       expect(found1).toBeDefined();
       expect(found2).toBeDefined();
-
-      await EventDAO.deleteEventBySlug('test-event-two').catch(() => {});
     });
 
     it('reads events with pagination', async () => {
-      await createEventOnServer();
+      await createEvent();
       const readResponse = await request(url)
         .post('')
         .send({
@@ -221,7 +245,7 @@ describe('Event Resolver', () => {
     });
 
     it('reads events with category filter', async () => {
-      await createEventOnServer();
+      await createEvent();
       const readResponse = await request(url)
         .post('')
         .send({
@@ -248,12 +272,11 @@ describe('Event Resolver', () => {
 
       expect(readResponse.status).toBe(200);
       const events = readResponse.body.data.readEvents;
-      // Filter may return 0 or more events depending on implementation
       expect(Array.isArray(events)).toBe(true);
     });
 
     it('reads events with sort order', async () => {
-      await createEventOnServer();
+      await createEvent();
       const readResponse = await request(url)
         .post('')
         .send({
@@ -289,7 +312,7 @@ describe('Event Resolver', () => {
     });
 
     it('validates organizer roles are returned correctly', async () => {
-      const event = await createEventOnServer();
+      const event = await createEvent();
       const readResponse = await request(url)
         .post('')
         .send({
@@ -319,10 +342,8 @@ describe('Event Resolver', () => {
 
   describe('Negative', () => {
     it('returns conflict when duplicate event is created', async () => {
-      await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(buildEventInput()));
+      await createEvent();
+
       const response = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + testUser.token)
@@ -367,7 +388,7 @@ describe('Event Resolver', () => {
     });
 
     it('returns unauthenticated when updating without token', async () => {
-      const createdEvent = await createEventOnServer();
+      const createdEvent = await createEvent();
       const response = await request(url)
         .post('')
         .send(getUpdateEventMutation({ eventId: createdEvent.eventId, title: 'No Token' }));
@@ -377,7 +398,7 @@ describe('Event Resolver', () => {
     });
 
     it('returns unauthenticated when deleting without token', async () => {
-      const createdEvent = await createEventOnServer();
+      const createdEvent = await createEvent();
       const response = await request(url).post('').send(getDeleteEventBySlugMutation(createdEvent.slug));
       expect(response.status).toBe(401);
       expect(response.body.errors).toBeDefined();
@@ -421,63 +442,33 @@ describe('Event Resolver', () => {
     });
 
     it('prevents unauthorized user from updating event', async () => {
-      const createdEvent = await createEventOnServer();
-      const otherUser = await UserDAO.create({
-        ...usersMockData[1],
-        email: 'other@example.com',
-        username: 'otherUser',
-      });
+      const createdEvent = await createEvent();
 
       const response = await request(url)
         .post('')
-        .set('Authorization', 'Bearer ' + otherUser.token)
+        .set('Authorization', 'Bearer ' + testUser2.token)
         .send(getUpdateEventMutation({ eventId: createdEvent.eventId, title: 'Unauthorized Update' }));
 
       expect(response.status).toBe(403);
-
-      await UserDAO.deleteUserByEmail(otherUser.email).catch(() => {});
     });
 
     it('prevents unauthorized user from deleting event', async () => {
-      const createdEvent = await createEventOnServer();
-      const otherUser = await UserDAO.create({
-        ...usersMockData[1],
-        email: 'other2@example.com',
-        username: 'otherUser2',
-      });
+      const createdEvent = await createEvent();
 
       const response = await request(url)
         .post('')
-        .set('Authorization', 'Bearer ' + otherUser.token)
+        .set('Authorization', 'Bearer ' + testUser2.token)
         .send(getDeleteEventByIdMutation(createdEvent.eventId));
 
       expect(response.status).toBe(403);
-
-      await UserDAO.deleteUserByEmail(otherUser.email).catch(() => {});
     });
   });
 
   describe('organization authorization guards', () => {
     it('returns UNAUTHORIZED when user does not have the required org role and succeeds after upgrading the role', async () => {
-      const orgOwner = await UserDAO.create({
-        ...usersMockData[4],
-        email: uniqueEmail('org-owner'),
-        username: uniqueUsername('orgOwner'),
-      });
-      cleanupUserEmails.push(orgOwner.email);
+      const organization = await createOrganization(`org-guard-${randomId()}`);
 
-      const organization = await OrganizationDAO.create({
-        name: `org-guard-${randomId()}`,
-        ownerId: orgOwner.userId,
-      });
-      createdOrgIds.push(organization.orgId);
-
-      const membership = await OrganizationMembershipDAO.create({
-        orgId: organization.orgId,
-        userId: testUser.userId,
-        role: OrganizationRole.Member,
-      });
-      createdMembershipIds.push(membership.membershipId);
+      const membership = await createMembership(organization.orgId, testUser.userId, OrganizationRole.Member);
 
       const input = buildEventInput();
       input.orgId = organization.orgId;
@@ -489,57 +480,22 @@ describe('Event Resolver', () => {
       expect(unauthorizedResponse.status).toBe(403);
       expect(unauthorizedResponse.body.errors?.[0]?.extensions?.code).toBe('UNAUTHORIZED');
 
-      await OrganizationMembershipDAO.update({
-        membershipId: membership.membershipId,
-        role: OrganizationRole.Host,
-      });
+      await updateMembershipRole(membership.membershipId, OrganizationRole.Host);
 
-      const allowedResponse = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(input));
-      expect(allowedResponse.status).toBe(200);
+      const allowedEvent = await createEvent(input);
+      expect(allowedEvent).toHaveProperty('eventId');
     });
 
     it('prevents users who lack membership in the current org from removing it from an event', async () => {
-      const orgOwner = await UserDAO.create({
-        ...usersMockData[5],
-        email: uniqueEmail('org-owner'),
-        username: uniqueUsername('orgOwner'),
-      });
-      cleanupUserEmails.push(orgOwner.email);
+      const organization = await createOrganization(`org-guard-remove-${randomId()}`);
 
-      const organization = await OrganizationDAO.create({
-        name: `org-guard-remove-${randomId()}`,
-        ownerId: orgOwner.userId,
-      });
-      createdOrgIds.push(organization.orgId);
+      await createMembership(organization.orgId, testUser.userId, OrganizationRole.Host);
 
-      const hostMembership = await OrganizationMembershipDAO.create({
-        orgId: organization.orgId,
-        userId: testUser.userId,
-        role: OrganizationRole.Host,
-      });
-      createdMembershipIds.push(hostMembership.membershipId);
-
-      const createdEvent = (
-        await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + testUser.token)
-          .send(getCreateEventMutation({ ...buildEventInput(), orgId: organization.orgId }))
-      ).body.data.createEvent;
-
-      const otherUser = await UserDAO.create({
-        ...usersMockData[6],
-        email: uniqueEmail('other-user'),
-        username: uniqueUsername('otherUser'),
-      });
-      cleanupUserEmails.push(otherUser.email);
-      const otherToken = await generateToken(otherUser);
+      const createdEvent = await createEvent({ ...buildEventInput(), orgId: organization.orgId });
 
       const removeOrgResponse = await request(url)
         .post('')
-        .set('Authorization', 'Bearer ' + otherToken)
+        .set('Authorization', 'Bearer ' + testUser2.token)
         .send(
           getUpdateEventMutation({
             eventId: createdEvent.eventId,

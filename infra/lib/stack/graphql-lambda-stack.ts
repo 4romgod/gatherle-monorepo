@@ -12,7 +12,6 @@ import { Construct } from 'constructs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { APPLICATION_STAGES } from '@ntlango/commons';
 import { join } from 'path';
 
 configDotenv();

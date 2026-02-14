@@ -3,7 +3,6 @@ import request from 'supertest';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
 import { usersMockData } from '@/mongodb/mockData';
-import { UserDAO } from '@/mongodb/dao';
 import {
   getCreateUserMutation,
   getDeleteUserByEmailMutation,
@@ -17,97 +16,84 @@ import {
   getReadUsersWithoutOptionsQuery,
   getUpdateUserMutation,
 } from '@/test/utils';
-import type { CreateUserInput, QueryOptionsInput, User, UserWithToken } from '@ntlango/commons/types';
+import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
 import { Gender } from '@ntlango/commons/types';
 import { ERROR_MESSAGES } from '@/validation';
-import { verifyToken } from '@/utils/auth';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import {
+  buildCreateUserInput,
+  cleanupUsersById,
+  createUserOnServer,
+  loginUserOnServer,
+  uniqueSuffix,
+} from '@/test/integration/utils/userResolverHelpers';
 
 describe('User Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   const TEST_PORT = 5003;
-  const testUserEmail = `test-${Date.now()}@example.com`;
-  const testUsername = `testUsername-${Date.now()}`;
   const testPassword = 'testPassword';
-  const cleanUserByEmail = async (email: string) => {
-    try {
-      await UserDAO.deleteUserByEmail(email);
-    } catch {
-      // ignore missing records
+  let adminUser: UserWithToken;
+  const createdUserIds: string[] = [];
+
+  const untrackUser = (userId: string) => {
+    const idx = createdUserIds.indexOf(userId);
+    if (idx >= 0) {
+      createdUserIds.splice(idx, 1);
     }
   };
-  let createUserInput: CreateUserInput;
+
+  const newUserInput = (suffix = uniqueSuffix()) =>
+    buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, testPassword, suffix);
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    createUserInput = {
-      ...usersMockData.at(0)!,
-      email: testUserEmail,
-      username: testUsername,
-      password: testPassword,
-    };
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
   afterAll(async () => {
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
+  });
+
+  afterEach(async () => {
+    await cleanupUsersById(url, adminUser.token, createdUserIds);
+    createdUserIds.length = 0;
   });
 
   describe('Positive', () => {
     describe('createUser Mutation', () => {
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('should create new user when valid input is provided', async () => {
-        const response = await request(url).post('').send(getCreateUserMutation(createUserInput));
-        expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
-        expect(response.body.data.createUser).toHaveProperty('userId');
-        expect(response.body.data.createUser.email).toBe(testUserEmail);
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
+        expect(createdUser).toHaveProperty('userId');
+        expect(createdUser.email).toBe(input.email);
       });
     });
 
     describe('loginUser Mutation', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('should login a user when valid input is provided', async () => {
-        const response = await request(url)
-          .post('')
-          .send(
-            getLoginUserMutation({
-              email: testUserEmail,
-              password: testPassword,
-            }),
-          );
-        expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
-        const decoded = (await verifyToken(response.body.data.loginUser.token)) as User;
-        expect(decoded.userId).toBe(createdUser.userId);
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+        const loggedInUser = await loginUserOnServer(url, input.email, testPassword);
+
+        expect(loggedInUser.userId).toBe(createdUser.userId);
+        expect(loggedInUser.email).toBe(input.email);
+        expect(loggedInUser.token).toBeTruthy();
       });
     });
 
     describe('updateUser Mutation', () => {
-      const updatedEmail = `updated-${Date.now()}@email.com`;
-
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-        await cleanUserByEmail(updatedEmail);
-      });
-
       it('should update a user when valid input is provided', async () => {
+        const input = newUserInput();
+        const updatedEmail = `updated-${uniqueSuffix()}@email.com`;
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
@@ -124,58 +110,54 @@ describe('User Resolver', () => {
     });
 
     describe('Delete User Mutations', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        // Clean up in case test failed before delete
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('should delete a user by userId', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
           .send(getDeleteUserByIdMutation(createdUser.userId));
         expect(response.status).toBe(200);
         expect(response.error).toBeFalsy();
-        expect(response.body.data.deleteUserById.email).toBe(testUserEmail);
+        expect(response.body.data.deleteUserById.email).toBe(input.email);
+        untrackUser(createdUser.userId);
       });
 
       it('should delete a user by email', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
           .send(getDeleteUserByEmailMutation(createdUser.email));
         expect(response.status).toBe(200);
         expect(response.error).toBeFalsy();
-        expect(response.body.data.deleteUserByEmail.email).toBe(testUserEmail);
+        expect(response.body.data.deleteUserByEmail.email).toBe(input.email);
+        untrackUser(createdUser.userId);
       });
 
       it('should delete a user by username', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
           .send(getDeleteUserByUsernameMutation(createdUser.username));
         expect(response.status).toBe(200);
         expect(response.error).toBeFalsy();
-        expect(response.body.data.deleteUserByUsername.email).toBe(testUserEmail);
+        expect(response.body.data.deleteUserByUsername.email).toBe(input.email);
+        untrackUser(createdUser.userId);
       });
     });
 
     describe('readUsers Queries', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('should retrieve users without options', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url).post('').send(getReadUsersWithoutOptionsQuery());
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
@@ -184,6 +166,9 @@ describe('User Resolver', () => {
       });
 
       it('should retrieve users with filter options', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const options: QueryOptionsInput = {
           filters: [
             {
@@ -200,10 +185,13 @@ describe('User Resolver', () => {
       });
 
       it('should retrieve users with text search options', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const options: QueryOptionsInput = {
           search: {
             fields: ['username', 'email'],
-            value: testUsername.toLowerCase(),
+            value: (input.username ?? '').toLowerCase(),
           },
         };
         const response = await request(url).post('').send(getReadUsersWithOptionsQuery(options));
@@ -215,31 +203,31 @@ describe('User Resolver', () => {
     });
 
     describe('Read User Queries', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('retrieves user by id', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url).post('').send(getReadUserByIdQuery(createdUser.userId));
         expect(response.status).toBe(200);
-        expect(response.body.data.readUserById.email).toBe(testUserEmail);
+        expect(response.body.data.readUserById.email).toBe(input.email);
       });
 
       it('retrieves user by email', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url).post('').send(getReadUserByEmailQuery(createdUser.email));
         expect(response.status).toBe(200);
-        expect(response.body.data.readUserByEmail.email).toBe(testUserEmail);
+        expect(response.body.data.readUserByEmail.email).toBe(input.email);
       });
 
       it('retrieves user by username', async () => {
+        const input = newUserInput();
+        const createdUser = await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url).post('').send(getReadUserByUsernameQuery(createdUser.username));
         expect(response.status).toBe(200);
-        expect(response.body.data.readUserByUsername.email).toBe(testUserEmail);
+        expect(response.body.data.readUserByUsername.email).toBe(input.email);
       });
     });
   });
@@ -247,10 +235,11 @@ describe('User Resolver', () => {
   describe('Negative', () => {
     describe('createUser Mutation', () => {
       it('returns conflict when user already exists', async () => {
-        await request(url).post('').send(getCreateUserMutation(createUserInput));
-        const response = await request(url).post('').send(getCreateUserMutation(createUserInput));
+        const input = newUserInput();
+        await createUserOnServer(url, input, createdUserIds);
+
+        const response = await request(url).post('').send(getCreateUserMutation(input));
         expect(response.status).toBe(409);
-        await cleanUserByEmail(testUserEmail);
       });
 
       it('validates phone numbers', async () => {
@@ -258,7 +247,7 @@ describe('User Resolver', () => {
           .post('')
           .send(
             getCreateUserMutation({
-              ...createUserInput,
+              ...newUserInput(),
               phone_number: 'not-a-phone',
             }),
           );
@@ -268,15 +257,10 @@ describe('User Resolver', () => {
     });
 
     describe('loginUser Mutation', () => {
-      beforeEach(async () => {
-        await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('throws unauthorized for invalid email', async () => {
+        const input = newUserInput();
+        await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
           .send(getLoginUserMutation({ email: 'missing@example.com', password: testPassword }));
@@ -285,42 +269,32 @@ describe('User Resolver', () => {
       });
 
       it('throws unauthorized for invalid password', async () => {
+        const input = newUserInput();
+        await createUserOnServer(url, input, createdUserIds);
+
         const response = await request(url)
           .post('')
-          .send(getLoginUserMutation({ email: testUserEmail, password: 'invalidPassword123' }));
+          .send(getLoginUserMutation({ email: input.email, password: 'invalidPassword123' }));
         expect(response.status).toBe(401);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
       });
     });
 
     describe('updateUser Mutation', () => {
-      let createdUser: UserWithToken;
-      const duplicateEmail = `duplicate-${Date.now()}@example.com`;
-      const duplicateUsername = `duplicate-${Date.now()}`;
-
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-        await cleanUserByEmail(duplicateEmail);
-      });
-
       it('returns conflict for duplicate field', async () => {
-        await UserDAO.create({
-          ...createUserInput,
-          email: duplicateEmail,
-          username: duplicateUsername,
-        });
+        const createdUser = await createUserOnServer(url, newUserInput('duplicate-a'), createdUserIds);
+        const duplicateUser = await createUserOnServer(url, newUserInput('duplicate-b'), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getUpdateUserMutation({ userId: createdUser.userId, username: duplicateUsername }));
+          .send(getUpdateUserMutation({ userId: createdUser.userId, username: duplicateUser.username }));
         expect(response.status).toBe(409);
       });
 
       it('returns bad input when invalid phone number is provided', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
@@ -330,6 +304,8 @@ describe('User Resolver', () => {
       });
 
       it('returns unauthorized when updating another user', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
@@ -339,16 +315,9 @@ describe('User Resolver', () => {
     });
 
     describe('deleteUserById Mutation', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('returns unauthenticated for invalid token', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + 'bad')
@@ -357,6 +326,8 @@ describe('User Resolver', () => {
       });
 
       it('returns unauthorized when deleting another user', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
@@ -366,16 +337,9 @@ describe('User Resolver', () => {
     });
 
     describe('deleteUserByEmail Mutation', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('returns unauthenticated for invalid token', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + 'bad')
@@ -384,6 +348,8 @@ describe('User Resolver', () => {
       });
 
       it('returns unauthorized when token does not belong to owner', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)
@@ -393,16 +359,9 @@ describe('User Resolver', () => {
     });
 
     describe('deleteUserByUsername Mutation', () => {
-      let createdUser: UserWithToken;
-      beforeEach(async () => {
-        createdUser = await UserDAO.create(createUserInput);
-      });
-
-      afterEach(async () => {
-        await cleanUserByEmail(testUserEmail);
-      });
-
       it('returns unauthenticated for invalid token', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + 'bad')
@@ -411,6 +370,8 @@ describe('User Resolver', () => {
       });
 
       it('returns unauthorized when token does not belong to owner', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + createdUser.token)

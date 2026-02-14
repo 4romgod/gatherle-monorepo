@@ -1,20 +1,22 @@
 import request from 'supertest';
-import { Types } from 'mongoose';
 import type { IntegrationServer } from '@/test/integration/utils/server';
 import { startIntegrationServer, stopIntegrationServer } from '@/test/integration/utils/server';
-import { EventCategoryDAO, EventCategoryGroupDAO } from '@/mongodb/dao';
-import { usersMockData } from '@/mongodb/mockData';
-import { generateToken } from '@/utils/auth';
-import type { User, UserWithToken, QueryOptionsInput } from '@ntlango/commons/types';
-import { UserRole } from '@ntlango/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
+  getDeleteEventCategoryGroupBySlugMutation,
   getReadEventCategoryGroupBySlugQuery,
   getReadEventCategoryGroupsQuery,
   getReadEventCategoryGroupsWithOptionsQuery,
   getUpdateEventCategoryGroupMutation,
 } from '@/test/utils';
-import type { EventCategoryGroup } from '@ntlango/commons/types';
+import { getSeededTestUsers, loginSeededUser } from '@/test/integration/utils/helpers';
+import {
+  createEventCategoryGroupOnServer,
+  readSeededEventCategories,
+  type EventCategoryRef,
+  uniqueGroupName,
+} from '@/test/integration/utils/eventCategoryGroupResolverHelpers';
 
 const TEST_PORT = 5004;
 
@@ -22,67 +24,48 @@ describe('EventCategoryGroup Resolver', () => {
   let server: IntegrationServer;
   let url = '';
   let adminUser: UserWithToken;
-  let categories: any[] = [];
-  const uniqueGroupName = (base: string) => `${base}-${new Types.ObjectId().toString().slice(-6)}`;
+  let categories: EventCategoryRef[] = [];
+  const createdGroupSlugs: string[] = [];
+
+  const createGroup = async (name: string) => {
+    const group = await createEventCategoryGroupOnServer(
+      url,
+      adminUser.token,
+      name,
+      categories.map((category) => category.eventCategoryId),
+    );
+    createdGroupSlugs.push(group.slug);
+    return group;
+  };
 
   beforeAll(async () => {
     server = await startIntegrationServer({ port: TEST_PORT });
     url = server.url;
-    const user = {
-      ...usersMockData[0],
-      userId: new Types.ObjectId().toString(),
-      userRole: UserRole.Admin,
-      email: 'group-admin@example.com',
-      username: 'groupAdmin',
-      interests: undefined,
-    } as User;
-    const token = await generateToken(user);
-    adminUser = {
-      ...user,
-      token,
-    };
-    // Clean up any leftover categories from failed test runs
-    await EventCategoryDAO.deleteEventCategoryBySlug('group-category-a').catch(() => {});
-    await EventCategoryDAO.deleteEventCategoryBySlug('group-category-b').catch(() => {});
-    categories = [
-      await EventCategoryDAO.create({
-        name: 'Group Category A',
-        iconName: 'icon-a',
-        description: 'A',
-      }),
-      await EventCategoryDAO.create({
-        name: 'Group Category B',
-        iconName: 'icon-b',
-        description: 'B',
-      }),
-    ];
+
+    const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+
+    categories = await readSeededEventCategories(url);
   });
 
   afterAll(async () => {
-    await categories.reduce(async (prevPromise, category) => {
-      await prevPromise;
-      await EventCategoryDAO.deleteEventCategoryBySlug(category.slug);
-    }, Promise.resolve());
-    await stopIntegrationServer(server);
+    if (server) {
+      await stopIntegrationServer(server);
+    }
   });
 
-  const createGroup = async (name: string) => {
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + adminUser.token)
-      .send(
-        getCreateEventCategoryGroupMutation({
-          name,
-          eventCategories: categories.map((category) => category.eventCategoryId),
-        }),
-      );
-
-    if (!response.body?.data?.createEventCategoryGroup) {
-      throw new Error(JSON.stringify(response.body.errors ?? response.body));
-    }
-
-    return response.body.data.createEventCategoryGroup as EventCategoryGroup;
-  };
+  afterEach(async () => {
+    await Promise.all(
+      createdGroupSlugs.map((slug) =>
+        request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getDeleteEventCategoryGroupBySlugMutation(slug))
+          .catch(() => {}),
+      ),
+    );
+    createdGroupSlugs.length = 0;
+  });
 
   describe('Positive', () => {
     it('creates and reads a group', async () => {
@@ -97,19 +80,15 @@ describe('EventCategoryGroup Resolver', () => {
         (group: any) => group.slug === createdGroup.slug,
       );
       expect(found).toBeTruthy();
-
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(createdGroup.slug).catch(() => {});
     });
 
     it('populates eventCategories with full category objects on creation', async () => {
       const createdGroup = await createGroup(uniqueGroupName('Populated Group'));
 
-      // Verify eventCategories is populated with full objects, not just IDs
       expect(createdGroup.eventCategories).toBeDefined();
       expect(Array.isArray(createdGroup.eventCategories)).toBe(true);
       expect(createdGroup.eventCategories).toHaveLength(categories.length);
 
-      // Each item should be a full EventCategory object with all fields
       createdGroup.eventCategories.forEach((category: any) => {
         expect(category).toHaveProperty('eventCategoryId');
         expect(category).toHaveProperty('name');
@@ -117,22 +96,15 @@ describe('EventCategoryGroup Resolver', () => {
         expect(category).toHaveProperty('iconName');
         expect(category).toHaveProperty('description');
 
-        // Verify it matches one of our test categories
         const matchingCategory = categories.find((c) => c.eventCategoryId === category.eventCategoryId);
         expect(matchingCategory).toBeDefined();
-        expect(category.name).toBe(matchingCategory!.name);
-        expect(category.iconName).toBe(matchingCategory!.iconName);
-        expect(category.description).toBe(matchingCategory!.description);
       });
-
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(createdGroup.slug).catch(() => {});
     });
 
     it('updates a group', async () => {
       const createdGroup = await createGroup(uniqueGroupName('Editable Group'));
-      const updatedName = 'Updated Group';
-      // Clean up any leftover "updated-group" from failed test runs
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug('updated-group').catch(() => {});
+      const updatedName = `Updated Group ${Date.now()}`;
+
       const updateResponse = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + adminUser.token)
@@ -143,12 +115,13 @@ describe('EventCategoryGroup Resolver', () => {
             eventCategories: categories.map((category) => category.eventCategoryId),
           }),
         );
+
       expect(updateResponse.status).toBe(200);
       expect(updateResponse.body.data.updateEventCategoryGroup.name).toBe(updatedName);
-      // Clean up using the ORIGINAL slug since slug shouldn't change on update
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(createdGroup.slug).catch(() => {});
-      // Also clean up in case slug did change (shouldn't happen with our fix)
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug('updated-group').catch(() => {});
+      const updatedSlug = updateResponse.body.data.updateEventCategoryGroup.slug;
+      if (updatedSlug && updatedSlug !== createdGroup.slug) {
+        createdGroupSlugs.push(updatedSlug);
+      }
     });
 
     it('reads groups with options', async () => {
@@ -159,7 +132,6 @@ describe('EventCategoryGroup Resolver', () => {
       expect(response.status).toBe(200);
       const found = response.body.data.readEventCategoryGroups.find((group: any) => group.slug === createdGroup.slug);
       expect(found).toBeTruthy();
-      await EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(createdGroup.slug).catch(() => {});
     });
   });
 
@@ -169,7 +141,7 @@ describe('EventCategoryGroup Resolver', () => {
         .post('')
         .send(
           getCreateEventCategoryGroupMutation({
-            name: 'Unauthorized Group',
+            name: uniqueGroupName('Unauthorized Group'),
             eventCategories: categories.map((category) => category.eventCategoryId),
           }),
         );

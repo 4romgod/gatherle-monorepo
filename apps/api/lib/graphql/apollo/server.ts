@@ -85,22 +85,86 @@ const getQueryStringFromRequest = (query: GraphQLQueryValue | undefined) => {
   return query.loc?.source?.body ?? '<query not provided>';
 };
 
+const inferOperationNameFromQuery = (query: string): string | undefined => {
+  const match = query.match(/\b(?:query|mutation|subscription)\s+([A-Za-z_][A-Za-z0-9_]*)/);
+  return match?.[1];
+};
+
+const isIntrospectionOperation = (operationName?: string, query?: string) =>
+  operationName === 'IntrospectionQuery' ||
+  operationName?.startsWith('__schema') ||
+  (query?.includes('__schema') ?? false);
+
 const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> => ({
   async requestDidStart({ request }) {
     if (!request) {
       return {};
     }
 
-    // Skip introspection queries to reduce log noise
-    const operationName = request.operationName;
-    if (operationName === 'IntrospectionQuery' || operationName?.startsWith('__schema')) {
-      return {};
+    const startQuery = getQueryStringFromRequest(request.query as GraphQLQueryValue | undefined).trim();
+    const startOperationName = request.operationName ?? inferOperationNameFromQuery(startQuery);
+    let resolvedOperationLogged = false;
+    let earlyErrorLogged = false;
+
+    if (!isIntrospectionOperation(startOperationName, startQuery)) {
+      logger.debug('GraphQL request started', {
+        stage: 'requestDidStart',
+        operation: startOperationName ?? '<unresolved>',
+      });
     }
 
-    const query = getQueryStringFromRequest(request.query as GraphQLQueryValue | undefined).trim();
-    const variables = request.variables ?? {};
-    logger.graphql(operationName ?? '<unnamed>', query, variables);
-    return {};
+    return {
+      async didResolveOperation(requestContext) {
+        const query = getQueryStringFromRequest(requestContext.request.query as GraphQLQueryValue | undefined).trim();
+        const variables = requestContext.request.variables ?? {};
+        const operationName =
+          requestContext.operationName ?? requestContext.request.operationName ?? inferOperationNameFromQuery(query);
+
+        // Skip introspection queries to reduce log noise
+        if (isIntrospectionOperation(operationName, query)) {
+          return;
+        }
+
+        logger.graphql(operationName ?? '<unnamed>', query, variables);
+        resolvedOperationLogged = true;
+      },
+      async didEncounterErrors(requestContext) {
+        if (resolvedOperationLogged || earlyErrorLogged) {
+          return;
+        }
+
+        const query = getQueryStringFromRequest(requestContext.request.query as GraphQLQueryValue | undefined).trim();
+        const operationName =
+          requestContext.operationName ?? requestContext.request.operationName ?? inferOperationNameFromQuery(query);
+
+        if (isIntrospectionOperation(operationName, query)) {
+          return;
+        }
+
+        // Parse/validation/operation resolution errors occur before didResolveOperation.
+        if (requestContext.operation) {
+          return;
+        }
+
+        const variables = requestContext.request.variables ?? {};
+        const errorCodes = requestContext.errors
+          .map((error) => {
+            const code = error.extensions?.code;
+            return typeof code === 'string' ? code : undefined;
+          })
+          .filter((code): code is string => Boolean(code));
+
+        logger.warn('GraphQL request failed before operation resolution', {
+          stage: 'parse_or_validation',
+          operation: operationName ?? '<unresolved>',
+          query,
+          variables,
+          errorCodes,
+          errorCount: requestContext.errors.length,
+        });
+        earlyErrorLogged = true;
+      },
+    };
   },
 });
 

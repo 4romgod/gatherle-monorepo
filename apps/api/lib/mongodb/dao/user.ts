@@ -4,12 +4,13 @@ import type {
   UpdateUserInput,
   CreateUserInput,
   QueryOptionsInput,
+  FilterInput,
   LoginUserInput,
   UserWithToken,
   SessionStateInput,
   SessionState,
 } from '@ntlango/commons/types';
-import { UserRole } from '@ntlango/commons/types';
+import { FilterOperatorInput, UserRole } from '@ntlango/commons/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { ERROR_MESSAGES } from '@/validation';
@@ -107,7 +108,22 @@ class UserDAO {
   static async readUsers(options?: QueryOptionsInput): Promise<User[]> {
     try {
       logger.debug('Reading users with options:', options);
-      const query = options ? transformOptionsToQuery(UserModel, options) : UserModel.find({});
+      const testUserExclusionFilter: FilterInput = {
+        field: 'isTestUser',
+        operator: FilterOperatorInput.ne,
+        value: true,
+      };
+
+      const optionsWithTestUserExclusion: QueryOptionsInput = options
+        ? {
+            ...options,
+            filters: [...(options.filters ?? []), testUserExclusionFilter],
+          }
+        : {
+            filters: [testUserExclusionFilter],
+          };
+
+      const query = transformOptionsToQuery(UserModel, optionsWithTestUserExclusion);
       const retrieved = await query.exec();
       return retrieved.map((user) => user.toObject());
     } catch (error) {
