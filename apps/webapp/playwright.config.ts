@@ -19,7 +19,7 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'on',
+    video: 'retain-on-failure',
     ...(slowMo > 0 ? { launchOptions: { slowMo } } : {}),
   },
   projects: [
