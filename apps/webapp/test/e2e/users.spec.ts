@@ -25,6 +25,6 @@ test.describe('Users Page', () => {
     }
 
     await expect(page.getByRole('heading', { name: 'Meet Your People' })).toBeVisible();
-    await expect(page.getByLabel('Search events by title, description...')).toBeVisible();
+    await expect(page.getByLabel('Search community members...')).toBeVisible();
   });
 });
