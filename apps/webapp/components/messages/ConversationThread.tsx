@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@apollo/client';
+import { useApolloClient, useQuery } from '@apollo/client';
 import {
   Avatar,
   Box,
@@ -26,9 +26,15 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { ArrowBack, Search, Send } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
-import { useChatConversations, useChatMessages, useChatRealtime, useResolveConversationUsers } from '@/hooks';
+import {
+  useChatActions,
+  useChatConversations,
+  useChatMessages,
+  useChatRealtime,
+  useResolveConversationUsers,
+} from '@/hooks';
 import { ROUTES } from '@/lib/constants';
-import { getAvatarSrc } from '@/lib/utils';
+import { getAvatarSrc, logger } from '@/lib/utils';
 import {
   buildConversationPreview,
   formatConversationRelativeTime,
@@ -73,6 +79,7 @@ interface ConversationThreadProps {
 }
 
 export default function ConversationThread({ username }: ConversationThreadProps) {
+  const client = useApolloClient();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -89,6 +96,8 @@ export default function ConversationThread({ username }: ConversationThreadProps
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messagesBottomRef = useRef<HTMLDivElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
+  const markReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markConversationReadRef = useRef<((withUserId: string) => Promise<void>) | null>(null);
 
   const {
     data: targetUserData,
@@ -120,9 +129,66 @@ export default function ConversationThread({ username }: ConversationThreadProps
     markAsRead: true,
   });
 
-  const { isConnected, sendChatMessage, markConversationRead } = useChatRealtime({
+  const { markConversationRead: markConversationReadMutation } = useChatActions();
+
+  const {
+    isConnected,
+    sendChatMessage,
+    markConversationRead: markConversationReadRealtime,
+  } = useChatRealtime({
     enabled: Boolean(currentUserId),
+    onChatMessage: (payload) => {
+      if (!targetUserId || !currentUserId) {
+        return;
+      }
+
+      const isIncomingForOpenConversation =
+        payload.senderUserId === targetUserId && payload.recipientUserId === currentUserId;
+
+      if (!isIncomingForOpenConversation) {
+        return;
+      }
+
+      scheduleMarkConversationRead();
+    },
   });
+
+  useEffect(() => {
+    markConversationReadRef.current = async (withUserId: string) => {
+      markConversationReadRealtime(withUserId);
+      try {
+        await markConversationReadMutation(withUserId);
+      } catch (error) {
+        logger.warn('Failed to mark conversation read through GraphQL mutation', {
+          withUserId,
+          error,
+        });
+      } finally {
+        void client.refetchQueries({
+          include: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+        });
+      }
+    };
+  }, [client, markConversationReadMutation, markConversationReadRealtime]);
+
+  const scheduleMarkConversationRead = useCallback(() => {
+    if (!targetUserId || !currentUserId) {
+      return;
+    }
+
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+
+    if (markReadTimeoutRef.current) {
+      return;
+    }
+
+    markReadTimeoutRef.current = setTimeout(() => {
+      markReadTimeoutRef.current = null;
+      void markConversationReadRef.current?.(targetUserId);
+    }, 150);
+  }, [currentUserId, targetUserId]);
 
   const updateScrollStickiness = useCallback(() => {
     const container = messageListRef.current;
@@ -152,8 +218,31 @@ export default function ConversationThread({ username }: ConversationThreadProps
       return;
     }
 
-    markConversationRead(targetUserId);
-  }, [markConversationRead, targetUserId]);
+    scheduleMarkConversationRead();
+  }, [scheduleMarkConversationRead, targetUserId]);
+
+  useEffect(() => {
+    return () => {
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+        markReadTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        return;
+      }
+      scheduleMarkConversationRead();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [scheduleMarkConversationRead]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && username) {
@@ -517,8 +606,10 @@ export default function ConversationThread({ username }: ConversationThreadProps
               value={draftMessage}
               onChange={(event) => setDraftMessage(event.target.value)}
               placeholder="Type your message..."
-              InputProps={{
-                disableUnderline: true,
+              slotProps={{
+                input: {
+                  disableUnderline: true,
+                },
               }}
               sx={{
                 '& .MuiInputBase-root': {
@@ -616,12 +707,14 @@ export default function ConversationThread({ username }: ConversationThreadProps
                   size="small"
                   placeholder="Search conversations"
                   sx={{ mt: 1.5 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search fontSize="small" />
-                      </InputAdornment>
-                    ),
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    },
                   }}
                 />
               </Box>

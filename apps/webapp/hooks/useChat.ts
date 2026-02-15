@@ -139,21 +139,20 @@ export function useChatActions() {
 
   const [markConversationReadMutation, { loading: markConversationReadLoading }] = useMutation(
     MarkChatConversationReadDocument,
-    {
-      context: {
-        headers: getAuthHeader(token),
-      },
-      refetchQueries: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
-    },
   );
 
   const markConversationRead = useCallback(
     async (withUserId: string) => {
       return markConversationReadMutation({
         variables: { withUserId },
+        context: {
+          headers: getAuthHeader(token),
+        },
+        refetchQueries: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+        awaitRefetchQueries: true,
       });
     },
-    [markConversationReadMutation],
+    [markConversationReadMutation, token],
   );
 
   return {

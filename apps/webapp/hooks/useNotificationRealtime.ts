@@ -45,16 +45,37 @@ export function useNotificationRealtime(enabled: boolean = true) {
   const client = useApolloClient();
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const userId = session?.user?.userId;
   const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
+  const websocketSource = websocketBaseUrl ? 'explicit' : 'missing';
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const shouldReconnectRef = useRef(false);
+  const tokenRef = useRef<string | null>(token ?? null);
+  const connectRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!enabled || !token || !websocketBaseUrl) {
+    tokenRef.current = token ?? null;
+  }, [token]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    if (!userId) {
+      logger.warn('Notification realtime disabled because session user is missing');
+      return;
+    }
+
+    if (!websocketBaseUrl) {
+      logger.error('Notification websocket URL is not configured', {
+        websocketSource,
+        hasExplicitWebsocketUrl: Boolean(WEBSOCKET_URL.trim()),
+      });
       return;
     }
 
@@ -125,16 +146,25 @@ export function useNotificationRealtime(enabled: boolean = true) {
         return;
       }
 
+      const activeToken = tokenRef.current;
+      if (!activeToken) {
+        logger.warn('Notification websocket token missing; waiting before connecting');
+        return;
+      }
+
       clearReconnectTimeout();
       clearPing();
 
-      const socketUrl = addTokenToWebSocketUrl(websocketBaseUrl, token);
+      const socketUrl = addTokenToWebSocketUrl(websocketBaseUrl, activeToken);
       const socket = new WebSocket(socketUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
         reconnectAttemptsRef.current = 0;
-        logger.info('WebSocket connected for realtime notifications');
+        logger.info('WebSocket connected for realtime notifications', {
+          websocketBaseUrl,
+          websocketSource,
+        });
 
         try {
           socket.send(
@@ -196,6 +226,8 @@ export function useNotificationRealtime(enabled: boolean = true) {
           code: event.code,
           reason: event.reason || 'no reason',
           reconnectDelayMs: reconnectDelay,
+          websocketSource,
+          websocketBaseUrl,
         });
 
         reconnectTimeoutRef.current = setTimeout(() => {
@@ -204,17 +236,39 @@ export function useNotificationRealtime(enabled: boolean = true) {
       };
     };
 
+    connectRef.current = connect;
     connect();
 
     return () => {
+      connectRef.current = null;
       shouldReconnectRef.current = false;
       clearReconnectTimeout();
       clearPing();
 
       if (socketRef.current) {
+        logger.info('Closing notification websocket from effect cleanup', {
+          readyState: socketRef.current.readyState,
+          userId,
+          hasToken: Boolean(tokenRef.current),
+          websocketBaseUrl,
+        });
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, [client, enabled, token, websocketBaseUrl]);
+  }, [client, enabled, userId, websocketBaseUrl, websocketSource]);
+
+  useEffect(() => {
+    if (!enabled || !userId || !websocketBaseUrl || !token) {
+      return;
+    }
+
+    const socket = socketRef.current;
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    shouldReconnectRef.current = true;
+    connectRef.current?.();
+  }, [enabled, userId, websocketBaseUrl, token]);
 }

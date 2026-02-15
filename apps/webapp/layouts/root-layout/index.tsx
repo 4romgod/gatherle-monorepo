@@ -29,8 +29,9 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
   useEffect(() => {
     logger.debug('RootLayout session updated', { isAuthN });
   }, [isAuthN]);
-  // Force SessionProvider remount when the NextAuth token changes so client hooks get the up-to-date session (fixes the need to refresh after login).
-  const sessionProviderKey = session?.user?.token ?? 'guest-session';
+  // Keep SessionProvider stable across token refresh/churn to avoid tearing down realtime sockets.
+  // We only need a remount boundary when auth identity changes (guest <-> user or user switch).
+  const sessionProviderKey = session?.user?.userId ?? 'guest-session';
 
   return (
     <html lang="en">

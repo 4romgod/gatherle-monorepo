@@ -66,18 +66,32 @@ export class WebSocketApiStack extends Stack {
       routeSelectionExpression: '$request.body.action',
     });
 
-    const websocketIntegration = new WebSocketLambdaIntegration(
-      'NtlangoWebSocketLambdaIntegration',
-      this.websocketLambda,
-    );
+    this.websocketApi.addRoute('$connect', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketConnectLambdaIntegration', this.websocketLambda),
+    });
+    this.websocketApi.addRoute('$disconnect', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketDisconnectLambdaIntegration', this.websocketLambda),
+    });
+    this.websocketApi.addRoute('$default', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketDefaultLambdaIntegration', this.websocketLambda),
+    });
+    this.websocketApi.addRoute('ping', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketPingLambdaIntegration', this.websocketLambda),
+    });
+    this.websocketApi.addRoute('notification.subscribe', {
+      integration: new WebSocketLambdaIntegration(
+        'NtlangoWebSocketNotificationSubscribeLambdaIntegration',
+        this.websocketLambda,
+      ),
+    });
+    this.websocketApi.addRoute('chat.send', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketChatSendLambdaIntegration', this.websocketLambda),
+    });
+    this.websocketApi.addRoute('chat.read', {
+      integration: new WebSocketLambdaIntegration('NtlangoWebSocketChatReadLambdaIntegration', this.websocketLambda),
+    });
 
-    this.websocketApi.addRoute('$connect', { integration: websocketIntegration });
-    this.websocketApi.addRoute('$disconnect', { integration: websocketIntegration });
-    this.websocketApi.addRoute('$default', { integration: websocketIntegration });
-    this.websocketApi.addRoute('ping', { integration: websocketIntegration });
-    this.websocketApi.addRoute('notification.subscribe', { integration: websocketIntegration });
-    this.websocketApi.addRoute('chat.send', { integration: websocketIntegration });
-    this.websocketApi.addRoute('chat.read', { integration: websocketIntegration });
+    this.websocketApi.grantManageConnections(this.websocketLambda);
 
     this.websocketStage = new WebSocketStage(this, 'NtlangoWebSocketStage', {
       webSocketApi: this.websocketApi,

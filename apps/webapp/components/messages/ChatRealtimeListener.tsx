@@ -107,6 +107,7 @@ export default function ChatRealtimeListener() {
     },
     onChatRead: () => {
       scheduleRefetch({
+        unreadCount: true,
         conversations: true,
         messages: true,
       });

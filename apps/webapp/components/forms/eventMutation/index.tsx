@@ -551,7 +551,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     color="secondary"
                     value={displayEventData.capacity || ''}
                     onChange={handleNumberChange}
-                    InputProps={{ inputProps: { min: 1 } }}
+                    slotProps={{ htmlInput: { min: 1 } }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
                 </Grid>
@@ -572,7 +572,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     color="secondary"
                     value={displayEventData.rsvpLimit || ''}
                     onChange={handleNumberChange}
-                    InputProps={{ inputProps: { min: 1 } }}
+                    slotProps={{ htmlInput: { min: 1 } }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
                 </Grid>

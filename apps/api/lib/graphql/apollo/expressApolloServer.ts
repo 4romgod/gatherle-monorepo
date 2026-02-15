@@ -24,7 +24,6 @@ import type { User } from '@ntlango/commons';
 const DEV_PORT = 9000;
 
 export const startExpressApolloServer = async (listenOptions: ListenOptions = { port: DEV_PORT }) => {
-  // Validate environment configuration
   validateEnv();
 
   const actualPort = listenOptions.port ?? DEV_PORT;

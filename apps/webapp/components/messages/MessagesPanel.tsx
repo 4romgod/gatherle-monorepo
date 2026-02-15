@@ -125,12 +125,14 @@ export default function MessagesPanel() {
               size="small"
               placeholder="Search conversations"
               sx={{ mt: 1.5 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search fontSize="small" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
           </Box>

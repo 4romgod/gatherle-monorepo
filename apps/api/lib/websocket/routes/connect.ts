@@ -13,17 +13,30 @@ import { HttpStatusCode } from '@/constants';
 export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   const token = extractToken(event);
   if (!token) {
+    logger.warn('WebSocket connect rejected because auth token is missing', {
+      connectionId: event.requestContext.connectionId,
+      routeKey: event.requestContext.routeKey,
+    });
     return response(HttpStatusCode.UNAUTHENTICATED, { message: 'Missing auth token. Provide token query parameter.' });
   }
 
   let user: User;
   try {
     user = await verifyToken(token);
-  } catch {
+  } catch (error) {
+    logger.warn('WebSocket connect rejected because auth token verification failed', {
+      connectionId: event.requestContext.connectionId,
+      routeKey: event.requestContext.routeKey,
+      error,
+    });
     return response(HttpStatusCode.UNAUTHENTICATED, { message: 'Invalid auth token.' });
   }
 
   if (!user.userId) {
+    logger.warn('WebSocket connect rejected because token payload did not include userId', {
+      connectionId: event.requestContext.connectionId,
+      routeKey: event.requestContext.routeKey,
+    });
     return response(HttpStatusCode.UNAUTHENTICATED, { message: 'Invalid auth token.' });
   }
 

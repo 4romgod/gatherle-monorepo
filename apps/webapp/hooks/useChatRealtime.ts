@@ -110,8 +110,25 @@ let sharedPingInterval: ReturnType<typeof setInterval> | null = null;
 let sharedReconnectAttempts = 0;
 let sharedShouldReconnect = false;
 let sharedToken: string | null = null;
+let sharedUserId: string | null = null;
 let sharedWebsocketBaseUrl: string | null = null;
 let sharedIsConnected = false;
+let sharedWebsocketSource: 'explicit' | 'missing' = 'missing';
+
+const getSocketReadyStateLabel = (readyState?: number | null): string => {
+  switch (readyState) {
+    case 0:
+      return 'CONNECTING';
+    case 1:
+      return 'OPEN';
+    case 2:
+      return 'CLOSING';
+    case 3:
+      return 'CLOSED';
+    default:
+      return 'UNAVAILABLE';
+  }
+};
 
 const hasEnabledSubscribers = (): boolean => {
   return Array.from(chatSubscribers.values()).some((subscriber) => subscriber.enabled);
@@ -142,8 +159,13 @@ const clearSharedReconnectTimeout = () => {
   }
 };
 
-const closeSharedSocket = () => {
+const closeSharedSocket = (reason: string) => {
   if (sharedSocket) {
+    logger.info('Closing shared chat websocket', {
+      reason,
+      readyState: sharedSocket.readyState,
+      readyStateLabel: getSocketReadyStateLabel(sharedSocket.readyState),
+    });
     sharedSocket.close();
     sharedSocket = null;
   }
@@ -155,9 +177,10 @@ const resetSharedConnectionState = () => {
   sharedReconnectAttempts = 0;
   sharedShouldReconnect = false;
   sharedToken = null;
+  sharedUserId = null;
   sharedWebsocketBaseUrl = null;
   setSharedConnected(false);
-  closeSharedSocket();
+  closeSharedSocket('reset-shared-connection-state');
 };
 
 const dispatchMessageToSubscribers = (
@@ -200,7 +223,10 @@ const connectSharedSocket = () => {
   socket.onopen = () => {
     sharedReconnectAttempts = 0;
     setSharedConnected(true);
-    logger.info('WebSocket connected for chat');
+    logger.info('WebSocket connected for chat', {
+      websocketBaseUrl: sharedWebsocketBaseUrl,
+      websocketSource: sharedWebsocketSource,
+    });
 
     sharedPingInterval = setInterval(() => {
       if (socket.readyState === WebSocket.OPEN) {
@@ -251,6 +277,8 @@ const connectSharedSocket = () => {
       code: event.code,
       reason: event.reason || 'no reason',
       reconnectDelayMs: reconnectDelay,
+      websocketSource: sharedWebsocketSource,
+      websocketBaseUrl: sharedWebsocketBaseUrl,
     });
 
     sharedReconnectTimeout = setTimeout(() => {
@@ -259,23 +287,52 @@ const connectSharedSocket = () => {
   };
 };
 
-const refreshSharedConnection = (token: string | null | undefined, websocketBaseUrl: string | null) => {
-  if (!token || !websocketBaseUrl || !hasEnabledSubscribers()) {
+const refreshSharedConnection = (
+  token: string | null | undefined,
+  userId: string | null | undefined,
+  websocketBaseUrl: string | null,
+  websocketSource: 'explicit' | 'missing',
+) => {
+  sharedWebsocketSource = websocketSource;
+
+  if (!websocketBaseUrl || !hasEnabledSubscribers() || !userId) {
+    logger.warn('Chat websocket prerequisites missing; connection not started', {
+      enabledSubscriberCount: Array.from(chatSubscribers.values()).filter((subscriber) => subscriber.enabled).length,
+      hasToken: Boolean(token),
+      hasUserId: Boolean(userId),
+      hasWebsocketBaseUrl: Boolean(websocketBaseUrl),
+      websocketSource,
+    });
     resetSharedConnectionState();
     return;
   }
 
-  const credentialsChanged = token !== sharedToken || websocketBaseUrl !== sharedWebsocketBaseUrl;
+  if (!token) {
+    logger.warn('Chat websocket token missing; deferring connection refresh', {
+      userId,
+      hasSocket: Boolean(sharedSocket),
+      readyState: sharedSocket?.readyState ?? null,
+    });
+    sharedUserId = userId;
+    if (!sharedSocket) {
+      sharedShouldReconnect = false;
+      setSharedConnected(false);
+    }
+    return;
+  }
+
+  const connectionIdentityChanged = userId !== sharedUserId || websocketBaseUrl !== sharedWebsocketBaseUrl;
   sharedToken = token;
+  sharedUserId = userId;
   sharedWebsocketBaseUrl = websocketBaseUrl;
   sharedShouldReconnect = true;
 
-  if (credentialsChanged) {
+  if (connectionIdentityChanged) {
     clearSharedReconnectTimeout();
     clearSharedPing();
     sharedReconnectAttempts = 0;
     setSharedConnected(false);
-    closeSharedSocket();
+    closeSharedSocket('connection-identity-changed');
   }
 
   if (!sharedSocket || sharedSocket.readyState === WebSocket.CLOSING || sharedSocket.readyState === WebSocket.CLOSED) {
@@ -293,6 +350,27 @@ const removeSubscriber = (subscriberId: number) => {
 
 const sendSharedAction = (payload: Record<string, unknown>) => {
   if (!sharedSocket || sharedSocket.readyState !== WebSocket.OPEN) {
+    logger.warn('Skipped websocket action because chat socket is not open', {
+      action: typeof payload.action === 'string' ? payload.action : 'unknown',
+      hasSocket: Boolean(sharedSocket),
+      readyState: sharedSocket?.readyState ?? null,
+      readyStateLabel: getSocketReadyStateLabel(sharedSocket?.readyState),
+      hasToken: Boolean(sharedToken),
+      hasWebsocketBaseUrl: Boolean(sharedWebsocketBaseUrl),
+      shouldReconnect: sharedShouldReconnect,
+      websocketSource: sharedWebsocketSource,
+      websocketBaseUrl: sharedWebsocketBaseUrl,
+    });
+
+    if (
+      sharedShouldReconnect &&
+      sharedToken &&
+      sharedWebsocketBaseUrl &&
+      (!sharedSocket || sharedSocket.readyState === WebSocket.CLOSING || sharedSocket.readyState === WebSocket.CLOSED)
+    ) {
+      connectSharedSocket();
+    }
+
     return false;
   }
 
@@ -309,7 +387,9 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   const { enabled = true, onChatMessage, onChatRead, onChatConversationUpdated } = options;
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const userId = session?.user?.userId;
   const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
+  const websocketSource = websocketBaseUrl ? 'explicit' : 'missing';
 
   const subscriberIdRef = useRef<number | null>(null);
   const onChatMessageRef = useRef<typeof onChatMessage>(onChatMessage);
@@ -349,7 +429,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     });
 
     setIsConnected(sharedIsConnected);
-    refreshSharedConnection(token, websocketBaseUrl);
+    refreshSharedConnection(token, userId, websocketBaseUrl, websocketSource);
 
     return () => {
       removeSubscriber(subscriberId);
@@ -368,8 +448,26 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     }
 
     existingSubscriber.enabled = enabled;
-    refreshSharedConnection(token, websocketBaseUrl);
-  }, [enabled, token, websocketBaseUrl]);
+    refreshSharedConnection(token, userId, websocketBaseUrl, websocketSource);
+  }, [enabled, token, userId, websocketBaseUrl, websocketSource]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    if (!token) {
+      logger.warn('Chat realtime disabled because session token is missing');
+      return;
+    }
+
+    if (!websocketBaseUrl) {
+      logger.error('Chat realtime websocket URL is not configured', {
+        websocketSource,
+        hasExplicitWebsocketUrl: Boolean(WEBSOCKET_URL.trim()),
+      });
+    }
+  }, [enabled, token, websocketBaseUrl, websocketSource]);
 
   const sendChatMessage = useCallback((recipientUserId: string, message: string) => {
     return sendSharedAction({

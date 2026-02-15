@@ -2,6 +2,7 @@ import type { APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { randomUUID } from 'crypto';
 import type { IncomingHttpHeaders, IncomingMessage, Server } from 'http';
 import WebSocket, { WebSocketServer, type RawData } from 'ws';
+import { WebSocketCloseCode } from '@/constants';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { websocketLambdaHandler } from '@/websocket/lambdaHandler';
@@ -20,6 +21,13 @@ interface ConnectionMetadata {
   stage: string;
   queryStringParameters: Record<string, string | undefined>;
   headers: Record<string, string | undefined>;
+}
+
+interface WebSocketEvent {
+  routeKey: string;
+  eventType: 'CONNECT' | 'DISCONNECT' | 'MESSAGE';
+  metadata: ConnectionMetadata;
+  body?: string;
 }
 
 const toHeaderRecord = (headers: IncomingHttpHeaders): Record<string, string | undefined> => {
@@ -73,17 +81,7 @@ const getRouteKeyFromMessageBody = (body: string): string => {
   return WEBSOCKET_ROUTES.DEFAULT;
 };
 
-const buildWebSocketEvent = ({
-  routeKey,
-  eventType,
-  metadata,
-  body,
-}: {
-  routeKey: string;
-  eventType: 'CONNECT' | 'DISCONNECT' | 'MESSAGE';
-  metadata: ConnectionMetadata;
-  body?: string;
-}): WebSocketRequestEvent => {
+const buildWebSocketEvent = ({ routeKey, eventType, metadata, body }: WebSocketEvent): WebSocketRequestEvent => {
   return {
     version: '2.0',
     routeKey,
@@ -114,45 +112,31 @@ const invokeLambdaHandler = async ({
   eventType,
   metadata,
   body,
-}: {
-  routeKey: string;
-  eventType: 'CONNECT' | 'DISCONNECT' | 'MESSAGE';
-  metadata: ConnectionMetadata;
-  body?: string;
-}): Promise<APIGatewayProxyResultV2> => {
+}: WebSocketEvent): Promise<APIGatewayProxyResultV2> => {
   const event = buildWebSocketEvent({ routeKey, eventType, metadata, body });
   const context = { awsRequestId: randomUUID() } as Context;
 
   const result = await websocketLambdaHandler(event, context, noopLambdaCallback);
-  if (!result) {
-    return {
+  return (
+    result ?? {
       statusCode: 200,
       body: JSON.stringify({ message: 'ok' }),
-    };
-  }
-
-  if (typeof result === 'string') {
-    return {
-      statusCode: 200,
-      body: result,
-    };
-  }
-
-  return result;
+    }
+  );
 };
 
-const closeWithStatus = (socket: WebSocket, statusCode: number): void => {
+const closeConnectionWithStatus = (socket: WebSocket, statusCode: number): void => {
   if (statusCode === 401) {
-    socket.close(4401, 'Unauthorized');
+    socket.close(WebSocketCloseCode.APP_UNAUTHORIZED, 'Unauthorized');
     return;
   }
 
   if (statusCode >= 400 && statusCode < 500) {
-    socket.close(4400, 'Bad request');
+    socket.close(WebSocketCloseCode.APP_BAD_REQUEST, 'Bad request');
     return;
   }
 
-  socket.close(1011, 'Internal server error');
+  socket.close(WebSocketCloseCode.INTERNAL_SERVER_ERROR, 'Internal server error');
 };
 
 const toMessageString = (data: RawData): string => {
@@ -192,7 +176,7 @@ export const startLocalWebSocketServer = (httpServer: Server): WebSocketServer =
 
   webSocketServer.on('connection', async (socket, request) => {
     const parsedUrl = parseRequestUrl(request);
-    const metadata: ConnectionMetadata = {
+    const connectionMetadata: ConnectionMetadata = {
       connectionId: randomUUID(),
       stage: extractStageFromPath(parsedUrl.pathname),
       queryStringParameters: toQueryStringParameters(parsedUrl),
@@ -203,29 +187,30 @@ export const startLocalWebSocketServer = (httpServer: Server): WebSocketServer =
       const connectResult = await invokeLambdaHandler({
         routeKey: WEBSOCKET_ROUTES.CONNECT,
         eventType: 'CONNECT',
-        metadata,
+        metadata: connectionMetadata,
       });
 
-      const connectStatusCode = typeof connectResult === 'string' ? 200 : (connectResult.statusCode ?? 500);
+      const isConnectStatusString = typeof connectResult === 'string';
+      const connectStatusCode = isConnectStatusString ? 200 : (connectResult.statusCode ?? 500);
       if (connectStatusCode >= 400) {
         logger.warn('Rejected local websocket connection', {
-          connectionId: metadata.connectionId,
-          stage: metadata.stage,
+          connectionId: connectionMetadata.connectionId,
+          stage: connectionMetadata.stage,
           statusCode: connectStatusCode,
         });
-        closeWithStatus(socket, connectStatusCode);
+        closeConnectionWithStatus(socket, connectStatusCode);
         return;
       }
 
-      registerLocalConnection(metadata.connectionId, (serializedPayload) => {
+      registerLocalConnection(connectionMetadata.connectionId, (serializedPayload) => {
         if (socket.readyState === WebSocket.OPEN) {
           socket.send(serializedPayload);
         }
       });
 
       logger.info('Accepted local websocket connection', {
-        connectionId: metadata.connectionId,
-        stage: metadata.stage,
+        connectionId: connectionMetadata.connectionId,
+        stage: connectionMetadata.stage,
       });
 
       socket.on('message', async (raw) => {
@@ -236,40 +221,40 @@ export const startLocalWebSocketServer = (httpServer: Server): WebSocketServer =
           await invokeLambdaHandler({
             routeKey,
             eventType: 'MESSAGE',
-            metadata,
+            metadata: connectionMetadata,
             body,
           });
         } catch (error) {
           logger.error('Failed to process local websocket message', {
-            connectionId: metadata.connectionId,
+            connectionId: connectionMetadata.connectionId,
             error,
           });
         }
       });
 
       socket.on('close', async () => {
-        unregisterLocalConnection(metadata.connectionId);
+        unregisterLocalConnection(connectionMetadata.connectionId);
 
         try {
           await invokeLambdaHandler({
             routeKey: WEBSOCKET_ROUTES.DISCONNECT,
             eventType: 'DISCONNECT',
-            metadata,
+            metadata: connectionMetadata,
           });
         } catch (error) {
           logger.warn('Failed to process local websocket disconnect', {
-            connectionId: metadata.connectionId,
+            connectionId: connectionMetadata.connectionId,
             error,
           });
         }
       });
     } catch (error) {
-      unregisterLocalConnection(metadata.connectionId);
+      unregisterLocalConnection(connectionMetadata.connectionId);
       logger.error('Failed to initialize local websocket connection', {
-        connectionId: metadata.connectionId,
+        connectionId: connectionMetadata.connectionId,
         error,
       });
-      socket.close(1011, 'Internal server error');
+      socket.close(WebSocketCloseCode.INTERNAL_SERVER_ERROR, 'Internal server error');
     }
   });
 

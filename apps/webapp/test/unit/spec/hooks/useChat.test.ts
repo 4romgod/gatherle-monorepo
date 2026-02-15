@@ -270,8 +270,14 @@ describe('useChat hooks', () => {
       await result.current.markConversationRead('user-2');
     });
 
+    expect(getAuthHeaderMock).toHaveBeenCalledWith('token-1');
     expect(markConversationReadMutation).toHaveBeenCalledWith({
       variables: { withUserId: 'user-2' },
+      context: {
+        headers: { Authorization: 'Bearer token' },
+      },
+      refetchQueries: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+      awaitRefetchQueries: true,
     });
   });
 

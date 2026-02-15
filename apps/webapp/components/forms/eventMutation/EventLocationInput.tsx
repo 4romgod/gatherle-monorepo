@@ -120,14 +120,16 @@ export default function EventLocationInput({ onChange, value, venueId, onVenueCh
                 placeholder={loading ? 'Loading venues…' : 'Search by name or city'}
                 size="small"
                 color="secondary"
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {loading && <CircularProgress size={20} />}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {loading && <CircularProgress size={20} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  },
                 }}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />

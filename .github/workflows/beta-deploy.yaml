@@ -55,7 +55,7 @@ jobs:
           npm run cdk -w @ntlango/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 
       - name: Get API Gateway endpoint
-        id: get_endpoint
+        id: get_graphql_endpoint
         run: |
           ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphQLStack --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
           echo "Retrieved endpoint: $ENDPOINT"
@@ -64,9 +64,22 @@ jobs:
           echo "Verify output was set:"
           cat $GITHUB_OUTPUT
 
+      - name: Get WebSocket API endpoint
+        id: get_websocket_endpoint
+        run: |
+          WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name WebSocketApiStack --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
+          if [ -z "$WS_ENDPOINT" ] || [ "$WS_ENDPOINT" = "None" ]; then
+            echo "Failed to retrieve WebSocket endpoint from WebSocketApiStack output websocketApiUrl."
+            exit 1
+          fi
+          echo "WEBSOCKET_URL=$WS_ENDPOINT" >> $GITHUB_ENV
+          echo "websocket_url=$WS_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "WebSocket endpoint retrieved:"
+          echo "$WS_ENDPOINT"
+
       - name: Run API E2E Tests
         env:
-          GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
+          GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
           NTLANGO_SECRET_ARN: ${{ secrets.NTLANGO_SECRET_ARN }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: npm run test:e2e:api
@@ -88,8 +101,9 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_GRAPHQL_URL: ${{ steps.get_endpoint.outputs.graphql_url }}
-          NEXT_PUBLIC_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NEXT_PUBLIC_GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
+          NEXT_PUBLIC_WEBSOCKET_URL: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
           DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)

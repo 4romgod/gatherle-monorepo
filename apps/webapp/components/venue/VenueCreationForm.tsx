@@ -385,7 +385,7 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
                   onChange={handleChange('capacity')}
                   size="small"
                   color="secondary"
-                  inputProps={{ min: 0 }}
+                  slotProps={{ htmlInput: { min: 0 } }}
                 />
               </Grid>
             </Grid>

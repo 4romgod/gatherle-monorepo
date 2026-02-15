@@ -14,7 +14,9 @@
     "lint": "npm --workspaces --if-present run lint",
     "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\" && npm --workspaces --if-present run lint:fix",
     "typecheck": "npm --workspaces --if-present run typecheck",
-    "test:unit": "npm run test:unit -w @ntlango/api && npm run test:unit -w @ntlango/webapp",
+    "test:unit": "npm run test:unit:api && npm run test:unit:web",
+    "test:unit:api": "npm run test:unit -w @ntlango/api",
+    "test:unit:web": "npm run test:unit -w @ntlango/webapp",
     "test:e2e:api": "npm run test:e2e -w @ntlango/api --",
     "test:e2e:web": "npm run test:e2e -w @ntlango/webapp --"
   },
