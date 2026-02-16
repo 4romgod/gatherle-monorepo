@@ -20,5 +20,5 @@ yarn-error.log*
 test-results.txt
 **/test/**/reports/
 .github/prompts/
-
+.local/
 packages/commons/schema.graphql

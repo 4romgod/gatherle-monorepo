@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { CustomAppContextProvider } from '@/components/context/AppContext';
 import { useAppContext } from '@/hooks/useAppContext';
 import { STORAGE_KEYS, STORAGE_NAMESPACES } from '@/hooks/usePersistentState/constants';
@@ -60,9 +60,7 @@ describe('useAppContext', () => {
 
     const { result } = renderHook(() => useAppContext(), { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.themeMode).toBe('dark');
-    });
+    expect(result.current.themeMode).toBe('dark');
   });
 
   it('persists theme mode updates to localStorage', async () => {
@@ -72,10 +70,8 @@ describe('useAppContext', () => {
       result.current.setThemeMode('dark');
     });
 
-    await waitFor(() => {
-      const rawValue = window.localStorage.getItem(THEME_STORAGE_KEY);
-      expect(rawValue).not.toBeNull();
-      expect(JSON.parse(rawValue as string).value).toBe('dark');
-    });
+    const rawValue = window.localStorage.getItem(THEME_STORAGE_KEY);
+    expect(rawValue).not.toBeNull();
+    expect(JSON.parse(rawValue as string).value).toBe('dark');
   });
 });
