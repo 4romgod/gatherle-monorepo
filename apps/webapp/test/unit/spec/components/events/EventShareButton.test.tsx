@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { ComponentProps } from 'react';
 import EventShareButton from '@/components/events/EventShareButton';
 
@@ -73,8 +73,8 @@ describe('EventShareButton', () => {
     render(<EventShareButton eventTitle={eventTitle} eventUrl={eventUrl} {...props} />);
 
   it('renders the share button', () => {
-    renderButton();
+    const { getByRole } = renderButton();
 
-    expect(screen.getByRole('button', { name: `Share ${eventTitle}` })).toBeTruthy();
+    expect(getByRole('button', { name: `Share ${eventTitle}` })).toBeTruthy();
   });
 });
