@@ -84,7 +84,7 @@ describe('useNotifications', () => {
 });
 
 describe('useUnreadNotificationCount', () => {
-  it('returns unread count from query', () => {
+  it('returns unread count from query without polling', () => {
     mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
     useQueryMock.mockReturnValue({
       data: { unreadNotificationCount: 5 },
@@ -95,6 +95,33 @@ describe('useUnreadNotificationCount', () => {
 
     const { result } = renderHook(() => useUnreadNotificationCount());
     expect(result.current.unreadCount).toBe(5);
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        skip: false,
+      }),
+    );
+    const queryOptions = useQueryMock.mock.calls[0][1];
+    expect(queryOptions).not.toHaveProperty('pollInterval');
+  });
+
+  it('skips unread count query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: { unreadNotificationCount: 0 },
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    renderHook(() => useUnreadNotificationCount());
+
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        skip: true,
+      }),
+    );
   });
 });
 

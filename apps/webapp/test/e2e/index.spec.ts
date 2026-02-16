@@ -22,20 +22,27 @@ test.describe('Index Page', () => {
 
   test('navigates to /events from the hero Browse events CTA', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#hero-section').getByRole('link', { name: 'Browse events' }).click();
-    await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
+    const browseEventsLink = page.locator('#hero-section').getByRole('link', { name: 'Browse events', exact: true });
+    await expect(browseEventsLink).toBeVisible();
+    await expect(browseEventsLink).toHaveAttribute('href', '/events');
+    await Promise.all([page.waitForURL(/\/events\/?$/, { timeout: 20_000 }), browseEventsLink.click()]);
   });
 
   test('navigates to /auth/register from the hero Sign up CTA', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#hero-section').getByRole('link', { name: 'Sign up' }).click();
-    await expect(page).toHaveURL(/\/auth\/register\/?$/, { timeout: 20_000 });
+    const signUpLink = page.locator('#hero-section').getByRole('link', { name: 'Sign up', exact: true });
+    await expect(signUpLink).toBeVisible();
+    await expect(signUpLink).toHaveAttribute('href', '/auth/register');
+    await Promise.all([page.waitForURL(/\/auth\/register\/?$/, { timeout: 20_000 }), signUpLink.click()]);
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible({ timeout: 20_000 });
   });
 
   test('redirects to /auth/login when unauthenticated user clicks Host with Ntlango', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#hero-section').getByRole('link', { name: 'Host with Ntlango' }).click();
+    const hostLink = page.locator('#hero-section').getByRole('link', { name: 'Host with Ntlango', exact: true });
+    await expect(hostLink).toBeVisible();
+    await expect(hostLink).toHaveAttribute('href', '/account/events/create');
+    await Promise.all([page.waitForURL(/\/auth\/login\/?(?:\?.*)?$/, { timeout: 20_000 }), hostLink.click()]);
     await expectLoginPage(page);
   });
 });

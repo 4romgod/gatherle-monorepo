@@ -22,9 +22,10 @@ export default function EventTileGrid({ events, loading = false, skeletonCount =
   const handleLinkClick = (e: React.MouseEvent) => {
     // Prevent Link navigation if clicking on an interactive element (buttons, menus, etc.)
     const target = e.target as HTMLElement;
-    const isInteractive = target.closest('button, [role="button"], [role="menuitem"]');
+    const isInteractive = target.closest('button, [role="button"], [role="menuitem"], [data-card-interactive="true"]');
     if (isInteractive) {
       e.preventDefault();
+      e.stopPropagation();
     }
   };
 

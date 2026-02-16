@@ -151,6 +151,11 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
     clearSavedLocation();
   }, [clearFilterLocation, clearSavedLocation]);
 
+  const clearAllFilters = useCallback(() => {
+    resetFilters();
+    clearSavedLocation();
+  }, [resetFilters, clearSavedLocation]);
+
   // Wait for filters to hydrate before applying them to prevent double-fetch on page load
   const filtersToUse = isHydrated ? filters : initialFilters;
   const { events: serverEvents, loading, error } = useFilteredEvents(filtersToUse, initialEvents);
@@ -229,7 +234,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
           {hasActiveFilters && (
             <Box sx={{ mb: 2 }}>
               <Button
-                onClick={resetFilters}
+                onClick={clearAllFilters}
                 sx={(theme) => ({
                   background: theme.palette.action.selected,
                   color: theme.palette.text.primary,
@@ -348,7 +353,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
             loading={loading}
             error={error}
             hasActiveFilters={hasActiveFilters}
-            onClearFilters={resetFilters}
+            onClearFilters={clearAllFilters}
           />
         </Grid>
 

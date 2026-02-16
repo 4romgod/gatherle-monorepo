@@ -49,9 +49,14 @@ jest.mock('@/mongodb/dao', () => ({
     upsert: jest.fn(),
     cancel: jest.fn(),
     readByEventAndUser: jest.fn(),
+    readByEvent: jest.fn(),
+    countByEvent: jest.fn(),
   },
   EventDAO: {
     readEventById: jest.fn(),
+  },
+  UserDAO: {
+    readUserById: jest.fn(),
   },
 }));
 
@@ -69,9 +74,14 @@ jest.mock('@/utils/logger', () => ({
   },
 }));
 
+jest.mock('@/websocket/publisher', () => ({
+  publishEventRsvpUpdated: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { EventParticipantService } from '@/services';
-import { EventParticipantDAO, EventDAO } from '@/mongodb/dao';
+import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
+import { publishEventRsvpUpdated } from '@/websocket/publisher';
 import type { EventParticipant, Event } from '@ntlango/commons/types';
 import {
   ParticipantStatus,
@@ -122,8 +132,25 @@ describe('EventParticipantService', () => {
     ],
   };
 
+  const mockActorUser = {
+    userId: 'user-1',
+    username: 'actor-user',
+    given_name: 'Actor',
+    family_name: 'User',
+    profile_picture: null,
+  };
+
+  const mockEventParticipants = [mockParticipant];
+
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockActorUser);
+    (EventParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockEventParticipants);
+    (EventParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(1);
   });
 
   describe('rsvp', () => {
@@ -158,6 +185,20 @@ describe('EventParticipantService', () => {
             targetType: NotificationTargetType.Event,
             targetSlug: 'test-event',
             rsvpStatus: ParticipantStatus.Going,
+          }),
+        );
+
+        expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
+          expect.arrayContaining(['host-user-id', 'cohost-user-id', 'user-1']),
+          expect.objectContaining({
+            participant: expect.objectContaining({
+              participantId: 'participant-1',
+              eventId: 'event-1',
+              userId: 'user-1',
+              status: ParticipantStatus.Going,
+            }),
+            previousStatus: null,
+            rsvpCount: 1,
           }),
         );
       });
@@ -328,6 +369,7 @@ describe('EventParticipantService', () => {
   describe('cancel', () => {
     it('cancels RSVP and does NOT send notification', async () => {
       const cancelledParticipant = { ...mockParticipant, status: ParticipantStatus.Cancelled };
+      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
       (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(cancelledParticipant);
 
       const result = await EventParticipantService.cancel({
@@ -340,15 +382,28 @@ describe('EventParticipantService', () => {
         userId: 'user-1',
       });
       expect(result).toEqual(cancelledParticipant);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       expect(NotificationService.notify).not.toHaveBeenCalled();
+      expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
+        expect.arrayContaining(['user-1']),
+        expect.objectContaining({
+          participant: expect.objectContaining({
+            participantId: 'participant-1',
+            status: ParticipantStatus.Cancelled,
+          }),
+          previousStatus: ParticipantStatus.Going,
+        }),
+      );
     });
   });
 
   describe('checkIn', () => {
     it('checks in and sends notification to all organizers', async () => {
       const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
+      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
       (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
 
       const result = await EventParticipantService.checkIn('event-1', 'user-1');
 
@@ -370,6 +425,16 @@ describe('EventParticipantService', () => {
           actorUserId: 'user-1',
           targetType: NotificationTargetType.Event,
           targetSlug: 'test-event',
+        }),
+      );
+      expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
+        expect.arrayContaining(['host-user-id', 'cohost-user-id', 'user-1']),
+        expect.objectContaining({
+          participant: expect.objectContaining({
+            participantId: 'participant-1',
+            status: ParticipantStatus.CheckedIn,
+          }),
+          previousStatus: ParticipantStatus.Going,
         }),
       );
     });

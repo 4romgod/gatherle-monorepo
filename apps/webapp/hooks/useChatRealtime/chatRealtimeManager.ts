@@ -1,53 +1,15 @@
-'use client';
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { WEBSOCKET_URL } from '@/lib/constants';
+import { addTokenToWebSocketUrl, computeReconnectDelay, logger, PING_INTERVAL_MS } from '@/lib/utils';
 import {
-  addTokenToWebSocketUrl,
-  computeReconnectDelay,
-  isRecord,
-  logger,
-  normalizeWebSocketBaseUrl,
-  PING_INTERVAL_MS,
-} from '@/lib/utils';
+  isChatConversationUpdatedPayload,
+  isChatMessagePayload,
+  isChatReadPayload,
+  parseChatRealtimeEvent,
+  type ChatConversationUpdatedRealtimePayload,
+  type ChatMessageRealtimePayload,
+  type ChatReadRealtimePayload,
+} from './chatRealtimeProtocol';
 
-type RealtimeEnvelope = {
-  type?: unknown;
-  payload?: unknown;
-};
-
-export interface ChatMessageRealtimePayload {
-  messageId: string;
-  senderUserId: string;
-  recipientUserId: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface ChatReadRealtimePayload {
-  readerUserId: string;
-  withUserId: string;
-  markedCount: number;
-  readAt: string;
-}
-
-export interface ChatConversationUpdatedRealtimePayload {
-  conversationWithUserId: string;
-  unreadCount: number;
-  unreadTotal: number;
-  reason: 'chat.send' | 'chat.read';
-  updatedAt: string;
-  lastMessage: ChatMessageRealtimePayload | null;
-}
-
-interface UseChatRealtimeOptions {
-  enabled?: boolean;
-  onChatMessage?: (payload: ChatMessageRealtimePayload) => void;
-  onChatRead?: (payload: ChatReadRealtimePayload) => void;
-  onChatConversationUpdated?: (payload: ChatConversationUpdatedRealtimePayload) => void;
-}
+export type ChatWebsocketSource = 'explicit' | 'missing';
 
 interface ChatRealtimeSubscriber {
   enabled: boolean;
@@ -57,50 +19,12 @@ interface ChatRealtimeSubscriber {
   onChatConversationUpdated?: (payload: ChatConversationUpdatedRealtimePayload) => void;
 }
 
-const isChatMessagePayload = (value: unknown): value is ChatMessageRealtimePayload => {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.messageId === 'string' &&
-    typeof value.senderUserId === 'string' &&
-    typeof value.recipientUserId === 'string' &&
-    typeof value.message === 'string' &&
-    typeof value.isRead === 'boolean' &&
-    typeof value.createdAt === 'string'
-  );
-};
-
-const isChatReadPayload = (value: unknown): value is ChatReadRealtimePayload => {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.readerUserId === 'string' &&
-    typeof value.withUserId === 'string' &&
-    typeof value.markedCount === 'number' &&
-    typeof value.readAt === 'string'
-  );
-};
-
-const isChatConversationUpdatedPayload = (value: unknown): value is ChatConversationUpdatedRealtimePayload => {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  const lastMessage = value.lastMessage;
-
-  return (
-    typeof value.conversationWithUserId === 'string' &&
-    typeof value.unreadCount === 'number' &&
-    typeof value.unreadTotal === 'number' &&
-    (value.reason === 'chat.send' || value.reason === 'chat.read') &&
-    typeof value.updatedAt === 'string' &&
-    (lastMessage === null || isChatMessagePayload(lastMessage))
-  );
-};
+interface RefreshSharedConnectionParams {
+  token: string | null | undefined;
+  userId: string | null | undefined;
+  websocketBaseUrl: string | null;
+  websocketSource: ChatWebsocketSource;
+}
 
 const chatSubscribers = new Map<number, ChatRealtimeSubscriber>();
 let chatSubscriberSequence = 0;
@@ -113,7 +37,7 @@ let sharedToken: string | null = null;
 let sharedUserId: string | null = null;
 let sharedWebsocketBaseUrl: string | null = null;
 let sharedIsConnected = false;
-let sharedWebsocketSource: 'explicit' | 'missing' = 'missing';
+let sharedWebsocketSource: ChatWebsocketSource = 'missing';
 
 const getSocketReadyStateLabel = (readyState?: number | null): string => {
   switch (readyState) {
@@ -213,6 +137,13 @@ const connectSharedSocket = () => {
     return;
   }
 
+  if (
+    sharedSocket &&
+    (sharedSocket.readyState === WebSocket.OPEN || sharedSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
+
   clearSharedReconnectTimeout();
   clearSharedPing();
 
@@ -221,6 +152,11 @@ const connectSharedSocket = () => {
   sharedSocket = socket;
 
   socket.onopen = () => {
+    if (sharedSocket !== socket) {
+      socket.close();
+      return;
+    }
+
     sharedReconnectAttempts = 0;
     setSharedConnected(true);
     logger.info('WebSocket connected for chat', {
@@ -240,19 +176,18 @@ const connectSharedSocket = () => {
       return;
     }
 
-    let parsed: RealtimeEnvelope;
-    try {
-      parsed = JSON.parse(event.data) as RealtimeEnvelope;
-    } catch {
+    const realtimeEvent = parseChatRealtimeEvent(event.data);
+    if (!realtimeEvent) {
       return;
     }
 
-    if (parsed.type === 'chat.message' || parsed.type === 'chat.read' || parsed.type === 'chat.conversation.updated') {
-      dispatchMessageToSubscribers(parsed.type, parsed.payload);
-    }
+    dispatchMessageToSubscribers(realtimeEvent.type, realtimeEvent.payload);
   };
 
   socket.onerror = (event) => {
+    if (sharedSocket !== socket) {
+      return;
+    }
     logger.warn('Chat websocket error', event);
   };
 
@@ -287,12 +222,56 @@ const connectSharedSocket = () => {
   };
 };
 
-const refreshSharedConnection = (
-  token: string | null | undefined,
-  userId: string | null | undefined,
-  websocketBaseUrl: string | null,
-  websocketSource: 'explicit' | 'missing',
+export const getChatRealtimeConnectionState = (): boolean => {
+  return sharedIsConnected;
+};
+
+export const addChatRealtimeSubscriber = (subscriber: ChatRealtimeSubscriber): number => {
+  const subscriberId = ++chatSubscriberSequence;
+  chatSubscribers.set(subscriberId, subscriber);
+  return subscriberId;
+};
+
+export const updateChatRealtimeSubscriber = (
+  subscriberId: number,
+  updates: Partial<Omit<ChatRealtimeSubscriber, 'setConnected'>>,
 ) => {
+  const existingSubscriber = chatSubscribers.get(subscriberId);
+  if (!existingSubscriber) {
+    return;
+  }
+
+  if (typeof updates.enabled === 'boolean') {
+    existingSubscriber.enabled = updates.enabled;
+  }
+
+  if (Object.hasOwn(updates, 'onChatMessage')) {
+    existingSubscriber.onChatMessage = updates.onChatMessage;
+  }
+
+  if (Object.hasOwn(updates, 'onChatRead')) {
+    existingSubscriber.onChatRead = updates.onChatRead;
+  }
+
+  if (Object.hasOwn(updates, 'onChatConversationUpdated')) {
+    existingSubscriber.onChatConversationUpdated = updates.onChatConversationUpdated;
+  }
+};
+
+export const removeChatRealtimeSubscriber = (subscriberId: number) => {
+  chatSubscribers.delete(subscriberId);
+
+  if (!hasEnabledSubscribers()) {
+    resetSharedConnectionState();
+  }
+};
+
+export const refreshSharedConnection = ({
+  token,
+  userId,
+  websocketBaseUrl,
+  websocketSource,
+}: RefreshSharedConnectionParams) => {
   sharedWebsocketSource = websocketSource;
 
   if (!websocketBaseUrl || !hasEnabledSubscribers() || !userId) {
@@ -340,15 +319,7 @@ const refreshSharedConnection = (
   }
 };
 
-const removeSubscriber = (subscriberId: number) => {
-  chatSubscribers.delete(subscriberId);
-
-  if (!hasEnabledSubscribers()) {
-    resetSharedConnectionState();
-  }
-};
-
-const sendSharedAction = (payload: Record<string, unknown>) => {
+export const sendSharedAction = (payload: Record<string, unknown>) => {
   if (!sharedSocket || sharedSocket.readyState !== WebSocket.OPEN) {
     logger.warn('Skipped websocket action because chat socket is not open', {
       action: typeof payload.action === 'string' ? payload.action : 'unknown',
@@ -382,111 +353,3 @@ const sendSharedAction = (payload: Record<string, unknown>) => {
     return false;
   }
 };
-
-export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
-  const { enabled = true, onChatMessage, onChatRead, onChatConversationUpdated } = options;
-  const { data: session } = useSession();
-  const token = session?.user?.token;
-  const userId = session?.user?.userId;
-  const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
-  const websocketSource = websocketBaseUrl ? 'explicit' : 'missing';
-
-  const subscriberIdRef = useRef<number | null>(null);
-  const onChatMessageRef = useRef<typeof onChatMessage>(onChatMessage);
-  const onChatReadRef = useRef<typeof onChatRead>(onChatRead);
-  const onChatConversationUpdatedRef = useRef<typeof onChatConversationUpdated>(onChatConversationUpdated);
-  const [isConnected, setIsConnected] = useState(sharedIsConnected);
-
-  useEffect(() => {
-    onChatMessageRef.current = onChatMessage;
-    onChatReadRef.current = onChatRead;
-    onChatConversationUpdatedRef.current = onChatConversationUpdated;
-
-    if (!subscriberIdRef.current) {
-      return;
-    }
-
-    const existingSubscriber = chatSubscribers.get(subscriberIdRef.current);
-    if (!existingSubscriber) {
-      return;
-    }
-
-    existingSubscriber.onChatMessage = onChatMessage;
-    existingSubscriber.onChatRead = onChatRead;
-    existingSubscriber.onChatConversationUpdated = onChatConversationUpdated;
-  }, [onChatConversationUpdated, onChatMessage, onChatRead]);
-
-  useEffect(() => {
-    const subscriberId = ++chatSubscriberSequence;
-    subscriberIdRef.current = subscriberId;
-
-    chatSubscribers.set(subscriberId, {
-      enabled,
-      setConnected: setIsConnected,
-      onChatMessage: onChatMessageRef.current,
-      onChatRead: onChatReadRef.current,
-      onChatConversationUpdated: onChatConversationUpdatedRef.current,
-    });
-
-    setIsConnected(sharedIsConnected);
-    refreshSharedConnection(token, userId, websocketBaseUrl, websocketSource);
-
-    return () => {
-      removeSubscriber(subscriberId);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!subscriberIdRef.current) {
-      return;
-    }
-
-    const existingSubscriber = chatSubscribers.get(subscriberIdRef.current);
-    if (!existingSubscriber) {
-      return;
-    }
-
-    existingSubscriber.enabled = enabled;
-    refreshSharedConnection(token, userId, websocketBaseUrl, websocketSource);
-  }, [enabled, token, userId, websocketBaseUrl, websocketSource]);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-
-    if (!token) {
-      logger.warn('Chat realtime disabled because session token is missing');
-      return;
-    }
-
-    if (!websocketBaseUrl) {
-      logger.error('Chat realtime websocket URL is not configured', {
-        websocketSource,
-        hasExplicitWebsocketUrl: Boolean(WEBSOCKET_URL.trim()),
-      });
-    }
-  }, [enabled, token, websocketBaseUrl, websocketSource]);
-
-  const sendChatMessage = useCallback((recipientUserId: string, message: string) => {
-    return sendSharedAction({
-      action: 'chat.send',
-      recipientUserId,
-      message,
-    });
-  }, []);
-
-  const markConversationRead = useCallback((withUserId: string) => {
-    return sendSharedAction({
-      action: 'chat.read',
-      withUserId,
-    });
-  }, []);
-
-  return {
-    isConnected,
-    sendChatMessage,
-    markConversationRead,
-  };
-}

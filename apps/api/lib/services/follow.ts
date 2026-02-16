@@ -1,4 +1,4 @@
-import type { Follow, CreateFollowInput } from '@ntlango/commons/types';
+import type { Follow, CreateFollowInput, User } from '@ntlango/commons/types';
 import {
   FollowTargetType,
   FollowApprovalStatus,
@@ -10,6 +10,11 @@ import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 import NotificationService from './notification';
+import {
+  publishFollowRequestCreated,
+  publishFollowRequestUpdated,
+  type FollowRequestRealtimeSnapshot,
+} from '@/websocket/publisher';
 
 export interface FollowParams extends CreateFollowInput {
   followerUserId: string;
@@ -25,6 +30,30 @@ export interface UnfollowParams {
  * Service for managing follow relationships with notification integration
  */
 class FollowService {
+  private static toFollowRealtimeSnapshot(
+    follow: Follow,
+    follower: Pick<User, 'userId' | 'username' | 'email' | 'given_name' | 'family_name' | 'profile_picture' | 'bio'>,
+  ): FollowRequestRealtimeSnapshot {
+    return {
+      followId: follow.followId,
+      followerUserId: follow.followerUserId,
+      targetType: follow.targetType,
+      targetId: follow.targetId,
+      approvalStatus: follow.approvalStatus,
+      createdAt: follow.createdAt.toISOString(),
+      updatedAt: (follow.updatedAt ?? follow.createdAt).toISOString(),
+      follower: {
+        userId: follower.userId,
+        username: follower.username,
+        email: follower.email,
+        given_name: follower.given_name,
+        family_name: follower.family_name,
+        profile_picture: follower.profile_picture ?? null,
+        bio: follower.bio ?? null,
+      },
+    };
+  }
+
   /**
    * Follow a user, organization, or event (save)
    * Sends appropriate notifications based on follow type and approval status
@@ -33,6 +62,10 @@ class FollowService {
     const { followerUserId, targetType, targetId, ...rest } = params;
 
     let approvalStatus = FollowApprovalStatus.Pending;
+    let followerUserForRealtime: Pick<
+      User,
+      'userId' | 'username' | 'email' | 'given_name' | 'family_name' | 'profile_picture' | 'bio'
+    > | null = null;
 
     if (targetType === FollowTargetType.User) {
       const targetUser = await UserDAO.readUserById(targetId);
@@ -44,6 +77,7 @@ class FollowService {
 
       // Check if the follower has blocked the target user
       const followerUser = await UserDAO.readUserById(followerUserId);
+      followerUserForRealtime = followerUser;
       if (followerUser.blockedUserIds?.includes(targetId)) {
         throw CustomError('You cannot follow a blocked user', ErrorTypes.UNAUTHORIZED);
       }
@@ -77,6 +111,22 @@ class FollowService {
       logger.error('Failed to send follow notification', err);
     });
 
+    if (follow.targetType === FollowTargetType.User && follow.approvalStatus === FollowApprovalStatus.Pending) {
+      const publishFollowRequestRealtime = async () => {
+        const followerUser = followerUserForRealtime ?? (await UserDAO.readUserById(followerUserId));
+        const followSnapshot = this.toFollowRealtimeSnapshot(follow, followerUser);
+        await publishFollowRequestCreated(follow.targetId, followSnapshot);
+      };
+
+      publishFollowRequestRealtime().catch((err) => {
+        logger.warn('Failed to publish follow request created realtime event', {
+          error: err,
+          followId: follow.followId,
+          targetUserId: follow.targetId,
+        });
+      });
+    }
+
     return follow;
   }
 
@@ -94,6 +144,22 @@ class FollowService {
    */
   static async acceptFollowRequest(followId: string, targetUserId: string): Promise<Follow> {
     const follow = await FollowDAO.updateApprovalStatus(followId, targetUserId, FollowApprovalStatus.Accepted);
+    const publishFollowRequestRealtime = async () => {
+      const followerUser = await UserDAO.readUserById(follow.followerUserId);
+      const followSnapshot = this.toFollowRealtimeSnapshot(follow, followerUser);
+      await Promise.all([
+        publishFollowRequestUpdated(targetUserId, followSnapshot),
+        publishFollowRequestUpdated(follow.followerUserId, followSnapshot),
+      ]);
+    };
+
+    publishFollowRequestRealtime().catch((err) => {
+      logger.warn('Failed to publish follow request updated realtime event', {
+        error: err,
+        followId: follow.followId,
+        targetUserId,
+      });
+    });
 
     NotificationService.markFollowRequestNotificationsAsRead(targetUserId, follow.followerUserId).catch((err) => {
       logger.warn('Failed to mark follow request notification as read', err);
@@ -119,6 +185,23 @@ class FollowService {
    */
   static async rejectFollowRequest(followId: string, targetUserId: string): Promise<boolean> {
     const follow = await FollowDAO.updateApprovalStatus(followId, targetUserId, FollowApprovalStatus.Rejected);
+    const publishFollowRequestRealtime = async () => {
+      const followerUser = await UserDAO.readUserById(follow.followerUserId);
+      const followSnapshot = this.toFollowRealtimeSnapshot(follow, followerUser);
+      await Promise.all([
+        publishFollowRequestUpdated(targetUserId, followSnapshot),
+        publishFollowRequestUpdated(follow.followerUserId, followSnapshot),
+      ]);
+    };
+
+    publishFollowRequestRealtime().catch((err) => {
+      logger.warn('Failed to publish follow request updated realtime event', {
+        error: err,
+        followId: follow.followId,
+        targetUserId,
+      });
+    });
+
     NotificationService.markFollowRequestNotificationsAsRead(targetUserId, follow.followerUserId).catch((err) => {
       logger.warn('Failed to mark follow request notification as read', err);
     });

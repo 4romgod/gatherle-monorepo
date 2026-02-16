@@ -20,8 +20,9 @@ test.describe('Register Page', () => {
 
   test('navigates to /auth/login from register page', async ({ page }) => {
     await page.goto('/auth/register');
-    await page.getByRole('link', { name: 'Log in here' }).click();
-    await expect(page).toHaveURL(/\/auth\/login$/);
+    const loginLink = page.getByRole('link', { name: 'Log in here' });
+    await expect(loginLink).toBeVisible();
+    await Promise.all([page.waitForURL(/\/auth\/login\/?$/, { timeout: 20_000 }), loginLink.click()]);
     await expect(page.getByRole('heading', { level: 1, name: 'Welcome back' })).toBeVisible();
   });
 });

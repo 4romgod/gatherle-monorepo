@@ -11,7 +11,7 @@ import {
 import type { Notification, NotificationConnection } from '@/data/graphql/query/Notification/types';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 interface UseNotificationsOptions {
   limit?: number;
@@ -74,33 +74,19 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 }
 
 /**
- * TODO: Look into Pub Sub
- * Hook to get just the unread notification count (for badge display)
- * Uses a separate lightweight query that can poll frequently
- * Only polls when the page is visible to avoid unnecessary requests
+ * Hook to get just the unread notification count (for badge display).
+ *
+ * Unread counts are primarily kept up to date via WebSocket-driven events;
+ * this GraphQL query provides the initial value and acts as a fallback when
+ * the WebSocket connection is unavailable or out of date.
  */
-export function useUnreadNotificationCount(pollInterval?: number) {
+export function useUnreadNotificationCount() {
   const { data: session } = useSession();
   const token = session?.user?.token;
-  const [isVisible, setIsVisible] = useState(() => typeof document !== 'undefined' && !document.hidden);
-
-  // Track page visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsVisible(!document.hidden);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
 
   const { data, loading, error, refetch } = useQuery(GetUnreadNotificationCountDocument, {
-    skip: !token || !isVisible, // Skip query when tab is hidden
+    skip: !token,
     fetchPolicy: 'cache-and-network',
-    pollInterval: pollInterval && isVisible ? pollInterval : 0, // Only poll when visible
     context: {
       headers: getAuthHeader(token),
     },

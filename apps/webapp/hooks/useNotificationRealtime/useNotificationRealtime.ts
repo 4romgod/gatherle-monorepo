@@ -3,44 +3,39 @@
 import { useApolloClient } from '@apollo/client';
 import { useEffect, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { GetNotificationsDocument, GetUnreadNotificationCountDocument } from '@/data/graphql/query';
-import type { Notification } from '@/data/graphql/query/Notification/types';
 import { WEBSOCKET_URL } from '@/lib/constants';
 import {
   addTokenToWebSocketUrl,
   computeReconnectDelay,
-  isRecord,
   logger,
   normalizeWebSocketBaseUrl,
   PING_INTERVAL_MS,
 } from '@/lib/utils';
-const DEFAULT_NOTIFICATION_PAGE_LIMIT = 20;
+import { createNotificationRealtimeCacheHandlers } from './notificationRealtimeCache';
+import {
+  isRealtimeEventRsvpPayload,
+  isRealtimeFollowRequestPayload,
+  isRealtimeNotificationPayload,
+  parseRealtimeEnvelope,
+} from './notificationRealtimeProtocol';
 
-type RealtimeEnvelope = {
-  type?: unknown;
-  payload?: unknown;
-};
-
-type RealtimeNotificationPayload = {
-  notification: Notification;
-  unreadCount: number;
-};
-
-const isRealtimeNotificationPayload = (value: unknown): value is RealtimeNotificationPayload => {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  const notification = value.notification;
-  const unreadCount = value.unreadCount;
-
-  if (!isRecord(notification) || typeof unreadCount !== 'number') {
-    return false;
-  }
-
-  return typeof notification.notificationId === 'string' && typeof notification.recipientUserId === 'string';
-};
-
+/**
+ * React hook that manages a WebSocket connection for real-time notification updates.
+ *
+ * The hook uses the current authenticated session to attach an access token to the
+ * WebSocket URL, subscribes to notification-related events, and updates the Apollo
+ * Client cache via `createNotificationRealtimeCacheHandlers`. It maintains the full
+ * WebSocket lifecycle, including:
+ * - establishing a connection when a user session and WebSocket base URL are available,
+ * - sending periodic ping messages to keep the connection alive,
+ * - handling errors and automatic reconnection with a backoff strategy, and
+ * - closing the socket and clearing timers when the component unmounts or when the
+ *   hook is disabled.
+ *
+ * @param enabled Whether the real-time WebSocket connection should be active. When
+ *   `false`, the hook will not attempt to connect or reconnect, and will tear down
+ *   any existing connection.
+ */
 export function useNotificationRealtime(enabled: boolean = true) {
   const client = useApolloClient();
   const { data: session } = useSession();
@@ -79,6 +74,12 @@ export function useNotificationRealtime(enabled: boolean = true) {
       return;
     }
 
+    const { handleRealtimeEventRsvp, handleRealtimeFollowRequest, handleRealtimeNotification } =
+      createNotificationRealtimeCacheHandlers({
+        client,
+        userId,
+      });
+
     shouldReconnectRef.current = true;
 
     const clearPing = () => {
@@ -95,54 +96,16 @@ export function useNotificationRealtime(enabled: boolean = true) {
       }
     };
 
-    const handleRealtimeNotification = (payload: RealtimeNotificationPayload) => {
-      const { notification, unreadCount } = payload;
-
-      client.writeQuery({
-        query: GetUnreadNotificationCountDocument,
-        data: {
-          unreadNotificationCount: unreadCount,
-        },
-      });
-
-      const updateNotificationListCache = (unreadOnly: boolean) => {
-        client.cache.updateQuery(
-          {
-            query: GetNotificationsDocument,
-            variables: { limit: DEFAULT_NOTIFICATION_PAGE_LIMIT, unreadOnly },
-          },
-          (existing) => {
-            if (!existing?.notifications) {
-              return existing;
-            }
-
-            const currentItems = existing.notifications.notifications;
-            const alreadyExists = currentItems.some((item) => item.notificationId === notification.notificationId);
-
-            let nextItems = currentItems;
-            if (!alreadyExists && (!unreadOnly || notification.isRead === false)) {
-              const maxItems = Math.max(currentItems.length, DEFAULT_NOTIFICATION_PAGE_LIMIT);
-              nextItems = [notification as (typeof currentItems)[number], ...currentItems].slice(0, maxItems);
-            }
-
-            return {
-              ...existing,
-              notifications: {
-                ...existing.notifications,
-                unreadCount,
-                notifications: nextItems,
-              },
-            };
-          },
-        );
-      };
-
-      updateNotificationListCache(false);
-      updateNotificationListCache(true);
-    };
-
     const connect = () => {
       if (!shouldReconnectRef.current) {
+        return;
+      }
+
+      const activeSocket = socketRef.current;
+      if (
+        activeSocket &&
+        (activeSocket.readyState === WebSocket.OPEN || activeSocket.readyState === WebSocket.CONNECTING)
+      ) {
         return;
       }
 
@@ -160,6 +123,11 @@ export function useNotificationRealtime(enabled: boolean = true) {
       socketRef.current = socket;
 
       socket.onopen = () => {
+        if (socketRef.current !== socket) {
+          socket.close();
+          return;
+        }
+
         reconnectAttemptsRef.current = 0;
         logger.info('WebSocket connected for realtime notifications', {
           websocketBaseUrl,
@@ -189,30 +157,54 @@ export function useNotificationRealtime(enabled: boolean = true) {
           return;
         }
 
-        let parsed: RealtimeEnvelope;
-        try {
-          parsed = JSON.parse(event.data) as RealtimeEnvelope;
-        } catch {
+        const parsed = parseRealtimeEnvelope(event.data);
+        if (!parsed) {
           return;
         }
 
-        if (parsed.type !== 'notification.new') {
+        if (parsed.type === 'notification.new') {
+          if (!isRealtimeNotificationPayload(parsed.payload)) {
+            logger.warn('Received malformed notification websocket payload');
+            return;
+          }
+
+          handleRealtimeNotification(parsed.payload);
           return;
         }
 
-        if (!isRealtimeNotificationPayload(parsed.payload)) {
-          logger.warn('Received malformed notification websocket payload');
+        if (parsed.type === 'follow.request.created' || parsed.type === 'follow.request.updated') {
+          if (!isRealtimeFollowRequestPayload(parsed.payload)) {
+            logger.warn('Received malformed follow request websocket payload');
+            return;
+          }
+
+          handleRealtimeFollowRequest(parsed.payload);
           return;
         }
 
-        handleRealtimeNotification(parsed.payload);
+        if (parsed.type === 'event.rsvp.updated') {
+          if (!isRealtimeEventRsvpPayload(parsed.payload)) {
+            logger.warn('Received malformed event RSVP websocket payload');
+            return;
+          }
+
+          handleRealtimeEventRsvp(parsed.payload);
+        }
       };
 
       socket.onerror = (event) => {
+        if (socketRef.current !== socket) {
+          return;
+        }
         logger.warn('Notification websocket error', event);
       };
 
       socket.onclose = (event) => {
+        if (socketRef.current !== socket) {
+          return;
+        }
+
+        socketRef.current = null;
         clearPing();
 
         if (!shouldReconnectRef.current) {

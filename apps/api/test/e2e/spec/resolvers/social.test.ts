@@ -5,6 +5,7 @@ import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
 import {
   FollowTargetType,
+  FollowPolicy,
   ActivityVerb,
   ActivityObjectType,
   ActivityVisibility,
@@ -28,11 +29,56 @@ import {
   getReadIntentsByEventQuery,
   getReadIntentsByUserQuery,
   getUnfollowMutation,
+  getUpdateUserMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
 import { createEventOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
 
 const TEST_PORT = 5010;
+
+const getReadFollowRequestsQuery = (targetType: FollowTargetType) => ({
+  query: `
+    query ReadFollowRequests($targetType: FollowTargetType!) {
+      readFollowRequests(targetType: $targetType) {
+        followId
+        followerUserId
+        targetType
+        targetId
+        approvalStatus
+      }
+    }
+  `,
+  variables: {
+    targetType,
+  },
+});
+
+const getAcceptFollowRequestMutation = (followId: string) => ({
+  query: `
+    mutation AcceptFollowRequest($followId: ID!) {
+      acceptFollowRequest(followId: $followId) {
+        followId
+        followerUserId
+        targetId
+        approvalStatus
+      }
+    }
+  `,
+  variables: {
+    followId,
+  },
+});
+
+const getRejectFollowRequestMutation = (followId: string) => ({
+  query: `
+    mutation RejectFollowRequest($followId: ID!) {
+      rejectFollowRequest(followId: $followId)
+    }
+  `,
+  variables: {
+    followId,
+  },
+});
 
 describe('Social resolver e2e', () => {
   let server: E2EServer;
@@ -79,6 +125,17 @@ describe('Social resolver e2e', () => {
       .post('')
       .set('Authorization', 'Bearer ' + actorUser.token)
       .send(getUnfollowMutation(FollowTargetType.User, targetUser.userId))
+      .catch(() => {});
+
+    await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(
+        getUpdateUserMutation({
+          userId: targetUser.userId,
+          followPolicy: FollowPolicy.Public,
+        }),
+      )
       .catch(() => {});
   });
 
@@ -222,6 +279,115 @@ describe('Social resolver e2e', () => {
       .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
 
     expect([200, 409]).toContain(duplicateFollow.status);
+  });
+
+  it('supports follow request accept lifecycle when follow approval is required', async () => {
+    const policyUpdate = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(
+        getUpdateUserMutation({
+          userId: targetUser.userId,
+          followPolicy: FollowPolicy.RequireApproval,
+        }),
+      );
+    expect(policyUpdate.status).toBe(200);
+
+    const followResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + actorUser.token)
+      .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
+
+    expect(followResponse.status).toBe(200);
+    expect(followResponse.body.data.follow.approvalStatus).toBe('Pending');
+
+    const followId = followResponse.body.data.follow.followId;
+
+    const followRequestsResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(getReadFollowRequestsQuery(FollowTargetType.User));
+
+    expect(followRequestsResponse.status).toBe(200);
+    expect(followRequestsResponse.body.data.readFollowRequests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          followId,
+          approvalStatus: 'Pending',
+          followerUserId: actorUser.userId,
+        }),
+      ]),
+    );
+
+    const acceptResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(getAcceptFollowRequestMutation(followId));
+
+    expect(acceptResponse.status).toBe(200);
+    expect(acceptResponse.body.data.acceptFollowRequest.approvalStatus).toBe('Accepted');
+
+    const followingResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + actorUser.token)
+      .send(getReadFollowingQuery());
+
+    expect(followingResponse.status).toBe(200);
+    expect(followingResponse.body.data.readFollowing).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          followId,
+          approvalStatus: 'Accepted',
+        }),
+      ]),
+    );
+  });
+
+  it('supports follow request reject lifecycle when follow approval is required', async () => {
+    const policyUpdate = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(
+        getUpdateUserMutation({
+          userId: targetUser.userId,
+          followPolicy: FollowPolicy.RequireApproval,
+        }),
+      );
+    expect(policyUpdate.status).toBe(200);
+
+    const followResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + actorUser.token)
+      .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
+
+    expect(followResponse.status).toBe(200);
+    expect(followResponse.body.data.follow.approvalStatus).toBe('Pending');
+
+    const followId = followResponse.body.data.follow.followId;
+
+    const rejectResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(getRejectFollowRequestMutation(followId));
+
+    expect(rejectResponse.status).toBe(200);
+    expect(rejectResponse.body.data.rejectFollowRequest).toBe(true);
+
+    const followRequestsResponse = await request(url)
+      .post('')
+      .set('Authorization', 'Bearer ' + targetUser.token)
+      .send(getReadFollowRequestsQuery(FollowTargetType.User));
+
+    expect(followRequestsResponse.status).toBe(200);
+    expect(followRequestsResponse.body.data.readFollowRequests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          followId,
+          approvalStatus: 'Rejected',
+          followerUserId: actorUser.userId,
+        }),
+      ]),
+    );
   });
 
   it('handles intent status updates', async () => {

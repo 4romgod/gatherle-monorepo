@@ -129,6 +129,30 @@ describe('chatUiUtils', () => {
         }),
       ).toBe('Message');
     });
+
+    it('hides trailing event-share URLs from preview text', () => {
+      expect(
+        buildConversationPreview({
+          lastMessage: {
+            senderUserId: 'them',
+            message: 'Streetcar Platform: Transit Stories\nhttp://localhost:3000/events/streetcar-platform',
+          },
+          currentUserId: 'me',
+        }),
+      ).toBe('Streetcar Platform: Transit Stories');
+    });
+
+    it('shows a generic label when the full message is only a URL', () => {
+      expect(
+        buildConversationPreview({
+          lastMessage: {
+            senderUserId: 'them',
+            message: 'https://example.com/path',
+          },
+          currentUserId: 'me',
+        }),
+      ).toBe('Shared a link');
+    });
   });
 
   describe('time formatting helpers', () => {

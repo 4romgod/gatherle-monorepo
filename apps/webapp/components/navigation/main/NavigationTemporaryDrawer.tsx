@@ -41,9 +41,9 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const { data: session } = useSession();
   const isAdmin = useIsAdmin();
 
-  // Get unread notification count for badge (polls every 5 minutes only when tab is visible)
-  const { unreadCount } = useUnreadNotificationCount(isAuthN ? 300000 : undefined);
-  const { unreadCount: unreadChatCount } = useUnreadChatCount(isAuthN ? 30000 : undefined);
+  // Unread badges are primarily websocket-driven; queries provide initial/fallback state.
+  const { unreadCount } = useUnreadNotificationCount();
+  const { unreadCount: unreadChatCount } = useUnreadChatCount();
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);

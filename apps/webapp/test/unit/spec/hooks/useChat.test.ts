@@ -20,18 +20,10 @@ jest.mock('@/lib/utils', () => ({
 const { useMutation: useMutationMock, useQuery: useQueryMock } = require('@apollo/client');
 const { getAuthHeader: getAuthHeaderMock } = require('@/lib/utils');
 
-const setDocumentHidden = (value: boolean) => {
-  Object.defineProperty(document, 'hidden', {
-    configurable: true,
-    get: () => value,
-  });
-};
-
 describe('useChat hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseSession.mockReturnValue({ data: { user: { token: 'token-1' } } });
-    setDocumentHidden(false);
   });
 
   it('useChatConversations skips query when token is missing', () => {
@@ -201,7 +193,7 @@ describe('useChat hooks', () => {
     expect(result.current.count).toBe(0);
   });
 
-  it('useUnreadChatCount uses pollInterval when visible', () => {
+  it('useUnreadChatCount reads unread count and does not poll', () => {
     useQueryMock.mockReturnValue({
       data: { unreadChatCount: 7 },
       loading: false,
@@ -209,34 +201,13 @@ describe('useChat hooks', () => {
       refetch: jest.fn(),
     });
 
-    const { result } = renderHook(() => useUnreadChatCount(5000));
+    const { result } = renderHook(() => useUnreadChatCount());
 
     expect(result.current.unreadCount).toBe(7);
     expect(useQueryMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         skip: false,
-        pollInterval: 5000,
-      }),
-    );
-  });
-
-  it('useUnreadChatCount skips polling when tab is hidden', () => {
-    setDocumentHidden(true);
-    useQueryMock.mockReturnValue({
-      data: { unreadChatCount: 0 },
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(),
-    });
-
-    renderHook(() => useUnreadChatCount(5000));
-
-    expect(useQueryMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        skip: true,
-        pollInterval: 0,
       }),
     );
   });
@@ -250,7 +221,7 @@ describe('useChat hooks', () => {
       refetch: jest.fn(),
     });
 
-    renderHook(() => useUnreadChatCount(3000));
+    renderHook(() => useUnreadChatCount());
 
     expect(useQueryMock).toHaveBeenCalledWith(
       expect.anything(),

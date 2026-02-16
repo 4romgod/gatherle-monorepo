@@ -40,6 +40,7 @@ export default function UpcomingRsvpsSection() {
         <Stack gap={{ xs: 1.5, md: 2 }}>
           <Carousel
             items={rsvpEvents}
+            itemKey={(event) => event.eventId}
             viewAllButton={{ href: ROUTES.EVENTS.ROOT }}
             renderItem={(event) => <EventBoxSm event={event} />}
           />

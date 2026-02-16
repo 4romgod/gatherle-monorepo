@@ -3,10 +3,12 @@ import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
   Event,
+  User,
 } from '@ntlango/commons/types';
 import { ParticipantStatus, NotificationType, NotificationTargetType } from '@ntlango/commons/types';
-import { EventParticipantDAO, EventDAO } from '@/mongodb/dao';
+import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
+import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
 import NotificationService from './notification';
 
 /**
@@ -30,10 +32,68 @@ function getEventOrganizerIds(event: Event): string[] {
   return event.organizers.map((org) => extractUserId(org.user)).filter((id): id is string => id !== null);
 }
 
+function toIsoDateString(value?: Date | string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return new Date(value).toISOString();
+}
+
 /**
  * Service for managing event participation with notification integration
  */
 class EventParticipantService {
+  private static toEventRsvpRealtimeSnapshot(
+    participant: EventParticipant,
+    user: Pick<User, 'userId' | 'username' | 'given_name' | 'family_name' | 'profile_picture'>,
+  ): EventRsvpRealtimeSnapshot {
+    return {
+      participantId: participant.participantId,
+      eventId: participant.eventId,
+      userId: participant.userId,
+      status: participant.status,
+      quantity: participant.quantity ?? null,
+      sharedVisibility: participant.sharedVisibility ?? null,
+      rsvpAt: toIsoDateString(participant.rsvpAt),
+      cancelledAt: toIsoDateString(participant.cancelledAt),
+      checkedInAt: toIsoDateString(participant.checkedInAt),
+      user: {
+        userId: user.userId,
+        username: user.username,
+        given_name: user.given_name,
+        family_name: user.family_name,
+        profile_picture: user.profile_picture ?? null,
+      },
+    };
+  }
+
+  private static async publishRsvpUpdatedRealtime(
+    participant: EventParticipant,
+    previousStatus: ParticipantStatus | null,
+  ): Promise<void> {
+    const [event, actor, participants, rsvpCount] = await Promise.all([
+      EventDAO.readEventById(participant.eventId),
+      UserDAO.readUserById(participant.userId),
+      EventParticipantDAO.readByEvent(participant.eventId),
+      EventParticipantDAO.countByEvent(participant.eventId, [ParticipantStatus.Going, ParticipantStatus.Interested]),
+    ]);
+
+    const organizerIds = getEventOrganizerIds(event);
+    const participantUserIds = participants.map((eventParticipant) => eventParticipant.userId);
+    const recipientUserIds = [...new Set([...organizerIds, ...participantUserIds, participant.userId])];
+
+    if (recipientUserIds.length === 0) {
+      return;
+    }
+
+    await publishEventRsvpUpdated(recipientUserIds, {
+      participant: this.toEventRsvpRealtimeSnapshot(participant, actor),
+      previousStatus,
+      rsvpCount,
+    });
+  }
+
   /**
    * RSVP to an event (create or update participation)
    * Sends EVENT_RSVP notification to event owner when user RSVPs as Going
@@ -51,6 +111,15 @@ class EventParticipantService {
 
     const participant = await EventParticipantDAO.upsert(input);
 
+    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
+      logger.warn('Failed to publish RSVP realtime update', {
+        error,
+        eventId,
+        userId,
+        status: participant.status,
+      });
+    });
+
     // Send notification if this is a new RSVP or user changed to Going status
     if ((isNewRsvp || wasNotGoing) && (status === ParticipantStatus.Going || status === ParticipantStatus.Interested)) {
       this.sendRsvpNotification(eventId, userId, status).catch((err) => {
@@ -66,7 +135,18 @@ class EventParticipantService {
    * No notification sent for cancellations (by design - avoid negative notifications)
    */
   static async cancel(input: CancelEventParticipantInput): Promise<EventParticipant> {
-    return EventParticipantDAO.cancel(input);
+    const existingParticipant = await EventParticipantDAO.readByEventAndUser(input.eventId, input.userId);
+    const participant = await EventParticipantDAO.cancel(input);
+
+    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
+      logger.warn('Failed to publish RSVP cancellation realtime update', {
+        error,
+        eventId: input.eventId,
+        userId: input.userId,
+      });
+    });
+
+    return participant;
   }
 
   /**
@@ -74,10 +154,19 @@ class EventParticipantService {
    * Sends EVENT_CHECKIN notification to event owner
    */
   static async checkIn(eventId: string, userId: string): Promise<EventParticipant> {
+    const existingParticipant = await EventParticipantDAO.readByEventAndUser(eventId, userId);
     const participant = await EventParticipantDAO.upsert({
       eventId,
       userId,
       status: ParticipantStatus.CheckedIn,
+    });
+
+    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
+      logger.warn('Failed to publish RSVP check-in realtime update', {
+        error,
+        eventId,
+        userId,
+      });
     });
 
     // Send check-in notification to event owner

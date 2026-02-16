@@ -9,7 +9,6 @@ import { useChatRealtime } from '@/hooks/useChatRealtime';
 const REFETCH_DEBOUNCE_MS = 250;
 
 type PendingRefetchState = {
-  shouldRefetchUnreadCount: boolean;
   shouldRefetchConversations: boolean;
   shouldRefetchMessages: boolean;
 };
@@ -20,26 +19,13 @@ export default function ChatRealtimeListener() {
   const currentUserId = session?.user?.userId;
 
   const pendingRefetchStateRef = useRef<PendingRefetchState>({
-    shouldRefetchUnreadCount: false,
     shouldRefetchConversations: false,
     shouldRefetchMessages: false,
   });
   const refetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleRefetch = useCallback(
-    ({
-      unreadCount,
-      conversations,
-      messages,
-    }: {
-      unreadCount?: boolean;
-      conversations?: boolean;
-      messages?: boolean;
-    }) => {
-      if (unreadCount) {
-        pendingRefetchStateRef.current.shouldRefetchUnreadCount = true;
-      }
-
+    ({ conversations, messages }: { conversations?: boolean; messages?: boolean }) => {
       if (conversations) {
         pendingRefetchStateRef.current.shouldRefetchConversations = true;
       }
@@ -56,10 +42,6 @@ export default function ChatRealtimeListener() {
         const include: string[] = [];
         const pendingState = pendingRefetchStateRef.current;
 
-        if (pendingState.shouldRefetchUnreadCount) {
-          include.push('GetUnreadChatCount');
-        }
-
         if (pendingState.shouldRefetchConversations) {
           include.push('ReadChatConversations');
         }
@@ -69,7 +51,6 @@ export default function ChatRealtimeListener() {
         }
 
         pendingRefetchStateRef.current = {
-          shouldRefetchUnreadCount: false,
           shouldRefetchConversations: false,
           shouldRefetchMessages: false,
         };
@@ -96,18 +77,14 @@ export default function ChatRealtimeListener() {
 
   useChatRealtime({
     enabled: Boolean(currentUserId),
-    onChatMessage: (payload) => {
-      const unreadCountAffected = payload.recipientUserId === currentUserId;
-
+    onChatMessage: () => {
       scheduleRefetch({
-        unreadCount: unreadCountAffected,
         conversations: true,
         messages: true,
       });
     },
     onChatRead: () => {
       scheduleRefetch({
-        unreadCount: true,
         conversations: true,
         messages: true,
       });

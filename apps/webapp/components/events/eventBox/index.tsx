@@ -2,16 +2,17 @@
 
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
-import { Avatar, AvatarGroup, IconButton, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
+import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
 import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import { ShareRounded, PeopleOutline } from '@mui/icons-material';
+import { PeopleOutline } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { useState, useEffect } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
+import EventShareButton from '@/components/events/EventShareButton';
 
 export default function EventBox({ event }: { event: EventPreview }) {
   const theme = useTheme();
@@ -32,9 +33,12 @@ export default function EventBox({ event }: { event: EventPreview }) {
 
   const recurrenceText = RRule.fromString(recurrenceRule).toText();
   const imageUrl = media?.featuredImageUrl ?? null;
-  const participantCount = participants?.length ?? 0;
   const participantList = (participants ?? []) as EventParticipantPreview[];
-  const visibleParticipants = participantList.slice(0, 3);
+  const activeParticipants = participantList.filter(
+    (participant) => participant.status !== ParticipantStatus.Cancelled,
+  );
+  const participantCount = activeParticipants.length;
+  const visibleParticipants = activeParticipants.slice(0, 3);
 
   const getParticipantLabel = (participant: EventParticipantPreview) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
@@ -250,27 +254,16 @@ export default function EventBox({ event }: { event: EventPreview }) {
               showTooltip
               onSaveChange={setIsSaved}
             />
-            <IconButton
+            <EventShareButton
+              eventTitle={title}
+              eventSlug={event.slug}
+              stopPropagation
               size="small"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              aria-label={`Share ${title}`}
               sx={{
                 width: 28,
                 height: 28,
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': {
-                  borderColor: 'secondary.main',
-                  color: 'secondary.main',
-                  backgroundColor: 'secondary.lighter',
-                },
               }}
-            >
-              <ShareRounded sx={{ fontSize: 16 }} />
-            </IconButton>
+            />
           </Stack>
         </Box>
       </Box>

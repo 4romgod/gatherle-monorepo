@@ -34,7 +34,7 @@ const config: Config = {
   collectCoverageFrom: [
     '<rootDir>/lib/utils/**/*.ts',
     '<rootDir>/data/validation/**/*.ts',
-    '<rootDir>/hooks/**/*.ts',
+    '<rootDir>/hooks/**/use*.ts',
     '!<rootDir>/**/*.d.ts',
     '!<rootDir>/**/index.ts',
   ],

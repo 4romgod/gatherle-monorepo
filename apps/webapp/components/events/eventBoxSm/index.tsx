@@ -7,8 +7,8 @@ import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Even
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import Link from 'next/link';
-import { SaveEventButton, RsvpButton } from '@/components/events';
-import { useState, useEffect } from 'react';
+import { SaveEventButton, EventShareButton, RsvpButton } from '@/components/events';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
 
@@ -43,9 +43,12 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
 
   const cityLabel = location?.address?.city || 'Featured';
   const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
-  const participantCount = participants?.length ?? 0;
   const participantList = (participants ?? []) as EventParticipantPreview[];
-  const visibleParticipants = participantList.slice(0, 3);
+  const activeParticipants = participantList.filter(
+    (participant) => participant.status !== ParticipantStatus.Cancelled,
+  );
+  const participantCount = activeParticipants.length;
+  const visibleParticipants = activeParticipants.slice(0, 3);
   const getParticipantLabel = (participant: EventParticipantPreview) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
@@ -58,8 +61,18 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
     participant.userId?.charAt(0) ??
     '?';
 
+  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    const target = event.target as HTMLElement;
+    const isInteractive = target.closest('button, [role="button"], [role="menuitem"], [data-card-interactive="true"]');
+
+    if (isInteractive) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
   return (
-    <Link href={href || `/events/${event.slug}`}>
+    <Link href={href || `/events/${event.slug}`} onClick={handleLinkClick}>
       <Surface
         component={Card}
         sx={(theme) => ({
@@ -155,10 +168,14 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <CheckBoxRounded fontSize="inherit" sx={{ color: 'text.secondary', mr: 0.75, fontSize: '0.78rem' }} />
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.78rem' }}>
-              {participantCount} RSVP&lsquo;s
-            </Typography>
+            {participantCount > 0 && (
+              <>
+                <CheckBoxRounded fontSize="inherit" sx={{ color: 'text.secondary', mr: 0.75, fontSize: '0.78rem' }} />
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.78rem' }}>
+                  {participantCount} going
+                </Typography>
+              </>
+            )}
             <AvatarGroup
               max={3}
               sx={{
@@ -188,6 +205,16 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
               size="small"
               showTooltip
               onSaveChange={setIsSaved}
+            />
+            <EventShareButton
+              eventTitle={event.title}
+              eventSlug={event.slug}
+              stopPropagation
+              size="small"
+              sx={{
+                width: 28,
+                height: 28,
+              }}
             />
           </Stack>
         </CardContent>

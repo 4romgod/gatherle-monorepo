@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { Stack } from '@mui/material';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
-import CopyLinkButton from '@/components/events/CopyLinkButton';
 import Surface from '@/components/core/Surface';
+import EventShareButton from '@/components/events/EventShareButton';
 
 interface EventDetailActionsProps {
   eventId: string;
+  eventTitle: string;
+  eventSlug: string;
   eventUrl: string;
   isSavedByMe: boolean;
   myRsvpStatus: ParticipantStatus | null;
@@ -18,7 +20,14 @@ interface EventDetailActionsProps {
  * Client component for event detail page actions (Save, RSVP, Share).
  * Manages local state to reflect immediate UI updates after mutations.
  */
-export default function EventDetailActions({ eventId, eventUrl, isSavedByMe, myRsvpStatus }: EventDetailActionsProps) {
+export default function EventDetailActions({
+  eventId,
+  eventTitle,
+  eventSlug,
+  eventUrl,
+  isSavedByMe,
+  myRsvpStatus,
+}: EventDetailActionsProps) {
   // Local state for immediate UI feedback
   const [isSaved, setIsSaved] = useState(isSavedByMe);
   const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(myRsvpStatus);
@@ -54,7 +63,7 @@ export default function EventDetailActions({ eventId, eventUrl, isSavedByMe, myR
           showTooltip={false}
           onSaveChange={setIsSaved}
         />
-        <CopyLinkButton url={eventUrl} />
+        <EventShareButton eventTitle={eventTitle} eventSlug={eventSlug} eventUrl={eventUrl} size="large" />
       </Stack>
     </Surface>
   );

@@ -96,9 +96,15 @@ jest.mock('@/utils/logger', () => ({
   },
 }));
 
+jest.mock('@/websocket/publisher', () => ({
+  publishFollowRequestCreated: jest.fn().mockResolvedValue(undefined),
+  publishFollowRequestUpdated: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { FollowService } from '@/services';
 import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
+import { publishFollowRequestCreated, publishFollowRequestUpdated } from '@/websocket/publisher';
 import { CustomError, ErrorTypes } from '@/utils';
 import type { Follow, User, Organization, Event } from '@ntlango/commons/types';
 import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@ntlango/commons/types';
@@ -142,6 +148,11 @@ describe('FollowService', () => {
   const mockFollowerUser: Partial<User> = {
     userId: 'user-1',
     username: 'janedoe',
+    email: 'janedoe@example.com',
+    given_name: 'Jane',
+    family_name: 'Doe',
+    profile_picture: undefined,
+    bio: undefined,
     blockedUserIds: [],
   };
 
@@ -250,6 +261,16 @@ describe('FollowService', () => {
             actorUserId: 'user-1',
           }),
         );
+
+        expect(publishFollowRequestCreated).toHaveBeenCalledWith(
+          'user-2',
+          expect.objectContaining({
+            followId: pendingFollow.followId,
+            followerUserId: 'user-1',
+            targetId: 'user-2',
+            approvalStatus: FollowApprovalStatus.Pending,
+          }),
+        );
       });
 
       it('throws error when target user has blocked follower', async () => {
@@ -321,6 +342,7 @@ describe('FollowService', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(NotificationService.notify).not.toHaveBeenCalled();
+        expect(publishFollowRequestCreated).not.toHaveBeenCalled();
       });
     });
 
@@ -360,6 +382,7 @@ describe('FollowService', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(NotificationService.notify).not.toHaveBeenCalled();
+        expect(publishFollowRequestCreated).not.toHaveBeenCalled();
       });
     });
   });
@@ -387,6 +410,7 @@ describe('FollowService', () => {
     it('updates approval status and sends notification', async () => {
       const acceptedFollow = { ...mockFollow, approvalStatus: FollowApprovalStatus.Accepted };
       (FollowDAO.updateApprovalStatus as jest.Mock).mockResolvedValue(acceptedFollow);
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockFollowerUser);
 
       const result = await FollowService.acceptFollowRequest('follow-1', 'user-2');
 
@@ -403,6 +427,21 @@ describe('FollowService', () => {
           actorUserId: 'user-2', // The target who accepted
         }),
       );
+
+      expect(publishFollowRequestUpdated).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({
+          followId: 'follow-1',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        }),
+      );
+      expect(publishFollowRequestUpdated).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          followId: 'follow-1',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        }),
+      );
     });
   });
 
@@ -410,6 +449,7 @@ describe('FollowService', () => {
     it('updates approval status and does NOT send notification', async () => {
       const rejectedFollow = { ...mockFollow, approvalStatus: FollowApprovalStatus.Rejected };
       (FollowDAO.updateApprovalStatus as jest.Mock).mockResolvedValue(rejectedFollow);
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockFollowerUser);
 
       const result = await FollowService.rejectFollowRequest('follow-1', 'user-2');
 
@@ -420,6 +460,20 @@ describe('FollowService', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(NotificationService.notify).not.toHaveBeenCalled();
+      expect(publishFollowRequestUpdated).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({
+          followId: 'follow-1',
+          approvalStatus: FollowApprovalStatus.Rejected,
+        }),
+      );
+      expect(publishFollowRequestUpdated).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          followId: 'follow-1',
+          approvalStatus: FollowApprovalStatus.Rejected,
+        }),
+      );
     });
   });
 

@@ -21,7 +21,6 @@ import {
 import {
   CalendarMonth,
   LocationOn,
-  Share,
   ConfirmationNumber,
   Groups,
   Language,
@@ -37,7 +36,6 @@ import {
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
-import CopyLinkButton from '@/components/events/CopyLinkButton';
 import EventDetailActions from '@/components/events/EventDetailActions';
 import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
 import EventLocationMap from '@/components/events/EventLocationMap';
@@ -311,6 +309,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </Typography>
                 <EventDetailActions
                   eventId={eventId}
+                  eventTitle={title}
+                  eventSlug={slug}
                   eventUrl={eventUrl}
                   isSavedByMe={isSavedByMe ?? false}
                   myRsvpStatus={myRsvp?.status ?? null}
@@ -509,60 +509,63 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                       </Stack>
                     </Box>
 
-                    <Divider />
-
-                    <Box>
-                      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                        <Groups sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant="overline"
-                            color="text.secondary"
-                            fontWeight={600}
-                            sx={{ letterSpacing: 1 }}
-                          >
-                            Attendance
-                          </Typography>
-                          <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                            {goingCount > 0 && (
-                              <Stack direction="row" justifyContent="space-between">
-                                <Typography variant="body2" color="text.secondary">
-                                  Going
-                                </Typography>
-                                <Typography variant="body2" fontWeight={700} color="primary.main">
-                                  {goingCount}
-                                </Typography>
-                              </Stack>
-                            )}
-                            {interestedCount > 0 && (
-                              <Stack direction="row" justifyContent="space-between">
-                                <Typography variant="body2" color="text.secondary">
-                                  Interested
-                                </Typography>
-                                <Typography variant="body2" fontWeight={700} color="info.main">
-                                  {interestedCount}
-                                </Typography>
-                              </Stack>
-                            )}
-                            {waitlistedCount > 0 && (
-                              <Stack direction="row" justifyContent="space-between">
-                                <Typography variant="body2" color="text.secondary">
-                                  Waitlisted
-                                </Typography>
-                                <Typography variant="body2" fontWeight={700} color="warning.main">
-                                  {waitlistedCount}
-                                </Typography>
-                              </Stack>
-                            )}
-                            {participantList.length === 0 && (
-                              <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                                No RSVPs yet
+                    {goingCount > 0 && (
+                      <>
+                        <Divider />
+                        <Box>
+                          <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                            <Groups sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
+                            <Box sx={{ flex: 1 }}>
+                              <Typography
+                                variant="overline"
+                                color="text.secondary"
+                                fontWeight={600}
+                                sx={{ letterSpacing: 1 }}
+                              >
+                                Attendance
                               </Typography>
-                            )}
+                              <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                                {goingCount > 0 && (
+                                  <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">
+                                      Going
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} color="primary.main">
+                                      {goingCount}
+                                    </Typography>
+                                  </Stack>
+                                )}
+                                {interestedCount > 0 && (
+                                  <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">
+                                      Interested
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} color="info.main">
+                                      {interestedCount}
+                                    </Typography>
+                                  </Stack>
+                                )}
+                                {waitlistedCount > 0 && (
+                                  <Stack direction="row" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">
+                                      Waitlisted
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} color="warning.main">
+                                      {waitlistedCount}
+                                    </Typography>
+                                  </Stack>
+                                )}
+                                {participantList.length === 0 && (
+                                  <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                                    No RSVPs yet
+                                  </Typography>
+                                )}
+                              </Stack>
+                            </Box>
                           </Stack>
                         </Box>
-                      </Stack>
-                    </Box>
+                      </>
+                    )}
                   </Stack>
                 </CardContent>
               </Card>
@@ -588,19 +591,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   </CardContent>
                 </Card>
               )}
-
-              <Card
-                elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}
-              >
-                <CardContent sx={{ p: contentPadding, textAlign: 'center' }}>
-                  <Share sx={{ fontSize: 32, color: 'text.secondary', mb: 1 }} />
-                  <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>
-                    Share this event with friends
-                  </Typography>
-                  <CopyLinkButton url={eventUrl} />
-                </CardContent>
-              </Card>
             </Box>
           </Grid>
         </Grid>

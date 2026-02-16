@@ -19,8 +19,9 @@ test.describe('Login Page', () => {
 
   test('navigates to /auth/forgot-password from login page', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.getByRole('link', { name: 'Forgot password?' }).click();
-    await expect(page).toHaveURL(/\/auth\/forgot-password$/);
+    const forgotPasswordLink = page.getByRole('link', { name: 'Forgot password?' });
+    await expect(forgotPasswordLink).toBeVisible();
+    await Promise.all([page.waitForURL(/\/auth\/forgot-password\/?$/, { timeout: 20_000 }), forgotPasswordLink.click()]);
     await expect(page.getByRole('heading', { level: 1, name: 'Reset your password' })).toBeVisible();
   });
 
@@ -34,8 +35,9 @@ test.describe('Login Page', () => {
 
   test('navigates to /auth/register from login page', async ({ page }) => {
     await page.goto('/auth/login');
-    await page.locator('a[href="/auth/register"]').first().click();
-    await expect(page).toHaveURL(/\/auth\/register$/);
+    const registerLink = page.getByRole('link', { name: 'Sign Up', exact: true });
+    await expect(registerLink).toBeVisible();
+    await Promise.all([page.waitForURL(/\/auth\/register\/?$/, { timeout: 20_000 }), registerLink.click()]);
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
   });
 });

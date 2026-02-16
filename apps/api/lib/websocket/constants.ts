@@ -22,5 +22,8 @@ export const WEBSOCKET_EVENT_TYPES = {
   CHAT_MESSAGE: 'chat.message',
   CHAT_READ: 'chat.read',
   CHAT_CONVERSATION_UPDATED: 'chat.conversation.updated',
+  EVENT_RSVP_UPDATED: 'event.rsvp.updated',
+  FOLLOW_REQUEST_CREATED: 'follow.request.created',
+  FOLLOW_REQUEST_UPDATED: 'follow.request.updated',
   PING_PONG: 'ping.pong',
 } as const;

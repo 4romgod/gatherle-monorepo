@@ -107,6 +107,8 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
  * @returns A JWT token as a string
  */
 export const generateToken = async (user: User, secret?: string, expiresIn?: string | number) => {
+  // TODO(security): Implement JWT-claims hardening in the next patch by signing only minimal auth claims
+  // (for example userId, email, username, userRole, isTestUser) instead of the full user object.
   logger.debug('Generating JWT token', { userId: user.userId, username: user.username, expiresIn });
   const jwtSecret: Secret | undefined = secret ?? (await getConfigValue(SECRET_KEYS.JWT_SECRET));
   if (!jwtSecret) {

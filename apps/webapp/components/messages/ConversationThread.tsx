@@ -18,12 +18,15 @@ import {
   ListItemButton,
   ListItemText,
   Paper,
+  Popover,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { ArrowBack, Search, Send } from '@mui/icons-material';
+import { ArrowBack, Search, Send, SentimentSatisfiedAlt } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { GetUserByUsernameDocument } from '@/data/graphql/types/graphql';
 import {
@@ -44,6 +47,12 @@ import {
   isSameCalendarDay,
   resolveChatIdentity,
 } from '@/components/messages/chatUiUtils';
+import {
+  CHAT_EMOJI_CATEGORIES,
+  CHAT_EMOJI_OPTIONS,
+  type ChatEmojiCategoryKey,
+  type ChatEmojiOption,
+} from '@/components/messages/chatEmojiPickerData';
 
 const CHAT_MESSAGES_LIMIT = 100;
 const CHAT_CONVERSATIONS_LIMIT = 100;
@@ -51,6 +60,8 @@ const DESKTOP_PANEL_HEIGHT = 'calc(100vh - 220px)';
 const LAST_OPEN_CHAT_USERNAME_KEY = 'ntlango:last-open-chat-username';
 const MESSAGE_GROUP_WINDOW_MINUTES = 10;
 const STICKY_BOTTOM_THRESHOLD_PX = 96;
+const CHAT_EMOJI_RECENTS_KEY = 'ntlango:chat-emoji-recents';
+const CHAT_EMOJI_RECENTS_LIMIT = 18;
 
 type ThreadRenderItem =
   | {
@@ -92,12 +103,19 @@ export default function ConversationThread({ username }: ConversationThreadProps
   const [sendError, setSendError] = useState<string | null>(null);
   const [conversationSearch, setConversationSearch] = useState('');
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [emojiAnchorEl, setEmojiAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [emojiSearch, setEmojiSearch] = useState('');
+  const [emojiCategory, setEmojiCategory] = useState<ChatEmojiCategoryKey>('smileys');
+  const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
 
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messagesBottomRef = useRef<HTMLDivElement | null>(null);
+  const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const draftSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   const shouldStickToBottomRef = useRef(true);
   const markReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const markConversationReadRef = useRef<((withUserId: string) => Promise<void>) | null>(null);
+  const isEmojiPickerOpen = Boolean(emojiAnchorEl);
 
   const {
     data: targetUserData,
@@ -250,6 +268,31 @@ export default function ConversationThread({ username }: ConversationThreadProps
     }
   }, [username]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const storedValue = window.localStorage.getItem(CHAT_EMOJI_RECENTS_KEY);
+      if (!storedValue) {
+        return;
+      }
+
+      const parsed = JSON.parse(storedValue);
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+
+      const sanitized = parsed
+        .filter((item): item is string => typeof item === 'string')
+        .slice(0, CHAT_EMOJI_RECENTS_LIMIT);
+      setRecentEmojis(sanitized);
+    } catch {
+      setRecentEmojis([]);
+    }
+  }, []);
+
   const conversationItems = useMemo(() => {
     const sortedConversations = [...conversations].sort(
       (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
@@ -298,6 +341,41 @@ export default function ConversationThread({ username }: ConversationThreadProps
       return searchable.includes(normalizedSearch);
     });
   }, [conversationItems, conversationSearch]);
+
+  const emojiOptionsByCategory = useMemo(() => {
+    const query = emojiSearch.trim().toLowerCase();
+    const optionsMap = new Map<ChatEmojiCategoryKey, ChatEmojiOption[]>();
+
+    CHAT_EMOJI_CATEGORIES.forEach((category) => {
+      if (!query) {
+        optionsMap.set(category.key, category.emojis);
+        return;
+      }
+
+      const filtered = category.emojis.filter((option) => {
+        const normalizedLabel = option.label.toLowerCase();
+        const keywordMatch = option.keywords.some((keyword) => keyword.toLowerCase().includes(query));
+        return normalizedLabel.includes(query) || keywordMatch;
+      });
+
+      optionsMap.set(category.key, filtered);
+    });
+
+    return optionsMap;
+  }, [emojiSearch]);
+
+  const selectedEmojiOptions = emojiOptionsByCategory.get(emojiCategory) ?? [];
+
+  const recentEmojiOptions = useMemo(() => {
+    if (recentEmojis.length === 0) {
+      return [];
+    }
+
+    const optionByEmoji = new Map(CHAT_EMOJI_OPTIONS.map((option) => [option.emoji, option]));
+    return recentEmojis
+      .map((emoji) => optionByEmoji.get(emoji))
+      .filter((option): option is ChatEmojiOption => Boolean(option));
+  }, [recentEmojis]);
 
   const renderedMessages = useMemo(() => {
     return [...messages].sort(
@@ -417,7 +495,93 @@ export default function ConversationThread({ username }: ConversationThreadProps
 
     setSendError(null);
     setDraftMessage('');
+    draftSelectionRef.current = { start: 0, end: 0 };
   }, [draftMessage, sendChatMessage, targetUserId]);
+
+  const rememberEmoji = useCallback((emoji: string) => {
+    setRecentEmojis((previous) => {
+      const next = [emoji, ...previous.filter((item) => item !== emoji)].slice(0, CHAT_EMOJI_RECENTS_LIMIT);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CHAT_EMOJI_RECENTS_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const captureDraftSelection = useCallback(() => {
+    const input = draftInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    const selectionStart = input.selectionStart ?? draftSelectionRef.current.start;
+    const selectionEnd = input.selectionEnd ?? draftSelectionRef.current.end;
+    draftSelectionRef.current = { start: selectionStart, end: selectionEnd };
+  }, []);
+
+  const insertEmojiAtCursor = useCallback(
+    (emoji: string) => {
+      const input = draftInputRef.current;
+      const liveStart = input?.selectionStart;
+      const liveEnd = input?.selectionEnd;
+      let nextCursorPosition = 0;
+
+      setDraftMessage((currentValue) => {
+        const fallbackIndex = currentValue.length;
+        const start = Math.min(liveStart ?? draftSelectionRef.current.start ?? fallbackIndex, currentValue.length);
+        const end = Math.min(liveEnd ?? draftSelectionRef.current.end ?? start, currentValue.length);
+        const updatedValue = `${currentValue.slice(0, start)}${emoji}${currentValue.slice(end)}`;
+        nextCursorPosition = start + emoji.length;
+        return updatedValue;
+      });
+
+      rememberEmoji(emoji);
+      setSendError(null);
+
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          const nextInput = draftInputRef.current;
+          if (!nextInput) {
+            return;
+          }
+
+          nextInput.focus();
+          nextInput.setSelectionRange(nextCursorPosition, nextCursorPosition);
+          draftSelectionRef.current = { start: nextCursorPosition, end: nextCursorPosition };
+        });
+      }
+    },
+    [rememberEmoji],
+  );
+
+  const closeEmojiPicker = useCallback(() => {
+    setEmojiAnchorEl(null);
+    setEmojiSearch('');
+  }, []);
+
+  const openEmojiPicker = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      captureDraftSelection();
+      setEmojiAnchorEl(event.currentTarget);
+    },
+    [captureDraftSelection],
+  );
+
+  useEffect(() => {
+    if ((emojiOptionsByCategory.get(emojiCategory)?.length ?? 0) > 0) {
+      return;
+    }
+
+    const fallbackCategory =
+      CHAT_EMOJI_CATEGORIES.find((category) => (emojiOptionsByCategory.get(category.key)?.length ?? 0) > 0)?.key ??
+      'smileys';
+    setEmojiCategory(fallbackCategory);
+  }, [emojiCategory, emojiOptionsByCategory]);
+
+  useEffect(() => {
+    setEmojiAnchorEl(null);
+    setEmojiSearch('');
+  }, [targetUserId]);
 
   const threadPane = (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, p: 2 }}>
@@ -597,6 +761,24 @@ export default function ConversationThread({ username }: ConversationThreadProps
               },
             }}
           >
+            <IconButton
+              aria-label={isEmojiPickerOpen ? 'Close emoji picker' : 'Open emoji picker'}
+              onClick={(event) => {
+                if (isEmojiPickerOpen) {
+                  closeEmojiPicker();
+                  return;
+                }
+                openEmojiPicker(event);
+              }}
+              sx={{
+                width: 38,
+                height: 38,
+                mt: 0.5,
+                color: 'text.secondary',
+              }}
+            >
+              <SentimentSatisfiedAlt />
+            </IconButton>
             <TextField
               fullWidth
               multiline
@@ -604,7 +786,19 @@ export default function ConversationThread({ username }: ConversationThreadProps
               maxRows={4}
               variant="standard"
               value={draftMessage}
-              onChange={(event) => setDraftMessage(event.target.value)}
+              inputRef={draftInputRef}
+              onChange={(event) => {
+                const { value, selectionStart, selectionEnd } = event.target;
+                setDraftMessage(value);
+                draftSelectionRef.current = {
+                  start: selectionStart ?? value.length,
+                  end: selectionEnd ?? value.length,
+                };
+              }}
+              onClick={captureDraftSelection}
+              onSelect={captureDraftSelection}
+              onKeyUp={captureDraftSelection}
+              onFocus={captureDraftSelection}
               placeholder="Type your message..."
               slotProps={{
                 input: {
@@ -658,6 +852,172 @@ export default function ConversationThread({ username }: ConversationThreadProps
               <Send />
             </IconButton>
           </Box>
+          <Popover
+            open={isEmojiPickerOpen}
+            anchorEl={emojiAnchorEl}
+            onClose={closeEmojiPicker}
+            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            slotProps={{
+              paper: {
+                sx: {
+                  width: 336,
+                  mt: -1,
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: (muiTheme) =>
+                    muiTheme.palette.mode === 'light'
+                      ? alpha(muiTheme.palette.common.black, 0.16)
+                      : alpha(muiTheme.palette.common.white, 0.18),
+                  backgroundColor: (muiTheme) =>
+                    muiTheme.palette.mode === 'light' ? '#1f2127' : muiTheme.palette.background.paper,
+                  color: 'common.white',
+                  boxShadow: '0 18px 40px rgba(0, 0, 0, 0.35)',
+                },
+              },
+            }}
+          >
+            <Box sx={{ p: 1.25 }}>
+              <TextField
+                fullWidth
+                size="small"
+                value={emojiSearch}
+                onChange={(event) => setEmojiSearch(event.target.value)}
+                placeholder="Search emoji"
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search fontSize="small" sx={{ color: alpha(theme.palette.common.white, 0.68) }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{
+                  mb: 1,
+                  '& .MuiInputBase-root': {
+                    borderRadius: 2.5,
+                    backgroundColor: alpha(theme.palette.common.white, 0.08),
+                    color: 'common.white',
+                  },
+                  '& .MuiInputBase-input::placeholder': {
+                    color: alpha(theme.palette.common.white, 0.72),
+                    opacity: 1,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: alpha(theme.palette.common.white, 0.12),
+                  },
+                }}
+              />
+
+              {!emojiSearch.trim() && recentEmojiOptions.length > 0 && (
+                <Box sx={{ mb: 1 }}>
+                  <Typography variant="caption" sx={{ color: alpha(theme.palette.common.white, 0.7), px: 0.5 }}>
+                    Recently used
+                  </Typography>
+                  <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {recentEmojiOptions.map((option) => (
+                      <IconButton
+                        key={`recent-${option.emoji}`}
+                        size="small"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => insertEmojiAtCursor(option.emoji)}
+                        aria-label={`Insert ${option.label}`}
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 2,
+                          color: 'common.white',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.common.white, 0.12),
+                          },
+                        }}
+                      >
+                        <Box component="span" sx={{ fontSize: '1.2rem', lineHeight: 1 }}>
+                          {option.emoji}
+                        </Box>
+                      </IconButton>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              <Tabs
+                value={emojiCategory}
+                onChange={(_, value: ChatEmojiCategoryKey) => setEmojiCategory(value)}
+                variant="scrollable"
+                scrollButtons={false}
+                sx={{
+                  minHeight: 36,
+                  borderTop: '1px solid',
+                  borderBottom: '1px solid',
+                  borderColor: alpha(theme.palette.common.white, 0.12),
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: alpha(theme.palette.common.white, 0.9),
+                  },
+                }}
+              >
+                {CHAT_EMOJI_CATEGORIES.map((category) => {
+                  const hasMatches = (emojiOptionsByCategory.get(category.key)?.length ?? 0) > 0;
+                  return (
+                    <Tab
+                      key={category.key}
+                      value={category.key}
+                      disabled={emojiSearch.trim().length > 0 && !hasMatches}
+                      aria-label={category.label}
+                      icon={
+                        <Box component="span" sx={{ fontSize: '1.1rem', lineHeight: 1 }}>
+                          {category.tabEmoji}
+                        </Box>
+                      }
+                      sx={{
+                        minWidth: 48,
+                        minHeight: 36,
+                        color: alpha(theme.palette.common.white, 0.72),
+                        '&.Mui-selected': {
+                          color: theme.palette.common.white,
+                        },
+                      }}
+                    />
+                  );
+                })}
+              </Tabs>
+
+              <Box sx={{ pt: 1, maxHeight: 236, overflowY: 'auto', pr: 0.25 }}>
+                {selectedEmojiOptions.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: alpha(theme.palette.common.white, 0.72), px: 0.5, py: 1 }}>
+                    No emojis match your search.
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 0.35 }}>
+                    {selectedEmojiOptions.map((option) => (
+                      <IconButton
+                        key={`${emojiCategory}-${option.emoji}`}
+                        size="small"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => insertEmojiAtCursor(option.emoji)}
+                        aria-label={`Insert ${option.label}`}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 2,
+                          color: 'common.white',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.common.white, 0.12),
+                          },
+                        }}
+                      >
+                        <Box component="span" sx={{ fontSize: '1.25rem', lineHeight: 1 }}>
+                          {option.emoji}
+                        </Box>
+                      </IconButton>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </Popover>
           {sendError && (
             <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
               {sendError}

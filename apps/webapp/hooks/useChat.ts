@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
@@ -100,26 +100,21 @@ export function useChatMessages(options: UseChatMessagesOptions = {}) {
   };
 }
 
-export function useUnreadChatCount(pollInterval?: number) {
+/**
+ * Hook that exposes the current unread chat message count for the authenticated user.
+ *
+ * The unread count is kept in sync via WebSocket-driven updates elsewhere in the app,
+ * with this hook using a GraphQL query as a fallback/source of truth when needed.
+ *
+ * @returns An object containing the unread count, loading state, any error, and a refetch function.
+ */
+export function useUnreadChatCount() {
   const { data: session } = useSession();
   const token = session?.user?.token;
-  const [isVisible, setIsVisible] = useState(() => typeof document !== 'undefined' && !document.hidden);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsVisible(!document.hidden);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
 
   const { data, loading, error, refetch } = useQuery(GetUnreadChatCountDocument, {
-    skip: !token || !isVisible,
+    skip: !token,
     fetchPolicy: 'cache-and-network',
-    pollInterval: pollInterval && isVisible ? pollInterval : 0,
     context: {
       headers: getAuthHeader(token),
     },

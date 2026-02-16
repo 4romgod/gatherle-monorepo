@@ -21,9 +21,14 @@ jest.mock('next-auth/react', () => ({
 jest.mock('@apollo/client', () => ({
   useMutation: jest.fn(),
   useQuery: jest.fn(),
+  useApolloClient: jest.fn(),
 }));
 
-const { useMutation: useMutationMock, useQuery: useQueryMock } = require('@apollo/client');
+const {
+  useMutation: useMutationMock,
+  useQuery: useQueryMock,
+  useApolloClient: useApolloClientMock,
+} = require('@apollo/client');
 
 jest.mock('@/lib/utils', () => ({
   __esModule: true,
@@ -35,6 +40,11 @@ describe('useFollow and related hooks', () => {
     mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
     useMutationMock.mockReset();
     useQueryMock.mockReset();
+    useApolloClientMock.mockReturnValue({
+      cache: {
+        updateQuery: jest.fn(),
+      },
+    });
   });
 
   it('provides follow/unfollow actions', async () => {
@@ -95,6 +105,12 @@ describe('useFollow and related hooks', () => {
 
   it('handles follow requests actions', async () => {
     const refetch = jest.fn();
+    const updateQuery = jest.fn();
+    useApolloClientMock.mockReturnValue({
+      cache: {
+        updateQuery,
+      },
+    });
     useQueryMock.mockReturnValue({
       data: { readFollowRequests: [{ followId: 'req-1' }] },
       loading: false,
@@ -120,6 +136,7 @@ describe('useFollow and related hooks', () => {
 
     expect(acceptMutation).toHaveBeenCalledWith({ variables: { followId: 'req-1' } });
     expect(rejectMutation).toHaveBeenCalledWith({ variables: { followId: 'req-1' } });
+    expect(updateQuery).toHaveBeenCalledTimes(2);
     expect(result.current.requests).toEqual([{ followId: 'req-1' }]);
   });
 

@@ -17,6 +17,7 @@ type LastMessageInput = {
 } | null;
 
 const trimAndCollapseWhitespace = (value: string): string => value.replace(/\s+/g, ' ').trim();
+const HTTP_URL_PATTERN = /^https?:\/\/\S+$/i;
 
 const safeDate = (value: string | Date): Date | null => {
   const parsed = value instanceof Date ? value : new Date(value);
@@ -83,8 +84,25 @@ export const buildConversationPreview = ({
     return 'No messages yet';
   }
 
-  const message = trimAndCollapseWhitespace(lastMessage.message);
-  const body = message.length > 0 ? message : 'Message';
+  const rawMessage = lastMessage.message.trim();
+  let body = 'Message';
+
+  if (rawMessage.length > 0) {
+    const lines = rawMessage
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length >= 2 && HTTP_URL_PATTERN.test(lines[lines.length - 1])) {
+      const withoutTrailingUrl = trimAndCollapseWhitespace(lines.slice(0, -1).join(' '));
+      body = withoutTrailingUrl || 'Shared a link';
+    } else if (HTTP_URL_PATTERN.test(rawMessage)) {
+      body = 'Shared a link';
+    } else {
+      body = trimAndCollapseWhitespace(rawMessage);
+    }
+  }
+
   const prefix = currentUserId && lastMessage.senderUserId === currentUserId ? 'You: ' : '';
   return truncate(`${prefix}${body}`, maxLength);
 };
