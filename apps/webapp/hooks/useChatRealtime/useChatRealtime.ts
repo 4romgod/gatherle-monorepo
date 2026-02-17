@@ -5,18 +5,24 @@ import { useSession } from 'next-auth/react';
 import { WEBSOCKET_URL } from '@/lib/constants';
 import { logger, normalizeWebSocketBaseUrl } from '@/lib/utils';
 import {
-  addChatRealtimeSubscriber,
-  getChatRealtimeConnectionState,
-  refreshSharedConnection,
-  removeChatRealtimeSubscriber,
-  sendSharedAction,
-  updateChatRealtimeSubscriber,
-  type ChatWebsocketSource,
-} from './chatRealtimeManager';
+  addSharedRealtimeSubscriber,
+  getSharedRealtimeConnectionState,
+  refreshSharedRealtimeConnection,
+  removeSharedRealtimeSubscriber,
+  sendSharedRealtimeAction,
+  updateSharedRealtimeSubscriber,
+  type RealtimeWebsocketSource,
+} from '@/lib/utils/realtime';
 import type {
   ChatConversationUpdatedRealtimePayload,
   ChatMessageRealtimePayload,
   ChatReadRealtimePayload,
+} from './chatRealtimeProtocol';
+import {
+  isChatConversationUpdatedPayload,
+  isChatMessagePayload,
+  isChatReadPayload,
+  parseChatRealtimeEvent,
 } from './chatRealtimeProtocol';
 
 interface UseChatRealtimeOptions {
@@ -33,11 +39,11 @@ export type {
 } from './chatRealtimeProtocol';
 
 /**
- * React hook for subscribing to chat realtime events over a shared WebSocket connection.
+ * React hook for subscribing to chat realtime events over the global shared WebSocket connection.
  *
- * Multiple components can call this hook; they will all use the same underlying WebSocket,
- * managed by the chatRealtimeManager module. Each caller registers its own subscription
- * with per-instance callbacks that are invoked when relevant events are received.
+ * Multiple components can call this hook; they will all use the same underlying WebSocket.
+ * Each caller registers its own subscription with per-instance callbacks that are invoked
+ * when relevant events are received.
  *
  * The hook automatically:
  * - Registers the caller as a subscriber to the shared connection.
@@ -67,13 +73,34 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   const token = session?.user?.token;
   const userId = session?.user?.userId;
   const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
-  const websocketSource: ChatWebsocketSource = websocketBaseUrl ? 'explicit' : 'missing';
+  const websocketSource: RealtimeWebsocketSource = websocketBaseUrl ? 'explicit' : 'missing';
 
   const subscriberIdRef = useRef<number | null>(null);
   const onChatMessageRef = useRef<typeof onChatMessage>(onChatMessage);
   const onChatReadRef = useRef<typeof onChatRead>(onChatRead);
   const onChatConversationUpdatedRef = useRef<typeof onChatConversationUpdated>(onChatConversationUpdated);
-  const [isConnected, setIsConnected] = useState(getChatRealtimeConnectionState());
+  const [isConnected, setIsConnected] = useState(getSharedRealtimeConnectionState());
+
+  const handleRealtimeMessage = useCallback((rawEventData: string) => {
+    const realtimeEvent = parseChatRealtimeEvent(rawEventData);
+    if (!realtimeEvent) {
+      return;
+    }
+
+    if (realtimeEvent.type === 'chat.message' && isChatMessagePayload(realtimeEvent.payload)) {
+      onChatMessageRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'chat.read' && isChatReadPayload(realtimeEvent.payload)) {
+      onChatReadRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'chat.conversation.updated' && isChatConversationUpdatedPayload(realtimeEvent.payload)) {
+      onChatConversationUpdatedRef.current?.(realtimeEvent.payload);
+    }
+  }, []);
 
   useEffect(() => {
     onChatMessageRef.current = onChatMessage;
@@ -84,25 +111,21 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
       return;
     }
 
-    updateChatRealtimeSubscriber(subscriberIdRef.current, {
-      onChatMessage,
-      onChatRead,
-      onChatConversationUpdated,
+    updateSharedRealtimeSubscriber(subscriberIdRef.current, {
+      onMessage: handleRealtimeMessage,
     });
-  }, [onChatConversationUpdated, onChatMessage, onChatRead]);
+  }, [handleRealtimeMessage, onChatConversationUpdated, onChatMessage, onChatRead]);
 
   useEffect(() => {
-    const subscriberId = addChatRealtimeSubscriber({
+    const subscriberId = addSharedRealtimeSubscriber({
       enabled,
       setConnected: setIsConnected,
-      onChatMessage: onChatMessageRef.current,
-      onChatRead: onChatReadRef.current,
-      onChatConversationUpdated: onChatConversationUpdatedRef.current,
+      onMessage: handleRealtimeMessage,
     });
     subscriberIdRef.current = subscriberId;
 
-    setIsConnected(getChatRealtimeConnectionState());
-    refreshSharedConnection({
+    setIsConnected(getSharedRealtimeConnectionState());
+    refreshSharedRealtimeConnection({
       token,
       userId,
       websocketBaseUrl,
@@ -110,7 +133,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     });
 
     return () => {
-      removeChatRealtimeSubscriber(subscriberId);
+      removeSharedRealtimeSubscriber(subscriberId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -120,8 +143,8 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
       return;
     }
 
-    updateChatRealtimeSubscriber(subscriberIdRef.current, { enabled });
-    refreshSharedConnection({
+    updateSharedRealtimeSubscriber(subscriberIdRef.current, { enabled });
+    refreshSharedRealtimeConnection({
       token,
       userId,
       websocketBaseUrl,
@@ -148,7 +171,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   }, [enabled, token, websocketBaseUrl, websocketSource]);
 
   const sendChatMessage = useCallback((recipientUserId: string, message: string) => {
-    return sendSharedAction({
+    return sendSharedRealtimeAction({
       action: 'chat.send',
       recipientUserId,
       message,
@@ -156,7 +179,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   }, []);
 
   const markConversationRead = useCallback((withUserId: string) => {
-    return sendSharedAction({
+    return sendSharedRealtimeAction({
       action: 'chat.read',
       withUserId,
     });

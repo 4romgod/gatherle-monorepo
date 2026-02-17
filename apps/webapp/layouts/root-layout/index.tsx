@@ -45,8 +45,10 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
             <SessionProvider key={sessionProviderKey} session={session}>
               <CustomAppContextProvider>
                 <CustomThemeProvider>
-                  <NotificationRealtimeListener />
-                  <ChatRealtimeListener />
+                  <>
+                    <NotificationRealtimeListener />
+                    <ChatRealtimeListener />
+                  </>
                   <ToastProvider />
                   <TopProgressBar />
                   <MainNavigation isAuthN={isAuthN} />

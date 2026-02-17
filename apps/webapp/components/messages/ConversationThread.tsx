@@ -631,9 +631,6 @@ export default function ConversationThread({ username }: ConversationThreadProps
               <Typography variant="h6" fontWeight="medium" noWrap>
                 {displayIdentity.displayName}
               </Typography>
-              <Typography variant="caption" color={isConnected ? 'success.main' : 'text.secondary'} noWrap>
-                {isConnected ? 'Online' : 'Offline'}
-              </Typography>
             </Box>
           </Box>
 

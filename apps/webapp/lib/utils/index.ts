@@ -6,5 +6,6 @@ export * from './logger';
 export * from './performance';
 export * from './json-parse';
 export * from './websocket';
+export * from './realtime';
 // Note: url.ts is not exported here as it uses next/headers and only works in Server Components
 // Import directly from '@/lib/utils/url' when needed in Server Components

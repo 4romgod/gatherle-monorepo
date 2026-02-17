@@ -296,39 +296,6 @@ export class MonitoringDashboardStack extends Stack {
       }),
     );
 
-    this.websocketDashboard.addWidgets(
-      new GraphWidget({
-        title: 'Lambda Invocations',
-        left: [websocketLambdaFunction.metricInvocations({ statistic: 'Sum' })],
-        width: 8,
-        height: 6,
-      }),
-      new GraphWidget({
-        title: 'Lambda Errors',
-        left: [websocketLambdaFunction.metricErrors({ statistic: 'Sum', color: '#d62728' })],
-        width: 8,
-        height: 6,
-      }),
-      new GraphWidget({
-        title: 'Lambda Duration (P50, P95, P99)',
-        left: [
-          websocketLambdaFunction.metricDuration({ statistic: 'p50', label: 'P50' }),
-          websocketLambdaFunction.metricDuration({
-            statistic: 'p95',
-            label: 'P95',
-            color: '#ff7f0e',
-          }),
-          websocketLambdaFunction.metricDuration({
-            statistic: 'p99',
-            label: 'P99',
-            color: '#d62728',
-          }),
-        ],
-        width: 8,
-        height: 6,
-      }),
-    );
-
     const webSocketMetric = (metricName: string, label: string, color?: string) =>
       new Metric({
         namespace: 'AWS/ApiGateway',
@@ -345,7 +312,7 @@ export class MonitoringDashboardStack extends Stack {
 
     this.websocketDashboard.addWidgets(
       new TextWidget({
-        markdown: '## API Gateway WebSocket Metrics',
+        markdown: '## Core Health',
         width: 24,
         height: 1,
       }),
@@ -353,23 +320,32 @@ export class MonitoringDashboardStack extends Stack {
 
     this.websocketDashboard.addWidgets(
       new GraphWidget({
-        title: 'Connections',
+        title: 'Lambda Health',
         left: [
-          webSocketMetric('ConnectCount', 'ConnectCount'),
-          webSocketMetric('DisconnectCount', 'DisconnectCount', '#ff7f0e'),
+          websocketLambdaFunction.metricInvocations({ statistic: 'Sum', label: 'Invocations' }),
+          websocketLambdaFunction.metricErrors({ statistic: 'Sum', label: 'Errors', color: '#d62728' }),
+          websocketLambdaFunction.metricThrottles({ statistic: 'Sum', label: 'Throttles', color: '#9467bd' }),
         ],
-        width: 12,
+        width: 8,
         height: 6,
       }),
       new GraphWidget({
-        title: 'Message Throughput',
-        left: [webSocketMetric('MessageCount', 'MessageCount')],
-        width: 12,
+        title: 'Lambda Duration (P95, P99)',
+        left: [
+          websocketLambdaFunction.metricDuration({
+            statistic: 'p95',
+            label: 'P95',
+            color: '#ff7f0e',
+          }),
+          websocketLambdaFunction.metricDuration({
+            statistic: 'p99',
+            label: 'P99',
+            color: '#d62728',
+          }),
+        ],
+        width: 8,
         height: 6,
       }),
-    );
-
-    this.websocketDashboard.addWidgets(
       new GraphWidget({
         title: 'Gateway Errors',
         left: [
@@ -377,12 +353,39 @@ export class MonitoringDashboardStack extends Stack {
           webSocketMetric('IntegrationError', 'IntegrationError', '#9467bd'),
           webSocketMetric('ExecutionError', 'ExecutionError', '#8c564b'),
         ],
+        width: 8,
+        height: 6,
+      }),
+    );
+
+    this.websocketDashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Traffic and Route Mix',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.websocketDashboard.addWidgets(
+      new GraphWidget({
+        title: 'Connections and Message Throughput',
+        left: [
+          webSocketMetric('ConnectCount', 'ConnectCount'),
+          webSocketMetric('DisconnectCount', 'DisconnectCount', '#ff7f0e'),
+          webSocketMetric('MessageCount', 'MessageCount', '#2ca02c'),
+        ],
         width: 12,
         height: 6,
       }),
-      new GraphWidget({
-        title: 'Lambda Throttles',
-        left: [websocketLambdaFunction.metricThrottles({ statistic: 'Sum', label: 'Throttles' })],
+      new LogQueryWidget({
+        title: 'Route Mix (5m)',
+        logGroupNames: [websocketLambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.LINE,
+        queryLines: [
+          'fields @timestamp, context.routeKey as routeKey',
+          'filter message = "WebSocket lambda handler invoked" and ispresent(routeKey)',
+          'stats count() as requests by routeKey, bin(5m)',
+        ],
         width: 12,
         height: 6,
       }),
@@ -390,7 +393,7 @@ export class MonitoringDashboardStack extends Stack {
 
     this.websocketDashboard.addWidgets(
       new TextWidget({
-        markdown: '## WebSocket Logs',
+        markdown: '## Actionable Operational Signals',
         width: 24,
         height: 1,
       }),
@@ -398,11 +401,12 @@ export class MonitoringDashboardStack extends Stack {
 
     this.websocketDashboard.addWidgets(
       new LogQueryWidget({
-        title: 'Recent Errors',
+        title: 'Auth and Payload Rejections',
         logGroupNames: [websocketLambdaLogGroup.logGroupName],
         queryLines: [
-          'fields @timestamp, message, level, routeKey, connectionId',
-          'filter level = "ERROR"',
+          'fields @timestamp, message, context.routeKey as routeKey, context.connectionId as connectionId',
+          'filter level = "WARN"',
+          'filter message like /rejected/ or message like /Invalid payload/ or message like /not registered/',
           'sort @timestamp desc',
           'limit 100',
         ],
@@ -410,15 +414,54 @@ export class MonitoringDashboardStack extends Stack {
         height: 8,
       }),
       new LogQueryWidget({
-        title: 'Connect / Disconnect Events',
+        title: '$default Fallback Activity (5m)',
         logGroupNames: [websocketLambdaLogGroup.logGroupName],
         view: LogQueryVisualizationType.LINE,
         queryLines: [
-          'fields @timestamp, routeKey',
-          'filter routeKey = "$connect" or routeKey = "$disconnect"',
-          'stats count() as events by routeKey, bin(5m)',
+          'fields @timestamp',
+          'filter message = "Routing websocket action through $default fallback" or message = "Unhandled websocket action"',
+          'stats count() as fallbackEvents by bin(5m)',
         ],
         width: 12,
+        height: 8,
+      }),
+    );
+
+    this.websocketDashboard.addWidgets(
+      new LogQueryWidget({
+        title: 'Delivery Outcome Samples',
+        logGroupNames: [websocketLambdaLogGroup.logGroupName],
+        queryLines: [
+          'fields @timestamp, message, context.messageDeliveredCount as messageDeliveredCount, context.readEventDeliveredCount as readEventDeliveredCount, context.conversationDeliveredCount as conversationDeliveredCount, context.failedCount as failedCount, context.staleCount as staleCount',
+          'filter message = "Chat message sent and delivered" or message = "Chat conversation marked as read"',
+          'sort @timestamp desc',
+          'limit 100',
+        ],
+        width: 8,
+        height: 8,
+      }),
+      new LogQueryWidget({
+        title: 'Stale Connection Cleanup (5m)',
+        logGroupNames: [websocketLambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.LINE,
+        queryLines: [
+          'fields @timestamp',
+          'filter message = "Removed stale websocket connection" or message = "Removed stale websocket connection after GoneException"',
+          'stats count() as staleConnectionRemovals by bin(5m)',
+        ],
+        width: 8,
+        height: 8,
+      }),
+      new LogQueryWidget({
+        title: 'Recent Errors',
+        logGroupNames: [websocketLambdaLogGroup.logGroupName],
+        queryLines: [
+          'fields @timestamp, message, context.routeKey as routeKey, context.connectionId as connectionId, error.name as errorName, error.message as errorMessage',
+          'filter level = "ERROR"',
+          'sort @timestamp desc',
+          'limit 100',
+        ],
+        width: 8,
         height: 8,
       }),
     );
