@@ -95,7 +95,9 @@ export default function UserProfileActions({
           sx={{
             borderRadius: 2,
             bgcolor: 'background.paper',
+            border: '1px solid',
             borderColor: 'divider',
+            color: 'text.primary',
             textTransform: 'none',
             fontWeight: 600,
             '&:hover': {
@@ -114,10 +116,11 @@ export default function UserProfileActions({
         sx={{
           borderRadius: 2,
           bgcolor: 'background.paper',
-          boxShadow: 2,
+          border: '1px solid',
+          borderColor: 'divider',
           '&:hover': {
             bgcolor: 'background.default',
-            boxShadow: 4,
+            borderColor: 'text.secondary',
           },
         }}
       >

@@ -125,6 +125,8 @@ interface EventsContentProps {
 }
 
 function EventsContent({ categories, initialEvents, popularOrganization, stats, userId }: EventsContentProps) {
+  const { data: session } = useSession();
+  const token = session?.user?.token;
   const {
     filters,
     setSearchQuery,
@@ -158,7 +160,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
 
   // Wait for filters to hydrate before applying them to prevent double-fetch on page load
   const filtersToUse = isHydrated ? filters : initialFilters;
-  const { events: serverEvents, loading, error } = useFilteredEvents(filtersToUse, initialEvents);
+  const { events: serverEvents, loading, error } = useFilteredEvents(filtersToUse, initialEvents, token);
 
   const hasCoordinates =
     typeof filters.location?.latitude === 'number' && typeof filters.location?.longitude === 'number';

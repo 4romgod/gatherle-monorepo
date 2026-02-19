@@ -11,6 +11,7 @@ import {
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventFilters, LocationFilter } from '@/components/events/filters/EventFilterContext';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
+import { getAuthHeader } from '@/lib/utils/auth';
 
 /**
  * Builds GraphQL filter inputs from event filters.
@@ -80,7 +81,7 @@ export const buildLocationFilter = (location: LocationFilter): LocationFilterInp
   };
 };
 
-export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPreview[]) => {
+export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPreview[], token?: string | null) => {
   const [events, setEvents] = useState<EventPreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
@@ -118,6 +119,7 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       },
       fetchPolicy: 'network-only',
       context: {
+        headers: getAuthHeader(token),
         fetchOptions: {
           signal: abortController.signal,
         },

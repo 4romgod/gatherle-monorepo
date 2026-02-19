@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "scripts": {
-    "build": "npm-run-all lint build:ts",
+    "build": "npm-run-all lint:check build:ts",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
-    "lint": "eslint \"lib/**/*.{ts,tsx}\"",
+    "lint:check": "eslint \"lib/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"lib/**/*.{ts,tsx}\" --fix",
     "typecheck": "tsc --noEmit --pretty"
   },

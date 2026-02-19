@@ -10,7 +10,6 @@ import Link from 'next/link';
 import { SaveEventButton, EventShareButton, RsvpButton } from '@/components/events';
 import { useState, useEffect, type MouseEvent } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
-import Surface from '@/components/core/Surface';
 
 export default function EventBoxSm({ event, href }: { event: EventPreview; href?: string }) {
   const { recurrenceRule, participants, location, media } = event;
@@ -73,8 +72,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
 
   return (
     <Link href={href || `/events/${event.slug}`} onClick={handleLinkClick}>
-      <Surface
-        component={Card}
+      <Box
         sx={(theme) => ({
           height: '100%',
           display: 'flex',
@@ -218,7 +216,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
             />
           </Stack>
         </CardContent>
-      </Surface>
+      </Box>
     </Link>
   );
 }

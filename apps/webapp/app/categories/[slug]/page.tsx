@@ -13,6 +13,8 @@ import {
 } from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import { ROUTES } from '@/lib/constants';
+import { getAuthHeader } from '@/lib/utils';
+import { auth } from '@/auth';
 import { getEventCategoryIcon } from '@/lib/constants';
 import { CategoryExplorer } from '@/components/home';
 import CategoryInterestToggleButton from '@/components/categories/CategoryInterestToggleButton';
@@ -62,6 +64,8 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 export default async function CategoryDetailPage({ params }: CategoryPageProps) {
   const { slug } = await params;
   const client = getClient();
+  const session = await auth();
+  const authHeaders = getAuthHeader(session?.user?.token);
 
   let categoryData: GetEventCategoryBySlugQuery['readEventCategoryBySlug'] | null | undefined;
   let eventsData: GetAllEventsQuery['readEvents'] | null | undefined;
@@ -81,6 +85,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
             pagination: { limit: 40 },
           },
         },
+        context: { headers: authHeaders },
       }),
       client.query<GetAllEventCategoryGroupsQuery>({
         query: GetAllEventCategoryGroupsDocument,

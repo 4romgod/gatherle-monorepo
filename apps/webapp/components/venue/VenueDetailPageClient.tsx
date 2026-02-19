@@ -30,6 +30,8 @@ import VenueDetailSkeleton from '@/components/venue/VenueDetailSkeleton';
 import { ROUTES } from '@/lib/constants';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 
+import { useSession } from 'next-auth/react';
+import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 
@@ -66,6 +68,9 @@ interface VenueDetailPageClientProps {
 }
 
 export default function VenueDetailPageClient({ slug }: VenueDetailPageClientProps) {
+  const { data: session } = useSession();
+  const authContext = { headers: getAuthHeader(session?.user?.token) };
+
   const { data, loading, error } = useQuery(GetVenueBySlugDocument, {
     variables: { slug },
     fetchPolicy: 'cache-and-network',
@@ -93,6 +98,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
     skip: !eventFilterOptions,
     variables: { options: eventFilterOptions },
     fetchPolicy: 'cache-and-network',
+    context: authContext,
   });
 
   const venueEvents = (venueEventsData?.readEvents ?? []) as EventPreview[];

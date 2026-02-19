@@ -14,6 +14,8 @@ import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
 import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
+import { useSession } from 'next-auth/react';
+import { getAuthHeader } from '@/lib/utils/auth';
 
 interface OrganizationPageClientProps {
   slug: string;
@@ -22,6 +24,9 @@ interface OrganizationPageClientProps {
 const EVENT_LIMIT = 12;
 
 export default function OrganizationPageClient({ slug }: OrganizationPageClientProps) {
+  const { data: session } = useSession();
+  const authContext = { headers: getAuthHeader(session?.user?.token) };
+
   const {
     data: orgData,
     loading: orgLoading,
@@ -49,6 +54,7 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
     },
     skip: !orgId,
     fetchPolicy: 'cache-and-network',
+    context: authContext,
   });
 
   const events = eventsData?.readEvents ?? [];

@@ -626,8 +626,20 @@ export default function ConversationThread({ username }: ConversationThreadProps
       ) : (
         <>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar src={getAvatarSrc(targetUser)} alt={displayIdentity.displayName} />
-            <Box sx={{ minWidth: 0 }}>
+            <Box
+              component={Link}
+              href={ROUTES.USERS.USER(username)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                minWidth: 0,
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              <Avatar src={getAvatarSrc(targetUser)} alt={displayIdentity.displayName} />
               <Typography variant="h6" fontWeight="medium" noWrap>
                 {displayIdentity.displayName}
               </Typography>

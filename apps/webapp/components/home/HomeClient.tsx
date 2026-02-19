@@ -3,7 +3,9 @@
 import { useQuery } from '@apollo/client';
 import { Box, Container, Typography } from '@mui/material';
 import { GetAllEventCategoriesDocument, GetAllEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
+import { useSession } from 'next-auth/react';
 import { HeroSection, CategoryExplorer, ValuePropositionSection, NearbyEventsSection } from '@/components/home';
+import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import EventBoxSm from '@/components/events/eventBoxSm';
@@ -12,8 +14,12 @@ import type { EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 
 export default function HomeClient() {
+  const { data: session } = useSession();
+  const authContext = { headers: getAuthHeader(session?.user?.token) };
+
   const { data: trendingEventsData, loading: trendingEventsLoading } = useQuery(GetAllEventsDocument, {
     fetchPolicy: 'cache-and-network',
+    context: authContext,
     variables: {
       options: {
         sort: [{ field: 'rsvpCount', order: SortOrderInput.Desc }],
@@ -24,6 +30,7 @@ export default function HomeClient() {
 
   const { data: featuredEventsData, loading: featuredEventsLoading } = useQuery(GetAllEventsDocument, {
     fetchPolicy: 'cache-and-network',
+    context: authContext,
     variables: {
       options: {
         sort: [{ field: 'savedByCount', order: SortOrderInput.Desc }],

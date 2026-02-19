@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
-import Surface from '@/components/core/Surface';
 import { Organization, OrganizationRole } from '@/data/graphql/types/graphql';
 import { Settings } from '@mui/icons-material';
 
@@ -20,8 +19,7 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
   const manageHref = slug ? ROUTES.ACCOUNT.ORGANIZATIONS.SETTINGS(slug) : ROUTES.ACCOUNT.ORGANIZATIONS.ROOT;
   const roleColor = userRole === OrganizationRole.Owner ? 'primary' : 'secondary';
   return (
-    <Surface
-      component={Card}
+    <Box
       sx={{
         borderRadius: 3,
         minHeight: 220,
@@ -118,7 +116,7 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
           )}
         </Stack>
       </CardActions>
-    </Surface>
+    </Box>
   );
 };
 

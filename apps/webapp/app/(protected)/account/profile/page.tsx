@@ -20,29 +20,22 @@ import {
   LocationOn as LocationIcon,
   Cake as CakeIcon,
   Wc as GenderIcon,
-  Event as EventIcon,
-  CheckCircle as RSVPIcon,
   Badge as BadgeIcon,
-  CalendarMonth,
-  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import { auth } from '@/auth';
 import { differenceInYears, format } from 'date-fns';
-import { GetAllEventsDocument, GetUserByUsernameDocument, GetSavedEventsDocument } from '@/data/graphql/types/graphql';
+import {
+  GetAllEventsDocument,
+  GetUserByUsernameDocument,
+  GetSavedEventsDocument,
+  ParticipantStatus,
+} from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
-import { EventPreviewCarousel } from '@/components/carousel';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import UserProfileStats from '@/components/users/UserProfileStats';
-import {
-  ROUTES,
-  CARD_STYLES,
-  BUTTON_STYLES,
-  SECTION_TITLE_STYLES,
-  EMPTY_STATE_STYLES,
-  EMPTY_STATE_ICON_STYLES,
-  SPACING,
-} from '@/lib/constants';
+import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
+import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
 import { omit } from 'lodash';
 import Link from 'next/link';
 import { getAvatarSrc, logger, isApolloAuthError, getAuthHeader } from '@/lib/utils';
@@ -79,9 +72,10 @@ async function AuthenticatedProfileContent() {
   const user = userData.readUserByUsername;
   if (!user) return null;
 
-  // Query events (public) and saved events (requires auth)
+  // Query events with auth so myRsvp / isSavedByMe resolve for the viewer
   const { data: events } = await getClient().query({
     query: GetAllEventsDocument,
+    context: { headers: getAuthHeader(token) },
   });
 
   // Saved events query requires auth - handle token expiry gracefully
@@ -110,7 +104,9 @@ async function AuthenticatedProfileContent() {
   }
 
   const allEvents = (events.readEvents ?? []) as EventPreview[];
-  const rsvpdEvents = allEvents.filter((event) => event.participants?.some((p) => p.userId === user.userId));
+  const rsvpdEvents = allEvents.filter((event) =>
+    event.participants?.some((p) => p.userId === user.userId && p.status !== ParticipantStatus.Cancelled),
+  );
   const organizedEvents = allEvents.filter((event) =>
     event.organizers.some((organizer) => organizer.user.userId === user.userId),
   );
@@ -170,100 +166,90 @@ async function AuthenticatedProfileContent() {
               borderColor: 'divider',
             }}
           >
-            <Box
-              sx={{
-                height: { xs: 180, md: 240 },
-                position: 'relative',
-                bgcolor: 'primary.main',
-              }}
-            >
-              <Link href={ROUTES.ACCOUNT.ROOT}>
-                <Button
-                  startIcon={<EditIcon />}
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    ...BUTTON_STYLES,
-                    position: 'absolute',
-                    top: 20,
-                    right: 20,
-                    bgcolor: 'background.paper',
-                    borderColor: 'divider',
-                    '&:hover': {
-                      bgcolor: 'background.default',
-                      borderColor: 'text.secondary',
-                    },
-                  }}
-                >
-                  Edit Profile
-                </Button>
-              </Link>
-            </Box>
-
-            <CardContent sx={{ pt: 0 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-end', mt: -8 }}>
-                <Box sx={{ position: 'relative' }}>
+            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              {/* Top row: Avatar + Name + Edit button */}
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 2, md: 3 } }}>
+                <Box sx={{ position: 'relative', flexShrink: 0 }}>
                   <Avatar
                     src={getAvatarSrc(session?.user)}
                     alt={`${user.given_name} ${user.family_name}`}
                     sx={{
-                      width: { xs: 120, md: 140 },
-                      height: { xs: 120, md: 140 },
-                      border: '4px solid',
-                      borderColor: 'common.white',
+                      width: { xs: 80, md: 100 },
+                      height: { xs: 80, md: 100 },
+                      border: '3px solid',
+                      borderColor: 'divider',
                     }}
                   />
                   <Box
                     sx={{
                       position: 'absolute',
-                      bottom: { xs: 8, md: 10 },
-                      right: { xs: 8, md: 10 },
-                      width: { xs: 20, md: 24 },
-                      height: { xs: 20, md: 24 },
+                      bottom: 4,
+                      right: 4,
+                      width: 16,
+                      height: 16,
                       bgcolor: 'success.main',
                       borderRadius: '50%',
-                      border: '3px solid',
-                      borderColor: 'common.white',
+                      border: '2px solid',
+                      borderColor: 'background.paper',
                     }}
                   />
                 </Box>
-                <Box sx={{ ml: 3, mb: 1 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip
-                      icon={<BadgeIcon />}
-                      label={user.userRole}
-                      size="small"
-                      color="primary"
-                      sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'capitalize' }}
-                    />
-                  </Stack>
+
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                    <Box>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontWeight: 800,
+                          fontSize: { xs: '1.5rem', md: '2rem' },
+                          mb: 0.5,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {user.given_name} {user.family_name}
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          @{user.username}
+                        </Typography>
+                        <Chip
+                          icon={<BadgeIcon />}
+                          label={user.userRole}
+                          size="small"
+                          color="primary"
+                          sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'capitalize' }}
+                        />
+                      </Stack>
+                    </Box>
+                    <Link href={ROUTES.ACCOUNT.ROOT}>
+                      <Button
+                        startIcon={<EditIcon />}
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          ...BUTTON_STYLES,
+                          borderColor: 'divider',
+                          flexShrink: 0,
+                          '&:hover': {
+                            bgcolor: 'background.default',
+                            borderColor: 'text.secondary',
+                          },
+                        }}
+                      >
+                        Edit Profile
+                      </Button>
+                    </Link>
+                  </Box>
+                  {user.bio && (
+                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600, lineHeight: 1.6, mt: 1 }}>
+                      {user.bio}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
 
-              {/* Name and Username */}
-              <Box sx={{ mt: 3 }}>
-                <Typography
-                  variant="h3"
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: '1.75rem', md: '2.25rem' },
-                    mb: 1,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {user.given_name} {user.family_name}
-                </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500, mb: 2 }}>
-                  @{user.username}
-                </Typography>
-                {user.bio && (
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600, lineHeight: 1.6 }}>
-                    {user.bio}
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Stats - clickable stats with scroll-to-section behavior */}
+              {/* Stats */}
               <UserProfileStats
                 userId={user.userId}
                 displayName={`${user.given_name} ${user.family_name}`.trim()}
@@ -278,234 +264,96 @@ async function AuthenticatedProfileContent() {
             </CardContent>
           </Card>
 
-          {/* Details Grid */}
+          {/* 2-Column Layout: Sidebar + Events */}
           <Grid container spacing={SPACING.standard}>
-            {/* Personal Information */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card
-                elevation={0}
-                sx={{
-                  ...CARD_STYLES,
-                  height: '100%',
-                }}
-              >
-                <CardContent>
-                  <Stack spacing={2}>
-                    <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
-                      Personal Information
-                    </Typography>
-                    <Divider />
-                    <Stack spacing={0} divider={<Divider />}>
-                      <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
-                      <InfoItem
-                        icon={<PhoneIcon fontSize="small" />}
-                        label="Phone"
-                        value={user.phone_number || 'Not provided'}
-                      />
-                      <InfoItem
-                        icon={<LocationIcon fontSize="small" />}
-                        label="Location"
-                        value={user.location ? `${user.location.city}, ${user.location.country}` : 'Not provided'}
-                      />
-                      <InfoItem
-                        icon={<CakeIcon fontSize="small" />}
-                        label="Birthday"
-                        value={`${formattedDOB} (${age} years old)`}
-                      />
-                      <InfoItem
-                        icon={<GenderIcon fontSize="small" />}
-                        label="Gender"
-                        value={user.gender || 'Not specified'}
-                      />
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Interests */}
-            <Grid id="interests" size={{ xs: 12, md: 6 }}>
-              <Card
-                elevation={0}
-                sx={{
-                  ...CARD_STYLES,
-                  height: '100%',
-                }}
-              >
-                <CardContent>
-                  <Stack spacing={2}>
-                    <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
-                      Interests
-                    </Typography>
-                    <Divider />
-                    {interests.length > 0 ? (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
-                        {interests.map((category, index) => (
-                          <EventCategoryBadge key={`${category ?? 'interest'}-${index}`} category={category} />
-                        ))}
-                      </Box>
-                    ) : (
-                      <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No interests selected yet
+            {/* Sidebar */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Box sx={{ position: { md: 'sticky' }, top: 24 }}>
+                <Stack spacing={SPACING.standard}>
+                  {/* Personal Information */}
+                  <Card elevation={0} sx={CARD_STYLES}>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
+                          Personal Information
                         </Typography>
-                      </Box>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+                        <Divider />
+                        <Stack spacing={0} divider={<Divider />}>
+                          <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
+                          <InfoItem
+                            icon={<PhoneIcon fontSize="small" />}
+                            label="Phone"
+                            value={user.phone_number || 'Not provided'}
+                          />
+                          <InfoItem
+                            icon={<LocationIcon fontSize="small" />}
+                            label="Location"
+                            value={user.location ? `${user.location.city}, ${user.location.country}` : 'Not provided'}
+                          />
+                          <InfoItem
+                            icon={<CakeIcon fontSize="small" />}
+                            label="Birthday"
+                            value={`${formattedDOB} (${age} years old)`}
+                          />
+                          <InfoItem
+                            icon={<GenderIcon fontSize="small" />}
+                            label="Gender"
+                            value={user.gender || 'Not specified'}
+                          />
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
 
-          {/* Events Created */}
-          <Box id="events-created">
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: 'primary.main',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  letterSpacing: '0.1em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  mb: 1,
-                }}
-              >
-                <EventIcon sx={{ fontSize: 20 }} />
-                MY EVENTS
-              </Typography>
-              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
-                Events Created
-              </Typography>
-            </Box>
-            {organizedEvents.length > 0 ? (
-              <EventPreviewCarousel events={organizedEvents} />
-            ) : (
-              <Card elevation={0} sx={CARD_STYLES}>
-                <Box sx={EMPTY_STATE_STYLES}>
-                  <Box sx={EMPTY_STATE_ICON_STYLES}>
-                    <CalendarMonth sx={{ fontSize: 48, color: 'text.secondary' }} />
-                  </Box>
-                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                    No events created yet
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
-                    Start hosting events and they'll appear here
-                  </Typography>
+                  {/* Interests */}
+                  <Card id="interests" elevation={0} sx={CARD_STYLES}>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Typography variant="h6" sx={SECTION_TITLE_STYLES} gutterBottom>
+                          Interests
+                        </Typography>
+                        <Divider />
+                        {interests.length > 0 ? (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
+                            {interests.map((category, index) => (
+                              <EventCategoryBadge key={`${category ?? 'interest'}-${index}`} category={category} />
+                            ))}
+                          </Box>
+                        ) : (
+                          <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No interests selected yet
+                            </Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Stack>
+              </Box>
+            </Grid>
+
+            {/* Main Content - Tabbed Events */}
+            <Grid size={{ xs: 12, md: 8 }}>
+              <ProfileEventsTabs
+                organizedEvents={organizedEvents}
+                rsvpdEvents={rsvpdEvents}
+                savedEvents={savedEvents}
+                isOwnProfile={true}
+                emptyCreatedCta={
                   <Button
+                    component={Link}
+                    href={ROUTES.ACCOUNT.EVENTS.CREATE}
                     variant="contained"
                     color="secondary"
-                    href={ROUTES.ACCOUNT.EVENTS.CREATE}
                     sx={{ ...BUTTON_STYLES, mt: 2 }}
                   >
                     Create Your First Event
                   </Button>
-                </Box>
-              </Card>
-            )}
-          </Box>
-
-          {/* Events Attending */}
-          <Box id="events-attending">
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: 'primary.main',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  letterSpacing: '0.1em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  mb: 1,
-                }}
-              >
-                <RSVPIcon sx={{ fontSize: 20 }} />
-                ATTENDING
-              </Typography>
-              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
-                Events Attending
-              </Typography>
-            </Box>
-            {rsvpdEvents.length > 0 ? (
-              <EventPreviewCarousel events={rsvpdEvents} />
-            ) : (
-              <Card elevation={0} sx={CARD_STYLES}>
-                <Box sx={EMPTY_STATE_STYLES}>
-                  <Box sx={EMPTY_STATE_ICON_STYLES}>
-                    <RSVPIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
-                  </Box>
-                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                    No RSVPs yet
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
-                    Browse events and RSVP to ones you're interested in
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    href={ROUTES.EVENTS.ROOT}
-                    sx={{ ...BUTTON_STYLES, mt: 2 }}
-                  >
-                    Explore Events
-                  </Button>
-                </Box>
-              </Card>
-            )}
-          </Box>
-
-          {/* Saved Events */}
-          <Box id="saved-events">
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="overline"
-                sx={{
-                  color: 'primary.main',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  letterSpacing: '0.1em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  mb: 1,
-                }}
-              >
-                <BookmarkIcon sx={{ fontSize: 20 }} />
-                SAVED
-              </Typography>
-              <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', md: '1.75rem' } }}>
-                Saved Events
-              </Typography>
-            </Box>
-            {savedEvents.length > 0 ? (
-              <EventPreviewCarousel events={savedEvents} />
-            ) : (
-              <Card elevation={0} sx={CARD_STYLES}>
-                <Box sx={EMPTY_STATE_STYLES}>
-                  <Box sx={EMPTY_STATE_ICON_STYLES}>
-                    <BookmarkIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
-                  </Box>
-                  <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                    No saved events yet
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
-                    Save events you're interested in to view them later
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    href={ROUTES.EVENTS.ROOT}
-                    sx={{ ...BUTTON_STYLES, mt: 2 }}
-                  >
-                    Explore Events
-                  </Button>
-                </Box>
-              </Card>
-            )}
-          </Box>
+                }
+              />
+            </Grid>
+          </Grid>
         </Stack>
       </Container>
     </Box>

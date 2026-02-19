@@ -2,6 +2,7 @@ import EventBox from '@/components/events/eventBoxSm';
 import { FilterOperatorInput, GetAllEventsDocument } from '@/data/graphql/types/graphql';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
+import { getAuthHeader } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 import { Box, Button, Container, Grid, Typography } from '@mui/material';
 import { Add, Event as EventIcon } from '@mui/icons-material';
@@ -33,6 +34,7 @@ export default async function EventsPage() {
         ],
       },
     },
+    context: { headers: getAuthHeader(session.user.token) },
   });
 
   const eventList = events.readEvents ?? [];

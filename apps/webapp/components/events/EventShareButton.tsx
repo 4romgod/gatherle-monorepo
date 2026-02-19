@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactN
 import { useLazyQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
-  alpha,
   Avatar,
   Badge,
   Box,
@@ -247,40 +246,40 @@ export default function EventShareButton({
       key: 'copy',
       label: 'Copy link',
       muiIcon: <LinkRounded fontSize="small" />,
-      bgColor: '#272f3f',
-      fgColor: '#dce3f4',
+      bgColor: 'text.secondary',
+      fgColor: 'background.paper',
       onClick: handleCopyLink,
     },
     {
       key: 'whatsapp',
       label: 'WhatsApp',
       icon: FaWhatsapp,
-      bgColor: '#1fa958',
-      fgColor: '#ffffff',
+      bgColor: 'success.main',
+      fgColor: 'success.contrastText',
       onClick: () => launchExternalShare(`https://wa.me/?text=${encodedWhatsAppText}`),
     },
     {
       key: 'facebook',
       label: 'Facebook',
       icon: FaFacebookF,
-      bgColor: '#1877f2',
-      fgColor: '#ffffff',
+      bgColor: 'info.main',
+      fgColor: 'info.contrastText',
       onClick: () => launchExternalShare(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`),
     },
     {
       key: 'x',
       label: 'X',
       icon: FaXTwitter,
-      bgColor: '#0f1419',
-      fgColor: '#ffffff',
+      bgColor: 'text.primary',
+      fgColor: 'background.paper',
       onClick: () => launchExternalShare(`https://x.com/intent/tweet?text=${encodedSummary}&url=${encodedUrl}`),
     },
     {
       key: 'email',
       label: 'Email',
       icon: FaEnvelope,
-      bgColor: '#4a4f5f',
-      fgColor: '#ffffff',
+      bgColor: 'text.secondary',
+      fgColor: 'background.paper',
       onClick: () =>
         launchExternalShare(
           `mailto:?subject=${encodeURIComponent(eventTitle)}&body=${encodeURIComponent(
@@ -337,7 +336,7 @@ export default function EventShareButton({
           },
         }}
       >
-        <DialogContent sx={{ p: 0 }}>
+        <DialogContent sx={{ p: 0, backgroundColor: 'background.default' }}>
           <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <IconButton
@@ -534,7 +533,7 @@ export default function EventShareButton({
                         color: action.fgColor,
                         backgroundColor: action.bgColor,
                         border: '1px solid',
-                        borderColor: alpha('#ffffff', 0.12),
+                        borderColor: 'divider',
                         '&:hover': {
                           opacity: 0.9,
                           backgroundColor: action.bgColor,

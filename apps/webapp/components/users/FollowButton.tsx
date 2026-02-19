@@ -128,10 +128,13 @@ export default function FollowButton({
               borderRadius: 2,
               bgcolor: 'background.paper',
               color: 'text.primary',
-              boxShadow: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 'none',
               '&:hover': {
                 bgcolor: 'background.default',
-                boxShadow: 4,
+                borderColor: 'text.secondary',
+                boxShadow: 'none',
               },
             }
       }

@@ -15,6 +15,8 @@ const config: Config = {
     '^@ntlango/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
     'next/font/google$': '<rootDir>/test/unit/mocks/nextFontMock.ts',
     'next/font/local$': '<rootDir>/test/unit/mocks/nextFontLocalMock.ts',
+    // Use Node.js build of jose instead of browser build (jsdom lacks TextEncoder)
+    '^jose$': '<rootDir>/../../node_modules/jose/dist/node/cjs/index.js',
   },
   transform: {
     '^.+\\.(ts|tsx)$': [
@@ -26,6 +28,7 @@ const config: Config = {
   },
   // Transform ESM modules from node_modules
   transformIgnorePatterns: ['/node_modules/(?!(jose)/)'],
+  setupFiles: ['<rootDir>/test/unit/setupGlobals.ts'],
   setupFilesAfterEnv: ['<rootDir>/test/unit/setup.ts'],
   globalTeardown: '<rootDir>/test/unit/teardown.ts',
   collectCoverage: true,
