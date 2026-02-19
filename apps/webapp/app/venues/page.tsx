@@ -21,12 +21,10 @@ export default function VenuesPage() {
       <Box
         sx={{
           bgcolor: 'background.paper',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
           py: { xs: 6, md: 8 },
         }}
       >
-        <Container>
+        <Container maxWidth="md">
           <Box sx={{ maxWidth: '800px' }}>
             <Typography
               variant="overline"

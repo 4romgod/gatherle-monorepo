@@ -1,24 +1,51 @@
 'use client';
 
-import { Box, Container, Grid, Typography, Button } from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Box, Container, Grid, Typography, Button, Paper } from '@mui/material';
 import { Add, Groups } from '@mui/icons-material';
 import { useQuery } from '@apollo/client';
 import { GetAllOrganizationsDocument } from '@/data/graphql/query';
 import OrganizationCard from '@/components/organization/organizationBox';
 import OrganizationBoxSkeleton from '@/components/organization/organizationBox/OrganizationBoxSkeleton';
-import Carousel from '@/components/carousel';
+import SearchBox from '@/components/search/SearchBox';
 
 const SKELETON_COUNT = 8;
 
 export default function OrganizationsClient() {
+  const [searchQuery, setSearchQuery] = useState('');
   const { data, loading, error } = useQuery(GetAllOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
   });
 
   const organizations = data?.readOrganizations ?? [];
 
+  const searchItems = useMemo(
+    () => Array.from(new Set(organizations.map((org) => org.name).filter(Boolean) as string[])),
+    [organizations],
+  );
+
+  const filteredOrganizations = useMemo(() => {
+    if (!searchQuery.trim()) return organizations;
+    const q = searchQuery.toLowerCase();
+    return organizations.filter((org) => {
+      const name = (org.name ?? '').toLowerCase();
+      const description = (org.description ?? '').toLowerCase();
+      const tags = (org.tags ?? []).join(' ').toLowerCase();
+      return name.includes(q) || description.includes(q) || tags.includes(q);
+    });
+  }, [organizations, searchQuery]);
+
   return (
-    <Container sx={{ py: 6 }}>
+    <Container maxWidth="md" sx={{ py: 6 }}>
+      <Box mb={5}>
+        <SearchBox
+          itemList={searchItems}
+          placeholder="Try a name, description, or tag"
+          ariaLabel="Search organizations"
+          onSearch={setSearchQuery}
+        />
+      </Box>
+
       {error ? (
         <Typography color="error" sx={{ textAlign: 'center' }}>
           Unable to load organizations right now. Please try again shortly.
@@ -31,42 +58,46 @@ export default function OrganizationsClient() {
             </Grid>
           ))}
         </Grid>
-      ) : organizations.length === 0 ? (
-        <Box
+      ) : filteredOrganizations.length === 0 ? (
+        <Paper
+          elevation={0}
           sx={{
+            p: 8,
             textAlign: 'center',
-            py: 12,
+            bgcolor: 'background.default',
+            border: '1px solid',
+            borderColor: 'divider',
           }}
         >
           <Groups sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" fontWeight={600} gutterBottom>
-            No organizations yet
+            {searchQuery ? 'No matching organizations' : 'No organizations yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Be the first to create a community space on Ntlango
+            {searchQuery ? 'Try a different search term.' : 'Be the first to create a community space on Ntlango'}
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            sx={{
-              fontWeight: 600,
-              textTransform: 'none',
-              px: 3,
-            }}
-          >
-            Create Organization
-          </Button>
-        </Box>
+          {!searchQuery && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              sx={{
+                fontWeight: 600,
+                textTransform: 'none',
+                px: 3,
+              }}
+            >
+              Create Organization
+            </Button>
+          )}
+        </Paper>
       ) : (
-        <Carousel
-          items={organizations}
-          title="Featured Organizations"
-          autoplay={true}
-          autoplayInterval={6000}
-          itemWidth={350}
-          showIndicators={true}
-          renderItem={(organization) => <OrganizationCard organization={organization} />}
-        />
+        <Grid container spacing={3}>
+          {filteredOrganizations.map((organization) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={organization.slug}>
+              <OrganizationCard organization={organization} />
+            </Grid>
+          ))}
+        </Grid>
       )}
     </Container>
   );

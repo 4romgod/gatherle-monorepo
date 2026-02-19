@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import { Organization, OrganizationRole } from '@/data/graphql/types/graphql';
 import { Settings } from '@mui/icons-material';
@@ -18,6 +18,7 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
 
   const manageHref = slug ? ROUTES.ACCOUNT.ORGANIZATIONS.SETTINGS(slug) : ROUTES.ACCOUNT.ORGANIZATIONS.ROOT;
   const roleColor = userRole === OrganizationRole.Owner ? 'primary' : 'secondary';
+
   return (
     <Box
       sx={{
@@ -25,10 +26,6 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
         minHeight: 220,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-        },
       }}
     >
       {logo ? (

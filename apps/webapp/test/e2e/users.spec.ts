@@ -19,7 +19,7 @@ test.describe('Users Page', () => {
     await page.goto('/users');
 
     const loadError = page.getByText('Unable to load community members right now.');
-    const peopleHeading = page.getByRole('heading', { name: 'Meet Your People' });
+    const peopleHeading = page.getByRole('heading', { name: 'Discover your community' });
 
     await expect(peopleHeading.or(loadError)).toBeVisible({ timeout: 20_000 });
 

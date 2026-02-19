@@ -30,6 +30,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
 
       {/* Quick Stats Box */}
       <Surface
+        disableShadow
         sx={{
           p: 0,
           display: 'grid',
@@ -77,6 +78,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
 
       {/* Trending Categories Box */}
       <Surface
+        disableShadow
         sx={{
           p: 0,
           display: 'grid',

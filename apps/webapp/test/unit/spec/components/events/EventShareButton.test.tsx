@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { ComponentProps } from 'react';
-import EventShareButton from '@/components/events/EventShareButton';
+import EventShareButton from '@/components/events/share/EventShareButton';
 
 const mockUseSession = jest.fn();
 const mockUseLazyQuery = jest.fn();

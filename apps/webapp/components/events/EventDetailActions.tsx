@@ -5,7 +5,7 @@ import { Stack } from '@mui/material';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
-import EventShareButton from '@/components/events/EventShareButton';
+import EventShareButton from '@/components/events/share/EventShareButton';
 
 interface EventDetailActionsProps {
   eventId: string;

@@ -52,13 +52,6 @@ const VenueCard = ({
         flexDirection: 'column',
         transition: 'all 0.2s ease',
         overflow: 'hidden',
-        boxShadow: theme.shadows[2],
-        '&:hover': {
-          borderColor: 'primary.main',
-          bgcolor: 'action.hover',
-          transform: 'translateY(-2px)',
-          boxShadow: theme.shadows[4],
-        },
       })}
     >
       {heroImageUrl && (

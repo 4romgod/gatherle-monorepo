@@ -102,7 +102,6 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       return;
     }
 
-    const abortController = new AbortController();
     let isCurrent = true;
 
     // Clear previous error when starting new request
@@ -120,9 +119,6 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
       fetchPolicy: 'network-only',
       context: {
         headers: getAuthHeader(token),
-        fetchOptions: {
-          signal: abortController.signal,
-        },
       },
     })
       .then((response) => {
@@ -133,19 +129,20 @@ export const useFilteredEvents = (filters: EventFilters, initialEvents: EventPre
           setEvents(response.data.readEvents as EventPreview[]);
           setError(null);
         } else if (response.error) {
+          console.error('GraphQL error fetching filtered events', response.error);
           setError('Failed to load filtered events. Please try again.');
         }
       })
-      .catch((error) => {
-        if (isCurrent && error.name !== 'AbortError') {
-          console.error('Error fetching filtered events', error);
-          setError('Unable to apply filters. Please check your connection and try again.');
+      .catch((caughtError) => {
+        if (!isCurrent) {
+          return;
         }
+        console.error('Error fetching filtered events', caughtError);
+        setError('Unable to apply filters. Please check your connection and try again.');
       });
 
     return () => {
       isCurrent = false;
-      abortController.abort();
     };
   }, [filterInputs, dateFilterParams, locationFilter, initialEvents, loadEvents]);
 

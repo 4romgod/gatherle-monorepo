@@ -12,7 +12,7 @@ import { SaveEventButton, RsvpButton } from '@/components/events';
 import { useState, useEffect } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
-import EventShareButton from '@/components/events/EventShareButton';
+import EventShareButton from '@/components/events/share/EventShareButton';
 
 export default function EventBox({ event }: { event: EventPreview }) {
   const theme = useTheme();

@@ -92,7 +92,6 @@ describe('useFilteredEvents', () => {
       fetchPolicy: 'network-only',
       context: {
         headers: expect.any(Object),
-        fetchOptions: { signal: expect.any(AbortSignal) },
       },
     });
     expect(result.current.events).toEqual(nextEvents);
