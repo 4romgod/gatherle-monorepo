@@ -1,7 +1,7 @@
 import { RemovalPolicy, Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, BlockPublicAccess, ObjectOwnership, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
-import { APPLICATION_STAGES } from '@ntlango/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 
 export class S3BucketStack extends Stack {
   public readonly imagesBucket: Bucket;
@@ -10,9 +10,9 @@ export class S3BucketStack extends Stack {
     super(scope, id, props);
 
     const stage = process.env.STAGE || APPLICATION_STAGES.DEV;
-    const bucketName = `ntlango-images-${stage.toLowerCase()}`;
+    const bucketName = `gatherle-images-${stage.toLowerCase()}`;
 
-    this.imagesBucket = new Bucket(this, 'NtlangoImagesBucket', {
+    this.imagesBucket = new Bucket(this, 'GatherleImagesBucket', {
       bucketName,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL, // Block public access by default (use pre-signed URLs for access)

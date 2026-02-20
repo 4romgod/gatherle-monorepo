@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { Follow as FollowEntity } from '@ntlango/commons/types';
+import { Follow as FollowEntity } from '@gatherle/commons/types';
 
 @pre<FollowModel>('validate', function (next) {
   try {

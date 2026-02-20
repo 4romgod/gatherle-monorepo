@@ -4,8 +4,8 @@ import type {
   EventParticipant,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
-} from '@ntlango/commons/types';
-import { ParticipantStatus, ParticipantVisibility } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { ParticipantStatus, ParticipantVisibility } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { MockMongoError } from '@/test/utils';

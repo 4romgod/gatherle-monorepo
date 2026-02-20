@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, Int } from 'type-graphql';
-import type { User } from '@ntlango/commons/types';
+import type { User } from '@gatherle/commons/types';
 import {
   CreateEventInput,
   Event,
@@ -13,7 +13,7 @@ import {
   ParticipantStatus,
   Organization,
   OrganizationRole,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
 import { HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';

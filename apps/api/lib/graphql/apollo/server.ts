@@ -7,13 +7,13 @@ import { logger } from '@/utils/logger';
 import type { ApolloServerPlugin } from '@apollo/server';
 import { ApolloServer } from '@apollo/server';
 import { createServer } from 'http';
-import { APPLICATION_STAGES } from '@ntlango/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
-import type { User, EventCategory, Organization, Event, EventParticipant } from '@ntlango/commons/types';
+import type { User, EventCategory, Organization, Event, EventParticipant } from '@gatherle/commons/types';
 
 export interface ServerContext {
   token?: string;

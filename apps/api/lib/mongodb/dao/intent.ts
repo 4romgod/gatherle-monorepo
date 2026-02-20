@@ -1,5 +1,5 @@
 import { GraphQLError } from 'graphql';
-import type { Intent as IntentEntity, UpsertIntentInput } from '@ntlango/commons/types';
+import type { Intent as IntentEntity, UpsertIntentInput } from '@gatherle/commons/types';
 import { Intent as IntentModel } from '@/mongodb/models';
 import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

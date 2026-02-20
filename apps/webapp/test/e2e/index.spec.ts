@@ -17,7 +17,7 @@ test.describe('Index Page', () => {
     );
     await expect(heroSection.getByRole('link', { name: 'Browse events' })).toBeVisible();
     await expect(heroSection.getByRole('link', { name: 'Sign up' })).toBeVisible();
-    await expect(heroSection.getByRole('link', { name: 'Host with Ntlango' })).toBeVisible();
+    await expect(heroSection.getByRole('link', { name: 'Host with Gatherle' })).toBeVisible();
   });
 
   test('navigates to /events from the hero Browse events CTA', async ({ page }) => {
@@ -37,9 +37,9 @@ test.describe('Index Page', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible({ timeout: 20_000 });
   });
 
-  test('redirects to /auth/login when unauthenticated user clicks Host with Ntlango', async ({ page }) => {
+  test('redirects to /auth/login when unauthenticated user clicks Host with Gatherle', async ({ page }) => {
     await page.goto('/');
-    const hostLink = page.locator('#hero-section').getByRole('link', { name: 'Host with Ntlango', exact: true });
+    const hostLink = page.locator('#hero-section').getByRole('link', { name: 'Host with Gatherle', exact: true });
     await expect(hostLink).toBeVisible();
     await expect(hostLink).toHaveAttribute('href', '/account/events/create');
     await Promise.all([page.waitForURL(/\/auth\/login\/?(?:\?.*)?$/, { timeout: 20_000 }), hostLink.click()]);

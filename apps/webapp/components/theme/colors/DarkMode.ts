@@ -52,7 +52,7 @@ declare module '@mui/material/styles' {
 }
 
 /**
- * Ntlango Dark Mode Color Palette
+ * Gatherle Dark Mode Color Palette
  *
  * Philosophy: Immersive, easy on the eyes, nightlife-ready
  * - Primary (Indigo): Professional blue, less saturated for dark mode

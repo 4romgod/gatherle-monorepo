@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { ChatMessage as ChatMessageEntity } from '@ntlango/commons/types';
+import { ChatMessage as ChatMessageEntity } from '@gatherle/commons/types';
 
 @pre<ChatMessageModel>('validate', function (next) {
   try {

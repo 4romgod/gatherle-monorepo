@@ -36,7 +36,7 @@ export class GraphQLStack extends Stack {
     super(scope, id, props);
     const stageSegment = `${process.env.STAGE ?? 'Beta'}`.toLowerCase();
 
-    const ntlangoSecret = Secret.fromSecretNameV2(this, 'ImportedSecret', `ntlango/backend/${stageSegment}`);
+    const gatherleSecret = Secret.fromSecretNameV2(this, 'ImportedSecret', `gatherle/backend/${stageSegment}`);
 
     this.graphqlLambdaLogGroup = new LogGroup(this, 'GraphqlLambdaLogGroup', {
       logGroupName: '/aws/lambda/GraphqlLambdaFunction',
@@ -63,14 +63,14 @@ export class GraphQLStack extends Stack {
       },
       environment: {
         STAGE: `${process.env.STAGE}`, // TODO fix CI/CD to pass this env variable
-        NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
+        GATHERLE_SECRET_ARN: gatherleSecret.secretArn,
         S3_BUCKET_NAME: props.s3BucketName || '',
         NODE_OPTIONS: '--enable-source-maps',
       },
       logGroup: this.graphqlLambdaLogGroup,
     });
 
-    ntlangoSecret.grantRead(this.graphqlLambda);
+    gatherleSecret.grantRead(this.graphqlLambda);
 
     this.graphqlApiAccessLogGroup = new LogGroup(this, 'GraphqlRestApiAccessLogs', {
       logGroupName: 'GraphqlRestApiAccessLogs',

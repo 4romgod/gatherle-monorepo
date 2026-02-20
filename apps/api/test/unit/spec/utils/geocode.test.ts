@@ -35,7 +35,7 @@ describe('geocodeAddress', () => {
       expect.stringContaining('nominatim.openstreetmap.org'),
       expect.objectContaining({
         headers: {
-          'User-Agent': 'Ntlango-EventsAPI/1.0 (info@mapapa.co.za)',
+          'User-Agent': 'Gatherle-EventsAPI/1.0 (info@mapapa.co.za)',
           'Accept-Language': 'en',
         },
       }),

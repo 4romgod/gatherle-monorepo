@@ -1,6 +1,6 @@
 import type { ValueNode } from 'graphql';
 import { graphql, GraphQLSchema, GraphQLObjectType, GraphQLString, Kind } from 'graphql';
-import { AnyType } from '@ntlango/commons/types';
+import { AnyType } from '@gatherle/commons/types';
 
 describe('Custom Graphql Scalar Types', () => {
   describe('Any Type', () => {

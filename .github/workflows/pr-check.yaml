@@ -31,34 +31,34 @@ jobs:
       #   run: npm audit --audit-level=high
 
       - name: Commons Lint
-        run: npm run lint:check -w @ntlango/commons
+        run: npm run lint:check -w @gatherle/commons
 
       - name: Commons TypeScript Artifacts Build
-        run: npm run build:ts -w @ntlango/commons
+        run: npm run build:ts -w @gatherle/commons
 
       - name: API Lint
-        run: npm run lint:check -w @ntlango/api
+        run: npm run lint:check -w @gatherle/api
 
       - name: API TypeScript Artifacts Build
-        run: npm run build:ts -w @ntlango/api
+        run: npm run build:ts -w @gatherle/api
 
       - name: API Unit Tests
-        run: npm run test:unit -w @ntlango/api
+        run: npm run test:unit -w @gatherle/api
 
       - name: Webapp Lint
-        run: npm run lint:check -w @ntlango/webapp
+        run: npm run lint:check -w @gatherle/webapp
 
       - name: Generate GraphQL Schema File
-        run: npm run emit-schema -w @ntlango/api
+        run: npm run emit-schema -w @gatherle/api
 
       - name: Webapp GraphQL Codegen
-        run: npm run codegen -w @ntlango/webapp
+        run: npm run codegen -w @gatherle/webapp
 
       - name: Webapp TypeScript Build
-        run: npm run build:ts -w @ntlango/webapp
+        run: npm run build:ts -w @gatherle/webapp
 
       - name: Webapp Next.js Build
-        run: npm run build:next -w @ntlango/webapp
+        run: npm run build:next -w @gatherle/webapp
 
       - name: Webapp Unit Tests
-        run: npm run test:unit -w @ntlango/webapp
+        run: npm run test:unit -w @gatherle/webapp

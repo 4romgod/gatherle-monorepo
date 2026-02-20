@@ -1,5 +1,5 @@
-import type { CreateEventInput } from '@ntlango/commons/types';
-import { EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility } from '@ntlango/commons/types/event';
+import type { CreateEventInput } from '@gatherle/commons/types';
+import { EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility } from '@gatherle/commons/types/event';
 
 export type EventSeedData = CreateEventInput & {
   orgSlug?: string;

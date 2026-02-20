@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Ntlango API has comprehensive CloudWatch monitoring with structured JSON logging, automatic error tracking, and a
+The Gatherle API has comprehensive CloudWatch monitoring with structured JSON logging, automatic error tracking, and a
 real-time dashboard for observability.
 
 ## CloudWatch Dashboard
@@ -14,7 +14,7 @@ A CloudWatch dashboard is automatically deployed with each CDK stack deployment 
 Access the dashboard in AWS Console:
 
 ```
-https://console.aws.amazon.com/cloudwatch/home?region=eu-west-1#dashboards:name=Ntlango-API-{STAGE}
+https://console.aws.amazon.com/cloudwatch/home?region=eu-west-1#dashboards:name=Gatherle-API-{STAGE}
 ```
 
 Replace `{STAGE}` with your environment: `Beta`, `Staging`, or `Prod`.

@@ -11,7 +11,7 @@ import {
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ILogGroup } from 'aws-cdk-lib/aws-logs';
 import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
-import { APPLICATION_STAGES } from '@ntlango/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 
 export interface MonitoringDashboardStackProps extends StackProps {
   graphqlLambdaFunction: IFunction;
@@ -41,13 +41,13 @@ export class MonitoringDashboardStack extends Stack {
       websocketStage,
     } = props;
 
-    this.graphqlDashboard = new Dashboard(this, 'NtlangoGraphqlDashboard', {
-      dashboardName: `Ntlango-GraphQL-${stageName}`,
+    this.graphqlDashboard = new Dashboard(this, 'GatherleGraphqlDashboard', {
+      dashboardName: `Gatherle-GraphQL-${stageName}`,
     });
 
     this.graphqlDashboard.addWidgets(
       new TextWidget({
-        markdown: `# Ntlango GraphQL Monitoring Dashboard\n\n**Stage:** ${stageName}\n**Lambda Function:** ${graphqlLambdaFunction.functionName}`,
+        markdown: `# Gatherle GraphQL Monitoring Dashboard\n\n**Stage:** ${stageName}\n**Lambda Function:** ${graphqlLambdaFunction.functionName}`,
         width: 24,
         height: 2,
       }),
@@ -284,13 +284,13 @@ export class MonitoringDashboardStack extends Stack {
       }),
     );
 
-    this.websocketDashboard = new Dashboard(this, 'NtlangoWebSocketDashboard', {
-      dashboardName: `Ntlango-WebSocket-${stageName}`,
+    this.websocketDashboard = new Dashboard(this, 'GatherleWebSocketDashboard', {
+      dashboardName: `Gatherle-WebSocket-${stageName}`,
     });
 
     this.websocketDashboard.addWidgets(
       new TextWidget({
-        markdown: `# Ntlango WebSocket Monitoring Dashboard\n\n**Stage:** ${stageName}\n**Lambda Function:** ${websocketLambdaFunction.functionName}\n**WebSocket API Id:** ${websocketApi.apiId}`,
+        markdown: `# Gatherle WebSocket Monitoring Dashboard\n\n**Stage:** ${stageName}\n**Lambda Function:** ${websocketLambdaFunction.functionName}\n**WebSocket API Id:** ${websocketApi.apiId}`,
         width: 24,
         height: 2,
       }),

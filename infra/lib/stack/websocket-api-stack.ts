@@ -26,7 +26,7 @@ export class WebSocketApiStack extends Stack {
     super(scope, id, props);
     const stageSegment = `${process.env.STAGE ?? 'Beta'}`.toLowerCase();
 
-    const ntlangoSecret = Secret.fromSecretNameV2(this, 'WebSocketImportedSecret', `ntlango/backend/${stageSegment}`);
+    const gatherleSecret = Secret.fromSecretNameV2(this, 'WebSocketImportedSecret', `gatherle/backend/${stageSegment}`);
 
     this.websocketLambdaLogGroup = new LogGroup(this, 'WebSocketLambdaLogGroup', {
       logGroupName: '/aws/lambda/WebSocketLambdaFunction',
@@ -51,49 +51,49 @@ export class WebSocketApiStack extends Stack {
       },
       environment: {
         STAGE: `${process.env.STAGE}`,
-        NTLANGO_SECRET_ARN: ntlangoSecret.secretArn,
+        GATHERLE_SECRET_ARN: gatherleSecret.secretArn,
         WEBSOCKET_CONNECTION_TTL_HOURS: '24',
         NODE_OPTIONS: '--enable-source-maps',
       },
       logGroup: this.websocketLambdaLogGroup,
     });
 
-    ntlangoSecret.grantRead(this.websocketLambda);
+    gatherleSecret.grantRead(this.websocketLambda);
 
-    this.websocketApi = new WebSocketApi(this, 'NtlangoWebSocketApi', {
-      apiName: 'NtlangoWebSocketApi',
-      description: 'Ntlango websocket API for realtime notifications and chat',
+    this.websocketApi = new WebSocketApi(this, 'GatherleWebSocketApi', {
+      apiName: 'GatherleWebSocketApi',
+      description: 'Gatherle websocket API for realtime notifications and chat',
       routeSelectionExpression: '$request.body.action',
     });
 
     this.websocketApi.addRoute('$connect', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketConnectLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketConnectLambdaIntegration', this.websocketLambda),
     });
     this.websocketApi.addRoute('$disconnect', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketDisconnectLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketDisconnectLambdaIntegration', this.websocketLambda),
     });
     this.websocketApi.addRoute('$default', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketDefaultLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketDefaultLambdaIntegration', this.websocketLambda),
     });
     this.websocketApi.addRoute('ping', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketPingLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketPingLambdaIntegration', this.websocketLambda),
     });
     this.websocketApi.addRoute('notification.subscribe', {
       integration: new WebSocketLambdaIntegration(
-        'NtlangoWebSocketNotificationSubscribeLambdaIntegration',
+        'GatherleWebSocketNotificationSubscribeLambdaIntegration',
         this.websocketLambda,
       ),
     });
     this.websocketApi.addRoute('chat.send', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketChatSendLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketChatSendLambdaIntegration', this.websocketLambda),
     });
     this.websocketApi.addRoute('chat.read', {
-      integration: new WebSocketLambdaIntegration('NtlangoWebSocketChatReadLambdaIntegration', this.websocketLambda),
+      integration: new WebSocketLambdaIntegration('GatherleWebSocketChatReadLambdaIntegration', this.websocketLambda),
     });
 
     this.websocketApi.grantManageConnections(this.websocketLambda);
 
-    this.websocketStage = new WebSocketStage(this, 'NtlangoWebSocketStage', {
+    this.websocketStage = new WebSocketStage(this, 'GatherleWebSocketStage', {
       webSocketApi: this.websocketApi,
       stageName: `${process.env.STAGE}`.toLowerCase(),
       autoDeploy: true,

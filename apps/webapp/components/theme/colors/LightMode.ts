@@ -52,7 +52,7 @@ declare module '@mui/material/styles' {
 }
 
 /**
- * Ntlango Light Mode Color Palette
+ * Gatherle Light Mode Color Palette
  *
  * Philosophy: Clean, energetic, and approachable
  * - Primary (Indigo): Professional, trustworthy, not overwhelming

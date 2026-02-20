@@ -3,7 +3,7 @@
  * This is used by the webapp's codegen to generate types without
  * needing a running server.
  *
- * Usage: npm run emit-schema -w @ntlango/api
+ * Usage: npm run emit-schema -w @gatherle/api
  *
  * Note: This script does not require environment variables because:
  * - Environment validation is lazy (only runs when validateEnv() is called)

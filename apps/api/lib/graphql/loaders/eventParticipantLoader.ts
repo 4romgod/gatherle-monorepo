@@ -1,7 +1,7 @@
 import DataLoader from 'dataloader';
 import { EventParticipant as EventParticipantModel } from '@/mongodb/models';
 import { EventParticipantDAO } from '@/mongodb/dao';
-import type { EventParticipant } from '@ntlango/commons/types';
+import type { EventParticipant } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 
 /**

@@ -7,8 +7,8 @@ import type {
   DeleteOrganizationMembershipInput,
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
-} from '@ntlango/commons/types';
-import { OrganizationRole } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { OrganizationRole } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 

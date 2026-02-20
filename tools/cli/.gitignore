@@ -2,7 +2,7 @@ dist
 .DS_Store
 .env
 .git
-.ntlango-env
+.gatherle-env
 .vscode
 build
-ntlango.egg-info
+gatherle.egg-info

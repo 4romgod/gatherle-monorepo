@@ -45,10 +45,10 @@ import type {
   UpdateVenueInput,
   User,
   Venue,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { SECRET_KEYS, validateEnv } from '@/constants';
-import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@ntlango/commons/types';
-import { EventVisibility } from '@ntlango/commons/types/event';
+import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@gatherle/commons/types';
+import { EventVisibility } from '@gatherle/commons/types/event';
 import { logger } from '@/utils/logger';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {

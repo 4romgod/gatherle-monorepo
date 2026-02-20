@@ -1,5 +1,5 @@
 import request from 'supertest';
-import type { CreateEventCategoryInput } from '@ntlango/commons/types';
+import type { CreateEventCategoryInput } from '@gatherle/commons/types';
 import { getCreateEventCategoryMutation } from '@/test/utils';
 import { trackCreatedId } from './eventResolverHelpers';
 

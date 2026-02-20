@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const displayName = fullName || `@${user.username}`;
       return buildPageMetadata({
         title: `${displayName} Profile`,
-        description: user.bio || `Explore ${displayName}'s profile, interests, and community activity on Ntlango.`,
+        description: user.bio || `Explore ${displayName}'s profile, interests, and community activity on Gatherle.`,
         keywords: [user.username, fullName, 'community profile', 'event community'].filter(Boolean) as string[],
       });
     }
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Community Profile',
-    description: 'Discover people in the Ntlango community and connect through shared interests.',
+    description: 'Discover people in the Gatherle community and connect through shared interests.',
     keywords: ['community profile', 'event community', 'connect with people'],
   });
 }

@@ -6,8 +6,8 @@ import type {
   CancelEventParticipantInput,
   EventParticipant,
   User,
-} from '@ntlango/commons/types';
-import { ParticipantStatus } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import { createMockContext } from '../../../../utils/mockContext';
 

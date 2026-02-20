@@ -1,6 +1,6 @@
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
-import type { FilterInput, LocationFilterInput, TextSearchInput } from '@ntlango/commons/types';
-import { FilterOperatorInput } from '@ntlango/commons/types';
+import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/types';
+import { FilterOperatorInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 import { buildTextSearchRegex } from '../text-search';
 

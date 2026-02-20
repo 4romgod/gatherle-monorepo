@@ -1,7 +1,7 @@
 import request from 'supertest';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
-import type { QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
   getDeleteEventCategoryGroupBySlugMutation,

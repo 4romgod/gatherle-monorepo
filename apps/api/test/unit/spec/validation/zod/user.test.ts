@@ -7,7 +7,7 @@ import {
   ResetPasswordInputTypeSchema,
   ERROR_MESSAGES,
 } from '@/validation';
-import { Gender } from '@ntlango/commons/types/user';
+import { Gender } from '@gatherle/commons/types/user';
 import mongoose from 'mongoose';
 
 describe('User', () => {

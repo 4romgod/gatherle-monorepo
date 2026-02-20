@@ -4,7 +4,7 @@ import type {
   QueryOptionsInput,
   SortInput,
   TextSearchInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import type { Model, Query } from 'mongoose';
 import { CustomError, ErrorTypes } from '../exceptions';
 import { buildTextSearchRegex } from './text-search';

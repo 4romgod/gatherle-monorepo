@@ -1,4 +1,4 @@
-# The useLazyQuery Pattern: Scalable Data Fetching in Ntlango
+# The useLazyQuery Pattern: Scalable Data Fetching in Gatherle
 
 ## Overview
 
@@ -150,7 +150,7 @@ const handleExpand = async (id: string) => {
 };
 ```
 
-## Real-World Examples in Ntlango
+## Real-World Examples in Gatherle
 
 ### Example 1: User Search in Organization Settings
 
@@ -593,7 +593,7 @@ This allows:
 - Fuzzy matching
 - Better performance
 
-## Where to Use This Pattern in Ntlango
+## Where to Use This Pattern in Gatherle
 
 ### High-Priority Candidates
 
@@ -669,11 +669,11 @@ features into fast, responsive experiences that work with millions of records.
 - ✅ Clean up timeouts
 - ✅ Plan for backend text search
 
-By following this pattern, Ntlango can scale to millions of users, events, and organizations without sacrificing
+By following this pattern, Gatherle can scale to millions of users, events, and organizations without sacrificing
 performance or user experience.
 
 ---
 
 **Document Version:** 1.0  
 **Last Updated:** February 2, 2026  
-**Author:** Ntlango Engineering Team
+**Author:** Gatherle Engineering Team

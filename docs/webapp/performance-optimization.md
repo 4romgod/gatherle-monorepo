@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the performance optimizations implemented in the Ntlango webapp to achieve faster page loads and
+This document outlines the performance optimizations implemented in the Gatherle webapp to achieve faster page loads and
 better user experience.
 
 ## Implemented Optimizations

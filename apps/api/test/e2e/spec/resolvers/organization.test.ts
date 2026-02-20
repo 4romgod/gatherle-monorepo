@@ -2,8 +2,8 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
-import type { UserWithToken } from '@ntlango/commons/types';
-import { OrganizationRole } from '@ntlango/commons/types';
+import type { UserWithToken } from '@gatherle/commons/types';
+import { OrganizationRole } from '@gatherle/commons/types';
 import {
   getCreateOrganizationMutation,
   getDeleteOrganizationByIdMutation,

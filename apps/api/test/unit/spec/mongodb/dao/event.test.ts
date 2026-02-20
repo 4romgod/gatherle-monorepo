@@ -1,10 +1,10 @@
-import type { RsvpInput, UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@ntlango/commons/types';
+import type { RsvpInput, UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 import { EventDAO, EventParticipantDAO } from '@/mongodb/dao';
 import { Event as EventModel } from '@/mongodb/models';
-import { SortOrderInput } from '@ntlango/commons/types';
-import { DATE_FILTER_OPTIONS } from '@ntlango/commons/constants';
-import { EventStatus } from '@ntlango/commons/types/event';
+import { SortOrderInput } from '@gatherle/commons/types';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons/constants';
+import { EventStatus } from '@gatherle/commons/types/event';
 import { CustomError, ErrorTypes, transformEventOptionsToPipeline } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { ERROR_MESSAGES } from '@/validation';

@@ -1,7 +1,7 @@
 {
-  "name": "@ntlango/commons",
+  "name": "@gatherle/commons",
   "version": "1.0.0",
-  "description": "This repository contains common source code for ntlango",
+  "description": "This repository contains common source code for gatherle",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "scripts": {

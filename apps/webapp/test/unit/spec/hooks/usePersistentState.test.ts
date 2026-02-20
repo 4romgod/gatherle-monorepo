@@ -37,7 +37,7 @@ describe('usePersistentState', () => {
   });
 
   it('hydrates from existing storage entries', () => {
-    const prefilledKey = `ntlango:sessionstate:${hookKey}`;
+    const prefilledKey = `gatherle:sessionstate:${hookKey}`;
     window.localStorage.setItem(prefilledKey, JSON.stringify({ value: 'persisted' }));
 
     const { result } = renderHook(() => usePersistentState(hookKey, 'default'));
@@ -94,7 +94,7 @@ describe('usePersistentState', () => {
   });
 
   it('drops expired entries before hydrating', () => {
-    const prefilledKey = `ntlango:sessionstate:${hookKey}`;
+    const prefilledKey = `gatherle:sessionstate:${hookKey}`;
     const payload = { value: 'old', expiresAt: Date.now() - 1 };
     window.localStorage.setItem(prefilledKey, JSON.stringify(payload));
 
@@ -105,7 +105,7 @@ describe('usePersistentState', () => {
   });
 
   it('removes invalid JSON entries during hydration', () => {
-    const prefilledKey = `ntlango:sessionstate:${hookKey}`;
+    const prefilledKey = `gatherle:sessionstate:${hookKey}`;
     window.localStorage.setItem(prefilledKey, '{invalid-json');
 
     const { result } = renderHook(() => usePersistentState(hookKey, 'default'));

@@ -8,7 +8,7 @@ test.describe('Organizations Page', () => {
 
   test('renders /organizations hero section', async ({ page }) => {
     await page.goto('/organizations');
-    const heroHeading = page.getByRole('heading', { name: 'Community spaces on Ntlango' });
+    const heroHeading = page.getByRole('heading', { name: 'Community spaces on Gatherle' });
     const heroSection = heroHeading.locator('xpath=..');
 
     await expect(heroHeading).toBeVisible({ timeout: 20_000 });
@@ -18,7 +18,7 @@ test.describe('Organizations Page', () => {
 
   test('navigates to /events from organizations page CTA', async ({ page }) => {
     await page.goto('/organizations');
-    const heroSection = page.getByRole('heading', { name: 'Community spaces on Ntlango' }).locator('xpath=..');
+    const heroSection = page.getByRole('heading', { name: 'Community spaces on Gatherle' }).locator('xpath=..');
 
     await heroSection.getByRole('link', { name: /^Browse Events$/ }).click();
     await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
@@ -26,7 +26,7 @@ test.describe('Organizations Page', () => {
 
   test('redirects unauthenticated users to /auth/login from create organization CTA', async ({ page }) => {
     await page.goto('/organizations');
-    const heroSection = page.getByRole('heading', { name: 'Community spaces on Ntlango' }).locator('xpath=..');
+    const heroSection = page.getByRole('heading', { name: 'Community spaces on Gatherle' }).locator('xpath=..');
 
     await heroSection.getByRole('link', { name: /^Create Organization$/ }).click();
     await expectLoginPage(page);

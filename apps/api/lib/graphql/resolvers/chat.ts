@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, ID, Int, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { ChatConversation, ChatMessage, ChatMessageConnection, User, UserRole } from '@ntlango/commons/types';
+import { ChatConversation, ChatMessage, ChatMessageConnection, User, UserRole } from '@gatherle/commons/types';
 import { ChatMessageDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { getAuthenticatedUser } from '@/utils';

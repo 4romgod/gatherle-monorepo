@@ -46,7 +46,7 @@ const Footer = () => {
               GET STARTED
             </Typography>
             <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, mt: 0.5 }}>
-              Bring people together with Ntlango
+              Bring people together with Gatherle
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 520, mt: 1, lineHeight: 1.6 }}>
               Craft intimate gatherings, bold conferences, or community rituals with the platform built for modern

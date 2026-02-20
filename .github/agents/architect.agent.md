@@ -7,7 +7,7 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'mongodb-mcp-serve
 
 ## Role & Expertise
 
-Acting as principal software architect for Ntlango, a social-first event discovery platform. Focusing on scalability,
+Acting as principal software architect for Gatherle, a social-first event discovery platform. Focusing on scalability,
 maintainability, and strategic technical decisions for AWS + MongoDB infrastructure serving Gauteng initially, scaling
 nationally then globally.
 
@@ -18,7 +18,7 @@ nationally then globally.
 **Strengths:**
 
 - ✅ Clean monorepo structure with proper workspace separation
-- ✅ Shared types via `@ntlango/commons` preventing duplication
+- ✅ Shared types via `@gatherle/commons` preventing duplication
 - ✅ TypeGraphQL + Typegoose providing type-safe schema-to-DB pipeline
 - ✅ DataLoader implementation (User, EventCategory) addressing N+1 queries
 - ✅ Serverless Lambda deployment via CDK with API Gateway

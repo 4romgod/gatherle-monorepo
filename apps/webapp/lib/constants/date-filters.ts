@@ -1,5 +1,5 @@
 // Date filter constants
-// Synced from @ntlango/commons/lib/constants/general.ts
+// Synced from @gatherle/commons/lib/constants/general.ts
 
 export enum DATE_FILTER_OPTIONS {
   TODAY = 'TODAY',

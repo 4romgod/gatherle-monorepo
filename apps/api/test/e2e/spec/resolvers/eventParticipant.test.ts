@@ -2,8 +2,8 @@ import request from 'supertest';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
-import { ParticipantStatus } from '@ntlango/commons/types';
+import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
 import {
   getCancelEventParticipantMutation,
   getDeleteEventByIdMutation,

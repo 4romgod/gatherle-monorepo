@@ -3,8 +3,8 @@ import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
-import type { QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
-import { SortOrderInput } from '@ntlango/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
+import { SortOrderInput } from '@gatherle/commons/types';
 import {
   getCreateEventCategoryMutation,
   getDeleteEventCategoryByIdMutation,

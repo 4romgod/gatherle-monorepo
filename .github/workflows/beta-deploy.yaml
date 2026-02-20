@@ -33,13 +33,13 @@ jobs:
         run: npm i -g aws-cdk
 
       - name: Commons TypeScript Artifacts Build
-        run: npm run build:ts -w @ntlango/commons
+        run: npm run build:ts -w @gatherle/commons
 
       - name: API TypeScript Artifacts Build
-        run: npm run build:ts -w @ntlango/api
+        run: npm run build:ts -w @gatherle/api
 
       - name: Synthesize AWS CDK
-        run: npm run build:cdk -w @ntlango/cdk
+        run: npm run build:cdk -w @gatherle/cdk
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -52,7 +52,7 @@ jobs:
           CDK_DEPLOY_STACKS: "S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
         run: |
           # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
-          npm run cdk -w @ntlango/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
+          npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 
       - name: Get API Gateway endpoint
         id: get_graphql_endpoint
@@ -80,7 +80,7 @@ jobs:
       - name: Run API E2E Tests
         env:
           GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
-          NTLANGO_SECRET_ARN: ${{ secrets.NTLANGO_SECRET_ARN }}
+          GATHERLE_SECRET_ARN: ${{ secrets.GATHERLE_SECRET_ARN }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: npm run test:e2e:api
 

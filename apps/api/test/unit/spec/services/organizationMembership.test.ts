@@ -4,7 +4,7 @@ jest.mock('@/constants', () => ({
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
   JWT_SECRET: 'test-secret',
-  NTLANGO_SECRET_ARN: undefined,
+  GATHERLE_SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
   HttpStatusCode: {
@@ -91,8 +91,8 @@ jest.mock('@/utils/logger', () => ({
 import { OrganizationMembershipService } from '@/services';
 import { OrganizationMembershipDAO, OrganizationDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
-import type { OrganizationMembership, Organization } from '@ntlango/commons/types';
-import { OrganizationRole, NotificationType, NotificationTargetType } from '@ntlango/commons/types';
+import type { OrganizationMembership, Organization } from '@gatherle/commons/types';
+import { OrganizationRole, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
 
 describe('OrganizationMembershipService', () => {
   const mockMembership: OrganizationMembership = {

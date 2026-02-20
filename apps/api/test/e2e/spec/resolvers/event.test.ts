@@ -3,8 +3,8 @@ import { kebabCase } from 'lodash';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
-import { SortOrderInput, OrganizationRole } from '@ntlango/commons/types';
+import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
+import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
 import {
   getCreateEventMutation,
   getDeleteEventByIdMutation,

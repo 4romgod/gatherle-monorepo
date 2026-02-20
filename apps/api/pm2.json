@@ -1,9 +1,9 @@
 {
-  "name": "ntlango-backend",
+  "name": "gatherle-backend",
   "node_args": "-r ts-node/register",
   "script": "./dist/lib/scripts/startServer.js",
-  "error_file": "/tmp/ntlango-backend.err.log",
-  "out_file": "/tmp/ntlango-backend.out.log",
-  "log_file": "/tmp/ntlango-backend.log",
+  "error_file": "/tmp/gatherle-backend.err.log",
+  "out_file": "/tmp/gatherle-backend.out.log",
+  "log_file": "/tmp/gatherle-backend.log",
   "merge_logs": true
 }

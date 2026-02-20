@@ -6,7 +6,7 @@ import {
   UpdateEventCategoryInput,
   UserRole,
   QueryOptionsInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { EventCategoryDAO } from '@/mongodb/dao';
 import { CreateEventCategorySchema, UpdateEventCategorySchema, validateInput, validateMongodbId } from '@/validation';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';

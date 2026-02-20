@@ -7,7 +7,7 @@ const MessagesEntry = dynamicComponent(() => import('@/components/messages/Messa
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Messages',
-  description: 'Read and manage your private conversations on Ntlango.',
+  description: 'Read and manage your private conversations on Gatherle.',
   noIndex: true,
 });
 

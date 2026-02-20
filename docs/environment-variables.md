@@ -31,7 +31,7 @@ The following commands work without any environment variables:
 - Required keys:
   - `STAGE` (default `Beta`).
   - `AWS_REGION` (defaults to `eu-west-1`).
-  - `MONGO_DB_URL` **MUST include a database name** (e.g., `mongodb://localhost:27017/ntlango`) to prevent collections
+  - `MONGO_DB_URL` **MUST include a database name** (e.g., `mongodb://localhost:27017/gatherle`) to prevent collections
     from vanishing on reconnects. Without a database name, Mongoose defaults to the "test" database.
   - `JWT_SECRET` (used directly from the file).
   - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
@@ -39,18 +39,18 @@ The following commands work without any environment variables:
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
   automatically.
-- `NTLANGO_SECRET_ARN` is **not required** locally—dev never reads Secrets Manager.
+- `GATHERLE_SECRET_ARN` is **not required** locally—dev never reads Secrets Manager.
 
 ### Deployed stages (Staging/Prod)
 
 - Secrets Manager stores `MONGO_DB_URL` and `JWT_SECRET` inside a secret whose name follows
-  `ntlango/backend/${STAGE.toLowerCase()}` (for example `ntlango/backend/beta`).
+  `gatherle/backend/${STAGE.toLowerCase()}` (for example `gatherle/backend/beta`).
 - CDK injects these into the lambda by looking up that secret via `Secret.fromSecretNameV2` and supplying
-  `NTLANGO_SECRET_ARN` (the actual ARN returned by Secrets Manager) and `AWS_REGION`.
+  `GATHERLE_SECRET_ARN` (the actual ARN returned by Secrets Manager) and `AWS_REGION`.
 - Lambda environment:
   - `STAGE` (from CI/CD).
-  - `NTLANGO_SECRET_ARN` (required ARN, not just the string `ntlango/backend/${STAGE.toLowerCase()}`; the ARN is passed
-    verbatim).
+  - `GATHERLE_SECRET_ARN` (required ARN, not just the string `gatherle/backend/${STAGE.toLowerCase()}`; the ARN is
+    passed verbatim).
   - `AWS_REGION` (should align with where the stack is deployed).
   - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
@@ -61,14 +61,14 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 #### Local testing (STAGE=Dev, default)
 
-- Run: `npm run test:e2e -w @ntlango/api`
+- Run: `npm run test:e2e -w @gatherle/api`
 - Requires: `MONGO_DB_URL`, `JWT_SECRET`, `STAGE=Dev`
 - Behavior: Spins up local server at `http://localhost:9000/v1/graphql`, runs tests, cleans up test data automatically
 
 #### Remote testing (STAGE=Beta or STAGE=Prod)
 
-- Run: `STAGE=Beta GRAPHQL_URL=<endpoint> npm run test:e2e -w @ntlango/api`
-- Required env: `STAGE`, `GRAPHQL_URL`, `NTLANGO_SECRET_ARN`, `AWS_REGION`
+- Run: `STAGE=Beta GRAPHQL_URL=<endpoint> npm run test:e2e -w @gatherle/api`
+- Required env: `STAGE`, `GRAPHQL_URL`, `GATHERLE_SECRET_ARN`, `AWS_REGION`
 - Behavior: Tests against deployed endpoint without starting a server, skips automatic cleanup
 - Example: Post-deployment tests in CI/CD run against the freshly deployed API endpoint with `STAGE=Beta`
 
@@ -94,7 +94,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 ### E2E tests (Playwright)
 
-- Run (workspace): `npm run test:e2e -w @ntlango/webapp`
+- Run (workspace): `npm run test:e2e -w @gatherle/webapp`
 - Run (root alias): `npm run test:e2e:web`
 - Required: `PLAYWRIGHT_BASE_URL` must point to the deployed/running webapp URL.
 - Optional overrides:
@@ -110,15 +110,15 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   1. `ASSUME_ROLE_ARN` – secret, used when configuring AWS credentials.
   2. `AWS_REGION` – can live in repository **variables** (no need to mark it as a secret).
   3. `STAGE` – repository variable (default `Beta`, override for prod).
-  4. `NTLANGO_SECRET_ARN` – if tests or later steps run outside AWS, pass the ARN (or re-export it) so e2e tests/webapp
+  4. `GATHERLE_SECRET_ARN` – if tests or later steps run outside AWS, pass the ARN (or re-export it) so e2e tests/webapp
      builds can reach the same secrets.
 - CDK deploy step passes:
   - `STAGE` (via `vars.STAGE`).
   - `AWS_REGION` (via props, default `eu-west-1`).
-  - `NTLANGO_SECRET_ARN` (the actual ARN from the secret).
+  - `GATHERLE_SECRET_ARN` (the actual ARN from the secret).
 - After deployment:
   - Capture `GRAPHQL_URL` output.
-  - Run e2e tests with `STAGE`, `NTLANGO_SECRET_ARN`, `GRAPHQL_URL`.
+  - Run e2e tests with `STAGE`, `GATHERLE_SECRET_ARN`, `GRAPHQL_URL`.
   - For the frontend deploy, surface `NEXT_PUBLIC_GRAPHQL_URL` (`GRAPHQL_URL`) plus `NEXT_PUBLIC_JWT_SECRET` (from the
     secret) using GitHub env/outputs without hardcoding.
 
@@ -129,5 +129,5 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   to satisfy the right keys per `STAGE`.
 - Update the pipeline to pass `NEXT_PUBLIC_*` values securely instead of the placeholder `secret`; consider introducing
   a small job that writes those values to `${GITHUB_ENV}` after API deployment.
-- Propagate the `NTLANGO_SECRET_ARN` ARN (not just the secret name) everywhere the API runs so the lambda and tests can
+- Propagate the `GATHERLE_SECRET_ARN` ARN (not just the secret name) everywhere the API runs so the lambda and tests can
   actually resolve the secret.

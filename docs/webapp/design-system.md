@@ -1,9 +1,9 @@
-# Ntlango Design System: "Elevation Zero"
+# Gatherle Design System: "Elevation Zero"
 
 ## Overview
 
-The **Elevation Zero Design System** is Ntlango's visual language - a modern, clean, and accessible design approach that
-emphasizes flat surfaces with subtle borders over heavy shadows. This system prioritizes readability, mobile-first
+The **Elevation Zero Design System** is Gatherle's visual language - a modern, clean, and accessible design approach
+that emphasizes flat surfaces with subtle borders over heavy shadows. This system prioritizes readability, mobile-first
 responsiveness, and consistent user experiences across all pages.
 
 ### Philosophy

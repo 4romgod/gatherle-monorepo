@@ -1,7 +1,7 @@
 import { createSortStages } from '@/utils';
 import type { PipelineStage } from 'mongoose';
-import type { SortInput } from '@ntlango/commons/types';
-import { SortOrderInput } from '@ntlango/commons/types';
+import type { SortInput } from '@gatherle/commons/types';
+import { SortOrderInput } from '@gatherle/commons/types';
 
 describe('createSortStages', () => {
   it('should return a valid sort pipeline stage for given sort inputs', () => {

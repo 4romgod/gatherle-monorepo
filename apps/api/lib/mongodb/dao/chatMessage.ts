@@ -1,4 +1,8 @@
-import type { ChatConversation, ChatMessage as ChatMessageEntity, ChatMessageConnection } from '@ntlango/commons/types';
+import type {
+  ChatConversation,
+  ChatMessage as ChatMessageEntity,
+  ChatMessageConnection,
+} from '@gatherle/commons/types';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
 import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

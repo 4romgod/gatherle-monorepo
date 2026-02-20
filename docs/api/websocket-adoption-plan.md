@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document proposes introducing WebSockets to support real-time product experiences across Ntlango.
+This document proposes introducing WebSockets to support real-time product experiences across Gatherle.
 
 The goal is to move from request/refresh/poll patterns to push-based updates where immediacy matters.
 
@@ -226,7 +226,7 @@ This section documents what is implemented today so this plan can evolve as a li
 #### 1. Infrastructure
 
 - Stack: `infra/lib/stack/websocket-api-stack.ts`
-- API name: `NtlangoWebSocketApi`
+- API name: `GatherleWebSocketApi`
 - Stage: lowercase `STAGE` (for example `beta`)
 - Lambda: `WebSocketLambdaFunction` (Node.js 24, 30s timeout, 256MB)
 - Route selection expression: `$request.body.action`

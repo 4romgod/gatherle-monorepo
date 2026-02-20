@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document covers the notification system for Ntlango, including notification types, delivery channels, data
+This document covers the notification system for Gatherle, including notification types, delivery channels, data
 architecture, and implementation details for push notifications.
 
 ---
@@ -254,7 +254,7 @@ Store in AWS Secrets Manager:
 
 - `VAPID_PUBLIC_KEY` - shared with client
 - `VAPID_PRIVATE_KEY` - server only
-- `VAPID_SUBJECT` - mailto:support@ntlango.com
+- `VAPID_SUBJECT` - mailto:support@gatherle.com
 
 #### 2. Client-Side Setup
 

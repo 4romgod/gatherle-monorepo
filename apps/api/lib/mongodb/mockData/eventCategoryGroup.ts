@@ -1,4 +1,4 @@
-import type { CreateEventCategoryGroupInput } from '@ntlango/commons/types';
+import type { CreateEventCategoryGroupInput } from '@gatherle/commons/types';
 
 import eventCategories from './eventCategory';
 

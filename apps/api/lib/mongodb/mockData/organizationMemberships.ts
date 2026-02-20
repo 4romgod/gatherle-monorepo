@@ -1,4 +1,4 @@
-import { OrganizationRole } from '@ntlango/commons/types';
+import { OrganizationRole } from '@gatherle/commons/types';
 
 export type OrganizationMembershipSeed = {
   orgSlug: string;

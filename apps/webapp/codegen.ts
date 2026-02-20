@@ -15,7 +15,7 @@ const schemaSource = schemaFileExists ? schemaFilePath : process.env.NEXT_PUBLIC
 
 if (!schemaSource) {
   throw new Error(
-    'No schema source available. Either run `npm run emit-schema -w @ntlango/api` to generate the schema file, ' +
+    'No schema source available. Either run `npm run emit-schema -w @gatherle/api` to generate the schema file, ' +
       'or set NEXT_PUBLIC_GRAPHQL_URL to a running GraphQL server.',
   );
 }

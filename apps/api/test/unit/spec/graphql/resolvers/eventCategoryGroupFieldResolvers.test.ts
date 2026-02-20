@@ -1,5 +1,5 @@
 import { EventCategoryGroupResolver } from '@/graphql/resolvers/eventCategoryGroup';
-import type { EventCategoryGroup, EventCategory, User } from '@ntlango/commons/types';
+import type { EventCategoryGroup, EventCategory, User } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
 

@@ -1,7 +1,7 @@
 import { EventResolver } from '@/graphql/resolvers/event';
 import { FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
-import type { Event, EventCategory, User, EventParticipant, OrganizationMembership } from '@ntlango/commons/types';
-import { ParticipantStatus, OrganizationRole } from '@ntlango/commons/types';
+import type { Event, EventCategory, User, EventParticipant, OrganizationMembership } from '@gatherle/commons/types';
+import { ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
 

@@ -4,7 +4,7 @@ jest.mock('@/constants', () => ({
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
   JWT_SECRET: 'test-secret',
-  NTLANGO_SECRET_ARN: undefined,
+  GATHERLE_SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
   HttpStatusCode: {
@@ -106,8 +106,8 @@ import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishFollowRequestCreated, publishFollowRequestUpdated } from '@/websocket/publisher';
 import { CustomError, ErrorTypes } from '@/utils';
-import type { Follow, User, Organization, Event } from '@ntlango/commons/types';
-import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@ntlango/commons/types';
+import type { Follow, User, Organization, Event } from '@gatherle/commons/types';
+import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@gatherle/commons/types';
 import { GraphQLError } from 'graphql';
 
 // Set up mock implementations after imports so we can use GraphQLError

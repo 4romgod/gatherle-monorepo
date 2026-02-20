@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { Activity as ActivityEntity } from '@ntlango/commons/types';
+import { Activity as ActivityEntity } from '@gatherle/commons/types';
 
 @pre<ActivityModel>('validate', function (next) {
   try {

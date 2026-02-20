@@ -5,7 +5,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Reset Password',
-  description: 'Request a password reset link to regain access to your Ntlango account.',
+  description: 'Request a password reset link to regain access to your Gatherle account.',
   noIndex: true,
 });
 

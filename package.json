@@ -1,5 +1,5 @@
 {
-  "name": "ntlango",
+  "name": "gatherle",
   "private": true,
   "workspaces": [
     "apps/api",
@@ -9,20 +9,20 @@
   ],
   "scripts": {
     "build": "npm run build:commons && npm run build:api && npm run build:web && npm run build:cdk",
-    "build:api": "npm run build -w @ntlango/api",
-    "build:web": "npm run build -w @ntlango/webapp",
-    "build:cdk": "npm run build -w @ntlango/cdk",
-    "build:commons": "npm run build -w @ntlango/commons",
-    "dev:api": "npm run dev -w @ntlango/api",
-    "dev:web": "npm run dev -w @ntlango/webapp",
+    "build:api": "npm run build -w @gatherle/api",
+    "build:web": "npm run build -w @gatherle/webapp",
+    "build:cdk": "npm run build -w @gatherle/cdk",
+    "build:commons": "npm run build -w @gatherle/commons",
+    "dev:api": "npm run dev -w @gatherle/api",
+    "dev:web": "npm run dev -w @gatherle/webapp",
     "lint:check": "npm run lint -w --if-present",
     "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\"",
     "typecheck": "npm run typecheck -w --if-present",
     "test:unit": "npm run test:unit:api && npm run test:unit:web",
-    "test:unit:api": "npm run test:unit -w @ntlango/api",
-    "test:unit:web": "npm run test:unit -w @ntlango/webapp",
-    "test:e2e:api": "npm run test:e2e -w @ntlango/api --",
-    "test:e2e:web": "npm run test:e2e -w @ntlango/webapp --"
+    "test:unit:api": "npm run test:unit -w @gatherle/api",
+    "test:unit:web": "npm run test:unit -w @gatherle/webapp",
+    "test:e2e:api": "npm run test:e2e -w @gatherle/api --",
+    "test:e2e:web": "npm run test:e2e -w @gatherle/webapp --"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.6",

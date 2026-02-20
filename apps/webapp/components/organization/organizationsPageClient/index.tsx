@@ -74,7 +74,7 @@ export default function OrganizationsClient() {
             {searchQuery ? 'No matching organizations' : 'No organizations yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {searchQuery ? 'Try a different search term.' : 'Be the first to create a community space on Ntlango'}
+            {searchQuery ? 'Try a different search term.' : 'Be the first to create a community space on Gatherle'}
           </Typography>
           {!searchQuery && (
             <Button

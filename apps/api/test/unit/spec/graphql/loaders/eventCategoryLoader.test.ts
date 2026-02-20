@@ -1,6 +1,6 @@
 import { createEventCategoryLoader } from '@/graphql/loaders';
 import { EventCategory as EventCategoryModel } from '@/mongodb/models';
-import type { EventCategory } from '@ntlango/commons/types';
+import type { EventCategory } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/models', () => ({
   EventCategory: {

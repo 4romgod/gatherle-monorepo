@@ -78,7 +78,7 @@ export default function SocialMediaSettingsPage() {
   ]);
 
   const [shareOnSocialMedia, setShareOnSocialMedia] = useState(true);
-  const [customLink, setCustomLink] = useState('ntlango.com/johndoe');
+  const [customLink, setCustomLink] = useState('gatherle.com/johndoe');
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [tempLink, setTempLink] = useState(customLink);
 

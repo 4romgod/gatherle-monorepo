@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
 import { Event as EventModel } from '@/mongodb/models';
-import type { Event } from '@ntlango/commons/types';
+import type { Event } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 
 /**

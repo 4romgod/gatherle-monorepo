@@ -13,7 +13,7 @@ jest.mock('@/lib/utils/auth', () => ({
 describe('useMigrateSessionState', () => {
   const mockToken = 'test-token';
   const mockUserId = 'user-123';
-  const namespace = 'ntlango:sessionstate';
+  const namespace = 'gatherle:sessionstate';
 
   beforeEach(() => {
     localStorage.clear();
@@ -545,7 +545,7 @@ describe('useMigrateSessionState', () => {
     });
 
     it('should use default namespace when not provided', async () => {
-      const defaultNamespace = 'ntlango:sessionstate';
+      const defaultNamespace = 'gatherle:sessionstate';
       const key = `${defaultNamespace}:${mockUserId}:filter`;
 
       localStorage.setItem(key, JSON.stringify({ value: { data: 'test' } }));

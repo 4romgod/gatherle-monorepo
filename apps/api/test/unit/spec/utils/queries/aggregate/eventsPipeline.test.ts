@@ -1,6 +1,6 @@
 import { transformEventOptionsToPipeline } from '@/utils';
-import type { QueryOptionsInput } from '@ntlango/commons/types';
-import { FilterOperatorInput, SortOrderInput } from '@ntlango/commons/types';
+import type { QueryOptionsInput } from '@gatherle/commons/types';
+import { FilterOperatorInput, SortOrderInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 import * as filterModule from '@/utils/queries/aggregate/filter';
 import * as lookupModule from '@/utils/queries/aggregate/lookup';

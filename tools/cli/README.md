@@ -1,7 +1,7 @@
-# Ntlango Operations CLI
+# Gatherle Operations CLI
 
-This repository contains a python source code for the Ntlango CLI. This tool is used to perform common operations for
-the Ntlango system.
+This repository contains a python source code for the Gatherle CLI. This tool is used to perform common operations for
+the Gatherle system.
 
 ## Getting Started
 
@@ -26,16 +26,16 @@ We use Python `virtual environments` to run this tool.
 Create the virtual environment, run the command:
 
 ```bash
-$ python3 -m venv .ntlango-env
+$ python3 -m venv .gatherle-env
 ```
 
 Activate the virtual environment, run the command:
 
 ```bash
-$ . .ntlango/bin/activate
+$ . .gatherle/bin/activate
 ```
 
-Install ntlango to the python virtual environment, run the command:
+Install gatherle to the python virtual environment, run the command:
 
 ```bash
 $ pip install .
@@ -52,5 +52,5 @@ deactivate
 To see all the supported operations, run the command:
 
 ```bash
-$ ntlango --help
+$ gatherle --help
 ```

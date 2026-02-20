@@ -2,8 +2,8 @@ import request from 'supertest';
 import { Types } from 'mongoose';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
-import type { UserWithToken } from '@ntlango/commons/types';
-import { VenueType } from '@ntlango/commons/types';
+import type { UserWithToken } from '@gatherle/commons/types';
+import { VenueType } from '@gatherle/commons/types';
 import { getDeleteOrganizationByIdMutation } from '@/test/utils';
 import {
   getCreateVenueMutation,

@@ -9,7 +9,7 @@ import {
   Organization,
   SocialVisibility,
   Event,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { CreateFollowInputSchema } from '@/validation/zod';
 import { validateInput } from '@/validation';
 import { FollowDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';

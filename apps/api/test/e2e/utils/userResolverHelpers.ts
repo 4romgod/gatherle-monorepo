@@ -1,5 +1,5 @@
 import request from 'supertest';
-import type { CreateUserInput, UserWithToken } from '@ntlango/commons/types';
+import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
 import { trackCreatedId } from './eventResolverHelpers';
 

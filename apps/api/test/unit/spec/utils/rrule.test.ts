@@ -1,5 +1,5 @@
 import { getDateRangeForFilter, hasOccurrenceInRange, getNextOccurrence } from '@/utils/rrule';
-import { DATE_FILTER_OPTIONS } from '@ntlango/commons';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 
 describe('RRule Utilities', () => {
   describe('hasOccurrenceInRange', () => {

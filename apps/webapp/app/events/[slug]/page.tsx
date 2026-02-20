@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description:
           truncateDescription(event.summary) ??
           truncateDescription(event.description) ??
-          'View event details, venue information, and RSVP options on Ntlango.',
+          'View event details, venue information, and RSVP options on Gatherle.',
         keywords: ['event details', 'RSVP', ...eventCategories],
       });
     }
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Event Details',
-    description: 'View event details, venue information, and RSVP options on Ntlango.',
+    description: 'View event details, venue information, and RSVP options on Gatherle.',
     keywords: ['event details', 'RSVP', 'upcoming events'],
   });
 }

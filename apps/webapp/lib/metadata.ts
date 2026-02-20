@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const SITE_NAME = 'Ntlango';
+const SITE_NAME = 'Gatherle';
 
 const ICONS: Metadata['icons'] = {
   icon: '/logo-img.png',

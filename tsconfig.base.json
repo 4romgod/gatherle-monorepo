@@ -8,9 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@ntlango/commons/types": ["packages/commons/lib/types/index.ts"],
-      "@ntlango/commons/types/*": ["packages/commons/lib/types/*"],
-      "@ntlango/commons/*": ["packages/commons/lib/*"]
+      "@gatherle/commons/types": ["packages/commons/lib/types/index.ts"],
+      "@gatherle/commons/types/*": ["packages/commons/lib/types/*"],
+      "@gatherle/commons/*": ["packages/commons/lib/*"]
     }
   }
 }

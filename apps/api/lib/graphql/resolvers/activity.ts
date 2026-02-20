@@ -9,7 +9,7 @@ import {
   Event,
   Organization,
   ActivityObjectType,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { CreateActivityInputSchema } from '@/validation/zod';
 import { validateInput } from '@/validation';
 import { ActivityDAO, FollowDAO } from '@/mongodb/dao';

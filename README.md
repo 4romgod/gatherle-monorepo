@@ -1,6 +1,6 @@
-# Ntlango Monorepo
+# Gatherle Monorepo
 
-Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, infrastructure, and tooling.
+Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, infrastructure, and tooling.
 
 ## Layout
 
@@ -32,13 +32,13 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 ## Install
 
 - From repo root: `npm install`
-- Workspaces: use `npm install -w @ntlango/api` (etc.) from the root if you only need one package.
+- Workspaces: use `npm install -w @gatherle/api` (etc.) from the root if you only need one package.
 
 ## Environment
 
 - API (`apps/api`): expects `JWT_SECRET`, `MONGO_DB_URL`, `STAGE` (defaults to `Beta`; can be `Dev`, `Beta`, or `Prod`),
-  `AWS_REGION`, and optional `NTLANGO_SECRET_ARN` for Secrets Manager.
-  - **Important:** `MONGO_DB_URL` **must include a database name** (e.g., `mongodb://localhost:27017/ntlango`). Without
+  `AWS_REGION`, and optional `GATHERLE_SECRET_ARN` for Secrets Manager.
+  - **Important:** `MONGO_DB_URL` **must include a database name** (e.g., `mongodb://localhost:27017/gatherle`). Without
     a database name, Mongoose defaults to the "test" database, which can cause collections (RSVPs, org memberships) to
     vanish on reconnects.
 - Web (`apps/webapp`): needs `NEXT_PUBLIC_GRAPHQL_URL` pointing at the running API for codegen/build, plus optional
@@ -48,16 +48,16 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 ## Run / Build
 
 - API dev: `npm run dev:api` (nodemon on `apps/api/lib/scripts/startServer.ts`).
-- API tests: `npm run test:unit -w @ntlango/api` (runs in-band).
-- API build: `npm run build:ts -w @ntlango/api`
+- API tests: `npm run test:unit -w @gatherle/api` (runs in-band).
+- API build: `npm run build:ts -w @gatherle/api`
 - Web dev: set `NEXT_PUBLIC_GRAPHQL_URL`, then `npm run dev:web`
-- Web build: `npm run build -w @ntlango/webapp` (skips codegen if URL missing).
-- CDK synth: `npm run build:cdk -w @ntlango/cdk` (bundles lambdas; requires AWS access).
+- Web build: `npm run build -w @gatherle/webapp` (skips codegen if URL missing).
+- CDK synth: `npm run build:cdk -w @gatherle/cdk` (bundles lambdas; requires AWS access).
 - Full monorepo build: `npm run build` (runs API build+tests, web build, commons, CDK synth).
 
 ## Notes
 
-- Internal package links use npm workspaces with matching versions (`@ntlango/commons@1.0.0`); keep versions aligned if
+- Internal package links use npm workspaces with matching versions (`@gatherle/commons@1.0.0`); keep versions aligned if
   you publish.
 - If codegen is noisy offline, export a dummy `NEXT_PUBLIC_GRAPHQL_URL` or rely on the skip logic in the web `codegen`
   script.
@@ -69,9 +69,9 @@ Unified workspace for the Ntlango stack: GraphQL API, web app, shared commons, i
 - Build everything: `npm run build`
 - API dev server: `npm run dev:api`
 - Web dev server: `npm run dev:web`
-- API tests: `npm run test:unit -w @ntlango/api`
-- CDK synth: `npm run build:cdk -w @ntlango/cdk`
-- Seed database: `npm run seed -w @ntlango/api`
+- API tests: `npm run test:unit -w @gatherle/api`
+- CDK synth: `npm run build:cdk -w @gatherle/cdk`
+- Seed database: `npm run seed -w @gatherle/api`
 
 ## Troubleshooting
 
@@ -86,8 +86,8 @@ track of collections on reconnects.
 # ❌ Wrong - defaults to "test" database
 MONGO_DB_URL=mongodb://localhost:27017
 
-# ✅ Correct - explicitly uses "ntlango_dev" database
-MONGO_DB_URL=mongodb://localhost:27017/ntlango
+# ✅ Correct - explicitly uses "gatherle_dev" database
+MONGO_DB_URL=mongodb://localhost:27017/gatherle
 ```
 
 After fixing the URL, check logs on startup for: `MongoDB connected to database: your_db_name`

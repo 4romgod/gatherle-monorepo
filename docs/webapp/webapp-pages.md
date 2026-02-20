@@ -1,6 +1,6 @@
-# Ntlango — Website Page List
+# Gatherle — Website Page List
 
-This document lists all pages required for the Ntlango website, derived from the core product flowchart and feature
+This document lists all pages required for the Gatherle website, derived from the core product flowchart and feature
 scope. Pages are grouped by purpose and access level.
 
 ---

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
-import { Event as EventEntity } from '@ntlango/commons/types';
+import { Event as EventEntity } from '@gatherle/commons/types';
 
 @pre<EventModel>('validate', function (next) {
   try {

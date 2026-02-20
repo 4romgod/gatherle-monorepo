@@ -1,11 +1,11 @@
-# Ntlango — Project Brief
+# Gatherle — Project Brief
 
 ## Product Overview
 
-**Ntlango** is a social-first event discovery and management platform that helps people find exciting events and see
+**Gatherle** is a social-first event discovery and management platform that helps people find exciting events and see
 where their friends are going—creating natural FOMO and driving real-world participation.
 
-Unlike traditional event platforms that focus purely on listings, Ntlango emphasizes **social context, discovery, and
+Unlike traditional event platforms that focus purely on listings, Gatherle emphasizes **social context, discovery, and
 momentum**, helping users decide _what to do next_ based on what’s happening around them and who’s attending.
 
 The platform launches as a **website**, starting in **Gauteng**, with the ambition to expand nationally and eventually
@@ -15,8 +15,8 @@ globally.
 
 ## Vision Statement
 
-> **Ntlango turns events into experiences you don’t want to miss—by helping people discover what’s happening around them
-> and where their friends are showing up.**
+> **Gatherle turns events into experiences you don’t want to miss—by helping people discover what’s happening around
+> them and where their friends are showing up.**
 
 ---
 
@@ -247,5 +247,5 @@ Users can discover events through:
 
 ## Long-Term Vision
 
-Ntlango becomes the **social layer for real-world experiences**—a platform where people decide what to do next based on
+Gatherle becomes the **social layer for real-world experiences**—a platform where people decide what to do next based on
 momentum, friends, and excitement, not just static event listings.

@@ -1,7 +1,7 @@
-import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@ntlango/commons/types/activity';
-import type { FollowApprovalStatus } from '@ntlango/commons/types/follow';
-import { FollowTargetType } from '@ntlango/commons/types/follow';
-import { IntentVisibility, IntentSource, IntentStatus } from '@ntlango/commons/types/intent';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
+import type { FollowApprovalStatus } from '@gatherle/commons/types/follow';
+import { FollowTargetType } from '@gatherle/commons/types/follow';
+import { IntentVisibility, IntentSource, IntentStatus } from '@gatherle/commons/types/intent';
 
 export type FollowSeed = {
   followerEmail: string;

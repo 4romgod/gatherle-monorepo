@@ -1,6 +1,6 @@
 import { createOrganizationLoader } from '@/graphql/loaders';
 import { Organization as OrganizationModel } from '@/mongodb/models';
-import type { Organization } from '@ntlango/commons/types';
+import type { Organization } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/models', () => ({
   Organization: {

@@ -7,8 +7,8 @@ import type {
   OrganizationMembership,
   QueryOptionsInput,
   UpdateOrganizationInput,
-} from '@ntlango/commons/types';
-import { FollowTargetType, OrganizationRole } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { FollowTargetType, OrganizationRole } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { OrganizationMembershipService } from '@/services';
@@ -59,7 +59,7 @@ describe('OrganizationResolver', () => {
   const mockOrganization: Organization = {
     orgId: 'org-001',
     slug: 'org-001',
-    name: 'Ntlango Lab',
+    name: 'Gatherle Lab',
     ownerId: 'user-001',
     isFollowable: true,
   };

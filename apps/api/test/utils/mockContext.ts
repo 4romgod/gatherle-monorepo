@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
 import { EventParticipantDAO } from '@/mongodb/dao';
-import type { User, EventCategory, Event, Organization } from '@ntlango/commons/types';
+import type { User, EventCategory, Event, Organization } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 
 /**

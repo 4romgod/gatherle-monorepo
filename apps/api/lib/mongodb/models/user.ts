@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { DocumentType } from '@typegoose/typegoose';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { User as UserEntity } from '@ntlango/commons/types';
+import { User as UserEntity } from '@gatherle/commons/types';
 import { genSalt, hash, compare } from 'bcryptjs';
 import { logger } from '@/utils/logger';
 

@@ -1,6 +1,6 @@
-import type { CreateOrganizationInput } from '@ntlango/commons/types';
-import { EventVisibility } from '@ntlango/commons/types';
-import { FollowPolicy } from '@ntlango/commons/types/user';
+import type { CreateOrganizationInput } from '@gatherle/commons/types';
+import { EventVisibility } from '@gatherle/commons/types';
+import { FollowPolicy } from '@gatherle/commons/types/user';
 
 export type OrganizationSeedData = Omit<CreateOrganizationInput, 'ownerId'> & {
   ownerEmail: string;

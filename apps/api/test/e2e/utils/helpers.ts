@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { testAdminSeedUser, testUserSeedUser, testUser2SeedUser } from '@/mongodb/mockData';
-import type { UserWithToken } from '@ntlango/commons/types';
+import type { UserWithToken } from '@gatherle/commons/types';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 
 export type SeededUserCredentials = {

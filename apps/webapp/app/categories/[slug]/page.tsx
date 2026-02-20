@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         title: `${category.name} Events`,
         description:
           category.description ||
-          `Explore upcoming ${category.name.toLowerCase()} events, communities, and related categories on Ntlango.`,
+          `Explore upcoming ${category.name.toLowerCase()} events, communities, and related categories on Gatherle.`,
         keywords: [category.name, 'event category', 'discover events', 'community events'],
       });
     }
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   return buildPageMetadata({
     title: 'Category Events',
-    description: 'Browse events by category and discover related interests on Ntlango.',
+    description: 'Browse events by category and discover related interests on Gatherle.',
     keywords: ['event categories', 'discover events by interest'],
   });
 }

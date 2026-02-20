@@ -4,7 +4,7 @@ jest.mock('@/constants', () => ({
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
   JWT_SECRET: 'test-secret',
-  NTLANGO_SECRET_ARN: undefined,
+  GATHERLE_SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
   HttpStatusCode: {
@@ -82,13 +82,13 @@ import { EventParticipantService } from '@/services';
 import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishEventRsvpUpdated } from '@/websocket/publisher';
-import type { EventParticipant, Event } from '@ntlango/commons/types';
+import type { EventParticipant, Event } from '@gatherle/commons/types';
 import {
   ParticipantStatus,
   EventOrganizerRole,
   NotificationType,
   NotificationTargetType,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 
 describe('EventParticipantService', () => {
   const mockParticipant: EventParticipant = {

@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { Types } from 'mongoose';
-import type { Activity as ActivityEntity, CreateActivityInput } from '@ntlango/commons/types';
+import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/types';
 import { Activity as ActivityModel } from '@/mongodb/models';
 import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

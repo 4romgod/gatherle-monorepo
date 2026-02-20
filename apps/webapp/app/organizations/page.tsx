@@ -7,7 +7,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 export const metadata = buildPageMetadata({
   title: 'Organizations Hosting Events',
   description:
-    'Discover organizations, collectives, and communities creating events on Ntlango and follow their latest activity.',
+    'Discover organizations, collectives, and communities creating events on Gatherle and follow their latest activity.',
   keywords: ['organizations', 'event organizers', 'community groups', 'collectives'],
 });
 
@@ -51,7 +51,7 @@ export default async function OrganizationsPage() {
                 lineHeight: 1.2,
               }}
             >
-              Community spaces on Ntlango
+              Community spaces on Gatherle
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontSize: '1.125rem', lineHeight: 1.7 }}>
               Discover and connect with creative collectives, event organizers, and community spaces. Join organizations

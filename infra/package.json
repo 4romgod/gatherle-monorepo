@@ -1,8 +1,8 @@
 {
-  "name": "@ntlango/cdk",
+  "name": "@gatherle/cdk",
   "version": "1.0.0",
   "dependencies": {
-    "@ntlango/commons": "1.0.0"
+    "@gatherle/commons": "1.0.0"
   },
   "scripts": {
     "build": "npm run build:cdk",

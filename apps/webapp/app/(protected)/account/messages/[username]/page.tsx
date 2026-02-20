@@ -7,7 +7,7 @@ const ConversationThread = dynamicComponent(() => import('@/components/messages/
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Conversation',
-  description: 'Chat with a member on Ntlango.',
+  description: 'Chat with a member on Gatherle.',
   noIndex: true,
 });
 

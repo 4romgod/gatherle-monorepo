@@ -409,7 +409,7 @@ apps/api/lib/
 // services/follow.ts
 import { NotificationService } from './notification';
 import { FollowDAO, UserDAO } from '@/mongodb/dao';
-import { NotificationType } from '@ntlango/commons/types';
+import { NotificationType } from '@gatherle/commons/types';
 
 export class FollowService {
   static async follow(

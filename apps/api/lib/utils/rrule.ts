@@ -1,7 +1,7 @@
 import type { RRuleSet } from 'rrule';
 import { rrulestr } from 'rrule';
 import { logger } from './logger';
-import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@ntlango/commons';
+import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@gatherle/commons';
 
 /**
  * Parse an RRULE string and return occurrences within a date range

@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql';
-import type { Follow as FollowEntity, CreateFollowInput } from '@ntlango/commons/types';
-import { FollowApprovalStatus, FollowTargetType } from '@ntlango/commons/types';
+import type { Follow as FollowEntity, CreateFollowInput } from '@gatherle/commons/types';
+import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
 import { Follow as FollowModel } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

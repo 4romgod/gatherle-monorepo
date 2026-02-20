@@ -11,8 +11,8 @@
     "preserveSymlinks": true,
     "baseUrl": "./",
     "paths": {
-      "@ntlango/commons": ["../../packages/commons/lib/index.ts"],
-      "@ntlango/commons/*": ["../../packages/commons/lib/*"],
+      "@gatherle/commons": ["../../packages/commons/lib/index.ts"],
+      "@gatherle/commons/*": ["../../packages/commons/lib/*"],
       "@/test/*": ["test/*"],
       "@/*": ["lib/*"]
     }

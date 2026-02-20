@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { FollowDAO } from '@/mongodb/dao';
 import { Follow as FollowModel } from '@/mongodb/models';
-import type { Follow, CreateFollowInput } from '@ntlango/commons/types';
-import { FollowTargetType, FollowApprovalStatus } from '@ntlango/commons/types';
+import type { Follow, CreateFollowInput } from '@gatherle/commons/types';
+import { FollowTargetType, FollowApprovalStatus } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

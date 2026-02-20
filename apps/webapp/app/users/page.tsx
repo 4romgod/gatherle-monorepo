@@ -6,7 +6,7 @@ import { ROUTES } from '@/lib/constants';
 
 export const metadata = buildPageMetadata({
   title: 'Community Members',
-  description: 'Discover people in the Ntlango community, follow profiles, and connect through shared interests.',
+  description: 'Discover people in the Gatherle community, follow profiles, and connect through shared interests.',
   keywords: ['community', 'user profiles', 'follow creators', 'event community'],
 });
 

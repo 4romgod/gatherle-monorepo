@@ -6,7 +6,7 @@ import type {
   EventCategoryGroup,
   QueryOptionsInput,
   UpdateEventCategoryGroupInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 
 /**

@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
 import { User as UserModel } from '@/mongodb/models';
-import type { User } from '@ntlango/commons/types';
+import type { User } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 
 /**

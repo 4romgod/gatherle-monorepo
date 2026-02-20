@@ -3,8 +3,8 @@ import type {
   Notification as NotificationEntity,
   CreateNotificationInput,
   NotificationConnection,
-} from '@ntlango/commons/types';
-import { NotificationType } from '@ntlango/commons';
+} from '@gatherle/commons/types';
+import { NotificationType } from '@gatherle/commons';
 import { Notification as NotificationModel } from '@/mongodb/models';
 import { KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

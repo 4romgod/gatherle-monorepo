@@ -1,4 +1,4 @@
-import type { PaginationInput } from '@ntlango/commons/types';
+import type { PaginationInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 
 export const createPaginationStages = (paginationInput: PaginationInput): PipelineStage[] => {

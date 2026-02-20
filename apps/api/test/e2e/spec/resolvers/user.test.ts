@@ -16,8 +16,8 @@ import {
   getReadUsersWithoutOptionsQuery,
   getUpdateUserMutation,
 } from '@/test/utils';
-import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@ntlango/commons/types';
-import { Gender } from '@ntlango/commons/types';
+import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
+import { Gender } from '@gatherle/commons/types';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import {

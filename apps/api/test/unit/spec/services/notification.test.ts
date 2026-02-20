@@ -4,7 +4,7 @@ jest.mock('@/constants', () => ({
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
   JWT_SECRET: 'test-secret',
-  NTLANGO_SECRET_ARN: undefined,
+  GATHERLE_SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
   HttpStatusCode: {
@@ -65,8 +65,8 @@ jest.mock('@/utils/logger', () => ({
 
 import { NotificationService } from '@/services';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
-import type { Notification, User } from '@ntlango/commons/types';
-import { NotificationType, NotificationTargetType, ParticipantStatus } from '@ntlango/commons/types';
+import type { Notification, User } from '@gatherle/commons/types';
+import { NotificationType, NotificationTargetType, ParticipantStatus } from '@gatherle/commons/types';
 
 describe('NotificationService', () => {
   const mockNotification: Notification = {

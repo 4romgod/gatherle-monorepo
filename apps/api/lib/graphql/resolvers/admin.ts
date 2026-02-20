@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Authorized, Query, Resolver } from 'type-graphql';
-import { AdminDashboardStats, EventLifecycleStatus, EventStatus, UserRole } from '@ntlango/commons/types';
+import { AdminDashboardStats, EventLifecycleStatus, EventStatus, UserRole } from '@gatherle/commons/types';
 import { EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 

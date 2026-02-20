@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
-import { Intent, UpsertIntentInput, UserRole } from '@ntlango/commons/types';
+import { Intent, UpsertIntentInput, UserRole } from '@gatherle/commons/types';
 import { UpsertIntentInputSchema } from '@/validation/zod';
 import { validateInput } from '@/validation';
 import { IntentDAO } from '@/mongodb/dao';

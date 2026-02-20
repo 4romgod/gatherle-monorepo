@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Query, Authorized, Ctx, Resolver } from 'type-graphql';
-import { ImageUploadUrl, UserRole } from '@ntlango/commons/types';
+import { ImageUploadUrl, UserRole } from '@gatherle/commons/types';
 import { getAuthenticatedUser } from '@/utils';
 import { getPresignedUploadUrl, getPresignedUrl } from '@/clients/AWS/s3Client';
 import { AWS_REGION, CONTENT_TYPE_MAP, S3_BUCKET_NAME } from '@/constants';

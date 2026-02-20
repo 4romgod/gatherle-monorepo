@@ -1,5 +1,5 @@
 import { STAGE } from '@/constants';
-import { APPLICATION_STAGES } from '@ntlango/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 
 export interface E2ETestConfig {
   testUrl?: string;

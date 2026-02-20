@@ -1,6 +1,6 @@
 # Domain Data Model
 
-This document captures the current data model for Ntlango’s event platform as implemented in the backend, plus the
+This document captures the current data model for Gatherle’s event platform as implemented in the backend, plus the
 near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/Typegoose classes in
 `packages/commons/lib/types` and are persisted via Mongoose models in `apps/api/lib/mongodb/models`.
 

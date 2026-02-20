@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES, AWS_REGIONS } from '@ntlango/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
 
 export type ServiceAccount = {
   accountNumber: string;

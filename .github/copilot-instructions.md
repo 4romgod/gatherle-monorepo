@@ -70,7 +70,7 @@ making changes in this repository.
 
 - **Workspace boundaries**: Respect workspace boundaries. Shared code goes in `packages/commons`, not duplicated across
   workspaces.
-- **Import paths**: Use path aliases defined in `tsconfig.base.json` (e.g., `@ntlango/commons/*`).
+- **Import paths**: Use path aliases defined in `tsconfig.base.json` (e.g., `@gatherle/commons/*`).
 - **Dependencies**: Add dependencies to the appropriate workspace's `package.json`, not the root unless it's a dev tool.
 
 ### API Development

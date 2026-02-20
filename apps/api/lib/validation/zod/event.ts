@@ -5,7 +5,7 @@ import {
   EventPrivacySetting,
   EventStatus,
   EventVisibility,
-} from '@ntlango/commons/types/event';
+} from '@gatherle/commons/types/event';
 import { ERROR_MESSAGES } from '@/validation';
 import mongoose from 'mongoose';
 

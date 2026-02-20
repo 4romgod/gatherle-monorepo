@@ -27,17 +27,17 @@
 
 - Install deps: `npm install` (root). Workspace-only: `npm install -w <workspace>`.
 - API dev server: `npm run dev:api` (scoped; avoids workspace fan-out).
-- API build + unit tests: `npm run build -w @ntlango/api`; TS-only: `npm run build:ts -w @ntlango/api`.
-- API test suites: `npm run test:unit -w @ntlango/api`, `npm run test:e2e -w @ntlango/api`,
-  `npm run test:canary -w @ntlango/api`.
-- Web dev: export `NEXT_PUBLIC_GRAPHQL_URL`, then `npm run dev:web`. Prod build: `npm run build -w @ntlango/webapp`.
-- Web e2e tests: `npm run test:e2e -w @ntlango/webapp` (Playwright).
-- Commons build: `npm run build -w @ntlango/commons`. CDK synth: `npm run build:cdk -w @ntlango/cdk`.
+- API build + unit tests: `npm run build -w @gatherle/api`; TS-only: `npm run build:ts -w @gatherle/api`.
+- API test suites: `npm run test:unit -w @gatherle/api`, `npm run test:e2e -w @gatherle/api`,
+  `npm run test:canary -w @gatherle/api`.
+- Web dev: export `NEXT_PUBLIC_GRAPHQL_URL`, then `npm run dev:web`. Prod build: `npm run build -w @gatherle/webapp`.
+- Web e2e tests: `npm run test:e2e -w @gatherle/webapp` (Playwright).
+- Commons build: `npm run build -w @gatherle/commons`. CDK synth: `npm run build:cdk -w @gatherle/cdk`.
 - Repo-wide helpers: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` (scoped via workspaces).
 
 ## Coding Style & Naming Conventions
 
-- TypeScript everywhere; `tsconfig.base.json` enforces strict mode and path aliases (`@ntlango/commons/*`).
+- TypeScript everywhere; `tsconfig.base.json` enforces strict mode and path aliases (`@gatherle/commons/*`).
 - Prettier 3 is the formatter (`apps/api/.prettierrc.json`, `packages/commons/.prettierrc.json`); Next app uses
   `prettier` with the Tailwind plugin via `lint:fix`.
 - Prefer camelCase for variables/functions, PascalCase for types/components, kebab-case for files and workspace
@@ -59,7 +59,7 @@
   and group related changes.
 - For PRs, include: scope/summary, linked issue/ticket, env variables touched, and test evidence (commands run +
   outputs). Add screenshots/GIFs for UI changes in `apps/webapp`.
-- Keep workspaces version-aligned (`@ntlango/*@1.0.0`) when publishing; avoid committing secrets or `.env` files.
+- Keep workspaces version-aligned (`@gatherle/*@1.0.0`) when publishing; avoid committing secrets or `.env` files.
 
 ## Adding/Updating Domain Models
 
@@ -71,7 +71,7 @@
 
 ## Security & Configuration Tips
 
-- Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `NTLANGO_SECRET_ARN`); Web
+- Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `GATHERLE_SECRET_ARN`); Web
   (`NEXT_PUBLIC_GRAPHQL_URL`); CDK requires AWS creds.
 - Never commit secrets; use `.env` files ignored by git. For CDK, ensure AWS bootstrap is done per account/region before
   synth/deploy.
@@ -79,14 +79,14 @@
   - Keep a workspace-specific `.env` file per project (`apps/api/.env.local`, `apps/webapp/.env.local`, etc.) and never
     commit it; add `.env.*` to `.gitignore` if not already ignored.
   - Document required keys per workspace so contributors know what to populate before running scripts: the API needs
-    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `NTLANGO_SECRET_ARN`; the webapp consumes
+    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `GATHERLE_SECRET_ARN`; the webapp consumes
     `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` (and uses `NEXT_PUBLIC_JWT_SECRET` wherever the
     client-side auth config expects it).
   - For local dev run `npm run dev:api`/`npm run dev:web` with the matching `.env` or by exporting the vars, and
     consider adding `dotenv` helpers or scripts to validate the presence of required keys before starting.
   - Share secret values via a secure vault (e.g., AWS Secrets Manager, 1Password, or the team-approved store) and keep
-    the `NTLANGO_SECRET_ARN` format consistent with `ntlango/backend/<stage-lowercase>` (for example
-    `ntlango/backend/beta`) for AWS-integrated lookups.
+    the `GATHERLE_SECRET_ARN` format consistent with `gatherle/backend/<stage-lowercase>` (for example
+    `gatherle/backend/beta`) for AWS-integrated lookups.
 
 ## CI/CD Secrets & Environment Variables
 
@@ -97,17 +97,17 @@
 - Secrets/variables required in GitHub:
   - `ASSUME_ROLE_ARN`: Role the CDK deploy job assumes (set under repo Settings → Secrets).
   - `AWS_REGION`: Region used both for `configure-aws-credentials` and to satisfy `apps/api` env expectations.
-  - Repository `Variables`: `STAGE` (e.g., `Beta`, `Prod`) and `NTLANGO_SECRET_ARN` variants (for example,
-    `ntlango/backend/beta`) so e2e tests know where to resolve secrets.
+  - Repository `Variables`: `STAGE` (e.g., `Beta`, `Prod`) and `GATHERLE_SECRET_ARN` variants (for example,
+    `gatherle/backend/beta`) so e2e tests know where to resolve secrets.
 - Workflow flow for `api-deploy`:
   1. Checkout → Install deps → CDK tools.
   2. Build API/commons/CDK packages.
   3. Configure AWS creds via the assumed role secret + `AWS_REGION`.
   4. Deploy runtime CDK stacks (for example
-     `npm run cdk -w @ntlango/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
+     `npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
      with `STAGE` from repo vars, and deploy `SecretsManagementStack` only when secrets intentionally change.
   5. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
-  6. Run e2e tests with `STAGE`, `NTLANGO_SECRET_ARN`, `GRAPHQL_URL`.
+  6. Run e2e tests with `STAGE`, `GATHERLE_SECRET_ARN`, `GRAPHQL_URL`.
 - Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output
   and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy outputs/stored vars, and include a secure way to inject these into the
   build (e.g., GitHub Actions env or `next.config.js` referencing process env).

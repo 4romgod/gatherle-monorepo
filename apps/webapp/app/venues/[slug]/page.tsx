@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       return buildPageMetadata({
         title: venue.name,
         description:
-          `View venue details${locationLabel ? ` in ${locationLabel}` : ''}, amenities, and upcoming events on Ntlango.`.trim(),
+          `View venue details${locationLabel ? ` in ${locationLabel}` : ''}, amenities, and upcoming events on Gatherle.`.trim(),
         keywords: [venue.name, 'venue details', 'event venue', 'venue amenities'],
       });
     }
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Venue Details',
-    description: 'View venue details, amenities, and event hosting information on Ntlango.',
+    description: 'View venue details, amenities, and event hosting information on Gatherle.',
     keywords: ['venue details', 'event venues', 'venue amenities'],
   });
 }

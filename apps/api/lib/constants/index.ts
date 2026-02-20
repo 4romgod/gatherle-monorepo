@@ -1,3 +1,3 @@
 export * from './constants';
 export * from './environmentVariables';
-export * from '@ntlango/commons/constants/descriptions';
+export * from '@gatherle/commons/constants/descriptions';

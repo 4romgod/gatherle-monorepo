@@ -1,7 +1,7 @@
 import { createEventParticipantLoader, createEventParticipantsByEventLoader } from '@/graphql/loaders';
 import { EventParticipant as EventParticipantModel } from '@/mongodb/models';
 import { EventParticipantDAO } from '@/mongodb/dao';
-import type { EventParticipant } from '@ntlango/commons/types';
+import type { EventParticipant } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/models', () => ({
   EventParticipant: {

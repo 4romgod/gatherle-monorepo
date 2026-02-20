@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import EventParticipant from '@/mongodb/models/eventParticipant';
-import { ParticipantStatus } from '@ntlango/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
 
 describe('EventParticipant Model', () => {
   describe('pre-validate hook', () => {

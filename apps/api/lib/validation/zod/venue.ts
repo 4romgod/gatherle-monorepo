@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
-import { VenueType } from '@ntlango/commons/types';
+import { VenueType } from '@gatherle/commons/types';
 import { ERROR_MESSAGES } from '@/validation';
 
 const mongoIdValidator = (value: string) => mongoose.Types.ObjectId.isValid(value);

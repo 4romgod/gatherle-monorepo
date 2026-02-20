@@ -43,20 +43,20 @@ describe('URL Utilities', () => {
 
     it('should handle production domain', async () => {
       mockHeaders.mockResolvedValue({
-        get: jest.fn().mockReturnValue('ntlango.com'),
+        get: jest.fn().mockReturnValue('gatherle.com'),
       } as unknown as Awaited<ReturnType<typeof headers>>);
 
       const result = await getBaseUrl();
-      expect(result).toBe('https://ntlango.com');
+      expect(result).toBe('https://gatherle.com');
     });
 
     it('should handle subdomain', async () => {
       mockHeaders.mockResolvedValue({
-        get: jest.fn().mockReturnValue('api.ntlango.com'),
+        get: jest.fn().mockReturnValue('api.gatherle.com'),
       } as unknown as Awaited<ReturnType<typeof headers>>);
 
       const result = await getBaseUrl();
-      expect(result).toBe('https://api.ntlango.com');
+      expect(result).toBe('https://api.gatherle.com');
     });
   });
 
@@ -81,11 +81,11 @@ describe('URL Utilities', () => {
 
     it('should handle complex paths', async () => {
       mockHeaders.mockResolvedValue({
-        get: jest.fn().mockReturnValue('ntlango.com'),
+        get: jest.fn().mockReturnValue('gatherle.com'),
       } as unknown as Awaited<ReturnType<typeof headers>>);
 
       const result = await getFullUrl('/organizations/123/events');
-      expect(result).toBe('https://ntlango.com/organizations/123/events');
+      expect(result).toBe('https://gatherle.com/organizations/123/events');
     });
 
     it('should handle paths with query parameters', async () => {

@@ -4,7 +4,7 @@ import type {
   Organization,
   QueryOptionsInput,
   UpdateOrganizationInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';

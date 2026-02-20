@@ -4,8 +4,8 @@ import type {
   CancelEventParticipantInput,
   Event,
   User,
-} from '@ntlango/commons/types';
-import { ParticipantStatus, NotificationType, NotificationTargetType } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { ParticipantStatus, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
 import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';

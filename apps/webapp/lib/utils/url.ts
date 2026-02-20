@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
  * Gets the base URL of the application dynamically based on request headers.
  * Uses http in development and https in production.
  *
- * @returns The base URL (e.g., 'http://localhost:3000' or 'https://ntlango.com')
+ * @returns The base URL (e.g., 'http://localhost:3000' or 'https://gatherle.com')
  *
  * @example
  * ```ts

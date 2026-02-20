@@ -4,7 +4,7 @@ jest.mock('@/constants', () => ({
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
   JWT_SECRET: 'test-secret',
-  NTLANGO_SECRET_ARN: undefined,
+  GATHERLE_SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
   HttpStatusCode: {
@@ -87,8 +87,8 @@ jest.mock('@/utils/logger', () => ({
 
 import { UserService } from '@/services';
 import { UserDAO, FollowDAO } from '@/mongodb/dao';
-import type { User } from '@ntlango/commons/types';
-import { FollowTargetType } from '@ntlango/commons/types';
+import type { User } from '@gatherle/commons/types';
+import { FollowTargetType } from '@gatherle/commons/types';
 
 describe('UserService', () => {
   const mockUser: Partial<User> = {

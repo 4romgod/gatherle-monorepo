@@ -6,7 +6,7 @@ import type {
   Organization,
   QueryOptionsInput,
   UpdateOrganizationInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { CustomError, ErrorTypes, transformOptionsToQuery } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

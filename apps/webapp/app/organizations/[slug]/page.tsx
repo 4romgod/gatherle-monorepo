@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (organization) {
       return buildPageMetadata({
         title: organization.name,
-        description: organization.description || `Discover events hosted by ${organization.name} on Ntlango.`,
+        description: organization.description || `Discover events hosted by ${organization.name} on Gatherle.`,
         keywords: [organization.name, 'organization events', 'community organizers'],
       });
     }
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Organization',
-    description: 'Discover organizations powering events and communities on Ntlango.',
+    description: 'Discover organizations powering events and communities on Gatherle.',
     keywords: ['organizations', 'event organizers', 'community groups'],
   });
 }

@@ -19,7 +19,7 @@ import {
 import type { Server } from 'http';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
-import type { User } from '@ntlango/commons';
+import type { User } from '@gatherle/commons';
 
 const DEV_PORT = 9000;
 

@@ -3,8 +3,8 @@ import type {
   EventParticipant as EventParticipantEntity,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
-} from '@ntlango/commons/types';
-import { ParticipantStatus } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
 import { EventParticipant } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
 import { logger } from '@/utils/logger';

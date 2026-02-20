@@ -238,7 +238,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
 
           <Box sx={{ px: 2, pt: 1 }}>
             <Button variant="contained" color="secondary" fullWidth component={Link} href={ROUTES.AUTH.REGISTER}>
-              Join Ntlango
+              Join Gatherle
             </Button>
           </Box>
         </>

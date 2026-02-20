@@ -8,7 +8,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Admin Console',
-  description: 'Manage categories, users, groups, and operational workflows for the Ntlango platform.',
+  description: 'Manage categories, users, groups, and operational workflows for the Gatherle platform.',
   noIndex: true,
 });
 

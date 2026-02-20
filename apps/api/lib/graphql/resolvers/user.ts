@@ -13,7 +13,7 @@ import {
   FollowTargetType,
   SessionState,
   SessionStateInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
 import { RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';

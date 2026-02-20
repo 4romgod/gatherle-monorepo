@@ -1,4 +1,4 @@
-import type { PaginationInput } from '@ntlango/commons/types';
+import type { PaginationInput } from '@gatherle/commons/types';
 import { createPaginationStages } from '@/utils';
 
 describe('createPaginationStages', () => {

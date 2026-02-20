@@ -1,4 +1,4 @@
-import type { QueryOptionsInput } from '@ntlango/commons/types';
+import type { QueryOptionsInput } from '@gatherle/commons/types';
 
 export const getReadUserByIdQuery = (userId: string) => {
   return {

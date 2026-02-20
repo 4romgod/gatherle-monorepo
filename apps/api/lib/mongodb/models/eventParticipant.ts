@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { EventParticipant as EventParticipantEntity } from '@ntlango/commons/types';
+import { EventParticipant as EventParticipantEntity } from '@gatherle/commons/types';
 
 @pre<EventParticipantModel>('validate', function (next) {
   try {

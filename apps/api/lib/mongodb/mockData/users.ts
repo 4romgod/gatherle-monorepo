@@ -1,11 +1,11 @@
-import type { CreateUserInput } from '@ntlango/commons/types';
-import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@ntlango/commons/types/user';
+import type { CreateUserInput } from '@gatherle/commons/types';
+import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@gatherle/commons/types/user';
 
 // TODO:Consider using environment variables for test user passwords
 
 export const testAdminSeedUser: CreateUserInput = {
-  email: 'test-admin@ntlango.local',
-  username: 'ntlango-test-admin',
+  email: 'test-admin@gatherle.local',
+  username: 'gatherle-test-admin',
   birthdate: '1990-01-01',
   family_name: 'Admin',
   given_name: 'Test',
@@ -16,8 +16,8 @@ export const testAdminSeedUser: CreateUserInput = {
 };
 
 export const testUserSeedUser: CreateUserInput = {
-  email: 'test-user@ntlango.local',
-  username: 'ntlango-test-user',
+  email: 'test-user@gatherle.local',
+  username: 'gatherle-test-user',
   birthdate: '1992-05-15',
   family_name: 'User',
   given_name: 'Test',
@@ -28,8 +28,8 @@ export const testUserSeedUser: CreateUserInput = {
 };
 
 export const testUser2SeedUser: CreateUserInput = {
-  email: 'test-user2@ntlango.local',
-  username: 'ntlango-test-user2',
+  email: 'test-user2@gatherle.local',
+  username: 'gatherle-test-user2',
   birthdate: '1991-08-21',
   family_name: 'Other',
   given_name: 'Test',

@@ -1,5 +1,5 @@
 {
-  "name": "@ntlango/webapp",
+  "name": "@gatherle/webapp",
   "private": true,
   "scripts": {
     "build": "npm-run-all codegen lint:check build:ts build:next",

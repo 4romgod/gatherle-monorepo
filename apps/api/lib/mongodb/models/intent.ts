@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { Intent as IntentEntity } from '@ntlango/commons/types';
+import { Intent as IntentEntity } from '@gatherle/commons/types';
 
 @pre<IntentModel>('validate', function (next) {
   try {

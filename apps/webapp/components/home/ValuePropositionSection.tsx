@@ -27,8 +27,8 @@ export default function ValuePropositionSection() {
             Build, discover, and celebrate events with intention.
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 3 }}>
-            Ntlango surfaces meaningful gatherings, gives hosts polish in minutes, and keeps every RSVP in sync with the
-            people who care about shows, meals, activations, and after-hours sessions.
+            Gatherle surfaces meaningful gatherings, gives hosts polish in minutes, and keeps every RSVP in sync with
+            the people who care about shows, meals, activations, and after-hours sessions.
           </Typography>
           <Button
             variant="contained"
@@ -37,7 +37,7 @@ export default function ValuePropositionSection() {
             href={ROUTES.AUTH.REGISTER}
             sx={{ borderRadius: 10, mt: 3 }}
           >
-            Join Ntlango
+            Join Gatherle
           </Button>
         </Box>
       </CustomContainer>

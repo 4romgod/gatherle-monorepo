@@ -119,7 +119,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 href={ROUTES.AUTH.REGISTER}
                 sx={{ borderRadius: 10 }}
               >
-                Join Ntlango
+                Join Gatherle
               </Button>
             </Box>
           )}

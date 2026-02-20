@@ -1,6 +1,6 @@
 import { kebabCase } from 'lodash';
 import { Venue as VenueModel } from '@/mongodb/models';
-import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@ntlango/commons/types';
+import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';

@@ -12,7 +12,7 @@ export default function Logo() {
     <Box
       component={Link}
       href={isAuth ? ROUTES.HOME : ROUTES.ROOT}
-      aria-label="Ntlango home"
+      aria-label="Gatherle home"
       sx={{
         display: 'flex',
         alignItems: 'center',

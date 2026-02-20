@@ -5,8 +5,8 @@ import type {
   CreateOrganizationMembershipInput,
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
-} from '@ntlango/commons/types';
-import { OrganizationRole } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { OrganizationRole } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

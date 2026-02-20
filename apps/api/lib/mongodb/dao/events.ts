@@ -7,7 +7,7 @@ import type {
   EventsQueryOptionsInput,
   RsvpInput,
   CancelRsvpInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import {
   CustomError,
   ErrorTypes,
@@ -20,7 +20,7 @@ import {
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { EventParticipantDAO } from '@/mongodb/dao';
-import { ParticipantStatus, DATE_FILTER_OPTIONS } from '@ntlango/commons';
+import { ParticipantStatus, DATE_FILTER_OPTIONS } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
 

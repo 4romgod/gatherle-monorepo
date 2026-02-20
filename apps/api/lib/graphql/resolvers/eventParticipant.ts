@@ -7,7 +7,7 @@ import {
   User,
   UserRole,
   Event,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { EventParticipantDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';

@@ -7,7 +7,7 @@ import {
   UpdateEventCategoryGroupInput,
   UserRole,
   EventCategory,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { EventCategoryGroupDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';

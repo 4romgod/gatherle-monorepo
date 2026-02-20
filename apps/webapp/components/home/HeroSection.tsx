@@ -102,7 +102,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 opacity: 0.85,
               }}
             >
-              Ntlango is the modern layer for community-led events—discover inspiring gatherings or host your own with
+              Gatherle is the modern layer for community-led events—discover inspiring gatherings or host your own with
               gorgeous, human-first pages.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
@@ -142,7 +142,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
               href={ROUTES.ACCOUNT.EVENTS.CREATE}
               sx={{ fontWeight: 600 }}
             >
-              Host with Ntlango
+              Host with Gatherle
             </Button>
           </Grid>
 

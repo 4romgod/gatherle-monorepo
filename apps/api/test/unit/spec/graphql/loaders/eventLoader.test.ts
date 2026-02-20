@@ -1,6 +1,6 @@
 import { createEventLoader } from '@/graphql/loaders';
 import { Event as EventModel } from '@/mongodb/models';
-import type { Event } from '@ntlango/commons/types';
+import type { Event } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/models', () => ({
   Event: {

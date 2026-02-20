@@ -4,7 +4,7 @@ import type {
   UpdateEventCategoryInput,
   CreateEventCategoryInput,
   QueryOptionsInput,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { GraphQLError } from 'graphql';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { logger } from '@/utils/logger';

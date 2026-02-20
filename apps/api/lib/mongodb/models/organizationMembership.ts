@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { OrganizationMembership as OrganizationMembershipEntity } from '@ntlango/commons/types';
+import { OrganizationMembership as OrganizationMembershipEntity } from '@gatherle/commons/types';
 
 @pre<OrganizationMembershipModel>('validate', function (next) {
   try {

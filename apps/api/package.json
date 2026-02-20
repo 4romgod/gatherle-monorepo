@@ -1,7 +1,7 @@
 {
-  "name": "@ntlango/api",
+  "name": "@gatherle/api",
   "version": "1.0.0",
-  "description": "This npm workspace contains the business logic for the ntlango graphql api",
+  "description": "This npm workspace contains the business logic for the gatherle graphql api",
   "main": "dist/lib/index.js",
   "types": "dist/types/lib/index.d.ts",
   "scripts": {
@@ -9,7 +9,7 @@
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:node": "node -r ts-node/register",
     "emit-schema": "ts-node lib/scripts/emit-schema.ts",
-    "build:image": "docker build -t ntlango-backend .",
+    "build:image": "docker build -t gatherle-backend .",
     "dev": "nodemon lib/scripts/startServer.ts",
     "start:ts": "ts-node lib/scripts/startServer.ts",
     "start:js": "node -r ts-node/register dist/lib/scripts/startServer.js",
@@ -30,7 +30,7 @@
     "@aws-sdk/client-s3": "^3.981.0",
     "@aws-sdk/client-secrets-manager": "^3.981.0",
     "@aws-sdk/s3-request-presigner": "^3.981.0",
-    "@ntlango/commons": "1.0.0",
+    "@gatherle/commons": "1.0.0",
     "@typegoose/typegoose": "^12.4.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",

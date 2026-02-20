@@ -4,7 +4,7 @@ import type {
   FollowTargetType,
   ParticipantStatus,
   ParticipantVisibility,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import { NotificationDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_EVENT_TYPES } from '@/websocket/constants';

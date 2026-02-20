@@ -5,7 +5,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Create Account',
-  description: 'Create your Ntlango account to discover events, host experiences, and connect with your community.',
+  description: 'Create your Gatherle account to discover events, host experiences, and connect with your community.',
   noIndex: true,
 });
 
@@ -30,7 +30,7 @@ export default function RegisterPage() {
             Create your account
           </Typography>
           <Typography textAlign="center" variant="body2" color="text.secondary" marginBottom={4}>
-            Join Ntlango to discover and host amazing events
+            Join Gatherle to discover and host amazing events
           </Typography>
 
           <RegisterForm />

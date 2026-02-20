@@ -2,7 +2,7 @@ import request from 'supertest';
 import type { E2EServer } from '@/test/e2e/utils/server';
 import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@ntlango/commons/types';
+import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import {
   FollowTargetType,
   FollowPolicy,
@@ -15,7 +15,7 @@ import {
   EventStatus,
   EventVisibility,
   EventLifecycleStatus,
-} from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
 import {
   getDeleteEventByIdMutation,
   getDeleteOrganizationByIdMutation,

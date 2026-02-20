@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { IntentResolver } from '@/graphql/resolvers/intent';
 import { IntentDAO } from '@/mongodb/dao';
-import type { Intent, UpsertIntentInput, User } from '@ntlango/commons/types';
-import { IntentStatus, IntentVisibility, IntentSource, UserRole } from '@ntlango/commons/types';
+import type { Intent, UpsertIntentInput, User } from '@gatherle/commons/types';
+import { IntentStatus, IntentVisibility, IntentSource, UserRole } from '@gatherle/commons/types';
 import { Types } from 'mongoose';
 import type { ServerContext } from '@/graphql';
 

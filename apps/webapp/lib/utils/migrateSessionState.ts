@@ -28,7 +28,7 @@ export const useMigrateSessionState = () => {
       errors: [],
     };
 
-    const ns = namespace || 'ntlango:sessionstate';
+    const ns = namespace || 'gatherle:sessionstate';
 
     try {
       const keysToMigrate: Array<{ stateKey: string; value: any }> = [];

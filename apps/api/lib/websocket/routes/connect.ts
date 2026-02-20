@@ -1,5 +1,5 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
-import type { User } from '@ntlango/commons/types';
+import type { User } from '@gatherle/commons/types';
 import { verifyToken } from '@/utils/auth';
 import { logger } from '@/utils/logger';
 import { CONNECTION_TTL_HOURS } from '@/websocket/constants';

@@ -1,5 +1,5 @@
 import type { PipelineStage } from 'mongoose';
-import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@ntlango/commons/types';
+import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 
 export const createEventLookupStages = (): PipelineStage[] => {
   const rsvpStatusesForCount = [ParticipantStatus.Going, ParticipantStatus.Interested];

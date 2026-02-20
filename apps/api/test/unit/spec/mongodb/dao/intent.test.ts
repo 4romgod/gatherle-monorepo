@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { IntentDAO } from '@/mongodb/dao';
 import { Intent as IntentModel } from '@/mongodb/models';
-import type { Intent, UpsertIntentInput } from '@ntlango/commons/types';
-import { IntentSource, IntentStatus, IntentVisibility } from '@ntlango/commons/types';
+import type { Intent, UpsertIntentInput } from '@gatherle/commons/types';
+import { IntentSource, IntentStatus, IntentVisibility } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

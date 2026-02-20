@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
-import { Venue as VenueEntity } from '@ntlango/commons/types';
+import { Venue as VenueEntity } from '@gatherle/commons/types';
 
 @pre<VenueModel>('validate', function (next) {
   try {

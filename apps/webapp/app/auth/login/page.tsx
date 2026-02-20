@@ -8,7 +8,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Sign In',
-  description: 'Sign in to Ntlango to manage events, follow communities, and personalize your event feed.',
+  description: 'Sign in to Gatherle to manage events, follow communities, and personalize your event feed.',
   noIndex: true,
 });
 

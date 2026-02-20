@@ -21,7 +21,7 @@ reduces accidental data loss, and can later be extended to **support cross-devic
 - Persistence should survive a full page reload but not necessarily a logout (sensitive data must not linger).
 - It must work in the client-only forms/context (admin tabs and account settings pages already run in the browser).
 - Storage should be scoped per user and namespace to avoid cross-user leakage in shared browsers (use combined keys
-  e.g., `ntlango:sessionstate:account-events-tab:<userId>`).
+  e.g., `gatherle:sessionstate:account-events-tab:<userId>`).
 - Provide a way to clear stale drafts (e.g., “Discard draft” button on the event form) and automatically expire data
   after a configurable duration.
 - Minimal impact on bundle size/performance. We already ship MUI/Tailwind; adding a small helper hook is acceptable.
@@ -69,7 +69,7 @@ reduces accidental data loss, and can later be extended to **support cross-devic
 
 ## Persisted keys & UX notes
 
-- **`ntlango:sessionstate:<componentId>` tabs** – `CustomTabs` now accepts optional persistence metadata (`key`,
+- **`gatherle:sessionstate:<componentId>` tabs** – `CustomTabs` now accepts optional persistence metadata (`key`,
   `namespace`, `userId`). The admin console and account settings pages use it to write the selected tab index into
   `localStorage` via the hook, so reloads begin on the last tab and each user keeps their own view.
 - **`event-mutation:<eventId|slug|new>` drafts** – The event creation/edit form feeds its entire payload through
@@ -492,7 +492,7 @@ const handleMigrate = async () => {
   const result = await migrate({
     token: session.user.token,
     userId: session.user.id,
-    namespace: 'ntlango:sessionstate',
+    namespace: 'gatherle:sessionstate',
     onProgress: (current, total, key) => {
       console.log(`Migrating ${current}/${total}: ${key}`);
     },
@@ -688,7 +688,7 @@ infrastructure remains for future enablement.
 **Test 2.2: localStorage Inspection**
 
 - [ ] **Browser DevTools**: Open Application → Storage → Local Storage
-- [ ] **Expected**: See keys like `ntlango:sessionstate:user-123:event-filter`
+- [ ] **Expected**: See keys like `gatherle:sessionstate:user-123:event-filter`
 - [ ] **Expected**: Each user has separate namespaced keys
 - [ ] **Expected**: Values are valid JSON with `value` and optional `expiresAt` fields
 

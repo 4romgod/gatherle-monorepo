@@ -32,7 +32,7 @@ import { logger } from './logger';
 
 // Nominatim API configuration
 const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
-const NOMINATIM_USER_AGENT = 'Ntlango-EventsAPI/1.0 (info@mapapa.co.za)';
+const NOMINATIM_USER_AGENT = 'Gatherle-EventsAPI/1.0 (info@mapapa.co.za)';
 const RATE_LIMIT_DELAY_MS = 1100;
 let lastGeocodeRequestAt = 0;
 

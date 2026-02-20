@@ -9,8 +9,8 @@ import type {
   UserWithToken,
   SessionStateInput,
   SessionState,
-} from '@ntlango/commons/types';
-import { FilterOperatorInput, UserRole } from '@ntlango/commons/types';
+} from '@gatherle/commons/types';
+import { FilterOperatorInput, UserRole } from '@gatherle/commons/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { ERROR_MESSAGES } from '@/validation';
