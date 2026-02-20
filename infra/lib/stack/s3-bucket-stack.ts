@@ -2,18 +2,24 @@ import { RemovalPolicy, Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, BlockPublicAccess, ObjectOwnership, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { APPLICATION_STAGES } from '@gatherle/commons';
+import { buildTargetSuffix } from '../utils/naming';
+
+export interface S3BucketStackProps extends StackProps {
+  applicationStage: string;
+  awsRegion: string;
+}
 
 export class S3BucketStack extends Stack {
   public readonly imagesBucket: Bucket;
 
-  constructor(scope: Construct, id: string, props: StackProps) {
+  constructor(scope: Construct, id: string, props: S3BucketStackProps) {
     super(scope, id, props);
 
-    const stage = process.env.STAGE || APPLICATION_STAGES.DEV;
-    const bucketName = `gatherle-images-${stage.toLowerCase()}`;
+    const stage = props.applicationStage;
+    const targetSuffix = buildTargetSuffix(stage, props.awsRegion);
 
     this.imagesBucket = new Bucket(this, 'GatherleImagesBucket', {
-      bucketName,
+      bucketName: `gatherle-images-${targetSuffix}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL, // Block public access by default (use pre-signed URLs for access)
       publicReadAccess: false,
@@ -42,13 +48,13 @@ export class S3BucketStack extends Stack {
     new CfnOutput(this, 'ImagesBucketName', {
       value: this.imagesBucket.bucketName,
       description: 'S3 bucket name for storing images',
-      exportName: `${stage}-ImagesBucketName`,
+      exportName: `${targetSuffix}-ImagesBucketName`,
     });
 
     new CfnOutput(this, 'ImagesBucketArn', {
       value: this.imagesBucket.bucketArn,
       description: 'S3 bucket ARN for storing images',
-      exportName: `${stage}-ImagesBucketArn`,
+      exportName: `${targetSuffix}-ImagesBucketArn`,
     });
   }
 }

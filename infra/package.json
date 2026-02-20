@@ -5,7 +5,8 @@
     "@gatherle/commons": "1.0.0"
   },
   "scripts": {
-    "build": "npm run build:cdk",
+    "build": "npm run build:ts",
+    "build:ts": "tsc --noEmit",
     "build:cdk": "npm run cdk synth",
     "cdk": "npx aws-cdk"
   },

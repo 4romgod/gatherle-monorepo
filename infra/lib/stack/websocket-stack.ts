@@ -8,12 +8,18 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
 configDotenv();
 
 const pathRoot = join(__dirname, '../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
 const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'websocket', 'lambdaHandler.js');
+
+export interface WebSocketApiStackProps extends StackProps {
+  applicationStage: string;
+  awsRegion: string;
+}
 
 export class WebSocketApiStack extends Stack {
   readonly websocketLambda: NodejsFunction;
@@ -22,20 +28,26 @@ export class WebSocketApiStack extends Stack {
   readonly websocketApiEndpointOutput: CfnOutput;
   readonly websocketLambdaLogGroup: LogGroup;
 
-  constructor(scope: Construct, id: string, props: StackProps) {
+  constructor(scope: Construct, id: string, props: WebSocketApiStackProps) {
     super(scope, id, props);
-    const stageSegment = `${process.env.STAGE ?? 'Beta'}`.toLowerCase();
+    const stageSegment = props.applicationStage.toLowerCase();
+    const targetSuffix = buildTargetSuffix(props.applicationStage, props.awsRegion);
+    const websocketLambdaName = buildResourceName('WebSocketLambdaFunction', props.applicationStage, props.awsRegion);
 
-    const gatherleSecret = Secret.fromSecretNameV2(this, 'WebSocketImportedSecret', `gatherle/backend/${stageSegment}`);
+    const gatherleSecret = Secret.fromSecretNameV2(
+      this,
+      'WebSocketImportedSecret',
+      buildBackendSecretName(props.applicationStage, props.awsRegion),
+    );
 
     this.websocketLambdaLogGroup = new LogGroup(this, 'WebSocketLambdaLogGroup', {
-      logGroupName: '/aws/lambda/WebSocketLambdaFunction',
+      logGroupName: `/aws/lambda/${websocketLambdaName}`,
       retention: RetentionDays.ONE_MONTH,
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
     this.websocketLambda = new NodejsFunction(this, 'WebSocketLambdaFunction', {
-      functionName: 'WebSocketLambdaFunction',
+      functionName: websocketLambdaName,
       description: 'Lambda handler for websocket connect/disconnect and realtime message routes.',
       runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
@@ -50,8 +62,8 @@ export class WebSocketApiStack extends Stack {
         nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
       },
       environment: {
-        STAGE: `${process.env.STAGE}`,
-        GATHERLE_SECRET_ARN: gatherleSecret.secretArn,
+        STAGE: props.applicationStage,
+        SECRET_ARN: gatherleSecret.secretArn,
         WEBSOCKET_CONNECTION_TTL_HOURS: '24',
         NODE_OPTIONS: '--enable-source-maps',
       },
@@ -61,7 +73,7 @@ export class WebSocketApiStack extends Stack {
     gatherleSecret.grantRead(this.websocketLambda);
 
     this.websocketApi = new WebSocketApi(this, 'GatherleWebSocketApi', {
-      apiName: 'GatherleWebSocketApi',
+      apiName: buildResourceName('gatherle-websocket-api', props.applicationStage, props.awsRegion),
       description: 'Gatherle websocket API for realtime notifications and chat',
       routeSelectionExpression: '$request.body.action',
     });
@@ -95,14 +107,14 @@ export class WebSocketApiStack extends Stack {
 
     this.websocketStage = new WebSocketStage(this, 'GatherleWebSocketStage', {
       webSocketApi: this.websocketApi,
-      stageName: `${process.env.STAGE}`.toLowerCase(),
+      stageName: stageSegment,
       autoDeploy: true,
     });
 
     this.websocketApiEndpointOutput = new CfnOutput(this, 'websocketApiUrl', {
       value: this.websocketStage.url,
       description: 'The URL of the websocket API',
-      exportName: 'WebSocketApiEndpoint',
+      exportName: `WebSocketApiEndpoint-${targetSuffix}`,
     });
   }
 }

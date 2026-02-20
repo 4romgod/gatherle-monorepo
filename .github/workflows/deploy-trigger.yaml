@@ -1,0 +1,21 @@
+name: Deploy Trigger
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy_beta:
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [eu-west-1]
+    uses: ./.github/workflows/deploy.yaml
+    with:
+      stage: Beta
+      region: ${{ matrix.region }}
+    secrets: inherit

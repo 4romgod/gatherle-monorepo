@@ -225,7 +225,7 @@ This section documents what is implemented today so this plan can evolve as a li
 
 #### 1. Infrastructure
 
-- Stack: `infra/lib/stack/websocket-api-stack.ts`
+- Stack: `infra/lib/stack/websocket-stack.ts`
 - API name: `GatherleWebSocketApi`
 - Stage: lowercase `STAGE` (for example `beta`)
 - Lambda: `WebSocketLambdaFunction` (Node.js 24, 30s timeout, 256MB)

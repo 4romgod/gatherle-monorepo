@@ -37,7 +37,7 @@ Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, 
 ## Environment
 
 - API (`apps/api`): expects `JWT_SECRET`, `MONGO_DB_URL`, `STAGE` (defaults to `Beta`; can be `Dev`, `Beta`, or `Prod`),
-  `AWS_REGION`, and optional `GATHERLE_SECRET_ARN` for Secrets Manager.
+  `AWS_REGION`, and optional `SECRET_ARN` for Secrets Manager.
   - **Important:** `MONGO_DB_URL` **must include a database name** (e.g., `mongodb://localhost:27017/gatherle`). Without
     a database name, Mongoose defaults to the "test" database, which can cause collections (RSVPs, org memberships) to
     vanish on reconnects.
