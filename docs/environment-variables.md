@@ -39,18 +39,18 @@ The following commands work without any environment variables:
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
   automatically.
-- `GATHERLE_SECRET_ARN` is **not required** locally—dev never reads Secrets Manager.
+- `SECRET_ARN` is **not required** locally—dev never reads Secrets Manager.
 
 ### Deployed stages (Staging/Prod)
 
 - Secrets Manager stores `MONGO_DB_URL` and `JWT_SECRET` inside a secret whose name follows
-  `gatherle/backend/${STAGE.toLowerCase()}` (for example `gatherle/backend/beta`).
-- CDK injects these into the lambda by looking up that secret via `Secret.fromSecretNameV2` and supplying
-  `GATHERLE_SECRET_ARN` (the actual ARN returned by Secrets Manager) and `AWS_REGION`.
+  `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}` (for example `gatherle/backend/beta-eu-west-1`).
+- CDK injects these into the lambda by looking up that secret via `Secret.fromSecretNameV2` and supplying `SECRET_ARN`
+  (the actual ARN returned by Secrets Manager) and `AWS_REGION`.
 - Lambda environment:
   - `STAGE` (from CI/CD).
-  - `GATHERLE_SECRET_ARN` (required ARN, not just the string `gatherle/backend/${STAGE.toLowerCase()}`; the ARN is
-    passed verbatim).
+  - `SECRET_ARN` (required ARN, not just the string
+    `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}`; the ARN is passed verbatim).
   - `AWS_REGION` (should align with where the stack is deployed).
   - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
@@ -68,7 +68,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 #### Remote testing (STAGE=Beta or STAGE=Prod)
 
 - Run: `STAGE=Beta GRAPHQL_URL=<endpoint> npm run test:e2e -w @gatherle/api`
-- Required env: `STAGE`, `GRAPHQL_URL`, `GATHERLE_SECRET_ARN`, `AWS_REGION`
+- Required env: `STAGE`, `GRAPHQL_URL`, `SECRET_ARN`, `AWS_REGION`
 - Behavior: Tests against deployed endpoint without starting a server, skips automatic cleanup
 - Example: Post-deployment tests in CI/CD run against the freshly deployed API endpoint with `STAGE=Beta`
 
@@ -104,23 +104,61 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Prerequisite: Playwright browsers installed (for example `npx playwright install chromium`; on Linux CI use
   `npx playwright install --with-deps chromium`).
 
-## CI/CD (`.github/workflows/pipeline.yaml`)
+## CI/CD (`.github/workflows/deploy-trigger.yaml` + `.github/workflows/deploy.yaml`)
 
-- Secrets & vars needed in GitHub:
-  1. `ASSUME_ROLE_ARN` – secret, used when configuring AWS credentials.
-  2. `AWS_REGION` – can live in repository **variables** (no need to mark it as a secret).
-  3. `STAGE` – repository variable (default `Beta`, override for prod).
-  4. `GATHERLE_SECRET_ARN` – if tests or later steps run outside AWS, pass the ARN (or re-export it) so e2e tests/webapp
-     builds can reach the same secrets.
-- CDK deploy step passes:
-  - `STAGE` (via `vars.STAGE`).
-  - `AWS_REGION` (via props, default `eu-west-1`).
-  - `GATHERLE_SECRET_ARN` (the actual ARN from the secret).
-- After deployment:
-  - Capture `GRAPHQL_URL` output.
-  - Run e2e tests with `STAGE`, `GATHERLE_SECRET_ARN`, `GRAPHQL_URL`.
-  - For the frontend deploy, surface `NEXT_PUBLIC_GRAPHQL_URL` (`GRAPHQL_URL`) plus `NEXT_PUBLIC_JWT_SECRET` (from the
-    secret) using GitHub env/outputs without hardcoding.
+- CDK target resolution uses the nested map in `infra/lib/constants/accounts.ts`: `stage -> region -> account`.
+- `.github/workflows/deploy-trigger.yaml` is the orchestrator:
+  - Triggered on pushes to `main` (and supports `workflow_dispatch`).
+  - Calls deploy for `Beta` first using the region matrix defined in the workflow file.
+  - Calls deploy for `Prod` only after Beta succeeds and Prod deploy is enabled.
+- `.github/workflows/deploy.yaml` is reusable (`workflow_call`) and deploys a single target from `stage` + `region`.
+- The deploy workflow derives GitHub Environment name as `<stage-lower>-<region>` (for example `beta-eu-west-1`).
+- Create one GitHub **Environment** per target (for example `beta-eu-west-1`, `prod-eu-west-1`) so each target has
+  isolated secrets/approvals.
+
+### GitHub Environment Secrets (sensitive)
+
+- `ASSUME_ROLE_ARN` (required): IAM role for `configure-aws-credentials`.
+- `VERCEL_TOKEN` (required if web deploy is enabled).
+- `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
+- `JWT_SECRET` (only needed if workflow injects it into the web build).
+- `SECRET_ARN` is resolved dynamically in CI/CD from Secrets Manager using `STAGE` + `AWS_REGION`, so you do not need to
+  store it in GitHub variables.
+
+### GitHub Repository Variables (non-sensitive)
+
+- `ENABLE_PROD_DEPLOY` (optional, `true` or `false`, default `false`).
+- Regions are configured directly in `.github/workflows/deploy-trigger.yaml` matrix entries (for example
+  `region: [eu-west-1, us-east-1]`).
+- `SECRET_ARN` is not required as a GitHub variable when using dynamic resolution.
+- `STAGE`/`AWS_REGION` GitHub variables are not required for deployment targeting.
+
+### Post-deploy wiring
+
+- Capture `GRAPHQL_URL` from `gatherle-graphql-<stage-lower>-<region>` stack output `apiPath`.
+- Capture `WEBSOCKET_URL` from `gatherle-websocket-api-<stage-lower>-<region>` output `websocketApiUrl`.
+- Run API e2e tests with `STAGE`, `AWS_REGION`, `GRAPHQL_URL`, and `SECRET_ARN`.
+- Pass `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` to frontend deployment.
+
+### Manual Auth Bootstrap (one-time per AWS account)
+
+`GitHubActionsAwsAuthStack` creates the IAM OIDC provider and deploy role that CI/CD later assumes.  
+Because this role does not exist on day one, bootstrap it manually with admin AWS credentials:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+STAGE=Beta AWS_REGION=eu-west-1 npm run cdk -w @gatherle/cdk -- deploy GitHubActionsAwsAuthStack --require-approval never --exclusively
+```
+
+Then capture the created role ARN and store it as GitHub Environment secret `ASSUME_ROLE_ARN`:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+STAGE=Beta AWS_REGION=eu-west-1 aws cloudformation describe-stacks \
+  --stack-name gatherle-github-actions-auth-471112776816 \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --output text
+```
 
 ## Next steps to keep things tidy
 
@@ -129,5 +167,5 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   to satisfy the right keys per `STAGE`.
 - Update the pipeline to pass `NEXT_PUBLIC_*` values securely instead of the placeholder `secret`; consider introducing
   a small job that writes those values to `${GITHUB_ENV}` after API deployment.
-- Propagate the `GATHERLE_SECRET_ARN` ARN (not just the secret name) everywhere the API runs so the lambda and tests can
-  actually resolve the secret.
+- Propagate the `SECRET_ARN` ARN (not just the secret name) everywhere the API runs so the lambda and tests can actually
+  resolve the secret.

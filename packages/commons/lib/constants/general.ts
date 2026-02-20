@@ -29,9 +29,29 @@ export const APPLICATION_STAGES = {
 };
 
 export const AWS_REGIONS = {
-  Ireland: 'eu-west-1',
-  N_Virginia: 'us-east-1',
-  Ohio: 'us-east-2',
+  ARN: 'eu-north-1',
+  AUH: 'me-central-1',
+  BOM: 'ap-south-1',
+  CDG: 'eu-west-3',
+  DUB: 'eu-west-1',
+  CMH: 'us-east-2',
+  CPT: 'af-south-1',
+  DXB: 'me-central-1',
+  FRA: 'eu-central-1',
+  GRU: 'sa-east-1',
+  IAD: 'us-east-1',
+  ICN: 'ap-northeast-2',
+  KIX: 'ap-northeast-3',
+  LHR: 'eu-west-2',
+  MEL: 'ap-southeast-4',
+  NRT: 'ap-northeast-1',
+  PDT: 'us-gov-west-1',
+  PDX: 'us-west-2',
+  SFO: 'us-west-1',
+  SIN: 'ap-southeast-1',
+  SYD: 'ap-southeast-2',
+  YUL: 'ca-central-1',
+  ZHY: 'cn-northwest-1',
 };
 
 export enum DATE_FILTER_OPTIONS {

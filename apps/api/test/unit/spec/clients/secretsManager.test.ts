@@ -13,7 +13,7 @@ const mockConstants = (overrides: Partial<Record<string, string>> = {}) =>
     JWT_SECRET: 'local-jwt',
     MONGO_DB_URL: 'mongodb://local',
     STAGE: APPLICATION_STAGES.DEV,
-    GATHERLE_SECRET_ARN: 'arn:aws:secretsmanager:region:123:secret:gatherle',
+    SECRET_ARN: 'arn:aws:secretsmanager:region:123:secret:gatherle',
     SECRET_KEYS: {
       JWT_SECRET: 'JWT_SECRET',
       MONGO_DB_URL: 'MONGO_DB_URL',
@@ -71,11 +71,11 @@ describe('getConfigValue', () => {
     await expect(getConfigValue('JWT_SECRET')).rejects.toThrow('Secret "JWT_SECRET" not found in Secrets Manager');
   });
 
-  it('throws when GATHERLE_SECRET_ARN is missing outside Dev', async () => {
-    mockConstants({ STAGE: APPLICATION_STAGES.PROD, GATHERLE_SECRET_ARN: undefined as unknown as string });
+  it('throws when SECRET_ARN is missing outside Dev', async () => {
+    mockConstants({ STAGE: APPLICATION_STAGES.PROD, SECRET_ARN: undefined as unknown as string });
 
     const { getConfigValue } = await import('@/clients/AWS/secretsManager');
 
-    await expect(getConfigValue('JWT_SECRET')).rejects.toThrow('GATHERLE_SECRET_ARN is required when STAGE is not Dev');
+    await expect(getConfigValue('JWT_SECRET')).rejects.toThrow('SECRET_ARN is required when STAGE is not Dev');
   });
 });

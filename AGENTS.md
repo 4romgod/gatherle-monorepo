@@ -71,7 +71,7 @@
 
 ## Security & Configuration Tips
 
-- Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `GATHERLE_SECRET_ARN`); Web
+- Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `SECRET_ARN`); Web
   (`NEXT_PUBLIC_GRAPHQL_URL`); CDK requires AWS creds.
 - Never commit secrets; use `.env` files ignored by git. For CDK, ensure AWS bootstrap is done per account/region before
   synth/deploy.
@@ -79,35 +79,34 @@
   - Keep a workspace-specific `.env` file per project (`apps/api/.env.local`, `apps/webapp/.env.local`, etc.) and never
     commit it; add `.env.*` to `.gitignore` if not already ignored.
   - Document required keys per workspace so contributors know what to populate before running scripts: the API needs
-    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `GATHERLE_SECRET_ARN`; the webapp consumes
+    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `SECRET_ARN`; the webapp consumes
     `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` (and uses `NEXT_PUBLIC_JWT_SECRET` wherever the
     client-side auth config expects it).
   - For local dev run `npm run dev:api`/`npm run dev:web` with the matching `.env` or by exporting the vars, and
     consider adding `dotenv` helpers or scripts to validate the presence of required keys before starting.
   - Share secret values via a secure vault (e.g., AWS Secrets Manager, 1Password, or the team-approved store) and keep
-    the `GATHERLE_SECRET_ARN` format consistent with `gatherle/backend/<stage-lowercase>` (for example
-    `gatherle/backend/beta`) for AWS-integrated lookups.
+    the `SECRET_ARN` format consistent with `gatherle/backend/<stage-lowercase>-<aws-region-lowercase>` (for example
+    `gatherle/backend/beta-eu-west-1`) for AWS-integrated lookups.
 
 ## CI/CD Secrets & Environment Variables
 
-- The pipeline uses GitHub Workflows (`.github/workflows/pipeline.yaml`) with two jobs: `pr-check` (lint/build/test) and
-  `api-deploy` (CDK deploy + e2e tests). Ensure each job runs from the root so workspace commands resolve correctly.
-- Global workflow env: `STAGE` defaults to `Beta`, but production pushes should override via GitHub repository variables
-  (matching the stage naming in `packages/commons`).
+- The deploy pipeline uses `.github/workflows/deploy-trigger.yaml` (orchestrator) and `.github/workflows/deploy.yaml`
+  (reusable target deploy). Ensure commands run from repository root so workspace scripts resolve correctly.
 - Secrets/variables required in GitHub:
-  - `ASSUME_ROLE_ARN`: Role the CDK deploy job assumes (set under repo Settings → Secrets).
-  - `AWS_REGION`: Region used both for `configure-aws-credentials` and to satisfy `apps/api` env expectations.
-  - Repository `Variables`: `STAGE` (e.g., `Beta`, `Prod`) and `GATHERLE_SECRET_ARN` variants (for example,
-    `gatherle/backend/beta`) so e2e tests know where to resolve secrets.
+  - GitHub Environment secret `ASSUME_ROLE_ARN`: Role the deploy job assumes.
+  - Repository variable `ENABLE_PROD_DEPLOY`: optional gate for Prod promotion on main (set `true` to enable).
+  - Deploy regions are defined directly in `.github/workflows/deploy-trigger.yaml` via matrix entries.
+  - CI resolves `SECRET_ARN` dynamically from Secrets Manager using `gatherle/backend/<stage-lower>-<region>`.
 - Workflow flow for `api-deploy`:
-  1. Checkout → Install deps → CDK tools.
-  2. Build API/commons/CDK packages.
-  3. Configure AWS creds via the assumed role secret + `AWS_REGION`.
-  4. Deploy runtime CDK stacks (for example
+  1. `deploy-trigger` runs on `main` and calls reusable deploy for `Beta` first, then `Prod` when enabled.
+  2. Checkout → Install deps → CDK tools.
+  3. Build API/commons/CDK packages.
+  4. Configure AWS creds via the assumed role secret + `AWS_REGION`.
+  5. Deploy runtime CDK stacks (for example
      `npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
-     with `STAGE` from repo vars, and deploy `SecretsManagementStack` only when secrets intentionally change.
-  5. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
-  6. Run e2e tests with `STAGE`, `GATHERLE_SECRET_ARN`, `GRAPHQL_URL`.
+     with resolved `STAGE`/`AWS_REGION`, and deploy `SecretsManagementStack` only when secrets intentionally change.
+  6. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
+  7. Run e2e tests with `STAGE`, `SECRET_ARN`, `GRAPHQL_URL`.
 - Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output
   and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy outputs/stored vars, and include a secure way to inject these into the
   build (e.g., GitHub Actions env or `next.config.js` referencing process env).

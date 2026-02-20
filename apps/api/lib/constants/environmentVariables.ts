@@ -14,7 +14,7 @@ const BaseEnvSchema = z.object({
   JWT_SECRET: z.string().optional(),
   AWS_REGION: z.string().default('eu-west-1'),
   STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.BETA),
-  GATHERLE_SECRET_ARN: z.string().optional(),
+  SECRET_ARN: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
   LOG_LEVEL: z
     .string()
@@ -45,11 +45,11 @@ const ValidatedEnvSchema = BaseEnvSchema.superRefine((env, ctx) => {
       });
     }
   } else {
-    if (!env.GATHERLE_SECRET_ARN) {
+    if (!env.SECRET_ARN) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['GATHERLE_SECRET_ARN'],
-        message: 'GATHERLE_SECRET_ARN is required in staging/prod',
+        path: ['SECRET_ARN'],
+        message: 'SECRET_ARN is required in staging/prod',
       });
     }
   }
@@ -100,7 +100,7 @@ export function validateEnv(): void {
   console.log(`  - Log Level: ${logLevel}`);
   console.log(`  - MongoDB URL: ${env.MONGO_DB_URL ? '***configured***' : 'not set'}`);
   console.log(`  - JWT Secret: ${env.JWT_SECRET ? '***configured***' : 'not set'}`);
-  console.log(`  - Secrets ARN: ${env.GATHERLE_SECRET_ARN || 'not set'}`);
+  console.log(`  - Secrets ARN: ${env.SECRET_ARN || 'not set'}`);
   console.log(`  - S3 Bucket: ${env.S3_BUCKET_NAME || 'not set'}`);
 }
 
@@ -108,6 +108,6 @@ export const AWS_REGION = env.AWS_REGION;
 export const STAGE = env.STAGE;
 export const MONGO_DB_URL = env.MONGO_DB_URL;
 export const JWT_SECRET = env.JWT_SECRET;
-export const GATHERLE_SECRET_ARN = env.GATHERLE_SECRET_ARN;
+export const SECRET_ARN = env.SECRET_ARN;
 export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
 export const LOG_LEVEL = env.LOG_LEVEL;

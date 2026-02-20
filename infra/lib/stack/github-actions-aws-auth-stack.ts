@@ -9,6 +9,7 @@ export interface GitHubRepositoryConfigProps {
 }
 
 export interface GitHubActionsAwsAuthStackProps extends StackProps {
+  readonly accountNumberForNaming: string;
   readonly repositoryConfig: GitHubRepositoryConfigProps[];
 }
 
@@ -36,7 +37,7 @@ export class GitHubActionsAwsAuthStack extends Stack {
     };
 
     const role = new Role(this, 'gitHubDeployRole', {
-      roleName: 'githubActionsDeployRole',
+      roleName: `githubActionsDeployRole-${props.accountNumberForNaming}`,
       assumedBy: new WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, conditions),
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')],
       description: 'This role is used via GitHub Actions to deploy with AWS CDK or Terraform on the target AWS account',
@@ -46,7 +47,7 @@ export class GitHubActionsAwsAuthStack extends Stack {
     new CfnOutput(this, 'GithubActionOidcIamRoleArn', {
       value: role.roleArn,
       description: `Arn for AWS IAM role with Github OIDC auth for ${iamRepoDeployAccess}`,
-      exportName: 'GithubActionOidcIamRoleArn',
+      exportName: `GithubActionOidcIamRoleArn-${props.accountNumberForNaming}`,
     });
 
     Tags.of(this).add('component', 'CdkGithubActionsOidcIamRole');

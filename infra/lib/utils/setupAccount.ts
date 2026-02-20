@@ -8,43 +8,50 @@ import {
   WebSocketApiStack,
 } from '../stack';
 import { ServiceAccount } from '../constants';
+import { buildAccountScopedStackName, buildStackName } from './naming';
 
 export const setupServiceAccount = (app: App, account: ServiceAccount) => {
-  new GitHubActionsAwsAuthStack(app, 'GitHubActionsAwsAuthStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
-    repositoryConfig: [
-      {
-        owner: '4romgod',
-        repo: 'gatherle-monorepo',
-      },
-    ],
-    description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK Stacks',
-  });
+  const stackEnv = {
+    account: account.accountNumber,
+    region: account.awsRegion,
+  };
+
+  if (account.bootstrapAuthStack) {
+    new GitHubActionsAwsAuthStack(app, 'GitHubActionsAwsAuthStack', {
+      env: stackEnv,
+      stackName: buildAccountScopedStackName('github-actions-auth', account.accountNumber),
+      accountNumberForNaming: account.accountNumber,
+      repositoryConfig: [
+        {
+          owner: '4romgod',
+          repo: 'gatherle-monorepo',
+        },
+      ],
+      description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK Stacks',
+    });
+  }
 
   const secretsManagementStack = new SecretsManagementStack(app, 'SecretsManagementStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
+    env: stackEnv,
+    stackName: buildStackName('secrets-management', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
     description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
   });
 
   const s3BucketStack = new S3BucketStack(app, 'S3BucketStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
+    env: stackEnv,
+    stackName: buildStackName('s3-bucket', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
     description: 'This stack includes S3 bucket for storing user-uploaded images',
   });
 
   const graphqlStack = new GraphQLStack(app, 'GraphQLStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
+    env: stackEnv,
+    stackName: buildStackName('graphql', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
     s3BucketName: s3BucketStack.imagesBucket.bucketName,
     description: 'This stack includes infrastructure for the GraphQL API. This includes serverless resources.',
   });
@@ -53,10 +60,10 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   graphqlStack.addDependency(s3BucketStack);
 
   const webSocketApiStack = new WebSocketApiStack(app, 'WebSocketApiStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
+    env: stackEnv,
+    stackName: buildStackName('websocket-api', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
     description: 'This stack includes infrastructure for websocket routes used by realtime features.',
   });
 
@@ -67,10 +74,10 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
 
   // Create monitoring dashboard
   const monitoringStack = new MonitoringDashboardStack(app, 'MonitoringDashboardStack', {
-    env: {
-      account: account.accountNumber,
-      region: account.awsRegion,
-    },
+    env: stackEnv,
+    stackName: buildStackName('monitoring-dashboard', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
     graphqlLambdaFunction: graphqlStack.graphqlLambda,
     graphqlLambdaLogGroup: graphqlStack.graphqlLambdaLogGroup,
     graphqlApiAccessLogGroup: graphqlStack.graphqlApiAccessLogGroup,

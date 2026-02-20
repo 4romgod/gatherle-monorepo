@@ -133,7 +133,7 @@ Timeout Risks:
 
 **Code Changes Required:**
 
-- `infra/lib/stack/graphql-lambda-stack.ts` - increase memory, add provisioned concurrency
+- `infra/lib/stack/graphql-stack.ts` - increase memory, add provisioned concurrency
 - Create separate Lambda functions per domain
 - Implement Apollo Federation Router
 
@@ -289,7 +289,7 @@ Observability Stack:
 
 **Code Changes:**
 
-- `infra/lib/stack/graphql-lambda-stack.ts` - add throttling settings
+- `infra/lib/stack/graphql-stack.ts` - add throttling settings
 - `apps/api/lib/graphql/apollo/server.ts` - add query complexity plugin
 - Create rate limiting middleware using Redis
 

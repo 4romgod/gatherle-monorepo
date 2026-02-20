@@ -1,20 +1,29 @@
-name: Beta Deployment
+name: Deploy
 
 on:
-  push:
-    branches: ["main"]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      stage:
+        description: "Application stage (example: Beta, Prod)"
+        required: true
+        type: string
+      region:
+        description: "AWS region (example: eu-west-1)"
+        required: true
+        type: string
 
 permissions:
   id-token: write
   contents: read
 
-env:
-  STAGE: Beta
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -25,10 +34,23 @@ jobs:
           node-version: 24.x
           cache: npm
 
+      - name: Validate Deployment Configuration
+        env:
+          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
+        run: |
+          test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
+          test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
+          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
+
+      - name: Derive Deployment Suffix
+        run: |
+          STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
+          STACK_SUFFIX="${STAGE_SEGMENT}-${AWS_REGION}"
+          echo "STACK_SUFFIX=$STACK_SUFFIX" >> "$GITHUB_ENV"
+
       - name: Install Dependencies
         run: npm ci
 
-      # API Deployment
       - name: Install AWS CDK
         run: npm i -g aws-cdk
 
@@ -45,46 +67,55 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve Backend Secret ARN
+        run: |
+          STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
+          SECRET_NAME="gatherle/backend/${STAGE_SEGMENT}-${AWS_REGION}"
+          SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --query "ARN" --output text)
+          if [ -z "$SECRET_ARN" ] || [ "$SECRET_ARN" = "None" ]; then
+            echo "Failed to resolve secret ARN for $SECRET_NAME."
+            exit 1
+          fi
+          echo "SECRET_ARN=$SECRET_ARN" >> "$GITHUB_ENV"
 
       - name: Deploy AWS CDK
-        env:
-          CDK_DEPLOY_STACKS: "S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
         run: |
+          CDK_DEPLOY_STACKS="S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
           # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
           npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 
       - name: Get API Gateway endpoint
         id: get_graphql_endpoint
         run: |
-          ENDPOINT=$(aws cloudformation describe-stacks --stack-name GraphQLStack --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
-          echo "Retrieved endpoint: $ENDPOINT"
-          echo "GRAPHQL_URL=$ENDPOINT" >> $GITHUB_ENV
-          echo "graphql_url=$ENDPOINT" >> $GITHUB_OUTPUT
-          echo "Verify output was set:"
-          cat $GITHUB_OUTPUT
+          ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+          if [ -z "$ENDPOINT" ] || [ "$ENDPOINT" = "None" ]; then
+            echo "Failed to retrieve GraphQL endpoint from gatherle-graphql-${STACK_SUFFIX} output apiPath."
+            exit 1
+          fi
+          echo "GRAPHQL_URL=$ENDPOINT" >> "$GITHUB_ENV"
+          echo "graphql_url=$ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Get WebSocket API endpoint
         id: get_websocket_endpoint
         run: |
-          WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name WebSocketApiStack --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
+          WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-websocket-api-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
           if [ -z "$WS_ENDPOINT" ] || [ "$WS_ENDPOINT" = "None" ]; then
-            echo "Failed to retrieve WebSocket endpoint from WebSocketApiStack output websocketApiUrl."
+            echo "Failed to retrieve WebSocket endpoint from gatherle-websocket-api-${STACK_SUFFIX} output websocketApiUrl."
             exit 1
           fi
-          echo "WEBSOCKET_URL=$WS_ENDPOINT" >> $GITHUB_ENV
-          echo "websocket_url=$WS_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "WebSocket endpoint retrieved:"
-          echo "$WS_ENDPOINT"
+          echo "WEBSOCKET_URL=$WS_ENDPOINT" >> "$GITHUB_ENV"
+          echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Run API E2E Tests
         env:
+          STAGE: ${{ env.STAGE }}
           GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
-          GATHERLE_SECRET_ARN: ${{ secrets.GATHERLE_SECRET_ARN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SECRET_ARN: ${{ env.SECRET_ARN }}
+          AWS_REGION: ${{ env.AWS_REGION }}
         run: npm run test:e2e:api
 
-      # Webapp Deployment
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -118,7 +149,6 @@ jobs:
           fi
           echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           echo "PLAYWRIGHT_BASE_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
-          echo "Deployed URL: $DEPLOYMENT_URL"
 
       - name: Verify Captured Deployment URL
         env:
@@ -128,9 +158,6 @@ jobs:
             echo "PLAYWRIGHT_BASE_URL is empty."
             exit 1
           fi
-          echo "Deployment URL captured (value may be masked in logs)."
-          echo "URL length: ${#PLAYWRIGHT_BASE_URL}"
-          echo "Checking URL reachability..."
           curl -fsSIL "$PLAYWRIGHT_BASE_URL" | head -n 1
 
       - name: Install Playwright Browser Dependencies
