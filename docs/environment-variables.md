@@ -1,5 +1,7 @@
 # Environment & Secrets Reference
 
+For end-to-end account/bootstrap instructions, see `docs/aws-account-setup.md`.
+
 ## Environment Validation Strategy
 
 The API uses a **lazy validation** approach for environment variables:
@@ -104,21 +106,24 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Prerequisite: Playwright browsers installed (for example `npx playwright install chromium`; on Linux CI use
   `npx playwright install --with-deps chromium`).
 
-## CI/CD (`.github/workflows/deploy-trigger.yaml` + `.github/workflows/deploy.yaml`)
+## CI/CD (`.github/workflows/deploy-trigger.yaml` + reusable deploy workflows)
 
 - CDK target resolution uses the nested map in `infra/lib/constants/accounts.ts`: `stage -> region -> account`.
 - `.github/workflows/deploy-trigger.yaml` is the orchestrator:
-  - Triggered on pushes to `main` (and supports `workflow_dispatch`).
-  - Calls deploy for `Beta` first using the region matrix defined in the workflow file.
+  - Triggered on pushes to `main`.
+  - Calls DNS deploy first using the region matrix defined in the workflow file.
+  - Calls runtime deploy for `Beta` after DNS succeeds.
   - Calls deploy for `Prod` only after Beta succeeds and Prod deploy is enabled.
+- `.github/workflows/deploy-dns.yaml` is reusable (`workflow_call`) and deploys `DnsStack` for a single region.
 - `.github/workflows/deploy.yaml` is reusable (`workflow_call`) and deploys a single target from `stage` + `region`.
 - The deploy workflow derives GitHub Environment name as `<stage-lower>-<region>` (for example `beta-eu-west-1`).
-- Create one GitHub **Environment** per target (for example `beta-eu-west-1`, `prod-eu-west-1`) so each target has
-  isolated secrets/approvals.
+- DNS deploy derives GitHub Environment name as `dns-<region>` (for example `dns-af-south-1`).
+- Create one GitHub **Environment** per target (for example `dns-af-south-1`, `beta-af-south-1`, `prod-af-south-1`) so
+  each target has isolated secrets/approvals.
 
 ### GitHub Environment Secrets (sensitive)
 
-- `ASSUME_ROLE_ARN` (required): IAM role for `configure-aws-credentials`.
+- `ASSUME_ROLE_ARN` (required): IAM role for `configure-aws-credentials` in the matching environment target.
 - `VERCEL_TOKEN` (required if web deploy is enabled).
 - `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
 - `JWT_SECRET` (only needed if workflow injects it into the web build).
@@ -128,35 +133,101 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 ### GitHub Repository Variables (non-sensitive)
 
 - `ENABLE_PROD_DEPLOY` (optional, `true` or `false`, default `false`).
+- `ENABLE_CUSTOM_DOMAINS` (optional rollout flag, `false` by default; set to `true` after stage subdomain NS delegation).
 - Regions are configured directly in `.github/workflows/deploy-trigger.yaml` matrix entries (for example
   `region: [eu-west-1, us-east-1]`).
 - `SECRET_ARN` is not required as a GitHub variable when using dynamic resolution.
 - `STAGE`/`AWS_REGION` GitHub variables are not required for deployment targeting.
+- For DNS delegation automation in `dns-<region>` environment, optional variables:
+  - `DELEGATED_SUBDOMAIN` (for example `beta.af-south-1`)
+  - `DELEGATED_NAME_SERVERS` (comma-separated values from `GraphQLStack` output `stageHostedZoneNameServers`)
 
 ### Post-deploy wiring
 
 - Capture `GRAPHQL_URL` from `gatherle-graphql-<stage-lower>-<region>` stack output `apiPath`.
 - Capture `WEBSOCKET_URL` from `gatherle-websocket-api-<stage-lower>-<region>` output `websocketApiUrl`.
+- Capture `STAGE_HOSTED_ZONE_NAME_SERVERS` from `gatherle-graphql-<stage-lower>-<region>` output
+  `stageHostedZoneNameServers` when preparing DNS delegation.
 - Run API e2e tests with `STAGE`, `AWS_REGION`, `GRAPHQL_URL`, and `SECRET_ARN`.
 - Pass `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` to frontend deployment.
+- For first custom-domain rollout:
+  1. Deploy runtime with `ENABLE_CUSTOM_DOMAINS=false` to create stage hosted zone.
+  2. Capture `GraphQLStack` output `stageHostedZoneNameServers`.
+  3. Populate DNS env vars (`DELEGATED_SUBDOMAIN`, `DELEGATED_NAME_SERVERS`) and deploy `DnsStack`.
+  4. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime.
 
 ### Manual Auth Bootstrap (one-time per AWS account)
 
-`GitHubActionsAwsAuthStack` creates the IAM OIDC provider and deploy role that CI/CD later assumes.  
+`GitHubAuthStack` (from `npm run cdk:github-auth`) creates the IAM OIDC provider and deploy role that CI/CD later
+assumes.  
 Because this role does not exist on day one, bootstrap it manually with admin AWS credentials:
 
 ```bash
 cd /home/bigfish/code/projects/gatherle-monorepo
-STAGE=Beta AWS_REGION=eu-west-1 npm run cdk -w @gatherle/cdk -- deploy GitHubActionsAwsAuthStack --require-approval never --exclusively
+AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=327319899143 npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively
 ```
 
 Then capture the created role ARN and store it as GitHub Environment secret `ASSUME_ROLE_ARN`:
 
 ```bash
 cd /home/bigfish/code/projects/gatherle-monorepo
-STAGE=Beta AWS_REGION=eu-west-1 aws cloudformation describe-stacks \
-  --stack-name gatherle-github-actions-auth-471112776816 \
+STAGE=Beta AWS_REGION=af-south-1 aws cloudformation describe-stacks \
+  --stack-name gatherle-github-auth-327319899143 \
   --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --output text
+```
+
+### Manual Secrets Bootstrap / Rotation (intentional only)
+
+- Runtime deployment intentionally excludes `SecretsManagementStack`.
+- Bootstrap or rotate backend secret values manually:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively
+```
+
+- Verify secret ARN:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+aws secretsmanager describe-secret \
+  --secret-id gatherle/backend/beta-af-south-1 \
+  --query "ARN" \
+  --output text
+```
+
+- Dedicated app for this step: `infra/lib/secrets-app.ts`.
+
+## AWS Org Account Split (DNS + Beta)
+
+- Recommended account ownership:
+  - `Gatherle-dns` account owns root public hosted zone `gatherle.com`.
+  - `Gatherle-beta` account owns runtime stacks and stage subdomains.
+- Current beta deployment account configured in code:
+  - `infra/lib/constants/accounts.ts` maps `Beta + af-south-1` to account `327319899143`.
+- Deployment bootstrap sequence:
+  1. In `Gatherle-beta` account: run CDK bootstrap for `af-south-1`.
+  2. In `Gatherle-beta` account: deploy `GitHubAuthStack` once and store role ARN in GitHub environment secret.
+  3. In `Gatherle-dns` account: create/host `gatherle.com`.
+  4. Delegate stage subdomain NS records to the beta account hosted zone when API custom domains are introduced.
+
+### DNS Bootstrap (`Gatherle-dns` account)
+
+Deploy root hosted-zone stack from DNS account credentials:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+AWS_REGION=af-south-1 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively
+```
+
+Then retrieve registrar name servers:
+
+```bash
+cd /home/bigfish/code/projects/gatherle-monorepo
+AWS_REGION=af-south-1 aws cloudformation describe-stacks \
+  --stack-name gatherle-dns-root-zone-072092344224 \
+  --query "Stacks[0].Outputs[?OutputKey=='RootHostedZoneNameServers'].OutputValue" \
   --output text
 ```
 

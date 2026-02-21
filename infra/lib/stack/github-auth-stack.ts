@@ -8,13 +8,13 @@ export interface GitHubRepositoryConfigProps {
   filter?: string;
 }
 
-export interface GitHubActionsAwsAuthStackProps extends StackProps {
+export interface GitHubAuthStackProps extends StackProps {
   readonly accountNumberForNaming: string;
   readonly repositoryConfig: GitHubRepositoryConfigProps[];
 }
 
-export class GitHubActionsAwsAuthStack extends Stack {
-  constructor(scope: Construct, id: string, props: GitHubActionsAwsAuthStackProps) {
+export class GitHubAuthStack extends Stack {
+  constructor(scope: Construct, id: string, props: GitHubAuthStackProps) {
     super(scope, id, props);
 
     const githubDomain = 'token.actions.githubusercontent.com';

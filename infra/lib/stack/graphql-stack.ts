@@ -1,18 +1,26 @@
 import {
   AccessLogFormat,
+  BasePathMapping,
+  DomainName,
+  EndpointType,
   LambdaRestApi,
   LogGroupLogDestination,
   ResourceBase,
   RestApi,
+  SecurityPolicy,
 } from 'aws-cdk-lib/aws-apigateway';
-import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
 import { configDotenv } from 'dotenv';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
+import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
+import { ARecord, PublicHostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { join } from 'path';
+import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
 configDotenv();
@@ -25,6 +33,7 @@ export interface GraphQLStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
   s3BucketName?: string;
+  enableCustomDomains?: boolean;
 }
 
 export class GraphQLStack extends Stack {
@@ -34,11 +43,19 @@ export class GraphQLStack extends Stack {
   readonly graphqlApiPathOutput: CfnOutput;
   readonly graphqlLambdaLogGroup: LogGroup;
   readonly graphqlApiAccessLogGroup: LogGroup;
+  readonly stageHostedZone: PublicHostedZone;
+  readonly stageDomainCertificate?: Certificate;
+  readonly stageRegionDomainName: string;
+  readonly stageHostedZoneNameServersOutput: CfnOutput;
+  readonly graphqlApiDomainOutput?: CfnOutput;
 
   constructor(scope: Construct, id: string, props: GraphQLStackProps) {
     super(scope, id, props);
     const stageSegment = props.applicationStage.toLowerCase();
     const targetSuffix = buildTargetSuffix(props.applicationStage, props.awsRegion);
+    const enableCustomDomains = props.enableCustomDomains ?? false;
+    this.stageRegionDomainName = `${stageSegment}.${props.awsRegion.toLowerCase()}.${DNS_STACK_CONFIG.rootDomainName}`;
+    const graphqlCustomDomainName = `api.${this.stageRegionDomainName}`;
     const graphqlLambdaName = buildResourceName('GraphqlLambdaFunction', props.applicationStage, props.awsRegion);
 
     const gatherleSecret = Secret.fromSecretNameV2(
@@ -107,7 +124,52 @@ export class GraphQLStack extends Stack {
     this.graphql = this.graphqlApi.root.addResource('graphql');
     this.graphql.addMethod('ANY');
 
-    const graphqlApiEndpoint = this.graphqlApi.urlForPath('/graphql');
+    this.stageHostedZone = new PublicHostedZone(this, 'StageRegionHostedZone', {
+      zoneName: this.stageRegionDomainName,
+    });
+
+    this.stageHostedZoneNameServersOutput = new CfnOutput(this, 'stageHostedZoneNameServers', {
+      value: Fn.join(', ', this.stageHostedZone.hostedZoneNameServers ?? []),
+      description: 'Name servers for stage-region delegated hosted zone',
+      exportName: `StageHostedZoneNameServers-${targetSuffix}`,
+    });
+
+    let graphqlApiEndpoint = this.graphqlApi.urlForPath('/graphql');
+
+    if (enableCustomDomains) {
+      this.stageDomainCertificate = new Certificate(this, 'StageRegionDomainCertificate', {
+        domainName: this.stageRegionDomainName,
+        subjectAlternativeNames: [`*.${this.stageRegionDomainName}`],
+        validation: CertificateValidation.fromDns(this.stageHostedZone),
+      });
+
+      const graphqlCustomDomain = new DomainName(this, 'GraphqlCustomDomain', {
+        domainName: graphqlCustomDomainName,
+        certificate: this.stageDomainCertificate,
+        endpointType: EndpointType.REGIONAL,
+        securityPolicy: SecurityPolicy.TLS_1_2,
+      });
+
+      new BasePathMapping(this, 'GraphqlCustomDomainBasePathMapping', {
+        domainName: graphqlCustomDomain,
+        restApi: this.graphqlApi,
+      });
+
+      new ARecord(this, 'GraphqlCustomDomainARecord', {
+        zone: this.stageHostedZone,
+        recordName: 'api',
+        target: RecordTarget.fromAlias(new ApiGatewayDomain(graphqlCustomDomain)),
+      });
+
+      graphqlApiEndpoint = `https://${graphqlCustomDomainName}/graphql`;
+
+      this.graphqlApiDomainOutput = new CfnOutput(this, 'graphqlDomainName', {
+        value: graphqlCustomDomainName,
+        description: 'Custom domain name of the GraphQL API',
+        exportName: `GraphQLApiDomainName-${targetSuffix}`,
+      });
+    }
+
     this.graphqlApiPathOutput = new CfnOutput(this, 'apiPath', {
       value: graphqlApiEndpoint,
       description: 'The URL of the GraphQL API',

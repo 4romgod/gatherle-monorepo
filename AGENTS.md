@@ -92,21 +92,38 @@
 
 - The deploy pipeline uses `.github/workflows/deploy-trigger.yaml` (orchestrator) and `.github/workflows/deploy.yaml`
   (reusable target deploy). Ensure commands run from repository root so workspace scripts resolve correctly.
+- DNS deploy pipeline uses `.github/workflows/deploy-dns.yaml` (reusable DNS deploy) and is orchestrated by
+  `.github/workflows/deploy-trigger.yaml`.
+- Full AWS account bootstrap/onboarding runbook: `docs/aws-account-setup.md`.
 - Secrets/variables required in GitHub:
   - GitHub Environment secret `ASSUME_ROLE_ARN`: Role the deploy job assumes.
   - Repository variable `ENABLE_PROD_DEPLOY`: optional gate for Prod promotion on main (set `true` to enable).
+  - Repository variable `ENABLE_CUSTOM_DOMAINS`: rollout flag for API/WebSocket custom domains.
   - Deploy regions are defined directly in `.github/workflows/deploy-trigger.yaml` via matrix entries.
   - CI resolves `SECRET_ARN` dynamically from Secrets Manager using `gatherle/backend/<stage-lower>-<region>`.
 - Workflow flow for `api-deploy`:
-  1. `deploy-trigger` runs on `main` and calls reusable deploy for `Beta` first, then `Prod` when enabled.
-  2. Checkout → Install deps → CDK tools.
-  3. Build API/commons/CDK packages.
-  4. Configure AWS creds via the assumed role secret + `AWS_REGION`.
-  5. Deploy runtime CDK stacks (for example
+  1. `deploy-trigger` runs on `main` and calls reusable DNS deploy first, then reusable runtime deploy for `Beta`.
+  2. Runtime `Prod` deployment (when enabled) runs only after `Beta` succeeds.
+  3. Checkout → Install deps → CDK tools.
+  4. Build API/commons/CDK packages.
+  5. Configure AWS creds via the assumed role secret + `AWS_REGION`.
+  6. Deploy runtime CDK stacks (for example
      `npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
      with resolved `STAGE`/`AWS_REGION`, and deploy `SecretsManagementStack` only when secrets intentionally change.
-  6. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
-  7. Run e2e tests with `STAGE`, `SECRET_ARN`, `GRAPHQL_URL`.
+  7. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
+  8. Run e2e tests with `STAGE`, `SECRET_ARN`, `GRAPHQL_URL`.
+- DNS bootstrap workflow:
+  - Use `npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively` from DNS account
+    credentials to create root Route53 hosted zone for `gatherle.com`.
+  - Optional DNS environment vars for delegated subdomain NS records:
+    `DELEGATED_SUBDOMAIN`, `DELEGATED_NAME_SERVERS`.
+- GitHub auth bootstrap workflow:
+  - Use `npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively` with
+    `AWS_REGION` and `TARGET_AWS_ACCOUNT_ID` to create the CI/CD OIDC role once per target account.
+- Secrets bootstrap/rotation workflow:
+  - Keep `SecretsManagementStack` out of normal deploys.
+  - Deploy it manually via `npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively`
+    only when intentionally creating or rotating `MONGO_DB_URL` and `JWT_SECRET`.
 - Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output
   and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy outputs/stored vars, and include a secure way to inject these into the
   build (e.g., GitHub Actions env or `next.config.js` referencing process env).

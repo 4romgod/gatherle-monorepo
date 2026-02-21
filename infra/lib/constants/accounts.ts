@@ -8,54 +8,19 @@ export type ServiceAccount = {
   accountNumber: string;
   awsRegion: string;
   applicationStage: string;
-  bootstrapAuthStack: boolean;
 };
 
 type RegionalAccountConfig = {
   accountNumber: string;
-  bootstrapAuthStack?: boolean;
 };
 
 const STAGE_REGION_ACCOUNT_CONFIGS: Partial<Record<Stage, Partial<Record<Region, RegionalAccountConfig>>>> = {
   [APPLICATION_STAGES.BETA]: {
-    [AWS_REGIONS.DUB]: {
-      accountNumber: '471112776816',
-      bootstrapAuthStack: true,
+    [AWS_REGIONS.CPT]: {
+      accountNumber: '327319899143',
     },
   },
 };
-
-const validateBootstrapAuthTargets = (): void => {
-  const bootstrapTargetCountByAccount = new Map<string, number>();
-
-  for (const regionsByStage of Object.values(STAGE_REGION_ACCOUNT_CONFIGS)) {
-    if (!regionsByStage) {
-      continue;
-    }
-
-    for (const regionalConfig of Object.values(regionsByStage)) {
-      if (!regionalConfig?.bootstrapAuthStack) {
-        continue;
-      }
-
-      const count = bootstrapTargetCountByAccount.get(regionalConfig.accountNumber) ?? 0;
-      bootstrapTargetCountByAccount.set(regionalConfig.accountNumber, count + 1);
-    }
-  }
-
-  const duplicateBootstrapAccounts = [...bootstrapTargetCountByAccount.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([accountNumber]) => accountNumber);
-
-  if (duplicateBootstrapAccounts.length > 0) {
-    throw new Error(
-      `Duplicate bootstrapAuthStack targets found for account(s): ${duplicateBootstrapAccounts.join(', ')}. ` +
-        'Only one stage+region target per account may set bootstrapAuthStack=true.',
-    );
-  }
-};
-
-validateBootstrapAuthTargets();
 
 const resolveStage = (input: string): Stage => {
   const stageValues = Object.values(APPLICATION_STAGES) as Stage[];
@@ -108,6 +73,5 @@ export const resolveServiceAccount = (stageInput: string, regionInput: string): 
     accountNumber: accountForRegion.accountNumber,
     awsRegion,
     applicationStage,
-    bootstrapAuthStack: accountForRegion.bootstrapAuthStack === true,
   };
 };

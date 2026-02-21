@@ -24,6 +24,7 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -107,6 +108,17 @@ jobs:
           fi
           echo "WEBSOCKET_URL=$WS_ENDPOINT" >> "$GITHUB_ENV"
           echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Get Stage Hosted Zone Name Servers
+        id: get_stage_zone_nameservers
+        run: |
+          ZONE_NAME_SERVERS=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" --output text)
+          if [ -z "$ZONE_NAME_SERVERS" ] || [ "$ZONE_NAME_SERVERS" = "None" ]; then
+            echo "Failed to retrieve stageHostedZoneNameServers from gatherle-graphql-${STACK_SUFFIX}."
+            exit 1
+          fi
+          echo "STAGE_HOSTED_ZONE_NAME_SERVERS=$ZONE_NAME_SERVERS" >> "$GITHUB_ENV"
+          echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
 
       - name: Run API E2E Tests
         env:

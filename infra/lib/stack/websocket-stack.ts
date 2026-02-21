@@ -6,7 +6,10 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ICertificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { IHostedZone, ARecord, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
+import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
@@ -19,6 +22,9 @@ const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'websocket',
 export interface WebSocketApiStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
+  enableCustomDomains?: boolean;
+  stageHostedZone?: IHostedZone;
+  stageDomainCertificate?: ICertificate;
 }
 
 export class WebSocketApiStack extends Stack {
@@ -32,6 +38,7 @@ export class WebSocketApiStack extends Stack {
     super(scope, id, props);
     const stageSegment = props.applicationStage.toLowerCase();
     const targetSuffix = buildTargetSuffix(props.applicationStage, props.awsRegion);
+    const enableCustomDomains = props.enableCustomDomains ?? false;
     const websocketLambdaName = buildResourceName('WebSocketLambdaFunction', props.applicationStage, props.awsRegion);
 
     const gatherleSecret = Secret.fromSecretNameV2(
@@ -111,8 +118,43 @@ export class WebSocketApiStack extends Stack {
       autoDeploy: true,
     });
 
+    let websocketApiEndpoint = this.websocketStage.url;
+
+    if (enableCustomDomains) {
+      if (!props.stageHostedZone || !props.stageDomainCertificate) {
+        throw new Error(
+          'Custom domains are enabled but stage hosted zone/certificate are missing for WebSocketApiStack.',
+        );
+      }
+
+      const websocketCustomDomainName = `ws.${props.stageHostedZone.zoneName}`;
+      const websocketCustomDomain = new DomainName(this, 'GatherleWebSocketCustomDomain', {
+        domainName: websocketCustomDomainName,
+        certificate: props.stageDomainCertificate,
+      });
+
+      new ApiMapping(this, 'GatherleWebSocketApiMapping', {
+        api: this.websocketApi,
+        domainName: websocketCustomDomain,
+        stage: this.websocketStage,
+      });
+
+      new ARecord(this, 'GatherleWebSocketCustomDomainARecord', {
+        zone: props.stageHostedZone,
+        recordName: 'ws',
+        target: RecordTarget.fromAlias(
+          new ApiGatewayv2DomainProperties(
+            websocketCustomDomain.regionalDomainName,
+            websocketCustomDomain.regionalHostedZoneId,
+          ),
+        ),
+      });
+
+      websocketApiEndpoint = `wss://${websocketCustomDomainName}`;
+    }
+
     this.websocketApiEndpointOutput = new CfnOutput(this, 'websocketApiUrl', {
-      value: this.websocketStage.url,
+      value: websocketApiEndpoint,
       description: 'The URL of the websocket API',
       exportName: `WebSocketApiEndpoint-${targetSuffix}`,
     });

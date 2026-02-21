@@ -9,11 +9,22 @@ permissions:
   contents: read
 
 jobs:
-  deploy_beta:
+  deploy_dns:
     strategy:
       fail-fast: false
       matrix:
-        region: [eu-west-1]
+        region: [af-south-1]
+    uses: ./.github/workflows/deploy-dns.yaml
+    with:
+      region: ${{ matrix.region }}
+    secrets: inherit
+
+  deploy_beta:
+    needs: deploy_dns
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [af-south-1]
     uses: ./.github/workflows/deploy.yaml
     with:
       stage: Beta

@@ -1,6 +1,5 @@
 import { App } from 'aws-cdk-lib';
 import {
-  GitHubActionsAwsAuthStack,
   GraphQLStack,
   SecretsManagementStack,
   S3BucketStack,
@@ -8,28 +7,14 @@ import {
   WebSocketApiStack,
 } from '../stack';
 import { ServiceAccount } from '../constants';
-import { buildAccountScopedStackName, buildStackName } from './naming';
+import { buildStackName } from './naming';
 
 export const setupServiceAccount = (app: App, account: ServiceAccount) => {
+  const enableCustomDomains = process.env.ENABLE_CUSTOM_DOMAINS === 'true';
   const stackEnv = {
     account: account.accountNumber,
     region: account.awsRegion,
   };
-
-  if (account.bootstrapAuthStack) {
-    new GitHubActionsAwsAuthStack(app, 'GitHubActionsAwsAuthStack', {
-      env: stackEnv,
-      stackName: buildAccountScopedStackName('github-actions-auth', account.accountNumber),
-      accountNumberForNaming: account.accountNumber,
-      repositoryConfig: [
-        {
-          owner: '4romgod',
-          repo: 'gatherle-monorepo',
-        },
-      ],
-      description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK Stacks',
-    });
-  }
 
   const secretsManagementStack = new SecretsManagementStack(app, 'SecretsManagementStack', {
     env: stackEnv,
@@ -52,6 +37,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     stackName: buildStackName('graphql', account.applicationStage, account.awsRegion),
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
+    enableCustomDomains,
     s3BucketName: s3BucketStack.imagesBucket.bucketName,
     description: 'This stack includes infrastructure for the GraphQL API. This includes serverless resources.',
   });
@@ -64,10 +50,14 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     stackName: buildStackName('websocket-api', account.applicationStage, account.awsRegion),
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
+    enableCustomDomains,
+    stageHostedZone: graphqlStack.stageHostedZone,
+    stageDomainCertificate: graphqlStack.stageDomainCertificate,
     description: 'This stack includes infrastructure for websocket routes used by realtime features.',
   });
 
   webSocketApiStack.addDependency(secretsManagementStack);
+  webSocketApiStack.addDependency(graphqlStack);
 
   // Grant Lambda permissions to access S3 bucket
   s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda);

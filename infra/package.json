@@ -8,7 +8,13 @@
     "build": "npm run build:ts",
     "build:ts": "tsc --noEmit",
     "build:cdk": "npm run cdk synth",
-    "cdk": "npx aws-cdk"
+    "build:cdk:dns": "npm run cdk:dns synth",
+    "build:cdk:github-auth": "npm run cdk:github-auth synth",
+    "build:cdk:secrets": "npm run cdk:secrets synth",
+    "cdk": "npx aws-cdk",
+    "cdk:dns": "npx aws-cdk --app \"npx ts-node --prefer-ts-exts ./lib/dns-app.ts\"",
+    "cdk:github-auth": "npx aws-cdk --app \"npx ts-node --prefer-ts-exts ./lib/github-auth-app.ts\"",
+    "cdk:secrets": "npx aws-cdk --app \"npx ts-node --prefer-ts-exts ./lib/secrets-app.ts\""
   },
   "devDependencies": {
     "aws-cdk": "^2.147.0",

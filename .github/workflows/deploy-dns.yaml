@@ -1,0 +1,59 @@
+name: Deploy DNS
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        description: "AWS region for DNS stack deployment"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy_dns:
+    runs-on: ubuntu-latest
+    environment: ${{ format('dns-{0}', inputs.region) }}
+    env:
+      AWS_REGION: ${{ inputs.region }}
+      DELEGATED_SUBDOMAIN: ${{ vars.DELEGATED_SUBDOMAIN }}
+      DELEGATED_NAME_SERVERS: ${{ vars.DELEGATED_NAME_SERVERS }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Validate Deployment Configuration
+        env:
+          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
+        run: |
+          test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
+          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for DNS environment" && exit 1)
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install AWS CDK
+        run: npm i -g aws-cdk
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
+
+      - name: Synthesize DNS AWS CDK
+        run: npm run build:cdk:dns -w @gatherle/cdk
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy DNS AWS CDK
+        run: npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively
