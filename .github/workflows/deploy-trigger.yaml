@@ -29,4 +29,5 @@ jobs:
     with:
       stage: Beta
       region: ${{ matrix.region }}
+      web_domain_alias: beta.gatherle.com
     secrets: inherit

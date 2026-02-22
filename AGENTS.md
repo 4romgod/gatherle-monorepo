@@ -115,15 +115,15 @@
 - DNS bootstrap workflow:
   - Use `npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively` from DNS account
     credentials to create root Route53 hosted zone for `gatherle.com`.
-  - Optional DNS environment vars for delegated subdomain NS records:
-    `DELEGATED_SUBDOMAIN`, `DELEGATED_NAME_SERVERS`.
+  - Optional DNS environment vars for delegated subdomain NS records: `DELEGATED_SUBDOMAIN`, `DELEGATED_NAME_SERVERS`.
 - GitHub auth bootstrap workflow:
   - Use `npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively` with
     `AWS_REGION` and `TARGET_AWS_ACCOUNT_ID` to create the CI/CD OIDC role once per target account.
 - Secrets bootstrap/rotation workflow:
   - Keep `SecretsManagementStack` out of normal deploys.
-  - Deploy it manually via `npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively`
-    only when intentionally creating or rotating `MONGO_DB_URL` and `JWT_SECRET`.
+  - Deploy it manually via
+    `npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively` only
+    when intentionally creating or rotating `MONGO_DB_URL` and `JWT_SECRET`.
 - Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output
   and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy outputs/stored vars, and include a secure way to inject these into the
   build (e.g., GitHub Actions env or `next.config.js` referencing process env).
@@ -149,6 +149,8 @@ work.
 - **`.github/agents/webapp.agent.md`** – Frontend/UI agent for Next.js/MUI/Tailwind jobs in `apps/webapp`.
 - **`.github/agents/architect.agent.md`** – Strategic architecture leadership guidance for infra, scalability, and
   roadmap discussions.
+- **`.github/agents/security.agent.md`** – Security engineering guidance for GraphQL, WebSocket, webapp, CI/CD, AWS IAM,
+  and account/domain hardening.
 - **`.github/prompts/*.prompt.md`** – Task/plan templates (the `plan-*` files) and aliases (`pr`, etc.). Open the
   relevant prompt before executing a plan to honor its assumptions.
 

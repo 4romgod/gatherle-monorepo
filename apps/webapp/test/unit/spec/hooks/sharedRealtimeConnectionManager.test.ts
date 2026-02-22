@@ -7,7 +7,7 @@ const mockLogger = {
 
 jest.mock('@/lib/utils/websocket', () => ({
   PING_INTERVAL_MS: 1000,
-  addTokenToWebSocketUrl: (baseUrl: string, token: string) => `${baseUrl}?token=${token}`,
+  buildWebSocketAuthProtocols: (token: string) => [`gatherle.jwt.${token}`],
   computeReconnectDelay: () => 5,
 }));
 

@@ -5,7 +5,7 @@
     "build": "npm-run-all codegen lint:check build:ts build:next",
     "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
     "build:next": "NEXT_SKIP_ESLINT=1 next build -d",
-    "clean:types": "rm -rf .next",
+    "clean:dev": "rm -rf .next .vercel",
     "codegen": "graphql-codegen",
     "codegen:watch": "graphql-codegen --watch",
     "dev": "npm-run-all codegen start:dev",

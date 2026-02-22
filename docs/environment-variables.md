@@ -93,6 +93,9 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
 - `NEXT_PUBLIC_JWT_SECRET` should be sourced from the same Secrets Manager secret or another secure vault and exposed
   only to the frontend build pipeline.
+- Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in
+  Vercel + Route53 DNS records in the DNS account. Follow `docs/aws-account-setup.md` section
+  `D. Connect webapp domain in Vercel`.
 
 ### E2E tests (Playwright)
 
@@ -117,6 +120,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `.github/workflows/deploy-dns.yaml` is reusable (`workflow_call`) and deploys `DnsStack` for a single region.
 - `.github/workflows/deploy.yaml` is reusable (`workflow_call`) and deploys a single target from `stage` + `region`.
 - The deploy workflow derives GitHub Environment name as `<stage-lower>-<region>` (for example `beta-eu-west-1`).
+- The deploy workflow supports optional `web_domain_alias`; when provided by the caller, it aliases the successful
+  Vercel deployment to that domain and performs a basic HTTPS reachability check.
 - DNS deploy derives GitHub Environment name as `dns-<region>` (for example `dns-af-south-1`).
 - Create one GitHub **Environment** per target (for example `dns-af-south-1`, `beta-af-south-1`, `prod-af-south-1`) so
   each target has isolated secrets/approvals.
@@ -133,7 +138,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 ### GitHub Repository Variables (non-sensitive)
 
 - `ENABLE_PROD_DEPLOY` (optional, `true` or `false`, default `false`).
-- `ENABLE_CUSTOM_DOMAINS` (optional rollout flag, `false` by default; set to `true` after stage subdomain NS delegation).
+- `ENABLE_CUSTOM_DOMAINS` (optional rollout flag, `false` by default; set to `true` after stage subdomain NS
+  delegation).
 - Regions are configured directly in `.github/workflows/deploy-trigger.yaml` matrix entries (for example
   `region: [eu-west-1, us-east-1]`).
 - `SECRET_ARN` is not required as a GitHub variable when using dynamic resolution.

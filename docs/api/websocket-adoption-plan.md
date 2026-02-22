@@ -377,12 +377,12 @@ Key behavior:
 - WebSocket base URL comes from `NEXT_PUBLIC_WEBSOCKET_URL`.
 - Normalization utility maps `http/https` -> `ws/wss`:
   - `apps/webapp/lib/utils/websocket.ts`
-- Token is currently attached as query parameter (`token`) by the client URL builder.
+- Client passes auth token via `Sec-WebSocket-Protocol` using a prefixed protocol value (`gatherle.jwt.<token>`).
 
 ### Operational Notes and Known Gaps
 
 - `notification.subscribe` is currently acknowledged but topic state is not yet persisted server-side.
-- We currently use query-string token auth for connect; this is functional but not ideal for long-term hardening.
+- Connect auth accepts `Authorization` and `Sec-WebSocket-Protocol` headers; query-string token auth is no longer used.
 - Event ordering/dedupe is primarily handled at consumer/cache logic level; no global sequence number yet.
 - `$default` route includes fallback action dispatch for robustness.
 

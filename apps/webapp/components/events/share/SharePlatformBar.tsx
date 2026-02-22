@@ -1,7 +1,6 @@
 import { Box, IconButton, Stack, Typography } from '@mui/material';
 import { LinkRounded } from '@mui/icons-material';
-import { FaEnvelope, FaFacebookF, FaWhatsapp } from 'react-icons/fa';
-import { FaXTwitter } from 'react-icons/fa6';
+import { FaEnvelope, FaFacebookF, FaTwitter, FaWhatsapp } from 'react-icons/fa';
 import { launchExternalShare, type PlatformAction } from './share-utils';
 
 interface SharePlatformBarProps {
@@ -43,7 +42,7 @@ function buildPlatformActions(eventTitle: string, resolvedEventUrl: string, onCo
     {
       key: 'x',
       label: 'X',
-      icon: FaXTwitter,
+      icon: FaTwitter,
       bgColor: 'text.primary',
       fgColor: 'background.paper',
       onClick: () => launchExternalShare(`https://x.com/intent/tweet?text=${encodedSummary}&url=${encodedUrl}`),

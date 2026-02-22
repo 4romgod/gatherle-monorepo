@@ -262,7 +262,7 @@ export const startLocalWebSocketServer = (httpServer: Server): WebSocketServer =
   const port = typeof address === 'object' && address ? address.port : 'unknown';
   logger.info('Local websocket server attached to API HTTP server', {
     websocketUrlExample: `ws://localhost:${port}/${LOCAL_WEBSOCKET_STAGE_FALLBACK}`,
-    authQueryParam: 'token',
+    authHeader: 'Sec-WebSocket-Protocol: gatherle.jwt.<jwt>',
   });
 
   return webSocketServer;

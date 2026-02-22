@@ -1,4 +1,4 @@
-import { addTokenToWebSocketUrl, normalizeWebSocketBaseUrl } from '@/lib/utils/websocket';
+import { buildWebSocketAuthProtocols, normalizeWebSocketBaseUrl } from '@/lib/utils/websocket';
 
 describe('websocket utils', () => {
   describe('normalizeWebSocketBaseUrl', () => {
@@ -16,17 +16,9 @@ describe('websocket utils', () => {
     });
   });
 
-  describe('addTokenToWebSocketUrl', () => {
-    it('adds token as query parameter', () => {
-      expect(addTokenToWebSocketUrl('wss://api.example.com/beta', 'abc.def.ghi')).toBe(
-        'wss://api.example.com/beta?token=abc.def.ghi',
-      );
-    });
-
-    it('appends token to existing query string', () => {
-      expect(addTokenToWebSocketUrl('wss://api.example.com/beta?foo=bar', 'abc.def.ghi')).toBe(
-        'wss://api.example.com/beta?foo=bar&token=abc.def.ghi',
-      );
+  describe('buildWebSocketAuthProtocols', () => {
+    it('builds websocket auth protocol value from JWT token', () => {
+      expect(buildWebSocketAuthProtocols('abc.def.ghi')).toEqual(['gatherle.jwt.abc.def.ghi']);
     });
   });
 });

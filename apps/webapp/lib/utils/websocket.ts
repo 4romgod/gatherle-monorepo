@@ -5,6 +5,7 @@
 export const RECONNECT_BASE_MS = 1000;
 export const RECONNECT_MAX_MS = 30000;
 export const PING_INTERVAL_MS = 30000;
+export const WEBSOCKET_AUTH_PROTOCOL_PREFIX = 'gatherle.jwt.';
 
 /**
  * Normalizes a WebSocket URL by converting http(s) protocols to ws(s)
@@ -26,18 +27,8 @@ export const normalizeWebSocketBaseUrl = (value: string): string | null => {
   return trimmed;
 };
 
-/**
- * Adds authentication token to WebSocket URL as query parameter
- */
-export const addTokenToWebSocketUrl = (baseUrl: string, token: string): string => {
-  try {
-    const url = new URL(baseUrl);
-    url.searchParams.set('token', token);
-    return url.toString();
-  } catch {
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-  }
+export const buildWebSocketAuthProtocols = (token: string): string[] => {
+  return [`${WEBSOCKET_AUTH_PROTOCOL_PREFIX}${token}`];
 };
 
 /**

@@ -127,6 +127,7 @@ DNS environment variables (set in `dns-<region>` GitHub Environment when delegat
 ## DNS setup (root + stage delegation)
 
 This is the DNS model used by this repo:
+
 - Root zone `gatherle.com` is hosted in `Gatherle-dns` account.
 - Stage zone `beta.af-south-1.gatherle.com` is hosted in runtime account (`Gatherle-beta`) by `GraphQLStack`.
 - Root zone delegates to stage zone via an `NS` record created by `DnsStack` when delegation variables are provided.
@@ -134,10 +135,13 @@ This is the DNS model used by this repo:
 ### A. Root domain delegation (registrar -> Route53 root zone)
 
 1. Deploy DNS stack in DNS account (creates root hosted zone):
+
 ```bash
 AWS_REGION=af-south-1 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
+
 2. Get Route53 root NS values:
+
 ```bash
 aws cloudformation describe-stacks \
   --stack-name gatherle-dns-root-zone-072092344224 \
@@ -145,8 +149,10 @@ aws cloudformation describe-stacks \
   --output text \
   --profile gatherle-dns
 ```
+
 3. In GoDaddy, set domain nameservers to those Route53 NS values.
 4. Verify:
+
 ```bash
 dig +short NS gatherle.com
 ```
@@ -161,6 +167,7 @@ dig +short NS gatherle.com
    - `DELEGATED_NAME_SERVERS=<comma-separated from step 2>`
 4. Deploy DNS stack (CI/CD or manual). This creates root-zone NS record for `beta.af-south-1`.
 5. Verify:
+
 ```bash
 dig +short NS beta.af-south-1.gatherle.com
 ```
@@ -170,10 +177,56 @@ dig +short NS beta.af-south-1.gatherle.com
 1. Set `ENABLE_CUSTOM_DOMAINS=true` in `beta-af-south-1` environment variables.
 2. Redeploy runtime stacks.
 3. Verify:
+
 ```bash
 dig +short api.beta.af-south-1.gatherle.com
 dig +short ws.beta.af-south-1.gatherle.com
 ```
+
+### D. Connect webapp domain in Vercel (manual, once per hostname)
+
+This project currently deploys webapp builds to Vercel preview URLs from CI/CD.  
+Custom hostnames must be attached in Vercel and mapped in Route53 (DNS account).
+
+Recommended hostnames:
+
+- `beta.gatherle.com` (primary beta web hostname)
+- `www.beta.gatherle.com` (optional alias that redirects to `beta.gatherle.com`)
+
+1. In Vercel project settings (or CLI), add the domain:
+
+```bash
+vercel domains add beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+vercel domains add www.beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+```
+
+2. In Route53 hosted zone `gatherle.com` (DNS account), create records using the exact targets Vercel shows:
+
+- `beta.gatherle.com` -> `CNAME` -> `<vercel target for beta>`
+- `www.beta.gatherle.com` -> `CNAME` -> `beta.gatherle.com` (or Vercel-provided target)
+
+3. Point a deployment to the hostname (optional if Vercel already auto-assigned):
+
+```bash
+vercel alias set <deployment-url> beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+```
+
+Note: on `main` deployments to `Beta`, `.github/workflows/deploy.yaml` now performs this alias step automatically. This
+is controlled by the caller workflow via `web_domain_alias` input, so reusable deploy logic stays stage-agnostic.
+
+4. In Vercel, set canonical redirect:
+
+- Redirect `www.beta.gatherle.com` -> `beta.gatherle.com`.
+
+5. Verify DNS propagation and Vercel status:
+
+```bash
+dig +short beta.gatherle.com CNAME
+dig +short www.beta.gatherle.com CNAME
+```
+
+- In Vercel Domains page, both hostnames should show valid configuration.
+- If not, click `Refresh` after DNS propagation.
 
 ## 5. Manual backend secret bootstrap / rotation
 
@@ -194,6 +247,7 @@ aws secretsmanager describe-secret \
 ```
 
 Important:
+
 - Runtime deploy workflow intentionally excludes `SecretsManagementStack`.
 - Keep secret value changes intentional and manual.
 - The dedicated app for this step is `infra/lib/secrets-app.ts`.
@@ -212,7 +266,8 @@ Preferred:
 Recommended first rollout order for custom domains:
 
 1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks once.
-2. Read `GraphQLStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`).
+2. Read `GraphQLStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
+   `STAGE_HOSTED_ZONE_NAME_SERVERS`).
 3. Set DNS environment vars:
    - `DELEGATED_SUBDOMAIN=beta.af-south-1`
    - `DELEGATED_NAME_SERVERS=<comma-separated from step 2>`

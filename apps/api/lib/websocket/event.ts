@@ -1,15 +1,36 @@
-import { WEBSOCKET_AUTH_QUERY_KEY } from '@/websocket/constants';
+import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 
-export const extractToken = (event: WebSocketRequestEvent): string | undefined => {
-  const queryToken = event.queryStringParameters?.[WEBSOCKET_AUTH_QUERY_KEY];
-  if (queryToken) {
-    return queryToken;
+const parseProtocolHeaderForToken = (protocolHeader: string): string | undefined => {
+  const protocols = protocolHeader
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  for (const protocol of protocols) {
+    if (protocol.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX)) {
+      const token = protocol.slice(WEBSOCKET_AUTH_PROTOCOL_PREFIX.length).trim();
+      if (token) {
+        return token;
+      }
+    }
   }
 
+  return undefined;
+};
+
+export const extractToken = (event: WebSocketRequestEvent): string | undefined => {
   const authHeader = event.headers?.authorization || event.headers?.Authorization;
   if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      return token;
+    }
+  }
+
+  const protocolHeader = event.headers?.['sec-websocket-protocol'] || event.headers?.['Sec-WebSocket-Protocol'];
+  if (protocolHeader) {
+    return parseProtocolHeaderForToken(protocolHeader);
   }
 
   return undefined;

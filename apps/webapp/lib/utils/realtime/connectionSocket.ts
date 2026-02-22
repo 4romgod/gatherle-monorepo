@@ -1,5 +1,5 @@
 import { logger } from '@/lib/utils/logger';
-import { addTokenToWebSocketUrl, computeReconnectDelay, PING_INTERVAL_MS } from '@/lib/utils/websocket';
+import { buildWebSocketAuthProtocols, computeReconnectDelay, PING_INTERVAL_MS } from '@/lib/utils/websocket';
 import type { SharedRealtimeSubscriberStore } from './subscriberStore';
 import type { RealtimeWebsocketSource } from './types';
 
@@ -116,8 +116,8 @@ export const connectSocket = (runtime: RealtimeConnectionRuntime, subscriberStor
   clearReconnectTimeout(runtime);
   clearPing(runtime);
 
-  const socketUrl = addTokenToWebSocketUrl(runtime.websocketBaseUrl, runtime.token);
-  const socket = new WebSocket(socketUrl);
+  const protocols = buildWebSocketAuthProtocols(runtime.token);
+  const socket = new WebSocket(runtime.websocketBaseUrl, protocols);
   runtime.socket = socket;
 
   socket.onopen = () => {

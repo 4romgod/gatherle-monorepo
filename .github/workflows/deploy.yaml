@@ -11,6 +11,11 @@ on:
         description: "AWS region (example: eu-west-1)"
         required: true
         type: string
+      web_domain_alias:
+        description: "Optional webapp custom domain alias (example: beta.gatherle.com)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   id-token: write
@@ -161,6 +166,26 @@ jobs:
           fi
           echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           echo "PLAYWRIGHT_BASE_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
+
+      - name: Alias Webapp Custom Domain in Vercel
+        if: ${{ inputs.web_domain_alias != '' }}
+        working-directory: ./apps/webapp
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "Missing deployment URL for Vercel alias."
+            exit 1
+          fi
+
+          vercel alias set "$DEPLOYMENT_URL" "${{ inputs.web_domain_alias }}" --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Verify Webapp Custom Domain
+        if: ${{ inputs.web_domain_alias != '' }}
+        run: |
+          curl -fsSIL "https://${{ inputs.web_domain_alias }}" | head -n 1
 
       - name: Verify Captured Deployment URL
         env:
