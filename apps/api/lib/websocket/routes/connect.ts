@@ -1,6 +1,6 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
-import type { User } from '@gatherle/commons/types';
 import { verifyToken } from '@/utils/auth';
+import type { AuthClaims } from '@/utils/auth';
 import { logger } from '@/utils/logger';
 import { CONNECTION_TTL_HOURS } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
@@ -22,7 +22,7 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
     });
   }
 
-  let user: User;
+  let user: AuthClaims;
   try {
     user = await verifyToken(token);
   } catch (error) {

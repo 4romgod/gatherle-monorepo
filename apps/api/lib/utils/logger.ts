@@ -8,6 +8,7 @@
  * - ERROR: Error messages for failures
  * - NONE: Disable all logging
  */
+import { redactSensitiveData } from '@/utils/logRedaction';
 
 export enum LogLevel {
   DEBUG = 0,
@@ -40,6 +41,14 @@ interface LogEntry {
     message: string;
     stack?: string;
   };
+}
+
+interface GraphQLLogPayload {
+  operation: string;
+  operationType?: 'query' | 'mutation' | 'subscription' | string;
+  queryFingerprint?: string;
+  variableKeys?: string[];
+  variables?: Record<string, unknown>;
 }
 
 class Logger {
@@ -173,12 +182,19 @@ class Logger {
   /**
    * Log GraphQL requests (uses INFO level for operational visibility)
    */
-  graphql(operation: string, query: string, variables?: Record<string, any>): void {
+  graphql(payload: GraphQLLogPayload): void {
     if (this.shouldLog(LogLevel.INFO)) {
+      const variableKeys = payload.variableKeys ?? (payload.variables ? Object.keys(payload.variables) : []);
+      const safeVariables = payload.variables
+        ? (redactSensitiveData(payload.variables) as Record<string, unknown>)
+        : undefined;
+
       this.info('GraphQL request received', {
-        operation,
-        query,
-        variables,
+        operation: payload.operation,
+        operationType: payload.operationType ?? '<unknown>',
+        queryFingerprint: payload.queryFingerprint ?? '<missing>',
+        variableKeys,
+        ...(safeVariables ? { variables: safeVariables } : {}),
       });
     }
   }

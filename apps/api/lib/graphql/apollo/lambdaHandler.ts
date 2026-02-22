@@ -14,7 +14,7 @@ import {
   createEventParticipantsByEventLoader,
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
-import type { User } from '@gatherle/commons';
+import type { AuthClaims } from '@/utils/auth';
 
 // TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
 const CORS_HEADERS = {
@@ -65,7 +65,7 @@ async function initializeResources() {
           const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
 
           // This enables field resolvers like isSavedByMe to access the current user
-          let user: User | undefined;
+          let user: AuthClaims | undefined;
           if (token) {
             try {
               user = await verifyToken(token);

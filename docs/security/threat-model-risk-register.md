@@ -46,23 +46,23 @@ It is a practical engineering risk model, not a formal penetration test.
 
 ## Risk Register
 
-| ID   | Risk                                                                                                                         | Evidence                                                                                                                                                                                                        | Likelihood | Impact | Score | Priority |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ----- | -------- |
-| R-01 | CI/CD AWS role can lead to full account takeover if workflow/repo is compromised                                             | `infra/lib/stack/github-auth-stack.ts` uses `AdministratorAccess` and broad `sub` pattern (`repo:owner/repo:*`)                                                                                                 | 4          | 5      | 20    | Critical |
+| ID   | Risk                                                                                                                         | Evidence                                                                                                                                                                                                                                                               | Likelihood | Impact | Score | Priority |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ----- | -------- |
+| R-01 | CI/CD AWS role can lead to full account takeover if workflow/repo is compromised                                             | `infra/lib/stack/github-auth-stack.ts` uses `AdministratorAccess` and broad `sub` pattern (`repo:owner/repo:*`)                                                                                                                                                        | 4          | 5      | 20    | Critical |
 | R-02 | ~~JWT secret reuse across webapp auth and API token signing increases blast radius~~                                         | Webapp uses `NEXTAUTH_SECRET` in `apps/webapp/auth.config.ts`; API signs/verifies with `JWT_SECRET` in `apps/api/lib/utils/auth.ts`; deployment now injects `NEXTAUTH_SECRET` via `.github/workflows/deploy.yaml`, and operators confirmed distinct values + rotation. | 3          | 5      | 15    | High     |
-| R-03 | API signs full user object into JWT instead of minimal claims                                                                | `apps/api/lib/utils/auth.ts` `generateToken` signs `user`; TODO notes claims hardening is pending                                                                                                               | 4          | 4      | 16    | High     |
-| R-04 | Wildcard CORS broadens attack surface for API and S3 upload flows                                                            | `apps/api/lib/graphql/apollo/lambdaHandler.ts` allows `*`; `apps/api/lib/graphql/apollo/expressApolloServer.ts` default `cors()`; `infra/lib/stack/s3-bucket-stack.ts` `allowedOrigins: ['*']`                  | 4          | 4      | 16    | High     |
-| R-05 | ~~WebSocket query-string token exposure; residual handshake token risk remains (header/subprotocol + long-lived JWT reuse)~~ | Backend extracts `Authorization`/`Sec-WebSocket-Protocol` in `apps/api/lib/websocket/event.ts`; client sends protocol-based token in `apps/webapp/lib/utils/websocket.ts` (`buildWebSocketAuthProtocols`)       | 3          | 4      | 12    | High     |
-| R-06 | Missing request-abuse controls (GraphQL complexity, throttling, websocket rate limiting) raises DoS/cost risk                | No query depth/cost plugin in `apps/api/lib/graphql/schema/index.ts`; no API throttling config in `infra/lib/stack/graphql-stack.ts`; no websocket rate limiter in routes                                       | 4          | 4      | 16    | High     |
-| R-11 | No explicit L7 DDoS controls (WAF/rate-based rules) on public API and websocket edges                                        | `infra/lib/stack/graphql-stack.ts` and `infra/lib/stack/websocket-stack.ts` do not attach WAF/WebACL or rate-based blocking controls                                                                            | 4          | 5      | 20    | Critical |
-| R-12 | User enumeration/data scraping risk via unauthenticated user queries                                                         | `apps/api/lib/graphql/resolvers/user.ts` exposes `readUsers`, `readUserByEmail`, `readUserById`, `readUserByUsername` without `@Authorized`                                                                     | 4          | 4      | 16    | High     |
-| R-13 | Authentication brute-force/credential stuffing protections are not evident                                                   | Login path in `apps/webapp/data/actions/server/auth/login.ts` -> `signIn` and `apps/api/lib/mongodb/dao/user.ts` lacks attempt throttling/lockout/captcha controls                                              | 4          | 4      | 16    | High     |
-| R-14 | Unbounded query pagination can be abused for heavy reads and scraping                                                        | `apps/api/lib/utils/queries/query.ts` applies client-provided `pagination.limit` without max bound in generic query path                                                                                        | 4          | 3      | 12    | High     |
-| R-15 | Webapp response security headers are not explicitly configured (CSP/HSTS/frame/referrer)                                     | `apps/webapp/next.config.mjs` has no `headers()` security policy configuration                                                                                                                                  | 3          | 3      | 9     | Medium   |
-| R-07 | GraphQL request logging may capture sensitive variables in non-prod stages                                                   | `apps/api/lib/graphql/apollo/server.ts` logs query and variables via `logger.graphql`; logger writes structured logs in `apps/api/lib/utils/logger.ts`                                                          | 3          | 4      | 12    | High     |
-| R-08 | Apollo landing page plugin is enabled for all stages                                                                         | `apps/api/lib/graphql/apollo/server.ts` always adds `ApolloServerPluginLandingPageLocalDefault()`                                                                                                               | 3          | 3      | 9     | Medium   |
-| R-09 | Secrets bootstrap path can accidentally deploy empty/incorrect secret values                                                 | `infra/lib/stack/secrets-management-stack.ts` uses `unsafePlainText(process.env.* ?? '')`                                                                                                                       | 3          | 3      | 9     | Medium   |
-| R-10 | PR security gates are currently weak (dependency and code scanning not enforced)                                             | `.github/workflows/pr-check.yaml` has `npm audit` disabled and no SAST/IaC security job                                                                                                                         | 3          | 3      | 9     | Medium   |
+| R-03 | ~~API signs full user object into JWT instead of minimal claims~~                                                            | `apps/api/lib/utils/auth.ts` now maps to minimal `AuthClaims` (`sub`, `email`, `username`, `userRole`, optional `isTestUser`, `ver`) before signing, and verification enforces required claims/version via `toAuthClaims`                                              | 4          | 4      | 16    | High     |
+| R-04 | Wildcard CORS broadens attack surface for API and S3 upload flows                                                            | `apps/api/lib/graphql/apollo/lambdaHandler.ts` allows `*`; `apps/api/lib/graphql/apollo/expressApolloServer.ts` default `cors()`; `infra/lib/stack/s3-bucket-stack.ts` `allowedOrigins: ['*']`                                                                         | 4          | 4      | 16    | High     |
+| R-05 | ~~WebSocket query-string token exposure; residual handshake token risk remains (header/subprotocol + long-lived JWT reuse)~~ | Backend extracts `Authorization`/`Sec-WebSocket-Protocol` in `apps/api/lib/websocket/event.ts`; client sends protocol-based token in `apps/webapp/lib/utils/websocket.ts` (`buildWebSocketAuthProtocols`)                                                              | 3          | 4      | 12    | High     |
+| R-06 | Missing request-abuse controls (GraphQL complexity, throttling, websocket rate limiting) raises DoS/cost risk                | No query depth/cost plugin in `apps/api/lib/graphql/schema/index.ts`; no API throttling config in `infra/lib/stack/graphql-stack.ts`; no websocket rate limiter in routes                                                                                              | 4          | 4      | 16    | High     |
+| R-11 | No explicit L7 DDoS controls (WAF/rate-based rules) on public API and websocket edges                                        | `infra/lib/stack/graphql-stack.ts` and `infra/lib/stack/websocket-stack.ts` do not attach WAF/WebACL or rate-based blocking controls                                                                                                                                   | 4          | 5      | 20    | Critical |
+| R-12 | User enumeration/data scraping risk via unauthenticated user queries                                                         | `apps/api/lib/graphql/resolvers/user.ts` exposes `readUsers`, `readUserByEmail`, `readUserById`, `readUserByUsername` without `@Authorized`                                                                                                                            | 4          | 4      | 16    | High     |
+| R-13 | Authentication brute-force/credential stuffing protections are not evident                                                   | Login path in `apps/webapp/data/actions/server/auth/login.ts` -> `signIn` and `apps/api/lib/mongodb/dao/user.ts` lacks attempt throttling/lockout/captcha controls                                                                                                     | 4          | 4      | 16    | High     |
+| R-14 | Unbounded query pagination can be abused for heavy reads and scraping                                                        | `apps/api/lib/utils/queries/query.ts` applies client-provided `pagination.limit` without max bound in generic query path                                                                                                                                               | 4          | 3      | 12    | High     |
+| R-15 | Webapp response security headers are not explicitly configured (CSP/HSTS/frame/referrer)                                     | `apps/webapp/next.config.mjs` has no `headers()` security policy configuration                                                                                                                                                                                         | 3          | 3      | 9     | Medium   |
+| R-07 | ~~GraphQL request logging may capture sensitive variables in non-prod stages~~                                               | `apps/api/lib/graphql/apollo/server.ts` logs operation metadata + query fingerprint + variable keys (not raw query text). Variable values are not emitted by the GraphQL request logging plugin.                                                                       | 3          | 4      | 12    | High     |
+| R-08 | Apollo landing page plugin is enabled for all stages                                                                         | `apps/api/lib/graphql/apollo/server.ts` always adds `ApolloServerPluginLandingPageLocalDefault()`                                                                                                                                                                      | 3          | 3      | 9     | Medium   |
+| R-09 | Secrets bootstrap path can accidentally deploy empty/incorrect secret values                                                 | `infra/lib/stack/secrets-management-stack.ts` uses `unsafePlainText(process.env.* ?? '')`                                                                                                                                                                              | 3          | 3      | 9     | Medium   |
+| R-10 | PR security gates are currently weak (dependency and code scanning not enforced)                                             | `.github/workflows/pr-check.yaml` has `npm audit` disabled and no SAST/IaC security job                                                                                                                                                                                | 3          | 3      | 9     | Medium   |
 
 ## Threat Scenarios (Top Risks)
 
@@ -76,6 +76,11 @@ permissions. This enables destructive infrastructure changes, secret exfiltratio
 Status (2026-02-22): Resolved. Webapp and API secrets are split, deployment injects `NEXTAUTH_SECRET` separately, and
 operators confirmed distinct secret values with rotation.
 
+### R-03: ~~JWT overexposure via full user payload in auth tokens~~
+
+Status (2026-02-22): Resolved in code. API tokens now include only minimal auth claims, and token verification enforces
+claim shape + token schema version.
+
 ### R-05: ~~WebSocket handshake token exposure~~
 
 Query-string token auth has been removed in code, reducing URL leakage risk. Residual risk remains because handshake
@@ -84,6 +89,11 @@ websocket-specific tickets.
 
 Status (2026-02-22): Query-parameter token transport is resolved in code; remaining risk is token lifecycle and
 observability hygiene for handshake credentials.
+
+### R-07: ~~GraphQL request logs leaking sensitive variables~~
+
+Status (2026-02-22): Resolved in code. GraphQL request logging no longer stores raw query text, and variable values are
+not emitted by the request logging plugin.
 
 ### R-11: L7 DDoS exposure on public API surfaces
 
@@ -119,7 +129,7 @@ not constrained and response fields are not minimized for public callers.
 
 1. Implement GraphQL query depth/complexity limits and conservative defaults.
 2. Add API Gateway throttling and usage limits; add websocket per-connection message rate limits.
-3. Redact sensitive GraphQL variables in logs and disable logging of auth payloads.
+3. ~~Redact sensitive GraphQL variables in logs and disable logging of auth payloads.~~
 4. Disable Apollo landing page in production stages.
 5. Add safety checks in `SecretsManagementStack` deploy path to fail if required secret inputs are blank.
 6. Require auth and field minimization for sensitive user directory queries; add anti-enumeration constraints.
@@ -136,7 +146,7 @@ not constrained and response fields are not minimized for public callers.
 
 ## Security Backlog (Implementation Candidates)
 
-- JWT claims hardening in `apps/api/lib/utils/auth.ts`.
+- ~~JWT claims hardening in `apps/api/lib/utils/auth.ts`.~~
 - OIDC trust and policy hardening in `infra/lib/stack/github-auth-stack.ts`.
 - CORS/domain allowlist controls in `apps/api/lib/graphql/apollo/lambdaHandler.ts`,
   `apps/api/lib/graphql/apollo/expressApolloServer.ts`, and `infra/lib/stack/s3-bucket-stack.ts`.

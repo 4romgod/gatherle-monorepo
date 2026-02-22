@@ -47,21 +47,60 @@ describe('Auth Utilities', () => {
       (sign as jest.Mock).mockReturnValue('token');
       const token = await generateToken(mockUser);
       expect(token).toBe('token');
-      expect(sign).toHaveBeenCalledWith(mockUser, expect.any(String), { expiresIn: '7d' });
+      expect(sign).toHaveBeenCalledWith(
+        {
+          sub: mockUser.userId,
+          email: mockUser.email,
+          username: mockUser.username,
+          userRole: mockUser.userRole,
+          ver: 1,
+        },
+        expect.any(String),
+        { expiresIn: '7d', algorithm: 'HS256' },
+      );
     });
   });
 
   describe('verifyToken', () => {
     it('should verify a valid token', async () => {
-      (verify as jest.Mock).mockReturnValue({ ...mockUser, iat: 123, exp: 456 });
+      (verify as jest.Mock).mockReturnValue({
+        sub: mockUser.userId,
+        email: mockUser.email,
+        username: mockUser.username,
+        userRole: mockUser.userRole,
+        isTestUser: true,
+        ver: 1,
+        iat: 123,
+        exp: 456,
+      });
       const user = await verifyToken('valid-token');
-      expect(user).toEqual(mockUser);
+      expect(user).toEqual({
+        userId: mockUser.userId,
+        email: mockUser.email,
+        username: mockUser.username,
+        userRole: mockUser.userRole,
+        isTestUser: true,
+      });
     });
 
     it('should throw an error for an invalid token', async () => {
       (verify as jest.Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
+      await expect(verifyToken('invalid-token')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED),
+      );
+    });
+
+    it('should throw an error when token claims are missing required fields', async () => {
+      (verify as jest.Mock).mockReturnValue({
+        userId: mockUser.userId,
+        email: mockUser.email,
+        username: mockUser.username,
+        userRole: mockUser.userRole,
+        ver: 1,
+      });
+
       await expect(verifyToken('invalid-token')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED),
       );

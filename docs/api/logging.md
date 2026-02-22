@@ -12,13 +12,14 @@ for production environments.
 - **Configurable log levels** to control verbosity
 - **Environment-aware formatting** (JSON for production, human-readable for dev)
 - **Automatic error serialization** with stack traces
+- **GraphQL metadata logging with sensitive-value redaction**
 - **CloudWatch dashboard** with error/warning widgets and metrics
 
 ## Log Levels
 
 Logs are output based on severity, from most to least verbose:
 
-- **`debug`**: Detailed information for debugging (includes GraphQL queries, variables, etc.)
+- **`debug`**: Detailed information for debugging
 - **`info`**: General informational messages (default)
 - **`warn`**: Warning messages for potentially harmful situations
 - **`error`**: Error messages for failures
@@ -90,15 +91,19 @@ logger.clearRequestId();
 ### GraphQL request logging
 
 ```typescript
-// Automatically logs GraphQL requests at DEBUG level
-logger.graphql('GetAllEvents', queryString, variables);
+// Logs only GraphQL metadata + optional redacted variables
+logger.graphql({
+  operation: 'GetAllEvents',
+  operationType: 'query',
+  queryFingerprint: 'f7b4e2c9a3d41ab0',
+  variableKeys: ['pagination', 'filters'],
+});
 ```
 
 ### When to use each level
 
 **DEBUG**
 
-- GraphQL queries and responses
 - Database queries
 - Detailed request/response payloads
 - Internal state changes
@@ -129,7 +134,7 @@ logger.graphql('GetAllEvents', queryString, variables);
 ### Local Development
 
 ```bash
-# See all GraphQL queries and debug info
+# See verbose debug logs
 LOG_LEVEL=debug npm run dev
 ```
 
@@ -322,11 +327,12 @@ logger.error('Failed to save', { error, operation: 'saveUser' });
    logger.info('User login', { email, password });
 
    // ✅ Good
-   logger.info('User login', { email });
+   logger.info('User login', { userId });
    ```
 
 ## Performance Considerations
 
 - Log statements are **skipped** if below the configured level (no string interpolation or serialization)
 - Set `LOG_LEVEL=warn` or `LOG_LEVEL=error` in production to reduce CloudWatch costs
-- GraphQL introspection queries are automatically filtered out even at DEBUG level
+- GraphQL introspection queries are automatically filtered out
+- GraphQL operation logs store query fingerprints and variable keys, not raw query text

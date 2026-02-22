@@ -195,7 +195,7 @@ describe('FollowResolver', () => {
 
     it('returns followers when visibility is Private and viewer is the owner', async () => {
       const mockList: Follow[] = [{} as Follow];
-      const ownerContext = { user: { ...mockUser, userId: targetUserId } };
+      const ownerContext: Partial<ServerContext> = { user: { ...mockUser, userId: targetUserId } };
       const mockTargetUser = {
         userId: targetUserId,
         followersListVisibility: SocialVisibility.Private,
@@ -281,7 +281,7 @@ describe('FollowResolver', () => {
       };
       const targetUser = { userId: targetUserId, followPolicy: FollowPolicy.Public, blockedUserIds: [] };
       const currentUser = { ...mockUser, blockedUserIds: [targetUserId] };
-      const contextWithBlock = { user: currentUser };
+      const contextWithBlock: Partial<ServerContext> = { user: currentUser };
       (UserDAO.readUserById as jest.Mock)
         .mockResolvedValueOnce(targetUser) // First call for target user
         .mockResolvedValueOnce(currentUser); // Second call for follower user

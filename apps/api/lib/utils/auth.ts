@@ -13,6 +13,96 @@ import { getConfigValue } from '@/clients';
 import { Types } from 'mongoose';
 import { logger } from '@/utils/logger';
 
+const AUTH_TOKEN_VERSION = 1;
+const AUTH_TOKEN_ALGORITHM: SignOptions['algorithm'] = 'HS256';
+const AUTH_TOKEN_ALLOWED_ROLES = new Set<string>(Object.values(UserRole));
+
+/**
+ * Minimal identity/authorization claims that are allowed in Gatherle auth JWTs.
+ * This intentionally excludes profile and sensitive account fields.
+ */
+export type AuthClaims = Pick<User, 'userId' | 'email' | 'username' | 'userRole' | 'isTestUser'>;
+
+/**
+ * Reads and validates a required string claim from a verified JWT payload.
+ *
+ * @param payload Decoded JWT payload from jsonwebtoken.verify.
+ * @param claimName Claim key to validate.
+ * @returns The non-empty claim value.
+ * @throws CustomError UNAUTHENTICATED when the claim is missing/blank/non-string.
+ */
+const getRequiredStringClaim = (payload: JwtPayload, claimName: string): string => {
+  const value = payload[claimName];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
+  return value;
+};
+
+/**
+ * Maps trusted app user data into the exact JWT claim shape we sign.
+ *
+ * Contract:
+ * - `sub` carries Gatherle `userId`
+ * - `ver` enforces token-claim schema versioning
+ *
+ * @param user Source user identity data.
+ * @returns Minimal JWT claim payload.
+ * @throws CustomError UNAUTHENTICATED when required claims are missing/invalid.
+ */
+const toJwtTokenClaims = (user: AuthClaims): JwtPayload => {
+  if (!user.userId || !user.email || !user.username || !user.userRole || !AUTH_TOKEN_ALLOWED_ROLES.has(user.userRole)) {
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
+
+  return {
+    sub: user.userId,
+    email: user.email,
+    username: user.username,
+    userRole: user.userRole,
+    ...(user.isTestUser !== undefined ? { isTestUser: user.isTestUser } : {}),
+    ver: AUTH_TOKEN_VERSION,
+  };
+};
+
+/**
+ * Converts a verified JWT payload into internal auth claims used by API context/authz.
+ *
+ * This enforces all required claims and token schema version before request code
+ * can treat the token as authenticated.
+ *
+ * @param payload Decoded JWT payload from jsonwebtoken.verify.
+ * @returns Normalized auth claims for request context.
+ * @throws CustomError UNAUTHENTICATED when any claim is missing/invalid.
+ */
+const toAuthClaims = (payload: JwtPayload): AuthClaims => {
+  const userId = getRequiredStringClaim(payload, 'sub');
+  const email = getRequiredStringClaim(payload, 'email');
+  const username = getRequiredStringClaim(payload, 'username');
+  const userRole = getRequiredStringClaim(payload, 'userRole');
+  if (!AUTH_TOKEN_ALLOWED_ROLES.has(userRole)) {
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
+
+  const tokenVersion = payload.ver;
+  if (typeof tokenVersion !== 'number' || tokenVersion !== AUTH_TOKEN_VERSION) {
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
+
+  const isTestUserValue = payload.isTestUser;
+  if (isTestUserValue !== undefined && typeof isTestUserValue !== 'boolean') {
+    throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+  }
+
+  return {
+    userId,
+    email,
+    username,
+    userRole: userRole as UserRole,
+    ...(isTestUserValue !== undefined ? { isTestUser: isTestUserValue } : {}),
+  };
+};
+
 const operationsRequiringOwnership = new Set<string>([
   // User operations
   OPERATIONS.USER.UPDATE_USER,
@@ -101,28 +191,31 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
 };
 
 /**
- * @param user The user to encode into a JWT token
+ * Signs a Gatherle auth JWT from minimal validated auth claims.
+ *
+ * @param user Minimal claim source data.
  * @param secret The secret string for JWT encoding
  * @param expiresIn expressed in seconds or a string describing a time span [zeit/ms](https://github.com/zeit/ms.js).  Eg: 60, "2 days", "10h", "7d"
- * @returns A JWT token as a string
+ * @returns Signed JWT token string.
  */
-export const generateToken = async (user: User, secret?: string, expiresIn?: string | number) => {
-  // TODO(security): Implement JWT-claims hardening in the next patch by signing only minimal auth claims
-  // (for example userId, email, username, userRole, isTestUser) instead of the full user object.
+export const generateToken = async (user: AuthClaims, secret?: string, expiresIn?: string | number) => {
   logger.debug('Generating JWT token', { userId: user.userId, username: user.username, expiresIn });
   const jwtSecret: Secret | undefined = secret ?? (await getConfigValue(SECRET_KEYS.JWT_SECRET));
   if (!jwtSecret) {
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }
+  const jwtClaims = toJwtTokenClaims(user);
   const tokenExpiry: StringValue | number = (expiresIn ?? '7d') as StringValue | number;
-  const signOptions: SignOptions = { expiresIn: tokenExpiry };
-  return sign(user, jwtSecret as Secret, signOptions);
+  const signOptions: SignOptions = { expiresIn: tokenExpiry, algorithm: AUTH_TOKEN_ALGORITHM };
+  return sign(jwtClaims, jwtSecret as Secret, signOptions);
 };
 
 /**
+ * Verifies a JWT signature/algorithm and converts payload into normalized auth claims.
+ *
  * @param token A JWT token as a string
  * @param secret The secret string for JWT encoding
- * @returns The user decoded from the JWT token
+ * @returns Auth claims derived from verified JWT payload.
  */
 export const verifyToken = async (token: string, secret?: string) => {
   try {
@@ -130,8 +223,11 @@ export const verifyToken = async (token: string, secret?: string) => {
     if (!jwtSecret) {
       throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
     }
-    const { iat: _iat, exp: _exp, ...user } = verify(token, jwtSecret) as JwtPayload;
-    return user as User;
+    const decodedToken = verify(token, jwtSecret, { algorithms: [AUTH_TOKEN_ALGORITHM] });
+    if (typeof decodedToken === 'string') {
+      throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+    }
+    return toAuthClaims(decodedToken);
   } catch (error) {
     logger.debug('Error when verifying token', { error });
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
@@ -141,7 +237,7 @@ export const verifyToken = async (token: string, secret?: string) => {
 export const isAuthorizedByOperation = async (
   operationName: string,
   args: ArgsDictionary,
-  user: User,
+  user: AuthClaims,
 ): Promise<boolean> => {
   switch (operationName) {
     // User operations
@@ -259,7 +355,7 @@ const getOrganizerIdsFromEvent = (event: { organizers?: Array<{ user?: any }> })
     .filter((id): id is string => Boolean(id));
 };
 
-const isUserOrganizer = (event: { organizers?: Array<{ user?: any }> }, user: User) => {
+const isUserOrganizer = (event: { organizers?: Array<{ user?: any }> }, user: AuthClaims) => {
   const organizerIds = getOrganizerIdsFromEvent(event);
   return organizerIds.includes(user.userId);
 };
@@ -274,7 +370,7 @@ const isUserOrganizer = (event: { organizers?: Array<{ user?: any }> }, user: Us
  * @param user - The user attempting the operation
  * @returns true if authorized, false otherwise
  */
-const isAuthorizedToManageOrganization = async (orgId: string | undefined, user: User): Promise<boolean> => {
+const isAuthorizedToManageOrganization = async (orgId: string | undefined, user: AuthClaims): Promise<boolean> => {
   if (!orgId) {
     return false;
   }
@@ -309,7 +405,7 @@ const isAuthorizedToManageOrganization = async (orgId: string | undefined, user:
  * @param user - The user attempting the operation
  * @returns true if authorized, false otherwise
  */
-const isAuthorizedToManageVenue = async (venueId: string | undefined, user: User): Promise<boolean> => {
+const isAuthorizedToManageVenue = async (venueId: string | undefined, user: AuthClaims): Promise<boolean> => {
   if (!venueId) {
     return false;
   }
@@ -338,7 +434,7 @@ const isAuthorizedToManageVenue = async (venueId: string | undefined, user: User
  * @param user - The user attempting the operation
  * @returns true if authorized, false otherwise
  */
-const isAuthorizedToManageMembership = async (membershipId: string | undefined, user: User): Promise<boolean> => {
+const isAuthorizedToManageMembership = async (membershipId: string | undefined, user: AuthClaims): Promise<boolean> => {
   if (!membershipId) {
     return false;
   }
@@ -354,7 +450,7 @@ const isAuthorizedToManageMembership = async (membershipId: string | undefined, 
   }
 };
 
-const isAuthorizedByEventId = async (eventId: string | undefined, user: User) => {
+const isAuthorizedByEventId = async (eventId: string | undefined, user: AuthClaims) => {
   if (!eventId) {
     return false;
   }
@@ -362,7 +458,7 @@ const isAuthorizedByEventId = async (eventId: string | undefined, user: User) =>
   return isUserOrganizer(event, user);
 };
 
-const isAuthorizedByEventSlug = async (slug: string | undefined, user: User) => {
+const isAuthorizedByEventSlug = async (slug: string | undefined, user: AuthClaims) => {
   if (!slug) {
     return false;
   }
@@ -370,7 +466,7 @@ const isAuthorizedByEventSlug = async (slug: string | undefined, user: User) => 
   return isUserOrganizer(event, user);
 };
 
-const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, user: User) => {
+const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, user: AuthClaims) => {
   if (!eventId) {
     return false;
   }
@@ -389,10 +485,10 @@ const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, 
  * Should only be called in resolvers decorated with @Authorized, which ensures context.user is populated.
  *
  * @param context - GraphQL server context containing the verified user (set by authChecker).
- * @returns The authenticated User object.
+ * @returns The authenticated user claims.
  * @throws CustomError with UNAUTHENTICATED type if user is not in context (should never happen with @Authorized).
  */
-export const getAuthenticatedUser = (context: ServerContext): User => {
+export const getAuthenticatedUser = (context: ServerContext): AuthClaims => {
   if (!context?.user) {
     throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
   }

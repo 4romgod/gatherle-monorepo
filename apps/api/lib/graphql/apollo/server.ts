@@ -2,6 +2,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import type { Express, Request, Response } from 'express';
 import type { GraphQLError, GraphQLFormattedError } from 'graphql';
+import { createHash } from 'crypto';
 import { STAGE } from '@/constants';
 import { logger } from '@/utils/logger';
 import type { ApolloServerPlugin } from '@apollo/server';
@@ -14,10 +15,11 @@ import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
 import type { User, EventCategory, Organization, Event, EventParticipant } from '@gatherle/commons/types';
+import type { AuthClaims } from '@/utils/auth';
 
 export interface ServerContext {
   token?: string;
-  user?: User;
+  user?: AuthClaims;
   req?: Request;
   res?: Response;
   loaders: {
@@ -90,12 +92,18 @@ const inferOperationNameFromQuery = (query: string): string | undefined => {
   return match?.[1];
 };
 
+const getQueryFingerprint = (query: string): string =>
+  createHash('sha256')
+    .update(query || '<query not provided>')
+    .digest('hex')
+    .slice(0, 16);
+
 const isIntrospectionOperation = (operationName?: string, query?: string) =>
   operationName === 'IntrospectionQuery' ||
   operationName?.startsWith('__schema') ||
   (query?.includes('__schema') ?? false);
 
-const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> => ({
+export const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> => ({
   async requestDidStart({ request }) {
     if (!request) {
       return {};
@@ -116,7 +124,7 @@ const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> 
     return {
       async didResolveOperation(requestContext) {
         const query = getQueryStringFromRequest(requestContext.request.query as GraphQLQueryValue | undefined).trim();
-        const variables = requestContext.request.variables ?? {};
+        const variables = (requestContext.request.variables ?? {}) as Record<string, unknown>;
         const operationName =
           requestContext.operationName ?? requestContext.request.operationName ?? inferOperationNameFromQuery(query);
 
@@ -125,7 +133,12 @@ const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> 
           return;
         }
 
-        logger.graphql(operationName ?? '<unnamed>', query, variables);
+        logger.graphql({
+          operation: operationName ?? '<unnamed>',
+          operationType: requestContext.operation?.operation,
+          queryFingerprint: getQueryFingerprint(query),
+          variableKeys: Object.keys(variables),
+        });
         resolvedOperationLogged = true;
       },
       async didEncounterErrors(requestContext) {
@@ -146,7 +159,7 @@ const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> 
           return;
         }
 
-        const variables = requestContext.request.variables ?? {};
+        const variables = (requestContext.request.variables ?? {}) as Record<string, unknown>;
         const errorCodes = requestContext.errors
           .map((error) => {
             const code = error.extensions?.code;
@@ -157,8 +170,9 @@ const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerContext> 
         logger.warn('GraphQL request failed before operation resolution', {
           stage: 'parse_or_validation',
           operation: operationName ?? '<unresolved>',
-          query,
-          variables,
+          queryFingerprint: getQueryFingerprint(query),
+          queryLength: query.length,
+          variableKeys: Object.keys(variables),
           errorCodes,
           errorCount: requestContext.errors.length,
         });
