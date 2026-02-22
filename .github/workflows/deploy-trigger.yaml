@@ -1,7 +1,7 @@
 name: Deploy Trigger
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
 
 permissions:
@@ -9,18 +9,18 @@ permissions:
   contents: read
 
 jobs:
-  deploy_dns:
-    strategy:
-      fail-fast: false
-      matrix:
-        region: [af-south-1]
-    uses: ./.github/workflows/deploy-dns.yaml
-    with:
-      region: ${{ matrix.region }}
-    secrets: inherit
+  # deploy_dns:
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       region: [af-south-1]
+  #   uses: ./.github/workflows/deploy-dns.yaml
+  #   with:
+  #     region: ${{ matrix.region }}
+  #   secrets: inherit
 
   deploy_beta:
-    needs: deploy_dns
+    # needs: deploy_dns
     strategy:
       fail-fast: false
       matrix:

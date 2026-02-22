@@ -19,7 +19,7 @@ import {
 import type { Server } from 'http';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
-import type { User } from '@gatherle/commons';
+import type { AuthClaims } from '@/utils/auth';
 
 const DEV_PORT = 9000;
 
@@ -59,7 +59,7 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = { 
 
         // Try to verify token and populate user for all requests (not just @Authorized ones)
         // This enables field resolvers like isSavedByMe to access the current user
-        let user: User | undefined;
+        let user: AuthClaims | undefined;
         if (tokenValue) {
           try {
             user = await verifyToken(tokenValue);

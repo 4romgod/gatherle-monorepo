@@ -14,10 +14,11 @@ import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
 import type { User, EventCategory, Organization, Event, EventParticipant } from '@gatherle/commons/types';
+import type { AuthClaims } from '@/utils/auth';
 
 export interface ServerContext {
   token?: string;
-  user?: User;
+  user?: AuthClaims;
   req?: Request;
   res?: Response;
   loaders: {
