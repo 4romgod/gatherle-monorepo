@@ -3,12 +3,12 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { LoginUserInputSchema } from './data/validation';
 import { loginUserGlobalAction } from './data/actions/global/auth/login';
-import { JWT_SECRET } from '@/lib/constants';
+import { NEXTAUTH_SECRET } from '@/lib/constants';
 import type { NextAuthConfig } from 'next-auth';
 
 export default {
   trustHost: true,
-  secret: JWT_SECRET,
+  secret: NEXTAUTH_SECRET,
   providers: [
     GitHubProvider,
     GoogleProvider,

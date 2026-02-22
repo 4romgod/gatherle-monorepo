@@ -4,7 +4,6 @@ import { usePersistentState } from '@/hooks/usePersistentState';
 jest.mock('@/lib/utils/auth', () => ({
   getAuthHeader: jest.fn(() => ({})),
   isAuthenticated: jest.fn(async () => false),
-  verifyAndDecodeToken: jest.fn(async () => null),
 }));
 
 const mockMutate = jest.fn();

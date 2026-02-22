@@ -80,7 +80,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 - Source: `apps/webapp/.env`.
 - Keys:
-  - `NEXT_PUBLIC_JWT_SECRET` (mirrors API secret for client-side helpers).
+  - `NEXTAUTH_SECRET` (server-side NextAuth session signing secret; must be distinct from API `JWT_SECRET`).
   - `NEXT_PUBLIC_GRAPHQL_URL` (e.g., `http://localhost:9000/v1/graphql`).
   - `NEXT_PUBLIC_WEBSOCKET_URL` (e.g., `ws://localhost:3001` or deployed `wss://.../<stage>` endpoint for realtime
     notifications).
@@ -88,11 +88,10 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 ### Production & Staging
 
-- Host or CI (e.g., Vercel) should inject `NEXT_PUBLIC_JWT_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
+- Host or CI (e.g., Vercel) should inject `NEXTAUTH_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
 - Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
-- `NEXT_PUBLIC_JWT_SECRET` should be sourced from the same Secrets Manager secret or another secure vault and exposed
-  only to the frontend build pipeline.
+- `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in
   Vercel + Route53 DNS records in the DNS account. Follow `docs/aws-account-setup.md` section
   `D. Connect webapp domain in Vercel`.
@@ -131,7 +130,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `ASSUME_ROLE_ARN` (required): IAM role for `configure-aws-credentials` in the matching environment target.
 - `VERCEL_TOKEN` (required if web deploy is enabled).
 - `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
-- `JWT_SECRET` (only needed if workflow injects it into the web build).
+- `NEXTAUTH_SECRET` (used by NextAuth session signing in the webapp deployment environment).
 - `SECRET_ARN` is resolved dynamically in CI/CD from Secrets Manager using `STAGE` + `AWS_REGION`, so you do not need to
   store it in GitHub variables.
 

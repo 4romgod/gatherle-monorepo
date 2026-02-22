@@ -1,72 +1,60 @@
 describe('auth utils implementation', () => {
-  const setEnvVar = (key: string, value?: string) => {
-    if (typeof value === 'undefined') {
-      delete process.env[key];
-      return;
-    }
-
-    Object.defineProperty(process.env, key, {
-      configurable: true,
-      value,
-    });
-  };
-
-  const setup = (jwtSecret: string) => {
+  const setup = () => {
     jest.resetModules();
-    setEnvVar('JWT_SECRET', jwtSecret);
 
-    if (typeof global.TextEncoder === 'undefined') {
-      const { TextEncoder } = require('util');
-      global.TextEncoder = TextEncoder;
-    }
-
-    const jwtVerify = jest.fn();
-    jest.doMock('jose', () => ({ jwtVerify }));
-    jest.doMock('@/lib/constants/environment-variables', () => ({
-      JWT_SECRET: jwtSecret,
-      GRAPHQL_URL: '',
-    }));
+    const decodeJwt = jest.fn();
+    jest.doMock('jose', () => ({ decodeJwt }));
 
     let auth: typeof import('@/lib/utils/auth');
     jest.isolateModules(() => {
       auth = require('@/lib/utils/auth');
     });
 
-    return { auth: auth!, jwtVerify };
+    return { auth: auth!, decodeJwt };
   };
 
-  it('returns false/null when token or secret is missing', async () => {
-    const { auth } = setup('');
-
-    await expect(auth.isAuthenticated('token')).resolves.toBe(false);
+  it('returns false when token is missing', async () => {
+    const { auth } = setup();
     await expect(auth.isAuthenticated(undefined)).resolves.toBe(false);
-    await expect(auth.verifyAndDecodeToken('token')).resolves.toBeNull();
-    await expect(auth.verifyAndDecodeToken(undefined)).resolves.toBeNull();
   });
 
-  it('returns true and decoded payload when jwtVerify succeeds', async () => {
-    const payload = { userId: 'user-1', email: 'test@example.com' };
-    const { auth, jwtVerify } = setup('secret');
+  it('returns true for unexpired tokens', async () => {
+    const { auth, decodeJwt } = setup();
 
-    jwtVerify.mockResolvedValue({ payload });
+    decodeJwt.mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600 });
 
     await expect(auth.isAuthenticated('token')).resolves.toBe(true);
-    await expect(auth.verifyAndDecodeToken('token')).resolves.toEqual(payload);
-
-    expect(jwtVerify).toHaveBeenCalled();
+    expect(decodeJwt).toHaveBeenCalledWith('token');
   });
 
-  it('returns false/null when jwtVerify throws', async () => {
-    const { auth, jwtVerify } = setup('secret');
+  it('returns false for expired tokens', async () => {
+    const { auth, decodeJwt } = setup();
 
-    jwtVerify.mockRejectedValue(new Error('invalid'));
+    decodeJwt.mockReturnValue({ exp: Math.floor(Date.now() / 1000) - 60 });
+
+    await expect(auth.isAuthenticated('expired-token')).resolves.toBe(false);
+  });
+
+  it('returns false when exp is missing', async () => {
+    const { auth, decodeJwt } = setup();
+
+    decodeJwt.mockReturnValue({ sub: 'user-1' });
+
+    await expect(auth.isAuthenticated('token-without-exp')).resolves.toBe(false);
+  });
+
+  it('returns false when decodeJwt throws', async () => {
+    const { auth, decodeJwt } = setup();
+
+    decodeJwt.mockImplementation(() => {
+      throw new Error('invalid');
+    });
 
     await expect(auth.isAuthenticated('bad-token')).resolves.toBe(false);
-    await expect(auth.verifyAndDecodeToken('bad-token')).resolves.toBeNull();
   });
 
   it('builds auth headers for a token', () => {
-    const { auth } = setup('secret');
+    const { auth } = setup();
 
     expect(auth.getAuthHeader(null)).toEqual({});
     expect(auth.getAuthHeader('token')).toEqual({ Authorization: 'Bearer token' });

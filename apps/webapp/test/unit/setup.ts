@@ -15,8 +15,9 @@ jest.mock('next/headers', () => ({
 
 // Mock environment variables
 jest.mock('@/lib/constants/environment-variables', () => ({
-  JWT_SECRET: 'test-secret-key-for-unit-tests',
+  NEXTAUTH_SECRET: 'test-secret-key-for-unit-tests',
   GRAPHQL_URL: 'http://localhost:9000/v1/graphql',
+  WEBSOCKET_URL: 'ws://localhost:3001',
 }));
 
 console.log('Setting up webapp unit tests...');

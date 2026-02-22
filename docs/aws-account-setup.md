@@ -109,7 +109,7 @@ Create one GitHub Environment per target name used by deploy workflow:
 Set environment secrets:
 
 - `ASSUME_ROLE_ARN` (from `GitHubAuthStack` output for that target account; DNS workflows must use DNS account ARN)
-- `JWT_SECRET`
+- `NEXTAUTH_SECRET` (webapp session signing secret; keep distinct from backend `JWT_SECRET` in Secrets Manager)
 - `VERCEL_TOKEN` (if web deploy enabled)
 - `VERCEL_ORG_ID` (if web deploy enabled)
 - `VERCEL_PROJECT_ID` (if web deploy enabled)

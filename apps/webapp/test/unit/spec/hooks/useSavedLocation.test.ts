@@ -4,7 +4,6 @@ import { useSavedLocation } from '@/hooks/useSavedLocation';
 jest.mock('@/lib/utils/auth', () => ({
   getAuthHeader: jest.fn(() => ({})),
   isAuthenticated: jest.fn(async () => false),
-  verifyAndDecodeToken: jest.fn(async () => null),
 }));
 
 const mockUseQuery = jest.fn();

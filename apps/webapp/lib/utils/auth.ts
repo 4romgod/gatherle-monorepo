@@ -1,44 +1,21 @@
-import { jwtVerify } from 'jose';
-import { JWT_SECRET } from '@/lib/constants/environment-variables';
+import { decodeJwt } from 'jose';
+import { logger } from './logger';
+
+const isFutureUnixTimestamp = (value: unknown): boolean => {
+  return typeof value === 'number' && Number.isFinite(value) && value * 1000 > Date.now();
+};
 
 export const isAuthenticated = async (token: string | undefined): Promise<boolean> => {
-  if (!token || !JWT_SECRET) {
+  if (!token) {
     return false;
   }
 
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
+    const payload = decodeJwt(token);
+    return isFutureUnixTimestamp(payload.exp);
+  } catch (error) {
+    logger.error('Error decoding JWT:', error);
     return false;
-  }
-};
-
-export type DecodedToken = {
-  userId?: string;
-  email?: string;
-  username?: string;
-  iat?: number;
-  exp?: number;
-};
-
-/**
- * Verify and decode a JWT token in one step.
- * Returns the decoded payload if valid, null otherwise.
- * This is the preferred method for extracting claims securely.
- */
-export const verifyAndDecodeToken = async (token: string | undefined): Promise<DecodedToken | null> => {
-  if (!token || !JWT_SECRET) {
-    return null;
-  }
-
-  try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return payload as DecodedToken;
-  } catch {
-    return null;
   }
 };
 

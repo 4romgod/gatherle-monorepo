@@ -72,16 +72,15 @@
 ## Security & Configuration Tips
 
 - Required env vars: API (`JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `SECRET_ARN`); Web
-  (`NEXT_PUBLIC_GRAPHQL_URL`); CDK requires AWS creds.
+  (`NEXTAUTH_SECRET`, `NEXT_PUBLIC_GRAPHQL_URL`, optional `NEXT_PUBLIC_WEBSOCKET_URL`); CDK requires AWS creds.
 - Never commit secrets; use `.env` files ignored by git. For CDK, ensure AWS bootstrap is done per account/region before
   synth/deploy.
 - **Secret/Env Management**
   - Keep a workspace-specific `.env` file per project (`apps/api/.env.local`, `apps/webapp/.env.local`, etc.) and never
     commit it; add `.env.*` to `.gitignore` if not already ignored.
   - Document required keys per workspace so contributors know what to populate before running scripts: the API needs
-    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `SECRET_ARN`; the webapp consumes
-    `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` (and uses `NEXT_PUBLIC_JWT_SECRET` wherever the
-    client-side auth config expects it).
+    `JWT_SECRET`, `MONGO_DB_URL`, `STAGE`, `AWS_REGION`, optional `SECRET_ARN`; the webapp consumes `NEXTAUTH_SECRET`,
+    `NEXT_PUBLIC_GRAPHQL_URL`, and `NEXT_PUBLIC_WEBSOCKET_URL`.
   - For local dev run `npm run dev:api`/`npm run dev:web` with the matching `.env` or by exporting the vars, and
     consider adding `dotenv` helpers or scripts to validate the presence of required keys before starting.
   - Share secret values via a secure vault (e.g., AWS Secrets Manager, 1Password, or the team-approved store) and keep
@@ -124,9 +123,8 @@
   - Deploy it manually via
     `npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively` only
     when intentionally creating or rotating `MONGO_DB_URL` and `JWT_SECRET`.
-- Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` + `NEXT_PUBLIC_JWT_SECRET` from the API deploy output
-  and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy outputs/stored vars, and include a secure way to inject these into the
-  build (e.g., GitHub Actions env or `next.config.js` referencing process env).
+- Future webapp deploys should consume `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` from deploy
+  outputs/stored vars, while `NEXTAUTH_SECRET` is injected as a separate secret-managed webapp environment variable.
 
 ## Predefined Prompts & Aliases
 
