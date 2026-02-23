@@ -6,7 +6,6 @@ import type {
   UpdateOrganizationInput,
 } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
-import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 
 class OrganizationDAO {
@@ -21,37 +20,33 @@ class OrganizationDAO {
   }
 
   static async readOrganizationById(orgId: string): Promise<Organization> {
+    let organization;
     try {
       const query = OrganizationModel.findById(orgId);
-      const organization = await query.exec();
-      if (!organization) {
-        throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return organization.toObject();
+      organization = await query.exec();
     } catch (error) {
       logger.error(`Error reading organization by id ${orgId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!organization) {
+      throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return organization.toObject();
   }
 
   static async readOrganizationBySlug(slug: string): Promise<Organization> {
+    let organization;
     try {
       const query = OrganizationModel.findOne({ slug });
-      const organization = await query.exec();
-      if (!organization) {
-        throw CustomError(`Organization with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return organization.toObject();
+      organization = await query.exec();
     } catch (error) {
       logger.error(`Error reading organization by slug ${slug}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!organization) {
+      throw CustomError(`Organization with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return organization.toObject();
   }
 
   static async readOrganizations(options?: QueryOptionsInput): Promise<Organization[]> {
@@ -79,42 +74,42 @@ class OrganizationDAO {
   }
 
   static async updateOrganization(input: UpdateOrganizationInput): Promise<Organization> {
+    const { orgId, ...rest } = input;
+    let organization;
     try {
-      const { orgId, ...rest } = input;
-      const organization = await OrganizationModel.findById(orgId).exec();
-      if (!organization) {
-        throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
-      }
+      organization = await OrganizationModel.findById(orgId).exec();
+    } catch (error) {
+      logger.error(`Error finding organization for update ${orgId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!organization) {
+      throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       // Filter out undefined values to avoid overwriting with undefined
       const fieldsToUpdate = Object.fromEntries(Object.entries(rest).filter(([_, value]) => value !== undefined));
       Object.assign(organization, fieldsToUpdate);
       await organization.save();
-
       return organization.toObject();
     } catch (error) {
-      logger.error(`Error updating organization ${input.orgId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
+      logger.error(`Error updating organization ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
 
   static async deleteOrganizationById(orgId: string): Promise<Organization> {
+    let deletedOrganization;
     try {
-      const deletedOrganization = await OrganizationModel.findByIdAndDelete(orgId).exec();
-      if (!deletedOrganization) {
-        throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return deletedOrganization.toObject();
+      deletedOrganization = await OrganizationModel.findByIdAndDelete(orgId).exec();
     } catch (error) {
       logger.error(`Error deleting organization ${orgId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!deletedOrganization) {
+      throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return deletedOrganization.toObject();
   }
 }
 

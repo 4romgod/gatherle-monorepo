@@ -1,4 +1,3 @@
-import { GraphQLError } from 'graphql';
 import { Event as EventModel } from '@/mongodb/models';
 import type {
   Event as EventEntity,
@@ -46,38 +45,34 @@ class EventDAO {
   }
 
   static async readEventById(eventId: string): Promise<EventEntity> {
+    let events;
     try {
       const pipeline = [{ $match: { eventId: eventId } }, ...createEventLookupStages()];
-      const events = await EventModel.aggregate<EventEntity>(pipeline).exec();
-      if (!events || events.length === 0) {
-        throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return events[0];
+      events = await EventModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logger.error('Error reading event by id', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!events || events.length === 0) {
+      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return events[0];
   }
 
   static async readEventBySlug(slug: string): Promise<EventEntity> {
+    let events;
     try {
       // Use aggregation pipeline to include participants lookup
       const pipeline = [{ $match: { slug: slug } }, ...createEventLookupStages()];
-      const events = await EventModel.aggregate<EventEntity>(pipeline).exec();
-      if (!events || events.length === 0) {
-        throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return events[0];
+      events = await EventModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logger.error('Error reading event by slug:', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!events || events.length === 0) {
+      throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return events[0];
   }
 
   static async readEvents(options?: EventsQueryOptionsInput): Promise<EventEntity[]> {
@@ -134,14 +129,20 @@ class EventDAO {
   }
 
   static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
+    const { eventId, ...restInput } = input;
+    let event;
     try {
-      const { eventId, ...restInput } = input;
-      const event = await EventModel.findById(eventId).exec();
+      event = await EventModel.findById(eventId).exec();
+    } catch (error) {
+      logger.error('Error finding event for update', { error });
+      throw KnownCommonError(error);
+    }
 
-      if (!event) {
-        throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
-      }
+    if (!event) {
+      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       // Geocode address to coordinates if location is being updated
       if (restInput.location) {
         await enrichLocationWithCoordinates(restInput.location);
@@ -151,70 +152,65 @@ class EventDAO {
       const fieldsToUpdate = Object.fromEntries(Object.entries(restInput).filter(([_, value]) => value !== undefined));
       Object.assign(event, fieldsToUpdate);
       await event.save();
-
       return event.toObject();
     } catch (error) {
       logger.error('Error updating event', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }
 
   static async deleteEventById(eventId: string): Promise<EventEntity> {
+    let deletedEvent;
     try {
-      const deletedEvent = await EventModel.findByIdAndDelete(eventId).exec();
-      if (!deletedEvent) {
-        throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return deletedEvent.toObject();
+      deletedEvent = await EventModel.findByIdAndDelete(eventId).exec();
     } catch (error) {
       logger.error(`Error deleting event by eventId ${eventId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!deletedEvent) {
+      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return deletedEvent.toObject();
   }
 
   static async deleteEventBySlug(slug: string): Promise<EventEntity> {
+    let deletedEvent;
     try {
-      const deletedEvent = await EventModel.findOneAndDelete({ slug }).exec();
-      if (!deletedEvent) {
-        throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return deletedEvent.toObject();
+      deletedEvent = await EventModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
       logger.error(`Error deleting event with slug ${slug}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!deletedEvent) {
+      throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return deletedEvent.toObject();
   }
 
   static async RSVP(input: RsvpInput) {
     const { eventId } = input;
 
+    let validUserIds;
+    let event;
     try {
-      const validUserIds = await validateUserIdentifiers(input);
-      const event = await EventModel.findById(eventId).exec();
+      validUserIds = await validateUserIdentifiers(input);
+      event = await EventModel.findById(eventId).exec();
+    } catch (error) {
+      logger.error(`Error reading event for RSVP with eventId ${eventId}`, { error });
+      throw KnownCommonError(error);
+    }
 
-      if (!event) {
-        throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
-      }
+    if (!event) {
+      throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       for (const userId of validUserIds) {
         await EventParticipantDAO.upsert({ eventId, userId, status: ParticipantStatus.Going });
       }
-
       return event.toObject();
     } catch (error) {
       logger.error(`Error updating event RSVP's with eventId ${eventId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }
@@ -222,24 +218,27 @@ class EventDAO {
   static async cancelRSVP(input: CancelRsvpInput) {
     const { eventId } = input;
 
+    let validUserIds;
+    let event;
     try {
-      const validUserIds = await validateUserIdentifiers(input);
-      const event = await EventModel.findById(eventId).exec();
+      validUserIds = await validateUserIdentifiers(input);
+      event = await EventModel.findById(eventId).exec();
+    } catch (error) {
+      logger.error(`Error reading event for cancel RSVP with eventId ${eventId}`, { error });
+      throw KnownCommonError(error);
+    }
 
-      if (!event) {
-        throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
-      }
+    if (!event) {
+      throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       for (const userId of validUserIds) {
         await EventParticipantDAO.cancel({ eventId, userId });
       }
-
       return event.toObject();
     } catch (error) {
       logger.error(`Error cancelling event RSVP's with eventId ${eventId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }

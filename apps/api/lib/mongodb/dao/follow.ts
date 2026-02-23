@@ -1,4 +1,3 @@
-import { GraphQLError } from 'graphql';
 import type { Follow as FollowEntity, CreateFollowInput } from '@gatherle/commons/types';
 import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
 import { Follow as FollowModel } from '@/mongodb/models';
@@ -35,9 +34,6 @@ class FollowDAO {
       return follow.toObject();
     } catch (error) {
       logger.error('Error upserting follow', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }
@@ -47,26 +43,28 @@ class FollowDAO {
     targetUserId: string,
     approvalStatus: FollowApprovalStatus,
   ): Promise<FollowEntity> {
+    let follow;
     try {
-      const follow = await FollowModel.findOne({ followId }).exec();
+      follow = await FollowModel.findOne({ followId }).exec();
+    } catch (error) {
+      logger.error('Error finding follow for approval status update', { error });
+      throw KnownCommonError(error);
+    }
 
-      if (!follow) {
-        throw CustomError('Follow request not found', ErrorTypes.NOT_FOUND);
-      }
+    if (!follow) {
+      throw CustomError('Follow request not found', ErrorTypes.NOT_FOUND);
+    }
 
-      if (follow.targetId !== targetUserId) {
-        throw CustomError('Not authorized to modify this follow request', ErrorTypes.UNAUTHORIZED);
-      }
+    if (follow.targetId !== targetUserId) {
+      throw CustomError('Not authorized to modify this follow request', ErrorTypes.UNAUTHORIZED);
+    }
 
+    try {
       follow.approvalStatus = approvalStatus;
       await follow.save();
-
       return follow.toObject();
     } catch (error) {
       logger.error('Error updating approval status', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }
@@ -175,19 +173,17 @@ class FollowDAO {
     targetType: FollowTargetType;
     targetId: string;
   }): Promise<boolean> {
+    let removed;
     try {
-      const removed = await FollowModel.findOneAndDelete(params).exec();
-      if (!removed) {
-        throw CustomError('Follow edge not found', ErrorTypes.NOT_FOUND);
-      }
-      return true;
+      removed = await FollowModel.findOneAndDelete(params).exec();
     } catch (error) {
       logger.error('Error removing follow', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!removed) {
+      throw CustomError('Follow edge not found', ErrorTypes.NOT_FOUND);
+    }
+    return true;
   }
 
   /**
@@ -205,26 +201,24 @@ class FollowDAO {
     followerUserId: string,
     targetType: FollowTargetType,
   ): Promise<boolean> {
+    let removed;
     try {
-      const removed = await FollowModel.findOneAndDelete({
+      removed = await FollowModel.findOneAndDelete({
         followerUserId,
         targetType,
         targetId: targetUserId,
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
-
-      if (!removed) {
-        throw CustomError('Follower not found or not authorized', ErrorTypes.NOT_FOUND);
-      }
-
-      return true;
     } catch (error) {
       logger.error('Error removing follower', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+
+    if (!removed) {
+      throw CustomError('Follower not found or not authorized', ErrorTypes.NOT_FOUND);
+    }
+
+    return true;
   }
 
   // ============================================================================

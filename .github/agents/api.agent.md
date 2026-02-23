@@ -75,7 +75,7 @@ resolver implementation, database optimization, security enforcement, and mainta
 
 ❌ Frontend/webapp work (use webapp agent)  
 ❌ General infrastructure/DevOps (use infra agent)  
-❌ CLI tools (tools/cli)  
+❌ CLI tools (apps/ops-cli)  
 ❌ Documentation-only changes
 
 ## Execution Mode

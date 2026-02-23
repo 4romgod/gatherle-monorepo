@@ -162,15 +162,14 @@ describe('NotificationService', () => {
       );
     });
 
-    it('throws error when trying to notify yourself', async () => {
-      await expect(
-        NotificationService.notify({
-          type: NotificationType.FOLLOW_RECEIVED,
-          recipientUserId: 'user-1',
-          actorUserId: 'user-1', // Same user
-        }),
-      ).rejects.toThrow('Cannot notify yourself');
+    it('returns null when trying to notify yourself', async () => {
+      const result = await NotificationService.notify({
+        type: NotificationType.FOLLOW_RECEIVED,
+        recipientUserId: 'user-1',
+        actorUserId: 'user-1', // Same user
+      });
 
+      expect(result).toBeNull();
       expect(NotificationDAO.create).not.toHaveBeenCalled();
     });
 

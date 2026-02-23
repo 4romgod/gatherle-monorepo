@@ -7,7 +7,7 @@
 - `apps/webapp`: Next.js frontend (MUI + Tailwind). Codegen depends on `NEXT_PUBLIC_GRAPHQL_URL`.
 - `packages/commons`: Shared types, validation, and constants consumed by other workspaces.
 - `infra`: AWS CDK stacks for API deployment; expects AWS creds and bootstrap.
-- `tools/cli`: Python utilities; keep in sync with API contracts when modifying schemas.
+- `apps/ops-cli`: Python utilities; keep in sync with API contracts when modifying schemas.
 
 ## Backend Architecture (API)
 
