@@ -184,7 +184,7 @@ class NotificationService {
   /**
    * Create a notification for a single user
    */
-  static async notify(params: NotifyParams): Promise<Notification> {
+  static async notify(params: NotifyParams): Promise<Notification | null> {
     const {
       type,
       recipientUserId,
@@ -200,7 +200,7 @@ class NotificationService {
     // Don't notify yourself
     if (actorUserId && actorUserId === recipientUserId) {
       logger.debug('Skipping self-notification', { type, recipientUserId });
-      throw new Error('Cannot notify yourself');
+      return null;
     }
 
     // Get actor info for message personalization and URL generation

@@ -66,6 +66,11 @@ export const CustomError = (
  * //TODO Maybe use this in a middleware https://mongoosejs.com/docs/middleware.html
  */
 export const KnownCommonError = (error: unknown): GraphQLError => {
+  // Preserve existing GraphQLErrors (e.g. NOT_FOUND, UNAUTHORIZED) instead of wrapping them
+  if (error instanceof GraphQLError) {
+    return error;
+  }
+
   let message = ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
 
   if (error && typeof error === 'object') {

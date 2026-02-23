@@ -1,4 +1,3 @@
-import { GraphQLError } from 'graphql';
 import type {
   EventParticipant as EventParticipantEntity,
   UpsertEventParticipantInput,
@@ -51,32 +50,31 @@ class EventParticipantDAO {
       return participant.toObject();
     } catch (error) {
       logger.error('Error upserting event participant', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }
 
   static async cancel(input: CancelEventParticipantInput): Promise<EventParticipantEntity> {
+    const { eventId, userId } = input;
+    let participant;
     try {
-      const { eventId, userId } = input;
-      const participant = await EventParticipant.findOne({ eventId, userId }).exec();
+      participant = await EventParticipant.findOne({ eventId, userId }).exec();
+    } catch (error) {
+      logger.error('Error finding event participant for cancellation', { error });
+      throw KnownCommonError(error);
+    }
 
-      if (!participant) {
-        throw CustomError(`Participant not found for event ${eventId}`, ErrorTypes.NOT_FOUND);
-      }
+    if (!participant) {
+      throw CustomError(`Participant not found for event ${eventId}`, ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       participant.status = ParticipantStatus.Cancelled;
       participant.cancelledAt = new Date();
       await participant.save();
-
       return participant.toObject();
     } catch (error) {
       logger.error('Error cancelling event participant', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
   }

@@ -5,7 +5,6 @@ import type {
   UpdateOrganizationMembershipInput,
 } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
-import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 
 class OrganizationMembershipDAO {
@@ -20,20 +19,18 @@ class OrganizationMembershipDAO {
   }
 
   static async readMembershipById(membershipId: string): Promise<OrganizationMembership> {
+    let membership;
     try {
       const query = OrganizationMembershipModel.findOne({ membershipId });
-      const membership = await query.exec();
-      if (!membership) {
-        throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return membership.toObject();
+      membership = await query.exec();
     } catch (error) {
       logger.error(`Error reading membership ${membershipId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!membership) {
+      throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return membership.toObject();
   }
 
   static async readMembershipsByOrgId(orgId: string): Promise<OrganizationMembership[]> {
@@ -67,42 +64,42 @@ class OrganizationMembershipDAO {
   }
 
   static async update(input: UpdateOrganizationMembershipInput): Promise<OrganizationMembership> {
+    const { membershipId, ...rest } = input;
+    let membership;
     try {
-      const { membershipId, ...rest } = input;
-      const membership = await OrganizationMembershipModel.findOne({ membershipId }).exec();
-      if (!membership) {
-        throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
-      }
+      membership = await OrganizationMembershipModel.findOne({ membershipId }).exec();
+    } catch (error) {
+      logger.error(`Error finding membership for update ${membershipId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!membership) {
+      throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
+    }
 
+    try {
       // Filter out undefined values to avoid overwriting with undefined
       const fieldsToUpdate = Object.fromEntries(Object.entries(rest).filter(([_, value]) => value !== undefined));
       Object.assign(membership, fieldsToUpdate);
       await membership.save();
-
       return membership.toObject();
     } catch (error) {
-      logger.error(`Error updating membership ${input.membershipId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
+      logger.error(`Error updating membership ${membershipId}`, { error });
       throw KnownCommonError(error);
     }
   }
 
   static async delete(membershipId: string): Promise<OrganizationMembership> {
+    let deletedMembership;
     try {
-      const deletedMembership = await OrganizationMembershipModel.findOneAndDelete({ membershipId }).exec();
-      if (!deletedMembership) {
-        throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return deletedMembership.toObject();
+      deletedMembership = await OrganizationMembershipModel.findOneAndDelete({ membershipId }).exec();
     } catch (error) {
       logger.error(`Error deleting membership ${membershipId}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!deletedMembership) {
+      throw CustomError(`Organization membership ${membershipId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return deletedMembership.toObject();
   }
 }
 

@@ -1,5 +1,4 @@
 import { EventCategoryGroup as EventCategoryGroupModel } from '@/mongodb/models';
-import { GraphQLError } from 'graphql';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import type {
   CreateEventCategoryGroupInput,
@@ -36,20 +35,18 @@ class EventCategoryGroupDAO {
    * @returns EventCategoryGroup with populated eventCategories
    */
   static async readEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroup> {
+    let eventCategoryGroup;
     try {
       const query = EventCategoryGroupModel.findOne({ slug: slug });
-      const eventCategoryGroup = await query.exec();
-      if (!eventCategoryGroup) {
-        throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return eventCategoryGroup.toObject();
+      eventCategoryGroup = await query.exec();
     } catch (error) {
-      logger.info(`Error reading event category by slug ${slug}`, { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
+      logger.error(`Error reading event category group by slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
+    if (!eventCategoryGroup) {
+      throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return eventCategoryGroup.toObject();
   }
 
   /**
@@ -74,26 +71,25 @@ class EventCategoryGroupDAO {
    * @returns Updated EventCategoryGroup with populated eventCategories
    */
   static async updateEventCategoryGroup(input: UpdateEventCategoryGroupInput) {
+    let eventCategoryGroup;
     try {
-      const eventCategoryGroup = await EventCategoryGroupModel.findById(input.eventCategoryGroupId).exec();
+      eventCategoryGroup = await EventCategoryGroupModel.findById(input.eventCategoryGroupId).exec();
+    } catch (error) {
+      logger.error(`Error finding event category group for update ${input.eventCategoryGroupId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!eventCategoryGroup) {
+      throw CustomError('Event Category Group not found', ErrorTypes.NOT_FOUND);
+    }
 
-      if (!eventCategoryGroup) {
-        throw CustomError('Event Category Group not found', ErrorTypes.NOT_FOUND);
-      }
-
+    try {
       // Filter out undefined values to avoid overwriting with undefined
       const fieldsToUpdate = Object.fromEntries(Object.entries(input).filter(([_, value]) => value !== undefined));
       Object.assign(eventCategoryGroup, fieldsToUpdate);
       await eventCategoryGroup.save();
-
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.info(`Error updating event category group with eventCategoryGroupId ${input.eventCategoryGroupId}`, {
-        error,
-      });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
+      logger.error(`Error updating event category group ${input.eventCategoryGroupId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -103,19 +99,17 @@ class EventCategoryGroupDAO {
    * @returns Deleted EventCategoryGroup without populated references (deleted entities don't need populated data)
    */
   static async deleteEventCategoryGroupBySlug(slug: string): Promise<EventCategoryGroup> {
+    let deletedEventCategoryGroup;
     try {
-      const deletedEventCategoryGroup = await EventCategoryGroupModel.findOneAndDelete({ slug }).exec();
-      if (!deletedEventCategoryGroup) {
-        throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
-      }
-      return deletedEventCategoryGroup.toObject();
+      deletedEventCategoryGroup = await EventCategoryGroupModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
       logger.error('Error deleting event category group by slug:', { error });
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
       throw KnownCommonError(error);
     }
+    if (!deletedEventCategoryGroup) {
+      throw CustomError(`Event Category Group with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+    }
+    return deletedEventCategoryGroup.toObject();
   }
 
   static async count(filter: Record<string, unknown> = {}): Promise<number> {
