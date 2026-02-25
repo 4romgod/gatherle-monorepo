@@ -22,3 +22,4 @@ test-results.txt
 .github/prompts/
 .local/
 packages/commons/schema.graphql
+.vscode/

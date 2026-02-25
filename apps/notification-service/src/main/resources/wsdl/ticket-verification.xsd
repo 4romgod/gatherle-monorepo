@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+       xmlns:tns="http://gatherle.com/soap/ticket"
+       targetNamespace="http://gatherle.com/soap/ticket"
+       elementFormDefault="qualified">
+
+  <xs:element name="verifyTicketRequest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ticketId" type="xs:string"/>
+        <xs:element name="eventId" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="verifyTicketResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="valid" type="xs:boolean"/>
+        <xs:element name="holderName" type="xs:string" minOccurs="0"/>
+        <xs:element name="eventName" type="xs:string" minOccurs="0"/>
+        <xs:element name="ticketType" type="xs:string" minOccurs="0"/>
+        <xs:element name="message" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
