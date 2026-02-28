@@ -1,13 +1,18 @@
 import type { PaginationInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
+import { validatePaginationInput } from '../validation';
 
 export const createPaginationStages = (paginationInput: PaginationInput): PipelineStage[] => {
   const stages: PipelineStage[] = [];
-  if (paginationInput.skip) {
-    stages.push({ $skip: paginationInput.skip });
+  const validatedPagination = validatePaginationInput(paginationInput);
+
+  if (typeof validatedPagination.skip === 'number' && validatedPagination.skip > 0) {
+    stages.push({ $skip: validatedPagination.skip });
   }
-  if (paginationInput.limit) {
-    stages.push({ $limit: paginationInput.limit });
+
+  if (typeof validatedPagination.limit === 'number') {
+    stages.push({ $limit: validatedPagination.limit });
   }
+
   return stages;
 };

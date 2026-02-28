@@ -8,6 +8,7 @@ import type {
 import type { Model, Query } from 'mongoose';
 import { CustomError, ErrorTypes } from '../exceptions';
 import { buildTextSearchRegex } from './text-search';
+import { validatePaginationInput } from './validation';
 
 const addTextSearchToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, textSearch: TextSearchInput) => {
   const trimmed = textSearch.value?.trim();
@@ -38,11 +39,14 @@ export const addPaginationToQuery = <ResultType, DocType>(
   query: Query<ResultType, DocType>,
   paginationInput: PaginationInput,
 ) => {
-  if (paginationInput.skip) {
-    query.skip(paginationInput.skip);
+  const validatedPagination = validatePaginationInput(paginationInput);
+
+  if (typeof validatedPagination.skip === 'number' && validatedPagination.skip > 0) {
+    query.skip(validatedPagination.skip);
   }
-  if (paginationInput.limit) {
-    query.limit(paginationInput.limit);
+
+  if (typeof validatedPagination.limit === 'number') {
+    query.limit(validatedPagination.limit);
   }
 };
 

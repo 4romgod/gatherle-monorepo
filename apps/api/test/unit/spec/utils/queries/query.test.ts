@@ -1,5 +1,11 @@
 import type { Model, Query } from 'mongoose';
-import { addSortToQuery, addPaginationToQuery, addFiltersToQuery, transformOptionsToQuery } from '@/utils';
+import {
+  MAX_QUERY_PAGE_SIZE,
+  addSortToQuery,
+  addPaginationToQuery,
+  addFiltersToQuery,
+  transformOptionsToQuery,
+} from '@/utils';
 import type { FilterInput, SortInput } from '@gatherle/commons/types';
 import { FilterOperatorInput, SortOrderInput } from '@gatherle/commons/types';
 
@@ -25,12 +31,49 @@ describe('Query', () => {
       expect(mockQuery.limit).toHaveBeenCalledWith(20);
     });
 
-    it('should handle missing skip and limit values', () => {
+    it('should apply the default max page size when no limit is provided', () => {
       const mockQuery = { skip: jest.fn(), limit: jest.fn() } as unknown as Query<any, any>;
       const paginationInput = {};
       addPaginationToQuery(mockQuery, paginationInput);
       expect(mockQuery.skip).not.toHaveBeenCalled();
-      expect(mockQuery.limit).not.toHaveBeenCalled();
+      expect(mockQuery.limit).toHaveBeenCalledWith(MAX_QUERY_PAGE_SIZE);
+    });
+
+    it('should ignore skip when it is zero', () => {
+      const mockQuery = { skip: jest.fn(), limit: jest.fn() } as unknown as Query<any, any>;
+      const paginationInput = { skip: 0, limit: 10 };
+
+      addPaginationToQuery(mockQuery, paginationInput);
+
+      expect(mockQuery.skip).not.toHaveBeenCalled();
+      expect(mockQuery.limit).toHaveBeenCalledWith(10);
+    });
+
+    it('should throw when limit exceeds the maximum page size', () => {
+      const mockQuery = { skip: jest.fn(), limit: jest.fn() } as unknown as Query<any, any>;
+      const paginationInput = { limit: MAX_QUERY_PAGE_SIZE + 1 };
+
+      expect(() => addPaginationToQuery(mockQuery, paginationInput)).toThrow(
+        `Pagination limit must be between 1 and ${MAX_QUERY_PAGE_SIZE}.`,
+      );
+    });
+
+    it('should throw when limit is not positive', () => {
+      const mockQuery = { skip: jest.fn(), limit: jest.fn() } as unknown as Query<any, any>;
+      const paginationInput = { limit: 0 };
+
+      expect(() => addPaginationToQuery(mockQuery, paginationInput)).toThrow(
+        `Pagination limit must be between 1 and ${MAX_QUERY_PAGE_SIZE}.`,
+      );
+    });
+
+    it('should throw when skip is negative', () => {
+      const mockQuery = { skip: jest.fn(), limit: jest.fn() } as unknown as Query<any, any>;
+      const paginationInput = { skip: -5, limit: 10 };
+
+      expect(() => addPaginationToQuery(mockQuery, paginationInput)).toThrow(
+        'Pagination skip must be greater than or equal to 0.',
+      );
     });
   });
 

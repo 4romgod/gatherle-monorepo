@@ -9,6 +9,8 @@ import { useChatRealtime } from '@/hooks';
 import { SEARCH_DEBOUNCE_MS, USER_SEARCH_FIELDS, type ShareUser } from '@/components/events/share';
 import { logger } from '@/lib/utils';
 
+const SHARE_DIALOG_USER_LIMIT = 50;
+
 interface UseShareDialogOptions {
   eventTitle: string;
   resolvedEventUrl: string;
@@ -41,7 +43,7 @@ export function useShareDialog({ eventTitle, resolvedEventUrl }: UseShareDialogO
     async (term: string) => {
       const trimmedTerm = term.trim();
       const options: QueryOptionsInput = {
-        pagination: { limit: 56 },
+        pagination: { limit: SHARE_DIALOG_USER_LIMIT },
       };
 
       if (trimmedTerm) {

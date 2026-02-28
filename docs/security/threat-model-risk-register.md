@@ -1,6 +1,6 @@
 # Gatherle Threat Model & Risk Register
 
-Last updated: 2026-02-22
+Created: 2026-02-22
 
 ## Scope
 
@@ -57,7 +57,7 @@ It is a practical engineering risk model, not a formal penetration test.
 | R-11 | No explicit L7 DDoS controls (WAF/rate-based rules) on public API and websocket edges                                        | `infra/lib/stack/graphql-stack.ts` and `infra/lib/stack/websocket-stack.ts` do not attach WAF/WebACL or rate-based blocking controls                                                                                                                                   | 4          | 5      | 20    | Critical |
 | R-12 | User enumeration/data scraping risk via unauthenticated user queries                                                         | `apps/api/lib/graphql/resolvers/user.ts` exposes `readUsers`, `readUserByEmail`, `readUserById`, `readUserByUsername` without `@Authorized`                                                                                                                            | 4          | 4      | 16    | High     |
 | R-13 | Authentication brute-force/credential stuffing protections are not evident                                                   | Login path in `apps/webapp/data/actions/server/auth/login.ts` -> `signIn` and `apps/api/lib/mongodb/dao/user.ts` lacks attempt throttling/lockout/captcha controls                                                                                                     | 4          | 4      | 16    | High     |
-| R-14 | Unbounded query pagination can be abused for heavy reads and scraping                                                        | `apps/api/lib/utils/queries/query.ts` applies client-provided `pagination.limit` without max bound in generic query path                                                                                                                                               | 4          | 3      | 12    | High     |
+| R-14 | ~~Unbounded query pagination can be abused for heavy reads and scraping~~                                                    | `apps/api/lib/utils/queries/query.ts` and `apps/api/lib/utils/queries/aggregate/pagination.ts` now enforce `pagination.limit` within `1..50` and reject invalid pagination inputs with `400`                                                                           | 4          | 3      | 12    | High     |
 | R-15 | Webapp response security headers are not explicitly configured (CSP/HSTS/frame/referrer)                                     | `apps/webapp/next.config.mjs` has no `headers()` security policy configuration                                                                                                                                                                                         | 3          | 3      | 9     | Medium   |
 | R-07 | ~~GraphQL request logging may capture sensitive variables in non-prod stages~~                                               | `apps/api/lib/graphql/apollo/server.ts` logs operation metadata + query fingerprint + variable keys (not raw query text). Variable values are not emitted by the GraphQL request logging plugin.                                                                       | 3          | 4      | 12    | High     |
 | R-08 | Apollo landing page plugin is enabled for all stages                                                                         | `apps/api/lib/graphql/apollo/server.ts` always adds `ApolloServerPluginLandingPageLocalDefault()`                                                                                                                                                                      | 3          | 3      | 9     | Medium   |
@@ -106,6 +106,11 @@ Lambda/MongoDB.
 Unauthenticated user read operations allow broad account discovery and potential scraping patterns if request volume is
 not constrained and response fields are not minimized for public callers.
 
+### R-14: ~~Unbounded query pagination~~
+
+Status (2026-02-28): Resolved in code. Generic and aggregate pagination helpers now require `pagination.limit` to stay
+within `1..50` and reject invalid pagination values with `400`.
+
 ## Required Mitigations
 
 ### Immediate (0-7 days)
@@ -124,6 +129,7 @@ not constrained and response fields are not minimized for public callers.
    - Attach WAF WebACL to GraphQL/API and websocket entry points.
    - Add rate-based rules for abusive IPs/patterns.
    - Define baseline alarms for traffic spikes, 4xx/5xx anomalies, and throttles.
+7. ~~Add max pagination bounds in generic query helpers.~~
 
 ### Near-term (1-4 weeks)
 
@@ -134,8 +140,7 @@ not constrained and response fields are not minimized for public callers.
 5. Add safety checks in `SecretsManagementStack` deploy path to fail if required secret inputs are blank.
 6. Require auth and field minimization for sensitive user directory queries; add anti-enumeration constraints.
 7. Add brute-force protections for login paths (IP/user throttling, temporary lockouts, and optional CAPTCHA).
-8. Add max pagination bounds in generic query helpers.
-9. Add webapp security headers (CSP, HSTS, frame/referrer policies) with stage-aware tuning.
+8. Add webapp security headers (CSP, HSTS, frame/referrer policies) with stage-aware tuning.
 
 ### Medium-term (1-3 months)
 
@@ -156,7 +161,7 @@ not constrained and response fields are not minimized for public callers.
 - L7 DDoS controls via WAF/rate rules for API and websocket public edges in `infra/lib/stack/graphql-stack.ts` and
   `infra/lib/stack/websocket-stack.ts`.
 - User-directory exposure review and auth/privacy constraints in `apps/api/lib/graphql/resolvers/user.ts`.
-- Pagination hard limits in `apps/api/lib/utils/queries/query.ts`.
+- ~~Pagination hard limits in `apps/api/lib/utils/queries/query.ts`.~~
 - Webapp security header policy in `apps/webapp/next.config.mjs`.
 - CI security workflow additions under `.github/workflows`.
 
