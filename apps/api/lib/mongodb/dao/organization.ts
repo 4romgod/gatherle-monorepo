@@ -5,8 +5,7 @@ import type {
   QueryOptionsInput,
   UpdateOrganizationInput,
 } from '@gatherle/commons/types';
-import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
-import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 
 class OrganizationDAO {
   static async create(input: CreateOrganizationInput): Promise<Organization> {
@@ -14,7 +13,7 @@ class OrganizationDAO {
       const organization = await OrganizationModel.create(input);
       return organization.toObject();
     } catch (error) {
-      logger.error('Error creating organization', { error });
+      logDaoError('Error creating organization', { error });
       throw KnownCommonError(error);
     }
   }
@@ -25,7 +24,7 @@ class OrganizationDAO {
       const query = OrganizationModel.findById(orgId);
       organization = await query.exec();
     } catch (error) {
-      logger.error(`Error reading organization by id ${orgId}`, { error });
+      logDaoError(`Error reading organization by id ${orgId}`, { error });
       throw KnownCommonError(error);
     }
     if (!organization) {
@@ -40,7 +39,7 @@ class OrganizationDAO {
       const query = OrganizationModel.findOne({ slug });
       organization = await query.exec();
     } catch (error) {
-      logger.error(`Error reading organization by slug ${slug}`, { error });
+      logDaoError(`Error reading organization by slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
     if (!organization) {
@@ -55,7 +54,7 @@ class OrganizationDAO {
       const organizations = await query.exec();
       return organizations.map((organization) => organization.toObject());
     } catch (error) {
-      logger.error('Error reading organizations', { error });
+      logDaoError('Error reading organizations', { error });
       throw KnownCommonError(error);
     }
   }
@@ -68,7 +67,7 @@ class OrganizationDAO {
       const organizations = await OrganizationModel.find({ orgId: { $in: orgIds } }).exec();
       return organizations.map((organization) => organization.toObject());
     } catch (error) {
-      logger.error('Error reading organizations by ids', { error });
+      logDaoError('Error reading organizations by ids', { error });
       throw KnownCommonError(error);
     }
   }
@@ -79,7 +78,7 @@ class OrganizationDAO {
     try {
       organization = await OrganizationModel.findById(orgId).exec();
     } catch (error) {
-      logger.error(`Error finding organization for update ${orgId}`, { error });
+      logDaoError(`Error finding organization for update ${orgId}`, { error });
       throw KnownCommonError(error);
     }
     if (!organization) {
@@ -93,7 +92,7 @@ class OrganizationDAO {
       await organization.save();
       return organization.toObject();
     } catch (error) {
-      logger.error(`Error updating organization ${orgId}`, { error });
+      logDaoError(`Error updating organization ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -103,7 +102,7 @@ class OrganizationDAO {
     try {
       deletedOrganization = await OrganizationModel.findByIdAndDelete(orgId).exec();
     } catch (error) {
-      logger.error(`Error deleting organization ${orgId}`, { error });
+      logDaoError(`Error deleting organization ${orgId}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedOrganization) {

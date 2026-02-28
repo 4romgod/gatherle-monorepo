@@ -1,6 +1,5 @@
 import { WebSocketConnection as WebSocketConnectionModel } from '@/mongodb/models';
-import { KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { KnownCommonError, logDaoError } from '@/utils';
 
 export interface UpsertWebSocketConnectionInput {
   connectionId: string;
@@ -57,7 +56,7 @@ class WebSocketConnectionDAO {
 
       return connection.toObject();
     } catch (error) {
-      logger.error('Error upserting websocket connection', { error, connectionId: input.connectionId });
+      logDaoError('Error upserting websocket connection', { error, connectionId: input.connectionId });
       throw KnownCommonError(error);
     }
   }
@@ -67,7 +66,7 @@ class WebSocketConnectionDAO {
       const connection = await WebSocketConnectionModel.findOne({ connectionId }).exec();
       return connection ? connection.toObject() : null;
     } catch (error) {
-      logger.error('Error reading websocket connection by connection id', { error, connectionId });
+      logDaoError('Error reading websocket connection by connection id', { error, connectionId });
       throw KnownCommonError(error);
     }
   }
@@ -85,7 +84,7 @@ class WebSocketConnectionDAO {
         },
       ).exec();
     } catch (error) {
-      logger.error('Error touching websocket connection', { error, connectionId });
+      logDaoError('Error touching websocket connection', { error, connectionId });
       throw KnownCommonError(error);
     }
   }
@@ -95,7 +94,7 @@ class WebSocketConnectionDAO {
       const result = await WebSocketConnectionModel.deleteOne({ connectionId }).exec();
       return result.deletedCount > 0;
     } catch (error) {
-      logger.error('Error deleting websocket connection', { error, connectionId });
+      logDaoError('Error deleting websocket connection', { error, connectionId });
       throw KnownCommonError(error);
     }
   }
@@ -105,7 +104,7 @@ class WebSocketConnectionDAO {
       const connections = await WebSocketConnectionModel.find({ userId }).exec();
       return connections.map((connection) => connection.toObject());
     } catch (error) {
-      logger.error('Error reading websocket connections for user', { error, userId });
+      logDaoError('Error reading websocket connections for user', { error, userId });
       throw KnownCommonError(error);
     }
   }

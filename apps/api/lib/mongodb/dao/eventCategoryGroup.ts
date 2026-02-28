@@ -1,12 +1,11 @@
 import { EventCategoryGroup as EventCategoryGroupModel } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 import type {
   CreateEventCategoryGroupInput,
   EventCategoryGroup,
   QueryOptionsInput,
   UpdateEventCategoryGroupInput,
 } from '@gatherle/commons/types';
-import { logger } from '@/utils/logger';
 
 /**
  * Data Access Object for Event Category Group operations.
@@ -25,7 +24,7 @@ class EventCategoryGroupDAO {
       const eventCategoryGroup = await EventCategoryGroupModel.create(input);
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.info('Error creating event category group', { error });
+      logDaoError('Error creating event category group', { error });
       throw KnownCommonError(error);
     }
   }
@@ -40,7 +39,7 @@ class EventCategoryGroupDAO {
       const query = EventCategoryGroupModel.findOne({ slug: slug });
       eventCategoryGroup = await query.exec();
     } catch (error) {
-      logger.error(`Error reading event category group by slug ${slug}`, { error });
+      logDaoError(`Error reading event category group by slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
     if (!eventCategoryGroup) {
@@ -61,7 +60,7 @@ class EventCategoryGroupDAO {
       const eventCategoryGroups = await query.exec();
       return eventCategoryGroups.map((eventCategoryGroup) => eventCategoryGroup.toObject());
     } catch (error) {
-      logger.error('Error reading event category groups:', { error });
+      logDaoError('Error reading event category groups:', { error });
       throw KnownCommonError(error);
     }
   }
@@ -75,7 +74,7 @@ class EventCategoryGroupDAO {
     try {
       eventCategoryGroup = await EventCategoryGroupModel.findById(input.eventCategoryGroupId).exec();
     } catch (error) {
-      logger.error(`Error finding event category group for update ${input.eventCategoryGroupId}`, { error });
+      logDaoError(`Error finding event category group for update ${input.eventCategoryGroupId}`, { error });
       throw KnownCommonError(error);
     }
     if (!eventCategoryGroup) {
@@ -89,7 +88,7 @@ class EventCategoryGroupDAO {
       await eventCategoryGroup.save();
       return eventCategoryGroup.toObject();
     } catch (error) {
-      logger.error(`Error updating event category group ${input.eventCategoryGroupId}`, { error });
+      logDaoError(`Error updating event category group ${input.eventCategoryGroupId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -103,7 +102,7 @@ class EventCategoryGroupDAO {
     try {
       deletedEventCategoryGroup = await EventCategoryGroupModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
-      logger.error('Error deleting event category group by slug:', { error });
+      logDaoError('Error deleting event category group by slug:', { error });
       throw KnownCommonError(error);
     }
     if (!deletedEventCategoryGroup) {
@@ -116,7 +115,7 @@ class EventCategoryGroupDAO {
     try {
       return EventCategoryGroupModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting event category groups', { error });
+      logDaoError('Error counting event category groups', { error });
       throw KnownCommonError(error);
     }
   }

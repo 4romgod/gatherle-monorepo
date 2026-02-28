@@ -16,6 +16,7 @@ import {
   validateUserIdentifiers,
   enrichLocationWithCoordinates,
   createEventLookupStages,
+  logDaoError,
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { EventParticipantDAO } from '@/mongodb/dao';
@@ -34,7 +35,7 @@ class EventDAO {
       const event = await EventModel.create(input);
       return event.toObject();
     } catch (error) {
-      logger.error('Error creating event', { error });
+      logDaoError('Error creating event', { error });
       const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
 
       if (validationMessage !== 'Event validation failed') {
@@ -50,7 +51,7 @@ class EventDAO {
       const pipeline = [{ $match: { eventId: eventId } }, ...createEventLookupStages()];
       events = await EventModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
-      logger.error('Error reading event by id', { error });
+      logDaoError('Error reading event by id', { error });
       throw KnownCommonError(error);
     }
     if (!events || events.length === 0) {
@@ -66,7 +67,7 @@ class EventDAO {
       const pipeline = [{ $match: { slug: slug } }, ...createEventLookupStages()];
       events = await EventModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
-      logger.error('Error reading event by slug:', { error });
+      logDaoError('Error reading event by slug:', { error });
       throw KnownCommonError(error);
     }
     if (!events || events.length === 0) {
@@ -123,7 +124,7 @@ class EventDAO {
 
       return events;
     } catch (error) {
-      logger.error('Error reading events', { error });
+      logDaoError('Error reading events', { error });
       throw KnownCommonError(error);
     }
   }
@@ -134,7 +135,7 @@ class EventDAO {
     try {
       event = await EventModel.findById(eventId).exec();
     } catch (error) {
-      logger.error('Error finding event for update', { error });
+      logDaoError('Error finding event for update', { error });
       throw KnownCommonError(error);
     }
 
@@ -154,7 +155,7 @@ class EventDAO {
       await event.save();
       return event.toObject();
     } catch (error) {
-      logger.error('Error updating event', { error });
+      logDaoError('Error updating event', { error });
       throw KnownCommonError(error);
     }
   }
@@ -164,7 +165,7 @@ class EventDAO {
     try {
       deletedEvent = await EventModel.findByIdAndDelete(eventId).exec();
     } catch (error) {
-      logger.error(`Error deleting event by eventId ${eventId}`, { error });
+      logDaoError(`Error deleting event by eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedEvent) {
@@ -178,7 +179,7 @@ class EventDAO {
     try {
       deletedEvent = await EventModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
-      logger.error(`Error deleting event with slug ${slug}`, { error });
+      logDaoError(`Error deleting event with slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedEvent) {
@@ -196,7 +197,7 @@ class EventDAO {
       validUserIds = await validateUserIdentifiers(input);
       event = await EventModel.findById(eventId).exec();
     } catch (error) {
-      logger.error(`Error reading event for RSVP with eventId ${eventId}`, { error });
+      logDaoError(`Error reading event for RSVP with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
 
@@ -210,7 +211,7 @@ class EventDAO {
       }
       return event.toObject();
     } catch (error) {
-      logger.error(`Error updating event RSVP's with eventId ${eventId}`, { error });
+      logDaoError(`Error updating event RSVP's with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -224,7 +225,7 @@ class EventDAO {
       validUserIds = await validateUserIdentifiers(input);
       event = await EventModel.findById(eventId).exec();
     } catch (error) {
-      logger.error(`Error reading event for cancel RSVP with eventId ${eventId}`, { error });
+      logDaoError(`Error reading event for cancel RSVP with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
 
@@ -238,7 +239,7 @@ class EventDAO {
       }
       return event.toObject();
     } catch (error) {
-      logger.error(`Error cancelling event RSVP's with eventId ${eventId}`, { error });
+      logDaoError(`Error cancelling event RSVP's with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -247,7 +248,7 @@ class EventDAO {
     try {
       return EventModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting events', { error });
+      logDaoError('Error counting events', { error });
       throw KnownCommonError(error);
     }
   }

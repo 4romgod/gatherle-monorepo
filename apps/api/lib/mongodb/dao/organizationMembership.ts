@@ -4,8 +4,7 @@ import type {
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
 } from '@gatherle/commons/types';
-import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
 class OrganizationMembershipDAO {
   static async create(input: CreateOrganizationMembershipInput): Promise<OrganizationMembership> {
@@ -13,7 +12,7 @@ class OrganizationMembershipDAO {
       const membership = await OrganizationMembershipModel.create(input);
       return membership.toObject();
     } catch (error) {
-      logger.error('Error creating organization membership', { error });
+      logDaoError('Error creating organization membership', { error });
       throw KnownCommonError(error);
     }
   }
@@ -24,7 +23,7 @@ class OrganizationMembershipDAO {
       const query = OrganizationMembershipModel.findOne({ membershipId });
       membership = await query.exec();
     } catch (error) {
-      logger.error(`Error reading membership ${membershipId}`, { error });
+      logDaoError(`Error reading membership ${membershipId}`, { error });
       throw KnownCommonError(error);
     }
     if (!membership) {
@@ -38,7 +37,7 @@ class OrganizationMembershipDAO {
       const memberships = await OrganizationMembershipModel.find({ orgId }).exec();
       return memberships.map((membership) => membership.toObject());
     } catch (error) {
-      logger.error(`Error reading memberships for org ${orgId}`, { error });
+      logDaoError(`Error reading memberships for org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -48,7 +47,7 @@ class OrganizationMembershipDAO {
       const memberships = await OrganizationMembershipModel.find({ userId }).exec();
       return memberships.map((membership) => membership.toObject());
     } catch (error) {
-      logger.error(`Error reading memberships for user ${userId}`, { error });
+      logDaoError(`Error reading memberships for user ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -58,7 +57,7 @@ class OrganizationMembershipDAO {
       const membership = await OrganizationMembershipModel.findOne({ orgId, userId }).exec();
       return membership ? membership.toObject() : null;
     } catch (error) {
-      logger.error(`Error reading membership for user ${userId} in org ${orgId}`, { error });
+      logDaoError(`Error reading membership for user ${userId} in org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -69,7 +68,7 @@ class OrganizationMembershipDAO {
     try {
       membership = await OrganizationMembershipModel.findOne({ membershipId }).exec();
     } catch (error) {
-      logger.error(`Error finding membership for update ${membershipId}`, { error });
+      logDaoError(`Error finding membership for update ${membershipId}`, { error });
       throw KnownCommonError(error);
     }
     if (!membership) {
@@ -83,7 +82,7 @@ class OrganizationMembershipDAO {
       await membership.save();
       return membership.toObject();
     } catch (error) {
-      logger.error(`Error updating membership ${membershipId}`, { error });
+      logDaoError(`Error updating membership ${membershipId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -93,7 +92,7 @@ class OrganizationMembershipDAO {
     try {
       deletedMembership = await OrganizationMembershipModel.findOneAndDelete({ membershipId }).exec();
     } catch (error) {
-      logger.error(`Error deleting membership ${membershipId}`, { error });
+      logDaoError(`Error deleting membership ${membershipId}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedMembership) {

@@ -1,8 +1,7 @@
 import type { Follow as FollowEntity, CreateFollowInput } from '@gatherle/commons/types';
 import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
 import { Follow as FollowModel } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
 class FollowDAO {
   static async upsert(
@@ -33,7 +32,7 @@ class FollowDAO {
 
       return follow.toObject();
     } catch (error) {
-      logger.error('Error upserting follow', { error });
+      logDaoError('Error upserting follow', { error });
       throw KnownCommonError(error);
     }
   }
@@ -47,7 +46,7 @@ class FollowDAO {
     try {
       follow = await FollowModel.findOne({ followId }).exec();
     } catch (error) {
-      logger.error('Error finding follow for approval status update', { error });
+      logDaoError('Error finding follow for approval status update', { error });
       throw KnownCommonError(error);
     }
 
@@ -64,7 +63,7 @@ class FollowDAO {
       await follow.save();
       return follow.toObject();
     } catch (error) {
-      logger.error('Error updating approval status', { error });
+      logDaoError('Error updating approval status', { error });
       throw KnownCommonError(error);
     }
   }
@@ -80,7 +79,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading pending follows', { error });
+      logDaoError('Error reading pending follows', { error });
       throw KnownCommonError(error);
     }
   }
@@ -95,7 +94,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading follow requests', { error });
+      logDaoError('Error reading follow requests', { error });
       throw KnownCommonError(error);
     }
   }
@@ -105,7 +104,7 @@ class FollowDAO {
       const follows = await FollowModel.find({ followerUserId }).sort({ createdAt: -1 }).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading following list', { error });
+      logDaoError('Error reading following list', { error });
       throw KnownCommonError(error);
     }
   }
@@ -121,7 +120,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading followers', { error });
+      logDaoError('Error reading followers', { error });
       throw KnownCommonError(error);
     }
   }
@@ -134,7 +133,7 @@ class FollowDAO {
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
     } catch (error) {
-      logger.error('Error counting followers', { error });
+      logDaoError('Error counting followers', { error });
       throw KnownCommonError(error);
     }
   }
@@ -153,7 +152,7 @@ class FollowDAO {
       }).exec();
       return follow !== null;
     } catch (error) {
-      logger.error('Error checking follow status', { error });
+      logDaoError('Error checking follow status', { error });
       throw KnownCommonError(error);
     }
   }
@@ -177,7 +176,7 @@ class FollowDAO {
     try {
       removed = await FollowModel.findOneAndDelete(params).exec();
     } catch (error) {
-      logger.error('Error removing follow', { error });
+      logDaoError('Error removing follow', { error });
       throw KnownCommonError(error);
     }
     if (!removed) {
@@ -210,7 +209,7 @@ class FollowDAO {
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
     } catch (error) {
-      logger.error('Error removing follower', { error });
+      logDaoError('Error removing follower', { error });
       throw KnownCommonError(error);
     }
 
@@ -241,7 +240,7 @@ class FollowDAO {
         .exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
-      logger.error('Error reading saved events for user', { error });
+      logDaoError('Error reading saved events for user', { error });
       throw KnownCommonError(error);
     }
   }
@@ -259,7 +258,7 @@ class FollowDAO {
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
     } catch (error) {
-      logger.error('Error counting saves for event', { error });
+      logDaoError('Error counting saves for event', { error });
       throw KnownCommonError(error);
     }
   }
@@ -280,7 +279,7 @@ class FollowDAO {
       }).exec();
       return follow !== null;
     } catch (error) {
-      logger.error('Error checking if event is saved', { error });
+      logDaoError('Error checking if event is saved', { error });
       throw KnownCommonError(error);
     }
   }

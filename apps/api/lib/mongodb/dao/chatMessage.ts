@@ -4,8 +4,7 @@ import type {
   ChatMessageConnection,
 } from '@gatherle/commons/types';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
-import { KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { KnownCommonError, logDaoError } from '@/utils';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -43,7 +42,7 @@ class ChatMessageDAO {
 
       return toChatMessageEntity(chatMessage.toObject());
     } catch (error) {
-      logger.error('Error creating chat message', {
+      logDaoError('Error creating chat message', {
         error,
         senderUserId: input.senderUserId,
         recipientUserId: input.recipientUserId,
@@ -81,7 +80,7 @@ class ChatMessageDAO {
         count: results.length,
       };
     } catch (error) {
-      logger.error('Error reading chat conversation', {
+      logDaoError('Error reading chat conversation', {
         error,
         currentUserId,
         withUserId,
@@ -99,7 +98,7 @@ class ChatMessageDAO {
         isRead: { $ne: true },
       }).exec();
     } catch (error) {
-      logger.error('Error counting unread chat messages for conversation', {
+      logDaoError('Error counting unread chat messages for conversation', {
         error,
         currentUserId,
         withUserId,
@@ -115,7 +114,7 @@ class ChatMessageDAO {
         isRead: { $ne: true },
       }).exec();
     } catch (error) {
-      logger.error('Error counting total unread chat messages', {
+      logDaoError('Error counting total unread chat messages', {
         error,
         currentUserId,
       });
@@ -133,7 +132,7 @@ class ChatMessageDAO {
 
       return latest ? toChatMessageEntity(latest.toObject()) : null;
     } catch (error) {
-      logger.error('Error reading latest chat message in conversation', {
+      logDaoError('Error reading latest chat message in conversation', {
         error,
         currentUserId,
         withUserId,
@@ -196,7 +195,7 @@ class ChatMessageDAO {
         updatedAt: row.updatedAt,
       }));
     } catch (error) {
-      logger.error('Error reading chat conversations', {
+      logDaoError('Error reading chat conversations', {
         error,
         currentUserId,
         limit: boundedLimit,
@@ -223,7 +222,7 @@ class ChatMessageDAO {
 
       return result.modifiedCount;
     } catch (error) {
-      logger.error('Error marking chat conversation as read', {
+      logDaoError('Error marking chat conversation as read', {
         error,
         currentUserId,
         withUserId,

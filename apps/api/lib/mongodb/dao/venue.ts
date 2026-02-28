@@ -1,9 +1,8 @@
 import { kebabCase } from 'lodash';
 import { Venue as VenueModel } from '@/mongodb/models';
 import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/types';
-import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 import { GraphQLError } from 'graphql';
-import { logger } from '@/utils/logger';
 
 const buildVenueSlug = (venue: Partial<Venue>) => {
   const fallbackSource = venue.name ?? venue.venueId ?? 'venue';
@@ -22,7 +21,7 @@ class VenueDAO {
       const venue = await VenueModel.create(input);
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error('Error creating venue', { error });
+      logDaoError('Error creating venue', { error });
       throw KnownCommonError(error);
     }
   }
@@ -36,7 +35,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error reading venue ${venueId}`, { error });
+      logDaoError(`Error reading venue ${venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -53,7 +52,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error reading venue slug ${slug}`, { error });
+      logDaoError(`Error reading venue slug ${slug}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -67,7 +66,7 @@ class VenueDAO {
       const venues = await query.exec();
       return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
-      logger.error('Error reading venues', { error });
+      logDaoError('Error reading venues', { error });
       throw KnownCommonError(error);
     }
   }
@@ -77,7 +76,7 @@ class VenueDAO {
       const venues = await VenueModel.find({ orgId }).exec();
       return venues.map((venue) => ensureVenueSlug(venue.toObject()));
     } catch (error) {
-      logger.error(`Error reading venues for org ${orgId}`, { error });
+      logDaoError(`Error reading venues for org ${orgId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -97,7 +96,7 @@ class VenueDAO {
 
       return ensureVenueSlug(venue.toObject());
     } catch (error) {
-      logger.error(`Error updating venue ${input.venueId}`, { error });
+      logDaoError(`Error updating venue ${input.venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -113,7 +112,7 @@ class VenueDAO {
       }
       return ensureVenueSlug(deletedVenue.toObject());
     } catch (error) {
-      logger.error(`Error deleting venue ${venueId}`, { error });
+      logDaoError(`Error deleting venue ${venueId}`, { error });
       if (error instanceof GraphQLError) {
         throw error;
       }

@@ -5,9 +5,19 @@ import {
   ErrorTypes,
   duplicateFieldMessage,
   extractValidationErrorMessage,
+  logDaoError,
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { GraphQLError } from 'graphql';
+import { logger } from '@/utils/logger';
+
+jest.mock('@/utils/logger', () => ({
+  ...jest.requireActual('@/utils/logger'),
+  logger: {
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
 
 describe('exceptions', () => {
   describe('CustomError', () => {
@@ -243,6 +253,150 @@ describe('exceptions', () => {
       const error = { name: 'SomeError' };
       const result = extractValidationErrorMessage(error, 'Event validation failed');
       expect(result).toBe('Event validation failed');
+    });
+  });
+
+  describe('logDaoError', () => {
+    const mockWarn = logger.warn as jest.Mock;
+    const mockError = logger.error as jest.Mock;
+
+    beforeEach(() => {
+      mockWarn.mockClear();
+      mockError.mockClear();
+    });
+
+    describe('routes to logger.warn for expected client errors', () => {
+      it('logs at warn level for a NOT_FOUND GraphQLError', () => {
+        const error = new GraphQLError('Not found', { extensions: { code: 'NOT_FOUND' } });
+        logDaoError('resource missing', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockWarn).toHaveBeenCalledWith('resource missing', { error });
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a BAD_USER_INPUT GraphQLError', () => {
+        const error = new GraphQLError('bad input', { extensions: { code: 'BAD_USER_INPUT' } });
+        logDaoError('validation failed', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a BAD_REQUEST GraphQLError', () => {
+        const error = new GraphQLError('bad request', { extensions: { code: 'BAD_REQUEST' } });
+        logDaoError('bad request', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a CONFLICT GraphQLError', () => {
+        const error = new GraphQLError('conflict', { extensions: { code: 'CONFLICT' } });
+        logDaoError('conflict', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for an UNAUTHENTICATED GraphQLError', () => {
+        const error = new GraphQLError('unauthenticated', { extensions: { code: 'UNAUTHENTICATED' } });
+        logDaoError('unauthenticated', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for an UNAUTHORIZED GraphQLError', () => {
+        const error = new GraphQLError('unauthorized', { extensions: { code: 'UNAUTHORIZED' } });
+        logDaoError('unauthorized', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a MongoDB duplicate-key error (code 11000)', () => {
+        const error = { code: 11000, keyValue: { email: 'test@example.com' } };
+        logDaoError('duplicate key', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a MongoDB duplicate-key error (code 11001)', () => {
+        const error = { code: 11001 };
+        logDaoError('duplicate key', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a MongoDB content-too-large error (code 10334)', () => {
+        const error = { code: 10334 };
+        logDaoError('content too large', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a Mongoose ValidationError', () => {
+        const error = {
+          name: 'ValidationError',
+          message: 'validation failed',
+          errors: { email: { message: 'Email is required' } },
+        };
+        logDaoError('mongoose validation', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+
+      it('logs at warn level for a Mongoose ValidatorError', () => {
+        const error = { name: 'ValidatorError', message: 'Path is required' };
+        logDaoError('mongoose validator', { error });
+        expect(mockWarn).toHaveBeenCalledTimes(1);
+        expect(mockError).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('routes to logger.error for unexpected server errors', () => {
+      it('logs at error level for a generic Error', () => {
+        const error = new Error('connection timed out');
+        logDaoError('db failure', { error });
+        expect(mockError).toHaveBeenCalledTimes(1);
+        expect(mockError).toHaveBeenCalledWith('db failure', { error });
+        expect(mockWarn).not.toHaveBeenCalled();
+      });
+
+      it('logs at error level for an unknown object error', () => {
+        const error = { code: 99999, message: 'unknown' };
+        logDaoError('unknown failure', { error });
+        expect(mockError).toHaveBeenCalledTimes(1);
+        expect(mockWarn).not.toHaveBeenCalled();
+      });
+
+      it('logs at error level for a GraphQLError with an INTERNAL_SERVER_ERROR code', () => {
+        const error = new GraphQLError('internal', { extensions: { code: 'INTERNAL_SERVER_ERROR' } });
+        logDaoError('internal error', { error });
+        expect(mockError).toHaveBeenCalledTimes(1);
+        expect(mockWarn).not.toHaveBeenCalled();
+      });
+
+      it('logs at error level when error is null', () => {
+        logDaoError('null error', { error: null });
+        expect(mockError).toHaveBeenCalledTimes(1);
+        expect(mockWarn).not.toHaveBeenCalled();
+      });
+
+      it('logs at error level when error is undefined', () => {
+        logDaoError('no error object', {});
+        expect(mockError).toHaveBeenCalledTimes(1);
+        expect(mockWarn).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('passes context through to the logger', () => {
+      it('includes all extra context fields in the warn call', () => {
+        const error = new GraphQLError('not found', { extensions: { code: 'NOT_FOUND' } });
+        logDaoError('read failed', { error, userId: 'u-123', eventId: 'e-456' });
+        expect(mockWarn).toHaveBeenCalledWith('read failed', { error, userId: 'u-123', eventId: 'e-456' });
+      });
+
+      it('includes all extra context fields in the error call', () => {
+        const error = new Error('timeout');
+        logDaoError('db timeout', { error, connectionId: 'c-789' });
+        expect(mockError).toHaveBeenCalledWith('db timeout', { error, connectionId: 'c-789' });
+      });
     });
   });
 });
