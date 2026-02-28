@@ -16,6 +16,7 @@ const BaseEnvSchema = z.object({
   STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.BETA),
   SECRET_ARN: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
+  CORS_ALLOWED_ORIGINS: z.string().optional(),
   LOG_LEVEL: z
     .string()
     .toLowerCase()
@@ -102,6 +103,7 @@ export function validateEnv(): void {
   console.log(`  - JWT Secret: ${env.JWT_SECRET ? '***configured***' : 'not set'}`);
   console.log(`  - Secrets ARN: ${env.SECRET_ARN || 'not set'}`);
   console.log(`  - S3 Bucket: ${env.S3_BUCKET_NAME || 'not set'}`);
+  console.log(`  - Extra CORS Origins: ${env.CORS_ALLOWED_ORIGINS || 'not set'}`);
 }
 
 export const AWS_REGION = env.AWS_REGION;
@@ -110,4 +112,5 @@ export const MONGO_DB_URL = env.MONGO_DB_URL;
 export const JWT_SECRET = env.JWT_SECRET;
 export const SECRET_ARN = env.SECRET_ARN;
 export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
+export const CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
 export const LOG_LEVEL = env.LOG_LEVEL;

@@ -37,6 +37,8 @@ The following commands work without any environment variables:
     from vanishing on reconnects. Without a database name, Mongoose defaults to the "test" database.
   - `JWT_SECRET` (used directly from the file).
   - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
+  - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins only; use this for preview domains or
+    non-default local origins. `*` is rejected).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
@@ -55,6 +57,8 @@ The following commands work without any environment variables:
     `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}`; the ARN is passed verbatim).
   - `AWS_REGION` (should align with where the stack is deployed).
   - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
+  - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins merged with the stage-default webapp
+    allowlist. `*` is rejected).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
 ### E2E tests

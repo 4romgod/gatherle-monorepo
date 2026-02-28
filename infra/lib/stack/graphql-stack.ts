@@ -91,6 +91,7 @@ export class GraphQLStack extends Stack {
         STAGE: props.applicationStage,
         SECRET_ARN: gatherleSecret.secretArn,
         S3_BUCKET_NAME: props.s3BucketName || '',
+        CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
         NODE_OPTIONS: '--enable-source-maps',
       },
       logGroup: this.graphqlLambdaLogGroup,

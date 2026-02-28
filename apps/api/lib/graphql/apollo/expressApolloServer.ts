@@ -1,4 +1,3 @@
-import cors from 'cors';
 import type { Express } from 'express';
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -20,6 +19,7 @@ import type { Server } from 'http';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
+import { createCorsMiddleware } from './cors';
 
 const DEV_PORT = 9000;
 
@@ -50,7 +50,7 @@ export const startExpressApolloServer = async (listenOptions: ListenOptions = { 
   logger.info('Adding express middleware to apollo server...');
   expressApp.use(
     GRAPHQL_API_PATH,
-    cors<cors.CorsRequest>(),
+    createCorsMiddleware(),
     express.json(),
     expressMiddleware(apolloServer, {
       context: async ({ req, res }) => {

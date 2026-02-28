@@ -15,14 +15,7 @@ import {
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
-
-// TODO Consider restricting the allowed origins to specific domains or implementing dynamic origin validation based on environment configuration.
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Max-Age': '86400',
-};
+import { createCorsHeaders, isOriginAllowed } from './cors';
 
 // Module-level variables for connection reuse across Lambda invocations
 let cachedServer: Awaited<ReturnType<typeof createApolloServer>> | null = null;
@@ -103,6 +96,8 @@ export const graphqlLambdaHandler = async (
   event: APIGatewayProxyEvent,
   context: Context,
 ): Promise<APIGatewayProxyResult> => {
+  const requestOrigin = event.headers.origin ?? event.headers.Origin;
+
   // Set request ID for all logs in this invocation
   const requestId = context.awsRequestId;
   logger.setRequestId(requestId);
@@ -119,10 +114,22 @@ export const graphqlLambdaHandler = async (
     // Handle CORS preflight OPTIONS request
     if (event.httpMethod === 'OPTIONS') {
       logger.info('Handling OPTIONS preflight request');
+      if (requestOrigin && !isOriginAllowed(requestOrigin)) {
+        logger.warn('Rejected CORS preflight request from disallowed origin', { requestOrigin });
+        return {
+          statusCode: 403,
+          body: JSON.stringify({ error: 'Origin is not allowed' }),
+          headers: {
+            'Content-Type': 'application/json',
+            ...createCorsHeaders(requestOrigin),
+          },
+        };
+      }
+
       return {
         statusCode: 204,
         body: '',
-        headers: CORS_HEADERS,
+        headers: createCorsHeaders(requestOrigin),
       };
     }
 
@@ -147,7 +154,7 @@ export const graphqlLambdaHandler = async (
         body: JSON.stringify({ error: 'No response from handler' }),
         headers: {
           'Content-Type': 'application/json',
-          ...CORS_HEADERS,
+          ...createCorsHeaders(requestOrigin),
         },
       };
     }
@@ -157,7 +164,7 @@ export const graphqlLambdaHandler = async (
       ...result,
       headers: {
         ...(result.headers || {}),
-        ...CORS_HEADERS,
+        ...createCorsHeaders(requestOrigin),
       },
     };
   } catch (error) {
@@ -167,7 +174,7 @@ export const graphqlLambdaHandler = async (
       body: JSON.stringify({ error: 'Internal server error' }),
       headers: {
         'Content-Type': 'application/json',
-        ...CORS_HEADERS,
+        ...createCorsHeaders(requestOrigin),
       },
     };
   } finally {

@@ -1,7 +1,7 @@
 import { RemovalPolicy, Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Bucket, BucketEncryption, BlockPublicAccess, ObjectOwnership, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES, buildAllowedCorsOrigins } from '@gatherle/commons';
 import { buildTargetSuffix } from '../utils/naming';
 
 export interface S3BucketStackProps extends StackProps {
@@ -17,6 +17,7 @@ export class S3BucketStack extends Stack {
 
     const stage = props.applicationStage;
     const targetSuffix = buildTargetSuffix(stage, props.awsRegion);
+    const allowedCorsOrigins = buildAllowedCorsOrigins(stage, process.env.CORS_ALLOWED_ORIGINS);
 
     this.imagesBucket = new Bucket(this, 'GatherleImagesBucket', {
       bucketName: `gatherle-images-${targetSuffix}`,
@@ -37,7 +38,7 @@ export class S3BucketStack extends Stack {
             HttpMethods.DELETE,
             HttpMethods.HEAD,
           ] as any,
-          allowedOrigins: ['*'], // TODO: Restrict to your domain in production
+          allowedOrigins: allowedCorsOrigins,
           allowedHeaders: ['*'],
           exposedHeaders: ['ETag'],
           maxAge: 3000,
