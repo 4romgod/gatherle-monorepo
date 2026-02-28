@@ -3,21 +3,8 @@ import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
+import { Avatar, Box, Button, Card, CardContent, Container, Divider, Grid, Stack, Typography } from '@mui/material';
 import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Divider,
-  Grid,
-  Stack,
-  Typography,
-} from '@mui/material';
-import {
-  Badge as BadgeIcon,
   Cake as CakeIcon,
   Email as EmailIcon,
   Event as EventIcon,
@@ -224,7 +211,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 4 } }}>
       <Container maxWidth="lg">
         <Stack spacing={SPACING.relaxed}>
           <Card
@@ -266,7 +253,15 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                 </Box>
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                    }}
+                  >
                     <Box>
                       <Typography
                         variant="h3"
@@ -283,13 +278,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                         <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
                           @{user.username}
                         </Typography>
-                        <Chip
-                          icon={<BadgeIcon />}
-                          label={user.userRole}
-                          size="small"
-                          color="primary"
-                          sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'capitalize' }}
-                        />
                       </Stack>
                     </Box>
                     {isOwnProfile ? (
@@ -346,7 +334,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
             <Box sx={detailBlurSx}>
               <Grid container spacing={SPACING.standard}>
                 {/* ── Sidebar ── */}
-                <Grid size={{ xs: 12, md: 4 }}>
+                <Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 2, md: 1 } }}>
                   <Box sx={{ position: { md: 'sticky' }, top: 24 }}>
                     <Stack spacing={SPACING.standard}>
                       {/* Personal Information */}
@@ -411,7 +399,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                 </Grid>
 
                 {/* ── Main content: tabbed events ── */}
-                <Grid size={{ xs: 12, md: 8 }}>
+                <Grid size={{ xs: 12, md: 8 }} sx={{ order: { xs: 1, md: 2 } }}>
                   <ProfileEventsTabs
                     organizedEvents={organizedEvents}
                     rsvpdEvents={rsvpdEvents}

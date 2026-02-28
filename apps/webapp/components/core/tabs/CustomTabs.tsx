@@ -1,7 +1,7 @@
 'use client';
 
 import { SyntheticEvent, useMemo } from 'react';
-import { Tabs, Tab, Box, Typography, Card, useTheme, useMediaQuery } from '@mui/material';
+import { Tabs, Tab, Box, Tooltip, Typography, Card, useTheme, useMediaQuery } from '@mui/material';
 import { CustomTabPanel } from './CustomTabsPanel';
 import { StorageType, usePersistentState } from '@/hooks/usePersistentState';
 
@@ -58,6 +58,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
   });
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const isXsScreen = useMediaQuery(theme.breakpoints.only('xs'));
 
   // Use default value during SSR and initial render to prevent hydration mismatch
   const displayValue = isHydrated ? value : defaultTab;
@@ -82,6 +83,20 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
       onTabChange(newValue);
     }
   };
+
+  const isCompactHorizontal = isXsScreen && effectiveOrientation === 'horizontal';
+  const isRegularHorizontal = !isXsScreen && effectiveOrientation === 'horizontal';
+
+  function getTabPx(): number {
+    return isCompactHorizontal ? 1.5 : 2;
+  }
+
+  function getTabMinWidth(): number | 'auto' | undefined {
+    if (isCompactHorizontal) return 44;
+    if (isRegularHorizontal) return 'auto';
+    if (isSmallScreen) return 'auto';
+    return undefined;
+  }
 
   return (
     <Box
@@ -116,6 +131,17 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         {tabsTitle && !isSmallScreen && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mt: 0.5 }}>
+              {tabsTitle}
+            </Typography>
+          </Box>
+        )}
+        {tabsTitle && isSmallScreen && (
+          <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}
+            >
               {tabsTitle}
             </Typography>
           </Box>
@@ -193,25 +219,39 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
               id={`${id}-tab-${index}`}
               aria-controls={`${id}-panel-${index}`}
               label={
-                <span
-                  style={{
-                    textTransform: 'none',
-                    fontSize: effectiveOrientation === 'horizontal' ? '0.75rem' : '0.875rem',
-                    lineHeight: 1.2,
-                    whiteSpace: effectiveOrientation === 'horizontal' ? 'nowrap' : 'normal',
-                  }}
-                >
-                  {name}
-                </span>
+                // Icon-only on xs with horizontal orientation — saves space when many tabs
+                isCompactHorizontal ? undefined : (
+                  <span
+                    style={{
+                      textTransform: 'none',
+                      fontSize: effectiveOrientation === 'horizontal' ? '0.75rem' : '0.875rem',
+                      lineHeight: 1.2,
+                      whiteSpace: effectiveOrientation === 'horizontal' ? 'nowrap' : 'normal',
+                    }}
+                  >
+                    {name}
+                  </span>
+                )
               }
-              icon={icon}
+              icon={
+                isCompactHorizontal ? (
+                  // Wrap in Tooltip for accessibility when label is hidden
+                  <Tooltip title={name} placement="top">
+                    <span style={{ display: 'flex' }}>{icon}</span>
+                  </Tooltip>
+                ) : (
+                  icon
+                )
+              }
               iconPosition={effectiveOrientation === 'horizontal' ? 'top' : 'start'}
+              // Provide an accessible name when the visible label is hidden (icon-only compact mode)
+              aria-label={isCompactHorizontal ? name : undefined}
               disabled={disabled}
               sx={{
                 opacity: disabled ? 0.5 : 1,
-                px: effectiveOrientation === 'horizontal' ? 2 : 2,
+                px: getTabPx(),
                 py: effectiveOrientation === 'vertical' ? 1.5 : undefined,
-                minWidth: effectiveOrientation === 'horizontal' ? 'auto' : isSmallScreen ? 'auto' : undefined,
+                minWidth: getTabMinWidth(),
                 flexShrink: effectiveOrientation === 'horizontal' ? 0 : 1,
               }}
             />
@@ -231,6 +271,27 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
           minHeight: { xs: 'auto', md: '100vh' },
         }}
       >
+        {/* Mobile active tab title */}
+        {isSmallScreen && tabs[displayValue] && (
+          <Box
+            sx={{
+              px: 3,
+              pt: 2.5,
+              pb: 1,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={700} color="primary.main">
+              {tabs[displayValue].name}
+            </Typography>
+            {tabs[displayValue].description && (
+              <Typography variant="caption" color="text.secondary">
+                {tabs[displayValue].description}
+              </Typography>
+            )}
+          </Box>
+        )}
         {tabPanels}
       </Card>
     </Box>

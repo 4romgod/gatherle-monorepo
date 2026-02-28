@@ -32,9 +32,12 @@ export default function NavLinksList({ variant = 'toolbar' }: Props) {
     );
   }
 
+  // Events is already in the mobile bottom nav, so exclude it from the drawer to avoid duplication.
+  const drawerLinks = NAV_LINKS.filter((link) => link.label !== 'Events');
+
   return (
     <List>
-      {NAV_LINKS.map((link) => (
+      {drawerLinks.map((link) => (
         <Link key={link.label} href={link.href}>
           <ListItem disablePadding>
             <ListItemButton>

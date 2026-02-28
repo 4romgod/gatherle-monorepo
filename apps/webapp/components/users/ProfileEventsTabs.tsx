@@ -36,7 +36,6 @@ export default function ProfileEventsTabs({
   emptyCreatedCta,
 }: ProfileEventsTabsProps) {
   const [activeTab, setActiveTab] = useState(0);
-
   const defaultEmptyCreatedCta = emptyCreatedCta ?? (
     <Button
       variant="contained"

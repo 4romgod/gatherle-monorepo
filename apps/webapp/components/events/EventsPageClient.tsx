@@ -20,6 +20,7 @@ import EventsSidebar, { PlatformStats } from '@/components/events/EventsSidebar'
 import ActiveFiltersPills from '@/components/events/filters/ActiveFiltersPills';
 import EventsList from '@/components/events/filters/EventsList';
 import { CategoryMenu, DateMenu, LocationMenu, StatusMenu } from '@/components/events/filters/FilterMenus';
+import EventFiltersBottomSheet from '@/components/events/filters/EventFiltersBottomSheet';
 import { EventFilterProvider, initialFilters } from '@/components/events/filters/EventFilterContext';
 import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
@@ -233,6 +234,13 @@ function EventsContent({
   const statuses = Object.values(EventStatus);
   const dateOptions = Object.values(DATE_FILTER_OPTIONS);
 
+  // Count active filters for bottom sheet badge
+  const activeFilterCount =
+    filters.categories.length +
+    filters.statuses.length +
+    (filters.dateRange?.filterOption ? 1 : 0) +
+    (hasLocation ? 1 : 0);
+
   function getDateRangeForOption(option: string) {
     const today = dayjs().startOf('day');
     switch (option) {
@@ -260,7 +268,12 @@ function EventsContent({
           <Box mb={4}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
               <Box>
-                <Typography variant="h3" fontWeight={700} className="glow-text" sx={{ mb: 1 }}>
+                <Typography
+                  variant="h3"
+                  fontWeight={700}
+                  className="glow-text"
+                  sx={{ mb: 1, fontSize: { xs: '1.75rem', md: '2.5rem' } }}
+                >
                   Discover Events
                 </Typography>
               </Box>
@@ -269,8 +282,68 @@ function EventsContent({
             <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />
           </Box>
 
+          {/* Mobile filter sheet trigger (xs/sm only) */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 1, mb: 2, alignItems: 'center' }}>
+            <EventFiltersBottomSheet
+              categories={categories}
+              statuses={statuses}
+              dateOptions={dateOptions}
+              selectedCategories={filters.categories}
+              selectedStatuses={filters.statuses}
+              selectedDateOption={filters.dateRange?.filterOption || null}
+              selectedLocation={filters.location}
+              onToggleCategory={(category) => {
+                if (filters.categories.includes(category)) {
+                  setCategories(filters.categories.filter((c) => c !== category));
+                } else {
+                  setCategories([...filters.categories, category]);
+                }
+              }}
+              onToggleStatus={(status) => {
+                if (filters.statuses.includes(status)) {
+                  setStatuses(filters.statuses.filter((s) => s !== status));
+                } else {
+                  setStatuses([...filters.statuses, status]);
+                }
+              }}
+              onChangeDateOption={(option) => {
+                if (option === DATE_FILTER_OPTIONS.CUSTOM) {
+                  setDateRange(null, null, option);
+                } else {
+                  const { start, end, filterOption } = getDateRangeForOption(option);
+                  setDateRange(start, end, filterOption);
+                }
+              }}
+              onCustomDateChange={(date) => {
+                if (date) {
+                  setDateRange(date, date, DATE_FILTER_OPTIONS.CUSTOM);
+                } else {
+                  setDateRange(null, null, DATE_FILTER_OPTIONS.CUSTOM);
+                }
+              }}
+              onApplyLocation={setLocation}
+              onClearLocation={clearLocation}
+              onClearAll={clearAllFilters}
+              activeFilterCount={activeFilterCount}
+            />
+            {hasActiveFilters && (
+              <Button
+                size="small"
+                onClick={clearAllFilters}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  color: 'text.secondary',
+                }}
+              >
+                Clear all
+              </Button>
+            )}
+          </Box>
+
           {hasActiveFilters && (
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, display: { xs: 'none', md: 'block' } }}>
               <Button
                 onClick={clearAllFilters}
                 sx={(theme) => ({
@@ -293,22 +366,15 @@ function EventsContent({
             </Box>
           )}
 
+          {/* Desktop filter pills (md+) */}
           <Box
             sx={{
-              display: 'flex',
+              display: { xs: 'none', md: 'flex' },
               flexDirection: 'row',
+              flexWrap: 'wrap',
               gap: 2,
-              overflowX: 'auto',
               pb: 1,
               mb: 2,
-              '&::-webkit-scrollbar': { display: 'none' },
-              msOverflowStyle: 'none',
-              scrollbarWidth: 'none',
-              '@media (min-width: 900px)': {
-                overflowX: 'visible',
-                flexWrap: 'wrap',
-                gap: 2,
-              },
             }}
           >
             <CategoryMenu
@@ -399,12 +465,12 @@ function EventsContent({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, lg: 4 }} sx={{ display: { xs: 'none', lg: 'block' } }}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Box
             sx={{
-              position: 'sticky',
-              top: 80,
-              maxHeight: 'calc(100vh - 96px)',
+              position: { lg: 'sticky' },
+              top: { lg: 80 },
+              maxHeight: { lg: 'calc(100vh - 96px)' },
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
@@ -414,7 +480,7 @@ function EventsContent({
               },
               msOverflowStyle: 'none',
               scrollbarWidth: 'none',
-              overflowY: 'auto',
+              overflowY: { lg: 'auto' },
             }}
           >
             <EventsSidebar

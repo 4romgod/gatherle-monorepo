@@ -12,12 +12,14 @@ import { SessionProvider } from 'next-auth/react';
 import CustomThemeProvider from '@/components/context/providers/ThemeProvider';
 import ToastProvider from '@/components/context/providers/ToastProvider';
 import MainNavigation from '@/components/navigation/main';
+import MobileBottomNav, { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import Footer from '@/components/footer';
 import NotificationRealtimeListener from '@/components/notifications/NotificationRealtimeListener';
 import ChatRealtimeListener from '@/components/messages/ChatRealtimeListener';
 import { Box } from '@mui/material';
 import { Session } from 'next-auth';
 import { logger } from '@/lib/utils';
+import { isIndividualChatRoute } from '@/lib/constants';
 
 const TopProgressBar = dynamic(() => import('@/components/core/progress/TopProgressBar'), { ssr: false });
 
@@ -27,7 +29,7 @@ type RootLayoutProps = { children: ReactNode; session: Session | null };
 
 export default function RootLayout({ children, session }: RootLayoutProps) {
   const pathname = usePathname();
-  const isMessagesRoute = pathname?.startsWith('/account/messages') ?? false;
+  const isIndividualChatThreadRoute = isIndividualChatRoute(pathname);
 
   const isAuthN = Boolean(session?.user?.userId && session?.user?.token);
   useEffect(() => {
@@ -52,23 +54,25 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
                   <ToastProvider />
                   <TopProgressBar />
                   <MainNavigation isAuthN={isAuthN} />
+                  <MobileBottomNav />
                   <Box
                     sx={{
                       marginTop: `${NAV_HEIGHT}px`,
-                      ...(isMessagesRoute
+                      ...(isIndividualChatThreadRoute
                         ? {
                             height: `calc(100dvh - ${NAV_HEIGHT}px)`,
                             overflow: 'hidden',
                           }
                         : {
                             minHeight: '100vh',
+                            pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },
                           }),
                     }}
                   >
                     {children}
                   </Box>
-                  {!isMessagesRoute && (
-                    <Box>
+                  {!isIndividualChatThreadRoute && (
+                    <Box sx={{ pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 } }}>
                       <Footer />
                     </Box>
                   )}
