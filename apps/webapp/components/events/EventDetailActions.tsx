@@ -14,6 +14,12 @@ interface EventDetailActionsProps {
   eventUrl: string;
   isSavedByMe: boolean;
   myRsvpStatus: ParticipantStatus | null;
+  /**
+   * When true, renders in a compact bare layout without Surface card styling.
+   * Used for the mobile sticky action bar where the outer Paper already provides
+   * the visual container.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -27,6 +33,7 @@ export default function EventDetailActions({
   eventUrl,
   isSavedByMe,
   myRsvpStatus,
+  compact = false,
 }: EventDetailActionsProps) {
   // Local state for immediate UI feedback
   const [isSaved, setIsSaved] = useState(isSavedByMe);
@@ -41,6 +48,35 @@ export default function EventDetailActions({
     setRsvpStatus(myRsvpStatus);
   }, [myRsvpStatus]);
 
+  const actions = (
+    <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
+      <RsvpButton
+        eventId={eventId}
+        currentStatus={rsvpStatus}
+        size={compact ? 'medium' : 'large'}
+        showTooltip={false}
+        onRsvpChange={setRsvpStatus}
+      />
+      <SaveEventButton
+        eventId={eventId}
+        isSaved={isSaved}
+        size={compact ? 'medium' : 'large'}
+        showTooltip={false}
+        onSaveChange={setIsSaved}
+      />
+      <EventShareButton
+        eventTitle={eventTitle}
+        eventSlug={eventSlug}
+        eventUrl={eventUrl}
+        size={compact ? 'medium' : 'large'}
+      />
+    </Stack>
+  );
+
+  if (compact) {
+    return actions;
+  }
+
   return (
     <Surface
       sx={{
@@ -48,23 +84,7 @@ export default function EventDetailActions({
         borderRadius: 3,
       }}
     >
-      <Stack direction={{ xs: 'row' }} spacing={2}>
-        <RsvpButton
-          eventId={eventId}
-          currentStatus={rsvpStatus}
-          size="large"
-          showTooltip={false}
-          onRsvpChange={setRsvpStatus}
-        />
-        <SaveEventButton
-          eventId={eventId}
-          isSaved={isSaved}
-          size="large"
-          showTooltip={false}
-          onSaveChange={setIsSaved}
-        />
-        <EventShareButton eventTitle={eventTitle} eventSlug={eventSlug} eventUrl={eventUrl} size="large" />
-      </Stack>
+      {actions}
     </Surface>
   );
 }

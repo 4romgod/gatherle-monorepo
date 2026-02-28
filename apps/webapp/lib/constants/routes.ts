@@ -53,3 +53,8 @@ export const ROUTES = {
     ROOT: '/admin',
   },
 };
+
+/** Returns true when the pathname is an individual chat thread (e.g. /account/messages/alice). */
+export function isIndividualChatRoute(pathname: string | null | undefined): boolean {
+  return /^\/account\/messages\/[^/]+\/?$/.test(pathname ?? '');
+}

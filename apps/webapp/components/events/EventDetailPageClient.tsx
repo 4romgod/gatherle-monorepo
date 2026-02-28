@@ -14,6 +14,7 @@ import {
   Container,
   Divider,
   Grid,
+  Paper,
   Stack,
   Theme,
   Typography,
@@ -35,6 +36,7 @@ import {
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import EventDetailActions from '@/components/events/EventDetailActions';
 import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
@@ -165,7 +167,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   } = event;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '140px', md: 0 } }}>
       {/* Hero Section with Cover Image */}
       <Box
         sx={{
@@ -307,16 +309,84 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 >
                   {title}
                 </Typography>
-                <EventDetailActions
-                  eventId={eventId}
-                  eventTitle={title}
-                  eventSlug={slug}
-                  eventUrl={eventUrl}
-                  isSavedByMe={isSavedByMe ?? false}
-                  myRsvpStatus={myRsvp?.status ?? null}
-                />
+
+                {/* Mobile-only quick info strip — date/location immediately under title */}
+                <Box sx={{ display: { xs: 'block', md: 'none' }, mx: 2, mb: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <CalendarMonth sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
+                      <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                        {formatRecurrenceRule(recurrenceRule)}
+                      </Typography>
+                    </Stack>
+                    {location.locationType !== 'online' && (
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <LocationOn sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
+                        <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                          {formatLocationText(location)}
+                        </Typography>
+                      </Stack>
+                    )}
+                    {location.locationType === 'online' && (
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Language sx={{ fontSize: 18, color: 'success.main', flexShrink: 0 }} />
+                        <Chip label="Online Event" size="small" color="success" sx={{ fontWeight: 600 }} />
+                      </Stack>
+                    )}
+                    {goingCount > 0 && (
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Groups sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>{goingCount}</strong> going
+                          {interestedCount > 0 && ` · ${interestedCount} interested`}
+                        </Typography>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Box>
+
+                {/* Desktop actions inline in card */}
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                  <EventDetailActions
+                    eventId={eventId}
+                    eventTitle={title}
+                    eventSlug={slug}
+                    eventUrl={eventUrl}
+                    isSavedByMe={isSavedByMe ?? false}
+                    myRsvpStatus={myRsvp?.status ?? null}
+                  />
+                </Box>
               </CardContent>
             </Card>
+
+            {/* Mobile sticky action bar */}
+            <Paper
+              elevation={0}
+              sx={{
+                display: { xs: 'block', md: 'none' },
+                position: 'fixed',
+                bottom: MOBILE_BOTTOM_NAV_HEIGHT, // above the mobile bottom nav
+                left: 0,
+                right: 0,
+                zIndex: 1100,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                px: 2,
+                py: 1.5,
+                pb: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+              }}
+            >
+              <EventDetailActions
+                eventId={eventId}
+                eventTitle={title}
+                eventSlug={slug}
+                eventUrl={eventUrl}
+                isSavedByMe={isSavedByMe ?? false}
+                myRsvpStatus={myRsvp?.status ?? null}
+                compact
+              />
+            </Paper>
 
             {/* About */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>

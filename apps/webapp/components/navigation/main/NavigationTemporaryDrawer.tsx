@@ -5,7 +5,6 @@ import { useState } from 'react';
 import {
   Box,
   Button,
-  Badge,
   Divider,
   Drawer,
   IconButton,
@@ -19,11 +18,8 @@ import {
 } from '@mui/material';
 import {
   Clear,
-  Login,
   Menu,
   ControlPointOutlined,
-  MailOutline,
-  NotificationsOutlined,
   Settings,
   Security,
   Logout,
@@ -37,7 +33,7 @@ import NavLinksList from '@/components/navigation/main/NavLinksList';
 import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc, logger } from '@/lib/utils';
-import { useIsAdmin, useUnreadChatCount, useUnreadNotificationCount } from '@/hooks';
+import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
@@ -46,10 +42,6 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const apolloClient = useApolloClient();
   const isAdmin = useIsAdmin();
   const { themeMode, setThemeMode } = useAppContext();
-
-  // Unread badges are primarily websocket-driven; queries provide initial/fallback state.
-  const { unreadCount } = useUnreadNotificationCount();
-  const { unreadCount: unreadChatCount } = useUnreadChatCount();
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
@@ -105,12 +97,10 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
               Host an event
             </Button>
           </Box>
-
-          <Divider sx={{ my: 1 }} />
         </>
       )}
 
-      <Divider sx={{ color: 'primary', my: 1 }} />
+      <Divider sx={{ my: 1 }} />
 
       <NavLinksList variant="drawer" />
 
@@ -125,50 +115,6 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
                   <Business />
                 </ListItemIcon>
                 <ListItemText primary={'My Organizations'} />
-              </ListItemButton>
-            </ListItem>
-
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.MESSAGES}>
-                <ListItemIcon>
-                  <Badge
-                    badgeContent={unreadChatCount}
-                    color="error"
-                    sx={{
-                      '& .MuiBadge-badge': {
-                        fontSize: '0.65rem',
-                        height: 16,
-                        minWidth: 16,
-                        fontWeight: 700,
-                      },
-                    }}
-                  >
-                    <MailOutline />
-                  </Badge>
-                </ListItemIcon>
-                <ListItemText primary={'Messages'} />
-              </ListItemButton>
-            </ListItem>
-
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.NOTIFICATIONS}>
-                <ListItemIcon>
-                  <Badge
-                    badgeContent={unreadCount}
-                    color="error"
-                    sx={{
-                      '& .MuiBadge-badge': {
-                        fontSize: '0.65rem',
-                        height: 16,
-                        minWidth: 16,
-                        fontWeight: 700,
-                      },
-                    }}
-                  >
-                    <NotificationsOutlined />
-                  </Badge>
-                </ListItemIcon>
-                <ListItemText primary={'Notifications'} />
               </ListItemButton>
             </ListItem>
 
@@ -238,17 +184,6 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
 
       {!isAuthN && (
         <>
-          <Divider sx={{ my: 1 }} />
-
-          <ListItem disablePadding>
-            <ListItemButton component={Link} href={ROUTES.AUTH.LOGIN}>
-              <ListItemIcon>
-                <Login />
-              </ListItemIcon>
-              <ListItemText primary={'Log in'} />
-            </ListItemButton>
-          </ListItem>
-
           <Box sx={{ px: 2, pt: 1 }}>
             <Button variant="contained" color="secondary" fullWidth component={Link} href={ROUTES.AUTH.REGISTER}>
               Join Gatherle
