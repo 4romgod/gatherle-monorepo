@@ -6,8 +6,7 @@ import type {
 } from '@gatherle/commons/types';
 import { NotificationType } from '@gatherle/commons';
 import { Notification as NotificationModel } from '@/mongodb/models';
-import { KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { KnownCommonError , logDaoError } from '@/utils';
 
 export interface ReadNotificationsOptions {
   limit?: number;
@@ -29,7 +28,7 @@ class NotificationDAO {
       });
       return notification.toObject();
     } catch (error) {
-      logger.error('Error creating notification', { error });
+      logDaoError('Error creating notification', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -51,7 +50,7 @@ class NotificationDAO {
       const notifications = await NotificationModel.insertMany(notificationsData);
       return notifications.map((n) => n.toObject());
     } catch (error) {
-      logger.error('Error creating notifications in bulk', { error });
+      logDaoError('Error creating notifications in bulk', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -94,7 +93,7 @@ class NotificationDAO {
         unreadCount,
       };
     } catch (error) {
-      logger.error('Error reading notifications for user', { error });
+      logDaoError('Error reading notifications for user', { error });
       throw KnownCommonError(error);
     }
   }
@@ -109,7 +108,7 @@ class NotificationDAO {
         isRead: false,
       }).exec();
     } catch (error) {
-      logger.error('Error counting unread notifications', { error });
+      logDaoError('Error counting unread notifications', { error });
       throw KnownCommonError(error);
     }
   }
@@ -127,7 +126,7 @@ class NotificationDAO {
 
       return notification ? notification.toObject() : null;
     } catch (error) {
-      logger.error('Error marking notification as read', { error });
+      logDaoError('Error marking notification as read', { error });
       throw KnownCommonError(error);
     }
   }
@@ -143,7 +142,7 @@ class NotificationDAO {
       ).exec();
       return result.modifiedCount;
     } catch (error) {
-      logger.error('Error marking all notifications as read', { error });
+      logDaoError('Error marking all notifications as read', { error });
       throw KnownCommonError(error);
     }
   }
@@ -167,7 +166,7 @@ class NotificationDAO {
       ).exec();
       return result.modifiedCount;
     } catch (error) {
-      logger.error('Error marking follow request notifications as read', { error });
+      logDaoError('Error marking follow request notifications as read', { error });
       throw KnownCommonError(error);
     }
   }
@@ -183,7 +182,7 @@ class NotificationDAO {
       }).exec();
       return result.deletedCount > 0;
     } catch (error) {
-      logger.error('Error deleting notification', { error });
+      logDaoError('Error deleting notification', { error });
       throw KnownCommonError(error);
     }
   }
@@ -196,7 +195,7 @@ class NotificationDAO {
       const notification = await NotificationModel.findOne({ notificationId }).exec();
       return notification ? notification.toObject() : null;
     } catch (error) {
-      logger.error('Error reading notification by ID', { error });
+      logDaoError('Error reading notification by ID', { error });
       throw KnownCommonError(error);
     }
   }
@@ -208,7 +207,7 @@ class NotificationDAO {
     try {
       await NotificationModel.updateOne({ notificationId }, { emailSent: true }).exec();
     } catch (error) {
-      logger.error('Error marking email as sent', { error });
+      logDaoError('Error marking email as sent', { error });
       throw KnownCommonError(error);
     }
   }
@@ -220,7 +219,7 @@ class NotificationDAO {
     try {
       await NotificationModel.updateOne({ notificationId }, { pushSent: true }).exec();
     } catch (error) {
-      logger.error('Error marking push as sent', { error });
+      logDaoError('Error marking push as sent', { error });
       throw KnownCommonError(error);
     }
   }

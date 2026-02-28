@@ -5,8 +5,7 @@ import type {
 } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
 import { EventParticipant } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes, KnownCommonError , logDaoError } from '@/utils';
 
 class EventParticipantDAO {
   /**
@@ -19,7 +18,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find({ eventId: { $in: eventIds } }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading participants by events', { error });
+      logDaoError('Error reading participants by events', { error });
       throw KnownCommonError(error);
     }
   }
@@ -49,7 +48,7 @@ class EventParticipantDAO {
 
       return participant.toObject();
     } catch (error) {
-      logger.error('Error upserting event participant', { error });
+      logDaoError('Error upserting event participant', { error });
       throw KnownCommonError(error);
     }
   }
@@ -60,7 +59,7 @@ class EventParticipantDAO {
     try {
       participant = await EventParticipant.findOne({ eventId, userId }).exec();
     } catch (error) {
-      logger.error('Error finding event participant for cancellation', { error });
+      logDaoError('Error finding event participant for cancellation', { error });
       throw KnownCommonError(error);
     }
 
@@ -74,7 +73,7 @@ class EventParticipantDAO {
       await participant.save();
       return participant.toObject();
     } catch (error) {
-      logger.error('Error cancelling event participant', { error });
+      logDaoError('Error cancelling event participant', { error });
       throw KnownCommonError(error);
     }
   }
@@ -84,7 +83,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find({ eventId }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading participants', { error });
+      logDaoError('Error reading participants', { error });
       throw KnownCommonError(error);
     }
   }
@@ -102,7 +101,7 @@ class EventParticipantDAO {
       const participants = await EventParticipant.find(query).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
-      logger.error('Error reading user RSVPs', { error });
+      logDaoError('Error reading user RSVPs', { error });
       throw KnownCommonError(error);
     }
   }
@@ -116,7 +115,7 @@ class EventParticipantDAO {
       const participant = await EventParticipant.findOne({ eventId, userId }).exec();
       return participant ? participant.toObject() : null;
     } catch (error) {
-      logger.error('Error reading user RSVP for event', { error });
+      logDaoError('Error reading user RSVP for event', { error });
       throw KnownCommonError(error);
     }
   }
@@ -136,7 +135,7 @@ class EventParticipantDAO {
       }
       return await EventParticipant.countDocuments(query).exec();
     } catch (error) {
-      logger.error('Error counting event participants', { error });
+      logDaoError('Error counting event participants', { error });
       throw KnownCommonError(error);
     }
   }

@@ -5,8 +5,7 @@ import type {
   CreateEventCategoryInput,
   QueryOptionsInput,
 } from '@gatherle/commons/types';
-import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery } from '@/utils';
-import { logger } from '@/utils/logger';
+import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery , logDaoError } from '@/utils';
 
 class EventCategoryDAO {
   static async create(input: CreateEventCategoryInput): Promise<EventCategory> {
@@ -14,7 +13,7 @@ class EventCategoryDAO {
       const eventCategory = await EventCategoryModel.create(input);
       return eventCategory.toObject();
     } catch (error) {
-      logger.info('Error creating event category', { error });
+      logDaoError('Error creating event category', { error });
       throw KnownCommonError(error);
     }
   }
@@ -25,7 +24,7 @@ class EventCategoryDAO {
       const query = EventCategoryModel.findById(eventCategoryId);
       eventCategory = await query.exec();
     } catch (error) {
-      logger.error(`Error reading event category by eventCategoryId ${eventCategoryId}`, { error });
+      logDaoError(`Error reading event category by eventCategoryId ${eventCategoryId}`, { error });
       throw KnownCommonError(error);
     }
     if (!eventCategory) {
@@ -40,7 +39,7 @@ class EventCategoryDAO {
       const query = EventCategoryModel.findOne({ slug: slug });
       eventCategory = await query.exec();
     } catch (error) {
-      logger.error(`Error reading event category by slug ${slug}`, { error });
+      logDaoError(`Error reading event category by slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
     if (!eventCategory) {
@@ -55,7 +54,7 @@ class EventCategoryDAO {
       const eventCategories = await query.exec();
       return eventCategories.map((eventCategory) => eventCategory.toObject());
     } catch (error) {
-      logger.error('Error reading event categories:', { error });
+      logDaoError('Error reading event categories:', { error });
       throw KnownCommonError(error);
     }
   }
@@ -65,7 +64,7 @@ class EventCategoryDAO {
     try {
       eventCategory = await EventCategoryModel.findById(input.eventCategoryId).exec();
     } catch (error) {
-      logger.error(`Error finding event category for update ${input.eventCategoryId}`, { error });
+      logDaoError(`Error finding event category for update ${input.eventCategoryId}`, { error });
       throw KnownCommonError(error);
     }
     if (!eventCategory) {
@@ -79,7 +78,7 @@ class EventCategoryDAO {
       await eventCategory.save();
       return eventCategory.toObject();
     } catch (error) {
-      logger.error(`Error updating event category ${input.eventCategoryId}`, { error });
+      logDaoError(`Error updating event category ${input.eventCategoryId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -89,7 +88,7 @@ class EventCategoryDAO {
     try {
       deletedEventCategory = await EventCategoryModel.findByIdAndDelete(eventCategoryId).exec();
     } catch (error) {
-      logger.error('Error deleting event category by eventCategoryId:', { error });
+      logDaoError('Error deleting event category by eventCategoryId:', { error });
       throw KnownCommonError(error);
     }
     if (!deletedEventCategory) {
@@ -103,7 +102,7 @@ class EventCategoryDAO {
     try {
       deletedEventCategory = await EventCategoryModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
-      logger.error('Error deleting event category by slug:', { error });
+      logDaoError('Error deleting event category by slug:', { error });
       throw KnownCommonError(error);
     }
     if (!deletedEventCategory) {
@@ -116,7 +115,7 @@ class EventCategoryDAO {
     try {
       return EventCategoryModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting event categories', { error });
+      logDaoError('Error counting event categories', { error });
       throw KnownCommonError(error);
     }
   }

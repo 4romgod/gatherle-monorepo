@@ -11,7 +11,7 @@ import type {
   SessionState,
 } from '@gatherle/commons/types';
 import { FilterOperatorInput, UserRole } from '@gatherle/commons/types';
-import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
+import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery , logDaoError } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';
 import { logger } from '@/utils/logger';
@@ -24,7 +24,7 @@ class UserDAO {
       const token = await generateToken(tokenPayload);
       return { ...tokenPayload, token };
     } catch (error) {
-      logger.error('Error when creating a new user', { error });
+      logDaoError('Error when creating a new user', { error });
       throw KnownCommonError(error);
     }
   }
@@ -35,7 +35,7 @@ class UserDAO {
       const query = UserModel.findOne({ email }).select('+password');
       user = await query.exec();
     } catch (error) {
-      logger.error('Error when user logging in', { error });
+      logDaoError('Error when user logging in', { error });
       throw KnownCommonError(error);
     }
 
@@ -58,7 +58,7 @@ class UserDAO {
       const query = UserModel.findById(userId);
       user = await query.exec();
     } catch (error) {
-      logger.error(`Error reading user by userId ${userId}`, { error });
+      logDaoError(`Error reading user by userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -73,7 +73,7 @@ class UserDAO {
       const query = UserModel.findOne({ username });
       user = await query.exec();
     } catch (error) {
-      logger.error(`Error reading user by username ${username}`, { error });
+      logDaoError(`Error reading user by username ${username}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -88,7 +88,7 @@ class UserDAO {
       const query = UserModel.findOne({ email });
       user = await query.exec();
     } catch (error) {
-      logger.error(`Error reading user by email ${email}`, { error });
+      logDaoError(`Error reading user by email ${email}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -119,7 +119,7 @@ class UserDAO {
       const retrieved = await query.exec();
       return retrieved.map((user) => user.toObject());
     } catch (error) {
-      logger.error('Error querying users', { error });
+      logDaoError('Error querying users', { error });
       throw KnownCommonError(error);
     }
   }
@@ -130,7 +130,7 @@ class UserDAO {
     try {
       existingUser = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for update ${userId}`, { error });
+      logDaoError(`Error finding user for update ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!existingUser) {
@@ -146,7 +146,7 @@ class UserDAO {
       await existingUser.save();
       return existingUser.toObject();
     } catch (error) {
-      logger.error(`Error updating user with userId ${userId}`, { error });
+      logDaoError(`Error updating user with userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -157,7 +157,7 @@ class UserDAO {
       const query = UserModel.findByIdAndDelete(userId);
       deletedUser = await query.exec();
     } catch (error) {
-      logger.error(`Error deleting user with userId ${userId}`, { error });
+      logDaoError(`Error deleting user with userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedUser) {
@@ -172,7 +172,7 @@ class UserDAO {
       const query = UserModel.findOneAndDelete({ email });
       deletedUser = await query.exec();
     } catch (error) {
-      logger.error(`Error deleting user with email ${email}`, { error });
+      logDaoError(`Error deleting user with email ${email}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedUser) {
@@ -187,7 +187,7 @@ class UserDAO {
       const query = UserModel.findOneAndDelete({ username });
       deletedUser = await query.exec();
     } catch (error) {
-      logger.error(`Error deleting user with username ${username}`, { error });
+      logDaoError(`Error deleting user with username ${username}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedUser) {
@@ -201,7 +201,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for promotion ${userId}`, { error });
+      logDaoError(`Error finding user for promotion ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -213,7 +213,7 @@ class UserDAO {
       await user.save();
       return user.toObject();
     } catch (error) {
-      logger.error(`Error promoting user to Admin with userId ${userId}`, { error });
+      logDaoError(`Error promoting user to Admin with userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -231,7 +231,7 @@ class UserDAO {
         UserModel.findById(blockedUserId).exec(),
       ]);
     } catch (error) {
-      logger.error(`Error finding users for block operation`, { error });
+      logDaoError(`Error finding users for block operation`, { error });
       throw KnownCommonError(error);
     }
 
@@ -253,7 +253,7 @@ class UserDAO {
       await user.save();
       return user.toObject();
     } catch (error) {
-      logger.error(`Error blocking user ${blockedUserId} for userId ${userId}`, { error });
+      logDaoError(`Error blocking user ${blockedUserId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -263,7 +263,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for unblock ${userId}`, { error });
+      logDaoError(`Error finding user for unblock ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -277,7 +277,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unblocking user ${blockedUserId} for userId ${userId}`, { error });
+      logDaoError(`Error unblocking user ${blockedUserId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -287,7 +287,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for blocked users list ${userId}`, { error });
+      logDaoError(`Error finding user for blocked users list ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -304,7 +304,7 @@ class UserDAO {
       }).exec();
       return blockedUsers.map((u) => u.toObject());
     } catch (error) {
-      logger.error(`Error reading blocked users for userId ${userId}`, { error });
+      logDaoError(`Error reading blocked users for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -320,7 +320,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for mute ${userId}`, { error });
+      logDaoError(`Error finding user for mute ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -337,7 +337,7 @@ class UserDAO {
       await user.save();
       return user.toObject();
     } catch (error) {
-      logger.error(`Error muting user ${mutedUserId} for userId ${userId}`, { error });
+      logDaoError(`Error muting user ${mutedUserId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -347,7 +347,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for unmute ${userId}`, { error });
+      logDaoError(`Error finding user for unmute ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -361,7 +361,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unmuting user ${mutedUserId} for userId ${userId}`, { error });
+      logDaoError(`Error unmuting user ${mutedUserId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -371,7 +371,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for muted users list ${userId}`, { error });
+      logDaoError(`Error finding user for muted users list ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -388,7 +388,7 @@ class UserDAO {
       }).exec();
       return mutedUsers.map((u) => u.toObject());
     } catch (error) {
-      logger.error(`Error reading muted users for userId ${userId}`, { error });
+      logDaoError(`Error reading muted users for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -404,7 +404,7 @@ class UserDAO {
         OrganizationModel.findById(orgId).exec(),
       ]);
     } catch (error) {
-      logger.error(`Error finding entities for mute organization`, { error });
+      logDaoError(`Error finding entities for mute organization`, { error });
       throw KnownCommonError(error);
     }
 
@@ -426,7 +426,7 @@ class UserDAO {
       await user.save();
       return user.toObject();
     } catch (error) {
-      logger.error(`Error muting organization ${orgId} for userId ${userId}`, { error });
+      logDaoError(`Error muting organization ${orgId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -436,7 +436,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for unmute organization ${userId}`, { error });
+      logDaoError(`Error finding user for unmute organization ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -450,7 +450,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error unmuting organization ${orgId} for userId ${userId}`, { error });
+      logDaoError(`Error unmuting organization ${orgId} for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -460,7 +460,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for muted org IDs ${userId}`, { error });
+      logDaoError(`Error finding user for muted org IDs ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -474,7 +474,7 @@ class UserDAO {
     try {
       return UserModel.countDocuments(filter).exec();
     } catch (error) {
-      logger.error('Error counting users', { error });
+      logDaoError('Error counting users', { error });
       throw KnownCommonError(error);
     }
   }
@@ -513,7 +513,7 @@ class UserDAO {
 
       return countMap;
     } catch (error) {
-      logger.error('Error counting users by interest category IDs', { error, categoryIds });
+      logDaoError('Error counting users by interest category IDs', { error, categoryIds });
       throw KnownCommonError(error);
     }
   }
@@ -525,7 +525,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for session state save ${userId}`, { error });
+      logDaoError(`Error finding user for session state save ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -570,7 +570,7 @@ class UserDAO {
 
       return user.toObject();
     } catch (error) {
-      logger.error(`Error saving session state for userId ${userId}, key ${input.key}`, { error });
+      logDaoError(`Error saving session state for userId ${userId}, key ${input.key}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -580,7 +580,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for session state read ${userId}`, { error });
+      logDaoError(`Error finding user for session state read ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -596,7 +596,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for all session states ${userId}`, { error });
+      logDaoError(`Error finding user for all session states ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -611,7 +611,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for session state clear ${userId}`, { error });
+      logDaoError(`Error finding user for session state clear ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -626,7 +626,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error clearing session state for userId ${userId}, key ${key}`, { error });
+      logDaoError(`Error clearing session state for userId ${userId}, key ${key}`, { error });
       throw KnownCommonError(error);
     }
   }
@@ -636,7 +636,7 @@ class UserDAO {
     try {
       user = await UserModel.findById(userId).exec();
     } catch (error) {
-      logger.error(`Error finding user for clear all session states ${userId}`, { error });
+      logDaoError(`Error finding user for clear all session states ${userId}`, { error });
       throw KnownCommonError(error);
     }
     if (!user) {
@@ -651,7 +651,7 @@ class UserDAO {
       }
       return user.toObject();
     } catch (error) {
-      logger.error(`Error clearing all session states for userId ${userId}`, { error });
+      logDaoError(`Error clearing all session states for userId ${userId}`, { error });
       throw KnownCommonError(error);
     }
   }

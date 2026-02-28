@@ -4,6 +4,7 @@ import { HttpStatusCode, REGEXT_MONGO_DB_ERROR } from '@/constants';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 import { capitalize } from 'lodash';
 import { ERROR_MESSAGES } from '@/validation';
+import { logger } from '@/utils/logger';
 
 export type CustomErrorType = {
   errorCode: string;
@@ -158,5 +159,69 @@ export const duplicateFieldMessage = (mongoError: unknown) => {
     return 'An error occurred.';
   } catch (error) {
     return 'An error occurred while processing the error message.';
+  }
+};
+
+/** MongoDB error codes that represent expected client input errors */
+const KNOWN_MONGO_CLIENT_CODES = new Set([11000, 11001, 10334]);
+
+/** GraphQL error codes that represent expected client/business-logic errors */
+const CLIENT_ERROR_CODES = new Set([
+  'NOT_FOUND',
+  ApolloServerErrorCode.BAD_USER_INPUT,
+  ApolloServerErrorCode.BAD_REQUEST,
+  'CONFLICT',
+  'UNAUTHENTICATED',
+  'UNAUTHORIZED',
+]);
+
+/**
+ * Checks whether an error is an expected client/business-logic error
+ * (e.g. NOT_FOUND, duplicate key, validation failure) as opposed to an
+ * unexpected server error (e.g. connection lost, timeout).
+ */
+const isExpectedClientError = (error: unknown): boolean => {
+  // GraphQL errors with client-facing codes
+  if (error instanceof GraphQLError) {
+    const code = error.extensions?.code;
+    if (typeof code === 'string' && CLIENT_ERROR_CODES.has(code)) {
+      return true;
+    }
+  }
+
+  // MongoDB duplicate-key / content-too-large errors
+  if (error && typeof error === 'object') {
+    const { code } = error as { code?: number };
+    if (typeof code === 'number' && KNOWN_MONGO_CLIENT_CODES.has(code)) {
+      return true;
+    }
+  }
+
+  // Mongoose / Typegoose validation errors
+  if (error && typeof error === 'object') {
+    const { name } = error as { name?: string };
+    if (name === 'ValidationError' || name === 'ValidatorError') {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Smart DAO error logger that differentiates between expected client errors
+ * and unexpected server errors.
+ *
+ * - Client errors (NOT_FOUND, duplicate key, validation) → `logger.warn`
+ * - Unexpected server errors (connection failures, timeouts) → `logger.error`
+ *
+ * This prevents expected validation responses from polluting the
+ * Error Logs monitoring dashboard.
+ */
+export const logDaoError = (message: string, context: { error?: unknown; [key: string]: unknown }): void => {
+  if (isExpectedClientError(context.error)) {
+    logger.warn(message, context);
+  } else {
+    logger.error(message, context);
   }
 };

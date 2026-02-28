@@ -8,10 +8,12 @@ const config: Config = {
   testPathIgnorePatterns: ['<rootDir>/dist/', '<rootDir>/node_modules/'],
   testTimeout: 20000,
   testMatch: ['<rootDir>/test/e2e/**/*.test.[jt]s?(x)'],
-  // Run all test files in parallel — tests are I/O-bound (network calls to
-  // Lambda in CI) and each file uses a unique port locally, so high concurrency
-  // is safe and cuts CI wall-clock time from ~13 min to ~3 min.
-  maxWorkers: '100%',
+  // Use a fixed worker count matching the number of test files. Tests are
+  // I/O-bound (network calls to Lambda) so more workers than CPU cores is safe.
+  // GitHub Actions runners have only 2 cores; '100%' would limit to 2 workers
+  // and run files nearly serially (~13 min). With 9 workers, all files run in
+  // parallel and wall-clock time drops to the slowest file (~3-4 min).
+  maxWorkers: 9,
   moduleNameMapper: {
     '^@/(?!test)(.*)$': '<rootDir>/lib/$1',
     '^@/test/(.*)$': '<rootDir>/test/$1',

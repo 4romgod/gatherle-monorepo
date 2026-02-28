@@ -1,8 +1,7 @@
 import { GraphQLError } from 'graphql';
 import type { Intent as IntentEntity, UpsertIntentInput } from '@gatherle/commons/types';
 import { Intent as IntentModel } from '@/mongodb/models';
-import { KnownCommonError } from '@/utils';
-import { logger } from '@/utils/logger';
+import { KnownCommonError , logDaoError } from '@/utils';
 
 class IntentDAO {
   static async upsert(input: UpsertIntentInput & { userId: string }): Promise<IntentEntity> {
@@ -33,7 +32,7 @@ class IntentDAO {
 
       return intent.toObject();
     } catch (error) {
-      logger.error('Error upserting intent', { error });
+      logDaoError('Error upserting intent', { error });
       if (error instanceof GraphQLError) {
         throw error;
       }
@@ -46,7 +45,7 @@ class IntentDAO {
       const intents = await IntentModel.find({ userId }).sort({ updatedAt: -1 }).exec();
       return intents.map((intent) => intent.toObject());
     } catch (error) {
-      logger.error('Error reading user intents', { error });
+      logDaoError('Error reading user intents', { error });
       throw KnownCommonError(error);
     }
   }
@@ -56,7 +55,7 @@ class IntentDAO {
       const intents = await IntentModel.find({ eventId }).sort({ updatedAt: -1 }).exec();
       return intents.map((intent) => intent.toObject());
     } catch (error) {
-      logger.error('Error reading event intents', { error });
+      logDaoError('Error reading event intents', { error });
       throw KnownCommonError(error);
     }
   }
