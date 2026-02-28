@@ -1,11 +1,12 @@
 /**
  * WebSocket utility functions for realtime connections
  */
+import { APP_NAMESPACE } from '@/lib/constants/app';
 
 export const RECONNECT_BASE_MS = 1000;
 export const RECONNECT_MAX_MS = 30000;
 export const PING_INTERVAL_MS = 30000;
-export const WEBSOCKET_AUTH_PROTOCOL_PREFIX = 'gatherle.jwt.';
+export const WEBSOCKET_AUTH_PROTOCOL_PREFIX = `${APP_NAMESPACE}.jwt.`;
 
 /**
  * Normalizes a WebSocket URL by converting http(s) protocols to ws(s)

@@ -5,7 +5,7 @@ import { Box, Container, Grid, Typography, Link, Divider, Button } from '@mui/ma
 import darkModeColors from '@/components/theme/colors/DarkMode';
 import { footerSections, socialLinks } from './NavigationItems';
 import { ROUTES } from '@/lib/constants';
-import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { BUTTON_STYLES, SECTION_TITLE_STYLES, APP_NAME, COMPANY_LEGAL_NAME } from '@/lib/constants';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -28,7 +28,7 @@ const Footer = () => {
             gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
             gap: 3,
             p: { xs: 3, md: 4 },
-            borderRadius: 3,
+            borderRadius: 2,
             backgroundColor: 'background.paper',
             mb: 6,
           }}
@@ -46,7 +46,7 @@ const Footer = () => {
               GET STARTED
             </Typography>
             <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, mt: 0.5 }}>
-              Bring people together with Gatherle
+              Bring people together with {APP_NAME}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 520, mt: 1, lineHeight: 1.6 }}>
               Craft intimate gatherings, bold conferences, or community rituals with the platform built for modern
@@ -114,7 +114,7 @@ const Footer = () => {
         <Grid container spacing={2} alignItems="center" justifyContent="space-between">
           <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-              © {currentYear} Mapapa Solutions (Pty) Ltd. All rights reserved.
+              © {currentYear} {COMPANY_LEGAL_NAME}. All rights reserved.
             </Typography>
           </Grid>
 

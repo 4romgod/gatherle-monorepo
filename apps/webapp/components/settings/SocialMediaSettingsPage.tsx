@@ -1,6 +1,6 @@
 'use client';
 
-import React, { JSX, useState } from 'react';
+import { JSX, useState } from 'react';
 import {
   Box,
   Typography,
@@ -25,7 +25,7 @@ import {
   Link as LinkIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
-import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { APP_DOMAIN, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { logger } from '@/lib/utils';
 
 interface SocialAccount {
@@ -78,7 +78,7 @@ export default function SocialMediaSettingsPage() {
   ]);
 
   const [shareOnSocialMedia, setShareOnSocialMedia] = useState(true);
-  const [customLink, setCustomLink] = useState('gatherle.com/johndoe');
+  const [customLink, setCustomLink] = useState(`${APP_DOMAIN}/johndoe`);
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [tempLink, setTempLink] = useState(customLink);
 

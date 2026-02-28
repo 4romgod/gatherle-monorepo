@@ -78,12 +78,14 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
           display: 'flex',
           flexDirection: 'column',
           transition: 'all 0.25s ease-in-out',
-          borderRadius: 2,
           overflow: 'hidden',
+          borderColor: theme.palette.divider,
+          borderRadius: { xs: 1, sm: 2 },
           minHeight: 240,
-          boxShadow: theme.shadows[1],
+          boxShadow: 'none',
           '&:hover': {
             boxShadow: theme.shadows[4],
+            borderColor: theme.palette.primary.main,
           },
         })}
       >

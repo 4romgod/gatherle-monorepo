@@ -8,6 +8,7 @@ import { GetAllOrganizationsDocument } from '@/data/graphql/query';
 import OrganizationCard from '@/components/organization/organizationBox';
 import OrganizationBoxSkeleton from '@/components/organization/organizationBox/OrganizationBoxSkeleton';
 import SearchBox from '@/components/search/SearchBox';
+import { APP_NAME } from '@/lib/constants';
 
 const SKELETON_COUNT = 8;
 
@@ -74,7 +75,7 @@ export default function OrganizationsClient() {
             {searchQuery ? 'No matching organizations' : 'No organizations yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {searchQuery ? 'Try a different search term.' : 'Be the first to create a community space on Gatherle'}
+            {searchQuery ? 'Try a different search term.' : `Be the first to create a community space on ${APP_NAME}`}
           </Typography>
           {!searchQuery && (
             <Button

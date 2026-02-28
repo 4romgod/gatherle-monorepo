@@ -34,6 +34,8 @@
 - Web e2e tests: `npm run test:e2e -w @gatherle/webapp` (Playwright).
 - Commons build: `npm run build -w @gatherle/commons`. CDK synth: `npm run build:cdk -w @gatherle/cdk`.
 - Repo-wide helpers: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` (scoped via workspaces).
+- **Local CI:** GitHub Actions workflows can be run locally with `act`. See [docs/local-ci.md](docs/local-ci.md) for
+  setup and usage.
 
 ## Coding Style & Naming Conventions
 

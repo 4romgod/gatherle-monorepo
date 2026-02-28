@@ -223,110 +223,104 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
               borderColor: 'divider',
             }}
           >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              {/* Top row: Avatar + Name + Actions */}
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 2, md: 3 } }}>
-                <Box sx={{ position: 'relative', flexShrink: 0 }}>
-                  <Avatar
-                    src={getAvatarSrc(user)}
-                    alt={`${user.given_name} ${user.family_name}`}
-                    sx={{
-                      width: { xs: 80, md: 100 },
-                      height: { xs: 80, md: 100 },
-                      border: '3px solid',
-                      borderColor: 'divider',
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      bottom: 4,
-                      right: 4,
-                      width: 16,
-                      height: 16,
-                      bgcolor: 'success.main',
-                      borderRadius: '50%',
-                      border: '2px solid',
-                      borderColor: 'background.paper',
-                    }}
-                  />
+            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+              {/* Constrain header content width and center it on large screens (Instagram-style) */}
+              <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+                {/* Row 1: Avatar (left) + Stats (right) — Instagram style */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 3, md: 4 }, mb: 2 }}>
+                  <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                    <Avatar
+                      src={getAvatarSrc(user)}
+                      alt={`${user.given_name} ${user.family_name}`}
+                      sx={{
+                        width: { xs: 80, md: 96 },
+                        height: { xs: 80, md: 96 },
+                        border: '3px solid',
+                        borderColor: 'divider',
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: 4,
+                        right: 4,
+                        width: 14,
+                        height: 14,
+                        bgcolor: 'success.main',
+                        borderRadius: '50%',
+                        border: '2px solid',
+                        borderColor: 'background.paper',
+                      }}
+                    />
+                  </Box>
+
+                  {/* Stats inline beside avatar (compact = no top border/margin) */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <UserProfileStats
+                      userId={user.userId}
+                      displayName={getDisplayName(user)}
+                      initialFollowersCount={user.followersCount ?? 0}
+                      initialFollowingCount={0}
+                      organizedEventsCount={organizedEvents.length}
+                      rsvpdEventsCount={rsvpdEvents.length}
+                      savedEventsCount={savedEvents.length}
+                      interestsCount={interests.length}
+                      isOwnProfile={isOwnProfile}
+                      compact
+                    />
+                  </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Box
+                {/* Row 2: Display name */}
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 800, fontSize: { xs: '1rem', md: '1.15rem' }, lineHeight: 1.3 }}
+                >
+                  {user.given_name} {user.family_name}
+                </Typography>
+
+                {/* Row 3: @username */}
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: user.bio ? 0.75 : 1.5 }}>
+                  @{user.username}
+                </Typography>
+
+                {/* Row 4: Bio */}
+                {user.bio && (
+                  <Typography variant="body2" sx={{ lineHeight: 1.55, mb: 1.5, maxWidth: 480 }}>
+                    {user.bio}
+                  </Typography>
+                )}
+
+                {/* Row 5: Full-width action buttons */}
+                {isOwnProfile ? (
+                  <Button
+                    component={Link}
+                    href={ROUTES.ACCOUNT.ROOT}
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<EditIcon />}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 2,
-                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                      ...BUTTON_STYLES,
+                      borderColor: 'divider',
+                      '&:hover': {
+                        bgcolor: 'background.default',
+                        borderColor: 'text.secondary',
+                      },
                     }}
                   >
-                    <Box>
-                      <Typography
-                        variant="h3"
-                        sx={{
-                          fontWeight: 800,
-                          fontSize: { xs: '1.5rem', md: '2rem' },
-                          mb: 0.5,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {user.given_name} {user.family_name}
-                      </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
-                          @{user.username}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                    {isOwnProfile ? (
-                      <Link href={ROUTES.ACCOUNT.ROOT}>
-                        <Button
-                          startIcon={<EditIcon />}
-                          variant="outlined"
-                          size="small"
-                          sx={{
-                            ...BUTTON_STYLES,
-                            borderColor: 'divider',
-                            flexShrink: 0,
-                            '&:hover': {
-                              bgcolor: 'background.default',
-                              borderColor: 'text.secondary',
-                            },
-                          }}
-                        >
-                          Edit Profile
-                        </Button>
-                      </Link>
-                    ) : (
-                      <UserProfileActions
-                        userId={user.userId}
-                        username={user.username}
-                        canMessage={canMessageUser}
-                        messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
-                      />
-                    )}
-                  </Box>
-                  {user.bio && (
-                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 600, lineHeight: 1.6, mt: 1 }}>
-                      {user.bio}
-                    </Typography>
-                  )}
-                </Box>
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <UserProfileActions
+                    userId={user.userId}
+                    username={user.username}
+                    canMessage={canMessageUser}
+                    messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
+                    fullWidth
+                  />
+                )}
               </Box>
-
-              <UserProfileStats
-                userId={user.userId}
-                displayName={getDisplayName(user)}
-                initialFollowersCount={user.followersCount ?? 0}
-                initialFollowingCount={0}
-                organizedEventsCount={organizedEvents.length}
-                rsvpdEventsCount={rsvpdEvents.length}
-                savedEventsCount={savedEvents.length}
-                interestsCount={interests.length}
-                isOwnProfile={isOwnProfile}
-              />
+              {/* end centering box */}
             </CardContent>
           </Card>
 

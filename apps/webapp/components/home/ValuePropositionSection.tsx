@@ -3,7 +3,7 @@
 import { Box, Button, Stack, Typography } from '@mui/material';
 import Link from 'next/link';
 import CustomContainer from '@/components/core/layout/CustomContainer';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 
 export default function ValuePropositionSection() {
   return (
@@ -27,7 +27,7 @@ export default function ValuePropositionSection() {
             Build, discover, and celebrate events with intention.
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 3 }}>
-            Gatherle surfaces meaningful gatherings, gives hosts polish in minutes, and keeps every RSVP in sync with
+            {APP_NAME} surfaces meaningful gatherings, gives hosts polish in minutes, and keeps every RSVP in sync with
             the people who care about shows, meals, activations, and after-hours sessions.
           </Typography>
           <Button
@@ -37,7 +37,7 @@ export default function ValuePropositionSection() {
             href={ROUTES.AUTH.REGISTER}
             sx={{ borderRadius: 10, mt: 3 }}
           >
-            Join Gatherle
+            Join {APP_NAME}
           </Button>
         </Box>
       </CustomContainer>

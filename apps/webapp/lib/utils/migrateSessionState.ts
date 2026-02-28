@@ -1,5 +1,6 @@
 import { useMutation } from '@apollo/client';
 import { SaveSessionStateDocument } from '@/data/graphql/mutation/SessionState/mutation';
+import { DEFAULT_NAMESPACE } from '@/hooks/usePersistentState/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from './logger';
 
@@ -29,7 +30,7 @@ export const useMigrateSessionState = () => {
       errors: [],
     };
 
-    const ns = namespace || 'gatherle:sessionstate';
+    const ns = namespace || DEFAULT_NAMESPACE;
 
     try {
       const keysToMigrate: Array<{ stateKey: string; value: any }> = [];

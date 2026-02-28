@@ -12,7 +12,7 @@ import {
   GetAllEventCategoryGroupsQuery,
 } from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
-import { ROUTES } from '@/lib/constants';
+import { APP_NAME, ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils';
 import { auth } from '@/auth';
 import { getEventCategoryIcon } from '@/lib/constants';
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         title: `${category.name} Events`,
         description:
           category.description ||
-          `Explore upcoming ${category.name.toLowerCase()} events, communities, and related categories on Gatherle.`,
+          `Explore upcoming ${category.name.toLowerCase()} events, communities, and related categories on ${APP_NAME}.`,
         keywords: [category.name, 'event category', 'discover events', 'community events'],
       });
     }
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   return buildPageMetadata({
     title: 'Category Events',
-    description: 'Browse events by category and discover related interests on Gatherle.',
+    description: `Browse events by category and discover related interests on ${APP_NAME}.`,
     keywords: ['event categories', 'discover events by interest'],
   });
 }

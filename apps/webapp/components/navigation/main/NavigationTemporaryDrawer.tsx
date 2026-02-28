@@ -35,6 +35,7 @@ import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc, logger } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
+import { APP_NAME } from '@/lib/constants';
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const [open, setOpen] = useState(false);
@@ -186,7 +187,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         <>
           <Box sx={{ px: 2, pt: 1 }}>
             <Button variant="contained" color="secondary" fullWidth component={Link} href={ROUTES.AUTH.REGISTER}>
-              Join Gatherle
+              Join {APP_NAME}
             </Button>
           </Box>
         </>

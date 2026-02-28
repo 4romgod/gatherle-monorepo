@@ -1,6 +1,7 @@
+import { APP_NAMESPACE } from '@/lib/constants/app';
 import type { StorageType } from './types';
 
-export const DEFAULT_NAMESPACE = 'gatherle:sessionstate';
+export const DEFAULT_NAMESPACE = `${APP_NAMESPACE}:sessionstate`;
 export const DEFAULT_STORAGE: StorageType = 'localStorage';
 export const MAX_RETRY_ATTEMPTS = 3;
 export const INITIAL_RETRY_DELAY_MS = 1000;
@@ -19,6 +20,6 @@ export const STORAGE_KEYS = {
   USER_LOCATION: 'user-location',
   VENUE_CREATION_FORM: 'venue-creation-form',
   THEME_MODE: 'theme-mode',
-  LAST_OPEN_CHAT_USERNAME: 'gatherle:last-open-chat-username',
-  CHAT_EMOJI_RECENTS: 'gatherle:chat-emoji-recents',
+  LAST_OPEN_CHAT_USERNAME: `${APP_NAMESPACE}:last-open-chat-username`,
+  CHAT_EMOJI_RECENTS: `${APP_NAMESPACE}:chat-emoji-recents`,
 } as const;

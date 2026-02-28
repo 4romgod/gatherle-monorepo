@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Explore } from '@mui/icons-material';
 import { alpha, Box, Button, Card, Chip, Grid, Typography, Skeleton } from '@mui/material';
 import CustomContainer from '@/components/core/layout/CustomContainer';
-import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES } from '@/lib/constants';
+import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES, APP_NAME } from '@/lib/constants';
 import { RRule } from 'rrule';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 
@@ -102,8 +102,8 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 opacity: 0.85,
               }}
             >
-              Gatherle is the modern layer for community-led events—discover inspiring gatherings or host your own with
-              gorgeous, human-first pages.
+              {APP_NAME} is the modern layer for community-led events—discover inspiring gatherings or host your own
+              with gorgeous, human-first pages.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Button
@@ -142,7 +142,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
               href={ROUTES.ACCOUNT.EVENTS.CREATE}
               sx={{ fontWeight: 600 }}
             >
-              Host with Gatherle
+              Host with {APP_NAME}
             </Button>
           </Grid>
 

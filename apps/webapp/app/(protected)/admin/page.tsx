@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { Button, Container, Stack, Typography } from '@mui/material';
 import { auth } from '@/auth';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 import { UserRole } from '@/data/graphql/types/graphql';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Admin Console',
-  description: 'Manage categories, users, groups, and operational workflows for the Gatherle platform.',
+  description: `Manage categories, users, groups, and operational workflows for the ${APP_NAME} platform.`,
   noIndex: true,
 });
 

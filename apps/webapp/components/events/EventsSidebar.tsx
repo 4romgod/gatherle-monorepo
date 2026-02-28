@@ -37,7 +37,7 @@ export default function EventsSidebar({ popularOrganization, stats, trendingCate
           gridTemplateRows: { xs: 'auto auto', sm: '180px' },
           gap: 0,
           height: { xs: 'auto', sm: 180 },
-          borderRadius: 3,
+          borderRadius: 2,
           position: 'relative',
           overflow: 'hidden',
           cursor: 'pointer',

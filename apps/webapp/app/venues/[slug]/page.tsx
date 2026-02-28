@@ -3,6 +3,7 @@ import VenueDetailPageClient from '@/components/venue/VenueDetailPageClient';
 import { getClient } from '@/data/graphql';
 import { GetVenueBySlugDocument, GetVenueBySlugQuery } from '@/data/graphql/types/graphql';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       return buildPageMetadata({
         title: venue.name,
         description:
-          `View venue details${locationLabel ? ` in ${locationLabel}` : ''}, amenities, and upcoming events on Gatherle.`.trim(),
+          `View venue details${locationLabel ? ` in ${locationLabel}` : ''}, amenities, and upcoming events on ${APP_NAME}.`.trim(),
         keywords: [venue.name, 'venue details', 'event venue', 'venue amenities'],
       });
     }
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Venue Details',
-    description: 'View venue details, amenities, and event hosting information on Gatherle.',
+    description: `View venue details, amenities, and event hosting information on ${APP_NAME}.`,
     keywords: ['venue details', 'event venues', 'venue amenities'],
   });
 }

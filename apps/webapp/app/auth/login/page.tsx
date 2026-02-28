@@ -5,10 +5,11 @@ import { FaFacebookF } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { MdEmail } from 'react-icons/md';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 
 export const metadata = buildPageMetadata({
   title: 'Sign In',
-  description: 'Sign in to Gatherle to manage events, follow communities, and personalize your event feed.',
+  description: `Sign in to ${APP_NAME} to manage events, follow communities, and personalize your event feed.`,
   noIndex: true,
 });
 

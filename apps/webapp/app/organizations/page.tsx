@@ -1,13 +1,12 @@
 import { Container, Typography, Box, Button } from '@mui/material';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 import { Groups, Add } from '@mui/icons-material';
 import OrganizationsClient from '@/components/organization/organizationsPageClient';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Organizations Hosting Events',
-  description:
-    'Discover organizations, collectives, and communities creating events on Gatherle and follow their latest activity.',
+  description: `Discover organizations, collectives, and communities creating events on ${APP_NAME} and follow their latest activity.`,
   keywords: ['organizations', 'event organizers', 'community groups', 'collectives'],
 });
 
@@ -51,7 +50,7 @@ export default async function OrganizationsPage() {
                 lineHeight: 1.2,
               }}
             >
-              Community spaces on Gatherle
+              Community spaces on {APP_NAME}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontSize: '1.125rem', lineHeight: 1.7 }}>
               Discover and connect with creative collectives, event organizers, and community spaces. Join organizations

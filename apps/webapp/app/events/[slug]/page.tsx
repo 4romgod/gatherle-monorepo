@@ -3,6 +3,7 @@ import EventDetailPageClient from '@/components/events/EventDetailPageClient';
 import { getClient } from '@/data/graphql';
 import { GetEventBySlugDocument, GetEventBySlugQuery } from '@/data/graphql/types/graphql';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 
 // Force dynamic rendering to ensure fresh participant data
 export const dynamic = 'force-dynamic';
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description:
           truncateDescription(event.summary) ??
           truncateDescription(event.description) ??
-          'View event details, venue information, and RSVP options on Gatherle.',
+          `View event details, venue information, and RSVP options on ${APP_NAME}.`,
         keywords: ['event details', 'RSVP', ...eventCategories],
       });
     }
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Event Details',
-    description: 'View event details, venue information, and RSVP options on Gatherle.',
+    description: `View event details, venue information, and RSVP options on ${APP_NAME}.`,
     keywords: ['event details', 'RSVP', 'upcoming events'],
   });
 }

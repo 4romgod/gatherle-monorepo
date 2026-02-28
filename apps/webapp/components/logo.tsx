@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { alpha, Box, Typography } from '@mui/material';
 import { spaceGrotesk } from '@/components/theme/fonts';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 import { useIsAuthenticated } from '@/hooks/useIsAuthenticated';
 
 export default function Logo() {
@@ -12,7 +12,7 @@ export default function Logo() {
     <Box
       component={Link}
       href={isAuth ? ROUTES.HOME : ROUTES.ROOT}
-      aria-label="Gatherle home"
+      aria-label={`${APP_NAME} home`}
       sx={{
         display: 'flex',
         alignItems: 'center',

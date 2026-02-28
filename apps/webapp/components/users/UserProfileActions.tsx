@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Button, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Stack } from '@mui/material';
+import { Button, Box, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Stack } from '@mui/material';
 import { MoreVert, Block, RemoveCircleOutline, MailOutline } from '@mui/icons-material';
 import { useBlock, useBlockedUsers, useAppContext } from '@/hooks';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,8 @@ interface UserProfileActionsProps {
   username: string;
   canMessage?: boolean;
   messageHref?: string;
+  /** When true, Follow and Message buttons stretch to fill available width */
+  fullWidth?: boolean;
 }
 
 export default function UserProfileActions({
@@ -20,6 +22,7 @@ export default function UserProfileActions({
   username,
   canMessage = false,
   messageHref,
+  fullWidth = false,
 }: UserProfileActionsProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { blockUser, unblockUser, isLoading } = useBlock();
@@ -84,37 +87,49 @@ export default function UserProfileActions({
   };
 
   return (
-    <Stack direction="row" spacing={1}>
+    <Stack
+      direction="row"
+      sx={{
+        gap: 1,
+        ...(fullWidth && { width: '100%' }),
+      }}
+    >
       {canMessage && messageHref && (
-        <Button
-          component={Link}
-          href={messageHref}
-          variant="outlined"
-          size="small"
-          startIcon={<MailOutline />}
-          sx={{
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            color: 'text.primary',
-            textTransform: 'none',
-            fontWeight: 600,
-            '&:hover': {
-              bgcolor: 'background.default',
-              borderColor: 'text.secondary',
-            },
-          }}
-        >
-          Message
-        </Button>
+        <Box sx={{ flex: fullWidth ? 1 : undefined, minWidth: 0 }}>
+          <Button
+            component={Link}
+            href={messageHref}
+            variant="outlined"
+            size={fullWidth ? 'medium' : 'small'}
+            fullWidth={fullWidth}
+            startIcon={<MailOutline />}
+            sx={{
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'text.primary',
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: 'background.default',
+                borderColor: 'text.secondary',
+              },
+            }}
+          >
+            Message
+          </Button>
+        </Box>
       )}
-      <FollowButton targetId={userId} size="small" />
+      <Box sx={{ flex: fullWidth ? 1 : undefined, minWidth: 0 }}>
+        <FollowButton targetId={userId} size={fullWidth ? 'medium' : 'small'} fullWidth={fullWidth} />
+      </Box>
       <IconButton
         onClick={handleMenuOpen}
         size="small"
         sx={{
           borderRadius: 2,
+          flexShrink: 0,
           bgcolor: 'background.paper',
           border: '1px solid',
           borderColor: 'divider',

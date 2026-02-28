@@ -18,6 +18,8 @@ interface UserProfileStatsProps {
   interestsCount: number;
   /** Whether this is the user's own profile (enables modals and scroll-to-section behavior) */
   isOwnProfile?: boolean;
+  /** When true, removes the top border and margin (for use inline beside the avatar) */
+  compact?: boolean;
 }
 
 /**
@@ -35,6 +37,7 @@ export default function UserProfileStats({
   savedEventsCount,
   interestsCount,
   isOwnProfile = false,
+  compact = false,
 }: UserProfileStatsProps) {
   // Only fetch following data for own profile (hook returns current user's following)
   const { following, loading } = useFollowing();
@@ -94,14 +97,12 @@ export default function UserProfileStats({
     <>
       <Stack
         direction="row"
-        spacing={{ xs: 2, sm: 4 }}
+        spacing={compact ? { xs: 0 } : { xs: 2, sm: 4 }}
         sx={{
-          mt: 3,
-          pt: 3,
-          borderTop: 1,
-          borderColor: 'divider',
-          flexWrap: 'wrap',
-          rowGap: 2,
+          ...(compact ? {} : { mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }),
+          flexWrap: compact ? 'nowrap' : 'wrap',
+          rowGap: compact ? 0 : 2,
+          justifyContent: compact ? 'space-between' : 'flex-start',
         }}
       >
         {/* Followers - opens modal on own profile */}
@@ -110,7 +111,7 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant="h5"
+            variant={compact ? 'h6' : 'h5'}
             fontWeight={700}
             color="secondary"
             className="stat-number"
@@ -118,7 +119,7 @@ export default function UserProfileStats({
           >
             {followersCount}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
             Followers
           </Typography>
         </Box>
@@ -129,7 +130,7 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant="h5"
+            variant={compact ? 'h6' : 'h5'}
             fontWeight={700}
             color="secondary"
             className="stat-number"
@@ -137,7 +138,7 @@ export default function UserProfileStats({
           >
             {followingCount}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
             Following
           </Typography>
         </Box>
@@ -148,7 +149,7 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant="h5"
+            variant={compact ? 'h6' : 'h5'}
             fontWeight={700}
             color="secondary"
             className="stat-number"
@@ -156,8 +157,8 @@ export default function UserProfileStats({
           >
             {organizedEventsCount}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Events Created
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
+            {compact ? 'Events' : 'Events Created'}
           </Typography>
         </Box>
 
@@ -167,7 +168,7 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant="h5"
+            variant={compact ? 'h6' : 'h5'}
             fontWeight={700}
             color="secondary"
             className="stat-number"
@@ -180,8 +181,8 @@ export default function UserProfileStats({
           </Typography>
         </Box>
 
-        {/* Saved Events - scrolls to section on own profile */}
-        {isOwnProfile && (
+        {/* Saved Events - scrolls to section on own profile (hidden in compact mode) */}
+        {isOwnProfile && !compact && (
           <Box onClick={() => scrollToSection('saved-events')} sx={clickableStatSx}>
             <Typography
               variant="h5"
@@ -198,24 +199,26 @@ export default function UserProfileStats({
           </Box>
         )}
 
-        {/* Interests - scrolls to section on own profile */}
-        <Box
-          onClick={isOwnProfile ? () => scrollToSection('interests') : undefined}
-          sx={isOwnProfile ? clickableStatSx : staticStatSx}
-        >
-          <Typography
-            variant="h5"
-            fontWeight={700}
-            color="secondary"
-            className="stat-number"
-            sx={{ transition: 'color 0.2s' }}
+        {/* Interests - scrolls to section on own profile (hidden in compact mode) */}
+        {!compact && (
+          <Box
+            onClick={isOwnProfile ? () => scrollToSection('interests') : undefined}
+            sx={isOwnProfile ? clickableStatSx : staticStatSx}
           >
-            {interestsCount}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Interests
-          </Typography>
-        </Box>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              color="secondary"
+              className="stat-number"
+              sx={{ transition: 'color 0.2s' }}
+            >
+              {interestsCount}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Interests
+            </Typography>
+          </Box>
+        )}
       </Stack>
 
       <FollowersList

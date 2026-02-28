@@ -15,7 +15,7 @@ export default function EventBoxSkeleton() {
         gridTemplateRows: { xs: 'auto auto', sm: '180px' },
         gap: 0,
         height: { xs: 'auto', sm: 180 },
-        borderRadius: 3,
+        borderRadius: 2,
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',

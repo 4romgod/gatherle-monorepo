@@ -4,6 +4,7 @@ import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
 import { Organization } from '@/data/graphql/types/graphql';
 import OrganizationPageClient from '@/components/organization/organizationDetailPageClient';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 import { logger } from '@/lib/utils';
 
 interface Props {
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (organization) {
       return buildPageMetadata({
         title: organization.name,
-        description: organization.description || `Discover events hosted by ${organization.name} on Gatherle.`,
+        description: organization.description || `Discover events hosted by ${organization.name} on ${APP_NAME}.`,
         keywords: [organization.name, 'organization events', 'community organizers'],
       });
     }
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Organization',
-    description: 'Discover organizations powering events and communities on Gatherle.',
+    description: `Discover organizations powering events and communities on ${APP_NAME}.`,
     keywords: ['organizations', 'event organizers', 'community groups'],
   });
 }

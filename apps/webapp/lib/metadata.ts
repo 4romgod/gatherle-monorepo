@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import { APP_NAME, APP_LOGO_PATH } from '@/lib/constants';
 
-const SITE_NAME = 'Gatherle';
+const SITE_NAME = APP_NAME;
 
 const ICONS: Metadata['icons'] = {
-  icon: '/logo-img.png',
-  shortcut: '/logo-img.png',
-  apple: '/logo-img.png',
+  icon: APP_LOGO_PATH,
+  shortcut: APP_LOGO_PATH,
+  apple: APP_LOGO_PATH,
 };
 
 type BuildMetadataOptions = {

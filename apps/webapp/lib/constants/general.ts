@@ -2,6 +2,9 @@ import * as HeroIcons from '@heroicons/react/24/solid';
 import { Event, Business, Place, People, Category } from '@mui/icons-material';
 import { ROUTES } from './routes';
 
+// Re-export lightweight app-identity constants from their own bundle-safe module.
+export { APP_NAME, COMPANY_LEGAL_NAME, APP_DOMAIN, APP_LOGO_PATH, APP_NAMESPACE } from './app';
+
 export type EventCategoryIconComponents = {
   [key: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement> & React.RefAttributes<SVGSVGElement>>;
 };

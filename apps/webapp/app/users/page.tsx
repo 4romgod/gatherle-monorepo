@@ -2,11 +2,11 @@ import { Box, Container, Typography, Button } from '@mui/material';
 import { People } from '@mui/icons-material';
 import UsersPageClient from '@/components/users/UsersPageClient';
 import { buildPageMetadata } from '@/lib/metadata';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 
 export const metadata = buildPageMetadata({
   title: 'Community Members',
-  description: 'Discover people in the Gatherle community, follow profiles, and connect through shared interests.',
+  description: `Discover people in the ${APP_NAME} community, follow profiles, and connect through shared interests.`,
   keywords: ['community', 'user profiles', 'follow creators', 'event community'],
 });
 

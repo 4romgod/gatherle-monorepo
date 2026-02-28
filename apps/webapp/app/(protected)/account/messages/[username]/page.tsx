@@ -2,12 +2,13 @@ import { Box } from '@mui/material';
 import dynamicComponent from 'next/dynamic';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 
 const ConversationThread = dynamicComponent(() => import('@/components/messages/ConversationThread'));
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Conversation',
-  description: 'Chat with a member on Gatherle.',
+  description: `Chat with a member on ${APP_NAME}.`,
   noIndex: true,
 });
 

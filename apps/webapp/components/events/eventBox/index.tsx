@@ -65,7 +65,7 @@ export default function EventBox({ event }: { event: EventPreview }) {
         gridTemplateRows: { xs: 'auto auto', sm: '180px' },
         gap: 0,
         height: { xs: 'auto', sm: 180 },
-        borderRadius: 3,
+        borderRadius: { xs: 1.5, sm: 3 },
         position: 'relative',
         overflow: 'hidden',
         cursor: 'pointer',

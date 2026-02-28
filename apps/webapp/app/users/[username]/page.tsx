@@ -3,6 +3,7 @@ import UserProfilePageClient from '@/components/users/UserProfilePageClient';
 import { getClient } from '@/data/graphql';
 import { GetUserByUsernameDocument, GetUserByUsernameQuery } from '@/data/graphql/types/graphql';
 import { buildPageMetadata } from '@/lib/metadata';
+import { APP_NAME } from '@/lib/constants';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const displayName = fullName || `@${user.username}`;
       return buildPageMetadata({
         title: `${displayName} Profile`,
-        description: user.bio || `Explore ${displayName}'s profile, interests, and community activity on Gatherle.`,
+        description: user.bio || `Explore ${displayName}'s profile, interests, and community activity on ${APP_NAME}.`,
         keywords: [user.username, fullName, 'community profile', 'event community'].filter(Boolean) as string[],
       });
     }
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: 'Community Profile',
-    description: 'Discover people in the Gatherle community and connect through shared interests.',
+    description: `Discover people in the ${APP_NAME} community and connect through shared interests.`,
     keywords: ['community profile', 'event community', 'connect with people'],
   });
 }

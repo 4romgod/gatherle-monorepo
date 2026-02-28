@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Typography, IconButton, useMediaQuery, useTheme, Paper, Stack, Button, ButtonProps } from '@mui/material';
+import { Box, Typography, IconButton, useMediaQuery, useTheme, Stack, Button, ButtonProps } from '@mui/material';
 import { ChevronLeft, ChevronRight, ArrowForward } from '@mui/icons-material';
 import Link from 'next/link';
 
@@ -99,24 +99,7 @@ export default function Carousel<T>({
     content: React.ReactNode,
     _item?: T,
     _index?: number,
-  ) => (
-    <Paper
-      elevation={0}
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        overflow: 'hidden',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          borderColor: 'primary.main',
-          boxShadow: theme.shadows[4],
-        },
-      }}
-    >
-      {content}
-    </Paper>
-  );
+  ) => <>{content}</>;
 
   const renderWrappedItem = (item: T, index: number) => {
     const content = renderItem(item, index);

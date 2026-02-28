@@ -14,7 +14,7 @@ import Avatar from '@mui/material/Avatar';
 import ProfilesMenu from '@/components/navigation/main/NavigationProfileItems';
 import TemporaryDrawer from '@/components/navigation/main/NavigationTemporaryDrawer';
 import { Button } from '@mui/material';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants';
 import NavLinksList from '@/components/navigation/main/NavLinksList';
 import { getAvatarSrc } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -119,7 +119,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 href={ROUTES.AUTH.REGISTER}
                 sx={{ borderRadius: 10 }}
               >
-                Join Gatherle
+                Join {APP_NAME}
               </Button>
             </Box>
           )}
