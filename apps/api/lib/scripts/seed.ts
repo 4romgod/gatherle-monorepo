@@ -5,7 +5,6 @@ import {
   EventCategoryGroupDAO,
   EventDAO,
   FollowDAO,
-  IntentDAO,
   OrganizationDAO,
   OrganizationMembershipDAO,
   UserDAO,
@@ -21,10 +20,9 @@ import {
   eventCategoryMockData,
   eventCategoryGroupMockData,
   followSeedData,
-  intentSeedData,
   activitySeedData,
 } from '@/mongodb/mockData';
-import type { FollowSeed, IntentSeed, ActivitySeed } from '@/mongodb/mockData/social';
+import type { FollowSeed, ActivitySeed } from '@/mongodb/mockData/social';
 import type { EventSeedData } from '@/mongodb/mockData';
 import type { OrganizationSeedData } from '@/mongodb/mockData/organizations';
 import organizationsData from '@/mongodb/mockData/organizations';
@@ -547,28 +545,6 @@ async function seedFollows(seedData: FollowSeed[], usersByEmail: Map<string, Use
   logger.info('Completed seeding follow edges.');
 }
 
-async function seedIntents(seedData: IntentSeed[], usersByEmail: Map<string, User>, events: Event[]) {
-  logger.info('Starting to seed intents...');
-  for (const seed of seedData) {
-    const user = usersByEmail.get(seed.userEmail.toLowerCase());
-    const event = events.find((candidate) => candidate.title === seed.eventTitle);
-    if (!user || !event?.eventId) {
-      logger.warn('Skipping intent seed due to missing IDs', seed);
-      continue;
-    }
-
-    await IntentDAO.upsert({
-      userId: user.userId,
-      eventId: event.eventId,
-      status: seed.status,
-      visibility: seed.visibility,
-      source: seed.source,
-      metadata: seed.metadata,
-    });
-  }
-  logger.info('Completed seeding intents.');
-}
-
 async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string, User>, events: Event[]) {
   logger.info('Starting to seed activity feed...');
   for (const seed of seedData) {
@@ -707,7 +683,6 @@ async function main() {
   await seedEventParticipants(createdEvents, allUserIds);
 
   await seedFollows(followSeedData, userByEmail, createdOrganizations);
-  await seedIntents(intentSeedData, userByEmail, createdEvents);
   await seedActivities(activitySeedData, userByEmail, createdEvents);
   logger.info('Completed seeding data into the database.');
   await MongoDbClient.disconnectFromDatabase();

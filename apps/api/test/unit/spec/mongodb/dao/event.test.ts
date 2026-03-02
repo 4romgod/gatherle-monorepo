@@ -793,4 +793,62 @@ describe('EventDAO', () => {
       expect(cancelSpy).toHaveBeenCalled();
     });
   });
+
+  describe('readUpcomingPublished', () => {
+    // readUpcomingPublished uses find(...).sort(...).limit(...).exec()
+    const createSortLimitQuery = <T>(result: T) => ({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(result),
+    });
+
+    const createFailSortLimitQuery = <T>(error: T) => ({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockRejectedValue(error),
+    });
+
+    const mockRawEvent = {
+      toObject: () => ({ eventId: 'event-1', title: 'Upcoming Event', lifecycleStatus: 'Published' }),
+    };
+
+    it('queries for upcoming published events and returns mapped objects', async () => {
+      (EventModel.find as jest.Mock).mockReturnValue(createSortLimitQuery([mockRawEvent]));
+
+      const result = await EventDAO.readUpcomingPublished(100);
+
+      expect(EventModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lifecycleStatus: 'Published',
+          status: { $in: ['Upcoming', 'Ongoing'] },
+          visibility: { $in: ['Public', 'Unlisted'] },
+        }),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ eventId: 'event-1' });
+    });
+
+    it('applies the limit argument', async () => {
+      const mockQuery = createSortLimitQuery([]);
+      (EventModel.find as jest.Mock).mockReturnValue(mockQuery);
+
+      await EventDAO.readUpcomingPublished(42);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(42);
+    });
+
+    it('returns empty array when no events found', async () => {
+      (EventModel.find as jest.Mock).mockReturnValue(createSortLimitQuery([]));
+
+      const result = await EventDAO.readUpcomingPublished(100);
+
+      expect(result).toEqual([]);
+    });
+
+    it('wraps errors', async () => {
+      (EventModel.find as jest.Mock).mockReturnValue(createFailSortLimitQuery(new MockMongoError(0)));
+
+      await expect(EventDAO.readUpcomingPublished(100)).rejects.toThrow(GraphQLError);
+    });
+  });
 });

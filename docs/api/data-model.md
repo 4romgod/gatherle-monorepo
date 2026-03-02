@@ -19,7 +19,7 @@ near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/T
 - User, Event, EventCategory, EventCategoryGroup
 - EventParticipant
 - Organization, OrganizationMembership, Venue
-- Follow, Intent, Activity
+- Follow, Activity
 
 **Planned/partial**
 
@@ -80,12 +80,6 @@ classDiagram
         +string userId
         +ParticipantStatus status
     }
-    class Intent {
-        +string intentId
-        +string eventId
-        +string userId
-        +IntentStatus status
-    }
     class Activity {
         +string activityId
         +string actorId
@@ -104,8 +98,6 @@ classDiagram
     Event "1" --> "many" EventParticipant : resolved
     EventOrganizer "many" --> "1" User : userId
     EventParticipant "many" --> "1" User : userId
-    Intent "many" --> "1" Event : references
-    Intent "many" --> "1" User : references
     Activity "many" --> "1" Event : references
     Activity "many" --> "1" User : actor
     Follow "many" --> "1" User : follower
@@ -227,16 +219,6 @@ relationships without denormalizing user objects.
 
 - `followId`, `followerUserId`, `targetType` (User|Organization), `targetId`.
 - `status` (Active|Muted), `createdAt`.
-
-### Intent
-
-Intents are lightweight signals (Interested, Going, etc.) that are cheaper to write/read than EventParticipant rows and
-feed the UI before RSVPs are confirmed.
-
-- `intentId`, `userId`, `eventId`, optional `participantId`.
-- `status` (Interested|Going|Maybe|Declined).
-- `visibility` (Public|Followers|Private), `source` (Manual|Invite|OrgAnnouncement).
-- `metadata` (JSON), `createdAt`, `updatedAt`.
 
 ### Activity
 
@@ -371,12 +353,12 @@ const user = await context.loaders.user.load(participant.userId);
 ## Feed & FOMO Flow
 
 1. User follows User/Organization → `Follow` created, `Activity: Followed`.
-2. User marks Going/Interested → `Intent` created/updated; `EventParticipant` is upserted.
+2. User RSVPs → `EventParticipant` is upserted.
 3. Feed query pulls Activities where:
    - actor is in my follow set, and
    - activity visibility allows (Public or Followers when I follow), and
    - I’m not blocking/muting the actor/org.
-4. Event detail can show “Friends going” via intersecting my follow set with visible Intents/Participants.
+4. Event detail can show "Friends going" via intersecting my follow set with visible Participants.
 
 ## Mongo/NoSQL Adaptation Strategy (current)
 
@@ -390,7 +372,6 @@ const user = await context.loaders.user.load(participant.userId);
   - Organization: unique `slug`.
   - OrganizationMembership: unique `{orgId, userId}`.
   - Follow: unique `{followerUserId, targetType, targetId}`.
-  - Intent: unique `{userId, eventId}`.
   - Activity: index `{actorId, eventAt}`.
 
 ## Suggested Next Steps

@@ -283,6 +283,25 @@ class FollowDAO {
       throw KnownCommonError(error);
     }
   }
+
+  /**
+   * Read all saved-event follow records for a set of users.
+   * Used by the recommendation engine to discover which events followed users have saved.
+   */
+  static async readSavedEventsByUserIds(userIds: string[]): Promise<FollowEntity[]> {
+    if (userIds.length === 0) return [];
+    try {
+      const follows = await FollowModel.find({
+        followerUserId: { $in: userIds },
+        targetType: FollowTargetType.Event,
+        approvalStatus: FollowApprovalStatus.Accepted,
+      }).exec();
+      return follows.map((f) => f.toObject());
+    } catch (error) {
+      logDaoError('Error reading saved events by user IDs', { error });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default FollowDAO;

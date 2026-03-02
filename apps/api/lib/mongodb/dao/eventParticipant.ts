@@ -121,6 +121,24 @@ class EventParticipantDAO {
   }
 
   /**
+   * Batch fetch active participations for multiple userIds.
+   * Used for the "friends attending" signal in feed scoring.
+   */
+  static async readByUserIds(userIds: string[]): Promise<EventParticipantEntity[]> {
+    if (userIds.length === 0) return [];
+    try {
+      const participants = await EventParticipant.find({
+        userId: { $in: userIds },
+        status: { $ne: ParticipantStatus.Cancelled },
+      }).exec();
+      return participants.map((p) => p.toObject());
+    } catch (error) {
+      logDaoError('Error reading participants by userIds', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
    * Count participants for an event, optionally filtered by status.
    * Useful for showing "X people going" on event cards.
    */

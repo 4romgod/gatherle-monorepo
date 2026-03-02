@@ -357,7 +357,7 @@ if (initialLoadDoneRef.current && wasFollowingRef.current !== isCurrentlyFollowi
 ### Automated Testing
 
 - ✅ 526 unit tests passing (including Phase 2 tests for privacy, blocking, and remove follower)
-- ✅ E2E tests for social resolvers (follow, intent, activity)
+- ✅ E2E tests for social resolvers (follow, activity)
 - ✅ Unit tests for FollowResolver (with FollowPolicy and visibility handling)
 - ✅ Unit tests for Organization followersCount FieldResolver
 - ✅ Authorization checks for accept/reject/removeFollower mutations

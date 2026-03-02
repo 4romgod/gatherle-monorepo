@@ -1,32 +1,31 @@
 'use client';
-import { Box, Typography } from '@mui/material';
+
+import Link from 'next/link';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { GetAllOrganizationsDocument } from '@/data/graphql/query/Organization/query';
-import { GetAllUsersDocument } from '@/data/graphql/query/User/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
-import OrganizationCard from '@/components/organization/organizationBox';
-import OrganizationBoxSkeleton from '../organization/organizationBox/OrganizationBoxSkeleton';
-import Carousel from '@/components/carousel';
-import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
+import { GetRecommendedFeedDocument } from '@/data/graphql/query/Feed/query';
+import type { RecommendedFeedEventPreview } from '@/data/graphql/query/Feed/types';
+import EventTileGrid from '@/components/events/EventTileGrid';
+import EventBoxSkeleton from '@/components/events/eventBox/EventBoxSkeleton';
 
 export default function RecommendedSection() {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  // TODO Fetch organizations and users (could be improved with a recommendation engine)
-  const { data: orgData, loading: orgLoading } = useQuery(GetAllOrganizationsDocument, {
+  const { data, loading, error } = useQuery(GetRecommendedFeedDocument, {
+    variables: { limit: 4, skip: 0 },
     fetchPolicy: 'cache-and-network',
     context: { headers: getAuthHeader(token) },
-  });
-  const { data: userData, loading: userLoading } = useQuery(GetAllUsersDocument, {
-    fetchPolicy: 'cache-and-network',
-    context: { headers: getAuthHeader(token) },
+    skip: !token,
   });
 
-  const orgs = orgData?.readOrganizations?.slice(0, 2) ?? [];
-  const users = userData?.readUsers?.slice(0, 1) ?? [];
-  const loading = orgLoading || userLoading;
+  const events = (data?.readRecommendedFeed ?? [])
+    .map((item) => item.event)
+    .filter((e): e is RecommendedFeedEventPreview => e != null);
+
+  const isLoading = !token || loading;
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
@@ -36,25 +35,26 @@ export default function RecommendedSection() {
         sx={{ mb: { xs: 1, md: 2 }, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
       >
         Recommended For You
+        <Button color="secondary" component={Link} href="/events" size="small">
+          See all events
+        </Button>
       </Typography>
-      {loading ? (
-        <CarouselSkeleton
-          itemCount={3}
-          viewAll={false}
-          itemWidth={280}
-          renderSkeletonItem={() => <OrganizationBoxSkeleton />}
-        />
-      ) : orgs.length + users.length === 0 ? (
+      {isLoading && !data ? (
+        <Stack gap={{ xs: 1.5, md: 2 }}>
+          {[1, 2].map((i) => (
+            <EventBoxSkeleton key={i} />
+          ))}
+        </Stack>
+      ) : error ? (
+        <Typography color="error">Failed to load recommendations.</Typography>
+      ) : events.length === 0 ? (
         <Typography color="text.secondary">
           No recommendations yet. Follow more people and organizations to get personalized suggestions!
         </Typography>
       ) : (
-        <Carousel
-          items={orgs}
-          itemKey={(org) => org.orgId}
-          renderItem={(org) => <OrganizationCard organization={org} />}
-          showIndicators={false}
-        />
+        <Stack gap={{ xs: 1.5, md: 2 }}>
+          <EventTileGrid events={events} loading={isLoading} />
+        </Stack>
       )}
     </Box>
   );

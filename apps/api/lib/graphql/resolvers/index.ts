@@ -1,5 +1,6 @@
 export * from './admin';
 export * from './event';
+export * from './feed';
 export * from './eventCategory';
 export * from './eventCategoryGroup';
 export * from './user';
@@ -8,7 +9,6 @@ export * from './organization';
 export * from './organizationMembership';
 export * from './venue';
 export * from './follow';
-export * from './intent';
 export * from './activity';
 export * from './chat';
 export * from './notification';

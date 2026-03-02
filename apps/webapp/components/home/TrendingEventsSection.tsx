@@ -1,6 +1,7 @@
 'use client';
-import { Box, Button, Typography, Card, CardContent, Skeleton, Stack } from '@mui/material';
+
 import Link from 'next/link';
+import { Box, Button, Typography, Card, CardContent, Skeleton, Stack } from '@mui/material';
 import { useQuery } from '@apollo/client';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import EventTileGrid from '../events/EventTileGrid';

@@ -6,10 +6,14 @@ import EventBox from '@/components/events/eventBox';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
 import { EventPreview } from '@/data/graphql/query/Event/types';
+import type { RecommendedFeedEventPreview } from '@/data/graphql/query/Feed/types';
 import EventTileSkeletonGrid from './EventTileSkeleton';
 
+/** Union of all event shapes that EventTileGrid can render. */
+export type AnyEventPreview = EventPreview | RecommendedFeedEventPreview;
+
 export type EventTileGridProps = {
-  events: EventPreview[];
+  events: AnyEventPreview[];
   loading?: boolean;
   skeletonCount?: number;
 };

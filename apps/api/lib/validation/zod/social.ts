@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { FollowTargetType } from '@gatherle/commons/types/follow';
-import { IntentSource, IntentStatus, IntentVisibility } from '@gatherle/commons/types/intent';
 import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
 import { ERROR_MESSAGES } from '@/validation';
 
@@ -13,16 +12,6 @@ const objectIdSchema = z
 export const CreateFollowInputSchema = z.object({
   targetType: z.nativeEnum(FollowTargetType),
   targetId: objectIdSchema,
-});
-
-export const UpsertIntentInputSchema = z.object({
-  intentId: objectIdSchema.optional(),
-  eventId: objectIdSchema,
-  status: z.nativeEnum(IntentStatus).optional(),
-  visibility: z.nativeEnum(IntentVisibility).optional(),
-  source: z.nativeEnum(IntentSource).optional(),
-  participantId: objectIdSchema.optional(),
-  metadata: z.record(z.any()).optional(),
 });
 
 export const CreateActivityInputSchema = z.object({

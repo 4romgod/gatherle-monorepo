@@ -13,6 +13,7 @@ import {
   ParticipantStatus,
   Organization,
   OrganizationRole,
+  EventLifecycleStatus,
 } from '@gatherle/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
@@ -22,6 +23,7 @@ import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
 import { getAuthenticatedUser } from '@/utils/auth';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
+import RecommendationService from '@/services/recommendation';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
@@ -56,7 +58,20 @@ export class EventResolver {
     if (input.orgId && input.orgId !== existingEvent.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
-    return EventDAO.updateEvent(input);
+    const updatedEvent = await EventDAO.updateEvent(input);
+
+    // If this update transitioned the event to Published, notify the recommendation engine.
+    // Fire-and-forget: errors must not block the mutation response.
+    if (
+      existingEvent.lifecycleStatus !== EventLifecycleStatus.Published &&
+      updatedEvent.lifecycleStatus === EventLifecycleStatus.Published
+    ) {
+      RecommendationService.onEventPublished(updatedEvent.eventId).catch((err) => {
+        logger.warn('[EventResolver] Feed trigger failed after event publish', { error: err });
+      });
+    }
+
+    return updatedEvent;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

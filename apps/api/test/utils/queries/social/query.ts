@@ -34,43 +34,6 @@ export const getReadFollowersQuery = (targetType: string, targetId: string) => {
   };
 };
 
-export const getReadIntentsByUserQuery = () => {
-  return {
-    query: `
-      query ReadIntentsByUser {
-        readIntentsByUser {
-          intentId
-          userId
-          eventId
-          status
-          visibility
-          source
-        }
-      }
-    `,
-  };
-};
-
-export const getReadIntentsByEventQuery = (eventId: string) => {
-  return {
-    query: `
-      query ReadIntentsByEvent($eventId: String!) {
-        readIntentsByEvent(eventId: $eventId) {
-          intentId
-          userId
-          eventId
-          status
-          visibility
-          source
-        }
-      }
-    `,
-    variables: {
-      eventId,
-    },
-  };
-};
-
 export const getReadActivitiesByActorQuery = (actorId: string, limit?: number) => {
   return {
     query: `
