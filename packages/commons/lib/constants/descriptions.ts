@@ -116,18 +116,6 @@ export const SOCIAL_DESCRIPTIONS = {
     APPROVAL_STATUS:
       'The approval state of the follow request: Pending (awaiting approval), Accepted (approved), or Rejected (denied by followee).',
   },
-  INTENT: {
-    TYPE: 'Represents a user intent signal (Interested, Going, Maybe, Declined) for an event.',
-    CREATE_INPUT: 'Input type for upserting an intent for an event.',
-    ID: 'Unique identifier for the intent record.',
-    USER_ID: 'ID of the user expressing the intent.',
-    EVENT_ID: 'ID of the event that the intent references.',
-    STATUS: 'Current status of the intent (Interested, Going, Maybe, Declined).',
-    VISIBILITY: 'Visibility policy for the intent (Public, Followers, Private).',
-    SOURCE: 'Origin of the intent data (Manual, Invite, OrgAnnouncement).',
-    PARTICIPANT_ID: 'Optional EventParticipant ID tied to the intent.',
-    METADATA: 'Additional metadata to describe the intent.',
-  },
   ACTIVITY: {
     TYPE: 'Represents an activity feed entry for personalization (follows, RSVPs, comments, etc.).',
     CREATE_INPUT: 'Input type for creating a new activity entry.',
@@ -311,11 +299,6 @@ export const RESOLVER_DESCRIPTIONS = {
     readFollowers: 'List followers for a specific user or organization.',
     readPendingFollowRequests: "List pending follow requests awaiting the authenticated user's approval.",
   },
-  INTENT: {
-    upsertIntent: 'Create or update an intent for an event on behalf of the authenticated user.',
-    readIntentsByUser: 'List intents that belong to the authenticated user.',
-    readIntentsByEvent: 'List intents associated with a specific event.',
-  },
   ACTIVITY: {
     logActivity: 'Log a new activity event for the authenticated user.',
     readActivitiesByActor: 'Retrieve activities authored by a given actor.',
@@ -345,6 +328,12 @@ export const RESOLVER_DESCRIPTIONS = {
     deleteOrganizationMembership: 'Remove a user from an organization.',
     readOrganizationMembershipById: 'Read a membership by its ID. Returns the membership or a 404 Error if not found.',
     readOrganizationMembershipsByOrgId: 'Read all memberships that belong to an organization.',
+  },
+  FEED: {
+    readRecommendedFeed:
+      'Read the personalised event feed for the authenticated user, sorted by relevance score. Lazily recomputes if empty or stale.',
+    refreshFeed:
+      "Manually trigger a full recomputation of the authenticated user's feed and return true when complete.",
   },
 };
 

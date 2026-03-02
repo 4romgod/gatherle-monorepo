@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { EventParticipantResolver } from '@/graphql/resolvers/eventParticipant';
-import { EventParticipantDAO } from '@/mongodb/dao';
+import { EventParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
+import RecommendationService from '@/services/recommendation';
 import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
@@ -24,8 +25,25 @@ jest.mock('@/mongodb/dao', () => {
   class UserDAO {
     static readUserById = jest.fn();
   }
-  return { EventParticipantDAO, UserDAO };
+  class UserFeedDAO {
+    static removeEventFromFeed = jest.fn();
+  }
+  return { EventParticipantDAO, UserDAO, UserFeedDAO };
 });
+
+jest.mock('@/services/recommendation', () => ({
+  __esModule: true,
+  default: {
+    computeFeedForUser: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('@/utils/logger', () => ({
+  logger: { warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
+  LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4 },
+  initLogger: jest.fn(),
+}));
 
 jest.mock('@/validation', () => ({
   validateMongodbId: jest.fn(),
@@ -39,6 +57,9 @@ describe('EventParticipantResolver', () => {
     jest.clearAllMocks();
     // Reset validateMongodbId to default no-op behavior
     (validation.validateMongodbId as jest.Mock).mockImplementation(() => {});
+    // Ensure fire-and-forget stubs don't throw by default
+    (UserFeedDAO.removeEventFromFeed as jest.Mock).mockResolvedValue(undefined);
+    (RecommendationService.computeFeedForUser as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('upsertEventParticipant', () => {
@@ -87,6 +108,33 @@ describe('EventParticipantResolver', () => {
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
       expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(mockInput);
     });
+
+    it('removes the event from the feed after a successful RSVP', async () => {
+      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+
+      await resolver.upsertEventParticipant(mockInput);
+
+      expect(UserFeedDAO.removeEventFromFeed).toHaveBeenCalledWith(mockInput.userId, mockInput.eventId);
+    });
+
+    it('triggers a feed recomputation (fire-and-forget) after a successful RSVP', async () => {
+      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+
+      await resolver.upsertEventParticipant(mockInput);
+      // Allow microtask queue to flush the fire-and-forget promise
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith(mockInput.userId);
+    });
+
+    it('returns the participant even when feed removal fails', async () => {
+      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+      (UserFeedDAO.removeEventFromFeed as jest.Mock).mockRejectedValue(new Error('feed error'));
+
+      // feed removal error is swallowed via .catch() — resolver still resolves with the participant
+      const result = await resolver.upsertEventParticipant(mockInput);
+      expect(result).toEqual(mockParticipant);
+    });
   });
 
   describe('cancelEventParticipant', () => {
@@ -133,6 +181,24 @@ describe('EventParticipantResolver', () => {
       await expect(resolver.cancelEventParticipant(mockInput)).rejects.toThrow(daoError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
       expect(EventParticipantDAO.cancel).toHaveBeenCalledWith(mockInput);
+    });
+
+    it('triggers a feed recomputation (fire-and-forget) after cancellation', async () => {
+      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
+
+      await resolver.cancelEventParticipant(mockInput);
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith(mockInput.userId);
+    });
+
+    it('returns the cancelled participant even when feed trigger errors are swallowed', async () => {
+      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
+      (RecommendationService.computeFeedForUser as jest.Mock).mockRejectedValue(new Error('reco error'));
+
+      const result = await resolver.cancelEventParticipant(mockInput);
+
+      expect(result).toEqual(mockCancelledParticipant);
     });
   });
 

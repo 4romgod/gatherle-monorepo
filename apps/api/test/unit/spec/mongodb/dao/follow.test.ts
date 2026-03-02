@@ -580,4 +580,47 @@ describe('FollowDAO', () => {
       );
     });
   });
+
+  describe('readSavedEventsByUserIds', () => {
+    const mockSavedFollow: Follow = {
+      followId: 'save-1',
+      followerUserId: 'user-a',
+      targetType: FollowTargetType.Event,
+      targetId: 'event-1',
+      approvalStatus: FollowApprovalStatus.Accepted,
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+    };
+
+    it('returns saved event follows for a set of userIds', async () => {
+      (FollowModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => mockSavedFollow }]),
+      );
+
+      const result = await FollowDAO.readSavedEventsByUserIds(['user-a', 'user-b']);
+
+      expect(FollowModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          followerUserId: { $in: ['user-a', 'user-b'] },
+          targetType: FollowTargetType.Event,
+          approvalStatus: FollowApprovalStatus.Accepted,
+        }),
+      );
+      expect(result).toEqual([mockSavedFollow]);
+    });
+
+    it('returns empty array without querying when userIds is empty', async () => {
+      const result = await FollowDAO.readSavedEventsByUserIds([]);
+
+      expect(FollowModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('wraps errors', async () => {
+      (FollowModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(FollowDAO.readSavedEventsByUserIds(['user-a'])).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
 });

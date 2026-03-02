@@ -10,6 +10,7 @@ import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 import NotificationService from './notification';
+import RecommendationService from './recommendation';
 import {
   publishFollowRequestCreated,
   publishFollowRequestUpdated,
@@ -109,6 +110,12 @@ class FollowService {
     // Send notifications asynchronously (don't block the response)
     this.sendFollowNotification(follow, followerUserId).catch((err) => {
       logger.error('Failed to send follow notification', err);
+    });
+
+    // Trigger a feed refresh for the new follower so their social graph changes
+    // are immediately reflected in their recommendations. Fire-and-forget.
+    RecommendationService.onUserFollowed(followerUserId).catch((err) => {
+      logger.warn('[FollowService] Feed trigger failed after follow', { error: err });
     });
 
     if (follow.targetType === FollowTargetType.User && follow.approvalStatus === FollowApprovalStatus.Pending) {

@@ -252,6 +252,28 @@ class EventDAO {
       throw KnownCommonError(error);
     }
   }
+
+  /**
+   * Read upcoming and ongoing published events for feed candidate selection.
+   * Scoped to public and unlisted events only — private/invitation events are never surfaced.
+   * Used exclusively by the recommendation engine.
+   */
+  static async readUpcomingPublished(limit: number): Promise<EventEntity[]> {
+    try {
+      const events = await EventModel.find({
+        lifecycleStatus: 'Published',
+        status: { $in: ['Upcoming', 'Ongoing'] },
+        visibility: { $in: ['Public', 'Unlisted'] },
+      })
+        .sort({ 'primarySchedule.startAt': 1 })
+        .limit(limit)
+        .exec();
+      return events.map((e) => e.toObject()) as unknown as EventEntity[];
+    } catch (error) {
+      logDaoError('Error reading upcoming published events', { error });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventDAO;

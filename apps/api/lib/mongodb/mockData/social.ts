@@ -1,7 +1,6 @@
 import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
 import type { FollowApprovalStatus } from '@gatherle/commons/types/follow';
 import { FollowTargetType } from '@gatherle/commons/types/follow';
-import { IntentVisibility, IntentSource, IntentStatus } from '@gatherle/commons/types/intent';
 
 export type FollowSeed = {
   followerEmail: string;
@@ -9,15 +8,6 @@ export type FollowSeed = {
   targetUserEmail?: string;
   targetOrgSlug?: string;
   approvalStatus?: FollowApprovalStatus;
-};
-
-export type IntentSeed = {
-  userEmail: string;
-  eventTitle: string;
-  status?: IntentStatus;
-  visibility?: IntentVisibility;
-  source?: IntentSource;
-  metadata?: Record<string, any>;
 };
 
 export type ActivitySeed = {
@@ -54,23 +44,6 @@ export const followSeedData: FollowSeed[] = [
     followerEmail: 'jay@rocknation.com',
     targetType: FollowTargetType.User,
     targetUserEmail: 'celin@yahoo.com',
-  },
-];
-
-export const intentSeedData: IntentSeed[] = [
-  {
-    userEmail: 'user001@gmail.com',
-    eventTitle: 'Signal Studios Urban Maker Fair',
-    status: IntentStatus.Going,
-    visibility: IntentVisibility.Public,
-    source: IntentSource.Manual,
-  },
-  {
-    userEmail: 'jay@rocknation.com',
-    eventTitle: 'Harbour Collective: Salt City Night Market',
-    status: IntentStatus.Interested,
-    visibility: IntentVisibility.Followers,
-    source: IntentSource.Invite,
   },
 ];
 

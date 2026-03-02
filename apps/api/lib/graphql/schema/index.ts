@@ -11,11 +11,11 @@ import {
   OrganizationMembershipResolver,
   VenueResolver,
   FollowResolver,
-  IntentResolver,
   ActivityResolver,
   ChatResolver,
   NotificationResolver,
   ImageResolver,
+  FeedResolver,
 } from '@/graphql/resolvers';
 import { authChecker } from '@/utils/auth';
 import { ResolveTime } from '@/utils';
@@ -30,7 +30,6 @@ const createSchema = () => {
       UserResolver,
       EventParticipantResolver,
       FollowResolver,
-      IntentResolver,
       ActivityResolver,
       ChatResolver,
       OrganizationResolver,
@@ -38,6 +37,7 @@ const createSchema = () => {
       VenueResolver,
       NotificationResolver,
       ImageResolver,
+      FeedResolver,
     ],
     validate: true,
     emitSchemaFile: false,

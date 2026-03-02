@@ -9,9 +9,6 @@ import {
   ActivityVerb,
   ActivityObjectType,
   ActivityVisibility,
-  IntentStatus,
-  IntentVisibility,
-  IntentSource,
   EventStatus,
   EventVisibility,
   EventLifecycleStatus,
@@ -25,9 +22,6 @@ import {
   getReadFeedQuery,
   getLogActivityMutation,
   getReadActivitiesByActorQuery,
-  getUpsertIntentMutation,
-  getReadIntentsByEventQuery,
-  getReadIntentsByUserQuery,
   getUnfollowMutation,
   getUpdateUserMutation,
 } from '@/test/utils';
@@ -199,39 +193,6 @@ describe('Social resolver e2e', () => {
     expect(unfollowResponse.body.data.unfollow).toBe(true);
   });
 
-  it('records intents and surfaces them by user/event', async () => {
-    const intentResponse = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(
-        getUpsertIntentMutation({
-          eventId,
-          status: IntentStatus.Going,
-          visibility: IntentVisibility.Public,
-          source: IntentSource.Manual,
-        }),
-      );
-
-    expect(intentResponse.status).toBe(200);
-    expect(intentResponse.body.data.upsertIntent.eventId).toBe(eventId);
-
-    const userIntentsResponse = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getReadIntentsByUserQuery());
-
-    expect(userIntentsResponse.status).toBe(200);
-    expect(userIntentsResponse.body.data.readIntentsByUser.length).toBeGreaterThan(0);
-
-    const eventIntentsResponse = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getReadIntentsByEventQuery(eventId));
-
-    expect(eventIntentsResponse.status).toBe(200);
-    expect(eventIntentsResponse.body.data.readIntentsByEvent.length).toBeGreaterThan(0);
-  });
-
   it('logs activities and serves feed items', async () => {
     const logResponse = await request(url)
       .post('')
@@ -390,38 +351,6 @@ describe('Social resolver e2e', () => {
     );
   });
 
-  it('handles intent status updates', async () => {
-    const initialIntent = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(
-        getUpsertIntentMutation({
-          eventId,
-          status: IntentStatus.Interested,
-          visibility: IntentVisibility.Public,
-          source: IntentSource.Manual,
-        }),
-      );
-
-    expect(initialIntent.status).toBe(200);
-    expect(initialIntent.body.data.upsertIntent.status).toBe(IntentStatus.Interested);
-
-    const updatedIntent = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(
-        getUpsertIntentMutation({
-          eventId,
-          status: IntentStatus.Going,
-          visibility: IntentVisibility.Public,
-          source: IntentSource.Manual,
-        }),
-      );
-
-    expect(updatedIntent.status).toBe(200);
-    expect(updatedIntent.body.data.upsertIntent.status).toBe(IntentStatus.Going);
-  });
-
   it('requires authentication for follow mutation', async () => {
     const response = await request(url)
       .post('')
@@ -432,21 +361,6 @@ describe('Social resolver e2e', () => {
 
   it('requires authentication for unfollow mutation', async () => {
     const response = await request(url).post('').send(getUnfollowMutation(FollowTargetType.User, targetUser.userId));
-
-    expect(response.status).toBe(401);
-  });
-
-  it('requires authentication for intent mutations', async () => {
-    const response = await request(url)
-      .post('')
-      .send(
-        getUpsertIntentMutation({
-          eventId,
-          status: IntentStatus.Going,
-          visibility: IntentVisibility.Public,
-          source: IntentSource.Manual,
-        }),
-      );
 
     expect(response.status).toBe(401);
   });

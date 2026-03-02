@@ -128,11 +128,6 @@ export const OPERATIONS = {
     READ_ACTIVITIES_BY_ACTOR: 'readActivitiesByActor',
     READ_FEED: 'readFeed',
   },
-  INTENT: {
-    UPSERT_INTENT: 'upsertIntent',
-    READ_INTENTS_BY_USER: 'readIntentsByUser',
-    READ_INTENTS_BY_EVENT: 'readIntentsByEvent',
-  },
   NOTIFICATION: {
     MARK_NOTIFICATION_READ: 'markNotificationRead',
     MARK_ALL_NOTIFICATIONS_READ: 'markAllNotificationsRead',

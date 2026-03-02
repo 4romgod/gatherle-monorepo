@@ -210,7 +210,7 @@ await NotificationService.notifyMany({
 ### Lessons Learned
 
 1. Notifications should be specific and actionable
-2. When capturing user intent (Going vs Interested), propagate that context through the entire flow
+2. When capturing user RSVP status (Going vs Interested), propagate that context through the entire flow
 
 ---
 

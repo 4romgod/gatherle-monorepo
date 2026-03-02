@@ -17,3 +17,5 @@ export * from './organizationMembership/query';
 export * from './organizationMembership/mutation';
 export * from './social/mutation';
 export * from './social/query';
+export * from './feed/query';
+export * from './feed/mutation';

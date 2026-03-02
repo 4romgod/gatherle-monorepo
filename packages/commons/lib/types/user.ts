@@ -50,7 +50,7 @@ registerEnumType(UserRole, {
 
 registerEnumType(SocialVisibility, {
   name: 'SocialVisibility',
-  description: 'Visibility of social signals (intents, presence)',
+  description: 'Visibility of social signals (presence, activity)',
 });
 
 registerEnumType(FollowPolicy, {

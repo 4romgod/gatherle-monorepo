@@ -413,4 +413,46 @@ describe('EventParticipantDAO', () => {
       await expect(EventParticipantDAO.countByEvent(mockEventId)).rejects.toThrow(GraphQLError);
     });
   });
+
+  describe('readByUserIds', () => {
+    it('returns active participations for a set of userIds', async () => {
+      const mockParticipants = [
+        {
+          ...mockEventParticipant,
+          userId: 'user-a',
+          toObject: jest.fn().mockReturnValue({ ...mockEventParticipant, userId: 'user-a' }),
+        },
+        {
+          ...mockEventParticipant,
+          userId: 'user-b',
+          toObject: jest.fn().mockReturnValue({ ...mockEventParticipant, userId: 'user-b' }),
+        },
+      ];
+
+      (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
+
+      const result = await EventParticipantDAO.readByUserIds(['user-a', 'user-b']);
+
+      expect(EventParticipantModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: { $in: ['user-a', 'user-b'] },
+        }),
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    it('returns empty array when passed empty userIds list', async () => {
+      const result = await EventParticipantDAO.readByUserIds([]);
+
+      // Should short-circuit without hitting the DB
+      expect(EventParticipantModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('wraps errors', async () => {
+      (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(EventParticipantDAO.readByUserIds(['user-a'])).rejects.toThrow(GraphQLError);
+    });
+  });
 });

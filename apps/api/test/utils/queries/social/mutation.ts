@@ -31,26 +31,6 @@ export const getUnfollowMutation = (targetType: string, targetId: string) => {
   };
 };
 
-export const getUpsertIntentMutation = (input: any) => {
-  return {
-    query: `
-      mutation UpsertIntent($input: UpsertIntentInput!) {
-        upsertIntent(input: $input) {
-          intentId
-          userId
-          eventId
-          status
-          visibility
-          source
-        }
-      }
-    `,
-    variables: {
-      input,
-    },
-  };
-};
-
 export const getLogActivityMutation = (input: any) => {
   return {
     query: `

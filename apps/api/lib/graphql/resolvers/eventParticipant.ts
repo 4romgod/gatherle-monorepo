@@ -8,10 +8,12 @@ import {
   UserRole,
   Event,
 } from '@gatherle/commons/types';
-import { EventParticipantDAO } from '@/mongodb/dao';
+import { EventParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { EventParticipantService } from '@/services';
+import RecommendationService from '@/services/recommendation';
+import { logger } from '@/utils/logger';
 
 @Resolver(() => EventParticipant)
 export class EventParticipantResolver {
@@ -22,7 +24,18 @@ export class EventParticipantResolver {
   ): Promise<EventParticipant> {
     validateMongodbId(input.eventId);
     validateMongodbId(input.userId);
-    return EventParticipantService.rsvp(input);
+    const participant = await EventParticipantService.rsvp(input);
+
+    UserFeedDAO.removeEventFromFeed(input.userId, input.eventId).catch((err) => {
+      logger.warn('[EventParticipantResolver] Failed to remove event from feed after upsertEventParticipant', {
+        error: err,
+      });
+    });
+    RecommendationService.computeFeedForUser(input.userId).catch((err) => {
+      logger.warn('[EventParticipantResolver] Feed trigger failed after upsertEventParticipant', { error: err });
+    });
+
+    return participant;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -32,7 +45,13 @@ export class EventParticipantResolver {
   ): Promise<EventParticipant> {
     validateMongodbId(input.eventId);
     validateMongodbId(input.userId);
-    return EventParticipantService.cancel(input);
+    const participant = await EventParticipantService.cancel(input);
+
+    RecommendationService.computeFeedForUser(input.userId).catch((err) => {
+      logger.warn('[EventParticipantResolver] Feed trigger failed after cancelEventParticipant', { error: err });
+    });
+
+    return participant;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

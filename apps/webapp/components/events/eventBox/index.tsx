@@ -3,7 +3,8 @@
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
-import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
+import { EventParticipantPreview } from '@/data/graphql/query/Event/types';
+import type { AnyEventPreview } from '@/components/events/EventTileGrid';
 import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { PeopleOutline } from '@mui/icons-material';
@@ -14,7 +15,7 @@ import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
 import EventShareButton from '@/components/events/share/EventShareButton';
 
-export default function EventBox({ event }: { event: EventPreview }) {
+export default function EventBox({ event }: { event: AnyEventPreview }) {
   const theme = useTheme();
   const { title, recurrenceRule, participants, media, location, status } = event;
 
