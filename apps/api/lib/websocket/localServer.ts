@@ -4,7 +4,7 @@ import type { IncomingHttpHeaders, IncomingMessage, Server } from 'http';
 import WebSocket, { WebSocketServer, type RawData } from 'ws';
 import { WebSocketCloseCode } from '@/constants';
 import { logger } from '@/utils/logger';
-import { WEBSOCKET_ROUTES } from '@/websocket/constants';
+import { WEBSOCKET_AUTH_PROTOCOL_PREFIX, WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { websocketLambdaHandler } from '@/websocket/lambdaHandler';
 import {
   LOCAL_WEBSOCKET_DOMAIN_NAME,
@@ -166,7 +166,13 @@ const toMessageString = (data: RawData): string => {
 };
 
 export const startLocalWebSocketServer = (httpServer: Server): WebSocketServer => {
-  const webSocketServer = new WebSocketServer({ noServer: true });
+  const webSocketServer = new WebSocketServer({
+    noServer: true,
+    handleProtocols: (protocols) => {
+      const authProtocol = [...protocols].find((p) => p.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX));
+      return authProtocol ?? false;
+    },
+  });
 
   httpServer.on('upgrade', (request, socket, head) => {
     webSocketServer.handleUpgrade(request, socket, head, (ws) => {

@@ -2,13 +2,24 @@ import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
 import { logger } from '@/utils/logger';
-import { CONNECTION_TTL_HOURS } from '@/websocket/constants';
+import { CONNECTION_TTL_HOURS, WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
 import { extractToken, getConnectionMetadata } from '@/websocket/event';
 import { response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { HttpStatusCode } from '@/constants';
+
+const extractAuthProtocol = (event: WebSocketRequestEvent): string | undefined => {
+  const protocolHeader = event.headers?.['sec-websocket-protocol'] || event.headers?.['Sec-WebSocket-Protocol'];
+  if (!protocolHeader) {
+    return undefined;
+  }
+  return protocolHeader
+    .split(',')
+    .map((p) => p.trim())
+    .find((p) => p.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX));
+};
 
 export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   const token = extractToken(event);
@@ -60,5 +71,7 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
     stage,
   });
 
-  return response(HttpStatusCode.OK, { message: 'Connected' });
+  const authProtocol = extractAuthProtocol(event);
+  const responseHeaders = authProtocol ? { 'Sec-WebSocket-Protocol': authProtocol } : undefined;
+  return response(HttpStatusCode.OK, { message: 'Connected' }, responseHeaders);
 };
