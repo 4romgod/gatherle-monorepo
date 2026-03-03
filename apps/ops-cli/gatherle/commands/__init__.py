@@ -1,7 +1,5 @@
-from gatherle.commands.greetings import greetings
-from gatherle.commands.farewell import farewell
+from gatherle.commands.db import db
 
 command_groups = [
-    greetings,
-    farewell,
+    db,
 ]

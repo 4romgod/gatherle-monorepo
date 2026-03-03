@@ -3,6 +3,11 @@ dist
 .env
 .git
 .gatherle-env
+.venv
+env/
 .vscode
 build
 gatherle.egg-info
+__pycache__/
+*.py[cod]
+*.pyo

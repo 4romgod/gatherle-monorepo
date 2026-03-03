@@ -16,6 +16,7 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetAllEventsDocument,
+  GetMyRsvpsDocument,
   GetSavedEventsDocument,
   GetUserByUsernameDocument,
   ParticipantStatus,
@@ -29,12 +30,13 @@ import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { isEventUpcoming, logger } from '@/lib/utils';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { differenceInYears, format } from 'date-fns';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
-import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { useFollowing } from '@/hooks/useFollow';
+import ErrorPage from '@/components/errors/ErrorPage';
 
 interface UserProfilePageClientProps {
   username: string;
@@ -68,6 +70,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     variables: { username },
     fetchPolicy: 'cache-and-network',
   });
+
   const {
     data: eventsData,
     loading: eventsLoading,
@@ -76,7 +79,15 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     fetchPolicy: 'cache-and-network',
     context: { headers: getAuthHeader(token) },
   });
+
   const { data: savedData, loading: savedLoading } = useQuery(GetSavedEventsDocument, {
+    skip: !isOwnProfile || !token,
+    context: { headers: getAuthHeader(token) },
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const { data: myRsvpsData, loading: myRsvpsLoading } = useQuery(GetMyRsvpsDocument, {
+    variables: { includeCancelled: false },
     skip: !isOwnProfile || !token,
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
@@ -109,12 +120,32 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     (followingUserIds.has(user.userId) || user.defaultVisibility === SocialVisibility.Public),
   );
 
-  const rsvpdEvents = useMemo(
-    () =>
-      events.filter((event) =>
-        event.participants?.some((p) => p.userId === user?.userId && p.status !== ParticipantStatus.Cancelled),
-      ),
-    [events, user?.userId],
+  // For own profile use the dedicated myRsvps query; for others filter all events
+  const allRsvpdEvents = useMemo(() => {
+    if (isOwnProfile && myRsvpsData?.myRsvps) {
+      const rsvpdEvents = myRsvpsData.myRsvps
+        .map((r) => {
+          if (!r.event) {
+            logger.warn('UserProfilePageClient: myRsvps entry without associated event encountered');
+            return null;
+          }
+          return r.event;
+        })
+        .filter((e): e is EventPreview => e != null);
+      return rsvpdEvents;
+    }
+    return events.filter((event) =>
+      event.participants?.some((p) => p.userId === user?.userId && p.status !== ParticipantStatus.Cancelled),
+    );
+  }, [isOwnProfile, myRsvpsData, events, user?.userId]);
+
+  const upcomingRsvpdEvents = useMemo(
+    () => allRsvpdEvents.filter((e) => isEventUpcoming(e.recurrenceRule)),
+    [allRsvpdEvents],
+  );
+  const pastRsvpdEvents = useMemo(
+    () => allRsvpdEvents.filter((e) => !isEventUpcoming(e.recurrenceRule)),
+    [allRsvpdEvents],
   );
   const organizedEvents = useMemo(
     () => events.filter((event) => event.organizers.some((organizer) => organizer.user.userId === user?.userId)),
@@ -125,7 +156,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   const age = user?.birthdate ? differenceInYears(new Date(), new Date(user.birthdate)) : null;
   const formattedDOB = user?.birthdate ? format(new Date(user.birthdate), 'dd MMMM yyyy') : null;
 
-  const isLoading = userLoading || eventsLoading || (isOwnProfile && savedLoading);
+  const isLoading = userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading));
   const hasError = userError || eventsError;
   const notFoundError = isNotFoundGraphQLError(userError);
 
@@ -219,8 +250,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
             sx={{
               borderRadius: 3,
               overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
             }}
           >
             <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
@@ -262,7 +291,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                       initialFollowersCount={user.followersCount ?? 0}
                       initialFollowingCount={0}
                       organizedEventsCount={organizedEvents.length}
-                      rsvpdEventsCount={rsvpdEvents.length}
+                      rsvpdEventsCount={allRsvpdEvents.length}
                       savedEventsCount={savedEvents.length}
                       interestsCount={interests.length}
                       isOwnProfile={isOwnProfile}
@@ -327,80 +356,75 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
           <Box sx={{ position: 'relative' }}>
             <Box sx={detailBlurSx}>
               <Grid container spacing={SPACING.standard}>
-                {/* ── Sidebar ── */}
-                <Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 2, md: 1 } }}>
-                  <Box sx={{ position: { md: 'sticky' }, top: 24 }}>
-                    <Stack spacing={SPACING.standard}>
-                      {/* Personal Information */}
-                      <Card elevation={0} sx={CARD_STYLES}>
-                        <CardContent>
-                          <Stack spacing={2}>
-                            <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                              Personal Information
-                            </Typography>
-                            <Divider />
-                            <Stack spacing={0} divider={<Divider />}>
-                              <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
-                              <InfoItem
-                                icon={<PhoneIcon fontSize="small" />}
-                                label="Phone"
-                                value={user.phone_number || 'Not provided'}
-                              />
-                              <InfoItem
-                                icon={<LocationIcon fontSize="small" />}
-                                label="Location"
-                                value={locationText}
-                              />
-                              <InfoItem icon={<CakeIcon fontSize="small" />} label="Birthday" value={birthdayText} />
-                              <InfoItem
-                                icon={<EventIcon fontSize="small" />}
-                                label="Gender"
-                                value={user.gender || 'Not specified'}
-                              />
-                            </Stack>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-
-                      {/* Interests */}
-                      <Card id="interests" elevation={0} sx={CARD_STYLES}>
-                        <CardContent>
-                          <Stack spacing={2}>
-                            <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                              Interests
-                            </Typography>
-                            <Divider />
-                            {interests.length > 0 ? (
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
-                                {interests
-                                  .filter((interest) => interest.eventCategoryId != null)
-                                  .map((interest) => (
-                                    <EventCategoryBadge key={interest.eventCategoryId} category={interest} />
-                                  ))}
-                              </Box>
-                            ) : (
-                              <Box sx={{ textAlign: 'center', py: 3 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  No interests selected yet
-                                </Typography>
-                              </Box>
-                            )}
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Stack>
-                  </Box>
-                </Grid>
-
                 {/* ── Main content: tabbed events ── */}
-                <Grid size={{ xs: 12, md: 8 }} sx={{ order: { xs: 1, md: 2 } }}>
+                <Grid size={{ xs: 12 }}>
                   <ProfileEventsTabs
+                    upcomingRsvpdEvents={upcomingRsvpdEvents}
+                    pastRsvpdEvents={pastRsvpdEvents}
                     organizedEvents={organizedEvents}
-                    rsvpdEvents={rsvpdEvents}
                     savedEvents={savedEvents}
                     isOwnProfile={isOwnProfile}
                     emptyCreatedCta={emptyCreatedCTA}
                   />
+                </Grid>
+
+                <Grid container>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Personal Information */}
+                    <Card elevation={0} sx={CARD_STYLES}>
+                      <CardContent>
+                        <Stack spacing={2}>
+                          <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+                            Personal Information
+                          </Typography>
+                          <Divider />
+                          <Stack spacing={0} divider={<Divider />}>
+                            <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
+                            <InfoItem
+                              icon={<PhoneIcon fontSize="small" />}
+                              label="Phone"
+                              value={user.phone_number || 'Not provided'}
+                            />
+                            <InfoItem icon={<LocationIcon fontSize="small" />} label="Location" value={locationText} />
+                            <InfoItem icon={<CakeIcon fontSize="small" />} label="Birthday" value={birthdayText} />
+                            <InfoItem
+                              icon={<EventIcon fontSize="small" />}
+                              label="Gender"
+                              value={user.gender || 'Not specified'}
+                            />
+                          </Stack>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    {/* Interests */}
+                    <Card id="interests" elevation={0} sx={CARD_STYLES}>
+                      <CardContent>
+                        <Stack spacing={2}>
+                          <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+                            Interests
+                          </Typography>
+                          <Divider />
+                          {interests.length > 0 ? (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
+                              {interests
+                                .filter((interest) => interest.eventCategoryId != null)
+                                .map((interest) => (
+                                  <EventCategoryBadge key={interest.eventCategoryId} category={interest} />
+                                ))}
+                            </Box>
+                          ) : (
+                            <Box sx={{ textAlign: 'center', py: 3 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                No interests selected yet
+                              </Typography>
+                            </Box>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
               </Grid>
             </Box>

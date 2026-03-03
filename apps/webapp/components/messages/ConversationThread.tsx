@@ -20,6 +20,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -1065,9 +1066,11 @@ export default function ConversationThread({ username }: ConversationThreadProps
                       disabled={emojiSearch.trim().length > 0 && !hasMatches}
                       aria-label={category.label}
                       icon={
-                        <Box component="span" sx={{ fontSize: '1.1rem', lineHeight: 1 }}>
-                          {category.tabEmoji}
-                        </Box>
+                        <Tooltip title={category.label} placement="top" arrow>
+                          <Box component="span" sx={{ fontSize: '1.1rem', lineHeight: 1 }}>
+                            {category.tabEmoji}
+                          </Box>
+                        </Tooltip>
                       }
                       sx={{
                         minWidth: 48,

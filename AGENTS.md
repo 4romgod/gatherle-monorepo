@@ -8,7 +8,8 @@
 - `packages/commons`: Shared types, validation, and constants consumed by other workspaces.
 - `infrastructure/cdk`: AWS CDK stacks for API deployment; expects AWS creds and bootstrap.
 - `infrastructure/terraform`: Terraform configurations for provider-managed infrastructure.
-- `apps/ops-cli`: Python utilities; keep in sync with API contracts when modifying schemas.
+- `apps/ops-cli`: Python CLI for operational tasks (seeding, migrations, etc.); keep in sync with API contracts when
+  modifying schemas.
 
 ## Backend Architecture (API)
 
