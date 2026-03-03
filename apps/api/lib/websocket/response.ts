@@ -1,8 +1,13 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 
-export const response = (statusCode: number, body: Record<string, unknown>): APIGatewayProxyResultV2 => ({
+export const response = (
+  statusCode: number,
+  body: Record<string, unknown>,
+  headers?: Record<string, string>,
+): APIGatewayProxyResultV2 => ({
   statusCode,
   body: JSON.stringify(body),
+  ...(headers ? { headers } : {}),
 });
 
 export const parseBody = <T>(body: string | null | undefined): T | null => {
