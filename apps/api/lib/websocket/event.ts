@@ -1,6 +1,18 @@
 import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 
+export const getHeader = (
+  headers: Record<string, string | undefined> | undefined,
+  name: string,
+): string | undefined => {
+  if (!headers) {
+    return undefined;
+  }
+  const lower = name.toLowerCase();
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === lower);
+  return key ? headers[key] : undefined;
+};
+
 const parseProtocolHeaderForToken = (protocolHeader: string): string | undefined => {
   const protocols = protocolHeader
     .split(',')
@@ -20,15 +32,7 @@ const parseProtocolHeaderForToken = (protocolHeader: string): string | undefined
 };
 
 export const extractToken = (event: WebSocketRequestEvent): string | undefined => {
-  const authHeader = event.headers?.authorization || event.headers?.Authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    if (token) {
-      return token;
-    }
-  }
-
-  const protocolHeader = event.headers?.['sec-websocket-protocol'] || event.headers?.['Sec-WebSocket-Protocol'];
+  const protocolHeader = getHeader(event.headers, 'sec-websocket-protocol');
   if (protocolHeader) {
     return parseProtocolHeaderForToken(protocolHeader);
   }

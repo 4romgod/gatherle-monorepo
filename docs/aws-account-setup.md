@@ -106,6 +106,11 @@ Create one GitHub Environment per target name used by deploy workflow:
 - `beta-af-south-1`
 - `prod-af-south-1` (when enabled)
 
+```bash
+gh api --method PUT /repos/{owner}/{repo}/environments/dns-af-south-1
+gh api --method PUT /repos/{owner}/{repo}/environments/beta-af-south-1
+```
+
 Set environment secrets:
 
 - `ASSUME_ROLE_ARN` (from `GitHubAuthStack` output for that target account; DNS workflows must use DNS account ARN)
@@ -114,15 +119,34 @@ Set environment secrets:
 - `VERCEL_ORG_ID` (if web deploy enabled)
 - `VERCEL_PROJECT_ID` (if web deploy enabled)
 
-Repository variable:
+```bash
+gh secret set ASSUME_ROLE_ARN --env dns-af-south-1
+gh secret set ASSUME_ROLE_ARN --env beta-af-south-1
+gh secret set NEXTAUTH_SECRET --env beta-af-south-1
+gh secret set VERCEL_TOKEN --env beta-af-south-1
+gh secret set VERCEL_ORG_ID --env beta-af-south-1
+gh secret set VERCEL_PROJECT_ID --env beta-af-south-1
+```
+
+Repository variables:
 
 - `ENABLE_PROD_DEPLOY`
 - `ENABLE_CUSTOM_DOMAINS` (`false` for first rollout, then `true` after NS delegation)
+
+```bash
+gh variable set ENABLE_PROD_DEPLOY --body "false"
+gh variable set ENABLE_CUSTOM_DOMAINS --body "false"
+```
 
 DNS environment variables (set in `dns-<region>` GitHub Environment when delegating a subdomain):
 
 - `DELEGATED_SUBDOMAIN` (example: `beta.af-south-1`)
 - `DELEGATED_NAME_SERVERS` (comma-separated name servers from `GraphQLStack` output `stageHostedZoneNameServers`)
+
+```bash
+gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
+gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated-ns>" --env dns-af-south-1
+```
 
 ## DNS setup (root + stage delegation)
 
@@ -161,11 +185,42 @@ dig +short NS gatherle.com
 
 1. Run runtime deploy once with `ENABLE_CUSTOM_DOMAINS=false` so `GraphQLStack` creates stage hosted zone and outputs
    `stageHostedZoneNameServers`.
+
+```bash
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+```
+
 2. Copy `stageHostedZoneNameServers` (also surfaced by deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`).
-3. In GitHub Environment `dns-af-south-1`, set:
-   - `DELEGATED_SUBDOMAIN=beta.af-south-1`
-   - `DELEGATED_NAME_SERVERS=<comma-separated from step 2>`
-4. Deploy DNS stack (CI/CD or manual). This creates root-zone NS record for `beta.af-south-1`.
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-graphql-beta-af-south-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
+  --output text \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+3. Set the GitHub Environment variables (used by CI/CD deploys):
+
+```bash
+gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
+gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated from step 2>" --env dns-af-south-1
+```
+
+4. Deploy DNS stack. This creates root-zone NS record for `beta.af-south-1`.
+
+   CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
+
+   Manual (env vars must be passed inline — they are read by CDK at synth time, not from GitHub):
+
+```bash
+AWS_REGION=af-south-1 \
+DELEGATED_SUBDOMAIN=beta.af-south-1 \
+DELEGATED_NAME_SERVERS="<comma-separated from step 2>" \
+npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
+```
+
 5. Verify:
 
 ```bash
@@ -175,7 +230,17 @@ dig +short NS beta.af-south-1.gatherle.com
 ### C. Enable API/WS custom domains
 
 1. Set `ENABLE_CUSTOM_DOMAINS=true` in `beta-af-south-1` environment variables.
+
+```bash
+gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
+```
+
 2. Redeploy runtime stacks.
+
+```bash
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+```
+
 3. Verify:
 
 ```bash
@@ -266,13 +331,49 @@ Preferred:
 Recommended first rollout order for custom domains:
 
 1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks once.
+
+```bash
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+```
+
 2. Read `GraphQLStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
    `STAGE_HOSTED_ZONE_NAME_SERVERS`).
-3. Set DNS environment vars:
-   - `DELEGATED_SUBDOMAIN=beta.af-south-1`
-   - `DELEGATED_NAME_SERVERS=<comma-separated from step 2>`
-4. Deploy `DnsStack` (CI/CD or manual) so root zone gets NS delegation for `beta.af-south-1`.
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-graphql-beta-af-south-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
+  --output text \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+3. Set the GitHub Environment variables (used by CI/CD deploys):
+
+```bash
+gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
+gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated from step 2>" --env dns-af-south-1
+```
+
+4. Deploy `DnsStack` so root zone gets NS delegation for `beta.af-south-1`.
+
+   CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
+
+   Manual (env vars must be passed inline — they are read by CDK at synth time, not from GitHub):
+
+```bash
+AWS_REGION=af-south-1 \
+DELEGATED_SUBDOMAIN=beta.af-south-1 \
+DELEGATED_NAME_SERVERS="<comma-separated from step 2>" \
+npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
+```
+
 5. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime stacks.
+
+```bash
+gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+```
 
 Optional manual deploy commands:
 
@@ -282,7 +383,16 @@ Runtime stacks (Beta):
 STAGE=Beta AWS_REGION=af-south-1 npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
-DNS stack:
+DNS stack (with delegation — env vars are read at synth time and must be passed inline):
+
+```bash
+AWS_REGION=af-south-1 \
+DELEGATED_SUBDOMAIN=beta.af-south-1 \
+DELEGATED_NAME_SERVERS="<comma-separated stage NS>" \
+npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
+```
+
+DNS stack (without delegation — creates/updates root zone only):
 
 ```bash
 AWS_REGION=af-south-1 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
@@ -301,12 +411,51 @@ AWS_REGION=af-south-1 aws cloudformation describe-stacks \
 ## 7. Onboard a new account or region
 
 1. Add mapping in `infrastructure/cdk/lib/constants/accounts.ts` under `STAGE_REGION_ACCOUNT_CONFIGS`.
+
 2. Manually bootstrap `CDKToolkit` in that account+region.
+
+```bash
+STAGE=<Stage> AWS_REGION=<region> npm run cdk -w @gatherle/cdk -- bootstrap aws://<account-id>/<region> --profile <profile>
+```
+
 3. Manually deploy `GitHubAuthStack` in that account.
+
+```bash
+AWS_REGION=<region> TARGET_AWS_ACCOUNT_ID=<account-id> npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively --profile <profile>
+```
+
+Read the role ARN:
+
+```bash
+AWS_REGION=<region> aws cloudformation describe-stacks \
+  --stack-name gatherle-github-auth-<account-id> \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --output text \
+  --profile <profile>
+```
+
 4. Create GitHub Environment `<stage-lower>-<region>` and set secrets.
+
+```bash
+gh api --method PUT /repos/{owner}/{repo}/environments/<stage-lower>-<region>
+gh secret set ASSUME_ROLE_ARN --env <stage-lower>-<region>
+gh secret set NEXTAUTH_SECRET --env <stage-lower>-<region>
+```
+
 5. If DNS CI deploy is enabled, also create `dns-<region>` environment with DNS account `ASSUME_ROLE_ARN`.
+
+```bash
+gh api --method PUT /repos/{owner}/{repo}/environments/dns-<region>
+gh secret set ASSUME_ROLE_ARN --env dns-<region>
+```
+
 6. Add region to `.github/workflows/deploy-trigger.yaml` matrix.
+
 7. Ensure backend secret exists: `gatherle/backend/<stage-lower>-<region>`.
+
+```bash
+STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile <profile>
+```
 
 ## 8. Troubleshooting
 
