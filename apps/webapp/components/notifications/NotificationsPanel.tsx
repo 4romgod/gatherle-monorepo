@@ -12,6 +12,7 @@ import {
   Skeleton,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { DoneAll as MarkAllReadIcon, Refresh as RefreshIcon } from '@mui/icons-material';
@@ -138,8 +139,24 @@ export default function NotificationsPage() {
               '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 },
             }}
           >
-            <Tab label={`All ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`} />
-            <Tab label="Follow Requests" />
+            <Tab
+              label={
+                <Tooltip
+                  title="All your notifications including likes, comments, and mentions"
+                  placement="bottom"
+                  arrow
+                >
+                  <span>{`All ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}</span>
+                </Tooltip>
+              }
+            />
+            <Tab
+              label={
+                <Tooltip title="Pending requests from people who want to follow you" placement="bottom" arrow>
+                  <span>Follow Requests</span>
+                </Tooltip>
+              }
+            />
           </Tabs>
 
           <TabPanel value={tabValue} index={0}>

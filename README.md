@@ -8,7 +8,7 @@ Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, 
 - `apps/webapp` – Next.js frontend
 - `packages/commons` – Shared types, validation, and constants
 - `infra` – AWS CDK stacks for deploying the API
-- `apps/ops-cli` – Python CLI utilities
+- `apps/ops-cli` – Python CLI for operational tasks (e.g. `gatherle db seed`)
 
 ## Backend architecture (apps/api)
 

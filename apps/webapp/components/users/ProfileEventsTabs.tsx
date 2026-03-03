@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Box, Button, Card, Grid, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, Card, Grid, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import {
-  CalendarMonth,
-  CheckCircle as RSVPIcon,
+  EventAvailable as GoingIcon,
   Event as EventIcon,
+  History as PastIcon,
   Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import EventBoxSm from '@/components/events/eventBoxSm';
@@ -21,21 +21,24 @@ import {
 } from '@/lib/constants';
 
 interface ProfileEventsTabsProps {
+  upcomingRsvpdEvents: EventPreview[];
+  pastRsvpdEvents: EventPreview[];
   organizedEvents: EventPreview[];
-  rsvpdEvents: EventPreview[];
   savedEvents: EventPreview[];
   isOwnProfile: boolean;
   emptyCreatedCta?: React.ReactNode;
 }
 
 export default function ProfileEventsTabs({
+  upcomingRsvpdEvents,
+  pastRsvpdEvents,
   organizedEvents,
-  rsvpdEvents,
   savedEvents,
   isOwnProfile,
   emptyCreatedCta,
 }: ProfileEventsTabsProps) {
   const [activeTab, setActiveTab] = useState(0);
+
   const defaultEmptyCreatedCta = emptyCreatedCta ?? (
     <Button
       variant="contained"
@@ -53,7 +56,8 @@ export default function ProfileEventsTabs({
       <Tabs
         value={activeTab}
         onChange={(_, v) => setActiveTab(v)}
-        variant="fullWidth"
+        variant="scrollable"
+        scrollButtons="auto"
         sx={{
           borderBottom: '1px solid',
           borderColor: 'divider',
@@ -62,24 +66,47 @@ export default function ProfileEventsTabs({
             fontWeight: 600,
             fontSize: '0.9rem',
             py: 2,
+            minWidth: 'auto',
+            px: { xs: 2, sm: 3 },
           },
         }}
       >
         <Tab
-          icon={<EventIcon sx={{ fontSize: 20 }} />}
+          icon={<GoingIcon sx={{ fontSize: 20 }} />}
           iconPosition="start"
-          label={`Created (${organizedEvents.length})`}
+          label={
+            <Tooltip title="Events you've RSVPed to that are coming up" placement="bottom" arrow>
+              <span>{`Going (${upcomingRsvpdEvents.length})`}</span>
+            </Tooltip>
+          }
         />
         <Tab
-          icon={<RSVPIcon sx={{ fontSize: 20 }} />}
+          icon={<PastIcon sx={{ fontSize: 20 }} />}
           iconPosition="start"
-          label={`Attending (${rsvpdEvents.length})`}
+          label={
+            <Tooltip title="Events you RSVPed to that have already taken place" placement="bottom" arrow>
+              <span>{`Attended (${pastRsvpdEvents.length})`}</span>
+            </Tooltip>
+          }
+        />
+        <Tab
+          icon={<EventIcon sx={{ fontSize: 20 }} />}
+          iconPosition="start"
+          label={
+            <Tooltip title="Events you've created or co-hosted" placement="bottom" arrow>
+              <span>{`Hosted (${organizedEvents.length})`}</span>
+            </Tooltip>
+          }
         />
         {isOwnProfile && (
           <Tab
             icon={<BookmarkIcon sx={{ fontSize: 20 }} />}
             iconPosition="start"
-            label={`Saved (${savedEvents.length})`}
+            label={
+              <Tooltip title="Events you've bookmarked to keep an eye on" placement="bottom" arrow>
+                <span>{`Saved (${savedEvents.length})`}</span>
+              </Tooltip>
+            }
           />
         )}
       </Tabs>
@@ -87,20 +114,10 @@ export default function ProfileEventsTabs({
       <Box sx={{ p: { xs: 2, md: 3 } }}>
         {activeTab === 0 && (
           <EventTabPanel
-            events={organizedEvents}
-            emptyIcon={<CalendarMonth sx={{ fontSize: 48, color: 'text.secondary' }} />}
-            emptyTitle="No events created yet"
-            emptyDescription="Start hosting events and they'll appear here"
-            emptyCta={defaultEmptyCreatedCta}
-          />
-        )}
-
-        {activeTab === 1 && (
-          <EventTabPanel
-            events={rsvpdEvents}
-            emptyIcon={<RSVPIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
-            emptyTitle="No RSVPs yet"
-            emptyDescription="Browse events and RSVP to ones you're interested in"
+            events={upcomingRsvpdEvents}
+            emptyIcon={<GoingIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyTitle="No upcoming events"
+            emptyDescription="RSVP to events and they'll appear here"
             emptyCta={
               <Button
                 variant="contained"
@@ -115,7 +132,37 @@ export default function ProfileEventsTabs({
           />
         )}
 
-        {isOwnProfile && activeTab === 2 && (
+        {activeTab === 1 && (
+          <EventTabPanel
+            events={pastRsvpdEvents}
+            emptyIcon={<PastIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyTitle="No attended events"
+            emptyDescription="Events you've attended will show up here"
+            emptyCta={
+              <Button
+                variant="contained"
+                color="secondary"
+                component={Link}
+                href={ROUTES.EVENTS.ROOT}
+                sx={{ ...BUTTON_STYLES, mt: 2 }}
+              >
+                Explore Events
+              </Button>
+            }
+          />
+        )}
+
+        {activeTab === 2 && (
+          <EventTabPanel
+            events={organizedEvents}
+            emptyIcon={<EventIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyTitle="No events hosted yet"
+            emptyDescription="Start hosting events and they'll appear here"
+            emptyCta={defaultEmptyCreatedCta}
+          />
+        )}
+
+        {isOwnProfile && activeTab === 3 && (
           <EventTabPanel
             events={savedEvents}
             emptyIcon={<BookmarkIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
@@ -170,7 +217,7 @@ function EventTabPanel({
   return (
     <Grid container spacing={3}>
       {events.map((event) => (
-        <Grid key={event.eventId} size={{ xs: 12, sm: 6 }}>
+        <Grid key={event.eventId} size={{ xs: 12, sm: 4 }}>
           <EventBoxSm event={event} />
         </Grid>
       ))}

@@ -8,13 +8,11 @@
 import { SxProps, Theme } from '@mui/material';
 
 /**
- * Standard card styling - elevation zero with border
+ * Standard card styling - elevation zero
  */
 export const CARD_STYLES: SxProps<Theme> = {
   elevation: 0,
   borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
   p: { xs: 3, md: 4 },
 };
 
@@ -38,8 +36,6 @@ export const INTERACTIVE_CARD_STYLES: SxProps<Theme> = {
 export const CARD_COMPACT_STYLES: SxProps<Theme> = {
   elevation: 0,
   borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
   p: 3,
 };
 
