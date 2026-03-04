@@ -1,7 +1,5 @@
 import request from 'supertest';
 import { Types } from 'mongoose';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import type { UserWithToken } from '@gatherle/commons/types';
 import { OrganizationRole } from '@gatherle/commons/types';
 import {
@@ -16,9 +14,7 @@ import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
 
 describe('OrganizationMembership Resolver', () => {
-  let server: E2EServer;
-  let url = '';
-  const TEST_PORT = 5008;
+  const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let testUser2: UserWithToken;
   const createdMembershipIds: string[] = [];
@@ -31,18 +27,9 @@ describe('OrganizationMembership Resolver', () => {
     createMembershipOnServer(url, adminUser.token, orgId, userId, OrganizationRole.Member, createdMembershipIds);
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
     testUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {

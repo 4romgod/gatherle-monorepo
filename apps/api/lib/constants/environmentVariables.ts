@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { initLogger, LOG_LEVEL_MAP, LogLevel } from '@/utils/logger';
@@ -12,11 +12,13 @@ const stageEnumValues = Object.values(APPLICATION_STAGES) as [Stage, ...Stage[]]
 const BaseEnvSchema = z.object({
   MONGO_DB_URL: z.string().optional(),
   JWT_SECRET: z.string().optional(),
-  AWS_REGION: z.string().default('eu-west-1'),
+  AWS_REGION: z.string().default(AWS_REGIONS.CPT),
   STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.BETA),
   SECRET_ARN: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
+  EMAIL_FROM: z.string().optional().default('noreply@gatherle.com'),
+  WEBAPP_URL: z.string().optional().default('http://localhost:3000'),
   LOG_LEVEL: z
     .string()
     .toLowerCase()
@@ -51,6 +53,20 @@ const ValidatedEnvSchema = BaseEnvSchema.superRefine((env, ctx) => {
         code: z.ZodIssueCode.custom,
         path: ['SECRET_ARN'],
         message: 'SECRET_ARN is required in staging/prod',
+      });
+    }
+    if (!process.env.EMAIL_FROM) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_FROM'],
+        message: 'EMAIL_FROM must be explicitly set in staging/prod',
+      });
+    }
+    if (!process.env.WEBAPP_URL || new URL(process.env.WEBAPP_URL).hostname === 'localhost') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['WEBAPP_URL'],
+        message: 'WEBAPP_URL must be explicitly set to a non-localhost URL in staging/prod',
       });
     }
   }
@@ -104,6 +120,8 @@ export function validateEnv(): void {
   console.log(`  - Secrets ARN: ${env.SECRET_ARN || 'not set'}`);
   console.log(`  - S3 Bucket: ${env.S3_BUCKET_NAME || 'not set'}`);
   console.log(`  - Extra CORS Origins: ${env.CORS_ALLOWED_ORIGINS || 'not set'}`);
+  console.log(`  - Email From: ${env.EMAIL_FROM}`);
+  console.log(`  - Webapp URL: ${env.WEBAPP_URL}`);
 }
 
 export const AWS_REGION = env.AWS_REGION;
@@ -113,4 +131,6 @@ export const JWT_SECRET = env.JWT_SECRET;
 export const SECRET_ARN = env.SECRET_ARN;
 export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
 export const CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
+export const EMAIL_FROM = env.EMAIL_FROM;
+export const WEBAPP_URL = env.WEBAPP_URL;
 export const LOG_LEVEL = env.LOG_LEVEL;

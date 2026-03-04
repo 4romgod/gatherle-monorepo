@@ -47,6 +47,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   const token = session?.user?.token;
   const isOwnProfile = session?.user?.username === username;
   const viewerUserId = session?.user?.userId;
+
   const { following } = useFollowing();
   const followingUserIds = useMemo(() => {
     const set = new Set<string>();

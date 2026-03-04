@@ -7,6 +7,7 @@ export * from './eventCategoryGroup/query';
 export * from './eventCategoryGroup/mutation';
 export * from './user/query';
 export * from './user/mutation';
+export * from './user/auth';
 export * from './eventParticipant/query';
 export * from './eventParticipant/mutation';
 export * from './organization/query';

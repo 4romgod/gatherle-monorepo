@@ -1,6 +1,4 @@
 import request from 'supertest';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
@@ -18,11 +16,8 @@ import {
   uniqueGroupName,
 } from '@/test/e2e/utils/eventCategoryGroupResolverHelpers';
 
-const TEST_PORT = 5004;
-
 describe('EventCategoryGroup Resolver', () => {
-  let server: E2EServer;
-  let url = '';
+  const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let categories: EventCategoryRef[] = [];
   const createdGroupSlugs: string[] = [];
@@ -39,19 +34,10 @@ describe('EventCategoryGroup Resolver', () => {
   };
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
 
     categories = await readSeededEventCategories(url);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {

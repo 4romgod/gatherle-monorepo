@@ -1,6 +1,4 @@
 import request from 'supertest';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
@@ -13,11 +11,8 @@ import {
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
 import { createEventOnServer } from '@/test/e2e/utils/eventResolverHelpers';
 
-const TEST_PORT = 5005;
-
 describe('EventParticipant Resolver', () => {
-  let server: E2EServer;
-  let url = '';
+  const url = process.env.GRAPHQL_URL!;
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
   let eventId = '';
@@ -37,9 +32,6 @@ describe('EventParticipant Resolver', () => {
   });
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     participantUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
     participantUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
@@ -63,12 +55,6 @@ describe('EventParticipant Resolver', () => {
         .catch(() => {});
     }
     eventId = '';
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   it('upserts a participant', async () => {

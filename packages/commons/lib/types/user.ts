@@ -267,6 +267,10 @@ export class User {
   @Field(() => [String], { nullable: true })
   blockedUserIds?: string[];
 
+  @prop({ default: false, type: () => Boolean })
+  @Field(() => Boolean, { nullable: true, description: 'Whether the user has verified their email address' })
+  emailVerified?: boolean;
+
   @prop({ enum: FollowPolicy, default: FollowPolicy.Public, type: () => String })
   @Field(() => FollowPolicy, { nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY })
   followPolicy?: FollowPolicy;

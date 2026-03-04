@@ -1,7 +1,5 @@
 import request from 'supertest';
 import { kebabCase } from 'lodash';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
@@ -30,9 +28,7 @@ import {
 } from '@/test/e2e/utils/eventResolverHelpers';
 
 describe('Event Resolver', () => {
-  let server: E2EServer;
-  let url = '';
-  const TEST_PORT = 5002;
+  const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let testUser: UserWithToken;
   let testUser2: UserWithToken;
@@ -72,9 +68,6 @@ describe('Event Resolver', () => {
     updateMembershipRoleOnServer(url, adminUser.token, membershipId, role);
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
 
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
@@ -82,12 +75,6 @@ describe('Event Resolver', () => {
     testUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
 
     testEventCategory = await readFirstEventCategory(url);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {

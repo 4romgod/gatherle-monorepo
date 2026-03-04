@@ -1,8 +1,6 @@
 import request from 'supertest';
 import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput } from '@gatherle/commons/types';
 import {
@@ -18,24 +16,13 @@ import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { buildEventCategoryInput, createEventCategoryOnServer } from '@/test/e2e/utils/eventCategoryResolverHelpers';
 
 describe('EventCategory Resolver', () => {
-  let server: E2EServer;
-  let url = '';
-  const TEST_PORT = 5001;
+  const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   const createdCategoryIds: string[] = [];
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {

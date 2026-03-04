@@ -1198,4 +1198,113 @@ describe('UserDAO', () => {
       await expect(UserDAO.readMutedOrganizationIds('userId')).rejects.toThrow(KnownCommonError(mockError));
     });
   });
+
+  describe('setEmailVerified', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const makeMockUser = (overrides: Record<string, unknown> = {}) => {
+      const doc: any = {
+        emailVerified: false,
+        email: 'test@example.com',
+        userId: 'mockUserId',
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn(),
+        ...overrides,
+      };
+      doc.toObject.mockReturnValue({ ...doc, emailVerified: true });
+      return doc;
+    };
+
+    it('sets emailVerified to true and returns the updated user', async () => {
+      const mockUser = makeMockUser();
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      const result = await UserDAO.setEmailVerified('mockUserId');
+
+      expect(User.findById).toHaveBeenCalledWith('mockUserId');
+      expect(mockUser.emailVerified).toBe(true);
+      expect(mockUser.save).toHaveBeenCalled();
+      expect(result).toHaveProperty('emailVerified', true);
+    });
+
+    it('throws NOT_FOUND when the user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.setEmailVerified('nonExistingId')).rejects.toThrow(
+        CustomError('User with id nonExistingId does not exist', ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws when findById fails', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.setEmailVerified('userId')).rejects.toThrow(KnownCommonError(mockError));
+    });
+
+    it('throws when save fails', async () => {
+      const saveError = new Error('save error');
+      const mockUser = makeMockUser({ save: jest.fn().mockRejectedValue(saveError) });
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await expect(UserDAO.setEmailVerified('mockUserId')).rejects.toBeDefined();
+    });
+  });
+
+  describe('updatePassword', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const makeMockUser = (overrides: Record<string, unknown> = {}) => ({
+      userId: 'mockUserId',
+      password: 'old-hashed-password',
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject: jest.fn().mockReturnValue({ userId: 'mockUserId' }),
+      ...overrides,
+    });
+
+    it('sets user.password to the new value and calls save', async () => {
+      const mockUser = makeMockUser();
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await UserDAO.updatePassword('mockUserId', 'newPassword123');
+
+      expect(User.findById).toHaveBeenCalledWith('mockUserId');
+      expect(mockUser.password).toBe('newPassword123');
+      expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    it('resolves without returning a value', async () => {
+      const mockUser = makeMockUser();
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await expect(UserDAO.updatePassword('mockUserId', 'newPassword123')).resolves.toBeUndefined();
+    });
+
+    it('throws NOT_FOUND when the user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.updatePassword('nonExistingId', 'newPassword')).rejects.toThrow(
+        CustomError('User with id nonExistingId does not exist', ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws when findById fails', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.updatePassword('userId', 'newPassword')).rejects.toThrow(KnownCommonError(mockError));
+    });
+
+    it('throws when save fails', async () => {
+      const saveError = new Error('save error');
+      const mockUser = makeMockUser({ save: jest.fn().mockRejectedValue(saveError) });
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await expect(UserDAO.updatePassword('mockUserId', 'newPassword')).rejects.toBeDefined();
+    });
+  });
 });

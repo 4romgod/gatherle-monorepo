@@ -1,7 +1,5 @@
 import request from 'supertest';
 import { Types } from 'mongoose';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import type { UserWithToken } from '@gatherle/commons/types';
 import { OrganizationRole } from '@gatherle/commons/types';
 import {
@@ -22,9 +20,7 @@ type TrackedOrg = { orgId: string; token: string };
 type TrackedMembership = { membershipId: string; token: string };
 
 describe('Organization Resolver', () => {
-  let server: E2EServer;
-  let url = '';
-  const TEST_PORT = 5006;
+  const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let testUser: UserWithToken;
   const createdOrgs: TrackedOrg[] = [];
@@ -63,18 +59,9 @@ describe('Organization Resolver', () => {
   };
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
     testUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {

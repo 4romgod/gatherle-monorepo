@@ -1,6 +1,4 @@
 import request from 'supertest';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import {
@@ -27,8 +25,6 @@ import {
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
 import { createEventOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
-
-const TEST_PORT = 5010;
 
 const getReadFollowRequestsQuery = (targetType: FollowTargetType) => ({
   query: `
@@ -75,8 +71,7 @@ const getRejectFollowRequestMutation = (followId: string) => ({
 });
 
 describe('Social resolver e2e', () => {
-  let server: E2EServer;
-  let url = '';
+  const url = process.env.GRAPHQL_URL!;
   let actorUser: UserWithToken;
   let targetUser: UserWithToken;
   let eventId = '';
@@ -88,9 +83,6 @@ describe('Social resolver e2e', () => {
   })();
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     actorUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
     targetUser = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
@@ -153,10 +145,6 @@ describe('Social resolver e2e', () => {
           .catch(() => {}),
       ),
     );
-
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   it('creates and cleans up follows', async () => {

@@ -12,3 +12,5 @@ export { default as Notification } from './notification';
 export { default as ChatMessage } from './chatMessage';
 export { default as WebSocketConnection } from './websocketConnection';
 export { default as UserFeed } from './userFeed';
+export { default as EmailVerificationToken } from './emailVerificationToken';
+export { default as PasswordResetToken } from './passwordResetToken';
