@@ -4,6 +4,7 @@
   "workspaces": [
     "apps/api",
     "apps/webapp",
+    "apps/mobile",
     "packages/*",
     "infrastructure/cdk"
   ],

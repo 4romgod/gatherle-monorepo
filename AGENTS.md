@@ -151,6 +151,8 @@ work.
 
 - **`.github/agents/api.agent.md`** – Backend engineer instructions for TypeGraphQL/MongoDB work inside `apps/api`.
 - **`.github/agents/webapp.agent.md`** – Frontend/UI agent for Next.js/MUI/Tailwind jobs in `apps/webapp`.
+- **`.github/agents/mobile.agent.md`** – React Native / Expo agent for mobile app work inside `apps/mobile` (Expo
+  Router, Apollo Client, iOS/Android platform patterns).
 - **`.github/agents/architect.agent.md`** – Strategic architecture leadership guidance for infrastructure, scalability,
   and roadmap discussions.
 - **`.github/agents/security.agent.md`** – Security engineering guidance for GraphQL, WebSocket, webapp, CI/CD, AWS IAM,
