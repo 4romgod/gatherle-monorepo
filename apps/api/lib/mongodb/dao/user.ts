@@ -151,6 +151,47 @@ class UserDAO {
     }
   }
 
+  static async setEmailVerified(userId: string): Promise<User> {
+    let user;
+    try {
+      user = await UserModel.findById(userId).exec();
+    } catch (error) {
+      logDaoError(`Error finding user for email verification ${userId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!user) {
+      throw CustomError(`User with id ${userId} does not exist`, ErrorTypes.NOT_FOUND);
+    }
+    try {
+      user.emailVerified = true;
+      await user.save();
+      return user.toObject();
+    } catch (error) {
+      logDaoError(`Error setting emailVerified for userId ${userId}`, { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async updatePassword(userId: string, newPassword: string): Promise<void> {
+    let user;
+    try {
+      user = await UserModel.findById(userId).select('+password').exec();
+    } catch (error) {
+      logDaoError(`Error finding user for password reset ${userId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!user) {
+      throw CustomError(`User with id ${userId} does not exist`, ErrorTypes.NOT_FOUND);
+    }
+    try {
+      user.password = newPassword;
+      await user.save(); // pre('validate') hook hashes the password automatically
+    } catch (error) {
+      logDaoError(`Error updating password for userId ${userId}`, { error });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async deleteUserById(userId: string): Promise<User> {
     let deletedUser;
     try {

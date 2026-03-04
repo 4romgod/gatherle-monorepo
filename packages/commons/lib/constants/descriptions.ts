@@ -288,6 +288,9 @@ export const RESOLVER_DESCRIPTIONS = {
     readUserByEmail: 'Read a user by their email. Requires the email and returns the user or 404 Error if not found.',
     readUsers:
       'Read a list of users. Accepts optional query options for pagination and filtering and returns a list of users.',
+    requestEmailVerification:
+      'Send an email verification link to the supplied address. Returns true when the email is dispatched.',
+    verifyEmail: 'Validate an email verification token and mark the account as verified. Returns the updated user.',
   },
   FOLLOW: {
     follow: 'Create or re-activate a follow connection from the authenticated user.',

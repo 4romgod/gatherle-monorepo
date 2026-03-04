@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { buildSchemaSync } from 'type-graphql';
 import {
   AdminResolver,
+  AuthResolver,
   EventCategoryResolver,
   EventCategoryGroupResolver,
   EventResolver,
@@ -18,12 +19,12 @@ import {
   FeedResolver,
 } from '@/graphql/resolvers';
 import { authChecker } from '@/utils/auth';
-import { ResolveTime } from '@/utils';
 
 const createSchema = () => {
   const schema = buildSchemaSync({
     resolvers: [
       AdminResolver,
+      AuthResolver,
       EventCategoryResolver,
       EventCategoryGroupResolver,
       EventResolver,
@@ -41,7 +42,6 @@ const createSchema = () => {
     ],
     validate: true,
     emitSchemaFile: false,
-    globalMiddlewares: [ResolveTime],
     authChecker,
   });
 

@@ -1,4 +1,5 @@
 export * from './admin';
+export * from './auth';
 export * from './event';
 export * from './feed';
 export * from './eventCategory';

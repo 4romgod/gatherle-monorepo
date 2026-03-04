@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Button,
@@ -25,8 +26,10 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF } from 'react-icons/fa';
 import NProgress from 'nprogress';
 import { logger } from '@/lib/utils';
+import { ROUTES } from '@/lib/constants';
 
 export default function RegisterForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const { setToastProps, toastProps } = useAppContext();
   const [formState, formAction, isPending] = useActionState(registerUserAction, {});
@@ -61,10 +64,10 @@ export default function RegisterForm() {
         ...toastProps,
         open: true,
         severity: 'success',
-        message: 'You have successfully registered!',
+        message: 'You have successfully registered! Please verify your email.',
       });
 
-      // TODO: Redirect to the next page
+      router.push(ROUTES.AUTH.VERIFY_EMAIL_PENDING);
     }
   }, [formState]);
 
@@ -80,19 +83,40 @@ export default function RegisterForm() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth margin="normal">
-            <TextField required label="First Name" name="given_name" variant="outlined" color="secondary" />
+            <TextField
+              id="register-given-name"
+              required
+              label="First Name"
+              name="given_name"
+              variant="outlined"
+              color="secondary"
+            />
             <FormErrors error={formState.zodErrors?.given_name} />
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <FormControl fullWidth margin="normal">
-            <TextField required label="Last Name" name="family_name" variant="outlined" color="secondary" />
+            <TextField
+              id="register-family-name"
+              required
+              label="Last Name"
+              name="family_name"
+              variant="outlined"
+              color="secondary"
+            />
             <FormErrors error={formState.zodErrors?.family_name} />
           </FormControl>
         </Grid>
       </Grid>
       <FormControl fullWidth margin="normal">
-        <TextField required label="Email Address" name="email" variant="outlined" color="secondary" />
+        <TextField
+          id="register-email"
+          required
+          label="Email Address"
+          name="email"
+          variant="outlined"
+          color="secondary"
+        />
         <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
       <FormControl fullWidth margin="normal">
@@ -123,7 +147,12 @@ export default function RegisterForm() {
       </FormControl>
       <FormControl fullWidth margin="normal">
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
-          <DatePicker label="Date of Birth" format="YYYY-MM-DD" name="birthdate" />
+          <DatePicker
+            label="Date of Birth"
+            format="YYYY-MM-DD"
+            name="birthdate"
+            slotProps={{ textField: { id: 'register-birthdate' } }}
+          />
         </LocalizationProvider>
         <FormErrors error={formState.zodErrors?.birthdate} />
       </FormControl>

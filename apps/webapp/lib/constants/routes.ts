@@ -24,6 +24,8 @@ export const ROUTES = {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
     RESET_PASSWORD: '/auth/reset-password',
+    VERIFY_EMAIL: '/auth/verify-email',
+    VERIFY_EMAIL_PENDING: '/auth/verify-email/pending',
   },
   EVENTS: {
     EVENT: (slug: string) => `/events/${slug}`,

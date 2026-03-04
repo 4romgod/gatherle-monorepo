@@ -132,3 +132,32 @@ export const DeleteUserByIdDocument = graphql(`
     }
   }
 `);
+
+export const RequestEmailVerificationDocument = graphql(`
+  mutation RequestEmailVerification($email: String!) {
+    requestEmailVerification(email: $email)
+  }
+`);
+
+export const VerifyEmailDocument = graphql(`
+  mutation VerifyEmail($token: String!) {
+    verifyEmail(token: $token) {
+      userId
+      email
+      username
+      emailVerified
+    }
+  }
+`);
+
+export const ForgotPasswordDocument = graphql(`
+  mutation ForgotPassword($email: String!) {
+    forgotPassword(email: $email)
+  }
+`);
+
+export const ResetPasswordDocument = graphql(`
+  mutation ResetPassword($token: String!, $newPassword: String!) {
+    resetPassword(token: $token, newPassword: $newPassword)
+  }
+`);

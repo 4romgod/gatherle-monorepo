@@ -1,6 +1,4 @@
 import request from 'supertest';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
@@ -13,18 +11,12 @@ import {
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
 import { createEventOnServer } from '@/test/e2e/utils/eventResolverHelpers';
 
-const TEST_PORT = 5011;
-
 describe('Feed resolver e2e', () => {
-  let server: E2EServer;
-  let url = '';
+  const url = process.env.GRAPHQL_URL!;
   let actorUser: UserWithToken;
   const createdEventIds: string[] = [];
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     actorUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
 
@@ -57,10 +49,6 @@ describe('Feed resolver e2e', () => {
           .catch(() => {}),
       ),
     );
-
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   describe('readRecommendedFeed', () => {

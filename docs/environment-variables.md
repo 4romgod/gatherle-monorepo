@@ -39,6 +39,9 @@ The following commands work without any environment variables:
   - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
   - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins only; use this for preview domains or
     non-default local origins. `*` is rejected).
+  - `EMAIL_FROM` (defaults to `noreply@gatherle.com`; sender address for transactional emails).
+  - `WEBAPP_URL` (defaults to `http://localhost:3000`; used by the API EmailService to build email verification and
+    password reset links in dev).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
@@ -59,6 +62,10 @@ The following commands work without any environment variables:
   - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
   - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins merged with the stage-default webapp
     allowlist. `*` is rejected).
+  - `EMAIL_FROM` (verified SES sender address, e.g. `noreply@gatherle.com`; must be SES-verified in the deployment
+    region).
+  - `WEBAPP_URL` (public webapp URL, e.g. `https://app.gatherle.com`; used by the API EmailService to build email
+    verification and password reset links).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
 ### E2E tests

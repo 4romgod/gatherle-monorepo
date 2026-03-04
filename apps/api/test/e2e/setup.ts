@@ -1,3 +1,9 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load the API .env so GRAPHQL_URL is available in the globalSetup process
+config({ path: resolve(__dirname, '../../.env') });
+
 /**
  * Lightweight GraphQL query used to trigger Lambda cold starts before tests run.
  * Uses `__typename` so it doesn't require authentication or real data.
@@ -48,7 +54,15 @@ const setup = async () => {
   console.log('\nSetting up e2e tests...');
 
   const graphqlUrl = process.env.GRAPHQL_URL;
-  const isRemote = graphqlUrl && process.env.STAGE && process.env.STAGE !== 'Dev';
+
+  if (!graphqlUrl) {
+    throw new Error(
+      'GRAPHQL_URL environment variable is required to run e2e tests. ' +
+        'For local dev, start the server with `npm run dev:api` then set GRAPHQL_URL=http://localhost:9000/v1/graphql.',
+    );
+  }
+
+  const isRemote = !new URL(graphqlUrl).hostname.includes('localhost');
 
   if (isRemote) {
     // Warm up Lambda containers before Jest workers start their beforeAll hooks.
@@ -60,7 +74,7 @@ const setup = async () => {
     console.log('Lambda warm-up complete.');
   }
 
-  console.log('Done setting up e2e tests!');
+  console.log('Done setting up e2e tests...');
 };
 
 export default setup;

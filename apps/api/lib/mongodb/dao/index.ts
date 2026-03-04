@@ -12,3 +12,5 @@ export { default as NotificationDAO } from '@/mongodb/dao/notification';
 export { default as ChatMessageDAO } from '@/mongodb/dao/chatMessage';
 export { default as WebSocketConnectionDAO } from '@/mongodb/dao/websocketConnection';
 export { default as UserFeedDAO } from '@/mongodb/dao/userFeed';
+export { default as EmailVerificationTokenDAO } from '@/mongodb/dao/emailVerificationToken';
+export { default as PasswordResetTokenDAO } from '@/mongodb/dao/passwordResetToken';

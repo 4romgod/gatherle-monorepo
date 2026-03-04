@@ -1,7 +1,5 @@
 import { Types } from 'mongoose';
 import request from 'supertest';
-import type { E2EServer } from '@/test/e2e/utils/server';
-import { startE2EServer, stopE2EServer } from '@/test/e2e/utils/server';
 import { usersMockData } from '@/mongodb/mockData';
 import {
   getCreateUserMutation,
@@ -29,9 +27,7 @@ import {
 } from '@/test/e2e/utils/userResolverHelpers';
 
 describe('User Resolver', () => {
-  let server: E2EServer;
-  let url = '';
-  const TEST_PORT = 5003;
+  const url = process.env.GRAPHQL_URL!;
   const testPassword = 'testPassword';
   let adminUser: UserWithToken;
   const createdUserIds: string[] = [];
@@ -47,17 +43,8 @@ describe('User Resolver', () => {
     buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, testPassword, suffix);
 
   beforeAll(async () => {
-    server = await startE2EServer({ port: TEST_PORT });
-    url = server.url;
-
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
-  });
-
-  afterAll(async () => {
-    if (server) {
-      await stopE2EServer(server);
-    }
   });
 
   afterEach(async () => {
