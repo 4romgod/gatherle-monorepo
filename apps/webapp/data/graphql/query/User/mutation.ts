@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const RegisterUserDocument = graphql(`
-  mutation RegisterUser($input: CreateUserInput!) {
+export const CreateUserDocument = graphql(`
+  mutation CreateUser($input: CreateUserInput!) {
     createUser(input: $input) {
       userId
       email

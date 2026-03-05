@@ -187,7 +187,7 @@ dig +short NS gatherle.com
    `stageHostedZoneNameServers`.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 2. Copy `stageHostedZoneNameServers` (also surfaced by deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`).
@@ -238,7 +238,7 @@ gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
 2. Redeploy runtime stacks.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 3. Verify:
@@ -319,7 +319,105 @@ Important:
 
 This step must be completed before runtime service stack deployment.
 
-## 6. Deploy stacks (CI/CD preferred)
+## 6. SES production access and identity verification
+
+### A. Request SES production access (exit sandbox)
+
+New AWS accounts start in SES sandbox mode — outbound email is restricted to verified addresses only. Request production
+access **once per account+region** before sending transactional email.
+
+1. In the AWS console, navigate to **SES → Account dashboard** in the target region.
+2. Click **Request production access**.
+3. Fill in the form:
+   - **Mail type**: Transactional
+   - **Website URL**: `https://gatherle.com`
+   - **Use case description**: Describe sending email verification links and password reset links to registered users.
+4. Submit and wait for AWS approval (typically 24 hours). You will receive an email confirmation.
+
+Alternatively via CLI (creates a support case):
+
+```bash
+aws sesv2 put-account-details \
+  --mail-type TRANSACTIONAL \
+  --website-url https://gatherle.com \
+  --use-case-description "Transactional email: email verification and password reset for gatherle.com users." \
+  --production-access-enabled \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+### B. Retrieve DNS verification records from SesStack output
+
+After the first `SesStack` deploy, retrieve the 5 DNS records that SES requires:
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-ses-beta-af-south-1 \
+  --query "Stacks[0].Outputs" \
+  --output table \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+The outputs to look for:
+
+| Output key                             | DNS record type    | DNS name                           | Value                                    |
+| -------------------------------------- | ------------------ | ---------------------------------- | ---------------------------------------- |
+| `SesDkimRecord1-beta-af-south-1`       | `CNAME`            | `<token1>._domainkey.gatherle.com` | `<token1>.dkim.amazonses.com`            |
+| `SesDkimRecord2-beta-af-south-1`       | `CNAME`            | `<token2>._domainkey.gatherle.com` | `<token2>.dkim.amazonses.com`            |
+| `SesDkimRecord3-beta-af-south-1`       | `CNAME`            | `<token3>._domainkey.gatherle.com` | `<token3>.dkim.amazonses.com`            |
+| `SesMailFromMxRecord-beta-af-south-1`  | `MX` (priority 10) | `mail.gatherle.com`                | `feedback-smtp.af-south-1.amazonses.com` |
+| `SesMailFromSpfRecord-beta-af-south-1` | `TXT`              | `mail.gatherle.com`                | `"v=spf1 include:amazonses.com ~all"`    |
+
+### C. Add DNS records to the root hosted zone (DNS account)
+
+Add all 5 records to the `gatherle.com` hosted zone in the `Gatherle-dns` account. This is a one-time manual step — AWS
+Easy DKIM rotates keys transparently without requiring DNS changes.
+
+Example using AWS CLI (DNS account profile):
+
+```bash
+# Replace <token1/2/3> with values from SesStack outputs above
+aws route53 change-resource-record-sets \
+  --hosted-zone-id <gatherle-com-hosted-zone-id> \
+  --change-batch '{
+    "Changes": [
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":"<token1>._domainkey.gatherle.com","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"<token1>.dkim.amazonses.com"}]}},
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":"<token2>._domainkey.gatherle.com","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"<token2>.dkim.amazonses.com"}]}},
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":"<token3>._domainkey.gatherle.com","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"<token3>.dkim.amazonses.com"}]}},
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.gatherle.com","Type":"MX","TTL":300,"ResourceRecords":[{"Value":"10 feedback-smtp.af-south-1.amazonses.com"}]}},
+      {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.gatherle.com","Type":"TXT","TTL":300,"ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}}
+    ]
+  }' \
+  --profile gatherle-dns
+```
+
+### D. Verify SES identity status
+
+SES polls DNS automatically. Verification typically completes within minutes of DNS propagation.
+
+```bash
+aws sesv2 get-email-identity \
+  --email-identity gatherle.com \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+Expected:
+
+- `VerificationStatus`: `SUCCESS`
+- `DkimAttributes.Status`: `SUCCESS`
+- `MailFromAttributes.MailFromDomainStatus`: `SUCCESS`
+
+### E. Set GitHub Environment variables for email
+
+```bash
+gh variable set WEBAPP_URL --body "https://beta.gatherle.com" --env beta-af-south-1
+# EMAIL_FROM defaults to noreply@gatherle.com — only needed if overriding
+# gh variable set EMAIL_FROM --body "noreply@gatherle.com" --env beta-af-south-1
+```
+
+## 7. Deploy stacks (CI/CD preferred)
 
 Preferred:
 
@@ -333,7 +431,7 @@ Recommended first rollout order for custom domains:
 1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks once.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 2. Read `GraphQLStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
@@ -372,7 +470,7 @@ npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --e
 
 ```bash
 gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 Optional manual deploy commands:
@@ -380,7 +478,7 @@ Optional manual deploy commands:
 Runtime stacks (Beta):
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 DNS stack (with delegation — env vars are read at synth time and must be passed inline):
@@ -408,7 +506,7 @@ AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --profile gatherle-dns
 ```
 
-## 7. Onboard a new account or region
+## 8. Onboard a new account or region
 
 1. Add mapping in `infrastructure/cdk/lib/constants/accounts.ts` under `STAGE_REGION_ACCOUNT_CONFIGS`.
 
@@ -457,7 +555,19 @@ gh secret set ASSUME_ROLE_ARN --env dns-<region>
 STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile <profile>
 ```
 
-## 8. Troubleshooting
+8. **Request SES production access** for the new account+region (see section 6A above). New AWS accounts/regions default
+   to sandbox mode.
+
+9. After first `SesStack` deploy, add the 5 DNS verification records to the `gatherle.com` hosted zone (see section
+   6B–6D above).
+
+10. Set `WEBAPP_URL` (and optionally `EMAIL_FROM`) in the new GitHub Environment:
+
+```bash
+gh variable set WEBAPP_URL --body "https://<stage>.gatherle.com" --env <stage-lower>-<region>
+```
+
+## 9. Troubleshooting
 
 Error: `Need to perform AWS calls for account X, but the current credentials are for Y`
 

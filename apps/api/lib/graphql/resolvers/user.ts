@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, ID } from 'type-graphql';
-import { FollowDAO, UserDAO } from '@/mongodb/dao';
+import { EmailVerificationTokenDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import {
   User,
   CreateUserInput,
@@ -18,8 +18,9 @@ import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } fr
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
 import { RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';
 import { getAuthenticatedUser } from '@/utils';
+import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
-import { UserService } from '@/services';
+import { EmailService, UserService } from '@/services';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -36,7 +37,20 @@ export class UserResolver {
     @Arg('input', () => CreateUserInput, { description: USER_DESCRIPTIONS.CREATE_INPUT }) input: CreateUserInput,
   ): Promise<UserWithToken> {
     validateInput<CreateUserInput>(CreateUserInputSchema, input);
-    return UserDAO.create(input);
+    const result = await UserDAO.create(input);
+    // Best-effort — email failure must not roll back a successful registration
+    try {
+      const plainToken = await EmailVerificationTokenDAO.create(result.userId);
+      await EmailService.sendEmailVerification(result.email, plainToken);
+      logger.info('[UserResolver] Verification email sent after createUser', { userId: result.userId });
+    } catch (err) {
+      logger.warn('[UserResolver] Failed to send verification email after createUser', {
+        userId: result.userId,
+        email: result.email,
+        err,
+      });
+    }
+    return result;
   }
 
   // TODO https://hygraph.com/learn/graphql/authentication-and-authorization

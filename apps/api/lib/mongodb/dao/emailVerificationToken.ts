@@ -23,6 +23,7 @@ class EmailVerificationTokenDAO {
    */
   static async create(userId: string): Promise<string> {
     try {
+      logger.debug(`[EmailVerificationTokenDAO] Creating token for userId ${userId}`);
       // Remove any existing tokens for this user first
       await EmailVerificationTokenModel.deleteMany({ userId });
 

@@ -2,6 +2,7 @@ import { App } from 'aws-cdk-lib';
 import {
   GraphQLStack,
   SecretsManagementStack,
+  SesStack,
   S3BucketStack,
   MonitoringDashboardStack,
   WebSocketApiStack,
@@ -24,6 +25,15 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
   });
 
+  const sesStack = new SesStack(app, 'SesStack', {
+    env: stackEnv,
+    stackName: buildStackName('ses', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
+    description:
+      'This stack creates the SES domain identity and configuration set for sending transactional emails (email verification, password reset).',
+  });
+
   const s3BucketStack = new S3BucketStack(app, 'S3BucketStack', {
     env: stackEnv,
     stackName: buildStackName('s3-bucket', account.applicationStage, account.awsRegion),
@@ -44,6 +54,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
 
   graphqlStack.addDependency(secretsManagementStack);
   graphqlStack.addDependency(s3BucketStack);
+  graphqlStack.addDependency(sesStack);
 
   const webSocketApiStack = new WebSocketApiStack(app, 'WebSocketApiStack', {
     env: stackEnv,
@@ -61,6 +72,9 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
 
   // Grant Lambda permissions to access S3 bucket
   s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda);
+
+  // Grant Lambda permission to send email via SES
+  sesStack.grantSendEmail(graphqlStack.graphqlLambda);
 
   // Create monitoring dashboard
   const monitoringStack = new MonitoringDashboardStack(app, 'MonitoringDashboardStack', {
