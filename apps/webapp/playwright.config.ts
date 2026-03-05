@@ -51,6 +51,7 @@ const workers = (() => {
 
 export default defineConfig({
   testDir: './test/e2e',
+  testMatch: '**/*.e2e.ts',
   fullyParallel: process.env.CI ? true : !baseUrlIsLocalhost,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

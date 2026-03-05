@@ -25,12 +25,12 @@ function countFiles(dir: string, pattern: RegExp): number {
 }
 
 // __dirname is the directory of this config file (apps/api/test/e2e/).
-// Count every *.test.[jt]s(x) file beneath it so maxWorkers always equals the
+// Count every *.e2e.[jt]s(x) file beneath it so maxWorkers always equals the
 // number of test files. Tests are I/O-bound (network calls to Lambda) so more
 // workers than CPU cores is safe. On GitHub Actions 2-core runners the default
 // '100%' resolves to 2 workers, serialising 9 files into ~13 min batches; one
 // worker-per-file cuts wall-clock time to the slowest single file (~3-4 min).
-const e2eTestFileCount = countFiles(__dirname, /\.test\.[jt]sx?$/);
+const e2eTestFileCount = countFiles(__dirname, /\.e2e\.[jt]sx?$/);
 const maxE2eWorkers = Math.max(1, e2eTestFileCount);
 
 const config: Config = {
@@ -40,7 +40,7 @@ const config: Config = {
   rootDir: '../../',
   testPathIgnorePatterns: ['<rootDir>/dist/', '<rootDir>/node_modules/'],
   testTimeout: 20000,
-  testMatch: ['<rootDir>/test/e2e/**/*.test.[jt]s?(x)'],
+  testMatch: ['<rootDir>/test/e2e/**/*.e2e.[jt]s?(x)'],
   maxWorkers: maxE2eWorkers,
   moduleNameMapper: {
     '^@/(?!test)(.*)$': '<rootDir>/lib/$1',

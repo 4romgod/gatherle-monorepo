@@ -11,6 +11,6 @@ test.describe('Forgot Password Page', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Reset your password' })).toBeVisible();
     await expect(page.getByLabel('Email Address')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Reset Password' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible();
   });
 });
