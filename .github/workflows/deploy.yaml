@@ -30,6 +30,8 @@ jobs:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
+      WEBAPP_URL: ${{ vars.WEBAPP_URL }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -85,7 +87,7 @@ jobs:
 
       - name: Deploy AWS CDK
         run: |
-          CDK_DEPLOY_STACKS="S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
+          CDK_DEPLOY_STACKS="SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
           # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
           npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 

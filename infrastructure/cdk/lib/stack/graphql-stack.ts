@@ -92,6 +92,8 @@ export class GraphQLStack extends Stack {
         SECRET_ARN: gatherleSecret.secretArn,
         S3_BUCKET_NAME: props.s3BucketName || '',
         CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
+        EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
+        WEBAPP_URL: process.env.WEBAPP_URL ?? '',
         NODE_OPTIONS: '--enable-source-maps',
       },
       logGroup: this.graphqlLambdaLogGroup,

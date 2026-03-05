@@ -113,7 +113,7 @@
   4. Build API/commons/CDK packages.
   5. Configure AWS creds via the assumed role secret + `AWS_REGION`.
   6. Deploy runtime CDK stacks (for example
-     `npm run cdk -w @gatherle/cdk -- deploy S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
+     `npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
      with resolved `STAGE`/`AWS_REGION`, and deploy `SecretsManagementStack` only when secrets intentionally change.
   7. Query CloudFormation output for `apiPath`, expose as `GRAPHQL_URL` via `$GITHUB_ENV`/`$GITHUB_OUTPUT`.
   8. Run e2e tests with `STAGE`, `SECRET_ARN`, `GRAPHQL_URL`.
