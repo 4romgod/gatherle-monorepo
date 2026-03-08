@@ -95,6 +95,11 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `NEXT_PUBLIC_GRAPHQL_URL` (e.g., `http://localhost:9000/v1/graphql`).
   - `NEXT_PUBLIC_WEBSOCKET_URL` (e.g., `ws://localhost:3001` or deployed `wss://.../<stage>` endpoint for realtime
     notifications).
+  - `NEXT_PUBLIC_S3_IMAGES_URL` — required when testing image uploads locally. Point at the Beta bucket:
+    `https://gatherle-images-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
+    `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
+    `docs/webapp/image-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
+    `S3BucketStack` CloudFormation output.
 - These values stay local and are never checked in (respect `.gitignore` for `.env*`).
 
 ### Production & Staging

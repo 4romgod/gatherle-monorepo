@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useTransition } from 'react';
 import {
   Box,
   Typography,
@@ -14,7 +14,6 @@ import {
   Card,
 } from '@mui/material';
 import { Edit as EditIcon, CameraAlt as CameraIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
-import { UpdateUserInput, User, UserLocationInput } from '@/data/graphql/types/graphql';
 import { useActionState } from 'react';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
@@ -22,6 +21,9 @@ import { FormErrors } from '@/components/FormErrors';
 import LocationInput from '@/components/forms/LocationInput';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { signIn, useSession } from 'next-auth/react';
+import { UpdateUserInput, User, UserLocationInput } from '@/data/graphql/types/graphql';
+import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { useImageUpload } from '@/hooks/useImageUpload';
 
 export default function EditProfilePage({ user }: { user: User }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -29,6 +31,22 @@ export default function EditProfilePage({ user }: { user: User }) {
   const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
+
+  const {
+    upload: uploadAvatar,
+    uploading: avatarUploading,
+    error: avatarError,
+  } = useImageUpload({
+    entityType: ImageEntityType.User,
+    imageType: ImageType.Avatar,
+    // entityId omitted — resolver auto-uses the authenticated user's ID
+  });
+
+  // Pending file selected but not yet uploaded — upload happens on Save
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [profile, setProfile] = useState<UpdateUserInput>({
     userId: user.userId,
@@ -98,6 +116,43 @@ export default function EditProfilePage({ user }: { user: User }) {
     }
   }, [formState]);
 
+  const handleAvatarSelect = (file: File) => {
+    setPendingAvatarFile(file);
+    // Show a local preview immediately — no upload yet
+    const reader = new FileReader();
+    reader.onloadend = () => setLocalAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    let finalProfile = profile;
+
+    if (pendingAvatarFile) {
+      try {
+        const readUrl = await uploadAvatar(pendingAvatarFile);
+        finalProfile = { ...profile, profile_picture: readUrl };
+        setProfile(finalProfile);
+        setPendingAvatarFile(null);
+        setLocalAvatarPreview(null);
+      } catch {
+        // avatarError is set by the hook; abort the save so the user sees the error
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Trigger the server action via the hidden form, with up-to-date hidden inputs
+    startTransition(() => {
+      if (formRef.current) {
+        const data = new FormData(formRef.current);
+        // Ensure the potentially-updated profile_picture is used
+        data.set('profile_picture', finalProfile.profile_picture || '');
+        formAction(data);
+      }
+    });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setProfile((prev) => ({
@@ -146,13 +201,14 @@ export default function EditProfilePage({ user }: { user: User }) {
         )}
       </Stack>
 
-      <Box component="form" action={formAction} noValidate>
+      <Box component="form" ref={formRef} action={formAction} noValidate>
         {/* Hidden inputs to ensure form data is submitted */}
         <input type="hidden" name="given_name" value={profile.given_name || ''} />
         <input type="hidden" name="family_name" value={profile.family_name || ''} />
         <input type="hidden" name="username" value={profile.username || ''} />
         <input type="hidden" name="bio" value={profile.bio || ''} />
         <input type="hidden" name="location" value={JSON.stringify(profile.location || {})} />
+        <input type="hidden" name="profile_picture" value={profile.profile_picture || ''} />
 
         {/* Profile Picture Section */}
         <Card
@@ -170,7 +226,7 @@ export default function EditProfilePage({ user }: { user: User }) {
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
             <Box sx={{ position: 'relative' }}>
               <Avatar
-                src={profile.profile_picture || ''}
+                src={localAvatarPreview || profile.profile_picture || ''}
                 alt={`${profile.given_name} ${profile.family_name}`}
                 sx={(theme) => ({
                   width: { xs: 80, sm: 100 },
@@ -178,12 +234,38 @@ export default function EditProfilePage({ user }: { user: User }) {
                   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                 })}
               />
+              {avatarUploading && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(0,0,0,0.45)',
+                    borderRadius: '50%',
+                  }}
+                >
+                  <CircularProgress size={24} sx={{ color: 'common.white' }} />
+                </Box>
+              )}
               {isEditing && (
                 <Box sx={{ position: 'absolute', bottom: 0, right: 0 }}>
-                  <input accept="image/*" style={{ display: 'none' }} id="profile-picture-upload" type="file" />
+                  <input
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    style={{ display: 'none' }}
+                    id="profile-picture-upload"
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleAvatarSelect(file);
+                      e.target.value = '';
+                    }}
+                  />
                   <label htmlFor="profile-picture-upload">
                     <IconButton
                       component="span"
+                      disabled={avatarUploading}
                       sx={{
                         bgcolor: 'secondary.main',
                         color: 'secondary.contrastText',
@@ -200,6 +282,11 @@ export default function EditProfilePage({ user }: { user: User }) {
                 </Box>
               )}
             </Box>
+            {avatarError && (
+              <Typography variant="caption" color="error">
+                {avatarError}
+              </Typography>
+            )}
           </Stack>
         </Card>
 
@@ -314,15 +401,16 @@ export default function EditProfilePage({ user }: { user: User }) {
               Cancel
             </Button>
             <Button
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : undefined}
+              startIcon={loading || avatarUploading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
               variant="contained"
               color="primary"
-              type="submit"
-              disabled={loading}
+              type="button"
+              onClick={handleSave}
+              disabled={loading || avatarUploading || isPending}
               size="large"
               sx={{ ...BUTTON_STYLES, px: { xs: 2, sm: 4 }, width: { xs: '100%', sm: 'auto' } }}
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading || avatarUploading ? 'Saving...' : 'Save Changes'}
             </Button>
           </Stack>
         )}

@@ -1,5 +1,18 @@
 import { graphql } from '@/data/graphql/types';
 
+export const CreateEventDocument = graphql(`
+  mutation CreateEvent($input: CreateEventInput!) {
+    createEvent(input: $input) {
+      eventId
+      slug
+      title
+      status
+      lifecycleStatus
+      visibility
+    }
+  }
+`);
+
 export const DeleteEventByIdDocument = graphql(`
   mutation DeleteEventById($eventId: String!) {
     deleteEventById(eventId: $eventId) {
@@ -41,6 +54,7 @@ export const UpdateEventDocument = graphql(`
   mutation UpdateEvent($input: UpdateEventInput!) {
     updateEvent(input: $input) {
       eventId
+      slug
       title
       status
       lifecycleStatus

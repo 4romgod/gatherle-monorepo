@@ -43,14 +43,14 @@ export default async function CreateEvent() {
             <Box>
               <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
                 <Button
-                  href={ROUTES.ACCOUNT.EVENTS.ROOT}
+                  href={ROUTES.ACCOUNT.PROFILE}
                   startIcon={<ArrowBack />}
                   sx={{
                     textTransform: 'none',
                     fontWeight: 600,
                   }}
                 >
-                  Back to My Events
+                  Back to Profile
                 </Button>
               </Stack>
               <Typography variant="overline" color="primary" fontWeight={700} sx={{ letterSpacing: '0.1em' }}>

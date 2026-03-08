@@ -28,6 +28,8 @@ import TeamMembersTab from './settings/TeamMembersTab';
 import DangerZoneTab from './settings/DangerZoneTab';
 import MembershipConfirmationDialog from './settings/MembershipConfirmationDialog';
 import useOrganizationSettingsData from '@/hooks/useOrganizationSettingsData';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
 
 interface OrganizationSettingsClientProps {
@@ -77,6 +79,12 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
 
   const isMembershipActionInProgress = Boolean(membershipAction);
 
+  const { upload: uploadLogo, uploading: logoUploading } = useImageUpload({
+    entityType: ImageEntityType.Organization,
+    imageType: ImageType.Logo,
+    entityId: organization?.orgId,
+  });
+
   useEffect(() => {
     if (!organization) return;
     setFormData({
@@ -120,13 +128,29 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
     try {
       setSaveSuccess(false);
       setError(null);
-      await saveOrganization(formData);
+
+      let updatedFormData = formData;
+      if (logoFile) {
+        try {
+          const readUrl = await uploadLogo(logoFile);
+          updatedFormData = { ...formData, logo: readUrl };
+          setFormData(updatedFormData);
+          setLogoFile(null);
+          setLogoPreview(null);
+        } catch (err: any) {
+          logger.error('Logo upload failed', err);
+          setError(`Failed to upload logo: ${err.message}`);
+          return;
+        }
+      }
+
+      await saveOrganization(updatedFormData);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update organization');
     }
-  }, [formData, organization, saveOrganization]);
+  }, [formData, organization, saveOrganization, logoFile, uploadLogo]);
 
   const handleDelete = useCallback(async () => {
     try {
@@ -293,7 +317,7 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
       setLogoFile={setLogoFile}
       setLogoPreview={setLogoPreview}
       handleSave={handleSave}
-      updateLoading={updateLoading}
+      updateLoading={updateLoading || logoUploading}
     />
   );
 
