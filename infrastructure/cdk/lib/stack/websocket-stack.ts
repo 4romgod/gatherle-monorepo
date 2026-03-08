@@ -6,11 +6,13 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { ICertificate } from 'aws-cdk-lib/aws-certificatemanager';
-import { IHostedZone, ARecord, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { HostedZone, ARecord, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
 configDotenv();
@@ -23,8 +25,6 @@ export interface WebSocketApiStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
   enableCustomDomains?: boolean;
-  stageHostedZone?: IHostedZone;
-  stageDomainCertificate?: ICertificate;
 }
 
 export class WebSocketApiStack extends Stack {
@@ -121,16 +121,31 @@ export class WebSocketApiStack extends Stack {
     let websocketApiEndpoint = this.websocketStage.url;
 
     if (enableCustomDomains) {
-      if (!props.stageHostedZone || !props.stageDomainCertificate) {
-        throw new Error(
-          'Custom domains are enabled but stage hosted zone/certificate are missing for WebSocketApiStack.',
-        );
-      }
+      // Read hosted zone ID and certificate ARN from SSM at deploy time. valueForStringParameter()
+      // emits a CloudFormation {{resolve:ssm:...}} dynamic reference — no Fn::ImportValue is
+      // generated, so WebSocketApiStack deploys independently of GraphQLStack. Combined with
+      // addDependency(stageInfraStack) in setupAccount.ts, CDK's deployment engine ensures
+      // StageInfraStack completes before this stack starts, so the parameters always exist.
+      const hostedZoneId = StringParameter.valueForStringParameter(
+        this,
+        `/gatherle/${stageSegment}/${props.awsRegion}/stageHostedZoneId`,
+      );
+      const certificateArn = StringParameter.valueForStringParameter(
+        this,
+        `/gatherle/${stageSegment}/${props.awsRegion}/stageCertificateArn`,
+      );
+      const stageRegionDomainName = `${stageSegment}.${props.awsRegion.toLowerCase()}.${DNS_STACK_CONFIG.rootDomainName}`;
 
-      const websocketCustomDomainName = `ws.${props.stageHostedZone.zoneName}`;
+      const importedHostedZone = HostedZone.fromHostedZoneAttributes(this, 'ImportedStageHostedZone', {
+        hostedZoneId,
+        zoneName: stageRegionDomainName,
+      });
+      const importedCertificate = Certificate.fromCertificateArn(this, 'ImportedStageCertificate', certificateArn);
+
+      const websocketCustomDomainName = `ws.${stageRegionDomainName}`;
       const websocketCustomDomain = new DomainName(this, 'GatherleWebSocketCustomDomain', {
         domainName: websocketCustomDomainName,
-        certificate: props.stageDomainCertificate,
+        certificate: importedCertificate,
       });
 
       new ApiMapping(this, 'GatherleWebSocketApiMapping', {
@@ -140,7 +155,7 @@ export class WebSocketApiStack extends Stack {
       });
 
       new ARecord(this, 'GatherleWebSocketCustomDomainARecord', {
-        zone: props.stageHostedZone,
+        zone: importedHostedZone,
         recordName: 'ws',
         target: RecordTarget.fromAlias(
           new ApiGatewayv2DomainProperties(

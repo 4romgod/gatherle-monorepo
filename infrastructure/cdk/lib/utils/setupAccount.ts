@@ -3,6 +3,7 @@ import {
   GraphQLStack,
   SecretsManagementStack,
   SesStack,
+  StageInfraStack,
   S3BucketStack,
   MonitoringDashboardStack,
   WebSocketApiStack,
@@ -42,6 +43,16 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     description: 'This stack includes S3 bucket for storing user-uploaded images',
   });
 
+  const stageInfraStack = new StageInfraStack(app, 'StageInfraStack', {
+    env: stackEnv,
+    stackName: buildStackName('stage-infra', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
+    enableCustomDomains,
+    description:
+      'This stack owns the long-lived DNS (Route 53 hosted zone) and TLS (ACM certificate) infrastructure for the stage-region environment. It changes rarely and publishes its outputs to SSM so other stacks can read them independently.',
+  });
+
   const graphqlStack = new GraphQLStack(app, 'GraphQLStack', {
     env: stackEnv,
     stackName: buildStackName('graphql', account.applicationStage, account.awsRegion),
@@ -55,6 +66,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   graphqlStack.addDependency(secretsManagementStack);
   graphqlStack.addDependency(s3BucketStack);
   graphqlStack.addDependency(sesStack);
+  graphqlStack.addDependency(stageInfraStack);
 
   const webSocketApiStack = new WebSocketApiStack(app, 'WebSocketApiStack', {
     env: stackEnv,
@@ -62,13 +74,11 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
     enableCustomDomains,
-    stageHostedZone: graphqlStack.stageHostedZone,
-    stageDomainCertificate: graphqlStack.stageDomainCertificate,
     description: 'This stack includes infrastructure for websocket routes used by realtime features.',
   });
 
   webSocketApiStack.addDependency(secretsManagementStack);
-  webSocketApiStack.addDependency(graphqlStack);
+  webSocketApiStack.addDependency(stageInfraStack);
 
   // Grant Lambda permissions to access S3 bucket
   s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda);

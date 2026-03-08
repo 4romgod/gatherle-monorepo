@@ -69,7 +69,7 @@ const setup = async () => {
     // 5 concurrent requests provisions 5 execution environments, preventing the
     // thundering-herd cold-start problem that causes flaky first-run failures.
     const concurrency = 5;
-    console.log(`Warming up ${concurrency} Lambda containers at ${graphqlUrl}...`);
+    console.log(`Warming up ${concurrency} Lambda containers at ${graphqlUrl}`);
     await warmUpLambda(graphqlUrl, concurrency);
     console.log('Lambda warm-up complete.');
   }

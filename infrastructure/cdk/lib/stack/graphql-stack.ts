@@ -9,16 +9,17 @@ import {
   RestApi,
   SecurityPolicy,
 } from 'aws-cdk-lib/aws-apigateway';
-import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
+import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib/core';
 import { configDotenv } from 'dotenv';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
-import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
-import { ARecord, PublicHostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
+import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { join } from 'path';
 import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
@@ -43,10 +44,7 @@ export class GraphQLStack extends Stack {
   readonly graphqlApiPathOutput: CfnOutput;
   readonly graphqlLambdaLogGroup: LogGroup;
   readonly graphqlApiAccessLogGroup: LogGroup;
-  readonly stageHostedZone: PublicHostedZone;
-  readonly stageDomainCertificate?: Certificate;
   readonly stageRegionDomainName: string;
-  readonly stageHostedZoneNameServersOutput: CfnOutput;
   readonly graphqlApiDomainOutput?: CfnOutput;
 
   constructor(scope: Construct, id: string, props: GraphQLStackProps) {
@@ -117,6 +115,7 @@ export class GraphQLStack extends Stack {
       cloudWatchRole: true,
       description: 'REST API Gateway for GraphQL Lambda function',
       restApiName: buildResourceName('gatherle-graphql-api', props.applicationStage, props.awsRegion),
+      disableExecuteApiEndpoint: enableCustomDomains,
       deployOptions: {
         accessLogDestination: new LogGroupLogDestination(this.graphqlApiAccessLogGroup),
         accessLogFormat: AccessLogFormat.clf(),
@@ -127,28 +126,32 @@ export class GraphQLStack extends Stack {
     this.graphql = this.graphqlApi.root.addResource('graphql');
     this.graphql.addMethod('ANY');
 
-    this.stageHostedZone = new PublicHostedZone(this, 'StageRegionHostedZone', {
-      zoneName: this.stageRegionDomainName,
-    });
-
-    this.stageHostedZoneNameServersOutput = new CfnOutput(this, 'stageHostedZoneNameServers', {
-      value: Fn.join(', ', this.stageHostedZone.hostedZoneNameServers ?? []),
-      description: 'Name servers for stage-region delegated hosted zone',
-      exportName: `StageHostedZoneNameServers-${targetSuffix}`,
-    });
-
     let graphqlApiEndpoint = this.graphqlApi.urlForPath('/graphql');
 
     if (enableCustomDomains) {
-      this.stageDomainCertificate = new Certificate(this, 'StageRegionDomainCertificate', {
-        domainName: this.stageRegionDomainName,
-        subjectAlternativeNames: [`*.${this.stageRegionDomainName}`],
-        validation: CertificateValidation.fromDns(this.stageHostedZone),
+      // Read hosted zone ID and certificate ARN from SSM at deploy time. valueForStringParameter()
+      // emits a CloudFormation {{resolve:ssm:...}} dynamic reference — no Fn::ImportValue is
+      // generated, so GraphQLStack deploys independently of StageInfraStack. Combined with
+      // addDependency(stageInfraStack) in setupAccount.ts, CDK's deployment engine ensures
+      // StageInfraStack completes before this stack starts, so the parameters always exist.
+      const hostedZoneId = StringParameter.valueForStringParameter(
+        this,
+        `/gatherle/${stageSegment}/${props.awsRegion}/stageHostedZoneId`,
+      );
+      const certificateArn = StringParameter.valueForStringParameter(
+        this,
+        `/gatherle/${stageSegment}/${props.awsRegion}/stageCertificateArn`,
+      );
+
+      const importedHostedZone = HostedZone.fromHostedZoneAttributes(this, 'ImportedStageHostedZone', {
+        hostedZoneId,
+        zoneName: this.stageRegionDomainName,
       });
+      const importedCertificate = Certificate.fromCertificateArn(this, 'ImportedStageCertificate', certificateArn);
 
       const graphqlCustomDomain = new DomainName(this, 'GraphqlCustomDomain', {
         domainName: graphqlCustomDomainName,
-        certificate: this.stageDomainCertificate,
+        certificate: importedCertificate,
         endpointType: EndpointType.REGIONAL,
         securityPolicy: SecurityPolicy.TLS_1_2,
       });
@@ -159,7 +162,7 @@ export class GraphQLStack extends Stack {
       });
 
       new ARecord(this, 'GraphqlCustomDomainARecord', {
-        zone: this.stageHostedZone,
+        zone: importedHostedZone,
         recordName: 'api',
         target: RecordTarget.fromAlias(new ApiGatewayDomain(graphqlCustomDomain)),
       });

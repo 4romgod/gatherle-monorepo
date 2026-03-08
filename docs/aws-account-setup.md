@@ -138,14 +138,21 @@ gh variable set ENABLE_PROD_DEPLOY --body "false"
 gh variable set ENABLE_CUSTOM_DOMAINS --body "false"
 ```
 
-DNS environment variables (set in `dns-<region>` GitHub Environment when delegating a subdomain):
+DNS environment variables (set in `dns-<region>` GitHub Environment):
 
-- `DELEGATED_SUBDOMAIN` (example: `beta.af-south-1`)
-- `DELEGATED_NAME_SERVERS` (comma-separated name servers from `GraphQLStack` output `stageHostedZoneNameServers`)
+- `DELEGATED_SUBDOMAINS` — JSON array of `{ subdomain, nameServers[] }` objects. Supports multiple delegations (beta,
+  prod, gamma, etc.) in one var.
 
 ```bash
-gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
-gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated-ns>" --env dns-af-south-1
+# Single stage (beta only)
+gh variable set DELEGATED_SUBDOMAINS \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
+  --env dns-af-south-1
+
+# Multiple stages (beta + prod)
+gh variable set DELEGATED_SUBDOMAINS \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
+  --env dns-af-south-1
 ```
 
 ## DNS setup (root + stage delegation)
@@ -153,7 +160,13 @@ gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated-ns>" --env dns-a
 This is the DNS model used by this repo:
 
 - Root zone `gatherle.com` is hosted in `Gatherle-dns` account.
-- Stage zone `beta.af-south-1.gatherle.com` is hosted in runtime account (`Gatherle-beta`) by `GraphQLStack`.
+- Stage zone `beta.af-south-1.gatherle.com` is hosted in runtime account (`Gatherle-beta`) by `StageInfraStack`, which
+  also manages the wildcard ACM certificate for the stage-region subdomain. These rarely change.
+- `GraphQLStack` and `WebSocketApiStack` read the hosted zone ID and certificate ARN via
+  `StringParameter.valueForStringParameter()`, which emits CloudFormation `{{resolve:ssm:...}}` dynamic references
+  resolved at deploy time (no `Fn::ImportValue`, no synth-time SSM API calls). `addDependency(stageInfraStack)` ensures
+  CDK's deployment engine always deploys `StageInfraStack` before the consumers in a single pass, so the parameters are
+  present when CloudFormation resolves them.
 - Root zone delegates to stage zone via an `NS` record created by `DnsStack` when delegation variables are provided.
 
 ### A. Root domain delegation (registrar -> Route53 root zone)
@@ -183,41 +196,41 @@ dig +short NS gatherle.com
 
 ### B. Stage subdomain delegation (root zone -> stage zone)
 
-1. Run runtime deploy once with `ENABLE_CUSTOM_DOMAINS=false` so `GraphQLStack` creates stage hosted zone and outputs
-   `stageHostedZoneNameServers`.
+1. Deploy runtime stacks. CDK deploys `StageInfraStack` before the consumer stacks (enforced by `addDependency`), so the
+   SSM parameters exist when CloudFormation resolves them.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 2. Copy `stageHostedZoneNameServers` (also surfaced by deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`).
 
 ```bash
 aws cloudformation describe-stacks \
-  --stack-name gatherle-graphql-beta-af-south-1 \
+  --stack-name gatherle-stage-infra-beta-af-south-1 \
   --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
   --output text \
   --region af-south-1 \
   --profile gatherle-beta
 ```
 
-3. Set the GitHub Environment variables (used by CI/CD deploys):
+3. Set the GitHub Environment variable (used by CI/CD deploys):
 
 ```bash
-gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
-gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated from step 2>" --env dns-af-south-1
+gh variable set DELEGATED_SUBDOMAINS \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 2>"]}]' \
+  --env dns-af-south-1
 ```
 
 4. Deploy DNS stack. This creates root-zone NS record for `beta.af-south-1`.
 
    CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
 
-   Manual (env vars must be passed inline — they are read by CDK at synth time, not from GitHub):
+   Manual (env var must be passed inline — it is read by CDK at synth time, not from GitHub):
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAIN=beta.af-south-1 \
-DELEGATED_NAME_SERVERS="<comma-separated from step 2>" \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 3>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
@@ -235,10 +248,11 @@ dig +short NS beta.af-south-1.gatherle.com
 gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
 ```
 
-2. Redeploy runtime stacks.
+2. Deploy runtime stacks. `StageInfraStack` creates the wildcard ACM certificate first (enforced by `addDependency`);
+   CloudFormation resolves `/stageCertificateArn` for the consumer stacks once it exists.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 3. Verify:
@@ -428,49 +442,51 @@ Preferred:
 
 Recommended first rollout order for custom domains:
 
-1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks once.
+1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks. CDK deploys `StageInfraStack` before the consumer
+   stacks (enforced by `addDependency`), so the SSM parameters are present when CloudFormation resolves them.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
-2. Read `GraphQLStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
+2. Read `StageInfraStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
    `STAGE_HOSTED_ZONE_NAME_SERVERS`).
 
 ```bash
 aws cloudformation describe-stacks \
-  --stack-name gatherle-graphql-beta-af-south-1 \
+  --stack-name gatherle-stage-infra-beta-af-south-1 \
   --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
   --output text \
   --region af-south-1 \
   --profile gatherle-beta
 ```
 
-3. Set the GitHub Environment variables (used by CI/CD deploys):
+4. Set the GitHub Environment variable (used by CI/CD deploys):
 
 ```bash
-gh variable set DELEGATED_SUBDOMAIN --body "beta.af-south-1" --env dns-af-south-1
-gh variable set DELEGATED_NAME_SERVERS --body "<comma-separated from step 2>" --env dns-af-south-1
+gh variable set DELEGATED_SUBDOMAINS \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 3>"]}]' \
+  --env dns-af-south-1
 ```
 
-4. Deploy `DnsStack` so root zone gets NS delegation for `beta.af-south-1`.
+5. Deploy `DnsStack` so root zone gets NS delegation for `beta.af-south-1`.
 
    CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
 
-   Manual (env vars must be passed inline — they are read by CDK at synth time, not from GitHub):
+   Manual (env var must be passed inline — it is read by CDK at synth time, not from GitHub):
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAIN=beta.af-south-1 \
-DELEGATED_NAME_SERVERS="<comma-separated from step 2>" \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 4>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
-5. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime stacks.
+6. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime stacks. `StageInfraStack` creates the certificate first
+   (enforced by `addDependency`), so the consumer stacks resolve `/stageCertificateArn` correctly.
 
 ```bash
 gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 Optional manual deploy commands:
@@ -478,15 +494,14 @@ Optional manual deploy commands:
 Runtime stacks (Beta):
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
-DNS stack (with delegation — env vars are read at synth time and must be passed inline):
+DNS stack (with delegation — env var is read at synth time and must be passed inline):
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAIN=beta.af-south-1 \
-DELEGATED_NAME_SERVERS="<comma-separated stage NS>" \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
@@ -577,3 +592,43 @@ Fix:
 2. Check target account/region in command or stage-region mapping: `aws://<account-id>/<region>` and
    `infrastructure/cdk/lib/constants/accounts.ts`
 3. Re-run with the matching profile.
+
+---
+
+Error: `Certificate ... is in use (ResourceInUseException)` during `StageInfraStack` update
+
+Cause: CDK deploys `StageInfraStack` before consumer stacks (due to `addDependency`). When switching from an older
+layout where `GraphQLStack` owned the certificate to the current layout where `StageInfraStack` owns it,
+`StageInfraStack` attempts to delete the old cert before `GraphQLStack`/`WebSocketApiStack` have released their
+`DomainName` resources that reference it.
+
+The stack update itself completes (`UPDATE_COMPLETE`) but the cert deletion fails, leaving the certificate as an orphan
+in ACM — no longer tracked by any CloudFormation stack.
+
+Fix (one-time migration only):
+
+1. Deploy consumer stacks with `ENABLE_CUSTOM_DOMAINS=false` first to remove their `DomainName` and `ARecord` resources:
+
+```bash
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com \
+npm run cdk -w @gatherle/cdk -- deploy GraphQLStack WebSocketApiStack \
+--require-approval never --exclusively --profile gatherle-beta
+```
+
+2. Manually delete the now-unreferenced orphaned certificate from ACM:
+
+```bash
+aws acm delete-certificate \
+  --certificate-arn <orphaned-cert-arn> \
+  --region af-south-1 \
+  --profile gatherle-beta
+```
+
+3. Re-enable custom domains. `StageInfraStack` creates the new certificate and consumer stacks recreate their custom
+   domain resources:
+
+```bash
+STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com \
+npm run cdk -w @gatherle/cdk -- deploy StageInfraStack GraphQLStack WebSocketApiStack \
+--require-approval never --exclusively --profile gatherle-beta
+```
