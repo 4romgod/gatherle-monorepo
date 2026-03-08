@@ -5,8 +5,7 @@ import { buildAccountScopedStackName } from './utils';
 
 const app = new App();
 const deploymentRegion = process.env.AWS_REGION;
-const delegatedSubdomain = process.env.DELEGATED_SUBDOMAIN;
-const delegatedNameServers = process.env.DELEGATED_NAME_SERVERS;
+const delegatedSubdomainsRaw = process.env.DELEGATED_SUBDOMAINS;
 
 if (!deploymentRegion) {
   throw new Error(
@@ -15,10 +14,18 @@ if (!deploymentRegion) {
   );
 }
 
-if ((delegatedSubdomain && !delegatedNameServers) || (!delegatedSubdomain && delegatedNameServers)) {
-  throw new Error(
-    'Invalid delegated subdomain configuration. Provide both `DELEGATED_SUBDOMAIN` and `DELEGATED_NAME_SERVERS` together.',
-  );
+let delegatedSubdomains: { subdomain: string; nameServers: string[] }[] | undefined;
+
+if (delegatedSubdomainsRaw) {
+  try {
+    const parsed: { subdomain: string; nameServers: string[] }[] = JSON.parse(delegatedSubdomainsRaw);
+    delegatedSubdomains = parsed.filter((entry) => entry.nameServers.length > 0);
+  } catch {
+    throw new Error(
+      'Invalid DELEGATED_SUBDOMAINS value. Must be a JSON array of { subdomain, nameServers[] } objects. ' +
+        'Example: `[{"subdomain":"beta.af-south-1","nameServers":["ns-1.awsdns-01.org"]}]`',
+    );
+  }
 }
 
 new DnsStack(app, 'DnsStack', {
@@ -28,14 +35,7 @@ new DnsStack(app, 'DnsStack', {
   },
   stackName: buildAccountScopedStackName('dns-root-zone', DNS_STACK_CONFIG.accountNumber),
   rootDomainName: DNS_STACK_CONFIG.rootDomainName,
-  delegatedSubdomains: delegatedSubdomain
-    ? [
-        {
-          subdomain: delegatedSubdomain,
-          nameServers: delegatedNameServers!.split(',').map((value) => value.trim()),
-        },
-      ]
-    : undefined,
+  delegatedSubdomains,
   description: 'Root Route53 hosted zone for Gatherle domain.',
 });
 

@@ -86,10 +86,8 @@ export class SesStack extends Stack {
         resources: [
           // Sender domain identity — the Lambda sends from noreply@gatherle.com.
           `arn:aws:ses:${this.region}:${this.account}:identity/${DNS_STACK_CONFIG.rootDomainName}`,
-          // In SES sandbox mode, AWS also evaluates IAM against the recipient's verified identity.
-          // This wildcard covers all identities in the account and is required until production
-          // access is granted. In production mode, only the sender identity above is checked.
-          `arn:aws:ses:${this.region}:${this.account}:identity/*`,
+          // SES also evaluates IAM against the configuration set when one is attached to the identity.
+          `arn:aws:ses:${this.region}:${this.account}:configuration-set/${this.configurationSet.configurationSetName}`,
         ],
       }),
     );

@@ -18,8 +18,7 @@ jobs:
     environment: ${{ format('dns-{0}', inputs.region) }}
     env:
       AWS_REGION: ${{ inputs.region }}
-      DELEGATED_SUBDOMAIN: ${{ vars.DELEGATED_SUBDOMAIN }}
-      DELEGATED_NAME_SERVERS: ${{ vars.DELEGATED_NAME_SERVERS }}
+      DELEGATED_SUBDOMAINS: ${{ vars.DELEGATED_SUBDOMAINS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6

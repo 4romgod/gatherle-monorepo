@@ -46,7 +46,7 @@ export class AuthResolver {
     const user = await UserDAO.setEmailVerified(userId);
 
     // Best-effort cleanup — a failure here must not undo or mask a successful verification
-    EmailVerificationTokenDAO.deleteByUserId(userId).catch((err) =>
+    void EmailVerificationTokenDAO.deleteByUserId(userId).catch((err) =>
       logger.warn('[AuthResolver] Failed to clean up email verification token', { userId, error: err }),
     );
 
@@ -91,7 +91,7 @@ export class AuthResolver {
     await UserDAO.updatePassword(userId, newPassword);
 
     // Best-effort cleanup — a failure here must not undo or mask a successful password reset
-    PasswordResetTokenDAO.deleteByUserId(userId).catch((err) =>
+    void PasswordResetTokenDAO.deleteByUserId(userId).catch((err) =>
       logger.warn('[AuthResolver] Failed to clean up password reset token', { userId, error: err }),
     );
 

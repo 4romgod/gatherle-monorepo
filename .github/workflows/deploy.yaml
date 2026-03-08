@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  deploy-api:
     runs-on: ubuntu-latest
     # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -32,6 +32,12 @@ jobs:
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+    outputs:
+      graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
+      websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
+      stage_hosted_zone_name_servers: ${{ steps.get_stage_zone_nameservers.outputs.stage_hosted_zone_name_servers }}
+      stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
+      secret_arn: ${{ steps.resolve_secret.outputs.secret_arn }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -51,10 +57,12 @@ jobs:
           test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
 
       - name: Derive Deployment Suffix
+        id: derive_suffix
         run: |
           STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
           STACK_SUFFIX="${STAGE_SEGMENT}-${AWS_REGION}"
           echo "STACK_SUFFIX=$STACK_SUFFIX" >> "$GITHUB_ENV"
+          echo "stack_suffix=$STACK_SUFFIX" >> "$GITHUB_OUTPUT"
 
       - name: Install Dependencies
         run: npm ci
@@ -65,16 +73,17 @@ jobs:
       - name: API TypeScript Artifacts Build
         run: npm run build:ts -w @gatherle/api
 
-      - name: Synthesize AWS CDK
-        run: npm run build:cdk -w @gatherle/cdk
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Synthesize AWS CDK
+        run: npm run build:cdk -w @gatherle/cdk
+
       - name: Resolve Backend Secret ARN
+        id: resolve_secret
         run: |
           STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
           SECRET_NAME="gatherle/backend/${STAGE_SEGMENT}-${AWS_REGION}"
@@ -84,10 +93,11 @@ jobs:
             exit 1
           fi
           echo "SECRET_ARN=$SECRET_ARN" >> "$GITHUB_ENV"
+          echo "secret_arn=$SECRET_ARN" >> "$GITHUB_OUTPUT"
 
       - name: Deploy AWS CDK
         run: |
-          CDK_DEPLOY_STACKS="SesStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
+          CDK_DEPLOY_STACKS="SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack"
           # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
           npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 
@@ -99,7 +109,6 @@ jobs:
             echo "Failed to retrieve GraphQL endpoint from gatherle-graphql-${STACK_SUFFIX} output apiPath."
             exit 1
           fi
-          echo "GRAPHQL_URL=$ENDPOINT" >> "$GITHUB_ENV"
           echo "graphql_url=$ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Get WebSocket API endpoint
@@ -110,27 +119,73 @@ jobs:
             echo "Failed to retrieve WebSocket endpoint from gatherle-websocket-api-${STACK_SUFFIX} output websocketApiUrl."
             exit 1
           fi
-          echo "WEBSOCKET_URL=$WS_ENDPOINT" >> "$GITHUB_ENV"
           echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
 
       - name: Get Stage Hosted Zone Name Servers
         id: get_stage_zone_nameservers
         run: |
-          ZONE_NAME_SERVERS=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" --output text)
+          ZONE_NAME_SERVERS=$(aws cloudformation describe-stacks --stack-name "gatherle-stage-infra-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" --output text)
           if [ -z "$ZONE_NAME_SERVERS" ] || [ "$ZONE_NAME_SERVERS" = "None" ]; then
-            echo "Failed to retrieve stageHostedZoneNameServers from gatherle-graphql-${STACK_SUFFIX}."
+            echo "Failed to retrieve stageHostedZoneNameServers from gatherle-stage-infra-${STACK_SUFFIX}."
             exit 1
           fi
-          echo "STAGE_HOSTED_ZONE_NAME_SERVERS=$ZONE_NAME_SERVERS" >> "$GITHUB_ENV"
           echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
+
+  e2e-api:
+    needs: [deploy-api]
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Run API E2E Tests
         env:
-          STAGE: ${{ env.STAGE }}
-          GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
-          SECRET_ARN: ${{ env.SECRET_ARN }}
-          AWS_REGION: ${{ env.AWS_REGION }}
+          GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
         run: npm run test:e2e:api
+
+  deploy-webapp:
+    needs: [deploy-api, e2e-api]
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+    outputs:
+      deployment_url: ${{ steps.deploy_webapp.outputs.deployment_url }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -148,8 +203,8 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_GRAPHQL_URL: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
-          NEXT_PUBLIC_WEBSOCKET_URL: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
+          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
+          NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
@@ -168,7 +223,6 @@ jobs:
             exit 1
           fi
           echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
-          echo "PLAYWRIGHT_BASE_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
 
       - name: Alias Webapp Custom Domain in Vercel
         if: ${{ inputs.web_domain_alias != '' }}
@@ -182,7 +236,6 @@ jobs:
             echo "Missing deployment URL for Vercel alias."
             exit 1
           fi
-
           vercel alias set "$DEPLOYMENT_URL" "${{ inputs.web_domain_alias }}" --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Verify Webapp Custom Domain
@@ -191,14 +244,33 @@ jobs:
           curl -fsSIL "https://${{ inputs.web_domain_alias }}" | head -n 1
 
       - name: Verify Captured Deployment URL
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ steps.deploy_webapp.outputs.deployment_url }}
         run: |
-          if [ -z "$PLAYWRIGHT_BASE_URL" ]; then
+          DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
+          if [ -z "$DEPLOYMENT_URL" ]; then
             echo "PLAYWRIGHT_BASE_URL is empty."
             exit 1
           fi
-          curl -fsSIL "$PLAYWRIGHT_BASE_URL" | head -n 1
+          curl -fsSIL "$DEPLOYMENT_URL" | head -n 1
+
+  e2e-webapp:
+    needs: [deploy-webapp]
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Cache Playwright Browsers
         id: playwright-cache
@@ -219,5 +291,5 @@ jobs:
 
       - name: Run Webapp E2E Tests
         env:
-          PLAYWRIGHT_BASE_URL: ${{ steps.deploy_webapp.outputs.deployment_url }}
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-webapp.outputs.deployment_url }}
         run: npm run test:e2e:web
