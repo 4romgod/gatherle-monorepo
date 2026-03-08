@@ -1,8 +1,13 @@
 import { graphql } from '@/data/graphql/types';
 
 export const GetImageUploadUrlDocument = graphql(`
-  query GetImageUploadUrl($folder: String!, $filename: String!) {
-    getImageUploadUrl(folder: $folder, filename: $filename) {
+  query GetImageUploadUrl(
+    $entityType: ImageEntityType!
+    $imageType: ImageType!
+    $extension: String!
+    $entityId: String
+  ) {
+    getImageUploadUrl(entityType: $entityType, imageType: $imageType, extension: $extension, entityId: $entityId) {
       uploadUrl
       key
       publicUrl

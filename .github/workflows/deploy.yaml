@@ -38,6 +38,7 @@ jobs:
       stage_hosted_zone_name_servers: ${{ steps.get_stage_zone_nameservers.outputs.stage_hosted_zone_name_servers }}
       stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
       secret_arn: ${{ steps.resolve_secret.outputs.secret_arn }}
+      s3_images_url: ${{ steps.get_s3_bucket_url.outputs.s3_images_url }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -131,6 +132,17 @@ jobs:
           fi
           echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
 
+      - name: Get S3 Images Bucket URL
+        id: get_s3_bucket_url
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='ImagesBucketName'].OutputValue" --output text)
+          if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
+            echo "Failed to retrieve ImagesBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
+            exit 1
+          fi
+          S3_URL="https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com"
+          echo "s3_images_url=$S3_URL" >> "$GITHUB_OUTPUT"
+
   e2e-api:
     needs: [deploy-api]
     runs-on: ubuntu-latest
@@ -205,11 +217,13 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
+          NEXT_PUBLIC_S3_IMAGES_URL: ${{ needs.deploy-api.outputs.s3_images_url }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
+            --build-env NEXT_PUBLIC_S3_IMAGES_URL="$NEXT_PUBLIC_S3_IMAGES_URL" \
             --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
             > deployment-url.txt
           DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)

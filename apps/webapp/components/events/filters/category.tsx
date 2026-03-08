@@ -74,17 +74,20 @@ export default function CategoryFilter({ categoryList, sxProps, onChange, value 
           onChange={handleCategoryChange}
           renderValue={(selected) => (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {selected.map((value: string) => (
-                <Chip
-                  key={value}
-                  label={value}
-                  size="small"
-                  sx={{
-                    borderRadius: 1.5,
-                    fontWeight: 500,
-                  }}
-                />
-              ))}
+              {selected.map((id: string) => {
+                const cat = categoryList.find((c) => c.eventCategoryId === id);
+                return (
+                  <Chip
+                    key={id}
+                    label={cat?.name ?? id}
+                    size="small"
+                    sx={{
+                      borderRadius: 1.5,
+                      fontWeight: 500,
+                    }}
+                  />
+                );
+              })}
             </Box>
           )}
           sx={{
@@ -96,9 +99,9 @@ export default function CategoryFilter({ categoryList, sxProps, onChange, value 
         >
           {categoryList.map((category) => {
             const IconComponent = getEventCategoryIcon(category.iconName);
-            const isSelected = selectedCategories.includes(category.name);
+            const isSelected = selectedCategories.includes(category.eventCategoryId);
             return (
-              <MenuItem key={category.eventCategoryId} value={category.name}>
+              <MenuItem key={category.eventCategoryId} value={category.eventCategoryId}>
                 <Checkbox checked={isSelected} size="small" />
                 <Box component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <IconComponent color={category.color || ''} height={20} width={20} />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FormEvent, useMemo, useState } from 'react';
+import React, { FormEvent, useRef, useMemo, useState } from 'react';
 import {
   TextField,
   Button,
@@ -19,6 +19,9 @@ import {
   Switch,
   Alert,
   InputAdornment,
+  CircularProgress,
+  IconButton,
+  Snackbar,
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -29,8 +32,11 @@ import {
   People,
   Link as LinkIcon,
   Save,
+  CloudUpload,
+  Close,
 } from '@mui/icons-material';
-import { useQuery } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
+import { useRouter } from 'next/navigation';
 import {
   CreateEventInput,
   EventPrivacySetting,
@@ -46,9 +52,13 @@ import EventLocationInput from './EventLocationInput';
 import EventDateInput from './EventDateInput';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { usePersistentState } from '@/hooks';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
 import { STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import { useSession } from 'next-auth/react';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
+import { CreateEventDocument, UpdateEventDocument } from '@/data/graphql/query/Event/mutation';
+import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from '@/lib/utils';
 
@@ -56,6 +66,8 @@ const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRo
 
 export default function EventMutationForm({ categoryList, event }: EventMutationFormProps) {
   const isEditMode = !!event;
+  const router = useRouter();
+  const draftEntityId = useRef(crypto.randomUUID());
   const { data: sessionData, status: sessionStatus } = useSession();
   const { data: myOrganizationsData, loading: myOrganizationsLoading } = useQuery(GetMyOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
@@ -112,9 +124,18 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
   // Use default data during SSR and initial render to prevent hydration mismatch
   const displayEventData = isHydrated ? eventData : defaultEventData;
-  const featuredImageUrl =
-    (displayEventData.media as { featuredImageUrl?: string } | undefined)?.featuredImageUrl ?? '';
 
+  const getFeaturedImageUrl = (media: unknown): string => {
+    if (!media || typeof media !== 'object') {
+      return '';
+    }
+
+    const maybeMedia = media as { featuredImageUrl?: unknown };
+
+    return typeof maybeMedia.featuredImageUrl === 'string' ? maybeMedia.featuredImageUrl : '';
+  };
+
+  const featuredImageUrl = getFeaturedImageUrl(displayEventData.media);
   const eligibleOrganizations = (myOrganizationsData?.readMyOrganizations ?? []).filter((membership) =>
     EVENT_ORGANIZATION_ROLES.has(membership.role),
   );
@@ -133,8 +154,45 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     }));
   };
 
+  const {
+    upload: uploadFeaturedImage,
+    uploading: featuredImageUploading,
+    error: featuredImageError,
+    preview: featuredImagePreview,
+  } = useImageUpload({
+    entityType: ImageEntityType.Event,
+    imageType: ImageType.Featured,
+    // In edit mode use the real eventId; in create mode use a stable draft UUID so
+    // repeated "Change image" calls overwrite the same S3 path instead of scattering orphans.
+    entityId: event?.eventId ?? draftEntityId.current,
+  });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDiscardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const [createEvent, { loading: createLoading }] = useMutation(CreateEventDocument, {
+    context: { headers: getAuthHeader(sessionData?.user?.token) },
+    onCompleted: (data) => {
+      clearStorage();
+      setSuccessMessage('Event created successfully!');
+      router.push(ROUTES.EVENTS.EVENT(data.createEvent.slug));
+    },
+    onError: (err) => setSubmitError(err.message),
+  });
+
+  const [updateEvent, { loading: updateLoading }] = useMutation(UpdateEventDocument, {
+    context: { headers: getAuthHeader(sessionData?.user?.token) },
+    onCompleted: (data) => {
+      clearStorage();
+      setSuccessMessage('Event updated successfully!');
+      router.push(ROUTES.EVENTS.EVENT(data.updateEvent.slug));
+    },
+    onError: (err) => setSubmitError(err.message),
+  });
+
+  const submitting = createLoading || updateLoading;
 
   const handleLocationChange = (newLocation: Location) => {
     setEventData((prev) => ({ ...prev, location: newLocation }));
@@ -169,17 +227,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFeaturedImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = event.target;
-    setEventData((prev) => ({
-      ...prev,
-      media: {
-        ...(prev.media ?? {}),
-        featuredImageUrl: value || undefined,
-      },
-    }));
-  };
-
   const handleNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setEventData((prev) => ({ ...prev, [name]: value ? parseInt(value, 10) : undefined }));
@@ -203,15 +250,47 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    // TODO: Add your form submission logic here
-    logger.info('eventData', eventData);
+    setSubmitError(null);
+
+    if (isEditMode && event?.eventId) {
+      updateEvent({
+        variables: {
+          input: {
+            eventId: event.eventId,
+            title: eventData.title,
+            summary: eventData.summary,
+            description: eventData.description,
+            recurrenceRule: eventData.recurrenceRule,
+            location: eventData.location,
+            venueId: eventData.venueId,
+            status: eventData.status,
+            lifecycleStatus: eventData.lifecycleStatus,
+            visibility: eventData.visibility,
+            capacity: eventData.capacity,
+            rsvpLimit: eventData.rsvpLimit,
+            waitlistEnabled: eventData.waitlistEnabled,
+            allowGuestPlusOnes: eventData.allowGuestPlusOnes,
+            remindersEnabled: eventData.remindersEnabled,
+            showAttendees: eventData.showAttendees,
+            eventCategories: eventData.eventCategories,
+            media: eventData.media,
+            privacySetting: eventData.privacySetting,
+            eventLink: eventData.eventLink,
+            orgId: eventData.orgId,
+            tags: eventData.tags,
+          },
+        },
+      });
+    } else {
+      createEvent({ variables: { input: eventData } });
+    }
   };
 
   const handleDiscardDraft = () => {
@@ -459,30 +538,78 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Featured Image URL
+                  Featured Image
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Add a cover image for your event
+                  Upload a cover image for your event
                 </Typography>
-                <TextField
-                  fullWidth
-                  placeholder="https://example.com/image.jpg"
-                  name="featuredImageUrl"
-                  size="medium"
-                  color="secondary"
-                  value={featuredImageUrl}
-                  onChange={handleFeaturedImageChange}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <ImageIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                />
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={
+                      featuredImageUploading ? <CircularProgress size={16} color="inherit" /> : <CloudUpload />
+                    }
+                    disabled={featuredImageUploading}
+                    size="small"
+                  >
+                    {featuredImageUploading ? 'Uploading…' : featuredImageUrl ? 'Change image' : 'Upload image'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        e.target.value = '';
+                        try {
+                          const readUrl = await uploadFeaturedImage(file);
+                          setEventData((prev) => ({
+                            ...prev,
+                            media: { ...(prev.media ?? {}), featuredImageUrl: readUrl },
+                          }));
+                        } catch {
+                          // error shown via featuredImageError below
+                        }
+                      }}
+                    />
+                  </Button>
+                  {(featuredImageUrl || featuredImagePreview) && !featuredImageUploading && (
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        setEventData((prev) => ({
+                          ...prev,
+                          media: { ...(prev.media ?? {}), featuredImageUrl: undefined },
+                        }))
+                      }
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  )}
+                </Stack>
+                {featuredImageError && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                    {featuredImageError}
+                  </Typography>
+                )}
+                {(featuredImagePreview || featuredImageUrl) && (
+                  <Box
+                    component="img"
+                    src={featuredImagePreview || featuredImageUrl}
+                    alt="Featured image preview"
+                    sx={{
+                      width: '100%',
+                      maxWidth: 360,
+                      height: 160,
+                      objectFit: 'cover',
+                      borderRadius: 2,
+                      mt: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  />
+                )}
               </Box>
 
               <Box>
@@ -767,14 +894,30 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
               variant="contained"
               color="primary"
               size="large"
-              startIcon={<Save />}
+              disabled={submitting || featuredImageUploading}
+              startIcon={submitting || featuredImageUploading ? <CircularProgress size={20} color="inherit" /> : <Save />}
               sx={{ ...BUTTON_STYLES, px: 4 }}
             >
-              {isEditMode ? 'Save Changes' : 'Create Event'}
+              {submitting || featuredImageUploading ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Event'}
             </Button>
           </Stack>
         </Stack>
       </Box>
+      {submitError && (
+        <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+          {submitError}
+        </Alert>
+      )}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ borderRadius: 2 }}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
       <ConfirmDialog
         open={isDiscardDialogOpen}
         title="Discard draft?"

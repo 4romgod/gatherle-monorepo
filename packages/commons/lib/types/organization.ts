@@ -212,20 +212,3 @@ export class UpdateOrganizationInput {
   @Field(() => SocialVisibility, { nullable: true, description: "Who can see this organization's followers list" })
   followersListVisibility?: SocialVisibility;
 }
-
-@ObjectType('ImageUploadUrl', { description: 'Pre-signed URL for uploading images directly to S3' })
-export class ImageUploadUrl {
-  @Field(() => String, { description: 'Pre-signed URL for uploading' })
-  uploadUrl: string;
-
-  @Field(() => String, { description: 'S3 key/path where the file will be stored' })
-  key: string;
-
-  @Field(() => String, { description: 'Final public URL after upload completes' })
-  publicUrl: string;
-
-  @Field(() => String, {
-    description: 'Pre-signed URL for reading the uploaded image',
-  })
-  readUrl: string;
-}

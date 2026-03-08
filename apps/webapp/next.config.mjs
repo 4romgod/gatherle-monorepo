@@ -18,6 +18,7 @@ const buildContentSecurityPolicy = () => {
   const connectSources = new Set(["'self'"]);
   const graphqlOrigin = getOrigin(process.env.NEXT_PUBLIC_GRAPHQL_URL);
   const websocketOrigin = getOrigin(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+  const s3ImagesOrigin = getOrigin(process.env.NEXT_PUBLIC_S3_IMAGES_URL);
 
   if (graphqlOrigin) {
     connectSources.add(graphqlOrigin);
@@ -26,6 +27,12 @@ const buildContentSecurityPolicy = () => {
   if (websocketOrigin) {
     connectSources.add(websocketOrigin);
   }
+
+  if (s3ImagesOrigin) {
+    connectSources.add(s3ImagesOrigin);
+  }
+
+  const imgSources = ["'self'", 'data:', 'blob:', 'https:'];
 
   const scriptSources = ["'self'", "'unsafe-inline'"];
   if (isDevelopment) {
@@ -36,7 +43,7 @@ const buildContentSecurityPolicy = () => {
     "default-src 'self'",
     `script-src ${scriptSources.join(' ')}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src ${imgSources.join(' ')}`,
     "font-src 'self' data:",
     `connect-src ${Array.from(connectSources).join(' ')}`,
     "frame-src 'self' https://www.openstreetmap.org https://maps.google.com https://www.google.com",

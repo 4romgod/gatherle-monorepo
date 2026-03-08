@@ -44,13 +44,14 @@ export default async function Page(props: Props) {
 
   // Check if event exists
   if (!event) {
-    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+    redirect(ROUTES.ACCOUNT.PROFILE);
   }
 
   const isOrganizer = event.organizers.some((organizer) => organizer.user.userId === currentUserId);
+  const isAdmin = session?.user?.userRole === 'Admin';
 
-  if (!isOrganizer) {
-    redirect(ROUTES.ACCOUNT.EVENTS.ROOT);
+  if (!isOrganizer && !isAdmin) {
+    redirect(ROUTES.ACCOUNT.PROFILE);
   }
 
   return (
@@ -72,7 +73,7 @@ export default async function Page(props: Props) {
       >
         <Container maxWidth="lg">
           <Button
-            href={ROUTES.ACCOUNT.EVENTS.EVENT(params.slug)}
+            href={ROUTES.EVENTS.EVENT(params.slug)}
             startIcon={<ArrowBack />}
             sx={{ ...BUTTON_STYLES, mb: 2 }}
           >

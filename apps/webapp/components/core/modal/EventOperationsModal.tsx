@@ -14,7 +14,13 @@ import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { useAppContext } from '@/hooks/useAppContext';
 
-const EventOperationsModal = ({ event }: { event: EventDetail }) => {
+const EventOperationsModal = ({
+  event,
+  redirectOnDelete,
+}: {
+  event: EventDetail;
+  redirectOnDelete?: string;
+}) => {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { setToastProps, toastProps } = useAppContext();
@@ -47,7 +53,7 @@ const EventOperationsModal = ({ event }: { event: EventDetail }) => {
       });
     }
 
-    router.replace(ROUTES.ACCOUNT.EVENTS.ROOT);
+    router.replace(redirectOnDelete ?? ROUTES.ACCOUNT.PROFILE);
 
     handleDialogClose();
   };

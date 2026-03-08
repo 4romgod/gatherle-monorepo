@@ -27,6 +27,7 @@ import {
   Language,
   ArrowBack,
   Business,
+  Edit,
 } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
@@ -53,8 +54,10 @@ import {
 import { formatRecurrenceRule } from '@/components/events/date-utils';
 import UserPreviewItem from '@/components/users/UserPreviewItem';
 import { useFollowing } from '@/hooks/useFollow';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
+import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
 
 interface EventDetailPageClientProps {
   slug: string;
@@ -110,6 +113,12 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const contentPadding = { xs: 1, md: 2 };
   const { following } = useFollowing();
   const viewerUserId = session?.user?.userId;
+  const isAdmin = useIsAdmin();
+  const isOrganizer = useMemo(
+    () => (event?.organizers ?? []).some((o) => o.user?.userId === viewerUserId),
+    [event?.organizers, viewerUserId],
+  );
+  const canEditEvent = isOrganizer || isAdmin;
   const followingUserIds = useMemo(() => {
     const set = new Set<string>();
     following.forEach((follow) => {
@@ -345,6 +354,31 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   </Stack>
                 </Box>
 
+                {/* Edit Event button + ops menu (desktop) — visible to organizers/admins */}
+                {canEditEvent && (
+                  <Box
+                    sx={{
+                      display: { xs: 'none', md: 'flex' },
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 2,
+                      pb: 1,
+                    }}
+                  >
+                    <Button
+                      component={Link}
+                      href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(slug)}
+                      variant="contained"
+                      startIcon={<Edit />}
+                      sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 2.5, py: 1 }}
+                    >
+                      Edit Event
+                    </Button>
+                    <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                  </Box>
+                )}
+
                 {/* Desktop actions inline in card */}
                 <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                   <EventDetailActions
@@ -377,15 +411,32 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 pb: 'max(env(safe-area-inset-bottom, 0px), 12px)',
               }}
             >
-              <EventDetailActions
-                eventId={eventId}
-                eventTitle={title}
-                eventSlug={slug}
-                eventUrl={eventUrl}
-                isSavedByMe={isSavedByMe ?? false}
-                myRsvpStatus={myRsvp?.status ?? null}
-                compact
-              />
+              <Stack spacing={1.5}>
+                {canEditEvent && (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                      component={Link}
+                      href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(slug)}
+                      variant="contained"
+                      startIcon={<Edit />}
+                      fullWidth
+                      sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, py: 1 }}
+                    >
+                      Edit Event
+                    </Button>
+                    <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                  </Stack>
+                )}
+                <EventDetailActions
+                  eventId={eventId}
+                  eventTitle={title}
+                  eventSlug={slug}
+                  eventUrl={eventUrl}
+                  isSavedByMe={isSavedByMe ?? false}
+                  myRsvpStatus={myRsvp?.status ?? null}
+                  compact
+                />
+              </Stack>
             </Paper>
 
             {/* About */}

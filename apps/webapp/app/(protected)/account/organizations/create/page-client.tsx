@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useMutation, useLazyQuery } from '@apollo/client';
+import { useRef, useState } from 'react';
+import { useMutation } from '@apollo/client';
 import {
   Box,
   Container,
@@ -19,17 +19,19 @@ import {
 import { ArrowBack, Save, CloudUpload, Close } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { kebabCase } from 'lodash';
 import { ROUTES } from '@/lib/constants';
-import { CreateOrganizationDocument, GetImageUploadUrlDocument } from '@/data/graphql/query';
+import { CreateOrganizationDocument } from '@/data/graphql/query';
 import { useSession } from 'next-auth/react';
-import { getAuthHeader, getFileExtension, logger } from '@/lib/utils';
-import { CreateOrganizationInput } from '@/data/graphql/types/graphql';
+import { getAuthHeader } from '@/lib/utils';
+import type { CreateOrganizationInput } from '@/data/graphql/types/graphql';
+import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { useImageUpload } from '@/hooks/useImageUpload';
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const draftEntityId = useRef(crypto.randomUUID());
   const [error, setError] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -46,64 +48,24 @@ export default function CreateOrganizationPage() {
     context: { headers: getAuthHeader(token) },
   });
 
-  const [getUploadUrl] = useLazyQuery(GetImageUploadUrlDocument, {
-    context: { headers: getAuthHeader(token) },
+  const {
+    upload: uploadLogo,
+    uploading: logoUploading,
+    preview: logoUploadPreview,
+  } = useImageUpload({
+    entityType: ImageEntityType.Organization,
+    imageType: ImageType.Logo,
+    // Stable draft id so repeated uploads before submit overwrite the same S3 path
+    entityId: draftEntityId.current,
   });
 
   const handleFileSelect = (file: File) => {
-    // Just show preview, don't upload yet
     setLogoFile(file);
+    // Preview is generated inside the hook once upload() is called;
+    // for immediate preview before the user submits, read locally here too.
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result as string);
-    };
+    reader.onloadend = () => setLogoPreview(reader.result as string);
     reader.readAsDataURL(file);
-  };
-
-  const uploadLogoToS3 = async (file: File, orgName: string): Promise<string> => {
-    const slug = kebabCase(orgName);
-    const extension = getFileExtension(file) || 'jpg';
-    const uniqueSuffix = crypto.randomUUID();
-    const filename = `${slug}-${uniqueSuffix}.${extension}`;
-
-    logger.info('Uploading logo:', { slug, filename, fileType: file.type, fileSize: file.size });
-
-    // Get pre-signed URL from API
-    const { data, error: queryError } = await getUploadUrl({
-      variables: {
-        folder: 'organizations/logos',
-        filename,
-      },
-    });
-
-    if (queryError) {
-      throw new Error(queryError.message || 'Failed to get upload URL');
-    }
-
-    if (!data?.getImageUploadUrl) {
-      throw new Error('Failed to get upload URL - no data returned');
-    }
-
-    const { uploadUrl, readUrl } = data.getImageUploadUrl;
-    logger.info('Got upload URL for:', filename);
-
-    // Upload directly to S3
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: {
-        'Content-Type': file.type,
-      },
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      logger.error('S3 upload failed:', errorText);
-      throw new Error(`Failed to upload image: ${uploadResponse.status}`);
-    }
-
-    logger.debug('Read URL for preview:', readUrl);
-    return readUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,7 +89,7 @@ export default function CreateOrganizationPage() {
       // Upload logo first if selected
       if (logoFile) {
         try {
-          logoUrl = await uploadLogoToS3(logoFile, formData.name);
+          logoUrl = await uploadLogo(logoFile);
         } catch (err: any) {
           setError(`Failed to upload logo: ${err.message}`);
           return;
@@ -228,7 +190,12 @@ export default function CreateOrganizationPage() {
                     Organization Logo
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Button component="label" variant="outlined" startIcon={<CloudUpload />} disabled={loading}>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<CloudUpload />}
+                      disabled={loading || logoUploading}
+                    >
                       {logoFile ? logoFile.name : 'Upload Image'}
                       <input
                         type="file"
@@ -329,10 +296,10 @@ export default function CreateOrganizationPage() {
                     type="submit"
                     variant="contained"
                     startIcon={loading ? <CircularProgress size={16} /> : <Save />}
-                    disabled={loading || !formData.name.trim()}
+                    disabled={loading || logoUploading || !formData.name.trim()}
                     sx={{ fontWeight: 600, textTransform: 'none', px: 4 }}
                   >
-                    {loading ? 'Creating...' : 'Create Organization'}
+                    {loading ? 'Creating...' : logoUploading ? 'Uploading logo...' : 'Create Organization'}
                   </Button>
                 </Box>
               </Stack>

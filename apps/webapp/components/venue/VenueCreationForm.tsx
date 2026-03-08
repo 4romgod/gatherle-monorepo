@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
@@ -19,10 +19,12 @@ import {
 import { CreateVenueDocument } from '@/data/graphql/mutation/Venue/mutation';
 import { GetAllVenuesDocument } from '@/data/graphql/query';
 import { CreateVenueInput, VenueType } from '@/data/graphql/types/graphql';
+import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { ROUTES } from '@/lib/constants';
 import { logger } from '@/lib/utils';
 import { usePersistentState } from '@/hooks';
+import { useImageUpload } from '@/hooks/useImageUpload';
 import { STORAGE_KEYS, STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
@@ -81,10 +83,18 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
   const [successSlug, setSuccessSlug] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDiscardDialogOpen, setDiscardDialogOpen] = useState(false);
-  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const featuredImageUrlRef = useRef<string | null>(null);
-  const galleryPreviewsRef = useRef<string[]>([]);
+  const [featuredReadUrl, setFeaturedReadUrl] = useState<string | null>(null);
+
+  const {
+    upload: uploadFeaturedImage,
+    uploading: featuredImageUploading,
+    error: featuredImageError,
+    preview: featuredImagePreview,
+    reset: resetFeaturedImage,
+  } = useImageUpload({
+    entityType: ImageEntityType.Venue,
+    imageType: ImageType.Featured,
+  });
 
   const requiresAddress = useMemo(() => displayState.type !== VenueType.Virtual, [displayState.type]);
 
@@ -162,6 +172,10 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
       };
     }
 
+    if (featuredReadUrl) {
+      input.featuredImageUrl = featuredReadUrl;
+    }
+
     try {
       const response = await createVenue({ variables: { input } });
       const createdVenue = response.data?.createVenue;
@@ -170,52 +184,12 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
         setSuccessSlug(createdVenue.slug ?? null);
         clearStorage();
         setErrors({});
+        setFeaturedReadUrl(null);
+        resetFeaturedImage();
       }
     } catch (error) {
       logger.error('Failed to create venue', error);
     }
-  };
-
-  const handleFeaturedImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      if (featuredImageUrlRef.current) {
-        URL.revokeObjectURL(featuredImageUrlRef.current);
-        featuredImageUrlRef.current = null;
-      }
-      setFeaturedImagePreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    if (featuredImageUrlRef.current) {
-      URL.revokeObjectURL(featuredImageUrlRef.current);
-    }
-    featuredImageUrlRef.current = url;
-    setFeaturedImagePreview(url);
-    event.target.value = '';
-  };
-
-  const handleGalleryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    const newPreviews = files.map((file) => URL.createObjectURL(file));
-    const previews = [...galleryPreviewsRef.current, ...newPreviews];
-    galleryPreviewsRef.current = previews;
-    setGalleryPreviews(previews);
-    event.target.value = '';
-  };
-
-  const clearFeaturedImage = () => {
-    if (featuredImageUrlRef.current) {
-      URL.revokeObjectURL(featuredImageUrlRef.current);
-      featuredImageUrlRef.current = null;
-    }
-    setFeaturedImagePreview(null);
-  };
-
-  const clearGalleryImages = () => {
-    galleryPreviewsRef.current.forEach((prev) => URL.revokeObjectURL(prev));
-    galleryPreviewsRef.current = [];
-    setGalleryPreviews([]);
   };
 
   const handleDiscardDraft = () => {
@@ -231,15 +205,6 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
   const cancelDiscard = () => {
     setDiscardDialogOpen(false);
   };
-
-  useEffect(() => {
-    return () => {
-      if (featuredImageUrlRef.current) {
-        URL.revokeObjectURL(featuredImageUrlRef.current);
-      }
-      galleryPreviewsRef.current.forEach((prev) => URL.revokeObjectURL(prev));
-    };
-  }, []);
 
   return (
     <>
@@ -401,73 +366,74 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
               helperText="Examples: sound system, bar, outdoor patio"
             />
 
-            {/* TODO Update this when image upload is implemented */}
+            {/* Featured image upload */}
             <Stack spacing={1}>
               <Typography variant="subtitle2" fontWeight={600}>
-                Upload preview photos
+                Featured image
               </Typography>
               <Typography color="text.secondary" variant="body2">
-                You can choose a featured image and additional gallery shots now; we will hook up S3 + Mongo storage in
-                a later sprint, so these files currently stay client-side only.
+                A cover photo that appears on the venue profile and event pages.
               </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
-                <Box>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button component="label" variant="outlined" size="small">
-                      Select featured image
-                      <input type="file" hidden accept="image/*" onChange={handleFeaturedImageChange} />
-                    </Button>
-                    <Button size="small" color="secondary" onClick={clearFeaturedImage}>
-                      Clear
-                    </Button>
-                  </Stack>
-                  {featuredImagePreview && (
-                    <Box
-                      component="img"
-                      src={featuredImagePreview}
-                      alt="Featured venue preview"
-                      sx={{
-                        width: 200,
-                        height: 120,
-                        borderRadius: 2,
-                        mt: 1,
-                        objectFit: 'cover',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                      }}
-                    />
-                  )}
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button component="label" variant="outlined" size="small">
-                      Add gallery images
-                      <input type="file" hidden accept="image/*" multiple onChange={handleGalleryChange} />
-                    </Button>
-                    <Button size="small" color="secondary" onClick={clearGalleryImages}>
-                      Clear
-                    </Button>
-                  </Stack>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-                    {galleryPreviews.map((preview) => (
-                      <Box
-                        key={preview}
-                        component="img"
-                        src={preview}
-                        alt="Venue gallery preview"
-                        sx={{
-                          width: 120,
-                          height: 80,
-                          borderRadius: 2,
-                          objectFit: 'cover',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                        }}
-                      />
-                    ))}
-                  </Stack>
-                </Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  component="label"
+                  variant="outlined"
+                  size="small"
+                  disabled={featuredImageUploading}
+                  startIcon={featuredImageUploading ? <CircularProgress size={14} color="inherit" /> : undefined}
+                >
+                  {featuredImageUploading ? 'Uploading…' : featuredReadUrl ? 'Change image' : 'Select featured image'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      e.target.value = '';
+                      try {
+                        const readUrl = await uploadFeaturedImage(file);
+                        setFeaturedReadUrl(readUrl);
+                      } catch {
+                        // error shown via featuredImageError below
+                      }
+                    }}
+                  />
+                </Button>
+                {(featuredReadUrl || featuredImagePreview) && !featuredImageUploading && (
+                  <Button
+                    size="small"
+                    color="secondary"
+                    onClick={() => {
+                      setFeaturedReadUrl(null);
+                      resetFeaturedImage();
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
               </Stack>
+              {featuredImageError && (
+                <Typography variant="caption" color="error">
+                  {featuredImageError}
+                </Typography>
+              )}
+              {(featuredImagePreview || featuredReadUrl) && (
+                <Box
+                  component="img"
+                  src={featuredImagePreview || featuredReadUrl || undefined}
+                  alt="Featured venue preview"
+                  sx={{
+                    width: 200,
+                    height: 120,
+                    borderRadius: 2,
+                    mt: 1,
+                    objectFit: 'cover',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                />
+              )}
             </Stack>
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
@@ -482,10 +448,10 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={loading || !token}
+                  disabled={loading || featuredImageUploading || !token}
                   startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
                 >
-                  {loading ? 'Creating…' : 'Create venue'}
+                  {loading ? 'Creating…' : featuredImageUploading ? 'Uploading image…' : 'Create venue'}
                 </Button>
               </Stack>
             </Stack>
