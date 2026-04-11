@@ -5,7 +5,7 @@ import { handlers } from '@/auth';
 type NextAuthHandler = (request: NextRequest) => Promise<Response>;
 
 type NextAuthRouteContext = {
-  params?: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const { GET: nextAuthGET, POST: nextAuthPOST } = handlers as unknown as {

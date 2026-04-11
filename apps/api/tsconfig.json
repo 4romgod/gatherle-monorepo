@@ -1,24 +1,21 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.node.json",
   "compilerOptions": {
-    "noImplicitAny": false,
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationDir": "./dist/types",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "preserveSymlinks": true,
-    "baseUrl": "./",
+    "noEmit": true,
+    "types": ["node", "jest"],
     "paths": {
-      "@gatherle/commons": ["../../packages/commons/lib/index.ts"],
-      "@gatherle/commons/*": ["../../packages/commons/lib/*"],
-      "@/test/*": ["test/*"],
-      "@/*": ["lib/*"]
+      "@gatherle/commons": ["packages/commons/lib/index.ts"],
+      "@gatherle/commons/*": ["packages/commons/lib/*.ts", "packages/commons/lib/*/index.ts"],
+      "@/test/*": ["apps/api/test/*.ts", "apps/api/test/*/index.ts"],
+      "@/*": ["apps/api/lib/*.ts", "apps/api/lib/*/index.ts"]
     }
   },
   "ts-node": {
     "require": ["tsconfig-paths/register"]
   },
-  "exclude": ["node_modules", "dist"]
+  "include": ["lib/**/*.ts", "test/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

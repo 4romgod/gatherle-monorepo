@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "rootDir": "./",
+    "outDir": "./dist",
+    "declaration": true,
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
+    "paths": {
+      "@/*": ["apps/api/lib/*.ts", "apps/api/lib/*/index.ts"]
+    }
+  },
+  "references": [{ "path": "../../packages/commons" }],
+  "include": ["lib/**/*.ts"],
+  "exclude": ["dist", "node_modules", "test"]
+}

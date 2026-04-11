@@ -12,6 +12,7 @@ import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS } from '@gatherle/commons';
 import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
@@ -19,7 +20,7 @@ configDotenv();
 
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
-const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'websocket', 'lambdaHandler.js');
+const pathHandlerFile = join(pathApi, 'lib', 'websocket', 'lambdaHandler.ts');
 
 export interface WebSocketApiStackProps extends StackProps {
   applicationStage: string;
@@ -64,6 +65,7 @@ export class WebSocketApiStack extends Stack {
       projectRoot: pathRoot,
       depsLockFilePath: join(pathRoot, 'package-lock.json'),
       bundling: {
+        tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
         nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
@@ -73,6 +75,11 @@ export class WebSocketApiStack extends Stack {
         SECRET_ARN: gatherleSecret.secretArn,
         WEBSOCKET_CONNECTION_TTL_HOURS: '24',
         NODE_OPTIONS: '--enable-source-maps',
+        EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
+        WEBAPP_URL:
+          process.env.WEBAPP_URL ||
+          DEFAULT_STAGE_WEBAPP_ORIGINS[props.applicationStage]?.[0] ||
+          'http://localhost:3000',
       },
       logGroup: this.websocketLambdaLogGroup,
     });

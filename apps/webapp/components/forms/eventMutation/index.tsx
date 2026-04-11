@@ -895,7 +895,9 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
               color="primary"
               size="large"
               disabled={submitting || featuredImageUploading}
-              startIcon={submitting || featuredImageUploading ? <CircularProgress size={20} color="inherit" /> : <Save />}
+              startIcon={
+                submitting || featuredImageUploading ? <CircularProgress size={20} color="inherit" /> : <Save />
+              }
               sx={{ ...BUTTON_STYLES, px: 4 }}
             >
               {submitting || featuredImageUploading ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Event'}

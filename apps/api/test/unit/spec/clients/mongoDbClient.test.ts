@@ -11,6 +11,14 @@ const mockMongoose = () =>
     Query: mockQuery,
   }));
 
+type MongoDbClientStatic = {
+  connectToDatabase: (databaseUrl: string) => Promise<void>;
+  disconnectFromDatabase: () => Promise<void>;
+};
+
+const importMongoDbClient = async (): Promise<MongoDbClientStatic> =>
+  (await import('../../../../lib/clients/mongoDbClient.js')).default as unknown as MongoDbClientStatic;
+
 describe('MongoDbClient', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -21,7 +29,7 @@ describe('MongoDbClient', () => {
 
   it('connects only once when called multiple times', async () => {
     mockMongoose();
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     await MongoDbClient.connectToDatabase('mongodb://example');
     await MongoDbClient.connectToDatabase('mongodb://example');
@@ -35,14 +43,14 @@ describe('MongoDbClient', () => {
     connectMock.mockRejectedValue(error);
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     await expect(MongoDbClient.connectToDatabase('mongodb://example')).rejects.toThrow(error);
   });
 
   it('disconnects and resets state', async () => {
     mockMongoose();
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     await MongoDbClient.connectToDatabase('mongodb://example');
     await MongoDbClient.disconnectFromDatabase();
@@ -57,7 +65,7 @@ describe('MongoDbClient', () => {
     disconnectMock.mockRejectedValue(error);
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     await expect(MongoDbClient.disconnectFromDatabase()).rejects.toThrow(error);
   });
@@ -67,7 +75,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Verify exec was patched
@@ -80,7 +88,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call the patched exec
@@ -98,7 +106,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call the patched exec without model
@@ -115,7 +123,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call with op in _mongooseOptions instead of top-level
@@ -133,7 +141,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call with neither op nor _mongooseOptions.op (should default to 'query')
@@ -150,7 +158,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call with model object but no modelName (should default to 'unknown')
@@ -169,7 +177,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call the patched exec
@@ -185,7 +193,7 @@ describe('MongoDbClient', () => {
     mockQuery.prototype.exec = originalExec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Call with context that throws when accessing properties
@@ -207,7 +215,7 @@ describe('MongoDbClient', () => {
     const execBefore = mockQuery.prototype.exec;
     mockMongoose();
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
     await MongoDbClient.connectToDatabase('mongodb://example');
 
     // Should keep the same exec reference
@@ -222,7 +230,7 @@ describe('MongoDbClient', () => {
       Query: null,
     }));
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     // Should not throw, just log warning
     await expect(MongoDbClient.connectToDatabase('mongodb://example')).resolves.not.toThrow();
@@ -242,7 +250,7 @@ describe('MongoDbClient', () => {
       Query: throwingQuery,
     }));
 
-    const { default: MongoDbClient } = await import('@/clients/mongoDbClient');
+    const MongoDbClient = await importMongoDbClient();
 
     // Should not throw, just log warning and continue
     await expect(MongoDbClient.connectToDatabase('mongodb://example')).resolves.not.toThrow();

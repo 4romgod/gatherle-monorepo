@@ -35,14 +35,14 @@ const truncate = (value: string, maxLength: number): string => {
 export const resolveChatIdentity = (
   input: IdentityInput,
   fallback?: IdentityFallback,
-): { displayName: string; username?: string; handleLabel?: string } => {
+): { displayName: string; username: string | null; handleLabel?: string } => {
   const fullName = [input.givenName, input.familyName].filter(Boolean).join(' ').trim();
   const username = input.username || fallback?.username;
 
   if (fullName) {
     return {
       displayName: fullName,
-      username: username ?? undefined,
+      username: username ?? null,
       handleLabel: username ? `@${username}` : undefined,
     };
   }
@@ -59,14 +59,14 @@ export const resolveChatIdentity = (
   if (fallbackDisplayName) {
     return {
       displayName: fallbackDisplayName,
-      username: username ?? undefined,
+      username: username ?? null,
       handleLabel: username ? `@${username}` : undefined,
     };
   }
 
   return {
     displayName: 'Conversation',
-    username: undefined,
+    username: null,
     handleLabel: undefined,
   };
 };

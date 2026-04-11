@@ -3,9 +3,11 @@ node_modules
 .env.*
 .DS_Store
 dist
+build
 coverage
 .next
 cdk.out
+.vercel
 .turbo
 .cache
 .venv
@@ -26,3 +28,4 @@ test-results.txt
 .local/
 packages/commons/schema.graphql
 .secrets
+.codex

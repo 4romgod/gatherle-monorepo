@@ -72,11 +72,7 @@ export default async function Page(props: Props) {
         }}
       >
         <Container maxWidth="lg">
-          <Button
-            href={ROUTES.EVENTS.EVENT(params.slug)}
-            startIcon={<ArrowBack />}
-            sx={{ ...BUTTON_STYLES, mb: 2 }}
-          >
+          <Button href={ROUTES.EVENTS.EVENT(params.slug)} startIcon={<ArrowBack />} sx={{ ...BUTTON_STYLES, mb: 2 }}>
             Back to Event
           </Button>
           <Stack direction="row" alignItems="center" spacing={1.5}>

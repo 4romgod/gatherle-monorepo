@@ -14,13 +14,7 @@ import { ROUTES } from '@/lib/constants';
 import Link from 'next/link';
 import { useAppContext } from '@/hooks/useAppContext';
 
-const EventOperationsModal = ({
-  event,
-  redirectOnDelete,
-}: {
-  event: EventDetail;
-  redirectOnDelete?: string;
-}) => {
+const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail; redirectOnDelete?: string }) => {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { setToastProps, toastProps } = useAppContext();
