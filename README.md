@@ -51,7 +51,8 @@ Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, 
 - API tests: `npm run test:unit -w @gatherle/api` (runs in-band).
 - API build: `npm run build:ts -w @gatherle/api`
 - Web dev: set `NEXT_PUBLIC_GRAPHQL_URL`, then `npm run dev:web`
-- Web build: `npm run build -w @gatherle/webapp` (skips codegen if URL missing).
+- Web build: `npm run build -w @gatherle/webapp` (uses the committed schema file when available, otherwise
+  `NEXT_PUBLIC_GRAPHQL_URL`).
 - CDK synth: `npm run build:cdk -w @gatherle/cdk` (bundles lambdas; requires AWS access).
 - Full monorepo build: `npm run build` (runs API build+tests, web build, commons, CDK synth).
 
@@ -59,8 +60,8 @@ Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, 
 
 - Internal package links use npm workspaces with matching versions (`@gatherle/commons@1.0.0`); keep versions aligned if
   you publish.
-- If codegen is noisy offline, export a dummy `NEXT_PUBLIC_GRAPHQL_URL` or rely on the skip logic in the web `codegen`
-  script.
+- If codegen is noisy offline, export `NEXT_PUBLIC_GRAPHQL_URL` or rely on the committed schema file under
+  `packages/commons/schema.graphql`.
 - Jest workers sometimes crash in big repos; API tests are forced to `--runInBand` for stability.
 - Domain model details live in `docs/data-model.md` and map directly to types in `packages/commons/lib/types`.
 

@@ -1,13 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "allowJs": true,
     "module": "CommonJS",
     "moduleResolution": "Node",
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "types": ["jest", "node"],
     "noEmit": true
   }
 }
