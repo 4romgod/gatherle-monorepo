@@ -47,6 +47,15 @@ const config: Config = {
     '^@/test/(.*)$': '<rootDir>/test/$1',
     '^@gatherle/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
     '^@gatherle/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.jest.json',
+      },
+    ],
   },
   globalSetup: '<rootDir>/test/e2e/setup.ts',
   detectOpenHandles: true,

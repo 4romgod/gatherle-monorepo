@@ -1,6 +1,21 @@
 {
-  "extends": "../../tsconfig.web.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "ignoreDeprecations": "6.0",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
     "baseUrl": ".",
     "tsBuildInfoFile": "./.next/cache/tsconfig.tsbuildinfo",
     "plugins": [
@@ -10,8 +25,7 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    },
-    "jsx": "preserve"
+    }
   },
   "include": ["**/*.d.ts", "**/*.ts", "**/*.tsx", ".next/**/*.ts", "next-env.d.ts", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "test"]

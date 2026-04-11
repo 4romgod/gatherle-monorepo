@@ -20,9 +20,7 @@ const config: Config = {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
-        isolatedModules: true,
-        tsconfig: { module: 'CommonJS', moduleResolution: 'Node' },
-        diagnostics: { ignoreCodes: [151002] },
+        tsconfig: '<rootDir>/tsconfig.jest.json',
       },
     ],
   },
