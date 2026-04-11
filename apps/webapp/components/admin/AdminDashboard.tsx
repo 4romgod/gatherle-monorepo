@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
-import { Box, Button, Container, Stack, Typography } from '@mui/material';
+import { useMemo } from 'react';
+import { Button, Container, Stack, Typography } from '@mui/material';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
 import EventIcon from '@mui/icons-material/Event';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const token = session?.user?.token;
   const currentUserId = session?.user?.userId;
 
-  const tabs: CustomTabItem[] = React.useMemo(
+  const tabs: CustomTabItem[] = useMemo(
     () => [
       {
         name: 'Overview',

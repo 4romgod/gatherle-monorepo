@@ -1,6 +1,6 @@
 {
   "name": "gatherle-backend",
-  "node_args": "-r ts-node/register",
+  "node_args": "-r ts-node/register -r tsconfig-paths/register",
   "script": "./dist/lib/scripts/startServer.js",
   "error_file": "/tmp/gatherle-backend.err.log",
   "out_file": "/tmp/gatherle-backend.out.log",

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { createContext, useMemo, ReactNode } from 'react';
+import React, { createContext, useCallback, useMemo, ReactNode } from 'react';
 import { EventStatus } from '@/data/graphql/types/graphql';
 import dayjs, { Dayjs } from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import { usePersistentState, STORAGE_KEYS, STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
+import { filtersReducer, type FilterAction } from './filtersReducer';
 
 dayjs.extend(isBetween);
 
@@ -116,47 +117,54 @@ export const EventFilterProvider: React.FC<EventFilterProviderProps> = ({ childr
     token,
   });
 
-  const setCategories = (categories: string[]) => {
-    setFilters((prev) => ({ ...prev, categories }));
-  };
+  const dispatch = useCallback(
+    (action: FilterAction) => {
+      setFilters((prev) => filtersReducer(prev, action));
+    },
+    [setFilters],
+  );
 
-  const setDateRange = (start: Dayjs | null, end: Dayjs | null, filterOption?: string) => {
-    setFilters((prev) => ({ ...prev, dateRange: { start, end, filterOption } }));
-  };
+  const setCategories = useCallback(
+    (categories: string[]) => dispatch({ type: 'SET_CATEGORIES', payload: categories }),
+    [dispatch],
+  );
 
-  const setStatuses = (statuses: EventStatus[]) => {
-    setFilters((prev) => ({ ...prev, statuses }));
-  };
+  const setDateRange = useCallback(
+    (start: Dayjs | null, end: Dayjs | null, filterOption?: string) =>
+      dispatch({ type: 'SET_DATE_RANGE', payload: { start, end, filterOption } }),
+    [dispatch],
+  );
 
-  const setSearchQuery = (query: string) => {
-    setFilters((prev) => ({ ...prev, searchQuery: query }));
-  };
+  const setStatuses = useCallback(
+    (statuses: EventStatus[]) => dispatch({ type: 'SET_STATUSES', payload: statuses }),
+    [dispatch],
+  );
 
-  const setLocation = (location: LocationFilter) => {
-    setFilters((prev) => ({ ...prev, location }));
-  };
+  const setSearchQuery = useCallback(
+    (query: string) => dispatch({ type: 'SET_SEARCH_QUERY', payload: query }),
+    [dispatch],
+  );
 
-  const clearLocation = () => {
-    setFilters((prev) => ({ ...prev, location: {} }));
-  };
+  const setLocation = useCallback(
+    (location: LocationFilter) => dispatch({ type: 'SET_LOCATION', payload: location }),
+    [dispatch],
+  );
 
-  const resetFilters = () => {
-    clearStorage(); // This already resets state to initialFilters internally
-  };
+  const clearLocation = useCallback(() => dispatch({ type: 'CLEAR_LOCATION' }), [dispatch]);
 
-  const removeCategory = (category: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((c) => c !== category),
-    }));
-  };
+  const resetFilters = useCallback(() => {
+    clearStorage();
+  }, [clearStorage]);
 
-  const removeStatus = (status: EventStatus) => {
-    setFilters((prev) => ({
-      ...prev,
-      statuses: prev.statuses.filter((s) => s !== status),
-    }));
-  };
+  const removeCategory = useCallback(
+    (category: string) => dispatch({ type: 'REMOVE_CATEGORY', payload: category }),
+    [dispatch],
+  );
+
+  const removeStatus = useCallback(
+    (status: EventStatus) => dispatch({ type: 'REMOVE_STATUS', payload: status }),
+    [dispatch],
+  );
 
   const hasActiveFilters = useMemo(() => {
     const hasLocation = !!(

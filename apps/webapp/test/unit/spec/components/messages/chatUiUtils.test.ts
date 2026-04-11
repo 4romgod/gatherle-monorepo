@@ -58,7 +58,7 @@ describe('chatUiUtils', () => {
 
       expect(result).toEqual({
         displayName: 'Fallback Name',
-        username: undefined,
+        username: null,
         handleLabel: undefined,
       });
     });
@@ -68,7 +68,7 @@ describe('chatUiUtils', () => {
 
       expect(result).toEqual({
         displayName: 'Conversation',
-        username: undefined,
+        username: null,
         handleLabel: undefined,
       });
     });

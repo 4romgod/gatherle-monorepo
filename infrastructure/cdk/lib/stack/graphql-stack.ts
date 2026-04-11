@@ -21,6 +21,7 @@ import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { join } from 'path';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS } from '@gatherle/commons';
 import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
@@ -28,7 +29,7 @@ configDotenv();
 
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
-const pathHandlerFile = join(pathApi, 'dist', 'apps', 'api', 'lib', 'graphql', 'apollo', 'lambdaHandler.js');
+const pathHandlerFile = join(pathApi, 'lib', 'graphql', 'apollo', 'lambdaHandler.ts');
 
 export interface GraphQLStackProps extends StackProps {
   applicationStage: string;
@@ -80,6 +81,7 @@ export class GraphQLStack extends Stack {
       projectRoot: pathRoot,
       depsLockFilePath: join(pathRoot, 'package-lock.json'),
       bundling: {
+        tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
         nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
@@ -91,7 +93,10 @@ export class GraphQLStack extends Stack {
         S3_BUCKET_NAME: props.s3BucketName || '',
         CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
         EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
-        WEBAPP_URL: process.env.WEBAPP_URL ?? '',
+        WEBAPP_URL:
+          process.env.WEBAPP_URL ||
+          DEFAULT_STAGE_WEBAPP_ORIGINS[props.applicationStage]?.[0] ||
+          'http://localhost:3000',
         NODE_OPTIONS: '--enable-source-maps',
       },
       logGroup: this.graphqlLambdaLogGroup,
