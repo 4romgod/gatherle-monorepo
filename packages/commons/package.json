@@ -3,25 +3,52 @@
   "version": "1.0.0",
   "description": "This repository contains common source code for gatherle",
   "main": "dist/index.js",
-  "types": "dist/types/index.d.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "default": "./dist/constants/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "default": "./dist/utils/index.js"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "default": "./dist/validation/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
     "build": "npm-run-all lint:check build:ts",
-    "build:ts": "echo '\nTranspilling ts source code...' && tsc --build --pretty --verbose && echo 'All done with the build!'",
+    "build:ts": "npm run clean && tsc --build tsconfig.json --pretty",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint:check": "eslint \"lib/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"lib/**/*.{ts,tsx}\" --fix",
-    "typecheck": "tsc --noEmit --pretty"
+    "typecheck": "tsc --project tsconfig.json --noEmit --pretty"
   },
   "dependencies": {
-    "@typegoose/typegoose": "^12.4.0",
+    "@typegoose/typegoose": "^12.21.1",
     "date-fns": "^3.6.0",
-    "graphql": "^16.8.1",
+    "graphql": "^16.13.2",
     "graphql-type-json": "^0.3.2",
-    "mongoose": "^8.4.1",
+    "mongoose": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.1",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "eslint-plugin-unused-imports": "^4.3.0"
+    "eslint-plugin-unused-imports": "^4.4.1"
   }
 }

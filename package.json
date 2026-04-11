@@ -13,11 +13,12 @@
     "build:web": "npm run build -w @gatherle/webapp",
     "build:cdk": "npm run build -w @gatherle/cdk",
     "build:commons": "npm run build -w @gatherle/commons",
+    "clean": "npm run clean --workspaces --if-present",
     "dev:api": "npm run dev -w @gatherle/api",
     "dev:web": "npm run dev -w @gatherle/webapp",
-    "lint:check": "npm run lint -w --if-present",
+    "lint:check": "npm run lint:check --workspaces --if-present",
     "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\"",
-    "typecheck": "npm run typecheck -w --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "test:unit": "npm run test:unit:api && npm run test:unit:web",
     "test:unit:api": "npm run test:unit -w @gatherle/api",
     "test:unit:web": "npm run test:unit -w @gatherle/webapp",
@@ -25,12 +26,12 @@
     "test:e2e:web": "npm run test:e2e -w @gatherle/webapp --"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/lodash": "^4.17.4",
-    "dotenv": "^16.4.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/lodash": "^4.17.24",
+    "dotenv": "^16.6.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "^3.2.5",
+    "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "typescript": "^5.5.4"
+    "typescript": "^6.0.2"
   }
 }

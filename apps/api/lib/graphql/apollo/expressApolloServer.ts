@@ -2,9 +2,12 @@ import type { Express } from 'express';
 import express from 'express';
 import bodyParser from 'body-parser';
 import type { ListenOptions } from 'net';
+import type { Server } from 'http';
+import type { ApolloServer } from '@apollo/server';
 import { getConfigValue, MongoDbClient } from '@/clients';
 import { GRAPHQL_API_PATH, HttpStatusCode, SECRET_KEYS, validateEnv } from '@/constants';
 import { createApolloServer } from './server';
+import type { ServerContext } from './server';
 import { expressMiddleware } from '@apollo/server/express4';
 import {
   createUserLoader,
@@ -15,7 +18,6 @@ import {
   createEventParticipantLoader,
   createEventParticipantsByEventLoader,
 } from '@/graphql/loaders';
-import type { Server } from 'http';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
@@ -23,7 +25,9 @@ import { createCorsMiddleware } from './cors';
 
 const DEV_PORT = 9000;
 
-export const startExpressApolloServer = async (listenOptions: ListenOptions = { port: DEV_PORT }) => {
+export const startExpressApolloServer = async (
+  listenOptions: ListenOptions = { port: DEV_PORT },
+): Promise<{ url: string; expressApp: Express; apolloServer: ApolloServer<ServerContext>; httpServer: Server }> => {
   validateEnv();
 
   const actualPort = listenOptions.port ?? DEV_PORT;

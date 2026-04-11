@@ -1,12 +1,15 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../tsconfig.node.json",
   "compilerOptions": {
-    "noImplicitAny": false,
+    "composite": true,
+    "rootDir": "./lib",
     "outDir": "./dist",
     "declaration": true,
-    "declarationDir": "./dist/types",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false
-  }
+  },
+  "include": ["lib/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }
