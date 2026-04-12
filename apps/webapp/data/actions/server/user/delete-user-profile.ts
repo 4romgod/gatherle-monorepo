@@ -9,8 +9,8 @@ import { logger } from '@/lib/utils';
 
 export async function deleteUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
-  const userId = session?.user.userId;
-  const token = session?.user.token;
+  const userId = session?.user?.userId;
+  const token = session?.user?.token;
 
   logger.action('deleteUserProfileAction', { userId, hasToken: !!token });
 

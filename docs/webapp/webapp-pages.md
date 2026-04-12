@@ -7,7 +7,7 @@ scope. Pages are grouped by purpose and access level.
 
 ## 1. Public Pages (No Authentication Required)
 
-### 1. Landing Page (done)
+~~### 1. Landing Page (done)~~
 
 **Route:** `/`
 
@@ -18,7 +18,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 2. Browse Events (done)
+~~### 2. Browse Events (done)~~
 
 **Route:** `/events`
 
@@ -30,7 +30,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 3. Event Detail Page (Public View) (done)
+~~### 3. Event Detail Page (Public View) (done)~~
 
 **Route:** `/events/[slug]`
 
@@ -46,7 +46,7 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 3.1. Attendees List (done)
+~~### 3.1. Attendees List (done)~~
 
 **Route:** `/events/[slug]/attendees`
 
@@ -58,9 +58,9 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 4. Public User Profile (done)
+~~### 4. Public User Profile (done)~~
 
-**Route:** `/u/[username]`
+**Route:** `/users/[username]`
 
 - Public bio
 - Hosted events
@@ -69,9 +69,9 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 5. Public Organization Profile
+~~### 5. Public Organization Profile~~
 
-**Route:** `/org/[slug]`
+**Route:** `/organizations/[slug]`
 
 - Organization details
 - Upcoming events
@@ -112,7 +112,7 @@ scope. Pages are grouped by purpose and access level.
 
 ## 3. Core Authenticated User Pages
 
-### 9. Home / Feed (done)
+~~### 9. Home / Feed (done)~~
 
 **Route:** `/home`
 
@@ -123,29 +123,9 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 10. Search Results
+~~### 12. Notifications~~
 
-**Route:** `/search`
-
-- Keyword-based search
-- Filtered results
-- Map toggle
-
----
-
-### 11. Map View
-
-**Route:** `/map`
-
-- Map-based event discovery
-- Event pins
-- Filters
-
----
-
-### 12. Notifications
-
-**Route:** `/notifications`
+**Route:** `/account/notifications`
 
 - RSVP confirmations
 - Friend RSVPs
@@ -154,28 +134,18 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 13. Saved Events
+~~### 15. My Profile (done)~~
 
-**Route:** `/saved`
+**Route:** `/account/profile`
 
-- Bookmarked / saved events
-
----
-
-### 14. My Events
-
-**Route:** `/me/events` Tabs:
-
-- Going
-- Interested
-- Hosted
-- Past
+- Just to see public information
+- Privacy settings
 
 ---
 
-### 15. My Profile (Settings) (done)
+~~### 15. My Profile (Settings) (done)~~
 
-**Route:** `/me/profile`
+**Route:** `/account`
 
 - Edit bio
 - Interests
@@ -183,28 +153,18 @@ scope. Pages are grouped by purpose and access level.
 
 ---
 
-### 16. Following / Followers
-
-**Route:** `/me/connections`
-
-- Following
-- Followers
-- Mutual connections
-
----
-
 ## 4. Hosting & Event Management
 
 ### 17. Create Event
 
-**Route:** `/events/create`
+**Route:** `/account/events/create`
 
 - Event creation form
 - Draft / Publish flow
 
 ---
 
-## 30. Error Pages (done)
+~~## 30. Error Pages (done)~~
 
 ### `/404`
 
@@ -222,7 +182,7 @@ scope. Pages are grouped by purpose and access level.
 
 ### 18. Edit Event
 
-**Route:** `/events/[id]/edit`
+**Route:** `/account/events/[slug]/edit`
 
 - Update event details
 - Cancel event

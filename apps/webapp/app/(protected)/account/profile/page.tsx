@@ -60,7 +60,10 @@ export default function UserPublicProfile() {
 
 async function AuthenticatedProfileContent() {
   const session = await auth();
-  if (!session) return null;
+  if (!session?.user?.token) {
+    redirect(ROUTES.AUTH.LOGIN);
+  }
+
   const sessionUser = omit(session.user, ['token', '__typename']);
   const token = session.user.token;
   logger.debug('[Profile] Token present:', !!token, 'Username:', sessionUser.username);

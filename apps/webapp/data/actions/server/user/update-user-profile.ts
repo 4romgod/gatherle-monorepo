@@ -52,8 +52,8 @@ const PreferencesSchema = z
 
 export async function updateUserProfileAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
-  const userId = session?.user.userId;
-  const token = session?.user.token;
+  const userId = session?.user?.userId;
+  const token = session?.user?.token;
 
   logger.debug('🔐 Update Profile Action - Session check:', {
     hasSession: !!session,

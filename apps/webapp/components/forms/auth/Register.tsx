@@ -73,10 +73,16 @@ export default function RegisterForm() {
 
   return (
     <Box component="form" action={formAction} noValidate>
-      <Typography variant="body1" textAlign="center" paddingBottom={3}>
+      <Typography variant="body1" textAlign="center" paddingBottom={1}>
         <span>Already a member?&nbsp;</span>
-        <Link href="/auth/login" style={{ color: '#1e88e5', cursor: 'pointer' }}>
+        <Link href={ROUTES.AUTH.LOGIN} style={{ color: '#1e88e5', cursor: 'pointer' }}>
           Log in here
+        </Link>
+      </Typography>
+      <Typography variant="body2" textAlign="center" paddingBottom={3} color="text.secondary">
+        <span>Need to verify your email?&nbsp;</span>
+        <Link href={ROUTES.AUTH.VERIFY_EMAIL_PENDING} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+          Resend verification link
         </Link>
       </Typography>
 

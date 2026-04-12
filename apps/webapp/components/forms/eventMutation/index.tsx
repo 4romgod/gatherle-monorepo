@@ -28,7 +28,6 @@ import {
   Description,
   Category,
   Settings,
-  Image as ImageIcon,
   People,
   Link as LinkIcon,
   Save,
@@ -60,14 +59,15 @@ import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/qu
 import { CreateEventDocument, UpdateEventDocument } from '@/data/graphql/query/Event/mutation';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { logger } from '@/lib/utils';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
 export default function EventMutationForm({ categoryList, event }: EventMutationFormProps) {
   const isEditMode = !!event;
+
   const router = useRouter();
   const draftEntityId = useRef(crypto.randomUUID());
+
   const { data: sessionData, status: sessionStatus } = useSession();
   const { data: myOrganizationsData, loading: myOrganizationsLoading } = useQuery(GetMyOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',

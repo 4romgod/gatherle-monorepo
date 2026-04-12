@@ -1,14 +1,11 @@
 # Task Backlog
 
-This backlog captures known missing work discovered from TODO/FIXME markers and gaps in the current backend/frontend
-implementation. It is meant as a living list for quick task picking. Entries reference concrete code locations so they
-are easy to locate.
-
-## How to use
-
-- **Status:** `Backlog` → `Ready` → `In Progress` → `Done`.
-- **Priority:** P0 (blocker) → P3 (nice-to-have).
-- Prefer creating GitHub Issues from these entries, then link the issue back here.
+> **This document has been superseded.** All tasks, MVP status, bugs, and architectural context are now maintained in a
+> single living document:
+>
+> **→ [docs/project-state.md](project-state.md)**
+>
+> Do not add new tasks here. Update `project-state.md` instead.
 
 ## API (priority focus)
 

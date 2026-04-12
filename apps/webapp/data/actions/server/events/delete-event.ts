@@ -8,7 +8,11 @@ import { logger } from '@/lib/utils';
 export async function deleteEventAction(eventId: string) {
   const session = await auth();
 
-  logger.action('deleteEventAction', { eventId, hasToken: !!session?.user.token });
+  logger.action('deleteEventAction', { eventId, hasToken: !!session?.user?.token });
+
+  if (!session?.user?.token) {
+    return { apiError: 'User is not authenticated' };
+  }
 
   try {
     logger.debug('Sending delete event mutation');
@@ -17,7 +21,7 @@ export async function deleteEventAction(eventId: string) {
       variables: { eventId },
       context: {
         headers: {
-          token: session?.user.token,
+          token: session.user.token,
         },
       },
     });

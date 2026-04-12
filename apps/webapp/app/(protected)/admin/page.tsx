@@ -5,6 +5,7 @@ import { ROUTES, APP_NAME } from '@/lib/constants';
 import { UserRole } from '@/data/graphql/types/graphql';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import { buildPageMetadata } from '@/lib/metadata';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Admin Console',
@@ -16,9 +17,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
   const session = await auth();
+  if (!session?.user?.token) {
+    redirect(ROUTES.AUTH.LOGIN);
+  }
+
   const isAdmin = session?.user?.userRole === UserRole.Admin;
 
-  if (!session?.user || !isAdmin) {
+  if (!isAdmin) {
     return (
       <Container sx={{ py: { xs: 8, md: 10 } }}>
         <Stack spacing={3} alignItems="center" textAlign="center">

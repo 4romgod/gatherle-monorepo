@@ -11,9 +11,9 @@ import { logger } from '@/lib/utils/logger';
 
 export async function updateUserPasswordAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
-  const userId = session?.user.userId;
-  const token = session?.user.token;
-  const userEmail = session?.user.email;
+  const userId = session?.user?.userId;
+  const token = session?.user?.token;
+  const userEmail = session?.user?.email;
 
   logger.action('updateUserPasswordAction', { userId, hasToken: !!token });
 

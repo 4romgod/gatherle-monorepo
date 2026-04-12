@@ -15,6 +15,8 @@ import { getClient } from '@/data/graphql';
 import { GetAllEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
 import { omit } from 'lodash';
 import { buildPageMetadata } from '@/lib/metadata';
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/lib/constants';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Account Settings',
@@ -24,7 +26,9 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default async function SettingsPage() {
   const session = await auth();
-  if (!session) return;
+  if (!session?.user?.token) {
+    redirect(ROUTES.AUTH.LOGIN);
+  }
 
   const { data: groups } = await getClient().query({
     query: GetAllEventCategoryGroupsDocument,

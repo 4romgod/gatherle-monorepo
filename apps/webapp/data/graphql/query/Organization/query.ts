@@ -89,9 +89,14 @@ export const GetMyOrganizationsDocument = graphql(`
     readMyOrganizations {
       organization {
         orgId
+        ownerId
         slug
         name
+        description
         logo
+        tags
+        followersCount
+        isFollowable
       }
       role
     }
