@@ -3,6 +3,8 @@ import { Box, Container, Stack, Typography } from '@mui/material';
 import { auth } from '@/auth';
 import VenueCreationForm from '@/components/venue/VenueCreationForm';
 import { buildPageMetadata } from '@/lib/metadata';
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/lib/constants';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Add Venue',
@@ -14,11 +16,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function AddVenuePage() {
   const session = await auth();
-  const user = session?.user;
-
-  if (!user) {
-    return null;
+  if (!session?.user?.token) {
+    redirect(ROUTES.AUTH.LOGIN);
   }
+
+  const user = session.user;
 
   return (
     <Box component="main" sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 4, md: 6 } }}>

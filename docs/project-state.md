@@ -1,0 +1,275 @@
+# Gatherle — Project State
+
+> **Living document.** Update the "Last updated" date, "Current Focus", and task statuses whenever work is completed or
+> new tasks are discovered. This is the single source of truth for project progress.
+
+| Field                | Value                                                |
+| -------------------- | ---------------------------------------------------- |
+| **Last updated**     | 12 April 2026 (WEB-006 closed — already implemented) |
+| **API readiness**    | ~80% MVP                                             |
+| **Webapp readiness** | ~85% MVP                                             |
+| **Current focus**    | _(update this when you pick up a task)_              |
+
+---
+
+## How to Use This Document
+
+- **Stuck on what to do next?** Read [Immediate Next Tasks](#immediate-next-tasks).
+- **Starting a task?** Change its status to `In Progress` and set "Current focus" in the header above.
+- **Finished a task?** Mark it `Done`, clear "Current focus", and update the relevant MVP checklist row.
+- **Discovered a new issue?** Add it to the appropriate backlog table with a new ID.
+- **Statuses:** `Backlog` → `Ready` → `In Progress` → `Done`
+- **Priorities:** P0 (launch blocker) → P1 (high) → P2 (medium) → P3 (nice-to-have)
+
+---
+
+## MVP Feature Checklist
+
+Core features required to launch. Backend (API) and Webapp columns are assessed independently.
+
+| Feature                          | API        | Webapp     | Notes                                                                                                                                                                                                                                                                  |
+| -------------------------------- | ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Authentication**               | ⚠️ Partial | ⚠️ Partial | Email register/login, email verify, forgot/reset password done. Google and Facebook OAuth **not implemented** (API + Webapp).                                                                                                                                          |
+| **User Profiles**                | ✅ Done    | ✅ Done    | CRUD, avatar upload, profile view                                                                                                                                                                                                                                      |
+| **Browse & Search Events**       | ✅ Done    | ✅ Done    | Pagination, filters, text search                                                                                                                                                                                                                                       |
+| **Event Details Page**           | ✅ Done    | ✅ Done    | Location, organizers, categories, capacity, attendee preview                                                                                                                                                                                                           |
+| **Create & Edit Events**         | ✅ Done    | ✅ Done    | Full form, org attachment, featured image upload                                                                                                                                                                                                                       |
+| **RSVP (Going / Interested)**    | ✅ Done    | ✅ Done    | All statuses: Going, Interested, Waitlisted, Cancelled, CheckedIn                                                                                                                                                                                                      |
+| **Save / Bookmark Events**       | ✅ Done    | ✅ Done    | Implemented via Follow(targetType: Event)                                                                                                                                                                                                                              |
+| **Waitlist**                     | ✅ Done    | ✅ Done    | `waitlistEnabled` flag + `Waitlisted` participant status                                                                                                                                                                                                               |
+| **Follow Users & Orgs**          | ✅ Done    | ✅ Done    | Public / RequireApproval policies, pending state, block/mute                                                                                                                                                                                                           |
+| **Events I'm Going To**          | ✅ Done    | ✅ Done    | On profile + UpcomingRsvpsSection on home                                                                                                                                                                                                                              |
+| **Events I'm Interested In**     | ✅ Done    | ✅ Done    | Shown on profile via saved events tab                                                                                                                                                                                                                                  |
+| **Events I Hosted**              | ✅ Done    | ⚠️ Partial | Queryable; no dedicated `/account/events/hosted` page, only on profile                                                                                                                                                                                                 |
+| **Past Attended Events**         | ✅ Done    | ✅ Done    | RSVP history via ProfileEventsTabs                                                                                                                                                                                                                                     |
+| **Organization Management**      | ✅ Done    | ✅ Done    | Create/update/delete + Owner/Admin/Host/Member roles                                                                                                                                                                                                                   |
+| **Multi-Organizer Roles**        | ✅ Done    | ⚠️ Partial | Org-level roles work; no UI to assign/edit per-event co-organizers                                                                                                                                                                                                     |
+| **Volunteer Role**               | ❌ Missing | ❌ Missing | Not in schema; `OrganizationRole` enum has no Volunteer value                                                                                                                                                                                                          |
+| **Personalized "For You" Feed**  | ⚠️ Partial | ✅ Done    | Works; performance TODOs (sequential queries, no caching)                                                                                                                                                                                                              |
+| **Trending Events**              | ❌ Missing | ✅ Done    | No `readTrendingEvents` query — webapp sorts by RSVP count instead                                                                                                                                                                                                     |
+| **Friends-Going Feed**           | ⚠️ Partial | ⚠️ Partial | Scores events via FriendAttending reason; no dedicated API query or UI section                                                                                                                                                                                         |
+| **Social Activity Feed**         | ✅ Done    | ✅ Done    | logActivity + readFeed; SocialFeed component on home                                                                                                                                                                                                                   |
+| **In-App Notifications**         | ✅ Done    | ⚠️ Partial | Notification center page exists; end-to-end wiring for all types unclear                                                                                                                                                                                               |
+| **Direct Messaging (Chat)**      | ⚠️ Partial | ✅ Done    | Read msgs/conversations works; `sendMessage` mutation missing or not exposed                                                                                                                                                                                           |
+| **Image Uploads**                | ✅ Done    | ⚠️ Partial | S3 + upload UI exists for: user avatar, event featured image, org logo, venue featured image. **Missing:** user cover/banner photo and org cover/banner photo upload (WEB-032, WEB-033). Detail pages use hardcoded Unsplash fallbacks when no image is set (WEB-034). |
+| **Venue Management**             | ✅ Done    | ✅ Done    | Full CRUD + venue creation page                                                                                                                                                                                                                                        |
+| **Event Categories**             | ✅ Done    | ✅ Done    | Admin CRUD + category filter in browse                                                                                                                                                                                                                                 |
+| **Forgot / Reset Password**      | ✅ Done    | ✅ Done    | Fully implemented end-to-end. Server actions wire Apollo mutations; AWS SES sends reset emails.                                                                                                                                                                        |
+| **Plus-Ones (Guest +1)**         | ✅ Done    | ⚠️ Partial | `allowGuestPlusOnes` toggle in form; no attendee-side UI to add a +1                                                                                                                                                                                                   |
+| **Attendee Visibility (Opt-In)** | ✅ Done    | ✅ Done    | `showAttendees` + `sharedVisibility` controls implemented                                                                                                                                                                                                              |
+| **Event Link Field**             | ✅ Done    | ✅ Done    | Stored + shown on event detail page                                                                                                                                                                                                                                    |
+
+---
+
+## Immediate Next Tasks
+
+Pick any of these when you are unsure what to work on next. They are ordered by launch impact.
+
+| #   | Task                                                                         | Why it matters                                                                                         | Backlog ID |
+| --- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------- |
+| 1   | **Implement `sendMessage` mutation on the API + wire it in the Messages UI** | Chat reads work but users cannot actually send messages; the page is effectively dead                  | API-015    |
+| 2   | **Add `readTrendingEvents` query to API**                                    | Trending section in home uses a client-side sort workaround; proper backend query needed before launch | API-016    |
+| 3   | **Fix event filters not working in webapp**                                  | Browse page filters exist in the UI but do not apply — a broken core feature                           | WEB-022    |
+| 4   | **Implement event location validation in API Zod schema**                    | Invalid location data can be persisted silently; needed for data integrity                             | API-001    |
+
+---
+
+## Task Backlog — API
+
+| ID      | Title                                                             | Priority | Status  | Location                                                                              | Notes                                                                                                                                                                                                                          |
+| ------- | ----------------------------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| API-001 | Add location validation to event Zod schema                       | P1       | Backlog | `apps/api/lib/validation/zod/event.ts`                                                | Validate `location` and `primarySchedule` structure.                                                                                                                                                                           |
+| API-002 | Implement Activity resolver logic                                 | P1       | Backlog | `apps/api/lib/graphql/resolvers/activity.ts`                                          | Resolver has TODO placeholder; wire DAO + CRUD/queries. No pagination on `readFeed` query.                                                                                                                                     |
+| API-003 | Review/upgrade auth guidance for user resolver                    | P2       | Backlog | `apps/api/lib/graphql/resolvers/user.ts`                                              | TODO references auth strategy; align with JWT/role checks.                                                                                                                                                                     |
+| API-004 | Ensure user model select behavior matches commons                 | P2       | Backlog | `apps/api/lib/mongodb/models/user.ts`                                                 | Align model `select` defaults with `packages/commons/lib/types/user.ts`.                                                                                                                                                       |
+| API-005 | Confirm user DAO interest population works                        | P2       | Backlog | `apps/api/lib/mongodb/dao/user.ts`                                                    | Verify `.populate('interests')` returns expected shape.                                                                                                                                                                        |
+| API-006 | Make resolveTime middleware Lambda compatible                     | P2       | Backlog | `apps/api/lib/utils/middleware/resolveTime.ts`                                        | Adapt for Lambda runtime or guard for missing HTTP response.                                                                                                                                                                   |
+| API-007 | Support nested query filters                                      | P1       | Backlog | `apps/api/lib/utils/queries/query.ts`                                                 | TODO for nested fields and organizer-gender filter.                                                                                                                                                                            |
+| API-008 | Implement RootQuery selector operators                            | P1       | Backlog | `apps/api/lib/utils/queries/aggregate/filter.ts`                                      | Add `$and`, `$or`, `$text`, etc.                                                                                                                                                                                               |
+| API-009 | Consider middleware for known Mongoose errors                     | P3       | Backlog | `apps/api/lib/utils/exceptions.ts`                                                    | TODO suggests middleware-based translation of errors.                                                                                                                                                                          |
+| API-010 | Enforce birthdate validation rules                                | P2       | Backlog | `packages/commons/lib/validation/auth.ts`                                             | Ensure birthdate is not in the future.                                                                                                                                                                                         |
+| API-011 | Decide whether to persist participant IDs on Event                | P2       | Backlog | `packages/commons/lib/types/event.ts`                                                 | Document/implement final decision.                                                                                                                                                                                             |
+| API-012 | Fix CI/CD STAGE env wiring for GraphQL lambda                     | P1       | Backlog | `infrastructure/cdk/lib/stack/graphql-stack.ts`                                       | Ensure pipeline passes STAGE reliably.                                                                                                                                                                                         |
+| API-013 | Filter using related/resolved fields                              | P2       | Done    | `apps/api/lib/utils/queries/aggregate/filter.ts`                                      | Organizers and participants now use lookup/populate for nested filtering via aggregation pipeline.                                                                                                                             |
+| API-014 | Implement DataLoader batching for User and EventCategory          | P1       | Backlog | `apps/api/lib/graphql/apollo/expressApolloServer.ts`, `apps/api/lib/graphql/loaders/` | Add per-request DataLoaders to eliminate N+1 DB queries when resolving nested users and event categories. Install `dataloader`, create loader factory functions, wire into Apollo context. ~70–90% latency reduction expected. |
+| API-015 | Implement `sendMessage` mutation for chat                         | P1       | Backlog | `apps/api/lib/graphql/resolvers/chat.ts`                                              | Read side works; no mutation to send messages. Chat page is read-only without this.                                                                                                                                            |
+| API-016 | Add `readTrendingEvents` query                                    | P1       | Backlog | `apps/api/lib/graphql/resolvers/event.ts`, `apps/api/lib/mongodb/dao/events.ts`       | No trending query exists. Sort by `rsvpCount + savedByCount` descending with a time window (e.g., upcoming events only). Webapp currently works around this with a client-side sort.                                           |
+| API-017 | Add dedicated `readFriendsGoingFeed` query                        | P2       | Backlog | `apps/api/lib/graphql/resolvers/feed.ts`                                              | Currently the recommendation engine scores events with `FriendAttending` reason but there is no standalone query. Client has to compose this from two queries.                                                                 |
+| API-018 | Optimize RecommendationService performance                        | P2       | Backlog | `apps/api/lib/services/recommendation.ts`                                             | TODOs at line 112: sequential queries for follows + activities. Add caching layer; candidate pool limited to 500 events. See `docs/features/recommendation-feed.md`.                                                           |
+| API-019 | Implement recurrence rule expansion                               | P2       | Backlog | `apps/api/lib/graphql/resolvers/event.ts`                                             | `recurrenceRule` (RRULE string) is stored but never expanded. Recurring events show as a single entry. Needs expansion logic to generate occurrence instances.                                                                 |
+| API-020 | Add event check-in mutation                                       | P3       | Backlog | `apps/api/lib/graphql/resolvers/eventParticipant.ts`                                  | `CheckedIn` participant status exists in the schema but no mutation to trigger a check-in. Needed for post-MVP attendance verification.                                                                                        |
+| API-021 | Add Invitation and WaitlistEntry collections + resolvers          | P2       | Backlog | `apps/api/lib/graphql/resolvers/`, `apps/api/lib/mongodb/dao/`                        | Planned expansion from product scope. Replace ad-hoc waitlist flag with proper `Invitation` and `WaitlistEntry` domain objects.                                                                                                |
+| API-022 | Replace `Event.comments` JSON with Comment + Reaction collections | P3       | Backlog | `packages/commons/lib/types/event.ts`                                                 | Current `comments` field is an unstructured JSON blob. Replace with proper `Comment` and `Reaction` collections.                                                                                                               |
+| API-023 | Implement Google OAuth provider on the API / NextAuth config      | P1       | Backlog | `apps/api/lib/graphql/resolvers/auth.ts`, `apps/webapp/auth.config.ts`                | Add OAuth strategy (Google) to the auth resolver and NextAuth config. Needs Google client ID + secret in env. See `docs/environment-variables.md`.                                                                             |
+| API-024 | Implement Facebook OAuth provider on the API / NextAuth config    | P2       | Backlog | `apps/api/lib/graphql/resolvers/auth.ts`, `apps/webapp/auth.config.ts`                | Same as API-023 but for Facebook. Can be done after Google OAuth is proven. Needs Facebook App ID + secret in env.                                                                                                             |
+| API-025 | Wire email and push dispatch in NotificationService               | P2       | Backlog | `apps/api/lib/services/notification.ts`                                               | Two TODOs at lines 249 and 327 mark where email and push channels need to be dispatched based on user preferences. Currently all notifications are in-app only.                                                                |
+| API-026 | Replace regex-based text search with MongoDB text index queries   | P2       | Backlog | `apps/api/lib/utils/queries/text-search.ts`                                           | Text search currently uses `/value/i` regex across arbitrary fields — slow at scale and a potential ReDoS vector. Replace with the MongoDB `$text` operator backed by a proper text index.                                     |
+| API-027 | Move RRULE date-range filtering into the aggregation pipeline     | P2       | Backlog | `apps/api/lib/mongodb/dao/events.ts`                                                  | Date filtering on recurrence rules is applied after fetching from the DB, which breaks pagination counts. Moving this logic into the aggregation pipeline will make pagination and result counts accurate.                     |
+| API-028 | Enforce strong password policy in API Zod validation              | P1       | Backlog | `apps/api/lib/validation/zod/user.ts`, `packages/commons/lib/validation/auth.ts`      | Current minimum is 8 characters — passwords like `123456789` pass. Add complexity rules (uppercase, lowercase, digit, special char) to the `password` schema used in register, reset-password, and update-password resolvers.  |
+
+### Planned API expansions (from product scope)
+
+- Add audit trail storage and read APIs.
+- Wire end-to-end notification triggers for all notification types defined in `docs/features/notifications.md`.
+- Location proximity filtering — `LocationFilterInput` exists in schema but proximity/geo query may not be wired in
+  `EventDAO.readEvents`.
+
+---
+
+## Task Backlog — Webapp
+
+| ID      | Title                                                                 | Priority | Status  | Location                                                                                                                                                                      | Notes                                                                                                                                                                                                                                      |
+| ------- | --------------------------------------------------------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| WEB-001 | Replace date-fns auth validation TODO                                 | P3       | Backlog | `apps/webapp/data/validation/auth.ts`                                                                                                                                         | Decide on date lib; standardize client validation.                                                                                                                                                                                         |
+| WEB-002 | Wire forgot-password API call                                         | P1       | Done    | `apps/webapp/data/actions/server/auth/forgot-password.ts`                                                                                                                     | Already fully implemented — action calls `ForgotPasswordDocument` via Apollo; AWS SES sends the reset email.                                                                                                                               |
+| WEB-003 | Wire reset-password API call                                          | P1       | Done    | `apps/webapp/data/actions/server/auth/reset-password.ts`                                                                                                                      | Already fully implemented — action calls `ResetPasswordDocument` via Apollo with token + new password.                                                                                                                                     |
+| WEB-004 | Validate profile location before JSON.parse                           | P2       | Backlog | `apps/webapp/data/actions/server/user/update-user-profile.ts`                                                                                                                 | Prevent runtime parse errors.                                                                                                                                                                                                              |
+| WEB-005 | Sync user session after profile update                                | P2       | Backlog | `apps/webapp/data/actions/server/user/update-user-profile.ts`                                                                                                                 | Ensure session reflects updates immediately.                                                                                                                                                                                               |
+| WEB-006 | Verify current password before update                                 | P2       | Done    | `apps/webapp/data/actions/server/user/update-user-password.ts`                                                                                                                | Already implemented — server action calls `LoginUserDocument` to verify before updating. No session refresh needed after password-only change.                                                                                             |
+| WEB-007 | Log out after account deletion                                        | P2       | Backlog | `apps/webapp/data/actions/server/user/delete-user-profile.ts`                                                                                                                 | Session cleanup after delete.                                                                                                                                                                                                              |
+| WEB-008 | Restrict organizer-only event detail page                             | P2       | Backlog | `apps/webapp/app/(protected)/account/events/[slug]/page.tsx`                                                                                                                  | Enforce ownership in UI and server action.                                                                                                                                                                                                 |
+| WEB-009 | Provide fallback event image                                          | P3       | Backlog | `apps/webapp/app/events/[slug]/page.tsx`                                                                                                                                      | Set default hero image when none uploaded.                                                                                                                                                                                                 |
+| WEB-010 | Use registration data on user profile page                            | P3       | Backlog | `apps/webapp/app/users/[username]/page.tsx`                                                                                                                                   | Replace placeholder content.                                                                                                                                                                                                               |
+| WEB-011 | Resolve auth config secret exposure                                   | P0       | Done    | `apps/webapp/auth.config.ts`                                                                                                                                                  | Confirmed: webapp uses `NEXTAUTH_SECRET`, API uses `JWT_SECRET` — distinct env vars. Requirement documented in `docs/environment-variables.md`.                                                                                            |
+| WEB-012 | Export GraphQL mutations for categories                               | P3       | Backlog | `apps/webapp/data/graphql/query/index.ts`                                                                                                                                     | Uncomment mutation exports.                                                                                                                                                                                                                |
+| WEB-013 | Clean up MessagesPanel selected state                                 | P3       | Backlog | `apps/webapp/components/messages/MessagesPanel.tsx`                                                                                                                           | Implement selection state.                                                                                                                                                                                                                 |
+| WEB-014 | Fill footer routes or remove placeholders                             | P3       | Backlog | `apps/webapp/components/footer/NavigationItems.tsx`                                                                                                                           | Ensure routes exist or remove dead links.                                                                                                                                                                                                  |
+| WEB-016 | Replace hardcoded theme colors                                        | P3       | Backlog | `apps/webapp/components/global.css`                                                                                                                                           | Align with design system.                                                                                                                                                                                                                  |
+| WEB-017 | Add redirect logic on auth forms                                      | P2       | Backlog | `apps/webapp/components/forms/auth/Login.tsx`, `.../Register.tsx`                                                                                                             | Redirect after successful auth.                                                                                                                                                                                                            |
+| WEB-018 | Add address input component                                           | P3       | Backlog | `apps/webapp/components/forms/eventMutation/EventLocationInput.tsx`                                                                                                           | Replace TODO placeholder in location form.                                                                                                                                                                                                 |
+| WEB-019 | Persist recurrence rule in event date input                           | P3       | Backlog | `apps/webapp/components/forms/eventMutation/EventDateInput.tsx`                                                                                                               | Use local storage or form state for RRULE persistence.                                                                                                                                                                                     |
+| WEB-020 | Link event organizer names to profiles                                | P3       | Backlog | `apps/webapp/components/events/eventBox/index.tsx`                                                                                                                            | Add profile link on organizer names.                                                                                                                                                                                                       |
+| WEB-021 | Restore CategoryFilter onChange contract                              | P2       | Backlog | `apps/webapp/components/events/filters/category.tsx`                                                                                                                          | Fix potential API break.                                                                                                                                                                                                                   |
+| WEB-022 | Fix event filters not working                                         | P1       | Backlog | `apps/webapp/components/events/filters/EventFilterContext.tsx`                                                                                                                | Filter UI exists but filters do not apply to results.                                                                                                                                                                                      |
+| WEB-023 | Implement settings save logic                                         | P2       | Backlog | `apps/webapp/components/settings/*SettingsPage.tsx`                                                                                                                           | Wire API calls for all settings pages.                                                                                                                                                                                                     |
+| WEB-024 | Post-delete redirect in Account settings                              | P2       | Backlog | `apps/webapp/components/settings/AccountSettingsPage.tsx`                                                                                                                     | Redirect + sign out after account delete.                                                                                                                                                                                                  |
+| WEB-025 | Add plus-ones UI for attendees                                        | P2       | Backlog | `apps/webapp/app/events/[slug]/page.tsx` or event detail components                                                                                                           | `allowGuestPlusOnes` toggle exists in event form. No UI for attendees to register a +1.                                                                                                                                                    |
+| WEB-026 | Add dedicated "Events I'm Hosting" page                               | P3       | Backlog | `apps/webapp/app/(protected)/account/events/`                                                                                                                                 | Hosted events are only visible on profile. A dedicated `/account/events/hosted` route would help organizers.                                                                                                                               |
+| WEB-027 | Add friends-going section to home feed                                | P2       | Backlog | `apps/webapp/components/home/`                                                                                                                                                | `FriendAttending` reason exists in recommendation engine. A dedicated UI section ("Friends are going") would surface it prominently. Depends on API-017.                                                                                   |
+| WEB-028 | Add multi-organizer assignment UI in event form                       | P2       | Backlog | `apps/webapp/components/forms/eventMutation/index.tsx`                                                                                                                        | `organizers` field is in the event schema and mutation input, but there is no UI to search/add/remove per-event co-organizers.                                                                                                             |
+| WEB-029 | Wire sendMessage mutation in Messages UI                              | P1       | Backlog | `apps/webapp/app/(protected)/account/messages/`                                                                                                                               | Depends on API-015. Conversation list and read views exist; sending is not wired.                                                                                                                                                          |
+| WEB-030 | Add Google sign-in button to Login & Register pages                   | P1       | Backlog | `apps/webapp/components/forms/auth/Login.tsx`, `.../Register.tsx`                                                                                                             | Depends on API-023. Add NextAuth `signIn('google')` trigger with the Google button in both auth forms.                                                                                                                                     |
+| WEB-031 | Add Facebook sign-in button to Login & Register pages                 | P2       | Backlog | `apps/webapp/components/forms/auth/Login.tsx`, `.../Register.tsx`                                                                                                             | Depends on API-024 and WEB-030. Same pattern as Google; add Facebook button after Google is working.                                                                                                                                       |
+| WEB-032 | Add user cover/banner photo upload to profile settings                | P2       | Backlog | `apps/webapp/components/settings/EditProfilePage.tsx`                                                                                                                         | Avatar upload exists but the profile header shows a solid colour placeholder. Add a cover photo upload field using `useImageUpload` with an appropriate `ImageType`.                                                                       |
+| WEB-033 | Add organisation cover/banner photo upload in org settings            | P2       | Backlog | `apps/webapp/components/organization/settings/GeneralSettingsTab.tsx`                                                                                                         | Org logo upload exists but the org detail page falls back to a hardcoded Unsplash URL when no cover is stored. Add a cover image field alongside the logo in the settings tab.                                                             |
+| WEB-034 | Replace hardcoded Unsplash fallback images with internal placeholders | P3       | Backlog | `apps/webapp/components/organization/organizationDetailPageClient/index.tsx`, `apps/webapp/components/venue/VenueDetailPageClient.tsx`                                        | Org and venue detail pages use external Unsplash URLs as fallbacks when no image has been uploaded. Replace with self-hosted placeholder assets to avoid external dependency. Event detail page fallback is tracked separately in WEB-009. |
+| WEB-035 | Move event text search from client-side filtering to backend          | P2       | Backlog | `apps/webapp/components/search/EventSearchBar.tsx`                                                                                                                            | Search currently fetches a limited result set and regex-filters it client-side (TODOs at lines 94 and 100). Wire up a proper backend text search query once API-026 is done. Depends on API-026.                                           |
+| WEB-036 | Surface error state in useShareDialog                                 | P3       | Backlog | `apps/webapp/hooks/useShareDialog.ts`                                                                                                                                         | An unhandled promise rejection at line 64 is silently swallowed. Catch the error, set an error state, and show the user a message when sharing fails.                                                                                      |
+| WEB-037 | Add SEO fallback metadata to all slug-based pages                     | P2       | Backlog | `apps/webapp/app/categories/[slug]/page.tsx`, `apps/webapp/app/events/[slug]/page.tsx`, `apps/webapp/app/users/[username]/page.tsx`, `apps/webapp/app/venues/[slug]/page.tsx` | All four route files have a TODO marking missing fallback metadata. Implement `generateMetadata` fallbacks so pages never render with empty `<title>` or missing `<meta>` tags.                                                            |
+| WEB-038 | Simplify filter menu components to a single controlled pattern        | P3       | Backlog | `apps/webapp/components/events/filters/FilterMenus.tsx`                                                                                                                       | Filter menus (CategoryMenu, StatusMenu, DateMenu, LocationMenu) currently mix controlled and uncontrolled usage patterns. Standardise to fully controlled with callback props to reduce edge-case bugs.                                    |
+| WEB-039 | Enforce strong password policy in webapp validation                   | P1       | Backlog | `apps/webapp/data/validation/auth.ts`, `apps/webapp/components/settings/PasswordSettingsPage.tsx`                                                                             | Client-side Zod schema only checks 8-character minimum. Mirror the API-028 complexity rules so validation errors surface before a round trip. Depends on API-028 being defined first so rules stay in sync.                                |
+
+---
+
+## Known Bugs (Open)
+
+> Fixed bugs are documented in full in [docs/bugs-discovered.md](bugs-discovered.md).
+
+| ID      | Title                                                                 | Severity | Status  | Location                                     | Notes                                                                                                                                                                               |
+| ------- | --------------------------------------------------------------------- | -------- | ------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BUG-00X | Missing token in Apollo context causes incorrect user-specific fields | Medium   | 🚩 Open | Any component using `useQuery`/`useMutation` | `isSavedByMe`, `isRsvpedByMe`, etc. return wrong values when `getAuthHeader` is not passed in Apollo context. Audit all data-fetching hooks/components to ensure token is included. |
+
+---
+
+## Key Architectural Decisions
+
+Brief summaries of significant design choices. Full details are in the linked docs.
+
+### Recommendation Feed (For You)
+
+A rule-based scoring engine pre-computes a `user_feed` collection per user. The `readRecommendedFeed` query is a cheap
+indexed read. Seven scoring signals fire: category match, friends attending, followed org hosting, network saved, time
+urgency, popularity, and freshness. Feed auto-expires via MongoDB TTL after 7 days. Feed recomputes on follow, RSVP, and
+event publish triggers.
+
+→ See [docs/features/recommendation-feed.md](features/recommendation-feed.md) for scoring weights, lifecycle diagram,
+and performance notes.
+
+### Notification System
+
+Three delivery channels: in-app, email, push. Notifications cover social actions (follow/mention), event interactions
+(RSVP, check-in, reminders, updates, cancellations), organization actions, friend activity, and security alerts. All
+organizers on an event receive RSVP and check-in notifications. Push and email channels are planned but not fully wired
+for all notification types.
+
+→ See [docs/features/notifications.md](features/notifications.md) for the full notification type matrix.
+
+### Follow & Social Graph
+
+Follow targets are polymorphic: User or Organization. Follow policy is configurable per user/org (Public = auto-accept,
+RequireApproval = pending queue). Muting (`mutedUserIds`, `mutedOrgIds`) is decoupled from following. Blocking
+(`blockedUserIds`) cascades to delete follows. Event bookmarking reuses the Follow model (`targetType: Event`).
+
+→ See [docs/features/social-features-assessment.md](features/social-features-assessment.md) for full implementation
+details.
+
+### Session State & Draft Persistence
+
+Client-side state (event form drafts, selected tabs) is persisted via a `usePersistentState` hook backed by
+`localStorage`. Keys are namespaced per user and component to prevent cross-user leakage. TTL is configurable (7 days
+for event drafts). A "Discard draft" control clears stored state explicitly. Session storage is cleared on logout and
+successful submit.
+
+→ See [docs/features/session-state-plan.md](features/session-state-plan.md) for the full persistence strategy.
+
+### Chat Architecture
+
+Chat is implemented via a `ChatMessage` + `ChatConversation` domain model with a `ChatMessagingService`. Read side
+(message history, conversation list, unread count, mark-read) is complete. The `sendMessage` mutation is missing or not
+exposed — tracked as API-015.
+
+### Image Uploads
+
+S3 presigned URLs are generated server-side via `ImageService`. The client fetches a URL, uploads directly to S3, then
+stores the resulting public read URL on the entity. Entity types: User, Organization, Event, Venue. Image types:
+Featured, Avatar, Gallery.
+
+---
+
+## Feature Reference Index
+
+### Feature Docs
+
+| Document                                                                              | Contents                                                    |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [docs/features/notifications.md](features/notifications.md)                           | Notification types, delivery channels, data model           |
+| [docs/features/recommendation-feed.md](features/recommendation-feed.md)               | Scoring engine, feed lifecycle, file map                    |
+| [docs/features/social-features-assessment.md](features/social-features-assessment.md) | Follow system, muting, blocking, GraphQL API surface        |
+| [docs/features/real-life-social-strategy.md](features/real-life-social-strategy.md)   | Product positioning, social coordination vision             |
+| [docs/features/session-state-plan.md](features/session-state-plan.md)                 | Client-side persistence strategy, `usePersistentState` hook |
+
+### API Docs
+
+| Document                                                                                    | Contents                                |
+| ------------------------------------------------------------------------------------------- | --------------------------------------- |
+| [docs/api/data-model.md](api/data-model.md)                                                 | MongoDB collections, field descriptions |
+| [docs/api/services-architecture.md](api/services-architecture.md)                           | Service layer overview                  |
+| [docs/api/cloudwatch-monitoring.md](api/cloudwatch-monitoring.md)                           | CloudWatch metrics and alarms           |
+| [docs/api/logging.md](api/logging.md)                                                       | Logging strategy                        |
+| [docs/api/mongodb-knowledge-and-optimization.md](api/mongodb-knowledge-and-optimization.md) | MongoDB patterns and query optimization |
+| [docs/api/websocket-adoption-plan.md](api/websocket-adoption-plan.md)                       | WebSocket integration plan              |
+
+### Webapp Docs
+
+| Document                                                                        | Contents                                 |
+| ------------------------------------------------------------------------------- | ---------------------------------------- |
+| [docs/webapp/design-system.md](webapp/design-system.md)                         | Design tokens, color palette, typography |
+| [docs/webapp/form-patterns.md](webapp/form-patterns.md)                         | Form conventions, validation patterns    |
+| [docs/webapp/webapp-pages.md](webapp/webapp-pages.md)                           | Page inventory and route structure       |
+| [docs/webapp/performance-optimization.md](webapp/performance-optimization.md)   | Next.js performance strategies           |
+| [docs/webapp/image-upload-architecture.md](webapp/image-upload-architecture.md) | Image upload flow and S3 integration     |
+| [docs/webapp/useLazyQuery-pattern.md](webapp/useLazyQuery-pattern.md)           | useLazyQuery usage patterns              |
+
+### Bug Log
+
+| Document                                      | Contents                                                   |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| [docs/bugs-discovered.md](bugs-discovered.md) | Full root-cause analysis and fixes for all discovered bugs |
+
+### Other
+
+| Document                                                  | Contents                                         |
+| --------------------------------------------------------- | ------------------------------------------------ |
+| [docs/project-brief.md](project-brief.md)                 | Product vision, MVP scope, competitive landscape |
+| [docs/environment-variables.md](environment-variables.md) | Required env vars per workspace                  |
+| [docs/aws-account-setup.md](aws-account-setup.md)         | AWS bootstrap and deployment runbook             |

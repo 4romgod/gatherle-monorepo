@@ -241,7 +241,6 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
                       <Typography variant="h6" fontWeight={700}>
                         Attendees ({participantList.length})
                       </Typography>
-                      <Chip label="Live" color="success" size="small" />
                     </Stack>
 
                     <Stack direction="row" flexWrap="wrap" gap={1.5}>

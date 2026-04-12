@@ -2,13 +2,13 @@ import { Box, Button, Container, Grid, Typography } from '@mui/material';
 import { Add, Business } from '@mui/icons-material';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
-import { GetOrganizationMembershipsByOrgIdDocument } from '@/data/graphql/query/OrganizationMembership/query';
-import { GetAllOrganizationsDocument } from '@/data/graphql/query/Organization/query';
+import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { ROUTES } from '@/lib/constants';
+import { getAuthHeader } from '@/lib/utils/auth';
 import OrganizationCard from '@/components/organization/organizationBox';
-import { Organization, OrganizationMembership } from '@/data/graphql/types/graphql';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'My Organizations',
@@ -18,64 +18,16 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default async function AccountOrganizationsPage() {
   const session = await auth();
-  if (!session) {
-    return null;
+  if (!session?.user?.token) {
+    redirect(ROUTES.AUTH.LOGIN);
   }
 
-  // TODO: Consider implementing a dedicated backend query that returns only the organizations where the user is a member or owner, using a single database query with proper indexing.
-  const { data: allOrgsData } = await getClient().query({
-    query: GetAllOrganizationsDocument,
+  const { data } = await getClient().query({
+    query: GetMyOrganizationsDocument,
+    context: { headers: getAuthHeader(session.user.token) },
   });
 
-  const allOrganizations = allOrgsData.readOrganizations ?? [];
-
-  // Filter organizations where user is owner or member
-  const userOrganizations: Array<{ org: Organization; membership?: OrganizationMembership }> = [];
-
-  for (const org of allOrganizations) {
-    if (org.ownerId === session.user.userId) {
-      // User is owner, fetch membership to get role
-      try {
-        const { data: membershipsData } = await getClient().query({
-          query: GetOrganizationMembershipsByOrgIdDocument as any,
-          variables: { orgId: org.orgId },
-        });
-
-        const userMembership = membershipsData.readOrganizationMembershipsByOrgId.find(
-          (m: OrganizationMembership) => m.userId === session.user.userId,
-        );
-
-        userOrganizations.push({
-          org,
-          membership: userMembership,
-        });
-      } catch (error) {
-        // If membership fetch fails, still include org
-        userOrganizations.push({ org });
-      }
-    } else {
-      // Check if user is a member
-      try {
-        const { data: membershipsData } = await getClient().query({
-          query: GetOrganizationMembershipsByOrgIdDocument as any,
-          variables: { orgId: org.orgId },
-        });
-
-        const userMembership = membershipsData.readOrganizationMembershipsByOrgId.find(
-          (m: OrganizationMembership) => m.userId === session.user.userId,
-        );
-
-        if (userMembership) {
-          userOrganizations.push({
-            org,
-            membership: userMembership,
-          });
-        }
-      } catch {
-        // User not a member, skip
-      }
-    }
-  }
+  const userOrganizations = data.readMyOrganizations ?? [];
 
   return (
     <Box>
@@ -145,9 +97,9 @@ export default async function AccountOrganizationsPage() {
       <Container sx={{ py: 6 }}>
         {userOrganizations.length > 0 ? (
           <Grid container spacing={3}>
-            {userOrganizations.map(({ org, membership }) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={org.orgId}>
-                <OrganizationCard organization={org} userRole={membership?.role} />
+            {userOrganizations.map(({ organization, role }) => (
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={organization.orgId}>
+                <OrganizationCard organization={organization} userRole={role} />
               </Grid>
             ))}
           </Grid>

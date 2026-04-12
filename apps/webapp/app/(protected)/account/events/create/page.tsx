@@ -1,4 +1,3 @@
-import React from 'react';
 import { Metadata } from 'next';
 import { Box, Container, Paper, Typography, Button, Stack } from '@mui/material';
 import { ArrowBack, AddCircleOutline } from '@mui/icons-material';

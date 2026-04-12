@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Box, Card, CardContent, Container, Grid, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Card, CardContent, Container, Grid, Skeleton, Stack } from '@mui/material';
 
 export default function OrganizationPageSkeleton() {
   return (
