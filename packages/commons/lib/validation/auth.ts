@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
 import { isDateNotInFuture, validateDate, validateMongodbId } from '../utils';
-import { Gender, FollowPolicy, SocialVisibility, UserRole } from '../types';
+import { Gender, FollowPolicy, OAuthProvider, SocialVisibility, UserRole } from '../types';
 
 export const CreateUserInputSchema = z.object({
   address: z
@@ -71,6 +71,21 @@ export const UpdateUserInputSchema = z.object({
 export const LoginUserInputSchema = z.object({
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }),
   password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }),
+});
+
+export const ExchangeOAuthInputSchema = z.object({
+  provider: z.nativeEnum(OAuthProvider),
+  idToken: z.string().min(1, { message: 'Identity token is required' }),
+  email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }).optional(),
+  given_name: z
+    .string()
+    .min(1, { message: `First name ${ERROR_MESSAGES.REQUIRED}` })
+    .optional(),
+  family_name: z
+    .string()
+    .min(1, { message: `Last name ${ERROR_MESSAGES.REQUIRED}` })
+    .optional(),
+  profile_picture: z.string().optional(),
 });
 
 export const ForgotPasswordInputTypeSchema = z.object({

@@ -4,9 +4,9 @@ import { Typography, Avatar, Box, Paper, Chip, Stack, Button } from '@mui/materi
 import { LocationOn as LocationIcon } from '@mui/icons-material';
 import { User, SocialVisibility } from '@/data/graphql/types/graphql';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
-import { differenceInYears, format } from 'date-fns';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
+import { getBirthdateDisplay } from '@/lib/utils';
 
 interface UserDetailsProps {
   user: User;
@@ -46,8 +46,7 @@ export default function UserDetails({ user, isOwnProfile = false }: UserDetailsP
   const showEmail = isOwnProfile; // Email should only be visible to profile owner
   const showPhone = isOwnProfile; // Phone should only be visible to profile owner
 
-  const age = user.birthdate ? differenceInYears(new Date(), new Date(user.birthdate)) : null;
-  const formattedDOB = user.birthdate ? format(new Date(user.birthdate), 'dd MMMM yyyy') : null;
+  const { age, formattedBirthdate } = getBirthdateDisplay(user.birthdate);
 
   return (
     <Paper
@@ -130,11 +129,11 @@ export default function UserDetails({ user, isOwnProfile = false }: UserDetailsP
               value={`${user.location.city}, ${user.location.country}`}
             />
           )}
-          {formattedDOB && (
+          {formattedBirthdate && (
             <InfoItem
               icon={<Cake fontSize="small" />}
               label="Birthday"
-              value={`${formattedDOB}${age ? ` (${age} years old)` : ''}`}
+              value={`${formattedBirthdate}${age != null ? ` (${age} years old)` : ''}`}
             />
           )}
           {user.gender && <InfoItem icon={<Wc fontSize="small" />} label="Gender" value={user.gender} />}

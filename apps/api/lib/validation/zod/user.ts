@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { REGEX_PHONE_NUMBER } from '@/constants';
 import { isDateNotInFuture } from '@gatherle/commons/utils';
-import { Gender, FollowPolicy, SocialVisibility } from '@gatherle/commons/types/user';
+import { Gender, FollowPolicy, OAuthProvider, SocialVisibility } from '@gatherle/commons/types/user';
 import { ERROR_MESSAGES, validateDate } from '@/validation/common';
 import mongoose from 'mongoose';
 
@@ -14,7 +14,8 @@ export const UserSchema = z.object({
     .string()
     .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}` })
     .refine(isDateNotInFuture, { message: 'Birth date must be in the past' })
-    .describe('The birth date of the user'),
+    .describe('The birth date of the user')
+    .optional(),
 
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }),
 
@@ -67,6 +68,10 @@ export const UserSchema = z.object({
 });
 
 export const CreateUserInputSchema = UserSchema.extend({
+  birthdate: z
+    .string()
+    .refine(validateDate, { message: `Birth date ${ERROR_MESSAGES.INVALID_DATE}` })
+    .refine(isDateNotInFuture, { message: 'Birth date must be in the past' }),
   password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }),
 }).omit({ userId: true });
 
@@ -80,6 +85,21 @@ export const UpdateUserInputSchema = UserSchema.partial().extend({
 export const LoginUserInputSchema = z.object({
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }),
   password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }),
+});
+
+export const ExchangeOAuthInputSchema = z.object({
+  provider: z.nativeEnum(OAuthProvider),
+  idToken: z.string().min(1, { message: 'Identity token is required' }),
+  email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }).optional(),
+  given_name: z
+    .string()
+    .min(1, { message: `First name ${ERROR_MESSAGES.REQUIRED}` })
+    .optional(),
+  family_name: z
+    .string()
+    .min(1, { message: `Last name ${ERROR_MESSAGES.REQUIRED}` })
+    .optional(),
+  profile_picture: z.string().optional(),
 });
 
 export const ForgotPasswordInputTypeSchema = z.object({

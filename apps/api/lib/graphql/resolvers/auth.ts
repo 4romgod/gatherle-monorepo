@@ -1,12 +1,14 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { UserDAO, EmailVerificationTokenDAO, PasswordResetTokenDAO } from '@/mongodb/dao';
-import { User } from '@gatherle/commons/types';
-import { validateEmail } from '@/validation';
+import { ExchangeOAuthInput, User, UserWithToken } from '@gatherle/commons/types';
+import { validateEmail, validateInput } from '@/validation';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import { logger } from '@/utils/logger';
 import { EmailService } from '@/services';
+import { ExchangeOAuthInputSchema } from '@/validation/zod';
+import { verifyExternalIdentityToken } from '@/utils';
 
 @Resolver()
 export class AuthResolver {
@@ -96,5 +98,14 @@ export class AuthResolver {
     );
 
     return true;
+  }
+
+  @Mutation(() => UserWithToken, {
+    description: 'Exchange a verified Google or Apple identity token for a Gatherle session',
+  })
+  async loginWithOAuth(@Arg('input', () => ExchangeOAuthInput) input: ExchangeOAuthInput): Promise<UserWithToken> {
+    validateInput<ExchangeOAuthInput>(ExchangeOAuthInputSchema, input);
+    const verifiedIdentity = await verifyExternalIdentityToken(input);
+    return UserDAO.loginWithOAuth(verifiedIdentity);
   }
 }

@@ -39,6 +39,15 @@ describe('User', () => {
       expect(success).toBe(true);
     });
 
+    it('should validate UserSchema without birthdate', () => {
+      const validInput = {
+        ...getValidUserInput(),
+        birthdate: undefined,
+      };
+      const { success } = UserSchema.safeParse(validInput);
+      expect(success).toBe(true);
+    });
+
     it('should invalidate missing required fields', () => {
       const invalidInput = {};
       const { success, error } = UserSchema.safeParse(invalidInput);

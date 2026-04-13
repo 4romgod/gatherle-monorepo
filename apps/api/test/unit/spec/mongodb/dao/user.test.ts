@@ -2,7 +2,7 @@ import { UserDAO } from '@/mongodb/dao';
 import { User } from '@/mongodb/models';
 import type { CreateUserInput, UpdateUserInput, QueryOptionsInput } from '@gatherle/commons/types';
 import { SortOrderInput } from '@gatherle/commons/types';
-import { Gender, UserRole } from '@gatherle/commons/types/user';
+import { Gender, OAuthProvider, UserRole } from '@gatherle/commons/types/user';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';
@@ -52,6 +52,8 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
   exec: jest.fn().mockRejectedValue(error),
   select: jest.fn().mockReturnThis(),
 });
+
+type OAuthIdentity = Parameters<typeof UserDAO.loginWithOAuth>[0];
 
 describe('UserDAO', () => {
   afterEach(() => {
@@ -205,6 +207,154 @@ describe('UserDAO', () => {
       (User.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
       await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(KnownCommonError(mockError));
+    });
+  });
+
+  describe('loginWithOAuth', () => {
+    it('creates a new OAuth user without a birthdate placeholder', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Google,
+        providerUserId: 'google-user-1',
+        email: 'OAuthUser@example.com',
+        emailVerified: true,
+        givenName: 'OAuth',
+        familyName: 'User',
+        profilePicture: 'https://example.com/avatar.png',
+      };
+
+      const createdUser = {
+        toObject: jest.fn().mockReturnValue({
+          userId: 'user-1',
+          email: 'oauthuser@example.com',
+          username: 'oauthuser',
+          given_name: 'OAuth',
+          family_name: 'User',
+          emailVerified: true,
+          profile_picture: 'https://example.com/avatar.png',
+          googleSubject: 'google-user-1',
+        }),
+      };
+
+      (User.findOne as jest.Mock)
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(null))
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(null));
+      (User.create as jest.Mock).mockResolvedValue(createdUser);
+      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
+
+      const result = await UserDAO.loginWithOAuth(identity);
+
+      expect(User.findOne).toHaveBeenNthCalledWith(1, { googleSubject: 'google-user-1' });
+      expect(User.findOne).toHaveBeenNthCalledWith(2, { email: 'oauthuser@example.com' });
+      expect(User.create).toHaveBeenCalledWith({
+        email: 'oauthuser@example.com',
+        given_name: 'OAuth',
+        family_name: 'User',
+        password: expect.any(String),
+        emailVerified: true,
+        profile_picture: 'https://example.com/avatar.png',
+        googleSubject: 'google-user-1',
+      });
+      expect(result).toEqual({
+        userId: 'user-1',
+        email: 'oauthuser@example.com',
+        username: 'oauthuser',
+        given_name: 'OAuth',
+        family_name: 'User',
+        emailVerified: true,
+        profile_picture: 'https://example.com/avatar.png',
+        googleSubject: 'google-user-1',
+        token: 'oauth-token',
+      });
+
+      expect(result).not.toHaveProperty('birthdate');
+    });
+
+    it('returns an existing provider-linked user and updates email verification', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Google,
+        providerUserId: 'google-user-1',
+        email: 'user@example.com',
+        emailVerified: true,
+        profilePicture: 'https://example.com/avatar.png',
+      };
+      const existingUser = {
+        emailVerified: false,
+        profile_picture: undefined,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'user-1',
+          email: 'user@example.com',
+          username: 'existing-user',
+          emailVerified: true,
+          profile_picture: 'https://example.com/avatar.png',
+          googleSubject: 'google-user-1',
+        }),
+      };
+
+      (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(existingUser));
+      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
+
+      const result = await UserDAO.loginWithOAuth(identity);
+
+      expect(existingUser.emailVerified).toBe(true);
+      expect(existingUser.profile_picture).toBe('https://example.com/avatar.png');
+      expect(existingUser.save).toHaveBeenCalled();
+      expect(User.create).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        userId: 'user-1',
+        email: 'user@example.com',
+        username: 'existing-user',
+        emailVerified: true,
+        profile_picture: 'https://example.com/avatar.png',
+        googleSubject: 'google-user-1',
+        token: 'oauth-token',
+      });
+    });
+
+    it('links a verified OAuth identity to an existing email account', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Google,
+        providerUserId: 'google-user-2',
+        email: 'user@example.com',
+        emailVerified: true,
+        profilePicture: 'https://example.com/avatar.png',
+      };
+      const existingEmailUser: any = {
+        googleSubject: undefined,
+        emailVerified: false,
+        profile_picture: undefined,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'user-2',
+          email: 'user@example.com',
+          username: 'linked-user',
+          emailVerified: true,
+          profile_picture: 'https://example.com/avatar.png',
+          googleSubject: 'google-user-2',
+        }),
+      };
+
+      (User.findOne as jest.Mock)
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(null))
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(existingEmailUser));
+      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
+
+      const result = await UserDAO.loginWithOAuth(identity);
+
+      expect(existingEmailUser.googleSubject).toBe('google-user-2');
+      expect(existingEmailUser.emailVerified).toBe(true);
+      expect(existingEmailUser.profile_picture).toBe('https://example.com/avatar.png');
+      expect(existingEmailUser.save).toHaveBeenCalled();
+      expect(User.create).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        userId: 'user-2',
+        email: 'user@example.com',
+        username: 'linked-user',
+        emailVerified: true,
+        profile_picture: 'https://example.com/avatar.png',
+        googleSubject: 'google-user-2',
+        token: 'oauth-token',
+      });
     });
   });
 

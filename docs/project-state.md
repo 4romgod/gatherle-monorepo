@@ -161,6 +161,14 @@ Pick any of these when you are unsure what to work on next. They are ordered by 
 
 ---
 
+## Task Backlog — CI / Tooling
+
+| ID     | Title                                                           | Priority | Status | Location                                                                              | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------ | --------------------------------------------------------------- | -------- | ------ | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI-001 | Enforce Jest coverage thresholds to prevent coverage regression | P2       | Done   | `apps/api/test/unit/jest.config.ts`, `apps/webapp/package.json` (or `jest.config.ts`) | Add `coverageThreshold` to the unit test Jest configs so the CI run fails if coverage drops below a baseline. Set `global` thresholds for `lines`, `functions`, `branches`, and `statements` (e.g. 70%). Measure current coverage first (`npm run test:unit -w @gatherle/api -- --coverage`), set the threshold a few points below the current numbers, then tighten over time. No extra tooling needed — this is a native Jest feature. |
+
+---
+
 ## Known Bugs (Open)
 
 > Fixed bugs are documented in full in [docs/bugs-discovered.md](bugs-discovered.md).

@@ -23,7 +23,6 @@ import {
   Badge as BadgeIcon,
 } from '@mui/icons-material';
 import { auth } from '@/auth';
-import { differenceInYears, format } from 'date-fns';
 import {
   FilterOperatorInput,
   GetAllEventsDocument,
@@ -40,6 +39,7 @@ import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } fro
 import { omit } from 'lodash';
 import Link from 'next/link';
 import { getAvatarSrc, logger, isApolloAuthError, getAuthHeader, isEventUpcoming } from '@/lib/utils';
+import { getBirthdateDisplay } from '@/lib/utils/birthdate';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import { redirect } from 'next/navigation';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -138,8 +138,7 @@ async function AuthenticatedProfileContent() {
     .filter((event): event is NonNullable<typeof event> => event !== null && event !== undefined) as EventPreview[];
 
   const interests = user.interests ? user.interests : [];
-  const age = user.birthdate ? differenceInYears(new Date(), new Date(user.birthdate)) : null;
-  const formattedDOB = user.birthdate ? format(new Date(user.birthdate), 'dd MMMM yyyy') : null;
+  const { age, formattedBirthdate } = getBirthdateDisplay(user.birthdate);
 
   const InfoItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
     <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 2 }}>
@@ -328,9 +327,9 @@ async function AuthenticatedProfileContent() {
                           icon={<CakeIcon fontSize="small" />}
                           label="Birthday"
                           value={
-                            formattedDOB && age != null
-                              ? `${formattedDOB} (${age} years old)`
-                              : (formattedDOB ?? 'Not provided')
+                            formattedBirthdate && age != null
+                              ? `${formattedBirthdate} (${age} years old)`
+                              : (formattedBirthdate ?? 'Not provided')
                           }
                         />
                         <InfoItem

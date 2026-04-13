@@ -46,7 +46,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
   const [blockedUsersOpen, setBlockedUsersOpen] = useState(false);
   const { data: session } = useSession();
   const [settings, setSettings] = useState<PersonalSettings>({
-    birthdate: user.birthdate,
+    birthdate: user.birthdate || '',
     gender: user.gender || null,
     phone_number: user.phone_number || '',
     followPolicy: user.followPolicy || FollowPolicy.Public,
@@ -61,7 +61,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
   useEffect(() => {
     if (session?.user) {
       setSettings({
-        birthdate: session.user.birthdate,
+        birthdate: session.user.birthdate || '',
         gender: session.user.gender || null,
         phone_number: session.user.phone_number || '',
         followPolicy: session.user.followPolicy || FollowPolicy.Public,
@@ -106,7 +106,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
 
       // Update local state immediately with the returned data
       setSettings({
-        birthdate: updatedUser.birthdate,
+        birthdate: updatedUser.birthdate || '',
         gender: updatedUser.gender || null,
         phone_number: updatedUser.phone_number || '',
         followPolicy: updatedUser.followPolicy || FollowPolicy.Public,
@@ -179,11 +179,11 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                       label="Date of Birth"
                       format="YYYY-MM-DD"
                       name="birthdate"
-                      value={dayjs(settings.birthdate)}
+                      value={settings.birthdate ? dayjs(settings.birthdate) : null}
                       onChange={(newValue) => {
                         setSettings((prev) => ({
                           ...prev,
-                          birthdate: newValue ? newValue.format('YYYY-MM-DD') : prev.birthdate,
+                          birthdate: newValue ? newValue.format('YYYY-MM-DD') : '',
                         }));
                       }}
                       slotProps={{

@@ -19,6 +19,8 @@ const BaseEnvSchema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   EMAIL_FROM: z.string().optional().default('noreply@gatherle.com'),
   WEBAPP_URL: z.string().optional().default('http://localhost:3000'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  APPLE_CLIENT_ID: z.string().optional(),
   LOG_LEVEL: z
     .string()
     .toLowerCase()
@@ -133,4 +135,6 @@ export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
 export const CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
 export const EMAIL_FROM = env.EMAIL_FROM;
 export const WEBAPP_URL = env.WEBAPP_URL;
+export const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID;
+export const APPLE_CLIENT_ID = env.APPLE_CLIENT_ID;
 export const LOG_LEVEL = env.LOG_LEVEL;

@@ -1,4 +1,4 @@
-import GitHubProvider from 'next-auth/providers/github';
+import AppleProvider from 'next-auth/providers/apple';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { LoginUserInputSchema } from './data/validation';
@@ -10,8 +10,6 @@ export default {
   trustHost: true,
   secret: NEXTAUTH_SECRET,
   providers: [
-    GitHubProvider,
-    GoogleProvider,
     CredentialsProvider({
       async authorize(credentials) {
         const validatedFields = LoginUserInputSchema.safeParse(credentials);
@@ -25,6 +23,27 @@ export default {
           }
         }
         return null;
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        url: 'https://accounts.google.com/o/oauth2/v2/auth',
+        params: {
+          scope: 'openid profile email',
+        },
+      },
+      token: 'https://oauth2.googleapis.com/token',
+      userinfo: 'https://openidconnect.googleapis.com/v1/userinfo',
+    }),
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID,
+      clientSecret: process.env.APPLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope: 'name email',
+        },
       },
     }),
     // Dummy provider for refreshing session with updated user data

@@ -59,7 +59,7 @@ export const startExpressApolloServer = async (
     expressMiddleware(apolloServer, {
       context: async ({ req, res }) => {
         const authHeader = req.headers.authorization;
-        const tokenValue = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+        const tokenValue = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : undefined;
 
         // Try to verify token and populate user for all requests (not just @Authorized ones)
         // This enables field resolvers like isSavedByMe to access the current user
