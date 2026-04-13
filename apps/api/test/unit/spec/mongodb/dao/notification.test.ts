@@ -226,6 +226,14 @@ describe('NotificationDAO', () => {
 
       expect(result).toBeNull();
     });
+
+    it('throws error when update fails', async () => {
+      (NotificationModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('DB error')),
+      );
+
+      await expect(NotificationDAO.markAsRead('notif-1', 'user-1')).rejects.toThrow(GraphQLError);
+    });
   });
 
   describe('markAllAsRead', () => {
@@ -239,6 +247,47 @@ describe('NotificationDAO', () => {
         { isRead: true, readAt: expect.any(Date) },
       );
       expect(result).toBe(5);
+    });
+
+    it('throws error when updateMany fails', async () => {
+      (NotificationModel.updateMany as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.markAllAsRead('user-1')).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('markFollowRequestNotificationsAsRead', () => {
+    it('calls updateMany with FOLLOW_REQUEST filter and returns modifiedCount', async () => {
+      (NotificationModel.updateMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ modifiedCount: 3 }));
+
+      const result = await NotificationDAO.markFollowRequestNotificationsAsRead('user-1', 'user-2');
+
+      expect(NotificationModel.updateMany).toHaveBeenCalledWith(
+        {
+          recipientUserId: 'user-1',
+          actorUserId: 'user-2',
+          type: NotificationType.FOLLOW_REQUEST,
+          isRead: false,
+        },
+        { isRead: true, readAt: expect.any(Date) },
+      );
+      expect(result).toBe(3);
+    });
+
+    it('returns 0 when no matching notifications exist', async () => {
+      (NotificationModel.updateMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ modifiedCount: 0 }));
+
+      const result = await NotificationDAO.markFollowRequestNotificationsAsRead('user-1', 'user-nobody');
+
+      expect(result).toBe(0);
+    });
+
+    it('throws error when updateMany fails', async () => {
+      (NotificationModel.updateMany as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.markFollowRequestNotificationsAsRead('user-1', 'user-2')).rejects.toThrow(
+        GraphQLError,
+      );
     });
   });
 
@@ -262,6 +311,12 @@ describe('NotificationDAO', () => {
 
       expect(result).toBe(false);
     });
+
+    it('throws error when deleteOne fails', async () => {
+      (NotificationModel.deleteOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.delete('notif-1', 'user-1')).rejects.toThrow(GraphQLError);
+    });
   });
 
   describe('readById', () => {
@@ -283,6 +338,12 @@ describe('NotificationDAO', () => {
 
       expect(result).toBeNull();
     });
+
+    it('throws error when findOne fails', async () => {
+      (NotificationModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.readById('notif-1')).rejects.toThrow(GraphQLError);
+    });
   });
 
   describe('markEmailSent', () => {
@@ -293,6 +354,12 @@ describe('NotificationDAO', () => {
 
       expect(NotificationModel.updateOne).toHaveBeenCalledWith({ notificationId: 'notif-1' }, { emailSent: true });
     });
+
+    it('throws error when updateOne fails', async () => {
+      (NotificationModel.updateOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.markEmailSent('notif-1')).rejects.toThrow(GraphQLError);
+    });
   });
 
   describe('markPushSent', () => {
@@ -302,6 +369,12 @@ describe('NotificationDAO', () => {
       await NotificationDAO.markPushSent('notif-1');
 
       expect(NotificationModel.updateOne).toHaveBeenCalledWith({ notificationId: 'notif-1' }, { pushSent: true });
+    });
+
+    it('throws error when updateOne fails', async () => {
+      (NotificationModel.updateOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
+
+      await expect(NotificationDAO.markPushSent('notif-1')).rejects.toThrow(GraphQLError);
     });
   });
 });

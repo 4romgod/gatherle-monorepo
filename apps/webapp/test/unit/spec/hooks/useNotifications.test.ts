@@ -26,7 +26,22 @@ describe('useNotifications', () => {
   });
 
   it('returns notifications and calls fetchMore when more pages exist', async () => {
-    const fetchMore = jest.fn().mockResolvedValue({});
+    let capturedUpdateQuery: ((prev: any, ctx: any) => any) | undefined;
+    const fetchMore = jest.fn().mockImplementation(({ updateQuery }) => {
+      capturedUpdateQuery = updateQuery;
+      // Invoke immediately so V8 tracks coverage of updateQuery body
+      return Promise.resolve(
+        updateQuery(
+          { notifications: { notifications: [{ notificationId: 'note-1' }], hasMore: true, nextCursor: 'cursor-1' } },
+          {
+            fetchMoreResult: {
+              notifications: { notifications: [{ notificationId: 'note-2' }], hasMore: false, nextCursor: null },
+            },
+          },
+        ),
+      );
+    });
+
     useQueryMock.mockReturnValue({
       data: {
         notifications: {
@@ -54,6 +69,22 @@ describe('useNotifications', () => {
       variables: { cursor: 'cursor-1', limit: 5, unreadOnly: true },
       updateQuery: expect.any(Function),
     });
+
+    expect(capturedUpdateQuery).toBeDefined();
+
+    // Cover the null-notifications || [] branches
+    const prevNullNotifs = { notifications: { notifications: null, hasMore: false, nextCursor: null } };
+    const mergeNull = capturedUpdateQuery!(prevNullNotifs, {
+      fetchMoreResult: { notifications: { notifications: null, hasMore: false, nextCursor: null } },
+    });
+    expect(mergeNull.notifications.notifications).toEqual([]);
+
+    // Cover the !fetchMoreResult → return prev branch
+    const prev = {
+      notifications: { notifications: [{ notificationId: 'note-1' }], hasMore: true, nextCursor: 'cursor-1' },
+    };
+    const unchanged = capturedUpdateQuery!(prev, { fetchMoreResult: undefined });
+    expect(unchanged).toBe(prev);
   });
 
   it('does not call fetchMore if there is no next cursor', async () => {
@@ -157,5 +188,16 @@ describe('useNotificationActions', () => {
     expect(markAllReadMutation).toHaveBeenCalled();
     expect(deleteMutation).toHaveBeenCalledWith({ variables: { notificationId: 'note-1' } });
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('exposes isLoading=true when a mutation is in flight', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
+
+    const { result } = renderHook(() => useNotificationActions());
+
+    expect(result.current.isLoading).toBe(true);
   });
 });

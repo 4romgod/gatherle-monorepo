@@ -228,4 +228,164 @@ describe('useFollow and related hooks', () => {
       variables: { followerUserId: 'follower-1', targetType: FollowTargetType.User },
     });
   });
+
+  it('reports isLoading=true when followLoading is true', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
+
+    const { result } = renderHook(() => useFollow());
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it('reports isLoading=true when unmuteLoading is true for useMuteUser', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }]);
+
+    const { result } = renderHook(() => useMuteUser());
+
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('reports loading=true when muteLoading is true for useMuteUser', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
+
+    const { result } = renderHook(() => useMuteUser());
+
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('reports loading=true when muteLoading is true for useMuteOrganization', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
+
+    const { result } = renderHook(() => useMuteOrganization());
+
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('useFollowRequests updateQuery callback handles missing existing data', async () => {
+    const refetch = jest.fn();
+
+    let capturedCallback: ((existing: any) => any) | undefined;
+    const updateQueryMock = jest.fn((_, cb) => {
+      capturedCallback = cb;
+    });
+
+    useApolloClientMock.mockReturnValue({ cache: { updateQuery: updateQueryMock } });
+
+    useQueryMock.mockReturnValue({
+      data: { readFollowRequests: [] },
+      loading: false,
+      error: undefined,
+      refetch,
+    });
+
+    const acceptMutation = jest.fn().mockResolvedValue({});
+    const rejectMutation = jest.fn().mockResolvedValue({});
+    useMutationMock
+      .mockImplementationOnce(() => [acceptMutation, { loading: false }])
+      .mockImplementationOnce(() => [rejectMutation, { loading: false }]);
+
+    const { result } = renderHook(() => useFollowRequests(FollowTargetType.User));
+
+    await act(async () => {
+      await result.current.accept('req-1');
+    });
+
+    // Invoke callback with null existing — should return existing (null) unchanged
+    expect(capturedCallback).toBeDefined();
+    const callbackResult = capturedCallback!(null);
+    expect(callbackResult).toBeNull();
+  });
+
+  it('useFollowRequests updateQuery callback updates matching request status', async () => {
+    const refetch = jest.fn();
+
+    let capturedCallback: ((existing: any) => any) | undefined;
+    const updateQueryMock = jest.fn((_, cb) => {
+      capturedCallback = cb;
+    });
+
+    useApolloClientMock.mockReturnValue({ cache: { updateQuery: updateQueryMock } });
+
+    useQueryMock.mockReturnValue({
+      data: {
+        readFollowRequests: [
+          { followId: 'req-1', approvalStatus: 'Pending' },
+          { followId: 'req-2', approvalStatus: 'Pending' },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch,
+    });
+
+    const acceptMutation = jest.fn().mockResolvedValue({});
+    const rejectMutation = jest.fn().mockResolvedValue({});
+    useMutationMock
+      .mockImplementationOnce(() => [acceptMutation, { loading: false }])
+      .mockImplementationOnce(() => [rejectMutation, { loading: false }]);
+
+    const { result } = renderHook(() => useFollowRequests(FollowTargetType.User));
+
+    await act(async () => {
+      await result.current.accept('req-1');
+    });
+
+    const existing = {
+      readFollowRequests: [
+        { followId: 'req-1', approvalStatus: 'Pending' },
+        { followId: 'req-2', approvalStatus: 'Pending' },
+      ],
+    };
+    const updated = capturedCallback!(existing);
+    const updatedReq = updated.readFollowRequests.find((r: any) => r.followId === 'req-1');
+    expect(updatedReq.approvalStatus).toBe('Accepted');
+
+    // Non-matching request should be returned unchanged
+    const unchangedReq = updated.readFollowRequests.find((r: any) => r.followId === 'req-2');
+    expect(unchangedReq.approvalStatus).toBe('Pending');
+  });
+
+  it('useFollowers skips query when targetId is empty', () => {
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    renderHook(() => useFollowers(FollowTargetType.User, ''));
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+  });
+
+  it('useFollowing returns empty array when data is undefined', () => {
+    useQueryMock.mockReturnValue({ data: undefined, loading: true, error: undefined, refetch: jest.fn() });
+
+    const { result } = renderHook(() => useFollowing());
+
+    expect(result.current.following).toEqual([]);
+  });
+
+  it('useMuteUser loading is true when unmuteLoading is true', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }]);
+
+    const { result } = renderHook(() => useMuteUser());
+
+    expect(result.current.loading).toBe(true);
+  });
+
+  it('useMuteOrganization loading is true when unmuteLoading is true', () => {
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }]);
+
+    const { result } = renderHook(() => useMuteOrganization());
+
+    expect(result.current.loading).toBe(true);
+  });
 });

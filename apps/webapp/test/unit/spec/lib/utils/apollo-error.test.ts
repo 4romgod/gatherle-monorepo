@@ -19,9 +19,25 @@ describe('apollo-error utilities', () => {
     expect(message).toBe('General failure');
   });
 
+  it('falls back to networkError.message when no result.errors', () => {
+    const message = extractApolloErrorMessage({ networkError: { message: 'Connection refused' } }, 'default');
+    expect(message).toBe('Connection refused');
+  });
+
   it('returns default message when no specific data is present', () => {
     const message = extractApolloErrorMessage(undefined, 'default message');
     expect(message).toBe('default message');
+  });
+
+  it('uses the default fallback string when no default provided', () => {
+    const message = extractApolloErrorMessage(undefined);
+    expect(message).toContain('unexpected error');
+  });
+
+  it('returns false for isApolloAuthError when no graphQLErrors', () => {
+    expect(isApolloAuthError({})).toBe(false);
+    expect(isApolloAuthError(null)).toBe(false);
+    expect(isApolloAuthError(undefined)).toBe(false);
   });
 
   it('detects authentication errors via extensions', () => {

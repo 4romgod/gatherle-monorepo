@@ -40,6 +40,14 @@ const config: Config = {
     '!<rootDir>/**/index.ts',
   ],
   coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/test/', '<rootDir>/.next/'],
+  coverageThreshold: {
+    global: {
+      lines: 90,
+      functions: 90,
+      branches: 90,
+      statements: 90,
+    },
+  },
   // Mock static assets and CSS
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
 };

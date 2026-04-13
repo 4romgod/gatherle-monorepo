@@ -181,4 +181,49 @@ describe('useImageUpload', () => {
     const callVariables = mockGetUploadUrl.mock.calls[0][0].variables;
     expect(callVariables).not.toHaveProperty('entityId');
   });
+
+  it('rejects and sets error for unsupported MIME type', async () => {
+    const { result } = renderHook(() => useImageUpload(defaultOptions));
+
+    await act(async () => {
+      await result.current.upload(makeFile('document.pdf', 'application/pdf')).catch(() => {});
+    });
+
+    expect(result.current.error).toMatch(/Unsupported file type/);
+    expect(mockGetUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('rejects and sets error when file exceeds max size', async () => {
+    const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
+    const { result } = renderHook(() => useImageUpload(defaultOptions));
+
+    await act(async () => {
+      await result.current.upload(bigFile).catch(() => {});
+    });
+
+    expect(result.current.error).toMatch(/too large/);
+    expect(mockGetUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('throws when getImageUploadUrl returns no data', async () => {
+    mockGetUploadUrl.mockResolvedValue({ data: { getImageUploadUrl: null }, error: undefined });
+    const { result } = renderHook(() => useImageUpload(defaultOptions));
+
+    await act(async () => {
+      await result.current.upload(makeFile()).catch(() => {});
+    });
+
+    expect(result.current.error).toMatch(/Failed to get upload URL/);
+  });
+
+  it('handles non-Error throws in catch block', async () => {
+    mockGetUploadUrl.mockRejectedValue('string-error');
+    const { result } = renderHook(() => useImageUpload(defaultOptions));
+
+    await act(async () => {
+      await result.current.upload(makeFile()).catch(() => {});
+    });
+
+    expect(result.current.error).toBe('Upload failed');
+  });
 });

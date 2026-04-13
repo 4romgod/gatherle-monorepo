@@ -163,6 +163,32 @@ describe('useOrganizationSettingsData', () => {
     });
   });
 
+  it('saves organization with empty tags array when tags field is empty', async () => {
+    setupQueries();
+    const { updateOrganization } = setupMutations();
+    setupLazyQuery();
+
+    const { result } = renderHook(() => useOrganizationSettingsData('org-slug'));
+
+    await act(async () => {
+      await result.current.saveOrganization({
+        name: 'No Tags Org',
+        description: 'desc',
+        logo: '',
+        billingEmail: '',
+        tags: '',
+      } as any);
+    });
+
+    expect(updateOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({
+          input: expect.objectContaining({ tags: [] }),
+        }),
+      }),
+    );
+  });
+
   it('throws when saving without organization loaded', async () => {
     setupQueries(null, []);
     setupMutations();
@@ -188,6 +214,44 @@ describe('useOrganizationSettingsData', () => {
       variables: { orgId: 'org-1' },
     });
     expect(mockPush).toHaveBeenCalledWith(ROUTES.ACCOUNT.ORGANIZATIONS.ROOT);
+  });
+
+  it('throws when deleting without organization loaded', async () => {
+    setupQueries(null, []);
+    setupMutations();
+    setupLazyQuery();
+
+    const { result } = renderHook(() => useOrganizationSettingsData('org-slug'));
+
+    await expect(result.current.deleteOrganization()).rejects.toThrow('Organization not loaded');
+  });
+
+  it('throws when adding membership without organization loaded', async () => {
+    setupQueries(null, []);
+    setupMutations();
+    setupLazyQuery();
+
+    const { result } = renderHook(() => useOrganizationSettingsData('org-slug'));
+
+    await expect(
+      result.current.addOrganizationMembership({ userId: 'user-1' } as any, OrganizationRole.Admin),
+    ).rejects.toThrow('Organization not loaded');
+  });
+
+  it('returns empty users array when search query returns no data', async () => {
+    setupQueries();
+    setupMutations();
+    const searchUsersQuery = jest.fn().mockResolvedValue({ data: null });
+    useLazyQueryMock.mockReturnValue([searchUsersQuery, { loading: false }]);
+
+    const { result } = renderHook(() => useOrganizationSettingsData('org-slug'));
+
+    let users: any;
+    await act(async () => {
+      users = await result.current.searchUsers('test');
+    });
+
+    expect(users).toEqual([]);
   });
 
   it('manages organization memberships', async () => {

@@ -277,4 +277,23 @@ describe('safeJsonParse Utility', () => {
       expect(result).toBeUndefined();
     });
   });
+
+  describe('non-Error throw in JSON.parse', () => {
+    it('uses "Unknown error" message when a non-Error is thrown during parsing', () => {
+      const originalParse = JSON.parse;
+      JSON.parse = jest.fn(() => {
+        // eslint-disable-next-line @typescript-eslint/no-throw-literal
+        throw 'raw string error';
+      });
+
+      initLogger(LogLevel.WARN);
+      const schema = z.string();
+      const result = safeJsonParse('anything', schema, 'field');
+
+      expect(result).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalled();
+
+      JSON.parse = originalParse;
+    });
+  });
 });

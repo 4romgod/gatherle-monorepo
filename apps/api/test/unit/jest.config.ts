@@ -36,6 +36,14 @@ const config: Config = {
     '!<rootDir>/lib/**/index.ts',
   ],
   coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/test/'],
+  coverageThreshold: {
+    global: {
+      lines: 90,
+      functions: 90,
+      branches: 90,
+      statements: 90,
+    },
+  },
 };
 
 export default config;
