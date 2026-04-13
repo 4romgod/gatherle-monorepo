@@ -9,7 +9,7 @@ jest.mock('@/data/actions/types', () => ({
 import { getClient } from '@/data/graphql/apollo-client';
 import { getApolloErrorMessage } from '@/data/actions/types';
 import { exchangeOAuthIdentity } from '@/data/actions/global/auth/oauth';
-import { AuthProvider } from '@/data/graphql/types/graphql';
+import { OAuthProvider } from '@/data/graphql/types/graphql';
 
 const mockMutate = jest.fn();
 
@@ -42,7 +42,7 @@ describe('exchangeOAuthIdentity', () => {
       mutation: expect.anything(),
       variables: {
         input: {
-          provider: AuthProvider.Google,
+          provider: OAuthProvider.Google,
           idToken: 'google-id-token',
           email: 'user@example.com',
           given_name: 'Test',
@@ -72,7 +72,7 @@ describe('exchangeOAuthIdentity', () => {
       mutation: expect.anything(),
       variables: {
         input: {
-          provider: AuthProvider.Apple,
+          provider: OAuthProvider.Apple,
           idToken: 'apple-id-token',
         },
       },

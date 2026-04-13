@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
 import { isDateNotInFuture, validateDate, validateMongodbId } from '../utils';
-import { AuthProvider, Gender, FollowPolicy, SocialVisibility, UserRole } from '../types';
+import { Gender, FollowPolicy, OAuthProvider, SocialVisibility, UserRole } from '../types';
 
 export const CreateUserInputSchema = z.object({
   address: z
@@ -74,7 +74,7 @@ export const LoginUserInputSchema = z.object({
 });
 
 export const ExchangeOAuthInputSchema = z.object({
-  provider: z.union([z.literal(AuthProvider.Google), z.literal(AuthProvider.Apple)]),
+  provider: z.nativeEnum(OAuthProvider),
   idToken: z.string().min(1, { message: 'Identity token is required' }),
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }).optional(),
   given_name: z

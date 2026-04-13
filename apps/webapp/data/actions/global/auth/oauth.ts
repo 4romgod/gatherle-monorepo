@@ -1,6 +1,6 @@
 import { getClient } from '@/data/graphql/apollo-client';
 import { LoginWithOAuthDocument } from '@/data/graphql/query/User/mutation';
-import { AuthProvider, type LoginWithOAuthMutation } from '@/data/graphql/types/graphql';
+import { OAuthProvider, type LoginWithOAuthMutation } from '@/data/graphql/types/graphql';
 import { ApolloError } from '@apollo/client';
 import { getApolloErrorMessage } from '@/data/actions/types';
 
@@ -17,9 +17,9 @@ export type ExchangeOAuthIdentityInput = {
 
 type LoginWithOAuthUser = LoginWithOAuthMutation['loginWithOAuth'];
 
-const providerValueMap: Record<OAuthProviderId, AuthProvider> = {
-  google: AuthProvider.Google,
-  apple: AuthProvider.Apple,
+const providerValueMap: Record<OAuthProviderId, OAuthProvider> = {
+  google: OAuthProvider.Google,
+  apple: OAuthProvider.Apple,
 };
 
 export async function exchangeOAuthIdentity(input: ExchangeOAuthIdentityInput): Promise<LoginWithOAuthUser> {

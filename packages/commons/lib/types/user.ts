@@ -45,6 +45,11 @@ export enum AuthProvider {
   Apple = 'Apple',
 }
 
+export enum OAuthProvider {
+  Google = AuthProvider.Google,
+  Apple = AuthProvider.Apple,
+}
+
 registerEnumType(Gender, {
   name: 'Gender',
   description: USER_DESCRIPTIONS.GENDER,
@@ -68,6 +73,11 @@ registerEnumType(FollowPolicy, {
 registerEnumType(AuthProvider, {
   name: 'AuthProvider',
   description: 'Authentication provider used to prove the user identity.',
+});
+
+registerEnumType(OAuthProvider, {
+  name: 'OAuthProvider',
+  description: 'OAuth identity providers supported by the external identity exchange flow.',
 });
 
 @ObjectType('CommunicationPrefs')
@@ -508,8 +518,8 @@ export class LoginUserInput {
 
 @InputType('ExchangeOAuthInput', { description: 'Provider identity proof used to exchange for a Gatherle session.' })
 export class ExchangeOAuthInput {
-  @Field(() => AuthProvider, { description: 'External identity provider to verify.' })
-  provider: AuthProvider;
+  @Field(() => OAuthProvider, { description: 'External identity provider to verify.' })
+  provider: OAuthProvider;
 
   @Field(() => String, { description: 'OIDC identity token returned by the provider.' })
   idToken: string;

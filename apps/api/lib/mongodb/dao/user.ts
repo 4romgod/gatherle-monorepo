@@ -1,6 +1,6 @@
 import { User as UserModel, Organization as OrganizationModel } from '@/mongodb/models';
 import { randomUUID } from 'crypto';
-import { AuthProvider, FilterOperatorInput, UserRole } from '@gatherle/commons/types';
+import { FilterOperatorInput, OAuthProvider, UserRole } from '@gatherle/commons/types';
 import type {
   User,
   UpdateUserInput,
@@ -18,13 +18,13 @@ import { generateToken } from '@/utils/auth';
 import { logger } from '@/utils/logger';
 import type { VerifiedExternalIdentity } from '@/utils';
 
-type SupportedOAuthProvider = AuthProvider.Google | AuthProvider.Apple;
+type SupportedOAuthProvider = OAuthProvider;
 
 const getProviderSubjectField = (provider: SupportedOAuthProvider): 'googleSubject' | 'appleSubject' => {
   switch (provider) {
-    case AuthProvider.Google:
+    case OAuthProvider.Google:
       return 'googleSubject';
-    case AuthProvider.Apple:
+    case OAuthProvider.Apple:
       return 'appleSubject';
   }
 };
@@ -46,7 +46,7 @@ const deriveGivenName = (identity: VerifiedExternalIdentity): string => {
     return emailLocalPart;
   }
 
-  return identity.provider === 'Apple' ? 'Apple' : 'Google';
+  return identity.provider === OAuthProvider.Apple ? 'Apple' : 'Google';
 };
 
 const deriveFamilyName = (identity: VerifiedExternalIdentity): string => {

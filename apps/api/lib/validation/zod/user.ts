@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { REGEX_PHONE_NUMBER } from '@/constants';
 import { isDateNotInFuture } from '@gatherle/commons/utils';
-import { AuthProvider, Gender, FollowPolicy, SocialVisibility } from '@gatherle/commons/types/user';
+import { Gender, FollowPolicy, OAuthProvider, SocialVisibility } from '@gatherle/commons/types/user';
 import { ERROR_MESSAGES, validateDate } from '@/validation/common';
 import mongoose from 'mongoose';
 
@@ -88,7 +88,7 @@ export const LoginUserInputSchema = z.object({
 });
 
 export const ExchangeOAuthInputSchema = z.object({
-  provider: z.union([z.literal(AuthProvider.Google), z.literal(AuthProvider.Apple)]),
+  provider: z.nativeEnum(OAuthProvider),
   idToken: z.string().min(1, { message: 'Identity token is required' }),
   email: z.string().email({ message: ERROR_MESSAGES.INVALID_EMAIL }).optional(),
   given_name: z

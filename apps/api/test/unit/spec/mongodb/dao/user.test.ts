@@ -2,7 +2,7 @@ import { UserDAO } from '@/mongodb/dao';
 import { User } from '@/mongodb/models';
 import type { CreateUserInput, UpdateUserInput, QueryOptionsInput } from '@gatherle/commons/types';
 import { SortOrderInput } from '@gatherle/commons/types';
-import { AuthProvider, Gender, UserRole } from '@gatherle/commons/types/user';
+import { Gender, OAuthProvider, UserRole } from '@gatherle/commons/types/user';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';
@@ -213,7 +213,7 @@ describe('UserDAO', () => {
   describe('loginWithOAuth', () => {
     it('creates a new OAuth user without a birthdate placeholder', async () => {
       const identity: OAuthIdentity = {
-        provider: AuthProvider.Google,
+        provider: OAuthProvider.Google,
         providerUserId: 'google-user-1',
         email: 'OAuthUser@example.com',
         emailVerified: true,
@@ -271,7 +271,7 @@ describe('UserDAO', () => {
 
     it('returns an existing provider-linked user and updates email verification', async () => {
       const identity: OAuthIdentity = {
-        provider: AuthProvider.Google,
+        provider: OAuthProvider.Google,
         providerUserId: 'google-user-1',
         email: 'user@example.com',
         emailVerified: true,
@@ -313,7 +313,7 @@ describe('UserDAO', () => {
 
     it('links a verified OAuth identity to an existing email account', async () => {
       const identity: OAuthIdentity = {
-        provider: AuthProvider.Google,
+        provider: OAuthProvider.Google,
         providerUserId: 'google-user-2',
         email: 'user@example.com',
         emailVerified: true,
