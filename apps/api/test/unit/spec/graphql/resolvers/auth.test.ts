@@ -2,18 +2,25 @@ import 'reflect-metadata';
 import { AuthResolver } from '@/graphql/resolvers/auth';
 import { EmailVerificationTokenDAO, PasswordResetTokenDAO, UserDAO } from '@/mongodb/dao';
 import { EmailService } from '@/services';
+import { validateInput } from '@/validation';
+import { verifyExternalIdentityToken } from '@/utils';
 
-// Mock validation to avoid importing @/constants (which requires env vars before setup)
-jest.mock('@/validation', () => ({
-  validateEmail: jest.fn().mockImplementation((email: string) => {
-    if (!email || !email.includes('@') || !email.includes('.')) {
-      const err: any = new Error('Invalid email format');
-      err.extensions = { code: 'BAD_USER_INPUT' };
-      throw err;
-    }
-    return true;
-  }),
-}));
+// Keep the real validation module exports so transitive schema imports still work.
+jest.mock('@/validation', () => {
+  const actual = jest.requireActual('@/validation');
+  return {
+    ...actual,
+    validateEmail: jest.fn().mockImplementation((email: string) => {
+      if (!email || !email.includes('@') || !email.includes('.')) {
+        const err: any = new Error('Invalid email format');
+        err.extensions = { code: 'BAD_USER_INPUT' };
+        throw err;
+      }
+      return true;
+    }),
+    validateInput: jest.fn(),
+  };
+});
 
 jest.mock('@/constants', () => ({
   RESOLVER_DESCRIPTIONS: { USER: { requestEmailVerification: '', verifyEmail: '' } },
@@ -24,6 +31,7 @@ jest.mock('@/mongodb/dao', () => ({
     readUserByEmail: jest.fn(),
     setEmailVerified: jest.fn(),
     updatePassword: jest.fn(),
+    loginWithOAuth: jest.fn(),
   },
   EmailVerificationTokenDAO: {
     create: jest.fn(),
@@ -35,6 +43,10 @@ jest.mock('@/mongodb/dao', () => ({
     verify: jest.fn(),
     deleteByUserId: jest.fn(),
   },
+}));
+
+jest.mock('@/utils', () => ({
+  verifyExternalIdentityToken: jest.fn(),
 }));
 
 jest.mock('@/services', () => ({
@@ -252,6 +264,53 @@ describe('AuthResolver', () => {
       await resolver.resetPassword('valid-token', 'newPassword123');
 
       expect(PasswordResetTokenDAO.deleteByUserId).toHaveBeenCalledWith(mockUser.userId);
+    });
+  });
+
+  describe('loginWithOAuth', () => {
+    it('validates input, verifies the provider token, and returns the DAO response', async () => {
+      const input = {
+        provider: 'Google',
+        idToken: 'valid-google-id-token',
+        email: 'user@example.com',
+      };
+      const verifiedIdentity = {
+        provider: 'Google',
+        providerUserId: 'google-subject-1',
+        email: 'user@example.com',
+        emailVerified: true,
+        givenName: 'Test',
+        familyName: 'User',
+      };
+      const daoResponse = {
+        userId: 'user-1',
+        email: 'user@example.com',
+        username: 'testuser',
+        token: 'jwt-token',
+      };
+
+      (verifyExternalIdentityToken as jest.Mock).mockResolvedValue(verifiedIdentity);
+      (UserDAO.loginWithOAuth as jest.Mock).mockResolvedValue(daoResponse);
+
+      const result = await resolver.loginWithOAuth(input as any);
+
+      expect(validateInput).toHaveBeenCalled();
+      expect(verifyExternalIdentityToken).toHaveBeenCalledWith(input);
+      expect(UserDAO.loginWithOAuth).toHaveBeenCalledWith(verifiedIdentity);
+      expect(result).toEqual(daoResponse);
+    });
+
+    it('does not call the DAO when provider verification fails', async () => {
+      const input = {
+        provider: 'Google',
+        idToken: 'bad-token',
+      };
+      const verifyError = new Error('Google identity token is invalid.');
+
+      (verifyExternalIdentityToken as jest.Mock).mockRejectedValue(verifyError);
+
+      await expect(resolver.loginWithOAuth(input as any)).rejects.toThrow('Google identity token is invalid.');
+      expect(UserDAO.loginWithOAuth).not.toHaveBeenCalled();
     });
   });
 });

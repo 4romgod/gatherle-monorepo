@@ -42,6 +42,8 @@ The following commands work without any environment variables:
   - `EMAIL_FROM` (defaults to `noreply@gatherle.com`; sender address for transactional emails).
   - `WEBAPP_URL` (defaults to `http://localhost:3000`; used by the API EmailService to build email verification and
     password reset links in dev).
+  - `GOOGLE_CLIENT_ID` (required to verify Google OAuth identity tokens in the API).
+  - `APPLE_CLIENT_ID` (required to verify Apple OAuth identity tokens in the API).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
@@ -66,6 +68,10 @@ The following commands work without any environment variables:
     region).
   - `WEBAPP_URL` (public webapp URL, e.g. `https://app.gatherle.com`; used by the API EmailService to build email
     verification and password reset links).
+  - `GOOGLE_CLIENT_ID` (required when Google sign-in is enabled; the API validates Google `id_token` audience against
+    this value).
+  - `APPLE_CLIENT_ID` (required when Apple sign-in is enabled; the API validates Apple `id_token` audience against this
+    value).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
 ### E2E tests
@@ -95,6 +101,9 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `NEXT_PUBLIC_GRAPHQL_URL` (e.g., `http://localhost:9000/v1/graphql`).
   - `NEXT_PUBLIC_WEBSOCKET_URL` (e.g., `ws://localhost:3001` or deployed `wss://.../<stage>` endpoint for realtime
     notifications).
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (required for Google OAuth in NextAuth).
+  - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
+    credential used by NextAuth).
   - `NEXT_PUBLIC_S3_IMAGES_URL` — required when testing image uploads locally. Point at the Beta bucket:
     `https://gatherle-images-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
@@ -106,6 +115,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 - Host or CI (e.g., Vercel) should inject `NEXTAUTH_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
 - Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
+- Inject `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` when Google sign-in is enabled.
+- Inject `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in

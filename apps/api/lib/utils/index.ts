@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './externalAuth';
 export * from './exceptions';
 export * from './geocode';
 export * from './queries';

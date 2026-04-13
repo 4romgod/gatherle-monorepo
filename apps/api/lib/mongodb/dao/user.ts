@@ -1,4 +1,6 @@
 import { User as UserModel, Organization as OrganizationModel } from '@/mongodb/models';
+import { randomUUID } from 'crypto';
+import { AuthProvider, FilterOperatorInput, UserRole } from '@gatherle/commons/types';
 import type {
   User,
   UpdateUserInput,
@@ -10,11 +12,57 @@ import type {
   SessionStateInput,
   SessionState,
 } from '@gatherle/commons/types';
-import { FilterOperatorInput, UserRole } from '@gatherle/commons/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';
 import { logger } from '@/utils/logger';
+import type { VerifiedExternalIdentity } from '@/utils';
+
+type SupportedOAuthProvider = AuthProvider.Google | AuthProvider.Apple;
+
+const getProviderSubjectField = (provider: SupportedOAuthProvider): 'googleSubject' | 'appleSubject' => {
+  switch (provider) {
+    case AuthProvider.Google:
+      return 'googleSubject';
+    case AuthProvider.Apple:
+      return 'appleSubject';
+  }
+};
+
+const buildOAuthPlaceholderPassword = (): string => randomUUID();
+
+const normalizeEmail = (email?: string): string | undefined => {
+  return typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : undefined;
+};
+
+const deriveGivenName = (identity: VerifiedExternalIdentity): string => {
+  const givenName = identity.givenName?.trim();
+  if (givenName) {
+    return givenName;
+  }
+
+  const emailLocalPart = normalizeEmail(identity.email)?.split('@')[0];
+  if (emailLocalPart) {
+    return emailLocalPart;
+  }
+
+  return identity.provider === 'Apple' ? 'Apple' : 'Google';
+};
+
+const deriveFamilyName = (identity: VerifiedExternalIdentity): string => {
+  const familyName = identity.familyName?.trim();
+  if (familyName) {
+    return familyName;
+  }
+
+  return 'User';
+};
+
+const toUserWithToken = async (user: { toObject(): Omit<UserWithToken, 'token'> }): Promise<UserWithToken> => {
+  const tokenPayload = user.toObject();
+  const token = await generateToken(tokenPayload);
+  return { ...tokenPayload, token };
+};
 
 class UserDAO {
   static async create(userData: CreateUserInput): Promise<UserWithToken> {
@@ -50,6 +98,82 @@ class UserDAO {
 
     const jwtToken = await generateToken(user.toObject());
     return { token: jwtToken, ...user.toObject() };
+  }
+
+  static async loginWithOAuth(identity: VerifiedExternalIdentity): Promise<UserWithToken> {
+    const providerField = getProviderSubjectField(identity.provider);
+    const normalizedEmail = normalizeEmail(identity.email);
+
+    try {
+      const existingProviderUser = await UserModel.findOne({ [providerField]: identity.providerUserId }).exec();
+      if (existingProviderUser) {
+        let shouldSave = false;
+
+        if (identity.emailVerified && !existingProviderUser.emailVerified) {
+          existingProviderUser.emailVerified = true;
+          shouldSave = true;
+        }
+
+        if (!existingProviderUser.profile_picture && identity.profilePicture) {
+          existingProviderUser.profile_picture = identity.profilePicture;
+          shouldSave = true;
+        }
+
+        if (shouldSave) {
+          await existingProviderUser.save();
+        }
+
+        return toUserWithToken(existingProviderUser);
+      }
+
+      if (normalizedEmail && identity.emailVerified) {
+        const existingEmailUser = await UserModel.findOne({ email: normalizedEmail }).exec();
+        if (existingEmailUser) {
+          const existingProviderSubject = existingEmailUser[providerField];
+          if (existingProviderSubject && existingProviderSubject !== identity.providerUserId) {
+            throw CustomError(
+              `${identity.provider} sign-in is already linked to a different account.`,
+              ErrorTypes.CONFLICT,
+            );
+          }
+
+          existingEmailUser[providerField] = identity.providerUserId;
+
+          if (!existingEmailUser.emailVerified) {
+            existingEmailUser.emailVerified = true;
+          }
+
+          if (!existingEmailUser.profile_picture && identity.profilePicture) {
+            existingEmailUser.profile_picture = identity.profilePicture;
+          }
+
+          await existingEmailUser.save();
+          return toUserWithToken(existingEmailUser);
+        }
+      }
+
+      if (!normalizedEmail) {
+        throw CustomError(
+          `${identity.provider} sign-in did not return an email address for first-time account creation.`,
+          ErrorTypes.BAD_USER_INPUT,
+        );
+      }
+
+      const createdUser = await UserModel.create({
+        email: normalizedEmail,
+        given_name: deriveGivenName(identity),
+        family_name: deriveFamilyName(identity),
+        password: buildOAuthPlaceholderPassword(),
+        emailVerified: identity.emailVerified,
+        profile_picture: identity.profilePicture,
+        [providerField]: identity.providerUserId,
+      });
+
+      return toUserWithToken(createdUser);
+    } catch (error) {
+      logDaoError(`Error logging in with ${identity.provider}`, { error, provider: identity.provider });
+      throw KnownCommonError(error);
+    }
   }
 
   static async readUserById(userId: string): Promise<User> {

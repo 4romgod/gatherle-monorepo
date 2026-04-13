@@ -10,10 +10,10 @@ export const metadata = buildPageMetadata({
 
 export default async function HomePage() {
   const session = await auth();
-  const isAuth = !!session?.user && typeof session.user.id === 'string';
+  const isAuth = !!session?.user && typeof session.user.userId === 'string';
   if (isAuth && session?.user) {
     const user = {
-      id: session.user.id || session.user.userId || '',
+      id: session.user.userId,
       name: session.user.name ?? undefined,
       email: session.user.email ?? undefined,
       image: session.user.image ?? undefined,

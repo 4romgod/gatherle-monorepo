@@ -19,14 +19,13 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { registerUserAction } from '@/data/actions/server/auth';
 import { useActionState, useEffect, useState } from 'react';
 import { FormErrors } from '@/components/FormErrors';
+import SocialAuthButtons from '@/components/forms/auth/SocialAuthButtons';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useAppContext } from '@/hooks/useAppContext';
-import { FcGoogle } from 'react-icons/fc';
-import { FaFacebookF } from 'react-icons/fa';
-import NProgress from 'nprogress';
 import { logger } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
+import NProgress from 'nprogress';
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -168,28 +167,7 @@ export default function RegisterForm() {
       </Button>
 
       <Divider sx={{ marginY: 2 }}>or</Divider>
-
-      <Button
-        variant="outlined"
-        size="large"
-        fullWidth={true}
-        startIcon={<FaFacebookF />}
-        color="secondary"
-        sx={{ mt: 1, mb: 1 }}
-      >
-        Continue with Facebook
-      </Button>
-
-      <Button
-        variant="outlined"
-        size="large"
-        fullWidth={true}
-        startIcon={<FcGoogle />}
-        color="secondary"
-        sx={{ mt: 1, mb: 1 }}
-      >
-        Continue with Google
-      </Button>
+      <SocialAuthButtons />
     </Box>
   );
 }

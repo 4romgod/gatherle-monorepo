@@ -31,8 +31,8 @@ import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton'
 import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { isEventUpcoming, logger } from '@/lib/utils';
+import { getBirthdateDisplay } from '@/lib/utils/birthdate';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
-import { differenceInYears, format } from 'date-fns';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { useFollowing } from '@/hooks/useFollow';
@@ -154,8 +154,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   );
 
   const interests = user?.interests ?? [];
-  const age = user?.birthdate ? differenceInYears(new Date(), new Date(user.birthdate)) : null;
-  const formattedDOB = user?.birthdate ? format(new Date(user.birthdate), 'dd MMMM yyyy') : null;
+  const { age, formattedBirthdate } = getBirthdateDisplay(user?.birthdate);
 
   const isLoading = userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading));
   const hasError = userError || eventsError;
@@ -218,7 +217,10 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   );
 
   const locationText = user.location ? `${user.location.city}, ${user.location.country}` : 'Not provided';
-  const birthdayText = formattedDOB ? `${formattedDOB} (${age} years old)` : 'Not provided';
+  const birthdayText =
+    formattedBirthdate && age != null
+      ? `${formattedBirthdate} (${age} years old)`
+      : (formattedBirthdate ?? 'Not provided');
 
   const emptyCreatedCTA = isOwnProfile ? (
     <Button

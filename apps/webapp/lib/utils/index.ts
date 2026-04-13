@@ -2,6 +2,7 @@ export * from './apollo-error';
 export * from './data-manipulation';
 export * from './rrule';
 export * from './auth';
+export * from './birthdate';
 export * from './general';
 export * from './logger';
 export * from './performance';

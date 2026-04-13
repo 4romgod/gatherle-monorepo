@@ -8,6 +8,7 @@ import { EVENT_DESCRIPTIONS, USER_DESCRIPTIONS } from '../constants';
 import { EventCategory } from './eventCategory';
 import type {
   CreateUserInputSchema,
+  ExchangeOAuthInputSchema,
   ForgotPasswordInputTypeSchema,
   LoginUserInputSchema,
   ResetPasswordInputTypeSchema,
@@ -38,6 +39,12 @@ export enum FollowPolicy {
   RequireApproval = 'RequireApproval',
 }
 
+export enum AuthProvider {
+  Credentials = 'Credentials',
+  Google = 'Google',
+  Apple = 'Apple',
+}
+
 registerEnumType(Gender, {
   name: 'Gender',
   description: USER_DESCRIPTIONS.GENDER,
@@ -56,6 +63,11 @@ registerEnumType(SocialVisibility, {
 registerEnumType(FollowPolicy, {
   name: 'FollowPolicy',
   description: USER_DESCRIPTIONS.FOLLOW_POLICY,
+});
+
+registerEnumType(AuthProvider, {
+  name: 'AuthProvider',
+  description: 'Authentication provider used to prove the user identity.',
 });
 
 @ObjectType('CommunicationPrefs')
@@ -188,9 +200,9 @@ export class User {
   @Field(() => UserLocation, { nullable: true, description: 'User location for personalized event recommendations' })
   location?: UserLocation;
 
-  @prop({ required: true, type: () => String })
-  @Field(() => String, { description: USER_DESCRIPTIONS.BIRTHDATE })
-  birthdate: string;
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: USER_DESCRIPTIONS.BIRTHDATE })
+  birthdate?: string;
 
   @prop({ required: true, type: () => String })
   @Field(() => String, { description: USER_DESCRIPTIONS.GIVEN_NAME })
@@ -226,6 +238,12 @@ export class User {
 
   @prop({ required: true, select: false, type: () => String })
   password: string;
+
+  @prop({ unique: true, sparse: true, index: true, type: () => String })
+  googleSubject?: string;
+
+  @prop({ unique: true, sparse: true, index: true, type: () => String })
+  appleSubject?: string;
 
   @prop({ type: () => [String], ref: () => EventCategory, default: [], index: true })
   @Field(() => [EventCategory], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -488,8 +506,30 @@ export class LoginUserInput {
   password: string;
 }
 
+@InputType('ExchangeOAuthInput', { description: 'Provider identity proof used to exchange for a Gatherle session.' })
+export class ExchangeOAuthInput {
+  @Field(() => AuthProvider, { description: 'External identity provider to verify.' })
+  provider: AuthProvider;
+
+  @Field(() => String, { description: 'OIDC identity token returned by the provider.' })
+  idToken: string;
+
+  @Field(() => String, { nullable: true, description: 'Provider email fallback from the webapp callback.' })
+  email?: string;
+
+  @Field(() => String, { nullable: true, description: 'Provider given name fallback from the webapp callback.' })
+  given_name?: string;
+
+  @Field(() => String, { nullable: true, description: 'Provider family name fallback from the webapp callback.' })
+  family_name?: string;
+
+  @Field(() => String, { nullable: true, description: 'Provider profile picture fallback from the webapp callback.' })
+  profile_picture?: string;
+}
+
 export type LoginUserInputInferedType = z.infer<typeof LoginUserInputSchema>;
 export type CreateUserInputInferedType = z.infer<typeof CreateUserInputSchema>;
 export type UpdateUserInputInferedType = z.infer<typeof UpdateUserInputSchema>;
 export type ForgotPasswordInputInferedType = z.infer<typeof ForgotPasswordInputTypeSchema>;
 export type ResetPasswordInputInferedType = z.infer<typeof ResetPasswordInputTypeSchema>;
+export type ExchangeOAuthInputInferedType = z.infer<typeof ExchangeOAuthInputSchema>;
