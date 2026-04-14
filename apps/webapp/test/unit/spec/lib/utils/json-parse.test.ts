@@ -286,14 +286,16 @@ describe('safeJsonParse Utility', () => {
         throw 'raw string error';
       });
 
-      initLogger(LogLevel.WARN);
-      const schema = z.string();
-      const result = safeJsonParse('anything', schema, 'field');
+      try {
+        initLogger(LogLevel.WARN);
+        const schema = z.string();
+        const result = safeJsonParse('anything', schema, 'field');
 
-      expect(result).toBeUndefined();
-      expect(warnSpy).toHaveBeenCalled();
-
-      JSON.parse = originalParse;
+        expect(result).toBeUndefined();
+        expect(warnSpy).toHaveBeenCalled();
+      } finally {
+        JSON.parse = originalParse;
+      }
     });
   });
 });

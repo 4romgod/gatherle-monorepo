@@ -22,28 +22,7 @@ permissions:
   contents: read
 
 jobs:
-  load-global-secrets:
-    runs-on: ubuntu-latest
-    environment: global
-    outputs:
-      google_client_id: ${{ steps.export.outputs.google_client_id }}
-      google_client_secret: ${{ steps.export.outputs.google_client_secret }}
-    steps:
-      - name: Export Shared OAuth Secrets
-        id: export
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        run: |
-          test -n "$GOOGLE_CLIENT_ID" || (echo "Missing GOOGLE_CLIENT_ID secret in the global environment" && exit 1)
-          test -n "$GOOGLE_CLIENT_SECRET" || (echo "Missing GOOGLE_CLIENT_SECRET secret in the global environment" && exit 1)
-          echo "::add-mask::$GOOGLE_CLIENT_ID"
-          echo "::add-mask::$GOOGLE_CLIENT_SECRET"
-          echo "google_client_id=$GOOGLE_CLIENT_ID" >> "$GITHUB_OUTPUT"
-          echo "google_client_secret=$GOOGLE_CLIENT_SECRET" >> "$GITHUB_OUTPUT"
-
   deploy-api:
-    needs: [load-global-secrets]
     runs-on: ubuntu-latest
     # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -53,7 +32,7 @@ jobs:
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
-      GOOGLE_CLIENT_ID: ${{ needs.load-global-secrets.outputs.google_client_id }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
     outputs:
       graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
       websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
@@ -104,6 +83,21 @@ jobs:
 
       - name: Synthesize AWS CDK
         run: npm run build:cdk -w @gatherle/cdk
+
+      - name: Validate CDK Synth Output
+        run: |
+          TEMPLATE="infrastructure/cdk/cdk.out/GraphQLStack.template.json"
+          if [ ! -f "$TEMPLATE" ]; then
+            echo "GraphQLStack template not found at $TEMPLATE"
+            exit 1
+          fi
+          GOOGLE_CLIENT_ID_IN_TEMPLATE=$(jq -r '.Resources | to_entries[] | .value.Properties.Environment.Variables.GOOGLE_CLIENT_ID // empty' "$TEMPLATE" 2>/dev/null | head -1)
+          if [ -z "$GOOGLE_CLIENT_ID_IN_TEMPLATE" ]; then
+            echo "ERROR: GOOGLE_CLIENT_ID is empty in the synthesized GraphQLStack template."
+            echo "GOOGLE_CLIENT_ID env var present in shell: $(test -n "$GOOGLE_CLIENT_ID" && echo yes || echo no)"
+            exit 1
+          fi
+          echo "GOOGLE_CLIENT_ID is present in synthesized template."
 
       - name: Resolve Backend Secret ARN
         id: resolve_secret
@@ -197,10 +191,10 @@ jobs:
       - name: Run API E2E Tests
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-        run: npm run test:unit:api # change back to e2e
+        run: npm run test:e2e:api
 
   deploy-webapp:
-    needs: [load-global-secrets, deploy-api, e2e-api]
+    needs: [deploy-api, e2e-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
@@ -240,16 +234,14 @@ jobs:
           NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
           NEXT_PUBLIC_S3_IMAGES_URL: ${{ needs.deploy-api.outputs.s3_images_url }}
-          GOOGLE_CLIENT_ID: ${{ needs.load-global-secrets.outputs.google_client_id }}
-          GOOGLE_CLIENT_SECRET: ${{ needs.load-global-secrets.outputs.google_client_secret }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
             --build-env NEXT_PUBLIC_S3_IMAGES_URL="$NEXT_PUBLIC_S3_IMAGES_URL" \
-            --build-env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-            --build-env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
             --env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
             --env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
             --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
