@@ -1,5 +1,6 @@
 import { EventResolver } from '@/graphql/resolvers/event';
 import { FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import EventService from '@/services/event';
 import type { Event, EventCategory, User, EventParticipant, OrganizationMembership } from '@gatherle/commons/types';
 import { ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
@@ -16,6 +17,13 @@ jest.mock('@/mongodb/dao', () => ({
   },
   OrganizationMembershipDAO: {
     readMembershipByOrgIdAndUser: jest.fn(),
+  },
+}));
+
+jest.mock('@/services/event', () => ({
+  __esModule: true,
+  default: {
+    readTrending: jest.fn(),
   },
 }));
 
@@ -400,6 +408,55 @@ describe('EventResolver Field Resolvers', () => {
       (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue(membership);
 
       await expect(ensureAccess(orgId, userId)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('readTrendingEvents', () => {
+    const makeEvent = (overrides: Partial<Event> = {}): Event =>
+      ({ eventId: 'event-1', title: 'Test', ...overrides }) as Event;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('returns events from EventService.readTrending with the provided limit', async () => {
+      const mockEvents = [makeEvent({ eventId: 'e-1' }), makeEvent({ eventId: 'e-2' })];
+      (EventService.readTrending as jest.Mock).mockResolvedValue(mockEvents);
+
+      const result = await resolver.readTrendingEvents(5);
+
+      expect(EventService.readTrending).toHaveBeenCalledWith(5);
+      expect(result).toEqual(mockEvents);
+    });
+
+    it('falls back to limit 10 when limit is null', async () => {
+      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+
+      await resolver.readTrendingEvents(null);
+
+      expect(EventService.readTrending).toHaveBeenCalledWith(10);
+    });
+
+    it('clamps limit to 1 when a value below 1 is provided', async () => {
+      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+
+      await resolver.readTrendingEvents(0);
+
+      expect(EventService.readTrending).toHaveBeenCalledWith(1);
+    });
+
+    it('returns an empty array when no trending events exist', async () => {
+      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+
+      const result = await resolver.readTrendingEvents(10);
+
+      expect(result).toEqual([]);
+    });
+
+    it('propagates errors from EventService.readTrending', async () => {
+      (EventService.readTrending as jest.Mock).mockRejectedValue(new Error('service error'));
+
+      await expect(resolver.readTrendingEvents(10)).rejects.toThrow('service error');
     });
   });
 });

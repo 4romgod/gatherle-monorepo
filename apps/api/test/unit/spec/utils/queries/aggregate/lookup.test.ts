@@ -90,4 +90,35 @@ describe('createEventLookupStages', () => {
     expect(addFieldsStage.$addFields).toHaveProperty('rsvpCount');
     expect(addFieldsStage.$addFields).toHaveProperty('savedByCount');
   });
+
+  describe('skipCounts option', () => {
+    it('returns 10 stages when skipCounts is true (omits follows lookup and count addFields)', () => {
+      const stages = createEventLookupStages({ skipCounts: true });
+      expect(stages.length).toBe(10);
+    });
+
+    it('still includes the eventcategories and participants lookup stages', () => {
+      const stages = createEventLookupStages({ skipCounts: true });
+      const categoriesStage = stages[0] as PipelineStage.Lookup;
+      const participantsStage = stages[5] as PipelineStage.Lookup;
+      expect(categoriesStage.$lookup.from).toBe('eventcategories');
+      expect(participantsStage.$lookup.from).toBe('eventparticipants');
+    });
+
+    it('does not include a follows savedByCount lookup stage', () => {
+      const stages = createEventLookupStages({ skipCounts: true });
+      const hasFollowsLookup = stages.some(
+        (s) => '$lookup' in s && (s as PipelineStage.Lookup).$lookup.from === 'follows',
+      );
+      expect(hasFollowsLookup).toBe(false);
+    });
+
+    it('returns 12 stages by default (skipCounts absent)', () => {
+      expect(createEventLookupStages().length).toBe(12);
+    });
+
+    it('returns 12 stages when skipCounts is false', () => {
+      expect(createEventLookupStages({ skipCounts: false }).length).toBe(12);
+    });
+  });
 });

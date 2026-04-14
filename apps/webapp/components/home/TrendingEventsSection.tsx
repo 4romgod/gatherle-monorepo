@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, Typography, Card, CardContent, Skeleton, Stack } from '@mui/material';
+import { Box, Button, Typography, Stack } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
+import { ReadTrendingEventsDocument } from '@/data/graphql/query/Event/query';
 import EventTileGrid from '../events/EventTileGrid';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
@@ -13,16 +13,16 @@ export default function TrendingEventsSection() {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading, error } = useQuery(GetAllEventsDocument, {
-    variables: { options: {} },
+  const { data, loading, error } = useQuery(ReadTrendingEventsDocument, {
+    variables: { limit: 4 },
     fetchPolicy: 'cache-and-network',
     context: {
       headers: getAuthHeader(token),
     },
   });
 
-  const events = (data?.readEvents ?? []).slice().sort((a, b) => (b.rsvpCount ?? 0) - (a.rsvpCount ?? 0));
-  const isLoading = loading || !data;
+  const events = data?.readTrendingEvents ?? [];
+  const isLoading = loading && !data;
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
@@ -50,7 +50,7 @@ export default function TrendingEventsSection() {
         <Typography color="text.secondary">No trending events right now. Check back soon!</Typography>
       ) : (
         <Stack gap={{ xs: 1.5, md: 2 }}>
-          <EventTileGrid events={events.slice(0, 4)} loading={loading} />
+          <EventTileGrid events={events} loading={loading} />
         </Stack>
       )}
     </Box>

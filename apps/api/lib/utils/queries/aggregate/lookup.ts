@@ -1,7 +1,8 @@
 import type { PipelineStage } from 'mongoose';
 import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 
-export const createEventLookupStages = (): PipelineStage[] => {
+export const createEventLookupStages = (options?: { skipCounts?: boolean }): PipelineStage[] => {
+  const skipCounts = options?.skipCounts ?? false;
   const rsvpStatusesForCount = [ParticipantStatus.Going, ParticipantStatus.Interested];
 
   return [
@@ -141,43 +142,47 @@ export const createEventLookupStages = (): PipelineStage[] => {
         },
       },
     },
-    {
-      $lookup: {
-        from: 'follows',
-        let: { eventId: '$eventId' },
-        pipeline: [
+    ...(skipCounts
+      ? []
+      : [
           {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$targetType', FollowTargetType.Event] },
-                  { $eq: ['$targetId', '$$eventId'] },
-                  { $eq: ['$approvalStatus', FollowApprovalStatus.Accepted] },
-                ],
+            $lookup: {
+              from: 'follows',
+              let: { eventId: '$eventId' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ['$targetType', FollowTargetType.Event] },
+                        { $eq: ['$targetId', '$$eventId'] },
+                        { $eq: ['$approvalStatus', FollowApprovalStatus.Accepted] },
+                      ],
+                    },
+                  },
+                },
+                { $count: 'count' },
+              ],
+              as: 'savedByCountAggregation',
+            },
+          } as PipelineStage,
+          {
+            $addFields: {
+              rsvpCount: {
+                $size: {
+                  $filter: {
+                    input: { $ifNull: ['$participants', []] },
+                    as: 'participant',
+                    cond: { $in: ['$$participant.status', rsvpStatusesForCount] },
+                  },
+                },
+              },
+              savedByCount: {
+                $ifNull: [{ $arrayElemAt: ['$savedByCountAggregation.count', 0] }, 0],
               },
             },
-          },
-          { $count: 'count' },
-        ],
-        as: 'savedByCountAggregation',
-      },
-    },
-    {
-      $addFields: {
-        rsvpCount: {
-          $size: {
-            $filter: {
-              input: { $ifNull: ['$participants', []] },
-              as: 'participant',
-              cond: { $in: ['$$participant.status', rsvpStatusesForCount] },
-            },
-          },
-        },
-        savedByCount: {
-          $ifNull: [{ $arrayElemAt: ['$savedByCountAggregation.count', 0] }, 0],
-        },
-      },
-    },
+          } as PipelineStage,
+        ]),
     {
       $project: {
         participantsUsersMap: 0,

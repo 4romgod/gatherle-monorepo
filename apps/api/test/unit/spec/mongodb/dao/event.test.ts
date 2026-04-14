@@ -851,4 +851,93 @@ describe('EventDAO', () => {
       await expect(EventDAO.readUpcomingPublished(100)).rejects.toThrow(GraphQLError);
     });
   });
+
+  describe('readTrending', () => {
+    // readTrending uses aggregate(...).exec()
+    it('returns events via the aggregation pipeline', async () => {
+      const mockEvents = [{ ...expectedEvent, eventId: 'trending-1' }];
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvents));
+
+      const result = await EventDAO.readTrending(5);
+
+      expect(EventModel.aggregate).toHaveBeenCalled();
+      expect(result).toEqual(mockEvents);
+    });
+
+    it('applies the $match filter for Published, Upcoming/Ongoing, Public/Unlisted events', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventDAO.readTrending(10);
+
+      const pipeline = (EventModel.aggregate as jest.Mock).mock.calls[0][0];
+      const matchStage = pipeline[0].$match;
+      expect(matchStage.lifecycleStatus).toBe('Published');
+      expect(matchStage.status.$in).toEqual(expect.arrayContaining(['Upcoming', 'Ongoing']));
+      expect(matchStage.visibility.$in).toEqual(expect.arrayContaining(['Public', 'Unlisted']));
+    });
+
+    it('includes $or conditions in the $match to handle null startAt and Ongoing events', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventDAO.readTrending(10);
+
+      const pipeline = (EventModel.aggregate as jest.Mock).mock.calls[0][0];
+      const matchStage = pipeline[0].$match;
+      expect(matchStage.$or).toBeDefined();
+      expect(matchStage.$or.length).toBeGreaterThanOrEqual(2);
+      // Must have an entry covering Ongoing events
+      expect(matchStage.$or.some((cond: Record<string, unknown>) => cond.status === 'Ongoing')).toBe(true);
+    });
+
+    it('filters saves $lookup by approvalStatus Accepted (consistent with createEventLookupStages)', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventDAO.readTrending(10);
+
+      const pipeline = (EventModel.aggregate as jest.Mock).mock.calls[0][0];
+      const savedLookup = pipeline.find(
+        (s: Record<string, unknown>) => '$lookup' in s && (s as { $lookup: { as: string } }).$lookup.as === '_savedAgg',
+      ) as { $lookup: { pipeline: Array<{ $match: { $expr: { $and: Array<Record<string, unknown>> } } }> } };
+      expect(savedLookup).toBeDefined();
+      const andConds = savedLookup.$lookup.pipeline[0].$match.$expr.$and;
+      expect(andConds.some((c) => JSON.stringify(c) === JSON.stringify({ $eq: ['$approvalStatus', 'Accepted'] }))).toBe(
+        true,
+      );
+    });
+
+    it('includes a $limit stage with the provided limit', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventDAO.readTrending(7);
+
+      const pipeline = (EventModel.aggregate as jest.Mock).mock.calls[0][0];
+      const limitStage = pipeline.find((s: Record<string, unknown>) => s.$limit !== undefined);
+      expect(limitStage).toBeDefined();
+      expect(limitStage.$limit).toBe(7);
+    });
+
+    it('uses a default limit of 10 when none is provided', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventDAO.readTrending();
+
+      const pipeline = (EventModel.aggregate as jest.Mock).mock.calls[0][0];
+      const limitStage = pipeline.find((s: Record<string, unknown>) => s.$limit !== undefined);
+      expect(limitStage.$limit).toBe(10);
+    });
+
+    it('returns an empty array when the aggregation returns no results', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      const result = await EventDAO.readTrending(10);
+
+      expect(result).toEqual([]);
+    });
+
+    it('wraps errors thrown by the aggregation', async () => {
+      (EventModel.aggregate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(EventDAO.readTrending(10)).rejects.toThrow(GraphQLError);
+    });
+  });
 });

@@ -254,6 +254,96 @@ class EventDAO {
   }
 
   /**
+   * Read trending events sorted by a composite score of RSVP count + saved-by count.
+   * Scoped to Published, Upcoming/Ongoing, Public/Unlisted events starting from now.
+   * The score is computed inline via aggregation $lookup stages so sorting happens in the DB.
+   */
+  static async readTrending(limit: number = 10): Promise<EventEntity[]> {
+    try {
+      const now = new Date();
+      const pipeline = [
+        {
+          $match: {
+            lifecycleStatus: 'Published',
+            status: { $in: ['Upcoming', 'Ongoing'] },
+            visibility: { $in: ['Public', 'Unlisted'] },
+            $or: [
+              // Upcoming: only show events that haven't started yet
+              { status: 'Upcoming', 'primarySchedule.startAt': { $gte: now } },
+              // Upcoming with no scheduled date (e.g. recurring / TBD)
+              { status: 'Upcoming', 'primarySchedule.startAt': { $exists: false } },
+              { status: 'Upcoming', 'primarySchedule.startAt': null },
+              // Ongoing events are already in progress — always include
+              { status: 'Ongoing' },
+            ],
+          },
+        },
+        // Count RSVPs (Going + Interested) per event
+        {
+          $lookup: {
+            from: 'eventparticipants',
+            let: { eid: '$eventId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [{ $eq: ['$eventId', '$$eid'] }, { $in: ['$status', ['Going', 'Interested']] }],
+                  },
+                },
+              },
+              { $count: 'n' },
+            ],
+            as: '_rsvpAgg',
+          },
+        },
+        // Count saves (Follow where targetType = Event) per event
+        {
+          $lookup: {
+            from: 'follows',
+            let: { eid: '$eventId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$targetId', '$$eid'] },
+                      { $eq: ['$targetType', 'Event'] },
+                      { $eq: ['$approvalStatus', 'Accepted'] },
+                    ],
+                  },
+                },
+              },
+              { $count: 'n' },
+            ],
+            as: '_savedAgg',
+          },
+        },
+        {
+          $addFields: {
+            rsvpCount: { $ifNull: [{ $arrayElemAt: ['$_rsvpAgg.n', 0] }, 0] },
+            savedByCount: { $ifNull: [{ $arrayElemAt: ['$_savedAgg.n', 0] }, 0] },
+            _trendingScore: {
+              $add: [
+                { $ifNull: [{ $arrayElemAt: ['$_rsvpAgg.n', 0] }, 0] },
+                { $ifNull: [{ $arrayElemAt: ['$_savedAgg.n', 0] }, 0] },
+              ],
+            },
+          },
+        },
+        { $sort: { _trendingScore: -1 as const, 'primarySchedule.startAt': 1 as const } },
+        { $limit: limit },
+        { $unset: ['_rsvpAgg', '_savedAgg', '_trendingScore'] },
+        ...createEventLookupStages({ skipCounts: true }),
+      ];
+
+      return await EventModel.aggregate<EventEntity>(pipeline).exec();
+    } catch (error) {
+      logDaoError('Error reading trending events', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
    * Read upcoming and ongoing published events for feed candidate selection.
    * Scoped to public and unlisted events only — private/invitation events are never surfaced.
    * Used exclusively by the recommendation engine.
