@@ -93,6 +93,7 @@ export class GraphQLStack extends Stack {
         S3_BUCKET_NAME: props.s3BucketName || '',
         CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
         EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '',
         WEBAPP_URL:
           process.env.WEBAPP_URL ||
           DEFAULT_STAGE_WEBAPP_ORIGINS[props.applicationStage]?.[0] ||

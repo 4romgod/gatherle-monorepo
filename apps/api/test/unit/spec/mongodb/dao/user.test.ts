@@ -17,6 +17,8 @@ jest.mock('@/mongodb/models', () => ({
     findByIdAndDelete: jest.fn(),
     findOneAndDelete: jest.fn(),
     findOneAndUpdate: jest.fn(),
+    countDocuments: jest.fn(),
+    aggregate: jest.fn(),
   },
   Organization: {
     findById: jest.fn(),
@@ -1455,6 +1457,276 @@ describe('UserDAO', () => {
       (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
 
       await expect(UserDAO.updatePassword('mockUserId', 'newPassword')).rejects.toBeDefined();
+    });
+  });
+
+  describe('count', () => {
+    it('returns document count using provided filter', async () => {
+      (User.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(42) });
+
+      const result = await UserDAO.count({ isTestUser: false });
+
+      expect(User.countDocuments).toHaveBeenCalledWith({ isTestUser: false });
+      expect(result).toBe(42);
+    });
+
+    it('uses empty filter when none provided', async () => {
+      (User.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockResolvedValue(0) });
+
+      await UserDAO.count();
+
+      expect(User.countDocuments).toHaveBeenCalledWith({});
+    });
+
+    it('rejects when countDocuments fails', async () => {
+      const mockError = new Error('DB error');
+      (User.countDocuments as jest.Mock).mockReturnValue({ exec: jest.fn().mockRejectedValue(mockError) });
+
+      await expect(UserDAO.count()).rejects.toThrow('DB error');
+    });
+  });
+
+  describe('countByInterestCategoryIds', () => {
+    it('returns empty Map when categoryIds array is empty', async () => {
+      const result = await UserDAO.countByInterestCategoryIds([]);
+
+      expect(User.aggregate).not.toHaveBeenCalled();
+      expect(result).toEqual(new Map());
+    });
+
+    it('returns a Map with counts for each category', async () => {
+      (User.aggregate as jest.Mock).mockResolvedValue([
+        { _id: 'cat-1', count: 5 },
+        { _id: 'cat-2', count: 3 },
+      ]);
+
+      const result = await UserDAO.countByInterestCategoryIds(['cat-1', 'cat-2', 'cat-3']);
+
+      expect(User.aggregate).toHaveBeenCalled();
+      expect(result.get('cat-1')).toBe(5);
+      expect(result.get('cat-2')).toBe(3);
+      expect(result.get('cat-3')).toBe(0);
+    });
+
+    it('deduplicates categoryIds before querying', async () => {
+      (User.aggregate as jest.Mock).mockResolvedValue([]);
+
+      await UserDAO.countByInterestCategoryIds(['cat-1', 'cat-1', 'cat-2']);
+
+      const pipeline = (User.aggregate as jest.Mock).mock.calls[0][0];
+      const matchStage = pipeline[0].$match;
+      expect(matchStage.interests.$in).toEqual(['cat-1', 'cat-2']);
+    });
+
+    it('throws on aggregation error', async () => {
+      const mockError = new Error('DB error');
+      (User.aggregate as jest.Mock).mockRejectedValue(mockError);
+
+      await expect(UserDAO.countByInterestCategoryIds(['cat-1'])).rejects.toThrow(KnownCommonError(mockError));
+    });
+  });
+
+  describe('saveSessionState', () => {
+    const makeSessionUser = (overrides: Record<string, unknown> = {}) => ({
+      userId: 'user-1',
+      preferences: null as {
+        sessionState: Array<{ key: string; value: unknown; version: number; updatedAt: Date }>;
+      } | null,
+      markModified: jest.fn(),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject: jest.fn().mockReturnValue({ userId: 'user-1' }),
+      ...overrides,
+    });
+
+    it('initialises preferences and inserts a new session state key', async () => {
+      const mockUser = makeSessionUser();
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await UserDAO.saveSessionState('user-1', { key: 'theme', value: 'dark', version: 1 });
+
+      expect(mockUser.preferences?.sessionState).toHaveLength(1);
+      expect(mockUser.preferences?.sessionState[0].key).toBe('theme');
+      expect(mockUser.markModified).toHaveBeenCalledWith('preferences');
+      expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    it('updates an existing session state key in place', async () => {
+      const existingState = { key: 'theme', value: 'light', version: 1, updatedAt: new Date() };
+      const mockUser = makeSessionUser({
+        preferences: { sessionState: [existingState] },
+      });
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await UserDAO.saveSessionState('user-1', { key: 'theme', value: 'dark', version: 2 });
+
+      expect(mockUser.preferences?.sessionState).toHaveLength(1);
+      expect(mockUser.preferences?.sessionState[0].value).toBe('dark');
+      expect(mockUser.preferences?.sessionState[0].version).toBe(2);
+    });
+
+    it('throws NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.saveSessionState('nonExisting', { key: 'k', value: 'v', version: 1 })).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws on findById error', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.saveSessionState('user-1', { key: 'k', value: 'v', version: 1 })).rejects.toThrow(
+        KnownCommonError(mockError),
+      );
+    });
+  });
+
+  describe('readSessionState', () => {
+    it('returns the session state for a matching key', async () => {
+      const state = { key: 'theme', value: 'dark', version: 1, updatedAt: new Date() };
+      const mockUser = {
+        preferences: { sessionState: [state] },
+      };
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      const result = await UserDAO.readSessionState('user-1', 'theme');
+
+      expect(result).toEqual(state);
+    });
+
+    it('returns null when key is not found', async () => {
+      const mockUser = {
+        preferences: { sessionState: [{ key: 'other', value: 'x', version: 1, updatedAt: new Date() }] },
+      };
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      const result = await UserDAO.readSessionState('user-1', 'missing-key');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.readSessionState('nonExisting', 'theme')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws on findById error', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.readSessionState('user-1', 'theme')).rejects.toThrow(KnownCommonError(mockError));
+    });
+  });
+
+  describe('readAllSessionStates', () => {
+    it('returns all session states for a user', async () => {
+      const states = [
+        { key: 'theme', value: 'dark', version: 1, updatedAt: new Date() },
+        { key: 'lang', value: 'en', version: 1, updatedAt: new Date() },
+      ];
+      (User.findById as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ preferences: { sessionState: states } }),
+      );
+
+      const result = await UserDAO.readAllSessionStates('user-1');
+
+      expect(result).toEqual(states);
+    });
+
+    it('returns empty array when preferences has no sessionState', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ preferences: undefined }));
+
+      const result = await UserDAO.readAllSessionStates('user-1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('throws NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.readAllSessionStates('nonExisting')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws on findById error', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.readAllSessionStates('user-1')).rejects.toThrow(KnownCommonError(mockError));
+    });
+  });
+
+  describe('clearSessionState', () => {
+    it('filters out the specified key, calls markModified, and saves', async () => {
+      const state1 = { key: 'theme', value: 'dark', version: 1, updatedAt: new Date() };
+      const state2 = { key: 'lang', value: 'en', version: 1, updatedAt: new Date() };
+      const mockUser = {
+        preferences: { sessionState: [state1, state2] },
+        markModified: jest.fn(),
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({ userId: 'user-1' }),
+      };
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await UserDAO.clearSessionState('user-1', 'theme');
+
+      expect(mockUser.preferences.sessionState).toHaveLength(1);
+      expect(mockUser.preferences.sessionState[0].key).toBe('lang');
+      expect(mockUser.markModified).toHaveBeenCalledWith('preferences');
+      expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    it('throws NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.clearSessionState('nonExisting', 'theme')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws on findById error', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.clearSessionState('user-1', 'theme')).rejects.toThrow(KnownCommonError(mockError));
+    });
+  });
+
+  describe('clearAllSessionStates', () => {
+    it('sets sessionState to empty array, calls markModified, and saves', async () => {
+      const mockUser = {
+        preferences: { sessionState: [{ key: 'theme', value: 'dark', version: 1, updatedAt: new Date() }] },
+        markModified: jest.fn(),
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({ userId: 'user-1' }),
+      };
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
+
+      await UserDAO.clearAllSessionStates('user-1');
+
+      expect(mockUser.preferences.sessionState).toEqual([]);
+      expect(mockUser.markModified).toHaveBeenCalledWith('preferences');
+      expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    it('throws NOT_FOUND when user does not exist', async () => {
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.clearAllSessionStates('nonExisting')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('throws on findById error', async () => {
+      const mockError = new Error('DB error');
+      (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
+
+      await expect(UserDAO.clearAllSessionStates('user-1')).rejects.toThrow(KnownCommonError(mockError));
     });
   });
 });

@@ -136,6 +136,60 @@ describe('OrganizationMembershipDAO', () => {
     });
   });
 
+  describe('readMembershipsByUserId', () => {
+    it('reads memberships by user ID', async () => {
+      (OrganizationMembershipModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => mockMembership }]),
+      );
+
+      const result = await OrganizationMembershipDAO.readMembershipsByUserId('user-1');
+
+      expect(OrganizationMembershipModel.find).toHaveBeenCalledWith({ userId: 'user-1' });
+      expect(result).toEqual([mockMembership]);
+    });
+
+    it('wraps errors', async () => {
+      (OrganizationMembershipModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new MockMongoError(0)),
+      );
+
+      await expect(OrganizationMembershipDAO.readMembershipsByUserId('user-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('readMembershipByOrgIdAndUser', () => {
+    it('returns membership when found', async () => {
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ toObject: () => mockMembership }),
+      );
+
+      const result = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser('org-1', 'user-1');
+
+      expect(OrganizationMembershipModel.findOne).toHaveBeenCalledWith({ orgId: 'org-1', userId: 'user-1' });
+      expect(result).toEqual(mockMembership);
+    });
+
+    it('returns null when not found', async () => {
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      const result = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser('org-1', 'user-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('wraps errors', async () => {
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new MockMongoError(0)),
+      );
+
+      await expect(OrganizationMembershipDAO.readMembershipByOrgIdAndUser('org-1', 'user-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
   describe('update', () => {
     it('updates membership', async () => {
       const mockSave = jest.fn().mockResolvedValue({ toObject: () => mockMembership });
@@ -167,7 +221,7 @@ describe('OrganizationMembershipDAO', () => {
       );
     });
 
-    it('wraps unknown errors', async () => {
+    it('wraps unknown errors on findOne', async () => {
       (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
         createMockFailedMongooseQuery(new MockMongoError(0)),
       );
@@ -175,6 +229,21 @@ describe('OrganizationMembershipDAO', () => {
       await expect(OrganizationMembershipDAO.update({ membershipId: 'membership-1' })).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
+    });
+
+    it('wraps save errors', async () => {
+      const mockSave = jest.fn().mockRejectedValue(new MockMongoError(0));
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({
+          ...mockMembership,
+          save: mockSave,
+          toObject: () => mockMembership,
+        }),
+      );
+
+      await expect(
+        OrganizationMembershipDAO.update({ membershipId: 'membership-1', role: OrganizationRole.Member }),
+      ).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
     });
   });
 

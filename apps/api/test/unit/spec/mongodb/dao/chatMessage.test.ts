@@ -169,6 +169,74 @@ describe('ChatMessageDAO', () => {
     expect(result).toBeNull();
   });
 
+  it('readLatestInConversation returns message when found', async () => {
+    const createdAt = new Date('2026-03-01T10:00:00.000Z');
+    const mockDoc = {
+      toObject: () => ({
+        chatMessageId: 'msg-latest',
+        senderUserId: 'user-2',
+        recipientUserId: 'user-1',
+        message: 'hey there',
+        isRead: false,
+        createdAt,
+      }),
+    };
+    (ChatMessageModel.findOne as jest.Mock).mockReturnValue(createFindOneQuery(mockDoc));
+
+    const result = await ChatMessageDAO.readLatestInConversation('user-1', 'user-2');
+
+    expect(ChatMessageModel.findOne).toHaveBeenCalledWith({
+      conversationKey: 'user-1:user-2',
+    });
+    expect(result?.chatMessageId).toBe('msg-latest');
+    expect(result?.message).toBe('hey there');
+  });
+
+  it('readLatestInConversation re-throws failures as GraphQLError', async () => {
+    (ChatMessageModel.findOne as jest.Mock).mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockRejectedValue(new Error('db fail')),
+    });
+
+    await expect(ChatMessageDAO.readLatestInConversation('user-1', 'user-2')).rejects.toBeInstanceOf(GraphQLError);
+  });
+
+  it('countUnreadTotal returns the total unread count for a recipient', async () => {
+    (ChatMessageModel.countDocuments as jest.Mock).mockReturnValue(createExecQuery(7));
+
+    const result = await ChatMessageDAO.countUnreadTotal('user-1');
+
+    expect(ChatMessageModel.countDocuments).toHaveBeenCalledWith({
+      recipientUserId: 'user-1',
+      isRead: { $ne: true },
+    });
+    expect(result).toBe(7);
+  });
+
+  it('countUnreadTotal re-throws failures as GraphQLError', async () => {
+    (ChatMessageModel.countDocuments as jest.Mock).mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('db fail')),
+    });
+
+    await expect(ChatMessageDAO.countUnreadTotal('user-1')).rejects.toBeInstanceOf(GraphQLError);
+  });
+
+  it('readConversations re-throws aggregate failures as GraphQLError', async () => {
+    (ChatMessageModel.aggregate as jest.Mock).mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('aggregate failed')),
+    });
+
+    await expect(ChatMessageDAO.readConversations('user-1')).rejects.toBeInstanceOf(GraphQLError);
+  });
+
+  it('markConversationRead re-throws failures as GraphQLError', async () => {
+    (ChatMessageModel.updateMany as jest.Mock).mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('update failed')),
+    });
+
+    await expect(ChatMessageDAO.markConversationRead('user-1', 'user-2')).rejects.toBeInstanceOf(GraphQLError);
+  });
+
   it('wraps unknown readConversation failures with KnownCommonError', async () => {
     const findQuery = {
       sort: jest.fn().mockReturnThis(),

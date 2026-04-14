@@ -78,6 +78,23 @@ describe('useSavedEvents', () => {
     expect(result.current.savedEvents).toEqual([{ eventId: 'saved-1' }]);
     expect(result.current.refetch).toBe(refetch);
   });
+
+  it('returns empty array when no saved events data', () => {
+    mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    const { result } = renderHook(() => useSavedEvents());
+    expect(result.current.savedEvents).toEqual([]);
+  });
+
+  it('skips query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    renderHook(() => useSavedEvents());
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+  });
 });
 
 describe('useIsEventSaved', () => {
@@ -92,5 +109,31 @@ describe('useIsEventSaved', () => {
 
     const { result } = renderHook(() => useIsEventSaved('event-1'));
     expect(result.current.isSaved).toBe(true);
+  });
+
+  it('returns false when no data', () => {
+    mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    const { result } = renderHook(() => useIsEventSaved('event-1'));
+    expect(result.current.isSaved).toBe(false);
+  });
+
+  it('skips query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    renderHook(() => useIsEventSaved('event-1'));
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+  });
+
+  it('skips query when eventId is empty', () => {
+    mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    renderHook(() => useIsEventSaved(''));
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
   });
 });

@@ -27,4 +27,38 @@ describe('navigation utilities', () => {
     expect(pushState).toHaveBeenCalledWith(null, '', '#section-1');
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
   });
+
+  it('prepends # when hash does not start with it', () => {
+    const pushState = jest.fn();
+    window.history.pushState = pushState;
+    document.querySelector = jest.fn(() => null);
+
+    navigateToHash('no-hash-prefix');
+
+    expect(pushState).toHaveBeenCalledWith(null, '', '#no-hash-prefix');
+  });
+
+  it('does not scroll when the target element is not found', () => {
+    const scrollIntoView = jest.fn();
+    window.history.pushState = jest.fn();
+    document.querySelector = jest.fn(() => null);
+
+    navigateToHash('#missing-element');
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('falls back to window.location.hash when pushState is unavailable', () => {
+    // jsdom's history.pushState is non-configurable; spy on the history getter instead
+    const historySpy = jest.spyOn(window, 'history', 'get').mockReturnValue({
+      pushState: undefined as any,
+    } as History);
+    document.querySelector = jest.fn(() => null);
+
+    navigateToHash('#fallback');
+
+    expect(window.location.hash).toBe('#fallback');
+
+    historySpy.mockRestore();
+  });
 });

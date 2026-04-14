@@ -166,6 +166,21 @@ describe('useChat hooks', () => {
     expect(fetchMore).not.toHaveBeenCalled();
   });
 
+  it('useChatMessages skips query when auth token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+      fetchMore: jest.fn(),
+    });
+
+    renderHook(() => useChatMessages({ withUserId: 'user-2' }));
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+  });
+
   it('useChatMessages skips query when withUserId is missing and returns defaults', () => {
     useQueryMock.mockReturnValue({
       data: undefined,
@@ -258,5 +273,77 @@ describe('useChat hooks', () => {
     const { result } = renderHook(() => useChatActions());
 
     expect(result.current.markConversationReadLoading).toBe(true);
+  });
+
+  it('useChatConversations uses default limit when called without options', () => {
+    useQueryMock.mockReturnValue({ data: undefined, loading: false, error: undefined, refetch: jest.fn() });
+
+    renderHook(() => useChatConversations());
+
+    expect(useQueryMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ variables: { limit: 50 } }));
+  });
+
+  it('useChatMessages uses defaults when called without options', () => {
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+      fetchMore: jest.fn(),
+    });
+
+    renderHook(() => useChatMessages());
+
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        variables: { withUserId: '', limit: 50, markAsRead: true },
+        skip: true,
+      }),
+    );
+  });
+
+  it('useChatMessages loadMore updateQuery returns prev when fetchMoreResult has no messages', async () => {
+    let capturedUpdateQuery: ((prev: any, ctx: any) => any) | undefined;
+    const fetchMore = jest.fn().mockImplementation(({ updateQuery }) => {
+      capturedUpdateQuery = updateQuery;
+      return Promise.resolve({});
+    });
+
+    useQueryMock.mockReturnValue({
+      data: {
+        readChatMessages: {
+          messages: [{ chatMessageId: 'm1' }],
+          nextCursor: 'c1',
+          hasMore: true,
+          count: 1,
+        },
+      },
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+      fetchMore,
+    });
+
+    const { result } = renderHook(() => useChatMessages({ withUserId: 'user-2' }));
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(capturedUpdateQuery).toBeDefined();
+    // When fetchMoreResult has no readChatMessages, return prev unchanged
+    const prev = { readChatMessages: { messages: [{ chatMessageId: 'm1' }] } };
+    const returned = capturedUpdateQuery!(prev, { fetchMoreResult: {} });
+    expect(returned).toBe(prev);
+  });
+
+  it('useChatActions uses no-token path gracefully', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useMutationMock.mockReturnValue([jest.fn(), { loading: false }]);
+
+    const { result } = renderHook(() => useChatActions());
+
+    expect(result.current.markConversationReadLoading).toBe(false);
   });
 });

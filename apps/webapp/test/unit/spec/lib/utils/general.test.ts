@@ -1,4 +1,4 @@
-import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
+import { getAvatarSrc, getDisplayName, isRecord, getFileExtension } from '@/lib/utils/general';
 import { UserWithToken, User } from '@/data/graphql/types/graphql';
 
 /**
@@ -134,6 +134,44 @@ describe('General Utilities', () => {
         family_name: 'Wonderland',
       });
       expect(getDisplayName(user)).toBe('Alice Wonderland');
+    });
+  });
+
+  describe('isRecord', () => {
+    it('returns true for a plain object', () => {
+      expect(isRecord({ key: 'value' })).toBe(true);
+    });
+
+    it('returns false for null', () => {
+      expect(isRecord(null)).toBe(false);
+    });
+
+    it('returns false for a primitive', () => {
+      expect(isRecord('string')).toBe(false);
+      expect(isRecord(42)).toBe(false);
+      expect(isRecord(undefined)).toBe(false);
+    });
+
+    it('returns true for an array (arrays are objects)', () => {
+      expect(isRecord([])).toBe(true);
+    });
+  });
+
+  describe('getFileExtension', () => {
+    it('returns lowercase extension from a normal filename', () => {
+      const file = new File(['data'], 'photo.JPG', { type: 'image/jpeg' });
+      expect(getFileExtension(file)).toBe('jpg');
+    });
+
+    it('returns empty string when filename ends with a dot (no extension after dot)', () => {
+      // split('.').pop() on 'file.' gives '' which is falsy → || '' returns ''
+      const file = new File(['data'], 'file.', { type: 'text/plain' });
+      expect(getFileExtension(file)).toBe('');
+    });
+
+    it('handles filenames with multiple dots correctly', () => {
+      const file = new File(['data'], 'my.archive.tar.gz', { type: 'application/gzip' });
+      expect(getFileExtension(file)).toBe('gz');
     });
   });
 });
