@@ -1,4 +1,5 @@
 export { default as NotificationService } from './notification';
+export { default as EventService } from './event';
 export { default as FollowService } from './follow';
 export { default as RecommendationService } from './recommendation';
 export { default as EventParticipantService } from './eventParticipant';

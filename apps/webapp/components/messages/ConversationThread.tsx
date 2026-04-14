@@ -22,8 +22,6 @@ export default function ConversationThread({ username }: ConversationThreadProps
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
-  // ── Data ───────────────────────────────────────────────────────────────────
-
   const {
     currentUserId,
     targetUser,
@@ -43,8 +41,6 @@ export default function ConversationThread({ username }: ConversationThreadProps
   const { addPendingMessage, threadItems } = useThreadMessages({ messages, currentUserId });
   const { messageListRef, messagesBottomRef, showJumpToLatest, updateScrollStickiness, scrollToLatest } =
     useMessageScroll({ targetUserId, messagesLength: messages.length });
-
-  // ── Realtime + mark-read ───────────────────────────────────────────────────
 
   const { markConversationRead: markConversationReadMutation } = useChatActions();
 
@@ -77,16 +73,12 @@ export default function ConversationThread({ username }: ConversationThreadProps
     scheduleMarkConversationReadRef.current = scheduleMarkConversationRead;
   }, [scheduleMarkConversationRead]);
 
-  // ── Side effects ───────────────────────────────────────────────────────────
-
   // Persist the last open chat username
   useEffect(() => {
     if (typeof window !== 'undefined' && username) {
       window.localStorage.setItem(STORAGE_KEYS.LAST_OPEN_CHAT_USERNAME, username);
     }
   }, [username]);
-
-  // ── Send handler ───────────────────────────────────────────────────────────
 
   const handleSend = useCallback(
     (message: string): boolean => {
@@ -98,8 +90,6 @@ export default function ConversationThread({ username }: ConversationThreadProps
     },
     [addPendingMessage, sendChatMessage, targetUserId],
   );
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   const threadPane = (
     <Box

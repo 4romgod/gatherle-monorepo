@@ -6,6 +6,87 @@ export const GetEventsCountDocument = graphql(`
   }
 `);
 
+export const ReadTrendingEventsDocument = graphql(`
+  query ReadTrendingEvents($limit: Int) {
+    readTrendingEvents(limit: $limit) {
+      eventId
+      slug
+      title
+      summary
+      description
+      status
+      lifecycleStatus
+      visibility
+      recurrenceRule
+      eventCategories {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+      location {
+        locationType
+        address {
+          street
+          city
+          state
+          zipCode
+          country
+        }
+      }
+      primarySchedule {
+        startAt
+        endAt
+      }
+      media {
+        featuredImageUrl
+      }
+      organizers {
+        role
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+        }
+      }
+      organization {
+        orgId
+        slug
+        name
+        logo
+      }
+      rsvpCount
+      savedByCount
+      isSavedByMe
+      participants {
+        participantId
+        eventId
+        userId
+        status
+        sharedVisibility
+        quantity
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+          defaultVisibility
+        }
+      }
+      myRsvp {
+        participantId
+        status
+        quantity
+      }
+    }
+  }
+`);
+
 export const GetAllEventsDocument = graphql(`
   query GetAllEvents($options: EventsQueryOptionsInput) {
     readEvents(options: $options) {

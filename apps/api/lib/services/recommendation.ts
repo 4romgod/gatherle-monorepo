@@ -20,6 +20,7 @@ const SCORE_WEIGHTS = {
 const FEED_TTL_DAYS = 7;
 const FEED_STALE_AFTER_HOURS = 24;
 const MAX_CANDIDATE_EVENTS = 500;
+const COLD_START_FALLBACK_LIMIT = 20;
 
 function daysBetween(earlier: Date, later: Date): number {
   return (later.getTime() - earlier.getTime()) / (1_000 * 60 * 60 * 24);
@@ -34,16 +35,19 @@ class RecommendationService {
     try {
       logger.debug('[RecommendationService] Computing feed', { userId });
 
-      const user = await UserDAO.readUserById(userId);
+      // Parallelise all four independent queries to reduce round-trip latency.
+      const [user, activeParticipations, following, candidateEvents] = await Promise.all([
+        UserDAO.readUserById(userId),
+        EventParticipantDAO.readByUser(userId),
+        FollowDAO.readFollowingForUser(userId),
+        EventDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS),
+      ]);
+
       // user.interests stores Ref<EventCategory>[] which at runtime are string IDs
       const userInterests = new Set<string>((user.interests as unknown as string[]) ?? []);
       const mutedOrgIds = new Set(user.mutedOrgIds ?? []);
       const mutedUserIds = new Set(user.mutedUserIds ?? []);
-
-      const activeParticipations = await EventParticipantDAO.readByUser(userId);
       const rsvpdEventIds = new Set(activeParticipations.map((p) => p.eventId));
-
-      const following = await FollowDAO.readFollowingForUser(userId);
 
       const followedUserIds = following
         .filter(
@@ -67,8 +71,6 @@ class RecommendationService {
           .filter((f) => f.targetType === FollowTargetType.Event && f.approvalStatus === FollowApprovalStatus.Accepted)
           .map((f) => f.targetId),
       );
-
-      const candidateEvents = await EventDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS);
 
       const friendRsvpCountByEventId = new Map<string, number>();
       const friendSaveCountByEventId = new Map<string, number>();
@@ -162,9 +164,10 @@ class RecommendationService {
       await UserFeedDAO.clearFeedForUser(userId);
 
       const itemsToStore = scoredItems.filter((item) => item.score > 0);
+      const expiresAt = new Date(now.getTime() + FEED_TTL_DAYS * 24 * 60 * 60 * 1_000);
+      let fallbackCount = 0;
 
       if (itemsToStore.length > 0) {
-        const expiresAt = new Date(now.getTime() + FEED_TTL_DAYS * 24 * 60 * 60 * 1_000);
         await UserFeedDAO.bulkUpsertFeedItems(
           itemsToStore.map((item) => ({
             ...item,
@@ -173,6 +176,41 @@ class RecommendationService {
             expiresAt,
           })),
         );
+      } else {
+        // Cold-start: no personalisation signals fired (new user or no activity yet).
+        // Fall back to the most popular already-fetched candidate events so the feed is
+        // never empty without triggering an additional heavy trending query.
+        const fallbackItems = [...candidateEvents]
+          .filter(
+            (event) =>
+              !rsvpdEventIds.has(event.eventId) &&
+              !savedEventIds.has(event.eventId) &&
+              (!event.orgId || !mutedOrgIds.has(event.orgId)),
+          )
+          .sort((left, right) => {
+            const leftPopularity = (left.rsvpCount ?? 0) + (left.savedByCount ?? 0);
+            const rightPopularity = (right.rsvpCount ?? 0) + (right.savedByCount ?? 0);
+            return rightPopularity - leftPopularity;
+          })
+          .slice(0, COLD_START_FALLBACK_LIMIT)
+          .map((event) => {
+            const popularity = (event.rsvpCount ?? 0) + (event.savedByCount ?? 0);
+            const score =
+              popularity >= 20 ? SCORE_WEIGHTS.POPULARITY_HIGH : popularity >= 5 ? SCORE_WEIGHTS.POPULARITY_LOW : 1;
+            return {
+              userId,
+              eventId: event.eventId,
+              score,
+              reasons: [FeedReason.Popularity] as FeedReason[],
+              computedAt: now,
+              expiresAt,
+            };
+          });
+
+        if (fallbackItems.length > 0) {
+          await UserFeedDAO.bulkUpsertFeedItems(fallbackItems);
+        }
+        fallbackCount = fallbackItems.length;
       }
 
       logger.debug('[RecommendationService] Feed computed', {
@@ -180,6 +218,7 @@ class RecommendationService {
         candidateCount: candidateEvents.length,
         scoredCount: scoredItems.length,
         surfacedCount: itemsToStore.length,
+        fallbackCount,
       });
     } catch (error) {
       logger.error('[RecommendationService] Failed to compute feed', { userId, error });

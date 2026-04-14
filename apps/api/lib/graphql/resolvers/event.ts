@@ -24,6 +24,7 @@ import { logger } from '@/utils/logger';
 import { getAuthenticatedUser } from '@/utils/auth';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
+import EventService from '@/services/event';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
@@ -109,6 +110,14 @@ export class EventResolver {
   @Query(() => Int, { description: 'Read the total number of events.' })
   async readEventsCount(): Promise<number> {
     return EventDAO.count();
+  }
+
+  @Query(() => [Event], { description: 'Read the top trending upcoming events ranked by RSVP + saved-by score.' })
+  async readTrendingEvents(
+    @Arg('limit', () => Int, { nullable: true, defaultValue: 10 }) limit?: number | null,
+  ): Promise<Event[]> {
+    const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.trunc(limit!)) : 10;
+    return EventService.readTrending(safeLimit);
   }
 
   @FieldResolver(() => [EventCategory], { nullable: true })

@@ -259,11 +259,10 @@ describe('RecommendationService', () => {
       expect(items[0].reasons).toContain(FeedReason.Freshness);
     });
 
-    it('does not store events with a score of 0', async () => {
-      // Event with no matching signals
+    it('stores zero-signal events via cold-start fallback with score 1 (floor)', async () => {
+      // Event with no matching signals — personalised score is 0 so cold-start kicks in
       const event = makeEvent({ eventId: 'event-zero', eventCategories: ['unknown-cat'], orgId: null });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['different-cat'] }));
-      // different interest → no category match; no friends; no org follow; not fresh; not popular
       const staleCreatedAt = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000);
       const farFuture = new Date(Date.now() + 60 * 24 * 60 * 60 * 1_000);
       const eventWithNoSignals = {
@@ -277,7 +276,12 @@ describe('RecommendationService', () => {
 
       await RecommendationService.computeFeedForUser('user-1');
 
-      expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+      // Cold-start stores the candidate with floor score 1 and Popularity reason
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items).toHaveLength(1);
+      expect(items[0].eventId).toBe('event-zero');
+      expect(items[0].score).toBe(1);
+      expect(items[0].reasons).toEqual([FeedReason.Popularity]);
     });
 
     it('clears existing feed before writing new items', async () => {
@@ -327,6 +331,127 @@ describe('RecommendationService', () => {
   describe('onEventPublished', () => {
     it('resolves without error (lazy recompute strategy)', async () => {
       await expect(RecommendationService.onEventPublished('event-1')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('cold-start fallback (no personalisation signals)', () => {
+    // An event that produces score=0: wrong category, null org, no popularity, not fresh, no urgency.
+    const makeZeroSignalEvent = (overrides: Record<string, unknown> = {}) =>
+      makeEvent({
+        eventCategories: ['unmatched-cat'],
+        orgId: null,
+        rsvpCount: 0,
+        savedByCount: 0,
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1_000),
+        primarySchedule: { startAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1_000) },
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      // User has a different interest to ensure no CategoryMatch.
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['other-cat'] }));
+    });
+
+    it('stores candidateEvents as fallback items with Popularity reason', async () => {
+      const candidate = makeZeroSignalEvent({ eventId: 'candidate-1' });
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items).toHaveLength(1);
+      expect(items[0].eventId).toBe('candidate-1');
+      expect(items[0].reasons).toEqual([FeedReason.Popularity]);
+    });
+
+    it('assigns score 1 (floor) to candidates with no popularity signal', async () => {
+      const candidate = makeZeroSignalEvent({ eventId: 'candidate-1', rsvpCount: 0, savedByCount: 0 });
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items[0].score).toBe(1);
+    });
+
+    it('sorts fallback candidates by popularity descending', async () => {
+      const low = makeZeroSignalEvent({ eventId: 'low', rsvpCount: 1, savedByCount: 0 });
+      const high = makeZeroSignalEvent({ eventId: 'high', rsvpCount: 3, savedByCount: 0 });
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([low, high]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items[0].eventId).toBe('high');
+      expect(items[1].eventId).toBe('low');
+    });
+
+    it('slices fallback to at most COLD_START_FALLBACK_LIMIT (20) candidates', async () => {
+      const candidates = Array.from({ length: 25 }, (_, i) => makeZeroSignalEvent({ eventId: `e-${i}` }));
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue(candidates);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items.length).toBeLessThanOrEqual(20);
+    });
+
+    it('excludes already RSVPd events from the fallback', async () => {
+      (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue([makeParticipant('user-1', 'candidate-1')]);
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+        makeZeroSignalEvent({ eventId: 'candidate-1' }),
+      ]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+    });
+
+    it('excludes already saved events from the fallback', async () => {
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        makeFollow(FollowTargetType.Event, 'candidate-1'),
+      ]);
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+        makeZeroSignalEvent({ eventId: 'candidate-1' }),
+      ]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+    });
+
+    it('excludes events from muted organisations from the fallback', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(
+        makeUser({ mutedOrgIds: ['muted-org'], interests: ['other-cat'] }),
+      );
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+        makeZeroSignalEvent({ eventId: 'candidate-1', orgId: 'muted-org' }),
+      ]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+    });
+
+    it('does not call bulkUpsertFeedItems when no candidateEvents remain after filtering', async () => {
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+    });
+
+    it('does not enter cold-start when personalised items have score > 0', async () => {
+      // Category match fires — there will be scored items.
+      const event = makeEvent({ eventId: 'event-1', eventCategories: ['cat-a'] });
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['cat-a'] }));
+      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      // bulkUpsertFeedItems called with the scored item, not a fallback FeedReason.Popularity item
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items[0].reasons).not.toEqual([FeedReason.Popularity]);
     });
   });
 });
