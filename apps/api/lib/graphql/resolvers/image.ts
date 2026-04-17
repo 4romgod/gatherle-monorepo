@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { Arg, Query, Authorized, Ctx, Resolver } from 'type-graphql';
 import { ImageUploadUrl, ImageEntityType, ImageType, UserRole } from '@gatherle/commons/types';
 import { getAuthenticatedUser } from '@/utils';
-import { getPresignedUploadUrl, getPresignedUrl } from '@/clients/AWS/s3Client';
-import { AWS_REGION, CONTENT_TYPE_MAP, S3_BUCKET_NAME, STAGE } from '@/constants';
+import { getPresignedUploadUrl } from '@/clients/AWS/s3Client';
+import { CF_IMAGES_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
 import { randomUUID } from 'crypto';
@@ -47,9 +47,12 @@ export class ImageResolver {
     const entityFolder = `${entityType}s`;
     const key = `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${filename}`;
 
+    if (!CF_IMAGES_DOMAIN) {
+      throw new Error('CF_IMAGES_DOMAIN is required to generate stable media URLs');
+    }
+
     const uploadUrl = await getPresignedUploadUrl(key, contentType, 900); // 15 minutes
-    const publicUrl = `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${key}`;
-    const readUrl = await getPresignedUrl(key, 604800); // 7 days
+    const readUrl = `https://${CF_IMAGES_DOMAIN}/${key}`;
 
     logger.info('Generated image upload URL', {
       userId: user.userId,
@@ -57,8 +60,9 @@ export class ImageResolver {
       entityId: resolvedEntityId,
       imageType,
       key,
+      mediaHost: CF_IMAGES_DOMAIN,
     });
 
-    return { uploadUrl, key, publicUrl, readUrl };
+    return { uploadUrl, key, readUrl };
   }
 }

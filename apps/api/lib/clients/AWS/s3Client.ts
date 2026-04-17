@@ -1,9 +1,22 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { AWS_REGION, S3_BUCKET_NAME } from '@/constants';
+import { AWS_REGION, CF_IMAGES_DOMAIN, S3_BUCKET_NAME } from '@/constants';
 import { logger } from '@/utils/logger';
 
 let s3Client: S3Client;
+
+function getConfiguredMediaHostname(): string | null {
+  if (!CF_IMAGES_DOMAIN) {
+    return null;
+  }
+
+  try {
+    const candidate = CF_IMAGES_DOMAIN.startsWith('http') ? CF_IMAGES_DOMAIN : `https://${CF_IMAGES_DOMAIN}`;
+    return new URL(candidate).hostname;
+  } catch {
+    return null;
+  }
+}
 
 function getS3Client(): S3Client {
   if (!s3Client) {
@@ -123,10 +136,15 @@ export function getKeyFromPublicUrl(publicUrl: string): string | null {
     const parsed = new URL(publicUrl);
     const hostname = parsed.hostname;
     const pathname = parsed.pathname.replace(/^\/+/, '');
+    const mediaHostname = getConfiguredMediaHostname();
 
     const regionalHost = `${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com`;
     const globalHost = `${S3_BUCKET_NAME}.s3.amazonaws.com`;
     const regionalAltHost = `s3.${AWS_REGION}.amazonaws.com`;
+
+    if (mediaHostname && hostname === mediaHostname) {
+      return pathname;
+    }
 
     if (hostname === regionalHost || hostname === globalHost) {
       return pathname;

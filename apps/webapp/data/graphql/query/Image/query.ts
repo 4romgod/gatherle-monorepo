@@ -10,7 +10,6 @@ export const GetImageUploadUrlDocument = graphql(`
     getImageUploadUrl(entityType: $entityType, imageType: $imageType, extension: $extension, entityId: $entityId) {
       uploadUrl
       key
-      publicUrl
       readUrl
     }
   }

@@ -213,7 +213,7 @@ describe('useImageUpload', () => {
       await result.current.upload(makeFile()).catch(() => {});
     });
 
-    expect(result.current.error).toMatch(/Failed to get upload URL/);
+    expect(result.current.error).toBe('Image upload failed. Please try again.');
   });
 
   it('handles non-Error throws in catch block', async () => {
@@ -224,6 +224,6 @@ describe('useImageUpload', () => {
       await result.current.upload(makeFile()).catch(() => {});
     });
 
-    expect(result.current.error).toBe('Upload failed');
+    expect(result.current.error).toBe('Image upload failed. Please try again.');
   });
 });

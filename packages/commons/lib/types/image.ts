@@ -33,9 +33,9 @@ export class ImageUploadUrl {
   @Field(() => String, { description: 'S3 key/path where the file will be stored' })
   key: string;
 
-  @Field(() => String, { description: 'Final public URL after upload completes' })
-  publicUrl: string;
-
-  @Field(() => String, { description: 'Pre-signed URL for reading the uploaded image' })
+  @Field(() => String, {
+    description:
+      'Canonical CDN-backed media URL for the uploaded file. Persist this value and use it to display the image.',
+  })
   readUrl: string;
 }

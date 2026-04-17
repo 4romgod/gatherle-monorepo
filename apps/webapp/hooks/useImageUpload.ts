@@ -16,7 +16,7 @@ interface UseImageUploadOptions {
 
 interface UseImageUploadResult {
   /**
-   * Upload a file to S3. Resolves to the presigned read URL on success.
+   * Upload a file to S3. Resolves to the media URL that should be persisted on success.
    * Also sets `preview` to an immediate local FileReader data URL.
    */
   upload: (file: File) => Promise<string>;
@@ -29,7 +29,7 @@ interface UseImageUploadResult {
 
 /**
  * Shared hook for all S3 image uploads across the webapp.
- * Handles FileReader preview, the presigned URL query, and the S3 PUT in one place.
+ * Handles FileReader preview, the upload URL query, and the S3 PUT in one place.
  *
  * @example
  * const { upload, uploading, error, preview, reset } = useImageUpload({
@@ -118,9 +118,17 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
       setPreview(null);
       return readUrl;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Upload failed';
-      logger.error('useImageUpload error', { entityType, imageType, error: message });
-      setError(message);
+      const rawMessage = err instanceof Error ? err.message : 'Upload failed';
+      // Only expose safe, user-facing validation messages. Server/infra errors are logged
+      // internally and replaced with a generic message so internal details never reach the UI.
+      const isUserFacingError =
+        rawMessage.startsWith('Unsupported file type') ||
+        rawMessage.startsWith('File is too large') ||
+        rawMessage.startsWith('Unable to determine file type') ||
+        rawMessage.startsWith('Upload failed:');
+      const userMessage = isUserFacingError ? rawMessage : 'Image upload failed. Please try again.';
+      logger.error('useImageUpload error', { entityType, imageType, error: rawMessage });
+      setError(userMessage);
       throw err;
     } finally {
       setUploading(false);

@@ -23,6 +23,7 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 jest.mock('@/constants', () => ({
   AWS_REGION: 'us-east-1',
   S3_BUCKET_NAME: 'test-bucket',
+  CF_IMAGES_DOMAIN: 'd111111abcdef8.cloudfront.net',
 }));
 
 jest.mock('@/utils/logger', () => ({
@@ -144,6 +145,10 @@ describe('s3Client', () => {
   });
 
   describe('getKeyFromPublicUrl', () => {
+    it('extracts key from the configured CloudFront URL', () => {
+      expect(getKeyFromPublicUrl('https://d111111abcdef8.cloudfront.net/images/photo.jpg')).toBe('images/photo.jpg');
+    });
+
     it('extracts key from regional URL (bucket.s3.region.amazonaws.com)', () => {
       expect(getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/images/photo.jpg')).toBe(
         'images/photo.jpg',
@@ -175,7 +180,7 @@ describe('s3Client', () => {
 
     beforeAll(() => {
       jest.resetModules();
-      jest.doMock('@/constants', () => ({ AWS_REGION: 'us-east-1', S3_BUCKET_NAME: '' }));
+      jest.doMock('@/constants', () => ({ AWS_REGION: 'us-east-1', S3_BUCKET_NAME: '', CF_IMAGES_DOMAIN: '' }));
       jest.doMock('@aws-sdk/client-s3', () => ({
         S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
         PutObjectCommand: jest.fn(),

@@ -10,8 +10,10 @@ across all Gatherle entities.
 Single private S3 bucket per environment: `gatherle-images-{stage}-{region}`
 
 - All objects private by default (`BlockPublicAccess.BLOCK_ALL`)
-- Access via pre-signed URLs only (upload: `PutObject`, read: `GetObject`)
+- Uploads use pre-signed `PutObject` URLs; reads in deployed environments use CloudFront URLs backed by the private
+  bucket
 - Bucket name exported from `S3BucketStack` and injected into the Lambda as `S3_BUCKET_NAME`
+- CloudFront distribution domain exported from `S3BucketStack` and injected into the Lambda as `CF_IMAGES_DOMAIN`
 
 ---
 
@@ -20,18 +22,18 @@ Single private S3 bucket per environment: `gatherle-images-{stage}-{region}`
 All keys follow a consistent, entity-scoped pattern:
 
 ```
-{stage}/{entityType}s/{entityId}/{imageType}-{uuid}.{ext}
+{stage}/{entityType}s/{entityId}/{filename}
 ```
 
 Where `{stage}` is `dev`, `beta`, or `prod` (lowercase, from `STAGE` env var).
 
-| Entity       | Image type               | Example key                                  |
-| ------------ | ------------------------ | -------------------------------------------- |
-| User         | Avatar / profile picture | `beta/users/{userId}/avatar-{uuid}.jpg`      |
-| Organization | Logo                     | `beta/organizations/{orgId}/logo-{uuid}.png` |
-| Event        | Featured / cover image   | `beta/events/{eventId}/featured-{uuid}.jpg`  |
-| Venue        | Featured image           | `beta/venues/{venueId}/featured-{uuid}.jpg`  |
-| Venue        | Gallery images           | `beta/venues/{venueId}/gallery-{uuid}.jpg`   |
+| Entity       | Image type               | Example key                                |
+| ------------ | ------------------------ | ------------------------------------------ |
+| User         | Avatar / profile picture | `beta/users/{userId}/avatar.jpg`           |
+| Organization | Logo                     | `beta/organizations/{orgId}/logo.png`      |
+| Event        | Featured / cover image   | `beta/events/{eventId}/featured.jpg`       |
+| Venue        | Featured image           | `beta/venues/{venueId}/featured.jpg`       |
+| Venue        | Gallery images           | `beta/venues/{venueId}/gallery-{uuid}.jpg` |
 
 **User images**: the `entityId` is always resolved server-side from the authenticated user's JWT — the client cannot
 supply it.
@@ -39,7 +41,9 @@ supply it.
 **Organization / Event / Venue**: the client passes `entityId`. During entity creation (before an ID exists), `entityId`
 may be omitted; the resolver generates a random UUID so the key is still non-colliding.
 
-**Naming rule:** the UUID suffix is mandatory. User-supplied strings never form the full key.
+**Naming rule:** gallery images get a UUID suffix so each upload is distinct; avatar, logo, and featured images reuse a
+stable filename so the latest upload replaces the previous object for that slot. User-supplied strings never form the
+full key.
 
 ---
 
@@ -56,7 +60,8 @@ may be omitted; the resolver generates a random UUID so the key is still non-col
 
 ## Local Development
 
-Image uploads in local dev point at the **Beta S3 bucket** directly. There is no dev-stage bucket.
+Image uploads in local dev point at the **Beta S3 bucket** directly for the `PUT`, and reads still require the
+configured CloudFront domain. There is no dev-stage bucket.
 
 Stage-prefixed keys keep dev and beta objects cleanly separated within the shared bucket:
 
@@ -69,6 +74,7 @@ Stage-prefixed keys keep dev and beta objects cleanly separated within the share
 
 ```
 S3_BUCKET_NAME=gatherle-images-beta-af-south-1
+CF_IMAGES_DOMAIN=<your-images-cloudfront-domain>
 STAGE=Dev
 # Add localhost to the Beta bucket's CORS allowed origins:
 CORS_ALLOWED_ORIGINS=http://localhost:3000
@@ -107,33 +113,12 @@ All authentication is enforced by the `@Authorized` decorator on `getImageUpload
 
 ---
 
-## ⚠️ Known Issue: `readUrl` Expires
+## Read URL Behavior
 
-`getPresignedUrl` currently defaults to `expiresIn = 3600s` (1 hour). Storing the resulting URL in the database means
-image URLs break after an hour.
-
-### Short-term fix (immediate)
-
-Extend the expiry when called from the image resolver to 7 days:
-
-```ts
-// apps/api/lib/graphql/resolvers/image.ts
-const readUrl = await getPresignedUrl(key, 604800); // 7 days
-```
-
-This makes the bug non-critical in practice while the proper solution is implemented.
-
-### Long-term fix
-
-Store the S3 **`key`** in the database field (not the URL). Hydrate a fresh pre-signed read URL at query time inside the
-resolver, or serve images through a CloudFront distribution with a permanent custom URL.
-
-| Option                                | Description                                                               | Effort                                        |
-| ------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------- |
-| **Store key + hydrate at query time** | Model fields hold keys; resolvers call `getPresignedUrl` before returning | Medium — requires resolver changes per entity |
-| **CloudFront distribution**           | CDN in front of the bucket; objects have permanent, cacheable URLs        | Medium — CDK infrastructure change            |
-
-CloudFront is the production-grade end state. Key hydration is the interim step before CDK investment.
+- `readUrl` and `publicUrl` are always stable CloudFront URLs such as `https://<distribution-domain>/<key>`, so the URL
+  stored in MongoDB does not expire.
+- The API does not fall back to pre-signed `GetObject` URLs. If `CF_IMAGES_DOMAIN` is missing, `getImageUploadUrl` fails
+  fast because an expiring URL is not acceptable for persistence.
 
 ---
 
@@ -166,7 +151,7 @@ interface UseImageUploadOptions {
 }
 
 function useImageUpload(options: UseImageUploadOptions): {
-  upload: (file: File) => Promise<string>; // resolves to readUrl
+  upload: (file: File) => Promise<string>; // resolves to the URL that should be persisted
   uploading: boolean;
   error: string | null;
   preview: string | null; // local FileReader data URL (shows immediately)
@@ -179,28 +164,28 @@ function useImageUpload(options: UseImageUploadOptions): {
 - Handles `FileReader` preview generation
 - Performs the S3 `PUT` via `fetch`
 - Manages `uploading` / `error` state
-- Returns the final `readUrl` from S3
+- Returns the final media URL for persistence
 
 ---
 
 ## Implementation Order
 
-| Step | Task                                                                                        | Scope        | Status  |
-| ---- | ------------------------------------------------------------------------------------------- | ------------ | ------- |
-| 1    | Add `ImageEntityType` / `ImageType` enums to `packages/commons`                             | API          | ✅ Done |
-| 2    | Redesign `getImageUploadUrl` resolver — enum params + entity-ID key structure               | API          | ✅ Done |
-| 3    | Emit schema + run codegen                                                                   | API / Webapp | ✅ Done |
-| 4    | Update webapp GQL query to new variables                                                    | Webapp       | ✅ Done |
-| 5    | Update `CreateOrganizationPage` caller                                                      | Webapp       | ✅ Done |
-| 6    | Update `EditProfilePage` caller                                                             | Webapp       | ✅ Done |
-| 7    | **Fix expiry bug** — extend `readUrl` presigned URL expiry to 7 days in `image.ts` resolver | API          | ⬜      |
-| 8    | **Create `useImageUpload` hook**                                                            | Webapp       | ⬜      |
-| 9    | **Refactor `CreateOrganizationPage`** onto the hook                                         | Webapp       | ⬜      |
-| 10   | **Refactor `EditProfilePage`** onto the hook                                                | Webapp       | ⬜      |
-| 11   | **`EditOrganizationPage`** — logo upload                                                    | Webapp       | ⬜      |
-| 12   | **`EventMutationForm`** (create + edit) — featured image                                    | Webapp       | ⬜      |
-| 13   | **`CreateVenuePage` / `EditVenuePage`** — featured + gallery                                | Webapp       | ⬜      |
-| 14   | **Store `key` instead of URL** (+ resolver hydration or CloudFront)                         | API + Webapp | ⬜      |
+| Step | Task                                                                                           | Scope        | Status  |
+| ---- | ---------------------------------------------------------------------------------------------- | ------------ | ------- |
+| 1    | Add `ImageEntityType` / `ImageType` enums to `packages/commons`                                | API          | ✅ Done |
+| 2    | Redesign `getImageUploadUrl` resolver — enum params + entity-ID key structure                  | API          | ✅ Done |
+| 3    | Emit schema + run codegen                                                                      | API / Webapp | ✅ Done |
+| 4    | Update webapp GQL query to new variables                                                       | Webapp       | ✅ Done |
+| 5    | Update `CreateOrganizationPage` caller                                                         | Webapp       | ✅ Done |
+| 6    | Update `EditProfilePage` caller                                                                | Webapp       | ✅ Done |
+| 7    | **Return stable media URLs** — CloudFront in front of the bucket with local presigned fallback | API + CDK    | ✅ Done |
+| 8    | **Create `useImageUpload` hook**                                                               | Webapp       | ⬜      |
+| 9    | **Refactor `CreateOrganizationPage`** onto the hook                                            | Webapp       | ⬜      |
+| 10   | **Refactor `EditProfilePage`** onto the hook                                                   | Webapp       | ⬜      |
+| 11   | **`EditOrganizationPage`** — logo upload                                                       | Webapp       | ⬜      |
+| 12   | **`EventMutationForm`** (create + edit) — featured image                                       | Webapp       | ⬜      |
+| 13   | **`CreateVenuePage` / `EditVenuePage`** — featured + gallery                                   | Webapp       | ⬜      |
+| 14   | **Store `key` instead of URL** (+ resolver hydration)                                          | API + Webapp | ⬜      |
 
 ---
 

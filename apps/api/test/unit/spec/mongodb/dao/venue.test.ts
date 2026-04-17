@@ -74,6 +74,30 @@ describe('VenueDAO', () => {
       expect(result).toEqual(mockVenue);
     });
 
+    it('derives a slug from the venue name when the persisted object has no slug', async () => {
+      (VenueModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => ({
+          ...mockVenue,
+          slug: undefined,
+        }),
+      });
+
+      const result = await VenueDAO.create({
+        orgId: 'org-1',
+        type: VenueType.Physical,
+        name: 'Test Venue',
+        address: {
+          street: '123 Test St',
+          city: 'Test City',
+          region: 'Test State',
+          country: 'Test Country',
+          postalCode: '12345',
+        },
+      });
+
+      expect(result.slug).toBe('test-venue');
+    });
+
     it('wraps errors', async () => {
       (VenueModel.create as jest.Mock).mockRejectedValue(new MockMongoError(0));
 
@@ -129,6 +153,22 @@ describe('VenueDAO', () => {
       await expect(VenueDAO.readVenueById('venue-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
+    });
+
+    it('derives a slug from venueId when both slug and name are missing', async () => {
+      (VenueModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({
+          toObject: () => ({
+            venueId: 'venue-1',
+            orgId: 'org-1',
+            type: VenueType.Physical,
+          }),
+        }),
+      );
+
+      const result = await VenueDAO.readVenueById('venue-1');
+
+      expect(result.slug).toBe('venue-1');
     });
   });
 
