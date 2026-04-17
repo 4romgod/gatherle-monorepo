@@ -60,6 +60,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     awsRegion: account.awsRegion,
     enableCustomDomains,
     s3BucketName: s3BucketStack.imagesBucket.bucketName,
+    cfImagesDomain: s3BucketStack.imagesCdnDomainName,
     description: 'This stack includes infrastructure for the GraphQL API. This includes serverless resources.',
   });
 

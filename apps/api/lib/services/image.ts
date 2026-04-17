@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { uploadToS3, deleteFromS3 } from '@/clients/AWS/s3Client';
+import { uploadToS3, deleteFromS3, getKeyFromPublicUrl } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
 
 class ImageService {
@@ -37,8 +37,11 @@ class ImageService {
    */
   static async deleteImageByUrl(url: string): Promise<void> {
     try {
-      const urlObj = new URL(url);
-      const key = urlObj.pathname.substring(1); // Remove leading slash
+      const key = getKeyFromPublicUrl(url);
+      if (!key) {
+        logger.warn('Skipping delete for non-Gatherle media URL', { url });
+        return;
+      }
 
       await deleteFromS3(key);
 

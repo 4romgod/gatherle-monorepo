@@ -35,6 +35,7 @@ export interface GraphQLStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
   s3BucketName?: string;
+  cfImagesDomain?: string;
   enableCustomDomains?: boolean;
 }
 
@@ -91,6 +92,7 @@ export class GraphQLStack extends Stack {
         STAGE: props.applicationStage,
         SECRET_ARN: gatherleSecret.secretArn,
         S3_BUCKET_NAME: props.s3BucketName || '',
+        CF_IMAGES_DOMAIN: props.cfImagesDomain || '',
         CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS ?? '',
         EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '',

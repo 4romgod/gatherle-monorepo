@@ -6,7 +6,6 @@ import * as authUtils from '@/utils';
 
 jest.mock('@/clients/AWS/s3Client', () => ({
   getPresignedUploadUrl: jest.fn(),
-  getPresignedUrl: jest.fn(),
 }));
 
 jest.mock('@/utils', () => ({
@@ -20,6 +19,7 @@ jest.mock('@/utils/logger', () => ({
 jest.mock('@/constants', () => ({
   AWS_REGION: 'af-south-1',
   S3_BUCKET_NAME: 'test-bucket',
+  CF_IMAGES_DOMAIN: 'd111111abcdef8.cloudfront.net',
   STAGE: 'test',
   CONTENT_TYPE_MAP: {
     jpg: 'image/jpeg',
@@ -46,7 +46,6 @@ describe('ImageResolver', () => {
     jest.clearAllMocks();
     (authUtils.getAuthenticatedUser as jest.Mock).mockReturnValue(mockUser);
     (s3Client.getPresignedUploadUrl as jest.Mock).mockResolvedValue('https://upload.example.com/signed');
-    (s3Client.getPresignedUrl as jest.Mock).mockResolvedValue('https://read.example.com/signed');
   });
 
   describe('S3 key generation — filename determinism', () => {
@@ -144,16 +143,46 @@ describe('ImageResolver', () => {
   });
 
   describe('returned URLs', () => {
-    it('returns uploadUrl, readUrl, and publicUrl', async () => {
+    it('returns uploadUrl and stable CDN-backed readUrl', async () => {
       const result = await resolver.getImageUploadUrl(ImageEntityType.User, ImageType.Avatar, 'jpg', null, mockContext);
       expect(result.uploadUrl).toBe('https://upload.example.com/signed');
-      expect(result.readUrl).toBe('https://read.example.com/signed');
-      expect(result.publicUrl).toContain('test-bucket');
+      expect(result.readUrl).toBe('https://d111111abcdef8.cloudfront.net/test/users/user-abc/avatar.jpg');
     });
 
-    it('includes the S3 key in the publicUrl', async () => {
+    it('includes the S3 key in the readUrl', async () => {
       const result = await resolver.getImageUploadUrl(ImageEntityType.User, ImageType.Avatar, 'jpg', null, mockContext);
-      expect(result.publicUrl).toContain(result.key);
+      expect(result.readUrl).toContain(result.key);
+    });
+
+    it('throws when CF_IMAGES_DOMAIN is not configured', async () => {
+      jest.resetModules();
+      jest.doMock('@/clients/AWS/s3Client', () => ({
+        getPresignedUploadUrl: jest.fn().mockResolvedValue('https://upload.example.com/signed'),
+      }));
+      jest.doMock('@/utils', () => ({
+        getAuthenticatedUser: jest.fn(() => mockUser),
+      }));
+      jest.doMock('@/utils/logger', () => ({
+        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+      }));
+      jest.doMock('@/constants', () => ({
+        AWS_REGION: 'af-south-1',
+        S3_BUCKET_NAME: 'test-bucket',
+        CF_IMAGES_DOMAIN: '',
+        STAGE: 'test',
+        CONTENT_TYPE_MAP: {
+          jpg: 'image/jpeg',
+        },
+      }));
+
+      const { ImageResolver: UnconfiguredResolver } = require('@/graphql/resolvers/image');
+      const unconfiguredResolver = new UnconfiguredResolver();
+
+      await expect(
+        unconfiguredResolver.getImageUploadUrl(ImageEntityType.User, ImageType.Avatar, 'jpg', null, mockContext),
+      ).rejects.toThrow('CF_IMAGES_DOMAIN is required to generate stable media URLs');
+
+      jest.resetModules();
     });
   });
 });
