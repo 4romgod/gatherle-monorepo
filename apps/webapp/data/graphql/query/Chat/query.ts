@@ -37,6 +37,9 @@ export const ReadChatMessagesDocument = graphql(`
         isRead
         readAt
         createdAt
+        replyToMomentId
+        replyToMomentCaption
+        replyToMomentType
       }
       nextCursor
       hasMore

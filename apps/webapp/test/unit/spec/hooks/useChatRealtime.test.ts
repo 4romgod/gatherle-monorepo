@@ -243,6 +243,40 @@ describe('useChatRealtime', () => {
     );
   });
 
+  it('sendChatMessage spreads replyContext into the action payload when provided', () => {
+    const { result } = renderHook(() => useChatRealtime());
+
+    act(() => {
+      result.current.sendChatMessage('recipient-1', 'Nice!', {
+        replyToMomentId: 'moment-abc',
+        replyToMomentCaption: 'Great sunset',
+        replyToMomentType: 'image',
+      });
+    });
+
+    expect(mockSendAction).toHaveBeenCalledWith({
+      action: 'chat.send',
+      recipientUserId: 'recipient-1',
+      message: 'Nice!',
+      replyToMomentId: 'moment-abc',
+      replyToMomentCaption: 'Great sunset',
+      replyToMomentType: 'image',
+    });
+  });
+
+  it('sendChatMessage omits reply context properties when not provided', () => {
+    const { result } = renderHook(() => useChatRealtime());
+
+    act(() => {
+      result.current.sendChatMessage('recipient-1', 'Hello!');
+    });
+
+    const call = mockSendAction.mock.calls[0][0];
+    expect(call).not.toHaveProperty('replyToMomentId');
+    expect(call).not.toHaveProperty('replyToMomentCaption');
+    expect(call).not.toHaveProperty('replyToMomentType');
+  });
+
   it('does not log websocket errors when disabled', () => {
     const { logger } = require('@/lib/utils');
 

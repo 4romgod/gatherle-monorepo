@@ -170,13 +170,21 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     }
   }, [enabled, token, websocketBaseUrl, websocketSource]);
 
-  const sendChatMessage = useCallback((recipientUserId: string, message: string) => {
-    return sendSharedRealtimeAction({
-      action: 'chat.send',
-      recipientUserId,
-      message,
-    });
-  }, []);
+  const sendChatMessage = useCallback(
+    (
+      recipientUserId: string,
+      message: string,
+      replyContext?: { replyToMomentId?: string; replyToMomentCaption?: string; replyToMomentType?: string },
+    ) => {
+      return sendSharedRealtimeAction({
+        action: 'chat.send',
+        recipientUserId,
+        message,
+        ...replyContext,
+      });
+    },
+    [],
+  );
 
   const markConversationRead = useCallback((withUserId: string) => {
     return sendSharedRealtimeAction({

@@ -10,6 +10,9 @@ export interface ThreadMessage {
   message: string;
   isRead: boolean;
   createdAt: string;
+  replyToMomentId?: string | null;
+  replyToMomentCaption?: string | null;
+  replyToMomentType?: string | null;
 }
 
 interface PendingMessage {
@@ -17,6 +20,9 @@ interface PendingMessage {
   recipientUserId: string;
   message: string;
   createdAt: string;
+  replyToMomentId?: string;
+  replyToMomentCaption?: string;
+  replyToMomentType?: string;
 }
 
 export type ThreadRenderItem =
@@ -72,6 +78,9 @@ export function useThreadMessages({ messages, currentUserId }: UseThreadMessages
       message: p.message,
       isRead: false,
       createdAt: p.createdAt,
+      replyToMomentId: p.replyToMomentId,
+      replyToMomentCaption: p.replyToMomentCaption,
+      replyToMomentType: p.replyToMomentType,
       __pending: true as const,
     }));
 
@@ -132,13 +141,28 @@ export function useThreadMessages({ messages, currentUserId }: UseThreadMessages
     return items;
   }, [currentUserId, renderedMessages]);
 
-  const addPendingMessage = ({ recipientUserId, message }: { recipientUserId: string; message: string }) => {
+  const addPendingMessage = ({
+    recipientUserId,
+    message,
+    replyToMomentId,
+    replyToMomentCaption,
+    replyToMomentType,
+  }: {
+    recipientUserId: string;
+    message: string;
+    replyToMomentId?: string;
+    replyToMomentCaption?: string;
+    replyToMomentType?: string;
+  }) => {
     pendingIdCounterRef.current += 1;
     const pending: PendingMessage = {
       clientId: `pending-${Date.now()}-${pendingIdCounterRef.current}`,
       recipientUserId,
       message,
       createdAt: new Date().toISOString(),
+      replyToMomentId,
+      replyToMomentCaption,
+      replyToMomentType,
     };
     setPendingMessages((prev) => [...prev, pending]);
   };

@@ -80,7 +80,12 @@ export class ChatMessagingService {
    * Send a chat message from one user to another, save to database,
    * and deliver realtime events to all active connections
    */
-  async sendMessage(senderUserId: string, recipientUserId: string, message: string): Promise<SendMessageResult> {
+  async sendMessage(
+    senderUserId: string,
+    recipientUserId: string,
+    message: string,
+    replyContext?: { replyToMomentId?: string; replyToMomentCaption?: string; replyToMomentType?: string },
+  ): Promise<SendMessageResult> {
     // Fetch connections for both users
     const [recipientConnections, senderConnections] = await Promise.all([
       WebSocketConnectionDAO.readConnectionsByUserId(recipientUserId),
@@ -92,6 +97,7 @@ export class ChatMessagingService {
       senderUserId,
       recipientUserId,
       message,
+      ...replyContext,
     });
 
     const messageId = chatMessage.chatMessageId;

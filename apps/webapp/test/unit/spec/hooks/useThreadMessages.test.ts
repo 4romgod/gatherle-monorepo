@@ -231,6 +231,38 @@ describe('useThreadMessages — addPendingMessage', () => {
     const pending = messageItems(result.current.threadItems).filter((m) => m.pending);
     expect(pending).toHaveLength(2);
   });
+
+  it('includes replyToMomentId/Caption/Type on the pending message when provided', () => {
+    const { result } = renderHook(() => useThreadMessages({ messages: [], currentUserId: CURRENT_USER }));
+
+    act(() => {
+      result.current.addPendingMessage({
+        recipientUserId: OTHER_USER,
+        message: 'love this!',
+        replyToMomentId: 'moment-xyz',
+        replyToMomentCaption: 'Sunset vibes',
+        replyToMomentType: 'image',
+      });
+    });
+
+    const [msg] = messageItems(result.current.threadItems);
+    expect(msg.message.replyToMomentId).toBe('moment-xyz');
+    expect(msg.message.replyToMomentCaption).toBe('Sunset vibes');
+    expect(msg.message.replyToMomentType).toBe('image');
+  });
+
+  it('reply context fields are undefined on pending messages when not provided', () => {
+    const { result } = renderHook(() => useThreadMessages({ messages: [], currentUserId: CURRENT_USER }));
+
+    act(() => {
+      result.current.addPendingMessage({ recipientUserId: OTHER_USER, message: 'plain message' });
+    });
+
+    const [msg] = messageItems(result.current.threadItems);
+    expect(msg.message.replyToMomentId).toBeUndefined();
+    expect(msg.message.replyToMomentCaption).toBeUndefined();
+    expect(msg.message.replyToMomentType).toBeUndefined();
+  });
 });
 
 describe('useThreadMessages — pending-message pruning', () => {

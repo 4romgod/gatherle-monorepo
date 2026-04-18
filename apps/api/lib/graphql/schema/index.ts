@@ -17,6 +17,7 @@ import {
   NotificationResolver,
   ImageResolver,
   FeedResolver,
+  EventMomentResolver,
 } from '@/graphql/resolvers';
 import { authChecker } from '@/utils/auth';
 
@@ -39,6 +40,7 @@ const createSchema = () => {
       NotificationResolver,
       ImageResolver,
       FeedResolver,
+      EventMomentResolver,
     ],
     validate: true,
     emitSchemaFile: false,

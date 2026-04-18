@@ -165,4 +165,97 @@ describe('websocket route: chat.send', () => {
     expect(WebSocketConnectionDAO.removeConnection).toHaveBeenCalledWith('conn-recipient');
     expect(response.statusCode).toBe(HttpStatusCode.OK);
   });
+
+  it('passes reply context fields to ChatMessageDAO.create when present in payload', async () => {
+    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-sender',
+      userId: 'user-1',
+      domainName: 'api.example.com',
+      stage: 'beta',
+    });
+
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
+      .mockResolvedValueOnce([
+        { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },
+      ])
+      .mockResolvedValueOnce([
+        { connectionId: 'conn-sender', userId: 'user-1', domainName: 'api.example.com', stage: 'beta' },
+      ]);
+
+    (ChatMessageDAO.create as jest.Mock).mockResolvedValue({
+      chatMessageId: 'msg-reply',
+      senderUserId: 'user-1',
+      recipientUserId: 'user-2',
+      message: 'great moment!',
+      replyToMomentId: 'moment-xyz',
+      replyToMomentCaption: 'Fun event',
+      replyToMomentType: 'image',
+      isRead: false,
+      createdAt: new Date('2026-04-18T10:00:00.000Z'),
+    });
+
+    (ChatMessageDAO.countUnreadForConversation as jest.Mock).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    (ChatMessageDAO.countUnreadTotal as jest.Mock).mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+    await handleChatSend({
+      body: JSON.stringify({
+        recipientUserId: 'user-2',
+        message: 'great moment!',
+        replyToMomentId: 'moment-xyz',
+        replyToMomentCaption: 'Fun event',
+        replyToMomentType: 'image',
+      }),
+    } as any);
+
+    expect(ChatMessageDAO.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyToMomentId: 'moment-xyz',
+        replyToMomentCaption: 'Fun event',
+        replyToMomentType: 'image',
+      }),
+    );
+  });
+
+  it('strips reply context fields that are empty strings (treats as absent)', async () => {
+    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-sender',
+      userId: 'user-1',
+      domainName: 'api.example.com',
+      stage: 'beta',
+    });
+
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
+      .mockResolvedValueOnce([
+        { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },
+      ])
+      .mockResolvedValueOnce([
+        { connectionId: 'conn-sender', userId: 'user-1', domainName: 'api.example.com', stage: 'beta' },
+      ]);
+
+    (ChatMessageDAO.create as jest.Mock).mockResolvedValue({
+      chatMessageId: 'msg-plain',
+      senderUserId: 'user-1',
+      recipientUserId: 'user-2',
+      message: 'plain message',
+      isRead: false,
+      createdAt: new Date('2026-04-18T10:00:00.000Z'),
+    });
+
+    (ChatMessageDAO.countUnreadForConversation as jest.Mock).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    (ChatMessageDAO.countUnreadTotal as jest.Mock).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    await handleChatSend({
+      body: JSON.stringify({
+        recipientUserId: 'user-2',
+        message: 'plain message',
+        replyToMomentId: '   ',
+        replyToMomentCaption: '',
+      }),
+    } as any);
+
+    // Empty / whitespace-only values should be normalised to undefined and not be spread into the DAO call
+    const createCall = (ChatMessageDAO.create as jest.Mock).mock.calls[0][0];
+    expect(createCall.replyToMomentId).toBeUndefined();
+    expect(createCall.replyToMomentCaption).toBeUndefined();
+  });
 });

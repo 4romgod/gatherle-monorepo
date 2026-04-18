@@ -135,6 +135,13 @@ export const OPERATIONS = {
     DELETE_NOTIFICATION: 'deleteNotification',
     READ_NOTIFICATIONS: 'readNotifications',
   },
+  EVENT_MOMENT: {
+    CREATE_EVENT_MOMENT: 'createEventMoment',
+    DELETE_EVENT_MOMENT: 'deleteEventMoment',
+    READ_EVENT_MOMENTS: 'readEventMoments',
+    READ_USER_EVENT_MOMENTS: 'readUserEventMoments',
+    READ_FOLLOWED_MOMENTS: 'readFollowedMoments',
+  },
   ADMIN: {
     READ_ADMIN_DASHBOARD_STATS: 'readAdminDashboardStats',
   },
@@ -151,4 +158,7 @@ export const CONTENT_TYPE_MAP: Record<string, string> = {
   png: 'image/png',
   webp: 'image/webp',
   gif: 'image/gif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
 };

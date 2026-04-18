@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { FollowTargetType } from '@gatherle/commons/types/follow';
 import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
+import { EventMomentType } from '@gatherle/commons/types/eventMoment';
 import { ERROR_MESSAGES } from '@/validation';
 
 const objectIdSchema = z
@@ -24,3 +25,42 @@ export const CreateActivityInputSchema = z.object({
   eventAt: z.date().optional(),
   metadata: z.record(z.any()).optional(),
 });
+
+export const CreateEventMomentInputSchema = z
+  .object({
+    eventId: objectIdSchema,
+    type: z.nativeEnum(EventMomentType),
+    caption: z.string().max(280, 'Caption must be 280 characters or fewer').optional(),
+    mediaKey: z.string().optional(),
+    thumbnailKey: z.string().optional(),
+    background: z
+      .enum([
+        'bg-purple-600',
+        'bg-blue-600',
+        'bg-green-600',
+        'bg-red-600',
+        'bg-orange-500',
+        'bg-pink-600',
+        'bg-indigo-600',
+        'bg-teal-600',
+        'bg-yellow-400',
+        'bg-cyan-500',
+      ])
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === EventMomentType.Text && !data.caption?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Caption is required for text moments',
+        path: ['caption'],
+      });
+    }
+    if ((data.type === EventMomentType.Image || data.type === EventMomentType.Video) && !data.mediaKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'mediaKey is required for image and video moments',
+        path: ['mediaKey'],
+      });
+    }
+  });

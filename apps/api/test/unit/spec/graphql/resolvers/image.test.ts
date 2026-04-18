@@ -25,6 +25,9 @@ jest.mock('@/constants', () => ({
     jpg: 'image/jpeg',
     png: 'image/png',
     webp: 'image/webp',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    webm: 'video/webm',
   },
 }));
 
@@ -139,6 +142,87 @@ describe('ImageResolver', () => {
         mockContext,
       );
       expect(result.key).toMatch(/avatar\.png$/);
+    });
+  });
+
+  describe('EventMoment entity type', () => {
+    it('generates a unique key for MomentMedia uploads (always includes UUID)', async () => {
+      const result = await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'jpg',
+        'event-moment-abc',
+        mockContext,
+      );
+
+      // Key pattern: {stage}/event-moments/{entityId}/moment-media-{UUID}.{ext}
+      expect(result.key).toMatch(/^test\/event-moments\/event-moment-abc\/moment-media-.+\.jpg$/);
+    });
+
+    it('uses the provided entityId for EventMoment (not the authenticated user id)', async () => {
+      const result = await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'mp4',
+        'moment-entity-xyz',
+        mockContext,
+      );
+
+      expect(result.key).toContain('/event-moments/moment-entity-xyz/');
+    });
+  });
+
+  describe('video MIME type resolution', () => {
+    it('resolves mp4 to video/mp4 for a presigned S3 upload', async () => {
+      await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'mp4',
+        'moment-1',
+        mockContext,
+      );
+
+      expect(s3Client.getPresignedUploadUrl).toHaveBeenCalledWith(expect.any(String), 'video/mp4', expect.any(Number));
+    });
+
+    it('resolves mov to video/quicktime for a presigned S3 upload', async () => {
+      await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'mov',
+        'moment-1',
+        mockContext,
+      );
+
+      expect(s3Client.getPresignedUploadUrl).toHaveBeenCalledWith(
+        expect.any(String),
+        'video/quicktime',
+        expect.any(Number),
+      );
+    });
+
+    it('resolves webm to video/webm for a presigned S3 upload', async () => {
+      await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'webm',
+        'moment-1',
+        mockContext,
+      );
+
+      expect(s3Client.getPresignedUploadUrl).toHaveBeenCalledWith(expect.any(String), 'video/webm', expect.any(Number));
+    });
+
+    it('falls back to image/jpeg for unknown extensions', async () => {
+      await resolver.getImageUploadUrl(
+        ImageEntityType.EventMoment,
+        ImageType.MomentMedia,
+        'xyz',
+        'moment-1',
+        mockContext,
+      );
+
+      expect(s3Client.getPresignedUploadUrl).toHaveBeenCalledWith(expect.any(String), 'image/jpeg', expect.any(Number));
     });
   });
 
