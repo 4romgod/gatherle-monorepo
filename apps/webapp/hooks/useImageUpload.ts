@@ -39,7 +39,8 @@ interface UseImageUploadResult {
  * });
  */
 const ACCEPTED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']);
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+// TODO: investigate the right max file size for image uploads — 15 MB is a temporary ceiling
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 
 export function useImageUpload(options: UseImageUploadOptions): UseImageUploadResult {
   const { entityType, imageType, entityId } = options;
@@ -63,7 +64,7 @@ export function useImageUpload(options: UseImageUploadOptions): UseImageUploadRe
       throw new Error(message);
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      const message = `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 5 MB.`;
+      const message = `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 15 MB.`;
       setError(message);
       throw new Error(message);
     }

@@ -41,7 +41,8 @@ interface EventMomentComposerProps {
 }
 
 const MAX_CAPTION = 280;
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+// TODO: investigate the right max file size for moments (images + videos) — 15 MB is a temporary ceiling
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const ACCEPTED_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
 
@@ -212,7 +213,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      setSubmitError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 5 MB.`);
+      setSubmitError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 15 MB.`);
       return;
     }
 
@@ -549,7 +550,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                     Tap to choose a photo
                   </Typography>
                   <Typography variant="caption" color="text.disabled">
-                    JPEG, PNG or WebP · max 5 MB
+                    JPEG, PNG or WebP · max 15 MB
                   </Typography>
                 </Box>
               )}
@@ -625,7 +626,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                     Tap to choose a video
                   </Typography>
                   <Typography variant="caption" color="text.disabled">
-                    MP4, MOV or WebM · max 5 MB
+                    MP4, MOV or WebM · max 15 MB
                   </Typography>
                 </Box>
               )}

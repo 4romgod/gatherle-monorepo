@@ -28,6 +28,7 @@ import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
+import UserProfileMomentsBar from '@/components/eventMoments/UserProfileMomentsBar';
 import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { isEventUpcoming, logger } from '@/lib/utils';
@@ -351,6 +352,16 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                     fullWidth
                   />
                 )}
+
+                {/* Moments bar — shown for all visitors; hides itself when there are none */}
+                <UserProfileMomentsBar
+                  userId={user.userId}
+                  events={[...organizedEvents, ...allRsvpdEvents]
+                    .filter((e, i, arr) => arr.findIndex((x) => x.eventId === e.eventId) === i)
+                    .map((e) => ({ eventId: e.eventId, title: e.title }))}
+                  token={token}
+                  isOwnProfile={isOwnProfile}
+                />
               </Box>
               {/* end centering box */}
             </CardContent>

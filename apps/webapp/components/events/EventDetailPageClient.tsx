@@ -27,7 +27,6 @@ import {
   Language,
   ArrowBack,
   Business,
-  Edit,
 } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
@@ -200,7 +199,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       <Box
         sx={{
           position: 'relative',
-          height: { xs: 280, sm: 340, md: 380 },
+          height: { xs: 200, sm: 340, md: 380 },
           width: '100%',
           overflow: 'hidden',
           bgcolor: 'grey.900',
@@ -246,19 +245,20 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             component={Link}
             href="/events"
             startIcon={<ArrowBack />}
+            size="small"
             sx={{
               bgcolor: 'background.paper',
               backdropFilter: 'blur(10px)',
               color: 'text.primary',
-              fontWeight: 600,
-              px: 2.5,
+              fontWeight: 400,
+              px: 2,
               py: 1,
               borderRadius: 2,
               opacity: 0.95,
-              boxShadow: 2,
+              boxShadow: 1,
               '&:hover': {
                 opacity: 1,
-                transform: 'translateX(-4px)',
+                transform: 'translateX(-2px)',
                 transition: 'all 0.2s ease',
               },
             }}
@@ -284,10 +284,10 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               sx={{
                 textTransform: 'none',
                 borderRadius: 2,
-                fontWeight: 600,
+                fontWeight: 400,
                 bgcolor: 'background.paper',
                 color: 'text.primary',
-                boxShadow: 2,
+                boxShadow: 1,
                 '&:hover': {
                   bgcolor: 'background.paper',
                 },
@@ -317,21 +317,21 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             <Card
               elevation={0}
               sx={{
-                mb: 4,
+                mb: { xs: 2, md: 4 },
                 borderRadius: 3,
                 border: '1px solid',
                 borderColor: 'divider',
                 overflow: 'visible',
               }}
             >
-              <CardContent sx={{ p: contentPadding }}>
+              <CardContent sx={{ p: contentPadding, '&:last-child': { pb: { xs: 1, md: undefined } } }}>
                 <Typography
                   variant="h3"
                   component="h1"
                   sx={{
-                    fontWeight: 800,
-                    fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.25rem' },
-                    lineHeight: 1.2,
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
+                    lineHeight: 1,
                     m: 2,
                   }}
                 >
@@ -339,31 +339,31 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </Typography>
 
                 {/* Mobile-only quick info strip — date/location immediately under title */}
-                <Box sx={{ display: { xs: 'block', md: 'none' }, mx: 2, mb: 2 }}>
+                <Box sx={{ display: { xs: 'block', md: 'none' }, mx: 2, mb: 0 }}>
                   <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <CalendarMonth sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
-                      <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CalendarMonth sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
+                      <Typography variant="subtitle2" fontWeight={200} sx={{ lineHeight: 1.3 }}>
                         {formatRecurrenceRule(recurrenceRule)}
                       </Typography>
                     </Stack>
                     {location.locationType !== 'online' && (
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <LocationOn sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
-                        <Typography variant="body2" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <LocationOn sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
+                        <Typography variant="subtitle2" fontWeight={200} sx={{ lineHeight: 1.3 }}>
                           {formatLocationText(location)}
                         </Typography>
                       </Stack>
                     )}
                     {location.locationType === 'online' && (
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Language sx={{ fontSize: 18, color: 'success.main', flexShrink: 0 }} />
-                        <Chip label="Online Event" size="small" color="success" sx={{ fontWeight: 600 }} />
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Language sx={{ fontSize: 15, color: 'success.main', flexShrink: 0 }} />
+                        <Chip label="Online Event" size="small" color="success" sx={{ fontWeight: 200 }} />
                       </Stack>
                     )}
                     {goingCount > 0 && (
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Groups sx={{ fontSize: 18, color: 'primary.main', flexShrink: 0 }} />
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Groups sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
                         <Typography variant="body2" color="text.secondary">
                           <strong>{goingCount}</strong> going
                           {interestedCount > 0 && ` · ${interestedCount} interested`}
@@ -372,31 +372,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     )}
                   </Stack>
                 </Box>
-
-                {/* Edit Event button + ops menu (desktop) — visible to organizers/admins */}
-                {canEditEvent && (
-                  <Box
-                    sx={{
-                      display: { xs: 'none', md: 'flex' },
-                      justifyContent: 'flex-end',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 2,
-                      pb: 1,
-                    }}
-                  >
-                    <Button
-                      component={Link}
-                      href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(slug)}
-                      variant="contained"
-                      startIcon={<Edit />}
-                      sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 2.5, py: 1 }}
-                    >
-                      Edit Event
-                    </Button>
-                    <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                  </Box>
-                )}
 
                 {/* Desktop actions inline in card */}
                 <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -407,6 +382,11 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     eventUrl={eventUrl}
                     isSavedByMe={isSavedByMe ?? false}
                     myRsvpStatus={myRsvp?.status ?? null}
+                    trailing={
+                      canEditEvent ? (
+                        <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                      ) : undefined
+                    }
                   />
                 </Box>
               </CardContent>
@@ -426,26 +406,10 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 borderColor: 'divider',
                 bgcolor: 'background.paper',
                 px: 2,
-                py: 1.5,
-                pb: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+                py: 0.5,
               }}
             >
               <Stack spacing={1.5}>
-                {canEditEvent && (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button
-                      component={Link}
-                      href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(slug)}
-                      variant="contained"
-                      startIcon={<Edit />}
-                      fullWidth
-                      sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, py: 1 }}
-                    >
-                      Edit Event
-                    </Button>
-                    <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                  </Stack>
-                )}
                 <EventDetailActions
                   eventId={eventId}
                   eventTitle={title}
@@ -454,6 +418,11 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   isSavedByMe={isSavedByMe ?? false}
                   myRsvpStatus={myRsvp?.status ?? null}
                   compact
+                  trailing={
+                    canEditEvent ? (
+                      <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                    ) : undefined
+                  }
                 />
               </Stack>
             </Paper>
@@ -461,7 +430,16 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* Event Moments */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent sx={{ p: contentPadding }}>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                <Typography
+                  variant="h3"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
+                    lineHeight: 1,
+                    m: 2,
+                  }}
+                >
                   Moments
                 </Typography>
                 <EventMomentsRing
@@ -476,13 +454,22 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* About */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent sx={{ p: contentPadding }}>
-                <Typography variant="h5" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
+                <Typography
+                  variant="h3"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
+                    lineHeight: 1,
+                    m: 2,
+                  }}
+                >
                   About This Event
                 </Typography>
                 <Typography
-                  variant="body1"
+                  variant="subtitle2"
                   color="text.secondary"
-                  sx={{ lineHeight: 1.8, fontSize: '1.05rem', whiteSpace: 'pre-line' }}
+                  sx={{ fontSize: '1rem', whiteSpace: 'pre-line' }}
                 >
                   {description}
                 </Typography>
@@ -492,7 +479,16 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* Organizers */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent sx={{ p: contentPadding }}>
-                <Typography variant="h5" fontWeight={700} gutterBottom sx={{ mb: 3 }}>
+                <Typography
+                  variant="h3"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
+                    lineHeight: 1,
+                    m: 2,
+                  }}
+                >
                   Organized By
                 </Typography>
                 {organizerData.length === 0 ? (
@@ -507,6 +503,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                           user.given_name && user.family_name
                             ? `${user.given_name} ${user.family_name}`
                             : user.username || 'Unknown User';
+
                         return (
                           <UserPreviewItem
                             key={user.userId}
@@ -528,19 +525,26 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* Participants */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent sx={{ p: contentPadding }}>
-                <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-                  <Typography variant="h5" fontWeight={700}>
-                    Who&apos;s Attending
-                  </Typography>
+                <Typography
+                  variant="h3"
+                  component="h2"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
+                    lineHeight: 1,
+                    m: 2,
+                  }}
+                >
+                  Who&apos;s Attending
                   {participantList.length > 0 && (
                     <Chip
                       label={participantList.length}
                       size="small"
                       color="primary"
-                      sx={{ fontWeight: 700, minWidth: 32 }}
+                      sx={{ fontWeight: 700, minWidth: 32, ml: 1, verticalAlign: 'middle' }}
                     />
                   )}
-                </Stack>
+                </Typography>
 
                 {participantList.length === 0 ? (
                   <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'action.hover', borderRadius: 2 }}>
@@ -591,7 +595,16 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           {/* Sidebar */}
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: 'sticky', top: 24 }}>
-              <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Card
+                elevation={0}
+                sx={{
+                  mb: 3,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: { xs: 'none', md: 'block' },
+                }}
+              >
                 <CardContent sx={{ p: contentPadding }}>
                   <Stack spacing={2.5}>
                     <Box>
@@ -604,7 +617,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                             fontWeight={600}
                             sx={{ letterSpacing: 1 }}
                           >
-                            Date & Time
+                            Date &amp; Time
                           </Typography>
                           <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
                             {formatRecurrenceRule(recurrenceRule)}
@@ -758,6 +771,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
         organizerIds={organizerIds}
+        eventContext={{ slug, title }}
         onDeleted={(momentId) => {
           setViewerMoments((prev) => prev.filter((m) => m.momentId !== momentId));
         }}
