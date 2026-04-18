@@ -34,7 +34,9 @@ export class AuthResolver {
     }
 
     const plainToken = await EmailVerificationTokenDAO.create(user.userId);
-    await EmailService.sendEmailVerification(email, plainToken);
+    await EmailService.sendEmailVerification(email, plainToken).catch((err) =>
+      logger.error('[AuthResolver] Email delivery failed for email verification', { email, error: err }),
+    );
     return true;
   }
 
@@ -73,7 +75,10 @@ export class AuthResolver {
     }
 
     const plainToken = await PasswordResetTokenDAO.create(user.userId);
-    await EmailService.sendPasswordReset(email, plainToken);
+    // Best-effort — a delivery failure must not block the flow or leak internal errors
+    await EmailService.sendPasswordReset(email, plainToken).catch((err) =>
+      logger.warn('[AuthResolver] Email delivery failed for password reset', { email, error: err }),
+    );
     return true;
   }
 

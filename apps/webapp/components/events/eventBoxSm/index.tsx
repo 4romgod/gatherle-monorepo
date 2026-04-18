@@ -12,7 +12,8 @@ import { useState, useEffect, type MouseEvent } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 
 export default function EventBoxSm({ event, href }: { event: EventPreview; href?: string }) {
-  const { recurrenceRule, participants, location, media } = event;
+  const { participants, location, media } = event;
+  const recurrenceRule = event.primarySchedule.recurrenceRule;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);

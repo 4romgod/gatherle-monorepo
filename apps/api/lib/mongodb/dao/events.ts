@@ -114,11 +114,11 @@ class EventDAO {
         // TODO: Consider moving RRULE date filtering into the aggregation pipeline so pagination/sorting
         // respect the date constraints before skip/limit stages execute.
         events = events.filter((event) => {
-          if (!event.recurrenceRule) {
+          if (!event.primarySchedule?.recurrenceRule) {
             return false;
           }
 
-          return hasOccurrenceInRange(event.recurrenceRule, new Date(startDate), new Date(endDate));
+          return hasOccurrenceInRange(event.primarySchedule.recurrenceRule, new Date(startDate), new Date(endDate));
         });
       }
 
@@ -270,9 +270,6 @@ class EventDAO {
             $or: [
               // Upcoming: only show events that haven't started yet
               { status: 'Upcoming', 'primarySchedule.startAt': { $gte: now } },
-              // Upcoming with no scheduled date (e.g. recurring / TBD)
-              { status: 'Upcoming', 'primarySchedule.startAt': { $exists: false } },
-              { status: 'Upcoming', 'primarySchedule.startAt': null },
               // Ongoing events are already in progress — always include
               { status: 'Ongoing' },
             ],

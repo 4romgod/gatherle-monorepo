@@ -109,11 +109,11 @@ export const GetSavedEventsDocument = graphql(`
         title
         summary
         description
-        recurrenceRule
         primarySchedule {
           startAt
           endAt
           timezone
+          recurrenceRule
         }
         location {
           locationType

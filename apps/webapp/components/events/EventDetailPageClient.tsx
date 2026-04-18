@@ -167,13 +167,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     organizers: organizerData,
     description,
     media,
-    recurrenceRule,
     location,
     eventCategories,
     eventId,
     isSavedByMe,
     myRsvp,
   } = event;
+  const recurrenceRule = event.primarySchedule.recurrenceRule;
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '140px', md: 0 } }}>

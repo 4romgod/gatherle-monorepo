@@ -128,8 +128,8 @@ async function AuthenticatedProfileContent() {
 
   const rsvpRecords = myRsvpsResult.data?.myRsvps ?? [];
   const allRsvpdEvents = rsvpRecords.map((r) => r.event).filter((e): e is EventPreview => e != null);
-  const upcomingRsvpdEvents = allRsvpdEvents.filter((e) => isEventUpcoming(e.recurrenceRule));
-  const pastRsvpdEvents = allRsvpdEvents.filter((e) => !isEventUpcoming(e.recurrenceRule));
+  const upcomingRsvpdEvents = allRsvpdEvents.filter((e) => isEventUpcoming(e.primarySchedule.recurrenceRule));
+  const pastRsvpdEvents = allRsvpdEvents.filter((e) => !isEventUpcoming(e.primarySchedule.recurrenceRule));
   const organizedEvents = (organizedEventsResult.data?.readEvents ?? []) as EventPreview[];
 
   // Extract saved events from follow records

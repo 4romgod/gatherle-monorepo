@@ -35,7 +35,6 @@ describe('readTrendingEvents e2e', () => {
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
       location: baseEventData.location,
-      recurrenceRule: baseEventData.recurrenceRule,
     };
 
     await createEventOnServer(url, actorUser.token, eventInput, createdEventIds);
@@ -221,7 +220,6 @@ describe('cold-start feed fallback e2e', () => {
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
       location: baseEventData.location,
-      recurrenceRule: baseEventData.recurrenceRule,
     };
 
     await createEventOnServer(url, freshUser.token, eventInput, createdEventIds);

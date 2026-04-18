@@ -20,7 +20,11 @@ export const DeleteEventByIdDocument = graphql(`
       slug
       title
       description
-      recurrenceRule
+      primarySchedule {
+        startAt
+        timezone
+        recurrenceRule
+      }
       location {
         locationType
         coordinates {

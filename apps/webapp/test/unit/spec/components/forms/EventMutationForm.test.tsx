@@ -98,7 +98,6 @@ const emptyEventData = {
   title: '',
   summary: '',
   description: '',
-  recurrenceRule: '',
   eventCategories: [] as string[],
   status: 'Upcoming',
   lifecycleStatus: 'Draft',
@@ -120,7 +119,12 @@ const emptyEventData = {
   orgId: undefined,
   venueId: undefined,
   locationSnapshot: undefined,
-  primarySchedule: undefined,
+  primarySchedule: {
+    startAt: undefined as unknown as Date,
+    endAt: undefined,
+    timezone: 'Africa/Johannesburg',
+    recurrenceRule: '',
+  },
 };
 
 const validEventData = {
@@ -128,7 +132,11 @@ const validEventData = {
   title: 'Test Event Title',
   summary: 'A short event summary',
   description: 'A detailed description of the test event',
-  recurrenceRule: 'DTSTART:20260601T100000Z\nRRULE:FREQ=WEEKLY',
+  primarySchedule: {
+    startAt: new Date('2026-06-01T10:00:00Z'),
+    timezone: 'UTC',
+    recurrenceRule: 'DTSTART:20260601T100000Z\nRRULE:FREQ=WEEKLY',
+  },
   eventCategories: ['cat-1'],
 };
 
@@ -139,7 +147,11 @@ const mockEventProp: any = {
   title: 'Existing Event',
   summary: 'Existing summary',
   description: 'Existing description',
-  recurrenceRule: 'DTSTART:20260601T100000Z',
+  primarySchedule: {
+    startAt: new Date('2026-06-01T10:00:00Z'),
+    timezone: 'UTC',
+    recurrenceRule: 'DTSTART:20260601T100000Z',
+  },
   status: 'Upcoming',
   lifecycleStatus: 'Published',
   visibility: 'Public',

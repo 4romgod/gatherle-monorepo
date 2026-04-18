@@ -169,7 +169,8 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                       {heroEvent.title}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'hero.textSecondary', opacity: 0.75, mt: 1.5 }}>
-                      {heroEvent.recurrenceRule && RRule.fromString(heroEvent.recurrenceRule).toText()}
+                      {heroEvent.primarySchedule.recurrenceRule &&
+                        RRule.fromString(heroEvent.primarySchedule.recurrenceRule).toText()}
                     </Typography>
                     <Box
                       sx={{
