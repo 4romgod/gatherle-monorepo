@@ -13,6 +13,9 @@ export interface CreateChatMessageInput {
   senderUserId: string;
   recipientUserId: string;
   message: string;
+  replyToMomentId?: string;
+  replyToMomentCaption?: string;
+  replyToMomentType?: string;
 }
 
 export interface ReadChatMessagesOptions {
@@ -38,6 +41,11 @@ class ChatMessageDAO {
         conversationKey: this.buildConversationKey(input.senderUserId, input.recipientUserId),
         message: input.message,
         isRead: input.senderUserId === input.recipientUserId,
+        ...(input.replyToMomentId && {
+          replyToMomentId: input.replyToMomentId,
+          replyToMomentCaption: input.replyToMomentCaption,
+          replyToMomentType: input.replyToMomentType,
+        }),
       });
 
       return toChatMessageEntity(chatMessage.toObject());

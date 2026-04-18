@@ -68,6 +68,65 @@ describe('ChatMessageDAO', () => {
     expect(result.isRead).toBe(true);
   });
 
+  it('persists reply-to moment fields when all three are provided', async () => {
+    const createdAt = new Date('2026-04-18T10:00:00.000Z');
+    (ChatMessageModel.create as jest.Mock).mockResolvedValue({
+      toObject: () => ({
+        chatMessageId: 'msg-2',
+        senderUserId: 'user-1',
+        recipientUserId: 'user-2',
+        message: 'nice moment!',
+        isRead: false,
+        replyToMomentId: 'moment-abc',
+        replyToMomentCaption: 'Great sunset',
+        replyToMomentType: 'image',
+        createdAt,
+      }),
+    });
+
+    await ChatMessageDAO.create({
+      senderUserId: 'user-1',
+      recipientUserId: 'user-2',
+      message: 'nice moment!',
+      replyToMomentId: 'moment-abc',
+      replyToMomentCaption: 'Great sunset',
+      replyToMomentType: 'image',
+    });
+
+    expect(ChatMessageModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyToMomentId: 'moment-abc',
+        replyToMomentCaption: 'Great sunset',
+        replyToMomentType: 'image',
+      }),
+    );
+  });
+
+  it('omits reply-to fields from the document when replyToMomentId is absent', async () => {
+    const createdAt = new Date('2026-04-18T10:00:00.000Z');
+    (ChatMessageModel.create as jest.Mock).mockResolvedValue({
+      toObject: () => ({
+        chatMessageId: 'msg-3',
+        senderUserId: 'user-1',
+        recipientUserId: 'user-2',
+        message: 'plain message',
+        isRead: false,
+        createdAt,
+      }),
+    });
+
+    await ChatMessageDAO.create({
+      senderUserId: 'user-1',
+      recipientUserId: 'user-2',
+      message: 'plain message',
+    });
+
+    const createCall = (ChatMessageModel.create as jest.Mock).mock.calls[0][0];
+    expect(createCall).not.toHaveProperty('replyToMomentId');
+    expect(createCall).not.toHaveProperty('replyToMomentCaption');
+    expect(createCall).not.toHaveProperty('replyToMomentType');
+  });
+
   it('readConversation applies cursor + pagination and computes nextCursor', async () => {
     const m1Date = new Date('2026-02-15T11:59:00.000Z');
     const m2Date = new Date('2026-02-15T11:58:00.000Z');

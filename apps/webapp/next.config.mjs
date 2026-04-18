@@ -46,6 +46,7 @@ const buildContentSecurityPolicy = () => {
     `img-src ${imgSources.join(' ')}`,
     "font-src 'self' data:",
     `connect-src ${Array.from(connectSources).join(' ')}`,
+    "media-src 'self' blob: https:",
     "frame-src 'self' https://www.openstreetmap.org https://maps.google.com https://www.google.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",

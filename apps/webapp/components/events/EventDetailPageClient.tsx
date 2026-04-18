@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
@@ -58,6 +58,10 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
+import EventMomentsRing from '@/components/eventMoments/EventMomentsRing';
+import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
+import EventMomentComposer from '@/components/eventMoments/EventMomentComposer';
+import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
 
 interface EventDetailPageClientProps {
   slug: string;
@@ -138,6 +142,19 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const notFoundError = isNotFoundGraphQLError(error);
   const isLoading = loading || (!event && !error);
 
+  // Event Moments UI state
+  type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number];
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [viewerMoments, setViewerMoments] = useState<Moment[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openViewer = (moments: Moment[], startIndex: number) => {
+    setViewerMoments(moments);
+    setViewerIndex(startIndex);
+    setViewerOpen(true);
+  };
+
   if (notFoundError) {
     return (
       <ErrorPage
@@ -174,6 +191,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     myRsvp,
   } = event;
   const recurrenceRule = event.primarySchedule.recurrenceRule;
+
+  const organizerIds = (event?.organizers ?? []).filter((o) => o.user?.userId).map((o) => o.user!.userId);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '140px', md: 0 } }}>
@@ -438,6 +457,21 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 />
               </Stack>
             </Paper>
+
+            {/* Event Moments */}
+            <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent sx={{ p: contentPadding }}>
+                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
+                  Moments
+                </Typography>
+                <EventMomentsRing
+                  eventId={eventId}
+                  myRsvpStatus={myRsvp?.status ?? null}
+                  onAddClick={() => setComposerOpen(true)}
+                  onMomentClick={openViewer}
+                />
+              </CardContent>
+            </Card>
 
             {/* About */}
             <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -716,6 +750,26 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           </Grid>
         </Grid>
       </Container>
+
+      {/* Event Moments Viewer */}
+      <EventMomentViewer
+        moments={viewerMoments}
+        startIndex={viewerIndex}
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        organizerIds={organizerIds}
+        onDeleted={(momentId) => {
+          setViewerMoments((prev) => prev.filter((m) => m.momentId !== momentId));
+        }}
+      />
+
+      {/* Event Moments Composer */}
+      <EventMomentComposer
+        eventId={eventId}
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        onCreated={() => setComposerOpen(false)}
+      />
     </Box>
   );
 }

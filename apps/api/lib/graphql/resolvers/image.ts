@@ -35,10 +35,10 @@ export class ImageResolver {
 
     const cleanExt = extension.toLowerCase().replace(/^\./, '');
     const contentType = CONTENT_TYPE_MAP[cleanExt] || 'image/jpeg';
-    // Gallery images get a unique key per upload; all other types (avatar, logo, featured)
-    // use a deterministic key so re-uploading overwrites the same S3 object.
-    const filename =
-      imageType === ImageType.Gallery ? `${imageType}-${randomUUID()}.${cleanExt}` : `${imageType}.${cleanExt}`;
+    // Gallery images and ALL EventMoment media get a unique key per upload so each upload is distinct.
+    // Other types (avatar, logo, featured) use a deterministic key so re-uploading overwrites the previous object.
+    const needsUniqueKey = imageType === ImageType.Gallery || entityType === ImageEntityType.EventMoment;
+    const filename = needsUniqueKey ? `${imageType}-${randomUUID()}.${cleanExt}` : `${imageType}.${cleanExt}`;
 
     // Key structure: {stage}/{entityType}s/{entityId}/{filename}
     // e.g. beta/users/abc123/avatar.jpg (avatar/logo/featured)

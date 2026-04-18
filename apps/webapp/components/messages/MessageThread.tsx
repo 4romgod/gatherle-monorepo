@@ -159,6 +159,49 @@ export function MessageThread({
                     ...bubbleBorderRadius,
                   }}
                 >
+                  {item.message.replyToMomentId && (
+                    <Box
+                      sx={{
+                        mb: 0.75,
+                        px: 1,
+                        py: 0.5,
+                        borderLeft: '3px solid',
+                        borderColor: item.fromMe ? 'rgba(255,255,255,0.6)' : 'primary.main',
+                        borderRadius: '2px 4px 4px 2px',
+                        opacity: 0.9,
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ display: 'block', fontWeight: 700, fontSize: '0.68rem', opacity: 0.75 }}
+                      >
+                        Replied to a moment
+                      </Typography>
+                      {item.message.replyToMomentCaption ? (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: 220,
+                            opacity: 0.85,
+                          }}
+                        >
+                          {item.message.replyToMomentCaption}
+                        </Typography>
+                      ) : item.message.replyToMomentType ? (
+                        <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.72rem' }}>
+                          {item.message.replyToMomentType?.toLowerCase() === 'image'
+                            ? '📷 Photo'
+                            : item.message.replyToMomentType?.toLowerCase() === 'video'
+                              ? '🎥 Video'
+                              : '✏️ Text moment'}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  )}
                   <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {item.message.message}
                   </Typography>

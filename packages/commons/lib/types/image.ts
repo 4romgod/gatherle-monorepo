@@ -6,6 +6,7 @@ export enum ImageEntityType {
   Organization = 'organization',
   Event = 'event',
   Venue = 'venue',
+  EventMoment = 'event-moment',
 }
 
 export enum ImageType {
@@ -13,6 +14,7 @@ export enum ImageType {
   Logo = 'logo',
   Featured = 'featured',
   Gallery = 'gallery',
+  MomentMedia = 'moment-media',
 }
 
 registerEnumType(ImageEntityType, {
