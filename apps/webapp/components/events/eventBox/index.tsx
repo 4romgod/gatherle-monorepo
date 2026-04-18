@@ -17,7 +17,8 @@ import EventShareButton from '@/components/events/share/EventShareButton';
 
 export default function EventBox({ event }: { event: AnyEventPreview }) {
   const theme = useTheme();
-  const { title, recurrenceRule, participants, media, location, status } = event;
+  const { title, participants, media, location, status } = event;
+  const recurrenceRule = event.primarySchedule.recurrenceRule;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);

@@ -35,7 +35,7 @@ export type CategoryFilterProps = {
 };
 
 export type EventDateInputProps = {
-  onChange: (value: string) => void;
+  onChange: (rrule: string, startAt: Date, timezone: string, endAt?: Date) => void;
 };
 
 export type EventRadioButtonsProps = {

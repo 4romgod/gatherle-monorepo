@@ -70,7 +70,12 @@ export const GetMyRsvpsDocument = graphql(`
           }
           details
         }
-        recurrenceRule
+        primarySchedule {
+          startAt
+          endAt
+          timezone
+          recurrenceRule
+        }
         media {
           featuredImageUrl
         }

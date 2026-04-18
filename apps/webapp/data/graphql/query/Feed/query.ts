@@ -45,7 +45,12 @@ export const GetRecommendedFeedDocument = graphql(`
           }
           details
         }
-        recurrenceRule
+        primarySchedule {
+          startAt
+          endAt
+          timezone
+          recurrenceRule
+        }
         orgId
         organization {
           orgId

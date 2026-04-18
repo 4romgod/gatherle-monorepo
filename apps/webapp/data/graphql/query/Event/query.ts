@@ -17,7 +17,12 @@ export const ReadTrendingEventsDocument = graphql(`
       status
       lifecycleStatus
       visibility
-      recurrenceRule
+      primarySchedule {
+        startAt
+        endAt
+        timezone
+        recurrenceRule
+      }
       eventCategories {
         eventCategoryId
         slug
@@ -35,10 +40,6 @@ export const ReadTrendingEventsDocument = graphql(`
           zipCode
           country
         }
-      }
-      primarySchedule {
-        startAt
-        endAt
       }
       media {
         featuredImageUrl
@@ -127,7 +128,12 @@ export const GetAllEventsDocument = graphql(`
         }
         details
       }
-      recurrenceRule
+      primarySchedule {
+        startAt
+        endAt
+        timezone
+        recurrenceRule
+      }
       orgId
       organization {
         orgId
@@ -217,7 +223,12 @@ export const GetEventBySlugDocument = graphql(`
         }
         details
       }
-      recurrenceRule
+      primarySchedule {
+        startAt
+        endAt
+        timezone
+        recurrenceRule
+      }
       orgId
       organization {
         orgId
@@ -307,7 +318,12 @@ export const GetEventsByVenueDocument = graphql(`
         }
         details
       }
-      recurrenceRule
+      primarySchedule {
+        startAt
+        endAt
+        timezone
+        recurrenceRule
+      }
       orgId
       organization {
         orgId

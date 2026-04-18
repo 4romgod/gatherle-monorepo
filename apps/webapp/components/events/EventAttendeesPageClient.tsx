@@ -120,7 +120,8 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
     );
   }
 
-  const { title, location, recurrenceRule, description, summary } = event;
+  const { title, location, description, summary } = event;
+  const recurrenceRule = event.primarySchedule.recurrenceRule;
   const locationText = location.locationType === 'online' ? 'Online event' : formatLocationText(location);
 
   const statusSummary = [

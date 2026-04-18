@@ -83,21 +83,21 @@ export class Media {
 
 @ObjectType('EventSchedule')
 export class EventSchedule {
-  @prop({ type: () => Date })
-  @Field(() => Date, { nullable: true })
-  startAt?: Date;
+  @prop({ type: () => Date, required: true })
+  @Field(() => Date, { description: 'Start date/time of the event' })
+  startAt: Date;
 
   @prop({ type: () => Date })
-  @Field(() => Date, { nullable: true })
+  @Field(() => Date, { nullable: true, description: 'End date/time of each occurrence (optional)' })
   endAt?: Date;
 
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  timezone?: string;
+  @prop({ type: () => String, required: true })
+  @Field(() => String, { description: 'IANA timezone identifier (e.g. Africa/Johannesburg)' })
+  timezone: string;
 
-  @prop({ type: () => String })
-  @Field(() => String, { nullable: true })
-  recurrenceRule?: string;
+  @prop({ type: () => String, required: true })
+  @Field(() => String, { description: 'RRULE string — single source of truth for event recurrence and scheduling' })
+  recurrenceRule: string;
 }
 
 @ObjectType('EventOrganizer')
@@ -134,13 +134,9 @@ export class Event {
   @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION })
   description: string;
 
-  @prop({ required: true, type: () => String })
-  @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE })
-  recurrenceRule: string;
-
-  @prop({ type: () => EventSchedule })
-  @Field(() => EventSchedule, { nullable: true, description: 'Primary schedule details with timezone/recurrence' })
-  primarySchedule?: EventSchedule;
+  @prop({ type: () => EventSchedule, required: true, _id: false })
+  @Field(() => EventSchedule, { description: 'Single source of truth for all event dates and recurrence' })
+  primarySchedule: EventSchedule;
 
   @prop({ type: () => Location, required: true })
   @Field(() => Location, { description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
@@ -261,11 +257,8 @@ export class CreateEventInput {
   @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION })
   description: string;
 
-  @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE })
-  recurrenceRule: string;
-
-  @Field(() => GraphQLJSON, { nullable: true, description: 'Primary schedule' })
-  primarySchedule?: Record<string, any>;
+  @Field(() => GraphQLJSON, { description: 'Primary schedule — contains startAt, endAt, timezone, and recurrenceRule' })
+  primarySchedule: Record<string, any>;
 
   // TODO Should the type be like this (or be location type)
   @Field(() => GraphQLJSON, { description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
@@ -346,10 +339,10 @@ export class UpdateEventInput {
   @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION })
   description?: string;
 
-  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE })
-  recurrenceRule?: string;
-
-  @Field(() => GraphQLJSON, { nullable: true, description: 'Primary schedule' })
+  @Field(() => GraphQLJSON, {
+    nullable: true,
+    description: 'Primary schedule — contains startAt, endAt, timezone, and recurrenceRule',
+  })
   primarySchedule?: Record<string, any>;
 
   // TODO Should the type be like this (or be location type)

@@ -33,7 +33,6 @@ describe('Feed resolver e2e', () => {
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
       location: baseEventData.location,
-      recurrenceRule: baseEventData.recurrenceRule,
     };
 
     await createEventOnServer(url, actorUser.token, eventInput, createdEventIds);
@@ -126,8 +125,13 @@ describe('Feed resolver e2e', () => {
       const first: unknown[] = firstPage.body.data.readRecommendedFeed;
       const second: unknown[] = secondPage.body.data.readRecommendedFeed;
 
-      // Second page should have at most (first.length - 1) items (or be empty)
-      expect(second.length).toBeLessThanOrEqual(Math.max(0, first.length - 1));
+      // skip=1 offsets by one item: second[0] should equal first[1]
+      if (first.length >= 2 && second.length >= 1) {
+        expect((second[0] as any).feedItemId).toBe((first[1] as any).feedItemId);
+      } else {
+        // Fewer than 2 items in the feed — second page (skip=1) must be empty
+        expect(second.length).toBe(0);
+      }
     });
   });
 

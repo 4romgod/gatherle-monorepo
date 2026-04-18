@@ -32,13 +32,31 @@ export const EventSchema = z.object({
 
   summary: z.string().optional().describe('Short summary for listings'),
 
-  recurrenceRule: z
-    .string()
-    .min(0, { message: `RecurrenceRule is not valid` })
-    .refine(() => true, { message: 'RecurrenceRule is invalid' })
-    .describe('The recurrence rule for the event, specifying if and how the event repeats.'),
-
-  primarySchedule: z.any().optional().describe('Primary schedule details'),
+  primarySchedule: z
+    .object({
+      startAt: z.coerce.date().describe('Start date/time of the event.'),
+      endAt: z.coerce.date().optional().describe('End date/time of each occurrence (optional).'),
+      timezone: z
+        .string()
+        .min(1, { message: 'Timezone is required' })
+        .refine(
+          (tz) => {
+            try {
+              Intl.DateTimeFormat(undefined, { timeZone: tz });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          { message: 'Timezone must be a valid IANA timezone identifier' },
+        )
+        .describe('IANA timezone identifier, e.g. Africa/Johannesburg.'),
+      recurrenceRule: z
+        .string()
+        .min(1, { message: 'RecurrenceRule is required' })
+        .describe('RRULE string — single source of truth for event recurrence and scheduling.'),
+    })
+    .describe('Single source of truth for all event dates and recurrence.'),
 
   // TODO add validation for location
   location: z.any().describe('The location where the event will take place.'),

@@ -53,7 +53,7 @@ describe('Event', () => {
     expect(eventType.slug).toBeUndefined();
     expect(eventType.title).toBeUndefined();
     expect(eventType.description).toBeUndefined();
-    expect(eventType.recurrenceRule).toBeUndefined();
+    expect(eventType.primarySchedule).toBeUndefined();
     expect(eventType.location).toBeUndefined();
     expect(eventType.status).toBeUndefined();
     expect(eventType.capacity).toBeUndefined();
@@ -79,7 +79,7 @@ describe('CreateEventInput', () => {
 
     expect(createEventInputType.title).toBeUndefined();
     expect(createEventInputType.description).toBeUndefined();
-    expect(createEventInputType.recurrenceRule).toBeUndefined();
+    expect(createEventInputType.primarySchedule).toBeUndefined();
     expect(createEventInputType.location).toBeUndefined();
     expect(createEventInputType.status).toBeUndefined();
     expect(createEventInputType.capacity).toBeUndefined();
@@ -106,7 +106,7 @@ describe('UpdateEventInput', () => {
     expect(updateEventInputType.eventId).toBeUndefined();
     expect(updateEventInputType.title).toBeUndefined();
     expect(updateEventInputType.description).toBeUndefined();
-    expect(updateEventInputType.recurrenceRule).toBeUndefined();
+    expect(updateEventInputType.primarySchedule).toBeUndefined();
     expect(updateEventInputType.location).toBeUndefined();
     expect(updateEventInputType.status).toBeUndefined();
     expect(updateEventInputType.capacity).toBeUndefined();

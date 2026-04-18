@@ -3,7 +3,7 @@ import { logger } from './logger';
 
 /**
  * Returns true if the recurrenceRule has at least one occurrence on or after now.
- * The recurrenceRule is the authoritative source of truth for event dates.
+ * Pass event.primarySchedule.recurrenceRule as the argument.
  */
 export function isEventUpcoming(recurrenceRule: string | null | undefined): boolean {
   if (!recurrenceRule) return true; // safe default: don't hide events with no rule

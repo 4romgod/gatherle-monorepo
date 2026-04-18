@@ -52,7 +52,11 @@ describe('EventDAO', () => {
     location: {
       locationType: 'tba',
     },
-    recurrenceRule: 'FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=13',
+    primarySchedule: {
+      startAt: new Date('2026-09-13T10:00:00Z'),
+      timezone: 'Africa/Johannesburg',
+      recurrenceRule: 'FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=13',
+    },
     organizers: [],
     eventCategories: [],
   };
@@ -310,9 +314,30 @@ describe('EventDAO', () => {
         endOfToday.setHours(23, 59, 59, 999);
 
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event3', recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event3',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -350,10 +375,20 @@ describe('EventDAO', () => {
           {
             ...expectedEvent,
             eventId: 'event1',
-            recurrenceRule: `DTSTART:${startOfWeekStr}\nRRULE:FREQ=DAILY;COUNT=7`,
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${startOfWeekStr}\nRRULE:FREQ=DAILY;COUNT=7`,
+            },
           },
           // Event from last month (should be excluded)
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${lastMonthStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${lastMonthStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -376,8 +411,22 @@ describe('EventDAO', () => {
         nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
 
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -392,15 +441,30 @@ describe('EventDAO', () => {
         expect(events).toHaveLength(0);
       });
 
-      it('should exclude events with no recurrenceRule', async () => {
+      it('should exclude events with no recurrenceRule in primarySchedule', async () => {
         const startOfToday = new Date(today);
         const endOfToday = new Date(today);
         endOfToday.setHours(23, 59, 59, 999);
 
         const eventsWithAndWithoutRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: undefined },
-          { ...expectedEvent, eventId: 'event3', recurrenceRule: null },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: { ...expectedEvent.primarySchedule, recurrenceRule: undefined },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event3',
+            primarySchedule: { ...expectedEvent.primarySchedule, recurrenceRule: null },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithAndWithoutRRules));
@@ -435,13 +499,19 @@ describe('EventDAO', () => {
             ...expectedEvent,
             eventId: 'event1',
             title: 'Match',
-            recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
           },
           {
             ...expectedEvent,
             eventId: 'event2',
             title: 'NoMatch',
-            recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
           },
         ];
 
@@ -477,9 +547,30 @@ describe('EventDAO', () => {
 
       it('should filter events using TODAY option', async () => {
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event3', recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event3',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -494,8 +585,22 @@ describe('EventDAO', () => {
 
       it('should filter events using TOMORROW option', async () => {
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -511,8 +616,22 @@ describe('EventDAO', () => {
       it('should filter events using CUSTOM option with customDate', async () => {
         const customDate = tomorrow;
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
@@ -527,8 +646,22 @@ describe('EventDAO', () => {
 
       it('should prioritize dateFilterOption over dateRange', async () => {
         const eventsWithRRules = [
-          { ...expectedEvent, eventId: 'event1', recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1` },
-          { ...expectedEvent, eventId: 'event2', recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1` },
+          {
+            ...expectedEvent,
+            eventId: 'event1',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
+          {
+            ...expectedEvent,
+            eventId: 'event2',
+            primarySchedule: {
+              ...expectedEvent.primarySchedule,
+              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
+            },
+          },
         ];
 
         (EventModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));

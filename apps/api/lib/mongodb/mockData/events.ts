@@ -21,7 +21,12 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=12,13',
+    primarySchedule: {
+      startAt: new Date('2026-09-12T09:00:00.000Z'),
+      endAt: new Date('2026-09-13T17:00:00.000Z'),
+      timezone: 'Africa/Johannesburg',
+      recurrenceRule: 'DTSTART:20260912T090000Z\nRRULE:FREQ=YEARLY;BYMONTH=9;BYMONTHDAY=12,13',
+    },
     organizers: [],
     eventCategories: [],
     capacity: 600,
@@ -53,7 +58,26 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR;INTERVAL=1',
+    primarySchedule: (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const daysUntilFriday = day <= 5 ? 5 - day : 6;
+      const base = new Date(now);
+      base.setDate(now.getDate() + daysUntilFriday);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const dayOfMonth = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(18, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(23, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=MONTHLY;BYDAY=FR;INTERVAL=1`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 900,
@@ -85,7 +109,23 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=SA',
+    primarySchedule: (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const daysUntilSaturday = day <= 6 ? 6 - day || 7 : 1;
+      const base = new Date(now);
+      base.setDate(now.getDate() + daysUntilSaturday);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const dayOfMonth = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(22, 0, 0, 0);
+      return {
+        startAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T220000Z\nRRULE:FREQ=MONTHLY;BYDAY=SA`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 220,
@@ -111,7 +151,12 @@ const events: EventSeedData[] = [
       locationType: 'virtual',
       details: 'Private stream link shared 48h before start',
     },
-    recurrenceRule: 'FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=18,19',
+    primarySchedule: {
+      startAt: new Date('2026-11-18T09:00:00.000Z'),
+      endAt: new Date('2026-11-19T18:00:00.000Z'),
+      timezone: 'Africa/Johannesburg',
+      recurrenceRule: 'DTSTART:20261118T090000Z\nRRULE:FREQ=YEARLY;BYMONTH=11;BYMONTHDAY=18,19',
+    },
     organizers: [],
     eventCategories: [],
     capacity: 180,
@@ -143,7 +188,24 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYMONTHDAY=3',
+    primarySchedule: (() => {
+      const now = new Date();
+      const base = new Date(now.getFullYear(), now.getMonth(), 3);
+      if (now.getDate() > 3) base.setMonth(base.getMonth() + 1);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const dayOfMonth = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(9, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(17, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T090000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=3`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 40,
@@ -175,7 +237,29 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR,SA,SU',
+    primarySchedule: (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const daysUntilFriday = day <= 5 ? 5 - day || 7 : 6;
+      const daysUntilSunday = day === 0 ? 7 : 7 - day;
+      const friday = new Date(now);
+      friday.setDate(now.getDate() + daysUntilFriday);
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() + daysUntilSunday);
+      const year = friday.getFullYear();
+      const month = friday.getMonth() + 1;
+      const dayOfMonth = friday.getDate();
+      const startAt = new Date(friday);
+      startAt.setHours(8, 0, 0, 0);
+      const endAt = new Date(sunday);
+      endAt.setHours(17, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T080000Z\nRRULE:FREQ=MONTHLY;BYDAY=FR,SA,SU`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 120,
@@ -208,7 +292,26 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=SA',
+    primarySchedule: (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const daysUntilSaturday = day === 6 ? 7 : (6 - day + 7) % 7 || 7;
+      const base = new Date(now);
+      base.setDate(now.getDate() + daysUntilSaturday);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const dayOfMonth = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(18, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(23, 30, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=MONTHLY;BYDAY=SA`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 220,
@@ -241,7 +344,29 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR,SA,SU',
+    primarySchedule: (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const daysUntilFriday = day <= 5 ? 5 - day || 7 : 6;
+      const daysUntilSunday = day === 0 ? 7 : 7 - day;
+      const friday = new Date(now);
+      friday.setDate(now.getDate() + daysUntilFriday);
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() + daysUntilSunday);
+      const year = friday.getFullYear();
+      const month = friday.getMonth() + 1;
+      const dayOfMonth = friday.getDate();
+      const startAt = new Date(friday);
+      startAt.setHours(8, 0, 0, 0);
+      const endAt = new Date(sunday);
+      endAt.setHours(17, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${dayOfMonth.toString().padStart(2, '0')}T080000Z\nRRULE:FREQ=MONTHLY;BYDAY=FR,SA,SU`,
+      };
+    })(),
     organizers: [],
     eventCategories: [],
     capacity: 120,
@@ -275,12 +400,21 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: (() => {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth() + 1;
-      const day = today.getDate();
-      return `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=DAILY;COUNT=1`;
+    primarySchedule: (() => {
+      const base = new Date();
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const day = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(18, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(21, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=DAILY;COUNT=1`,
+      };
     })(),
     organizers: [],
     eventCategories: [],
@@ -314,13 +448,22 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: (() => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const year = tomorrow.getFullYear();
-      const month = tomorrow.getMonth() + 1;
-      const day = tomorrow.getDate();
-      return `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T190000Z\nRRULE:FREQ=DAILY;COUNT=1`;
+    primarySchedule: (() => {
+      const base = new Date();
+      base.setDate(base.getDate() + 1);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const day = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(19, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(22, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T190000Z\nRRULE:FREQ=DAILY;COUNT=1`,
+      };
     })(),
     organizers: [],
     eventCategories: [],
@@ -354,16 +497,25 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: (() => {
-      const today = new Date();
-      const currentDay = today.getDay();
+    primarySchedule: (() => {
+      const now = new Date();
+      const currentDay = now.getDay();
       const daysUntilWednesday = currentDay === 3 ? 7 : (3 - currentDay + 7) % 7;
-      const nextWednesday = new Date(today);
-      nextWednesday.setDate(today.getDate() + (daysUntilWednesday || 7));
-      const year = nextWednesday.getFullYear();
-      const month = nextWednesday.getMonth() + 1;
-      const day = nextWednesday.getDate();
-      return `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T160000Z\nRRULE:FREQ=DAILY;COUNT=1`;
+      const base = new Date(now);
+      base.setDate(now.getDate() + (daysUntilWednesday || 7));
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const day = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(16, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(19, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T160000Z\nRRULE:FREQ=WEEKLY;BYDAY=WE`,
+      };
     })(),
     organizers: [],
     eventCategories: [],
@@ -397,16 +549,28 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: (() => {
-      const today = new Date();
-      const currentDay = today.getDay();
+    primarySchedule: (() => {
+      const now = new Date();
+      const currentDay = now.getDay();
       const daysUntilSaturday = currentDay === 6 ? 7 : (6 - currentDay + 7) % 7;
-      const nextSaturday = new Date(today);
-      nextSaturday.setDate(today.getDate() + (daysUntilSaturday || 7));
-      const year = nextSaturday.getFullYear();
-      const month = nextSaturday.getMonth() + 1;
-      const day = nextSaturday.getDate();
-      return `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T100000Z\nRRULE:FREQ=DAILY;COUNT=2`;
+      const daysUntilSunday = currentDay === 0 ? 7 : 7 - currentDay;
+      const saturday = new Date(now);
+      saturday.setDate(now.getDate() + (daysUntilSaturday || 7));
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() + (daysUntilSunday || 7));
+      const year = saturday.getFullYear();
+      const month = saturday.getMonth() + 1;
+      const day = saturday.getDate();
+      const startAt = new Date(saturday);
+      startAt.setHours(10, 0, 0, 0);
+      const endAt = new Date(sunday);
+      endAt.setHours(20, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T100000Z\nRRULE:FREQ=DAILY;COUNT=2`,
+      };
     })(),
     organizers: [],
     eventCategories: [],
@@ -440,17 +604,23 @@ const events: EventSeedData[] = [
         country: 'South Africa',
       },
     },
-    recurrenceRule: (() => {
-      const today = new Date();
-      const targetDate = new Date(today.getFullYear(), today.getMonth(), 15, 18, 0, 0, 0);
-      // If the 15th has passed, go to next month
-      if (today.getDate() > 15) {
-        targetDate.setMonth(targetDate.getMonth() + 1);
-      }
-      const year = targetDate.getFullYear();
-      const month = targetDate.getMonth() + 1;
-      const day = targetDate.getDate();
-      return `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=DAILY;COUNT=1`;
+    primarySchedule: (() => {
+      const now = new Date();
+      const base = new Date(now.getFullYear(), now.getMonth(), 15);
+      if (now.getDate() > 15) base.setMonth(base.getMonth() + 1);
+      const year = base.getFullYear();
+      const month = base.getMonth() + 1;
+      const day = base.getDate();
+      const startAt = new Date(base);
+      startAt.setHours(18, 0, 0, 0);
+      const endAt = new Date(base);
+      endAt.setHours(20, 0, 0, 0);
+      return {
+        startAt,
+        endAt,
+        timezone: 'Africa/Johannesburg',
+        recurrenceRule: `DTSTART:${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}T180000Z\nRRULE:FREQ=MONTHLY;BYMONTHDAY=15`,
+      };
     })(),
     organizers: [],
     eventCategories: [],

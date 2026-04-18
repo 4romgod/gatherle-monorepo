@@ -58,7 +58,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
       result = rule.toString();
     }
 
-    onChange(result);
+    onChange(result, startDateTime.toDate(), Intl.DateTimeFormat().resolvedOptions().timeZone, endDateTime?.toDate());
   }, [eventType, startDateTime, endDateTime, frequency, interval, daysOfWeek]);
 
   const handleDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {

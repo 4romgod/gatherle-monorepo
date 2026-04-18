@@ -83,7 +83,19 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       summary: event?.summary ?? '',
       description: event?.description ?? '',
       location: event?.location ?? ({ locationType: 'venue' } as Location),
-      recurrenceRule: event?.recurrenceRule ?? '',
+      primarySchedule: event?.primarySchedule
+        ? {
+            startAt: event.primarySchedule.startAt,
+            endAt: event.primarySchedule.endAt ?? undefined,
+            timezone: event.primarySchedule.timezone ?? 'Africa/Johannesburg',
+            recurrenceRule: event.primarySchedule.recurrenceRule ?? '',
+          }
+        : {
+            startAt: undefined as unknown as Date,
+            endAt: undefined,
+            timezone: 'Africa/Johannesburg',
+            recurrenceRule: '',
+          },
       status: event?.status ?? EventStatus.Upcoming,
       lifecycleStatus: event?.lifecycleStatus ?? EventLifecycleStatus.Draft,
       visibility: event?.visibility ?? EventVisibility.Public,
@@ -104,7 +116,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       orgId: event?.orgId ?? undefined,
       venueId: event?.venueId,
       locationSnapshot: undefined,
-      primarySchedule: undefined,
     };
   }, [event]);
 
@@ -202,8 +213,17 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, venueId: venueId ?? undefined }));
   };
 
-  const handleEventDateChange = (rrule: string) => {
-    setEventData((prev) => ({ ...prev, recurrenceRule: rrule }));
+  const handleEventDateChange = (rrule: string, startAt: Date, timezone: string, endAt?: Date) => {
+    setEventData((prev) => ({
+      ...prev,
+      primarySchedule: {
+        ...(prev.primarySchedule ?? {}),
+        recurrenceRule: rrule,
+        startAt,
+        timezone,
+        endAt,
+      },
+    }));
   };
 
   const handleStatusChange = (event: SelectChangeEvent<EventStatus>) => {
@@ -243,7 +263,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     if (!eventData.title?.trim()) newErrors.title = 'Title is required';
     if (!eventData.summary?.trim()) newErrors.summary = 'Summary is required';
     if (!eventData.description?.trim()) newErrors.description = 'Description is required';
-    if (!eventData.recurrenceRule) newErrors.recurrenceRule = 'Event date is required';
+    if (!eventData.primarySchedule?.recurrenceRule) newErrors.recurrenceRule = 'Event date is required';
     if (eventData.eventCategories.length === 0) newErrors.categories = 'Select at least one category';
 
     setErrors(newErrors);
@@ -267,7 +287,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
             title: eventData.title,
             summary: eventData.summary,
             description: eventData.description,
-            recurrenceRule: eventData.recurrenceRule,
+            primarySchedule: eventData.primarySchedule,
             location: eventData.location,
             venueId: eventData.venueId,
             status: eventData.status,

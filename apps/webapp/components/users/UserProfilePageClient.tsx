@@ -141,11 +141,11 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   }, [isOwnProfile, myRsvpsData, events, user?.userId]);
 
   const upcomingRsvpdEvents = useMemo(
-    () => allRsvpdEvents.filter((e) => isEventUpcoming(e.recurrenceRule)),
+    () => allRsvpdEvents.filter((e) => isEventUpcoming(e.primarySchedule.recurrenceRule)),
     [allRsvpdEvents],
   );
   const pastRsvpdEvents = useMemo(
-    () => allRsvpdEvents.filter((e) => !isEventUpcoming(e.recurrenceRule)),
+    () => allRsvpdEvents.filter((e) => !isEventUpcoming(e.primarySchedule.recurrenceRule)),
     [allRsvpdEvents],
   );
   const organizedEvents = useMemo(

@@ -14,7 +14,11 @@ describe('Event', () => {
         description: 'Event Description',
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
-        recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        primarySchedule: {
+          startAt: '2024-06-30T10:00:00Z',
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        },
         location: {
           locationType: 'online',
         },
@@ -47,7 +51,11 @@ describe('Event', () => {
         description: 'Event Description',
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
-        recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        primarySchedule: {
+          startAt: '2024-06-30T10:00:00Z',
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        },
         location: {
           locationType: 'online',
         },

@@ -99,7 +99,6 @@ describe('Social resolver e2e', () => {
       lifecycleStatus: EventLifecycleStatus.Published,
       visibility: EventVisibility.Public,
       location: baseEventData.location,
-      recurrenceRule: baseEventData.recurrenceRule,
     };
 
     const createdEvent = await createEventOnServer(url, actorUser.token, eventInput, createdEventIds);
