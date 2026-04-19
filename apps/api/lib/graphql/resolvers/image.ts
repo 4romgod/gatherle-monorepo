@@ -1,17 +1,15 @@
 import 'reflect-metadata';
-import { Arg, Query, Authorized, Ctx, Resolver } from 'type-graphql';
+import { Arg, Mutation, Query, Authorized, Ctx, Resolver } from 'type-graphql';
 import { ImageUploadUrl, ImageEntityType, ImageType, UserRole } from '@gatherle/commons/types';
 import { getAuthenticatedUser } from '@/utils';
-import { getPresignedUploadUrl } from '@/clients/AWS/s3Client';
-import { CF_IMAGES_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
-import { logger } from '@/utils/logger';
+import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';
-import { randomUUID } from 'crypto';
+import { ImageService } from '@/services';
 
 @Resolver()
 export class ImageResolver {
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Query(() => ImageUploadUrl, { description: 'Get pre-signed URL for uploading images directly to S3' })
+  @Query(() => ImageUploadUrl, { description: RESOLVER_DESCRIPTIONS.IMAGE.getImageUploadUrl })
   async getImageUploadUrl(
     @Arg('entityType', () => ImageEntityType, { description: 'Type of entity this image belongs to' })
     entityType: ImageEntityType,
@@ -27,42 +25,19 @@ export class ImageResolver {
     @Ctx() context: ServerContext,
   ): Promise<ImageUploadUrl> {
     const user = getAuthenticatedUser(context);
+    return ImageService.getImageUploadUrl({ entityType, imageType, extension, entityId, userId: user.userId });
+  }
 
-    // For User images, always derive the entity ID from the authenticated user — never trust the client.
-    // For other entity types, fall back to a random UUID if no entityId is provided (e.g. during entity creation
-    // before an ID has been assigned). This keeps the key non-colliding even without a real entity ID.
-    const resolvedEntityId = entityType === ImageEntityType.User ? user.userId : (entityId ?? randomUUID());
-
-    const cleanExt = extension.toLowerCase().replace(/^\./, '');
-    const contentType = CONTENT_TYPE_MAP[cleanExt] || 'image/jpeg';
-    // Gallery images and ALL EventMoment media get a unique key per upload so each upload is distinct.
-    // Other types (avatar, logo, featured) use a deterministic key so re-uploading overwrites the previous object.
-    const needsUniqueKey = imageType === ImageType.Gallery || entityType === ImageEntityType.EventMoment;
-    const filename = needsUniqueKey ? `${imageType}-${randomUUID()}.${cleanExt}` : `${imageType}.${cleanExt}`;
-
-    // Key structure: {stage}/{entityType}s/{entityId}/{filename}
-    // e.g. beta/users/abc123/avatar.jpg (avatar/logo/featured)
-    //      beta/users/abc123/gallery-<uuid>.jpg (gallery)
-    const stagePrefix = STAGE.toLowerCase();
-    const entityFolder = `${entityType}s`;
-    const key = `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${filename}`;
-
-    if (!CF_IMAGES_DOMAIN) {
-      throw new Error('CF_IMAGES_DOMAIN is required to generate stable media URLs');
-    }
-
-    const uploadUrl = await getPresignedUploadUrl(key, contentType, 900); // 15 minutes
-    const readUrl = `https://${CF_IMAGES_DOMAIN}/${key}`;
-
-    logger.info('Generated image upload URL', {
-      userId: user.userId,
-      entityType,
-      entityId: resolvedEntityId,
-      imageType,
-      key,
-      mediaHost: CF_IMAGES_DOMAIN,
-    });
-
-    return { uploadUrl, key, readUrl };
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => ImageUploadUrl, { description: RESOLVER_DESCRIPTIONS.IMAGE.getEventMomentUploadUrl })
+  async getEventMomentUploadUrl(
+    @Arg('eventId', () => String, { description: 'ID of the event this moment belongs to' })
+    eventId: string,
+    @Arg('extension', () => String, { description: 'File extension without leading dot (e.g. mp4, jpg, webp)' })
+    extension: string,
+    @Ctx() context: ServerContext,
+  ): Promise<ImageUploadUrl> {
+    const user = getAuthenticatedUser(context);
+    return ImageService.getEventMomentUploadUrl({ eventId, extension, userId: user.userId, username: user.username });
   }
 }

@@ -25,9 +25,8 @@ class EventMomentDAO {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + EXPIRY_HOURS * 60 * 60 * 1000);
 
-      // Video moments start Processing until MediaConvert writes back the HLS URL.
-      const state =
-        input.type === EventMomentType.Video && !mediaUrl ? EventMomentState.Processing : EventMomentState.Ready;
+      // Video moments always start Processing; MediaConvert updates the record to Ready with the HLS URL.
+      const state = input.type === EventMomentType.Video ? EventMomentState.Processing : EventMomentState.Ready;
 
       const doc = await EventMoment.create({
         momentId,
@@ -75,12 +74,18 @@ class EventMomentDAO {
     eventId: string,
     cursor?: string,
     limit = 30,
+    viewerUserId?: string,
   ): Promise<{ items: EventMomentEntity[]; nextCursor?: string; hasMore: boolean }> {
     try {
       const now = new Date();
+      // Always include Ready moments; also include the viewer's own Processing moments so
+      // they see their upload immediately while transcoding is in progress.
+      const stateFilter = viewerUserId
+        ? { $or: [{ state: EventMomentState.Ready }, { state: EventMomentState.Processing, authorId: viewerUserId }] }
+        : { state: EventMomentState.Ready };
       const query: Record<string, unknown> = {
         eventId,
-        state: EventMomentState.Ready,
+        ...stateFilter,
         expiresAt: { $gt: now },
       };
 
@@ -194,24 +199,39 @@ class EventMomentDAO {
   }
 
   /**
-   * Update mediaUrl + thumbnailUrl + durationSeconds after MediaConvert completes.
+   * Update mediaUrl + durationSeconds (and optionally thumbnailUrl) after MediaConvert completes.
+   * thumbnailUrl is optional — callers that already set it via the client upload can omit it.
    * Called by the MediaConvert completion Lambda.
    */
   static async markReady(
     momentId: string,
     mediaUrl: string,
-    thumbnailUrl: string,
+    thumbnailUrl: string | undefined,
     durationSeconds: number,
   ): Promise<EventMomentEntity | null> {
     try {
-      const doc = await EventMoment.findOneAndUpdate(
-        { momentId },
-        { $set: { state: EventMomentState.Ready, mediaUrl, thumbnailUrl, durationSeconds } },
-        { new: true },
-      ).exec();
+      const setFields: Record<string, unknown> = { state: EventMomentState.Ready, mediaUrl, durationSeconds };
+      if (thumbnailUrl !== undefined) {
+        setFields.thumbnailUrl = thumbnailUrl;
+      }
+      const doc = await EventMoment.findOneAndUpdate({ momentId }, { $set: setFields }, { new: true }).exec();
       return doc ? doc.toObject() : null;
     } catch (error) {
       logDaoError('Error marking event moment ready', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Find a moment by its stored mediaUrl (the raw CloudFront URL set at creation time).
+   * Used by the MediaConvert completion Lambda to look up which moment a job belongs to.
+   */
+  static async findByMediaUrl(mediaUrl: string): Promise<EventMomentEntity | null> {
+    try {
+      const doc = await EventMoment.findOne({ mediaUrl }).exec();
+      return doc ? doc.toObject() : null;
+    } catch (error) {
+      logDaoError('Error finding event moment by media URL', { error });
       throw KnownCommonError(error);
     }
   }
@@ -227,7 +247,7 @@ class EventMomentDAO {
   }
 }
 
-export const POSTING_WINDOW_HOURS_AFTER_EVENT = 48;
+export const POSTING_WINDOW_HOURS_AFTER_EVENT = 72;
 export const MAX_STATUSES_PER_WINDOW = MAX_STATUSES_PER_ROLLING_WINDOW;
 
 export default EventMomentDAO;

@@ -338,6 +338,13 @@ export const RESOLVER_DESCRIPTIONS = {
     refreshFeed:
       "Manually trigger a full recomputation of the authenticated user's feed and return true when complete.",
   },
+  IMAGE: {
+    getImageUploadUrl: 'Get a pre-signed S3 URL for uploading an image directly to S3.',
+    getEventMomentUploadUrl:
+      'Get a pre-signed S3 URL for uploading an event moment media file. ' +
+      'Enforces event existence, posting window, RSVP (Going/CheckedIn), and per-user rate limit ' +
+      'before issuing the URL — preventing unauthorized MediaConvert job submissions.',
+  },
 };
 
 export const QUERY_DESCRIPTIONS = {

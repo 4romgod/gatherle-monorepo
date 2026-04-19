@@ -41,6 +41,7 @@ jest.mock('@/components/core/EmojiPickerPopover', () => ({
 
 const defaultProps = {
   eventId: 'event-1',
+  eventSlug: 'summer-party-2025',
   open: true,
   onClose: jest.fn(),
   onCreated: jest.fn(),
@@ -69,14 +70,14 @@ describe('EventMomentComposer — file validation', () => {
     expect(screen.getByText(/15 MB/i)).toBeTruthy();
   });
 
-  it('displays the 15 MB file size limit hint on the Video tab', async () => {
+  it('displays the 75 MB file size limit hint on the Video tab', async () => {
     render(<EventMomentComposer {...defaultProps} />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Video' }));
     });
 
-    expect(screen.getByText(/15 MB/i)).toBeTruthy();
+    expect(screen.getByText(/75 MB/i)).toBeTruthy();
   });
 
   it('shows an error and does not proceed when an image file exceeds 15 MB', async () => {
@@ -103,9 +104,10 @@ describe('EventMomentComposer — file validation', () => {
     expect(mockGetUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('shows an error and does not proceed when a video file exceeds 15 MB', async () => {
+  it('shows an error and does not proceed when a video file exceeds 75 MB', async () => {
     const mockGetUploadUrl = jest.fn();
     mockUseLazyQuery.mockReturnValue([mockGetUploadUrl, {}]);
+    URL.createObjectURL = jest.fn().mockReturnValue('blob:mock');
 
     render(<EventMomentComposer {...defaultProps} />);
 
@@ -116,7 +118,7 @@ describe('EventMomentComposer — file validation', () => {
     const input = document.querySelector('input[type="file"][accept*="video"]') as HTMLInputElement;
     expect(input).toBeTruthy();
 
-    const bigFile = new File([new ArrayBuffer(16 * 1024 * 1024)], 'huge.mp4', { type: 'video/mp4' });
+    const bigFile = new File([new ArrayBuffer(76 * 1024 * 1024)], 'huge.mp4', { type: 'video/mp4' });
     Object.defineProperty(input, 'files', { value: [bigFile], writable: false, configurable: true });
 
     await act(async () => {

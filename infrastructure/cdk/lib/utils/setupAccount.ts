@@ -1,6 +1,7 @@
 import { App } from 'aws-cdk-lib';
 import {
   GraphQLStack,
+  MediaStack,
   SecretsManagementStack,
   SesStack,
   StageInfraStack,
@@ -86,6 +87,21 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
 
   // Grant Lambda permission to send email via SES
   sesStack.grantSendEmail(graphqlStack.graphqlLambda);
+
+  const mediaStack = new MediaStack(app, 'MediaStack', {
+    env: stackEnv,
+    stackName: buildStackName('media', account.applicationStage, account.awsRegion),
+    applicationStage: account.applicationStage,
+    awsRegion: account.awsRegion,
+    s3BucketName: s3BucketStack.imagesBucket.bucketName,
+    cfImagesDomain: s3BucketStack.imagesCdnDomainName,
+    description:
+      'This stack contains the MediaConvert transcoding pipeline for Gatherle event-moment videos. ' +
+      'Videos are transcoded to 720p HLS on upload and stored back in the images S3 bucket.',
+  });
+
+  mediaStack.addDependency(s3BucketStack);
+  mediaStack.addDependency(secretsManagementStack);
 
   // Create monitoring dashboard
   const monitoringStack = new MonitoringDashboardStack(app, 'MonitoringDashboardStack', {

@@ -14,3 +14,13 @@ export const GetImageUploadUrlDocument = graphql(`
     }
   }
 `);
+
+export const GetEventMomentUploadUrlDocument = graphql(`
+  mutation GetEventMomentUploadUrl($eventId: String!, $extension: String!) {
+    getEventMomentUploadUrl(eventId: $eventId, extension: $extension) {
+      uploadUrl
+      key
+      readUrl
+    }
+  }
+`);

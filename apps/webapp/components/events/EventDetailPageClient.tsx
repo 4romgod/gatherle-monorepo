@@ -445,6 +445,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 <EventMomentsRing
                   eventId={eventId}
                   myRsvpStatus={myRsvp?.status ?? null}
+                  eventEndAt={event.primarySchedule?.endAt ?? null}
                   onAddClick={() => setComposerOpen(true)}
                   onMomentClick={openViewer}
                 />

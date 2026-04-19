@@ -5,6 +5,28 @@ import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
 
 type TestMoment = ReadEventMomentsQuery['readEventMoments']['items'][number];
 
+// ── hls.js mock ───────────────────────────────────────────────────────────────
+// jest.mock factories are hoisted before variable declarations, so the mock must
+// be fully self-contained. Access the mocked class via the static import below.
+jest.mock('hls.js', () => ({
+  __esModule: true,
+  default: Object.assign(
+    jest.fn().mockImplementation(() => ({
+      loadSource: jest.fn(),
+      attachMedia: jest.fn(),
+      destroy: jest.fn(),
+      on: jest.fn(),
+    })),
+    {
+      isSupported: jest.fn().mockReturnValue(true),
+      Events: { ERROR: 'hlsError' },
+    },
+  ),
+}));
+import Hls from 'hls.js';
+type HlsIsSupported = { isSupported: jest.Mock };
+// ─────────────────────────────────────────────────────────────────────────────
+
 const mockUseSession = jest.fn();
 const mockUseMutation = jest.fn();
 const mockUseChatRealtime = jest.fn();
@@ -153,6 +175,14 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
   });
 
   describe('video moments', () => {
+    let HlsMock: jest.MockedClass<typeof Hls>;
+
+    beforeEach(() => {
+      HlsMock = Hls as jest.MockedClass<typeof Hls>;
+      HlsMock.mockClear();
+      (HlsMock as unknown as HlsIsSupported).isSupported.mockReturnValue(true);
+    });
+
     it('shows a loading spinner before the video can play', () => {
       render(
         <EventMomentViewer
@@ -181,6 +211,73 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       });
 
       expect(screen.queryByRole('progressbar')).toBeNull();
+    });
+
+    it('uses hls.js for .m3u8 URLs when Hls.isSupported() is true', async () => {
+      (HlsMock as unknown as HlsIsSupported).isSupported.mockReturnValue(true);
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Video', { mediaUrl: 'https://cdn.example.com/clip/hls/index.m3u8' })]}
+        />,
+      );
+
+      await act(async () => {});
+
+      expect(HlsMock).toHaveBeenCalledTimes(1);
+      const instance = HlsMock.mock.results[0]?.value as { loadSource: jest.Mock; attachMedia: jest.Mock };
+      expect(instance.loadSource).toHaveBeenCalledWith('https://cdn.example.com/clip/hls/index.m3u8');
+      expect(instance.attachMedia).toHaveBeenCalledWith(expect.any(HTMLVideoElement));
+    });
+
+    it('sets video.src directly for .m3u8 when Hls.isSupported() is false (Safari)', async () => {
+      (HlsMock as unknown as HlsIsSupported).isSupported.mockReturnValue(false);
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Video', { mediaUrl: 'https://cdn.example.com/clip/hls/index.m3u8' })]}
+        />,
+      );
+
+      await act(async () => {});
+
+      expect(HlsMock).not.toHaveBeenCalled();
+      const video = document.querySelector('video');
+      expect(video?.src).toBe('https://cdn.example.com/clip/hls/index.m3u8');
+    });
+
+    it('sets video.src directly for plain .mp4 URLs', async () => {
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Video', { mediaUrl: 'https://cdn.example.com/video.mp4' })]}
+        />,
+      );
+
+      await act(async () => {});
+
+      expect(HlsMock).not.toHaveBeenCalled();
+      const video = document.querySelector('video');
+      expect(video?.src).toBe('https://cdn.example.com/video.mp4');
+    });
+
+    it('destroys the hls.js instance when the component unmounts', async () => {
+      (HlsMock as unknown as HlsIsSupported).isSupported.mockReturnValue(true);
+
+      const { unmount } = render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Video', { mediaUrl: 'https://cdn.example.com/clip/hls/index.m3u8' })]}
+        />,
+      );
+
+      await act(async () => {});
+      unmount();
+
+      const instance = HlsMock.mock.results[0]?.value as { destroy: jest.Mock };
+      expect(instance.destroy).toHaveBeenCalledTimes(1);
     });
   });
 
