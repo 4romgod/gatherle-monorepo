@@ -37,10 +37,10 @@ with noise. `Cancelled` is explicitly disallowed server-side.
 
 ### When can you post? (Posting window)
 
-Posting is allowed from the moment a user's RSVP is confirmed through to **48 hours after the event ends**.
+Posting is allowed from the moment a user's RSVP is confirmed through to **72 hours after the event ends**.
 
 ```
- RSVP confirmed ──────────────────────────── event.endDate + 48h
+ RSVP confirmed ──────────────────────────── event.endDate + 72h
       │                                              │
       ▼                                              ▼
   ┌────────────────────────────────────────────────────┐
@@ -51,12 +51,14 @@ Posting is allowed from the moment a user's RSVP is confirmed through to **48 ho
 **Why no hard start date?** Allowing posts from RSVP time lets attendees build pre-event hype organically — outfit
 photos, travel shots, "so excited for this" text statuses. These drive discovery for followers who haven't RSVP'd yet.
 
-**Why 48 hours post-event?** Recap content (highlight photos, group shots) is highest-engagement content for the event
-page. Cutting off at 48 h prevents indefinite accumulation while giving attendees a full day and a half to share
-memories. Each status still expires 24 hours after it is posted regardless.
+**Why 72 hours post-event?** Recap content (highlight photos, group shots) is highest-engagement content for the event
+page. 72 hours (three full days) gives attendees time to share memories even after a late-night event — someone who
+attended a Saturday midnight show can still post a recap photo on Monday evening. Each status still expires 24 hours
+after it is posted regardless.
 
-The posting window is enforced server-side in `createEventMoment`: the resolver reads `event.endDate` and rejects
-requests where `now > event.endDate + 48h`.
+The posting window is enforced **server-side** in `EventMomentService.create` (reads `event.primarySchedule.endAt`,
+rejects requests where `now > endAt + 72h`) and **client-side** in `EventMomentsRing` (the Add button is visually
+disabled with a tooltip once the window closes, preventing the user from even opening the composer).
 
 ### How many statuses can a user post?
 
@@ -90,50 +92,230 @@ Visibility depends on the surface:
 Statuses expire 24 hours after creation. Enforced by a MongoDB TTL index on `expiresAt`. The field is set at creation
 time to `createdAt + 24h`. Expired documents are deleted by MongoDB's background TTL reaper — no cron job needed.
 
-### Video clip length: **15 seconds**
+### Video clip length: **30 seconds**
 
 | Option      | Notes                                                                                                                                                           |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **15 s** ✅ | Instagram Stories / TikTok loop cap — short enough that raw uploads stay small (~25–75 MB) and transcoding is fast; still enough to capture a meaningful moment |
-| 30 s        | WhatsApp Video Status cap — more storage and transcoding cost per upload                                                                                        |
+| 15 s        | Instagram Stories / TikTok loop cap — very short; limits what users can share at a multi-hour event                                                              |
+| **30 s** ✅ | WhatsApp Video Status cap — long enough to capture a meaningful moment; raw uploads stay manageable (~75 MB ceiling); transcoding remains fast                  |
 | 60 s        | Significantly more storage and transcoding cost per upload                                                                                                      |
 | 90 s+       | Storage and transcoding cost jumps significantly; no clear UX benefit                                                                                           |
 
-**Recommendation: 15 seconds max.** If the selected file exceeds 15 seconds, the client **truncates it to the first 15
-seconds** (using the [MediaRecorder API](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder) or a
-`<canvas>` + `<video>` seek-and-record approach) before the upload begins. The user sees a preview of the truncated clip
-and a brief "Trimmed to 15 s" notice. The resolver also enforces the limit server-side via the `durationSeconds` field
-as a safety net. The short cap also means we can serve a single 720p rendition without adaptive bitrate complexity — HLS
-is still used for broad device compatibility but a second 360p rendition becomes optional.
+**Decision: 30 seconds max.** The client reads `videoEl.duration` after file selection and rejects files longer than
+30 seconds with an immediate error message. The resolver also enforces the limit server-side via the `durationSeconds`
+field as a safety net.
+
+**On multiple quality renditions:** For a 30-second clip, adaptive bitrate (ABR) is not necessary. A single 720p H.264
+output is simpler, cheaper, and good enough — the whole clip buffers in a couple of seconds on a normal connection
+regardless of rendition count. ABR pays off for long-form content where connection quality can fluctuate mid-playback.
+A 360p fallback rendition can be added later if analytics show buffering complaints.
 
 ### Video compression: Yes — server-side transcoding
 
-Uploading raw phone video to S3 and serving it directly is not viable:
+#### Why we can't just serve raw phone video
 
-- A 15-second 4K clip from a modern phone is ~25–75 MB
-- Different devices produce different codecs (H.264, H.265, ProRes, VP9)
-- No adaptive bitrate → poor experience on slow connections
+When someone records a 15-second clip on their phone and uploads it, the raw file has several problems:
 
-**Proposed approach: upload → transcode → HLS stream via CloudFront.**
+1. **It's huge.** A 30-second clip at 1080p from a modern iPhone or Android phone is typically 60–150 MB. Every viewer
+   who opens that moment has to download all of that before the video starts playing.
+
+2. **The codec might not be supported everywhere.** iPhones record in H.265 (HEVC) by default. Many Android phones
+   record in H.264. Some use ProRes or VP9. Browsers don't all support the same codecs — a raw `.mov` from an iPhone
+   will simply refuse to play in Chrome on Android, for example.
+
+3. **There's no way to adapt to a slow connection.** If a viewer is on a weak 3G signal and we serve a 60 MB file, the
+   video will buffer constantly. With a proper transcoded output we can serve lower-quality segments to slow connections
+   and higher-quality ones to fast connections automatically — this is called **adaptive bitrate streaming (ABR)**.
+
+#### What we do instead: transcode to HLS
+
+We transcode (convert and compress) the raw video on AWS infrastructure after upload, and produce a format called
+**HLS (HTTP Live Streaming)**. HLS breaks the video into small 2-second chunks (`.ts` segment files) and a manifest
+file (`.m3u8`) that lists all the chunks. The player reads the manifest and requests the chunks one by one. Because we
+produce multiple quality renditions (e.g. 720p and 360p), the player automatically switches between them based on the
+viewer's current internet speed — this is the adaptive bitrate magic.
+
+After transcoding, the raw file is no longer what gets served. The browser downloads small compressed chunks instead of
+one massive file.
+
+#### The complete pipeline, step by step
+
+**Step 1 — Client-side validation (before anything is uploaded)**
+
+Before the upload even starts, the webapp checks:
+- Is the video ≤ 30 seconds? (Read from `videoEl.duration` after the file is selected)
+- Is the file ≤ 75 MB? (A reasonable ceiling for a 30-second clip before compression)
+- Is the file type one of: `mp4`, `mov`, `webm`? (The three most common phone formats)
+
+If any check fails, the user sees an error message immediately and nothing is uploaded. This is fast, free, and saves
+everyone time.
+
+**Step 2 — Getting an upload URL**
+
+The client calls our GraphQL API: `getImageUploadUrl(entityType: EventMoment, imageType: MomentMedia, extension: "mp4")`.
+
+The API generates a **pre-signed PUT URL** — a temporary, single-use URL that allows the client to upload a file
+directly to our S3 bucket without going through our servers. The URL expires in 15 minutes and is scoped to a specific
+S3 key path (e.g. `beta/event-moments/{eventId}/{momentId}/raw.mp4`).
+
+The `momentId` is generated at this point so the S3 key is deterministic.
+
+**Step 3 — Client uploads the raw file directly to S3**
+
+The client does a `PUT` request directly to S3 using the pre-signed URL. Our API servers are not involved in this
+transfer at all — the file goes from the user's device straight to S3. This means:
+- Our API Lambda doesn't get charged for the bandwidth
+- The upload speed is limited only by the user's connection and S3 (not our server)
+- Large files don't time out our Lambda
+
+While the upload is in progress, the client shows an upload progress bar (we can track this via the `XMLHttpRequest`
+`progress` event or the fetch API's `ReadableStream`).
+
+**Step 4 — Creating the moment record (state: Processing)**
+
+Once the upload is complete, the client calls `createEventMoment(input: { type: Video, mediaKey: "beta/event-moments/..." })`.
+
+The API creates a document in MongoDB with `state: Processing`. This state means:
+- The moment exists in the database
+- It is NOT yet visible to other viewers (only the author can see it in a "pending" state)
+- It is waiting for the transcoding pipeline to finish
+
+The client immediately shows a "Processing…" skeleton in the stories ring so the author knows it's working.
+
+**Step 5 — S3 triggers a Lambda automatically**
+
+When a file is uploaded to S3 with the prefix `event-moments/` and the suffix `/raw.mp4` (or similar), S3 fires an
+**event notification** that invokes our `StartTranscodeJob` Lambda function.
+
+This Lambda is a small Node.js function that does one thing: it reads the S3 key from the event notification, then
+calls AWS Elemental MediaConvert to start a transcoding job.
+
+Think of MediaConvert as a very powerful video processing service that AWS runs. You give it an input file and a set of
+instructions ("make me a 720p HLS stream and a thumbnail"), and it produces the outputs. You pay per minute of video
+processed (about $0.0075 per minute — a 30-second clip costs less than $0.004).
+
+**Step 6 — MediaConvert transcodes the video**
+
+MediaConvert reads the raw file from S3 and produces:
+
+- **720p HLS rendition** — the primary quality tier, H.264 encoded, segmented into 2-second `.ts` chunks, with an
+  `index.m3u8` manifest. Written to: `event-moments/{eventId}/{momentId}/hls/720p/`
+- **360p HLS rendition** — the fallback for slow connections. Same format, lower bitrate. Written to: `.../hls/360p/`
+- **Thumbnail image** — a JPEG poster frame captured at the 1-second mark of the video. Written to:
+  `.../hls/thumbnail.jpg`
+
+The master manifest (`index.m3u8`) references both renditions. The player picks the right one automatically.
+
+This whole step typically takes 15–45 seconds for a 30-second clip.
+
+**Step 7 — A second Lambda fires when transcoding completes**
+
+AWS EventBridge watches for MediaConvert job state changes. When a job transitions to `COMPLETE` (or `ERROR`), it
+triggers our `OnTranscodeComplete` (or `OnTranscodeError`) Lambda.
+
+The `OnTranscodeComplete` Lambda:
+1. Reads the output paths from the MediaConvert completion event
+2. Builds the CloudFront URLs for the HLS manifest and the thumbnail
+3. Calls the GraphQL API (or writes directly to MongoDB) to update the moment document:
+   - Sets `state: Ready`
+   - Sets `mediaUrl` to the CloudFront URL of the HLS master manifest (e.g.
+     `https://cdn.gatherle.com/event-moments/.../hls/index.m3u8`)
+   - Sets `thumbnailUrl` to the CloudFront URL of the thumbnail JPEG
+   - Sets `durationSeconds` from the MediaConvert output metadata
+
+The `OnTranscodeError` Lambda sets `state: Failed` instead, which shows the author a "Upload failed, tap to retry"
+message.
+
+**Step 8 — WebSocket push notifies the author**
+
+When the moment transitions to `Ready`, the API pushes a `event_status_ready` WebSocket message to the author's open
+connection (if they're still on the page). The client updates the stories ring in real time — the "Processing…"
+skeleton is replaced with the actual bubble.
+
+Other viewers (followers who are on the event page) receive an `event_status_created` push at this point and see the
+new bubble appear.
+
+**Step 9 — Playback via CloudFront + hls.js**
+
+When a viewer opens the moment, the player:
+1. Fetches the `.m3u8` master manifest from CloudFront
+2. Reads the available renditions (720p and 360p)
+3. Starts downloading 2-second `.ts` segment chunks
+4. Switches between renditions automatically based on connection speed
+
+CloudFront caches the `.ts` segments at edge locations worldwide, so even if 1000 people are watching the same moment
+simultaneously, the origin S3 bucket is hit very few times.
+
+In the browser, native HLS support varies:
+- **Safari / iOS** — supports HLS natively in `<video src="...m3u8">`
+- **Chrome / Firefox / Edge** — require `hls.js`, a small JavaScript library (~5 KB gzip) that handles HLS using the
+  browser's Media Source Extensions API. We load it only for video moments.
 
 ```
-Phone → Pre-signed PUT → S3 raw/ prefix
-                              ↓
-                   S3 Event Notification (ObjectCreated)
-                              ↓
-                   AWS Lambda (or MediaConvert job trigger)
-                              ↓
-                   AWS Elemental MediaConvert
-                   (transcode to HLS: 360p / 720p renditions)
-                              ↓
-                   S3 processed/ prefix (HLS .m3u8 + .ts segments)
-                              ↓
-                   CloudFront → browser (adaptive bitrate)
+┌─────────────┐   PUT raw.mp4     ┌──────────────────────────────────────┐
+│ User device │ ────────────────► │  S3: event-moments/.../raw.mp4       │
+└─────────────┘  (presigned URL)  └───────────────┬──────────────────────┘
+                                                   │ S3 ObjectCreated event
+                                                   ▼
+                                  ┌──────────────────────────────────────┐
+                                  │  Lambda: StartTranscodeJob           │
+                                  │  - submits MediaConvert job          │
+                                  └───────────────┬──────────────────────┘
+                                                   │
+                                                   ▼
+                                  ┌──────────────────────────────────────┐
+                                  │  AWS Elemental MediaConvert          │
+                                  │  - 720p HLS + 360p HLS + thumbnail   │
+                                  └───────────────┬──────────────────────┘
+                                                   │ writes output to S3
+                                                   ▼
+                                  ┌──────────────────────────────────────┐
+                                  │  S3: event-moments/.../hls/          │
+                                  │  ├── index.m3u8                      │
+                                  │  ├── 720p/*.ts                       │
+                                  │  ├── 360p/*.ts                       │
+                                  │  └── thumbnail.jpg                   │
+                                  └───────────────┬──────────────────────┘
+                                                   │ EventBridge job COMPLETE
+                                                   ▼
+                                  ┌──────────────────────────────────────┐
+                                  │  Lambda: OnTranscodeComplete         │
+                                  │  - sets moment.state = Ready         │
+                                  │  - writes mediaUrl + thumbnailUrl    │
+                                  │  - pushes WebSocket event_ready      │
+                                  └───────────────┬──────────────────────┘
+                                                   │
+                                                   ▼
+                                  ┌──────────────────────────────────────┐
+                                  │  CloudFront CDN                      │
+                                  │  serves HLS chunks to viewers        │
+                                  └──────────────────────────────────────┘
 ```
 
-After MediaConvert completes, a Lambda writes back the `hlsUrl` to the `EventMoment` document in MongoDB (via an
-internal API call or direct Mongoose write in the Lambda). The client polls or receives a WebSocket push when the status
-transitions from `Processing` to `Ready`.
+#### What's actually built today vs what's planned
+
+This pipeline is **designed but not yet fully implemented**. Here's exactly where things stand:
+
+| Component | Built? | Notes |
+|---|---|---|
+| S3 bucket + CloudFront distribution | ✅ Yes | Deployed in `S3BucketStack` |
+| Pre-signed upload URLs | ✅ Yes | `getImageUploadUrl` resolver works |
+| `EventMomentState` model (Processing/Ready/Failed) | ✅ Yes | In `packages/commons` |
+| `updateAfterTranscode` DAO method | ✅ Yes | Written in `EventMomentDAO`, waiting to be called |
+| `markAsFailed` DAO method | ✅ Yes | Written, waiting to be called |
+| Client-side duration + size validation | ❌ No | Needs to be added to `EventMomentComposer` |
+| `StartTranscodeJob` Lambda | ❌ No | CDK stack not started |
+| `OnTranscodeComplete` Lambda | ❌ No | CDK stack not started |
+| `OnTranscodeError` Lambda | ❌ No | CDK stack not started |
+| S3 event notification trigger | ❌ No | Not in `S3BucketStack` yet |
+| MediaConvert CDK queue + IAM role | ❌ No | Not started |
+| HLS playback with `hls.js` in viewer | ❌ No | Viewer uses raw `<video src>` today |
+| WebSocket push on `state: Ready` | ❌ No | Not wired in completion Lambda |
+
+**What this means in practice today:** Video moments are uploaded as raw `.mp4` files. The file is stored on S3 and
+served directly via CloudFront as a raw video — no transcoding, no adaptive bitrate. It works for short clips, but
+viewers download the full uncompressed file. This is acceptable for an MVP/beta with small user counts. The full
+pipeline is Phase 2 infrastructure work.
 
 **Image** statuses: same path as current avatar/featured image uploads — pre-signed PUT, then served via existing
 CloudFront distribution. No transcoding needed.
@@ -468,11 +650,11 @@ upload time and storage cost without a server round trip.
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Can `Interested` RSVPs post?                             | No — restrict to `Going` + `CheckedIn` only                                                                                |
 | Can the same user post multiple statuses for one event?  | Yes — 5 per rolling 24-hour window per event (see above)                                                                   |
-| When can a user post?                                    | From RSVP confirmation until 48 hours after `event.endDate` (see above)                                                    |
+| When can a user post?                                    | From RSVP confirmation until 72 hours after `event.endDate` (see above)                                                    |
 | Reactions on statuses (like / ❤️)?                       | Post-MVP — out of scope for Phase 1                                                                                        |
 | Who can see `Failed` statuses?                           | Author only; show "Upload failed, tap to retry"                                                                            |
 | Should expired statuses be hard-deleted or soft-deleted? | Hard-deleted via TTL index — simpler, no cleanup job needed                                                                |
-| Video size limit (bytes)?                                | 50 MB raw upload limit — generous enough for 15 s 4K; enforced pre-signed URL side via S3 `content-length-range` condition |
+| Video size limit (bytes)?                                | 75 MB raw upload limit — generous enough for 30 s at high quality; enforced client-side pre-upload and server-side via S3 `content-length-range` condition on the pre-signed URL |
 
 ---
 

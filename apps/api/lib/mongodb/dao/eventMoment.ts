@@ -227,7 +227,7 @@ class EventMomentDAO {
   }
 }
 
-export const POSTING_WINDOW_HOURS_AFTER_EVENT = 48;
+export const POSTING_WINDOW_HOURS_AFTER_EVENT = 72;
 export const MAX_STATUSES_PER_WINDOW = MAX_STATUSES_PER_ROLLING_WINDOW;
 
 export default EventMomentDAO;

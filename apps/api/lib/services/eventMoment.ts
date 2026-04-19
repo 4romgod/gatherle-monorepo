@@ -27,11 +27,10 @@ class EventMomentService {
       throw CustomError('Event not found', ErrorTypes.NOT_FOUND);
     }
 
-    const windowCloseMs =
-      (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt)
-        ? (event.primarySchedule.endAt ?? event.primarySchedule.startAt!).getTime() +
-          POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000
-        : null;
+    const windowCloseMs = (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt) ?
+      (event.primarySchedule.endAt ?? event.primarySchedule.startAt!).getTime() + POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000 :
+      null;
+
     if (windowCloseMs !== null && Date.now() > windowCloseMs) {
       throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
     }

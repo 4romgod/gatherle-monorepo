@@ -15,11 +15,16 @@ interface EventMomentsRingProps {
   eventId: string;
   /** The viewer's current RSVP status — controls whether the "add" button is shown. */
   myRsvpStatus: ParticipantStatus | null;
+  /** The event end date/time — used to enforce the posting window on the frontend. */
+  eventEndAt?: string | null;
   onAddClick: () => void;
   onMomentClick: (moments: Moment[], startIndex: number) => void;
 }
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
+
+/** Hours after event end during which moments can still be posted. Must match the API constant. */
+const POSTING_WINDOW_HOURS = 72;
 
 /** Groups moments by author so each attendee gets one bubble in the ring. */
 function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
@@ -32,7 +37,7 @@ function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
   return map;
 }
 
-export default function EventMomentsRing({ eventId, myRsvpStatus, onAddClick, onMomentClick }: EventMomentsRingProps) {
+export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, onAddClick, onMomentClick }: EventMomentsRingProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
@@ -45,6 +50,12 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, onAddClick, on
   const moments = (data?.readEventMoments.items ?? []).filter((m) => m.state === EventMomentState.Ready);
   const authorGroups = groupByAuthor(moments);
   const canPost = myRsvpStatus !== null && ALLOWED_RSVP_STATUSES.includes(myRsvpStatus);
+
+  // Posting window: open while event is running, and for POSTING_WINDOW_HOURS after it ends.
+  // If endAt is not available we default to open so we don't wrongly block attendees.
+  const isWindowOpen = eventEndAt
+    ? Date.now() <= new Date(eventEndAt).getTime() + POSTING_WINDOW_HOURS * 60 * 60 * 1000
+    : true;
 
   if (loading && moments.length === 0) {
     return (
@@ -85,38 +96,50 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, onAddClick, on
     >
       {/* Add moment button — only for Going / CheckedIn attendees */}
       {canPost && (
-        <Tooltip title="Add a moment" placement="top">
-          <Box
-            onClick={onAddClick}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 0.75,
-              flexShrink: 0,
-              cursor: 'pointer',
-            }}
-          >
+        <Tooltip
+          title={isWindowOpen ? 'Add a moment' : `Moments closed — can be shared up to ${POSTING_WINDOW_HOURS}h after the event ends`}
+          placement="top"
+        >
+          {/* Wrapper span lets Tooltip work even when the child is pointer-events: none */}
+          <span>
             <Box
+              onClick={isWindowOpen ? onAddClick : undefined}
               sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                border: '2px dashed',
-                borderColor: 'primary.main',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                '&:hover': { bgcolor: 'action.hover', transform: 'scale(1.05)' },
+                gap: 0.75,
+                flexShrink: 0,
+                cursor: isWindowOpen ? 'pointer' : 'default',
+                opacity: isWindowOpen ? 1 : 0.4,
               }}
             >
-              <AddCircleIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  border: '2px dashed',
+                  borderColor: isWindowOpen ? 'primary.main' : 'text.disabled',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  ...(isWindowOpen && { '&:hover': { bgcolor: 'action.hover', transform: 'scale(1.05)' } }),
+                }}
+              >
+                <AddCircleIcon sx={{ fontSize: 28, color: isWindowOpen ? 'primary.main' : 'text.disabled' }} />
+              </Box>
+              <Typography
+                variant="caption"
+                color={isWindowOpen ? 'primary.main' : 'text.disabled'}
+                fontWeight={600}
+                sx={{ fontSize: '0.65rem' }}
+              >
+                Your moment
+              </Typography>
             </Box>
-            <Typography variant="caption" color="primary.main" fontWeight={600} sx={{ fontSize: '0.65rem' }}>
-              Your moment
-            </Typography>
-          </Box>
+          </span>
         </Tooltip>
       )}
 

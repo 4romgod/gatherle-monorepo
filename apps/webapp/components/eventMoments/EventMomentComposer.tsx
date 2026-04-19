@@ -41,8 +41,9 @@ interface EventMomentComposerProps {
 }
 
 const MAX_CAPTION = 280;
-// TODO: investigate the right max file size for moments (images + videos) — 15 MB is a temporary ceiling
-const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_VIDEO_BYTES = 75 * 1024 * 1024; // 75 MB
+const MAX_VIDEO_DURATION_SECONDS = 30;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 const ACCEPTED_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm']);
 
@@ -130,6 +131,8 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
   const videoInputRef = useRef<HTMLInputElement>(null);
   // Tracks the current object URL for video preview so it can be revoked when cleared
   const videoPreviewUrlRef = useRef<string | null>(null);
+  // Holds the last selected file + its imageType so the upload can be retried without re-selecting
+  const pendingFileRef = useRef<{ file: File; imageType: ImageType } | null>(null);
 
   const [createMoment, { loading: creating }] = useMutation(CreateEventMomentDocument, {
     context: { headers: getAuthHeader(token) },
@@ -184,6 +187,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       URL.revokeObjectURL(videoPreviewUrlRef.current);
       videoPreviewUrlRef.current = null;
     }
+    pendingFileRef.current = null;
     setMediaPreview(null);
     setMediaKey(null);
     setThumbnailKey(null);
@@ -208,12 +212,34 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     if (!file) return;
     e.target.value = '';
 
+    pendingFileRef.current = { file, imageType };
+    await uploadFile(file, imageType, acceptedTypes);
+  };
+
+  const retryUpload = async () => {
+    const pending = pendingFileRef.current;
+    if (!pending) return;
+    const acceptedTypes = ACCEPTED_VIDEO_TYPES.has(pending.file.type) ? ACCEPTED_VIDEO_TYPES : ACCEPTED_IMAGE_TYPES;
+    // Reset only the upload result (keep preview) before retrying
+    setMediaKey(null);
+    setThumbnailKey(null);
+    setSubmitError(null);
+    await uploadFile(pending.file, pending.imageType, acceptedTypes);
+  };
+
+  const uploadFile = async (file: File, imageType: ImageType, acceptedTypes: Set<string>) => {
+
     if (!acceptedTypes.has(file.type)) {
       setSubmitError('Unsupported file type. Please choose a different file.');
       return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setSubmitError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 15 MB.`);
+
+    const isVideo = ACCEPTED_VIDEO_TYPES.has(file.type);
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > maxBytes) {
+      setSubmitError(
+        `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max ${maxBytes / 1024 / 1024} MB.`,
+      );
       return;
     }
 
@@ -223,9 +249,25 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     // Video files must use an object URL — browsers cannot seek/play data: URLs for video.
     // Images are fine with data URLs (no seeking required).
     let localPreview: string;
-    if (ACCEPTED_VIDEO_TYPES.has(file.type)) {
+    if (isVideo) {
       localPreview = URL.createObjectURL(file);
       videoPreviewUrlRef.current = localPreview;
+
+      // Validate duration client-side before starting the upload.
+      const duration = await new Promise<number>((resolve) => {
+        const el = document.createElement('video');
+        el.preload = 'metadata';
+        el.src = localPreview;
+        el.onloadedmetadata = () => resolve(el.duration);
+        el.onerror = () => resolve(0);
+      });
+      if (duration > MAX_VIDEO_DURATION_SECONDS) {
+        setSubmitError(
+          `Video is too long (${Math.round(duration)}s). Max ${MAX_VIDEO_DURATION_SECONDS} seconds.`,
+        );
+        resetMedia();
+        return;
+      }
     } else {
       localPreview = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -242,7 +284,12 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       if (!extension) throw new Error('Cannot determine file extension');
 
       const { data, error: queryErr } = await getUploadUrl({
-        variables: { entityType: ImageEntityType.EventMoment, imageType, extension, entityId: eventId },
+        variables: {
+          entityType: ImageEntityType.EventMoment,
+          imageType,
+          extension,
+          entityId: eventId,
+        },
       });
       if (queryErr || !data?.getImageUploadUrl) throw new Error('Failed to get upload URL');
 
@@ -285,8 +332,10 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
         }
       }
     } catch {
-      setSubmitError('Upload failed. Please try a different file.');
-      resetMedia();
+      setSubmitError('Upload failed. Please try again.');
+      // Keep the preview so the user can retry — don't call resetMedia() here
+      setMediaKey(null);
+      setThumbnailKey(null);
     } finally {
       setUploading(false);
     }
@@ -527,6 +576,12 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                   <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
                     Change photo
                   </Button>
+                  {/* Show retry only when preview exists but upload hasn't completed */}
+                  {!mediaKey && !uploading && (
+                    <Button size="small" color="error" onClick={retryUpload} sx={{ mt: 1, ml: 1, textTransform: 'none' }}>
+                      Retry upload
+                    </Button>
+                  )}
                 </Box>
               ) : (
                 <Box
@@ -603,6 +658,12 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                   <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
                     Change video
                   </Button>
+                  {/* Show retry only when preview exists but upload hasn't completed */}
+                  {!mediaKey && !uploading && (
+                    <Button size="small" color="error" onClick={retryUpload} sx={{ mt: 1, ml: 1, textTransform: 'none' }}>
+                      Retry upload
+                    </Button>
+                  )}
                 </Box>
               ) : (
                 <Box
@@ -626,7 +687,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                     Tap to choose a video
                   </Typography>
                   <Typography variant="caption" color="text.disabled">
-                    MP4, MOV or WebM · max 15 MB
+                    MP4, MOV or WebM · max 30s · max 75 MB
                   </Typography>
                 </Box>
               )}
