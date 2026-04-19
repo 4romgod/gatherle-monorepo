@@ -35,6 +35,7 @@ type CreatedMoment = CreateEventMomentMutation['createEventMoment'];
 
 interface EventMomentComposerProps {
   eventId: string;
+  eventSlug: string;
   open: boolean;
   onClose: () => void;
   onCreated: (moment: CreatedMoment) => void;
@@ -108,7 +109,13 @@ async function generateVideoThumbnail(file: File): Promise<string | null> {
   });
 }
 
-export default function EventMomentComposer({ eventId, open, onClose, onCreated }: EventMomentComposerProps) {
+export default function EventMomentComposer({
+  eventId,
+  eventSlug,
+  open,
+  onClose,
+  onCreated,
+}: EventMomentComposerProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
@@ -228,7 +235,6 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
   };
 
   const uploadFile = async (file: File, imageType: ImageType, acceptedTypes: Set<string>) => {
-
     if (!acceptedTypes.has(file.type)) {
       setSubmitError('Unsupported file type. Please choose a different file.');
       return;
@@ -262,9 +268,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
         el.onerror = () => resolve(0);
       });
       if (duration > MAX_VIDEO_DURATION_SECONDS) {
-        setSubmitError(
-          `Video is too long (${Math.round(duration)}s). Max ${MAX_VIDEO_DURATION_SECONDS} seconds.`,
-        );
+        setSubmitError(`Video is too long (${Math.round(duration)}s). Max ${MAX_VIDEO_DURATION_SECONDS} seconds.`);
         resetMedia();
         return;
       }
@@ -288,7 +292,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
           entityType: ImageEntityType.EventMoment,
           imageType,
           extension,
-          entityId: eventId,
+          entityId: eventSlug,
         },
       });
       if (queryErr || !data?.getImageUploadUrl) throw new Error('Failed to get upload URL');
@@ -578,7 +582,12 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                   </Button>
                   {/* Show retry only when preview exists but upload hasn't completed */}
                   {!mediaKey && !uploading && (
-                    <Button size="small" color="error" onClick={retryUpload} sx={{ mt: 1, ml: 1, textTransform: 'none' }}>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={retryUpload}
+                      sx={{ mt: 1, ml: 1, textTransform: 'none' }}
+                    >
                       Retry upload
                     </Button>
                   )}
@@ -660,7 +669,12 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                   </Button>
                   {/* Show retry only when preview exists but upload hasn't completed */}
                   {!mediaKey && !uploading && (
-                    <Button size="small" color="error" onClick={retryUpload} sx={{ mt: 1, ml: 1, textTransform: 'none' }}>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={retryUpload}
+                      sx={{ mt: 1, ml: 1, textTransform: 'none' }}
+                    >
                       Retry upload
                     </Button>
                   )}

@@ -102,22 +102,25 @@ describe('EventMomentDAO', () => {
       );
     });
 
-    it('creates a video moment with mediaUrl with state Ready', async () => {
+    it('creates a video moment with mediaUrl with state Processing (raw URL stored for transcoding lookup)', async () => {
       const videoMoment: EventMoment = {
         ...mockMoment,
         type: EventMomentType.Video,
-        state: EventMomentState.Ready,
-        mediaUrl: 'https://cdn.example.com/vid.m3u8',
+        state: EventMomentState.Processing,
+        mediaUrl: 'https://cdn.example.com/vid.mp4',
       };
       (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => videoMoment });
 
       await EventMomentDAO.create(
         { eventId: 'event-1', type: EventMomentType.Video },
         'user-1',
-        'https://cdn.example.com/vid.m3u8',
+        'https://cdn.example.com/vid.mp4',
       );
 
-      expect(EventMomentModel.create).toHaveBeenCalledWith(expect.objectContaining({ state: EventMomentState.Ready }));
+      // Video moments always start as Processing so MediaConvert can replace the raw URL with HLS.
+      expect(EventMomentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ state: EventMomentState.Processing }),
+      );
     });
 
     it('persists thumbnailUrl when provided', async () => {
@@ -355,11 +358,11 @@ describe('EventMomentDAO', () => {
   });
 
   describe('markReady', () => {
-    it('returns the updated moment after marking Ready', async () => {
+    it('sets Ready state with HLS mediaUrl and durationSeconds', async () => {
       const readyMoment: EventMoment = {
         ...mockMoment,
         state: EventMomentState.Ready,
-        mediaUrl: 'https://cdn.example.com/vid.m3u8',
+        mediaUrl: 'https://cdn.example.com/vid/hls/index.m3u8',
         thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
         durationSeconds: 15,
       };
@@ -369,7 +372,7 @@ describe('EventMomentDAO', () => {
 
       const result = await EventMomentDAO.markReady(
         'moment-1',
-        'https://cdn.example.com/vid.m3u8',
+        'https://cdn.example.com/vid/hls/index.m3u8',
         'https://cdn.example.com/thumb.jpg',
         15,
       );
@@ -384,12 +387,23 @@ describe('EventMomentDAO', () => {
       expect(result).toEqual(readyMoment);
     });
 
+    it('omits thumbnailUrl from $set when not provided', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => mockMoment }),
+      });
+
+      await EventMomentDAO.markReady('moment-1', 'https://cdn.example.com/hls/index.m3u8', undefined, 10);
+
+      const call = (EventMomentModel.findOneAndUpdate as jest.Mock).mock.calls[0];
+      expect(call[1].$set).not.toHaveProperty('thumbnailUrl');
+    });
+
     it('returns null when moment not found', async () => {
       (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      const result = await EventMomentDAO.markReady('moment-1', 'url', 'thumb', 15);
+      const result = await EventMomentDAO.markReady('moment-1', 'url', undefined, 15);
 
       expect(result).toBeNull();
     });
@@ -399,7 +413,38 @@ describe('EventMomentDAO', () => {
         exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
       });
 
-      await expect(EventMomentDAO.markReady('moment-1', 'url', 'thumb', 15)).rejects.toThrow();
+      await expect(EventMomentDAO.markReady('moment-1', 'url', undefined, 15)).rejects.toThrow();
+    });
+  });
+
+  describe('findByMediaUrl', () => {
+    it('returns the moment matching the given mediaUrl', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => mockMoment }),
+      });
+
+      const result = await EventMomentDAO.findByMediaUrl('https://cdn.example.com/raw.mp4');
+
+      expect(EventMomentModel.findOne).toHaveBeenCalledWith({ mediaUrl: 'https://cdn.example.com/raw.mp4' });
+      expect(result).toEqual(mockMoment);
+    });
+
+    it('returns null when no match found', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await EventMomentDAO.findByMediaUrl('https://cdn.example.com/missing.mp4');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(EventMomentDAO.findByMediaUrl('url')).rejects.toThrow();
     });
   });
 

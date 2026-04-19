@@ -126,7 +126,7 @@ describe('EventMomentResolver', () => {
 
       const result = await resolver.readEventMoments('event-1', mockContext, 'cursor-1', 10);
 
-      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', 'cursor-1', 10);
+      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', 'cursor-1', 10, undefined);
       expect(result).toEqual(page);
     });
 
@@ -136,7 +136,7 @@ describe('EventMomentResolver', () => {
 
       await resolver.readEventMoments('event-1', mockContext);
 
-      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', undefined, undefined);
+      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', undefined, undefined, undefined);
     });
   });
 

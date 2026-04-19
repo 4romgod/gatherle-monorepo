@@ -7,6 +7,7 @@ import {
   CacheQueryStringBehavior,
   CachedMethods,
   Distribution,
+  ResponseHeadersPolicy,
   ViewerProtocolPolicy,
 } from 'aws-cdk-lib/aws-cloudfront';
 import { Bucket, BucketEncryption, BlockPublicAccess, ObjectOwnership, HttpMethods } from 'aws-cdk-lib/aws-s3';
@@ -41,6 +42,9 @@ export class S3BucketStack extends Stack {
       removalPolicy: stage === APPLICATION_STAGES.PROD ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       autoDeleteObjects: stage !== APPLICATION_STAGES.PROD, // Only auto-delete in non-prod environments
       versioned: stage === APPLICATION_STAGES.PROD,
+      // Forward object-lifecycle events to Amazon EventBridge so the MediaStack
+      // can trigger the transcoding pipeline without creating a cross-stack circular dependency.
+      eventBridgeEnabled: true,
       // CORS configuration for direct uploads from web app
       cors: [
         {
@@ -57,6 +61,21 @@ export class S3BucketStack extends Stack {
           maxAge: 3000,
         },
       ],
+    });
+
+    // CORS response headers policy — required for hls.js and any XHR-based media loading.
+    // hls.js loads .m3u8 manifests and .ts segments via XHR; the browser blocks responses
+    // without Access-Control-Allow-Origin. Using * is safe for read-only public media.
+    const mediaCorsPolicy = new ResponseHeadersPolicy(this, 'MediaCorsResponseHeadersPolicy', {
+      responseHeadersPolicyName: `gatherle-media-cors-${targetSuffix}`,
+      corsBehavior: {
+        accessControlAllowCredentials: false,
+        accessControlAllowHeaders: ['*'],
+        accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
+        accessControlAllowOrigins: ['*'],
+        accessControlMaxAge: Duration.seconds(600),
+        originOverride: true,
+      },
     });
 
     const imagesCachePolicy = new CachePolicy(this, 'ImagesCachePolicy', {
@@ -79,6 +98,7 @@ export class S3BucketStack extends Stack {
         allowedMethods: AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: CachedMethods.CACHE_GET_HEAD,
         cachePolicy: imagesCachePolicy,
+        responseHeadersPolicy: mediaCorsPolicy,
       },
     });
 

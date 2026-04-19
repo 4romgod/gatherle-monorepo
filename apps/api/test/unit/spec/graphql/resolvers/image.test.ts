@@ -37,7 +37,7 @@ jest.mock('crypto', () => ({
   randomUUID: jest.fn(() => MOCK_UUID),
 }));
 
-const mockUser = { userId: 'user-abc', email: 'test@example.com' };
+const mockUser = { userId: 'user-abc', email: 'test@example.com', username: 'testuser' };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockContext = {} as any;
 
@@ -155,8 +155,8 @@ describe('ImageResolver', () => {
         mockContext,
       );
 
-      // Key pattern: {stage}/event-moments/{entityId}/moment-media-{UUID}.{ext}
-      expect(result.key).toMatch(/^test\/event-moments\/event-moment-abc\/moment-media-.+\.jpg$/);
+      // Key pattern: {stage}/event-moments/{slug}/{username}/{shortId}.{ext}
+      expect(result.key).toMatch(/^test\/event-moments\/event-moment-abc\/testuser\/.+\.jpg$/);
     });
 
     it('uses the provided entityId for EventMoment (not the authenticated user id)', async () => {

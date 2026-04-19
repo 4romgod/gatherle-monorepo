@@ -6,7 +6,7 @@ import { getPresignedUploadUrl } from '@/clients/AWS/s3Client';
 import { CF_IMAGES_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 
 @Resolver()
 export class ImageResolver {
@@ -35,17 +35,36 @@ export class ImageResolver {
 
     const cleanExt = extension.toLowerCase().replace(/^\./, '');
     const contentType = CONTENT_TYPE_MAP[cleanExt] || 'image/jpeg';
-    // Gallery images and ALL EventMoment media get a unique key per upload so each upload is distinct.
-    // Other types (avatar, logo, featured) use a deterministic key so re-uploading overwrites the previous object.
-    const needsUniqueKey = imageType === ImageType.Gallery || entityType === ImageEntityType.EventMoment;
-    const filename = needsUniqueKey ? `${imageType}-${randomUUID()}.${cleanExt}` : `${imageType}.${cleanExt}`;
 
-    // Key structure: {stage}/{entityType}s/{entityId}/{filename}
-    // e.g. beta/users/abc123/avatar.jpg (avatar/logo/featured)
-    //      beta/users/abc123/gallery-<uuid>.jpg (gallery)
+    // Key structure varies by entity type.
+    // EventMoment: {stage}/event-moments/{eventSlug}/{username}/{shortId}.{ext}
+    //   - Event slug (passed as entityId) makes S3 paths human-readable.
+    //   - Username folder gives per-author observability without polluting the filename.
+    //   - Short random ID (11 URL-safe chars, 64-bit entropy) keeps paths concise while
+    //     remaining collision-proof within a single event+author folder.
+    //   - Tidy multi-rendition HLS paths: {shortId}/hls/{shortId}_720p.m3u8
+    // Other types: {stage}/{entityType}s/{entityId}/{filename}
+    //   - Gallery/unique types include UUID in filename; avatar/logo/featured are deterministic.
     const stagePrefix = STAGE.toLowerCase();
-    const entityFolder = `${entityType}s`;
-    const key = `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${filename}`;
+    let key: string;
+
+    if (entityType === ImageEntityType.EventMoment) {
+      const sanitizedSlug = resolvedEntityId
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      const sanitizedUsername = user.username
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      const shortId = randomBytes(8).toString('base64url');
+      key = `${stagePrefix}/event-moments/${sanitizedSlug}/${sanitizedUsername}/${shortId}.${cleanExt}`;
+    } else {
+      const entityFolder = `${entityType}s`;
+      const needsUniqueKey = imageType === ImageType.Gallery;
+      const filename = needsUniqueKey ? `${imageType}-${randomUUID()}.${cleanExt}` : `${imageType}.${cleanExt}`;
+      key = `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${filename}`;
+    }
 
     if (!CF_IMAGES_DOMAIN) {
       throw new Error('CF_IMAGES_DOMAIN is required to generate stable media URLs');

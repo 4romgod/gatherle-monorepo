@@ -15,7 +15,7 @@ import {
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
-import { createCorsHeaders, isOriginAllowed } from './cors';
+import { createCorsHeaders, isOriginAllowed } from '@/graphql/apollo';
 
 // Module-level variables for connection reuse across Lambda invocations
 let cachedServer: Awaited<ReturnType<typeof createApolloServer>> | null = null;

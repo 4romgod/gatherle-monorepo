@@ -781,6 +781,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       {/* Event Moments Composer */}
       <EventMomentComposer
         eventId={eventId}
+        eventSlug={slug}
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         onCreated={() => setComposerOpen(false)}

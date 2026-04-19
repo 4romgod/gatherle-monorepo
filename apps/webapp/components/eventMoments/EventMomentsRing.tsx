@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { Box, Avatar, Typography, Skeleton, IconButton, Tooltip } from '@mui/material';
+import { Box, Avatar, Typography, Skeleton, Tooltip, CircularProgress } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { ReadEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentState, ParticipantStatus } from '@/data/graphql/types/graphql';
@@ -37,17 +38,40 @@ function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
   return map;
 }
 
-export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, onAddClick, onMomentClick }: EventMomentsRingProps) {
+export default function EventMomentsRing({
+  eventId,
+  myRsvpStatus,
+  eventEndAt,
+  onAddClick,
+  onMomentClick,
+}: EventMomentsRingProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const viewerUserId = session?.user?.userId;
 
-  const { data, loading } = useQuery(ReadEventMomentsDocument, {
+  const { data, loading, startPolling, stopPolling } = useQuery(ReadEventMomentsDocument, {
     variables: { eventId, limit: 50 },
     context: token ? { headers: getAuthHeader(token) } : undefined,
     fetchPolicy: 'cache-and-network',
   });
 
-  const moments = (data?.readEventMoments.items ?? []).filter((m) => m.state === EventMomentState.Ready);
+  const allMoments = data?.readEventMoments.items ?? [];
+  const hasProcessing = allMoments.some((m) => m.state === EventMomentState.Processing);
+
+  // Poll every 10 s while any moment is still processing so the ring refreshes when transcoding finishes.
+  useEffect(() => {
+    if (hasProcessing) {
+      startPolling(10_000);
+    } else {
+      stopPolling();
+    }
+  }, [hasProcessing, startPolling, stopPolling]);
+
+  // Ready moments are visible to everyone; Processing moments are shown only to their author.
+  const moments = allMoments.filter(
+    (m) =>
+      m.state === EventMomentState.Ready || (m.state === EventMomentState.Processing && m.authorId === viewerUserId),
+  );
   const authorGroups = groupByAuthor(moments);
   const canPost = myRsvpStatus !== null && ALLOWED_RSVP_STATUSES.includes(myRsvpStatus);
 
@@ -97,7 +121,11 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, on
       {/* Add moment button — only for Going / CheckedIn attendees */}
       {canPost && (
         <Tooltip
-          title={isWindowOpen ? 'Add a moment' : `Moments closed — can be shared up to ${POSTING_WINDOW_HOURS}h after the event ends`}
+          title={
+            isWindowOpen
+              ? 'Add a moment'
+              : `Moments closed — can be shared up to ${POSTING_WINDOW_HOURS}h after the event ends`
+          }
           placement="top"
         >
           {/* Wrapper span lets Tooltip work even when the child is pointer-events: none */}
@@ -150,6 +178,7 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, on
         const displayName = author?.given_name ?? author?.username ?? 'User';
         const avatarSrc = author?.profile_picture ?? undefined;
         const initials = author?.given_name?.[0]?.toUpperCase() ?? author?.username?.[0]?.toUpperCase() ?? '?';
+        const isProcessing = authorMoments.some((m) => m.state === EventMomentState.Processing);
 
         return (
           <Box
@@ -164,34 +193,51 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, on
               cursor: 'pointer',
             }}
           >
-            <Box
-              sx={{
-                p: '2px',
-                borderRadius: '50%',
-                background: (theme) =>
-                  `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                transition: 'transform 0.2s ease',
-                '&:hover': { transform: 'scale(1.08)' },
-              }}
-            >
-              <Avatar
-                src={avatarSrc}
-                alt={displayName}
+            <Box sx={{ position: 'relative' }}>
+              <Box
                 sx={{
-                  width: 52,
-                  height: 52,
-                  border: '2px solid',
-                  borderColor: 'background.paper',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
+                  p: '2px',
+                  borderRadius: '50%',
+                  background: isProcessing
+                    ? (theme) => theme.palette.action.disabledBackground
+                    : (theme) =>
+                        `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  transition: 'transform 0.2s ease',
+                  opacity: isProcessing ? 0.6 : 1,
+                  '&:hover': { transform: 'scale(1.08)' },
                 }}
               >
-                {initials}
-              </Avatar>
+                <Avatar
+                  src={avatarSrc}
+                  alt={displayName}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    border: '2px solid',
+                    borderColor: 'background.paper',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {initials}
+                </Avatar>
+              </Box>
+              {isProcessing && (
+                <CircularProgress
+                  size={60}
+                  thickness={2}
+                  sx={{
+                    position: 'absolute',
+                    top: -2,
+                    left: -2,
+                    color: 'primary.main',
+                  }}
+                />
+              )}
             </Box>
             <Typography
               variant="caption"
-              color="text.secondary"
+              color={isProcessing ? 'text.disabled' : 'text.secondary'}
               sx={{
                 fontSize: '0.65rem',
                 maxWidth: 56,
@@ -201,7 +247,7 @@ export default function EventMomentsRing({ eventId, myRsvpStatus, eventEndAt, on
                 textAlign: 'center',
               }}
             >
-              {displayName}
+              {isProcessing ? 'Processing…' : displayName}
             </Typography>
           </Box>
         );

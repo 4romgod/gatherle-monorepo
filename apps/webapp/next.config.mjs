@@ -19,6 +19,7 @@ const buildContentSecurityPolicy = () => {
   const graphqlOrigin = getOrigin(process.env.NEXT_PUBLIC_GRAPHQL_URL);
   const websocketOrigin = getOrigin(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
   const s3ImagesOrigin = getOrigin(process.env.NEXT_PUBLIC_S3_IMAGES_URL);
+  const mediaCdnOrigin = getOrigin(process.env.NEXT_PUBLIC_MEDIA_CDN_URL);
 
   if (graphqlOrigin) {
     connectSources.add(graphqlOrigin);
@@ -30,6 +31,20 @@ const buildContentSecurityPolicy = () => {
 
   if (s3ImagesOrigin) {
     connectSources.add(s3ImagesOrigin);
+  }
+
+  // hls.js loads .m3u8 manifests and .ts segments via XHR — the CDN origin must
+  // appear in connect-src for these requests to succeed. Same origin also goes in
+  // media-src so the <video> element can load the stream directly.
+  if (mediaCdnOrigin) {
+    connectSources.add(mediaCdnOrigin);
+  }
+
+  const mediaSources = ["'self'", 'blob:'];
+  if (mediaCdnOrigin) {
+    mediaSources.push(mediaCdnOrigin);
+  } else {
+    mediaSources.push('https:');
   }
 
   const imgSources = ["'self'", 'data:', 'blob:', 'https:'];
@@ -46,7 +61,7 @@ const buildContentSecurityPolicy = () => {
     `img-src ${imgSources.join(' ')}`,
     "font-src 'self' data:",
     `connect-src ${Array.from(connectSources).join(' ')}`,
-    "media-src 'self' blob: https:",
+    `media-src ${mediaSources.join(' ')}`,
     "frame-src 'self' https://www.openstreetmap.org https://maps.google.com https://www.google.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",

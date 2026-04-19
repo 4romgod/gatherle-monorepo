@@ -323,7 +323,7 @@ describe('EventMomentService', () => {
 
       const result = await EventMomentService.readByEvent('event-1', undefined, 10);
 
-      expect(EventMomentDAO.readByEvent).toHaveBeenCalledWith('event-1', undefined, 10);
+      expect(EventMomentDAO.readByEvent).toHaveBeenCalledWith('event-1', undefined, 10, undefined);
       expect(result).toEqual(page);
     });
   });

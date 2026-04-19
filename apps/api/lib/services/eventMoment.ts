@@ -27,9 +27,11 @@ class EventMomentService {
       throw CustomError('Event not found', ErrorTypes.NOT_FOUND);
     }
 
-    const windowCloseMs = (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt) ?
-      (event.primarySchedule.endAt ?? event.primarySchedule.startAt!).getTime() + POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000 :
-      null;
+    const windowCloseMs =
+      (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt)
+        ? (event.primarySchedule.endAt ?? event.primarySchedule.startAt!).getTime() +
+          POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000
+        : null;
 
     if (windowCloseMs !== null && Date.now() > windowCloseMs) {
       throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
@@ -113,8 +115,13 @@ class EventMomentService {
    * Read all active moments for an event (event-page ring view).
    * No follow filter — all attendees' moments are visible on the event page.
    */
-  static async readByEvent(eventId: string, cursor?: string, limit?: number): Promise<EventMomentPage> {
-    return EventMomentDAO.readByEvent(eventId, cursor, limit);
+  static async readByEvent(
+    eventId: string,
+    cursor?: string,
+    limit?: number,
+    viewerUserId?: string,
+  ): Promise<EventMomentPage> {
+    return EventMomentDAO.readByEvent(eventId, cursor, limit, viewerUserId);
   }
 
   /**
