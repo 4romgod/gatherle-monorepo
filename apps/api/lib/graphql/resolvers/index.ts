@@ -14,4 +14,4 @@ export * from './follow';
 export * from './activity';
 export * from './chat';
 export * from './notification';
-export * from './image';
+export * from './media';

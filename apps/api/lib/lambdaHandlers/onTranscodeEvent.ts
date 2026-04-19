@@ -6,7 +6,7 @@ import { EventMomentDAO } from '@/mongodb/dao';
 import { deleteFromS3 } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
 
-const CF_IMAGES_DOMAIN = process.env.CF_IMAGES_DOMAIN || '';
+const MEDIA_CDN_DOMAIN = process.env.MEDIA_CDN_DOMAIN || '';
 
 let isDbConnected = false;
 
@@ -54,11 +54,11 @@ export const onTranscodeEventHandler = async (
     return;
   }
 
-  if (!CF_IMAGES_DOMAIN) {
-    throw new Error('CF_IMAGES_DOMAIN env var is required');
+  if (!MEDIA_CDN_DOMAIN) {
+    throw new Error('MEDIA_CDN_DOMAIN env var is required');
   }
 
-  const rawMediaUrl = `https://${CF_IMAGES_DOMAIN}/${rawS3Key}`;
+  const rawMediaUrl = `https://${MEDIA_CDN_DOMAIN}/${rawS3Key}`;
 
   await ensureDbConnected();
 
@@ -88,7 +88,7 @@ export const onTranscodeEventHandler = async (
     }
 
     const hlsKey = s3UriToKey(manifestS3Uri);
-    const hlsUrl = `https://${CF_IMAGES_DOMAIN}/${hlsKey}`;
+    const hlsUrl = `https://${MEDIA_CDN_DOMAIN}/${hlsKey}`;
 
     logger.info('Marking moment as Ready', { momentId, hlsUrl, durationSeconds });
 

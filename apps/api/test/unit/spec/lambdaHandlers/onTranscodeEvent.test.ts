@@ -88,11 +88,11 @@ describe('onTranscodeEventHandler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    process.env.CF_IMAGES_DOMAIN = 'cdn.example.com';
+    process.env.MEDIA_CDN_DOMAIN = 'cdn.example.com';
   });
 
   afterEach(() => {
-    delete process.env.CF_IMAGES_DOMAIN;
+    delete process.env.MEDIA_CDN_DOMAIN;
   });
 
   describe('input validation', () => {
@@ -108,11 +108,11 @@ describe('onTranscodeEventHandler', () => {
       );
     });
 
-    it('throws when CF_IMAGES_DOMAIN is not set', async () => {
-      delete process.env.CF_IMAGES_DOMAIN;
+    it('throws when MEDIA_CDN_DOMAIN is not set', async () => {
+      delete process.env.MEDIA_CDN_DOMAIN;
       const { handler } = await loadAll();
 
-      await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow('CF_IMAGES_DOMAIN env var is required');
+      await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow('MEDIA_CDN_DOMAIN env var is required');
     });
 
     it('logs an error and returns early when no moment matches the raw media URL', async () => {

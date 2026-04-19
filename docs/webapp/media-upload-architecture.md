@@ -1,19 +1,19 @@
-# Image Upload Architecture
+# Media Upload Architecture
 
-This document defines the agreed-upon structure, conventions, and implementation plan for user-generated image uploads
+This document defines the agreed-upon structure, conventions, and implementation plan for user-generated media uploads
 across all Gatherle entities.
 
 ---
 
 ## Bucket
 
-Single private S3 bucket per environment: `gatherle-images-{stage}-{region}`
+Single private S3 bucket per environment: `gatherle-media-{stage}-{region}`
 
 - All objects private by default (`BlockPublicAccess.BLOCK_ALL`)
 - Uploads use pre-signed `PutObject` URLs; reads in deployed environments use CloudFront URLs backed by the private
   bucket
 - Bucket name exported from `S3BucketStack` and injected into the Lambda as `S3_BUCKET_NAME`
-- CloudFront distribution domain exported from `S3BucketStack` and injected into the Lambda as `CF_IMAGES_DOMAIN`
+- CloudFront distribution domain exported from `S3BucketStack` and injected into the Lambda as `MEDIA_CDN_DOMAIN`
 
 ---
 
@@ -27,7 +27,7 @@ All keys follow a consistent, entity-scoped pattern:
 
 Where `{stage}` is `dev`, `beta`, or `prod` (lowercase, from `STAGE` env var).
 
-| Entity       | Image type               | Example key                                |
+| Entity       | Media type               | Example key                                |
 | ------------ | ------------------------ | ------------------------------------------ |
 | User         | Avatar / profile picture | `beta/users/{userId}/avatar.jpg`           |
 | Organization | Logo                     | `beta/organizations/{orgId}/logo.png`      |
@@ -35,7 +35,7 @@ Where `{stage}` is `dev`, `beta`, or `prod` (lowercase, from `STAGE` env var).
 | Venue        | Featured image           | `beta/venues/{venueId}/featured.jpg`       |
 | Venue        | Gallery images           | `beta/venues/{venueId}/gallery-{uuid}.jpg` |
 
-**User images**: the `entityId` is always resolved server-side from the authenticated user's JWT — the client cannot
+**User media**: the `entityId` is always resolved server-side from the authenticated user's JWT — the client cannot
 supply it.
 
 **Organization / Event / Venue**: the client passes `entityId`. During entity creation (before an ID exists), `entityId`
@@ -47,9 +47,9 @@ full key.
 
 ---
 
-## Domain Model → Image Field Mapping
+## Domain Model → Media Field Mapping
 
-| Type file                                    | GraphQL type                                                           | Image field(s)                                   | Upload page(s)                               |
+| Type file                                    | GraphQL type                                                           | Media field(s)                                   | Upload page(s)                               |
 | -------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------- |
 | `packages/commons/lib/types/user.ts`         | `User` / `UpdateUserInput`                                             | `profile_picture: String`                        | EditProfilePage                              |
 | `packages/commons/lib/types/organization.ts` | `Organization` / `CreateOrganizationInput` / `UpdateOrganizationInput` | `logo: String`                                   | CreateOrganizationPage, EditOrganizationPage |
@@ -60,7 +60,7 @@ full key.
 
 ## Local Development
 
-Image uploads in local dev point at the **Beta S3 bucket** directly for the `PUT`, and reads still require the
+Media uploads in local dev point at the **Beta S3 bucket** directly for the `PUT`, and reads still require the
 configured CloudFront domain. There is no dev-stage bucket.
 
 Stage-prefixed keys keep dev and beta objects cleanly separated within the shared bucket:
@@ -73,8 +73,8 @@ Stage-prefixed keys keep dev and beta objects cleanly separated within the share
 **`apps/api/.env.local`**
 
 ```
-S3_BUCKET_NAME=gatherle-images-beta-af-south-1
-CF_IMAGES_DOMAIN=<your-images-cloudfront-domain>
+S3_BUCKET_NAME=gatherle-media-beta-af-south-1
+MEDIA_CDN_DOMAIN=<your-media-cloudfront-domain>
 STAGE=Dev
 # Add localhost to the Beta bucket's CORS allowed origins:
 CORS_ALLOWED_ORIGINS=http://localhost:3000
@@ -83,7 +83,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 **`apps/webapp/.env.local`**
 
 ```
-NEXT_PUBLIC_S3_IMAGES_URL=https://gatherle-images-beta-af-south-1.s3.af-south-1.amazonaws.com
+NEXT_PUBLIC_S3_MEDIA_URL=https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com
 ```
 
 The API uses `STAGE=Dev` so all keys are prefixed `dev/`, keeping them separate from real Beta data. Local AWS
@@ -96,28 +96,28 @@ User selects file
   │
   ├── FileReader preview (immediate, no network)
   │
-  ├── POST getImageUploadUrl (GraphQL query)
-  │     entityType: ImageEntityType  (e.g. Organization)
-  │     imageType:  ImageType        (e.g. Logo)
+  ├── POST getMediaUploadUrl (GraphQL query)
+  │     entityType: MediaEntityType  (e.g. Organization)
+  │     mediaType:  MediaType        (e.g. Logo)
   │     extension:  string           (e.g. "jpg")
   │     entityId?:  string           (omit for User; required for Org/Event/Venue)
-  │     → returns { uploadUrl, key, readUrl, publicUrl }
+  │     → returns { uploadUrl, key, readUrl }
   │
   ├── PUT {file} → uploadUrl (direct S3 from browser)
   │
   └── Store readUrl in component state → submitted with the form
 ```
 
-All authentication is enforced by the `@Authorized` decorator on `getImageUploadUrl`; the Lambda IAM role grants
-`s3:PutObject` on the bucket (see `s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda)`).
+All authentication is enforced by the `@Authorized` decorator on `getMediaUploadUrl`; the Lambda IAM role grants
+`s3:PutObject` on the bucket (see `s3BucketStack.mediaBucket.grantReadWrite(graphqlStack.graphqlLambda)`).
 
 ---
 
 ## Read URL Behavior
 
-- `readUrl` and `publicUrl` are always stable CloudFront URLs such as `https://<distribution-domain>/<key>`, so the URL
-  stored in MongoDB does not expire.
-- The API does not fall back to pre-signed `GetObject` URLs. If `CF_IMAGES_DOMAIN` is missing, `getImageUploadUrl` fails
+- `readUrl` is always a stable CloudFront URL such as `https://<distribution-domain>/<key>`, so the URL stored in
+  MongoDB does not expire.
+- The API does not fall back to pre-signed `GetObject` URLs. If `MEDIA_CDN_DOMAIN` is missing, `getMediaUploadUrl` fails
   fast because an expiring URL is not acceptable for persistence.
 
 ---
@@ -139,18 +139,18 @@ Consistent across all upload points:
 
 All upload UI goes through a single reusable hook to avoid duplicating the fetch flow in every component.
 
-**Location:** `apps/webapp/hooks/useImageUpload.ts`
+**Location:** `apps/webapp/hooks/useMediaUpload.ts`
 
 ```ts
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 
-interface UseImageUploadOptions {
-  entityType: ImageEntityType;
-  imageType: ImageType;
+interface UseMediaUploadOptions {
+  entityType: MediaEntityType;
+  mediaType: MediaType;
   entityId?: string; // omit for User (resolved server-side from JWT)
 }
 
-function useImageUpload(options: UseImageUploadOptions): {
+function useMediaUpload(options: UseMediaUploadOptions): {
   upload: (file: File) => Promise<string>; // resolves to the URL that should be persisted
   uploading: boolean;
   error: string | null;
@@ -159,8 +159,8 @@ function useImageUpload(options: UseImageUploadOptions): {
 };
 ```
 
-- Internally calls `useLazyQuery(GetImageUploadUrlDocument)`
-- Accepts `ImageEntityType` and `ImageType` enum values — no raw strings
+- Internally calls `useLazyQuery(GetMediaUploadUrlDocument)`
+- Accepts `MediaEntityType` and `MediaType` enum values — no raw strings
 - Handles `FileReader` preview generation
 - Performs the S3 `PUT` via `fetch`
 - Manages `uploading` / `error` state
@@ -172,16 +172,16 @@ function useImageUpload(options: UseImageUploadOptions): {
 
 | Step | Task                                                                                           | Scope        | Status  |
 | ---- | ---------------------------------------------------------------------------------------------- | ------------ | ------- |
-| 1    | Add `ImageEntityType` / `ImageType` enums to `packages/commons`                                | API          | ✅ Done |
-| 2    | Redesign `getImageUploadUrl` resolver — enum params + entity-ID key structure                  | API          | ✅ Done |
+| 1    | Add `MediaEntityType` / `MediaType` enums to `packages/commons`                                | API          | ✅ Done |
+| 2    | Redesign `getMediaUploadUrl` resolver — enum params + entity-ID key structure                  | API          | ✅ Done |
 | 3    | Emit schema + run codegen                                                                      | API / Webapp | ✅ Done |
 | 4    | Update webapp GQL query to new variables                                                       | Webapp       | ✅ Done |
 | 5    | Update `CreateOrganizationPage` caller                                                         | Webapp       | ✅ Done |
 | 6    | Update `EditProfilePage` caller                                                                | Webapp       | ✅ Done |
 | 7    | **Return stable media URLs** — CloudFront in front of the bucket with local presigned fallback | API + CDK    | ✅ Done |
-| 8    | **Create `useImageUpload` hook**                                                               | Webapp       | ⬜      |
-| 9    | **Refactor `CreateOrganizationPage`** onto the hook                                            | Webapp       | ⬜      |
-| 10   | **Refactor `EditProfilePage`** onto the hook                                                   | Webapp       | ⬜      |
+| 8    | **Create `useMediaUpload` hook**                                                               | Webapp       | ✅ Done |
+| 9    | **Refactor `CreateOrganizationPage`** onto the hook                                            | Webapp       | ✅ Done |
+| 10   | **Refactor `EditProfilePage`** onto the hook                                                   | Webapp       | ✅ Done |
 | 11   | **`EditOrganizationPage`** — logo upload                                                       | Webapp       | ⬜      |
 | 12   | **`EventMutationForm`** (create + edit) — featured image                                       | Webapp       | ⬜      |
 | 13   | **`CreateVenuePage` / `EditVenuePage`** — featured + gallery                                   | Webapp       | ⬜      |
@@ -191,12 +191,12 @@ function useImageUpload(options: UseImageUploadOptions): {
 
 ## Current Status
 
-| Page                         | Entity       | Field                        | Upload UI                 |
-| ---------------------------- | ------------ | ---------------------------- | ------------------------- |
-| `EditProfilePage`            | User         | `profile_picture`            | ✅ implemented            |
-| `CreateOrganizationPage`     | Organization | `logo`                       | ✅ implemented (pre-hook) |
-| `EditOrganizationPage`       | Organization | `logo`                       | ❌ missing                |
-| `EventMutationForm` (create) | Event        | `media.featuredImageUrl`     | ❌ missing                |
-| `EventMutationForm` (edit)   | Event        | `media.featuredImageUrl`     | ❌ missing                |
-| `CreateVenuePage`            | Venue        | `featuredImageUrl`, `images` | ❌ missing                |
-| `EditVenuePage`              | Venue        | `featuredImageUrl`, `images` | ❌ missing                |
+| Page                         | Entity       | Field                        | Upload UI      |
+| ---------------------------- | ------------ | ---------------------------- | -------------- |
+| `EditProfilePage`            | User         | `profile_picture`            | ✅ implemented |
+| `CreateOrganizationPage`     | Organization | `logo`                       | ✅ implemented |
+| `EditOrganizationPage`       | Organization | `logo`                       | ❌ missing     |
+| `EventMutationForm` (create) | Event        | `media.featuredImageUrl`     | ❌ missing     |
+| `EventMutationForm` (edit)   | Event        | `media.featuredImageUrl`     | ❌ missing     |
+| `CreateVenuePage`            | Venue        | `featuredImageUrl`, `images` | ❌ missing     |
+| `EditVenuePage`              | Venue        | `featuredImageUrl`, `images` | ❌ missing     |

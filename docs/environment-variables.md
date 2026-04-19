@@ -36,8 +36,8 @@ The following commands work without any environment variables:
   - `MONGO_DB_URL` **MUST include a database name** (e.g., `mongodb://localhost:27017/gatherle`) to prevent collections
     from vanishing on reconnects. Without a database name, Mongoose defaults to the "test" database.
   - `JWT_SECRET` (used directly from the file).
-  - `S3_BUCKET_NAME` (optional for local dev; required when using image upload functionality).
-  - `CF_IMAGES_DOMAIN` (required when using image upload functionality; uploaded media URLs are always canonical CDN
+  - `S3_BUCKET_NAME` (optional for local dev; required when using media upload functionality).
+  - `MEDIA_CDN_DOMAIN` (required when using media upload functionality; uploaded media URLs are always canonical CDN
     URLs and the API no longer falls back to expiring presigned read URLs).
   - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins only; use this for preview domains or
     non-default local origins. `*` is rejected).
@@ -63,9 +63,9 @@ The following commands work without any environment variables:
   - `SECRET_ARN` (required ARN, not just the string
     `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}`; the ARN is passed verbatim).
   - `AWS_REGION` (should align with where the stack is deployed).
-  - `S3_BUCKET_NAME` (S3 bucket for image storage; must be configured in deployment environment).
-  - `CF_IMAGES_DOMAIN` (required; injected by CDK from the CloudFront distribution fronting the images bucket. The API
-    uses this to return stable media URLs and will reject image-upload URL requests if it is missing).
+  - `S3_BUCKET_NAME` (S3 bucket for media storage; must be configured in deployment environment).
+  - `MEDIA_CDN_DOMAIN` (required; injected by CDK from the CloudFront distribution fronting the media bucket. The API
+    uses this to return stable media URLs and will reject media-upload URL requests if it is missing).
   - `CORS_ALLOWED_ORIGINS` (optional comma-separated extra `http(s)` origins merged with the stage-default webapp
     allowlist. `*` is rejected).
   - `EMAIL_FROM` (verified SES sender address, e.g. `noreply@gatherle.com`; must be SES-verified in the deployment
@@ -108,10 +108,10 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (required for Google OAuth in NextAuth).
   - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
     credential used by NextAuth).
-  - `NEXT_PUBLIC_S3_IMAGES_URL` — required when testing image uploads locally. Point at the Beta bucket:
-    `https://gatherle-images-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
+  - `NEXT_PUBLIC_S3_MEDIA_URL` — required when testing media uploads locally. Point at the Beta bucket:
+    `https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
-    `docs/webapp/image-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
+    `docs/webapp/media-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
     `S3BucketStack` CloudFormation output.
 - These values stay local and are never checked in (respect `.gitignore` for `.env*`).
 
@@ -122,7 +122,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Inject `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` when Google sign-in is enabled.
 - Inject `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
-- `NEXT_PUBLIC_S3_IMAGES_URL` is still only needed for direct browser uploads and local upload testing; persisted media
+- `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
   reads come back from the API as stable CloudFront URLs in deployed environments.
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in

@@ -16,7 +16,7 @@ const BaseEnvSchema = z.object({
   STAGE: z.enum(stageEnumValues).default(APPLICATION_STAGES.BETA),
   SECRET_ARN: z.string().optional(),
   S3_BUCKET_NAME: z.string().optional(),
-  CF_IMAGES_DOMAIN: z.string().optional(),
+  MEDIA_CDN_DOMAIN: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   EMAIL_FROM: z.string().optional().default('noreply@gatherle.com'),
   WEBAPP_URL: z.string().optional().default('http://localhost:3000'),
@@ -122,7 +122,7 @@ export function validateEnv(): void {
   console.log(`  - JWT Secret: ${env.JWT_SECRET ? '***configured***' : 'not set'}`);
   console.log(`  - Secrets ARN: ${env.SECRET_ARN || 'not set'}`);
   console.log(`  - S3 Bucket: ${env.S3_BUCKET_NAME || 'not set'}`);
-  console.log(`  - Media CDN Domain: ${env.CF_IMAGES_DOMAIN || 'not set'}`);
+  console.log(`  - Media CDN Domain: ${env.MEDIA_CDN_DOMAIN || 'not set'}`);
   console.log(`  - Extra CORS Origins: ${env.CORS_ALLOWED_ORIGINS || 'not set'}`);
   console.log(`  - Email From: ${env.EMAIL_FROM}`);
   console.log(`  - Webapp URL: ${env.WEBAPP_URL}`);
@@ -134,7 +134,7 @@ export const MONGO_DB_URL = env.MONGO_DB_URL;
 export const JWT_SECRET = env.JWT_SECRET;
 export const SECRET_ARN = env.SECRET_ARN;
 export const S3_BUCKET_NAME = env.S3_BUCKET_NAME;
-export const CF_IMAGES_DOMAIN = env.CF_IMAGES_DOMAIN;
+export const MEDIA_CDN_DOMAIN = env.MEDIA_CDN_DOMAIN;
 export const CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
 export const EMAIL_FROM = env.EMAIL_FROM;
 export const WEBAPP_URL = env.WEBAPP_URL;

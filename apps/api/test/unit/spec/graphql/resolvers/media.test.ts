@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 
 jest.mock('@/services', () => ({
-  ImageService: {
-    getImageUploadUrl: jest.fn(),
+  MediaService: {
+    getMediaUploadUrl: jest.fn(),
     getEventMomentUploadUrl: jest.fn(),
   },
 }));
@@ -13,20 +13,19 @@ jest.mock('@/utils', () => ({
 
 jest.mock('@/constants', () => ({
   RESOLVER_DESCRIPTIONS: {
-    IMAGE: {
-      getImageUploadUrl: 'Get a pre-signed S3 URL for uploading an image directly to S3.',
+    MEDIA: {
+      getMediaUploadUrl: 'Get a pre-signed S3 URL for uploading media directly to S3.',
       getEventMomentUploadUrl: 'Get a pre-signed S3 URL for uploading an event moment media file.',
     },
   },
 }));
 
-import { ImageResolver } from '@/graphql/resolvers/image';
-import { ImageEntityType, ImageType } from '@gatherle/commons/types';
+import { MediaResolver } from '@/graphql/resolvers/media';
+import { MediaEntityType, MediaType } from '@gatherle/commons/types';
 import * as authUtils from '@/utils';
 import * as ServicesModule from '@/services';
 
 const mockUser = { userId: 'user-abc', email: 'test@example.com', username: 'testuser' };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockContext = {} as any;
 const mockUploadResult = {
   uploadUrl: 'https://upload.example.com/signed',
@@ -34,23 +33,23 @@ const mockUploadResult = {
   readUrl: 'https://cdn.example.com/test/events/event-1/featured.jpg',
 };
 
-describe('ImageResolver', () => {
-  let resolver: ImageResolver;
+describe('MediaResolver', () => {
+  let resolver: MediaResolver;
 
   beforeEach(() => {
-    resolver = new ImageResolver();
+    resolver = new MediaResolver();
     jest.clearAllMocks();
     (authUtils.getAuthenticatedUser as jest.Mock).mockReturnValue(mockUser);
-    (ServicesModule.ImageService.getImageUploadUrl as jest.Mock).mockResolvedValue(mockUploadResult);
-    (ServicesModule.ImageService.getEventMomentUploadUrl as jest.Mock).mockResolvedValue(mockUploadResult);
+    (ServicesModule.MediaService.getMediaUploadUrl as jest.Mock).mockResolvedValue(mockUploadResult);
+    (ServicesModule.MediaService.getEventMomentUploadUrl as jest.Mock).mockResolvedValue(mockUploadResult);
   });
 
-  describe('getImageUploadUrl', () => {
-    it('delegates to ImageService.getImageUploadUrl with correct params', async () => {
-      await resolver.getImageUploadUrl(ImageEntityType.Event, ImageType.Featured, 'jpg', 'event-1', mockContext);
-      expect(ServicesModule.ImageService.getImageUploadUrl).toHaveBeenCalledWith({
-        entityType: ImageEntityType.Event,
-        imageType: ImageType.Featured,
+  describe('getMediaUploadUrl', () => {
+    it('delegates to MediaService.getMediaUploadUrl with correct params', async () => {
+      await resolver.getMediaUploadUrl(MediaEntityType.Event, MediaType.Featured, 'jpg', 'event-1', mockContext);
+      expect(ServicesModule.MediaService.getMediaUploadUrl).toHaveBeenCalledWith({
+        entityType: MediaEntityType.Event,
+        mediaType: MediaType.Featured,
         extension: 'jpg',
         entityId: 'event-1',
         userId: mockUser.userId,
@@ -58,16 +57,16 @@ describe('ImageResolver', () => {
     });
 
     it('resolves userId from auth context, not from args', async () => {
-      await resolver.getImageUploadUrl(ImageEntityType.User, ImageType.Avatar, 'png', null, mockContext);
-      expect(ServicesModule.ImageService.getImageUploadUrl).toHaveBeenCalledWith(
+      await resolver.getMediaUploadUrl(MediaEntityType.User, MediaType.Avatar, 'png', null, mockContext);
+      expect(ServicesModule.MediaService.getMediaUploadUrl).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'user-abc' }),
       );
     });
 
-    it('returns the result from ImageService unchanged', async () => {
-      const result = await resolver.getImageUploadUrl(
-        ImageEntityType.Event,
-        ImageType.Featured,
+    it('returns the result from MediaService unchanged', async () => {
+      const result = await resolver.getMediaUploadUrl(
+        MediaEntityType.Event,
+        MediaType.Featured,
         'jpg',
         'event-1',
         mockContext,
@@ -77,9 +76,9 @@ describe('ImageResolver', () => {
   });
 
   describe('getEventMomentUploadUrl', () => {
-    it('delegates to ImageService.getEventMomentUploadUrl with correct params', async () => {
+    it('delegates to MediaService.getEventMomentUploadUrl with correct params', async () => {
       await resolver.getEventMomentUploadUrl('event-id-123', 'mp4', mockContext);
-      expect(ServicesModule.ImageService.getEventMomentUploadUrl).toHaveBeenCalledWith({
+      expect(ServicesModule.MediaService.getEventMomentUploadUrl).toHaveBeenCalledWith({
         eventId: 'event-id-123',
         extension: 'mp4',
         userId: mockUser.userId,
@@ -90,12 +89,12 @@ describe('ImageResolver', () => {
     it('passes username from auth claims to the service', async () => {
       (authUtils.getAuthenticatedUser as jest.Mock).mockReturnValue({ ...mockUser, username: 'special-user' });
       await resolver.getEventMomentUploadUrl('event-id-123', 'jpg', mockContext);
-      expect(ServicesModule.ImageService.getEventMomentUploadUrl).toHaveBeenCalledWith(
+      expect(ServicesModule.MediaService.getEventMomentUploadUrl).toHaveBeenCalledWith(
         expect.objectContaining({ username: 'special-user' }),
       );
     });
 
-    it('returns the result from ImageService unchanged', async () => {
+    it('returns the result from MediaService unchanged', async () => {
       const result = await resolver.getEventMomentUploadUrl('event-id-123', 'mp4', mockContext);
       expect(result).toBe(mockUploadResult);
     });

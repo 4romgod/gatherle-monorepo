@@ -158,8 +158,7 @@ everyone time.
 
 **Step 2 — Getting an upload URL**
 
-The client calls our GraphQL API:
-`getImageUploadUrl(entityType: EventMoment, imageType: MomentMedia, extension: "mp4")`.
+The client calls our GraphQL API: `getEventMomentUploadUrl(eventId: "...", extension: "mp4")`.
 
 The API generates a **pre-signed PUT URL** — a temporary, single-use URL that allows the client to upload a file
 directly to our S3 bucket without going through our servers. The URL expires in 15 minutes and is scoped to a specific
@@ -305,7 +304,7 @@ In the browser, native HLS support varies:
 | Component                                                        | Built? | Notes                                                     |
 | ---------------------------------------------------------------- | ------ | --------------------------------------------------------- |
 | S3 bucket + CloudFront distribution                              | ✅ Yes | Deployed in `S3BucketStack`                               |
-| Pre-signed upload URLs                                           | ✅ Yes | `getImageUploadUrl` resolver works                        |
+| Pre-signed upload URLs                                           | ✅ Yes | `getEventMomentUploadUrl` mutation works                  |
 | `EventMomentState` model (Processing/Ready/Failed)               | ✅ Yes | In `packages/commons`                                     |
 | `markReady` DAO method                                           | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda |
 | `markFailed` DAO method                                          | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda |
@@ -470,13 +469,13 @@ export class CreateEventMomentInput {
   caption?: string; // required when type = Text; optional otherwise
 
   @Field(() => String, { nullable: true })
-  mediaKey?: string; // the S3 key returned by getImageUploadUrl (image or video raw upload)
+  mediaKey?: string; // the S3 key returned by getEventMomentUploadUrl (image or video raw upload)
 }
 ```
 
 **Flow for video**:
 
-1. Client calls `getImageUploadUrl(entityType: EventMoment, imageType: PostMedia)` → gets pre-signed PUT URL and S3 key
+1. Client calls `getEventMomentUploadUrl(eventId, extension)` → gets pre-signed PUT URL and S3 key
 2. Client uploads raw video file directly to S3
 3. Client calls `createEventMoment(input: { type: Video, mediaKey, caption? })` — resolver creates the DB document with
    `state: Processing`
@@ -488,7 +487,7 @@ export class CreateEventMomentInput {
 
 ## S3 Key Structure
 
-Extends the existing convention in `docs/webapp/image-upload-architecture.md`:
+Extends the existing convention in `docs/webapp/media-upload-architecture.md`:
 
 | Media type | Raw upload key                                         | Processed output prefix                           |
 | ---------- | ------------------------------------------------------ | ------------------------------------------------- |
@@ -508,7 +507,7 @@ be created atomically with the upload.
 
 1. **MediaConvert queue** — an `aws-mediaconvert.CfnQueue` in `S3BucketStack` (or a new `MediaStack`).
 2. **S3 event notification** —
-   `imagesBucket.addEventNotification(EventType.OBJECT_CREATED, LambdaDestination(transcodeFunction), { prefix: '{stage}/event-moments/', suffix: '/raw' })`.
+   `mediaBucket.addEventNotification(EventType.OBJECT_CREATED, LambdaDestination(transcodeFunction), { prefix: '{stage}/event-moments/', suffix: '/raw' })`.
 3. **Transcode Lambda** — small Node.js Lambda that receives the S3 key, submits a MediaConvert job (HLS 360p + 720p
    renditions + thumbnail), and writes `state: Processing` confirmed.
 4. **MediaConvert completion Lambda** — EventBridge rule triggers on `MediaConvert Job State Change (COMPLETE | ERROR)`
@@ -566,15 +565,15 @@ Three tabs: **Text** | **Photo** | **Video**
   - **Upload** — file input (`accept="image/*"`) picks from the device gallery
   - **Camera** — `getUserMedia({ video: true })` opens a live viewfinder; user taps the shutter button to capture a
     still frame via `<canvas>.toBlob()`
-  - Both paths feed into `useImageUpload` → preview → `createEventMoment`
+  - Both paths use the event moment upload URL flow → preview → `createEventMoment`
 - **Video**: two entry points side by side:
   - **Upload** — file input (`accept="video/*"`) picks from the device. If `file.duration > 15`, the clip is truncated
     to the first 15 s client-side before upload. User sees a preview with a "Trimmed to 15 s" notice.
   - **Record** — `getUserMedia({ video: true, audio: true })` opens a live viewfinder with a record button. Recording
     stops automatically at 15 s (via `MediaRecorder` + a countdown timer); user can also stop early. The recorded `Blob`
-    is then uploaded via `useImageUpload`.
-  - Both paths feed into `useImageUpload` (same pre-signed URL flow) → `createEventMoment` → shows "Processing…"
-    skeleton in the ring while MediaConvert runs
+    is then uploaded via the event moment upload URL flow.
+  - Both paths use the same pre-signed URL flow → `createEventMoment` → shows "Processing…" skeleton in the ring while
+    MediaConvert runs
 
 **Browser API notes:**
 
@@ -614,8 +613,8 @@ others — respects privacy).
 | Image      | 10 MB (12 MP phone)   | ~300 KB          | Client resizes to max 1920 px before upload using `canvas.toBlob('image/webp', 0.8)` |
 | Video 720p | —                     | ~6 MB / 15 s     | MediaConvert H.264 rendition (single rendition sufficient at this length)            |
 
-Client-side image resize (canvas → WebP) happens inside `useImageUpload` when `entityType === EventMoment` — reduces
-upload time and storage cost without a server round trip.
+Client-side image resize (canvas → WebP) happens before the event moment upload URL flow — reduces upload time and
+storage cost without a server round trip.
 
 ---
 
@@ -630,7 +629,7 @@ upload time and storage cost without a server round trip.
 | 3   | Add `EventMomentDAO` (create, readByEvent, readByAuthor, delete)                 | API          | API-029    |
 | 4   | Add `createEventMoment` + `deleteEventMoment` mutations (RSVP guard)             | API          | API-029    |
 | 5   | Add `readEventMoments` query (follow-filtered, paginated, TTL-aware)             | API          | API-029    |
-| 6   | Extend `ImageEntityType` enum with `EventMoment`; `ImageType` with `MomentMedia` | Commons/API  | API-030    |
+| 6   | Extend `MediaEntityType` enum with `EventMoment`; `MediaType` with `MomentMedia` | Commons/API  | API-030    |
 | 7   | Run codegen                                                                      | Webapp       | —          |
 | 8   | Stories ring component on event detail page                                      | Webapp       | WEB-040    |
 | 9   | Composer sheet (Text + Photo tabs)                                               | Webapp       | WEB-040    |

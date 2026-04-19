@@ -17,14 +17,12 @@ jest.mock('@apollo/client', () => ({
 
 jest.mock('@/data/graphql/query', () => ({
   CreateEventMomentDocument: {},
-  GetImageUploadUrlDocument: {},
+  GetEventMomentUploadUrlDocument: {},
   ReadEventMomentsDocument: {},
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({
   EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
-  ImageEntityType: { EventMoment: 'EventMoment' },
-  ImageType: { MomentMedia: 'MomentMedia', MomentThumbnail: 'MomentThumbnail' },
 }));
 
 jest.mock('@/lib/utils/auth', () => ({
@@ -82,7 +80,7 @@ describe('EventMomentComposer — file validation', () => {
 
   it('shows an error and does not proceed when an image file exceeds 15 MB', async () => {
     const mockGetUploadUrl = jest.fn();
-    mockUseLazyQuery.mockReturnValue([mockGetUploadUrl, {}]);
+    mockUseMutation.mockReturnValueOnce([jest.fn(), { loading: false }]).mockReturnValueOnce([mockGetUploadUrl, {}]);
 
     render(<EventMomentComposer {...defaultProps} />);
 
@@ -106,7 +104,7 @@ describe('EventMomentComposer — file validation', () => {
 
   it('shows an error and does not proceed when a video file exceeds 75 MB', async () => {
     const mockGetUploadUrl = jest.fn();
-    mockUseLazyQuery.mockReturnValue([mockGetUploadUrl, {}]);
+    mockUseMutation.mockReturnValueOnce([jest.fn(), { loading: false }]).mockReturnValueOnce([mockGetUploadUrl, {}]);
     URL.createObjectURL = jest.fn().mockReturnValue('blob:mock');
 
     render(<EventMomentComposer {...defaultProps} />);
@@ -149,10 +147,10 @@ describe('EventMomentComposer — file validation', () => {
 
   it('does not show an error for a valid image file under 15 MB', async () => {
     const mockGetUploadUrl = jest.fn().mockResolvedValue({
-      data: { getImageUploadUrl: { uploadUrl: 'https://s3.example.com/upload', key: 'media/key.jpg' } },
-      error: undefined,
+      data: { getEventMomentUploadUrl: { uploadUrl: 'https://s3.example.com/upload', key: 'media/key.jpg' } },
+      errors: undefined,
     });
-    mockUseLazyQuery.mockReturnValue([mockGetUploadUrl, {}]);
+    mockUseMutation.mockReturnValueOnce([jest.fn(), { loading: false }]).mockReturnValueOnce([mockGetUploadUrl, {}]);
 
     // Mock fetch for the S3 PUT
     global.fetch = jest.fn().mockResolvedValue({ ok: true });

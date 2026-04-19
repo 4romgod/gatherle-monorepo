@@ -42,8 +42,8 @@ jest.mock('@apollo/client', () => ({
   useMutation: jest.fn(),
 }));
 
-jest.mock('@/hooks/useImageUpload', () => ({
-  useImageUpload: jest.fn(() => ({
+jest.mock('@/hooks/useMediaUpload', () => ({
+  useMediaUpload: jest.fn(() => ({
     upload: jest.fn(),
     uploading: false,
     error: null,

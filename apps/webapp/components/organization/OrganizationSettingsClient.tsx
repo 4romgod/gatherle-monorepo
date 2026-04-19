@@ -28,8 +28,8 @@ import TeamMembersTab from './settings/TeamMembersTab';
 import DangerZoneTab from './settings/DangerZoneTab';
 import MembershipConfirmationDialog from './settings/MembershipConfirmationDialog';
 import useOrganizationSettingsData from '@/hooks/useOrganizationSettingsData';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
 
 interface OrganizationSettingsClientProps {
@@ -79,9 +79,9 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
 
   const isMembershipActionInProgress = Boolean(membershipAction);
 
-  const { upload: uploadLogo, uploading: logoUploading } = useImageUpload({
-    entityType: ImageEntityType.Organization,
-    imageType: ImageType.Logo,
+  const { upload: uploadLogo, uploading: logoUploading } = useMediaUpload({
+    entityType: MediaEntityType.Organization,
+    mediaType: MediaType.Logo,
     entityId: organization?.orgId,
   });
 

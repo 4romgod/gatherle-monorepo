@@ -1,10 +1,10 @@
 import { randomBytes } from 'crypto';
 import { getPresignedUploadUrl } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
-import { CF_IMAGES_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
+import { MEDIA_CDN_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
-import type { ImageUploadUrl } from '@gatherle/commons/types';
-import { ImageEntityType, ImageType, ParticipantStatus, Event } from '@gatherle/commons/types';
+import type { Event, MediaUploadUrl } from '@gatherle/commons/types';
+import { MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventDAO, EventParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 
@@ -15,24 +15,24 @@ const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, Par
  * Explicit S3 folder name for each entity type.
  * Avoids fragile string-append heuristics (e.g. `${entityType}s`).
  */
-const ENTITY_FOLDER: Partial<Record<ImageEntityType, string>> = {
-  [ImageEntityType.User]: 'users',
-  [ImageEntityType.Organization]: 'organizations',
-  [ImageEntityType.Event]: 'events',
-  [ImageEntityType.Venue]: 'venues',
+const ENTITY_FOLDER: Partial<Record<MediaEntityType, string>> = {
+  [MediaEntityType.User]: 'users',
+  [MediaEntityType.Organization]: 'organizations',
+  [MediaEntityType.Event]: 'events',
+  [MediaEntityType.Venue]: 'venues',
 };
 
-class ImageService {
-  static async getImageUploadUrl(params: {
-    entityType: ImageEntityType;
-    imageType: ImageType;
+class MediaService {
+  static async getMediaUploadUrl(params: {
+    entityType: MediaEntityType;
+    mediaType: MediaType;
     extension: string;
     entityId: string | null;
     userId: string;
-  }): Promise<ImageUploadUrl> {
-    const { entityType, imageType, entityId, userId } = params;
+  }): Promise<MediaUploadUrl> {
+    const { entityType, mediaType, entityId, userId } = params;
 
-    if (entityType === ImageEntityType.EventMoment) {
+    if (entityType === MediaEntityType.EventMoment) {
       throw CustomError(
         'Use the getEventMomentUploadUrl mutation for event moment uploads.',
         ErrorTypes.BAD_USER_INPUT,
@@ -54,28 +54,28 @@ class ImageService {
     }
 
     const resolvedEntityId =
-      entityType === ImageEntityType.User ? userId : (entityId ?? randomBytes(8).toString('base64url'));
+      entityType === MediaEntityType.User ? userId : (entityId ?? randomBytes(8).toString('base64url'));
 
     const stagePrefix = STAGE.toLowerCase();
     const key =
-      imageType === ImageType.Gallery
+      mediaType === MediaType.Gallery
         ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/gallery/${randomBytes(8).toString('base64url')}.${cleanExt}`
-        : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${imageType}.${cleanExt}`;
+        : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}.${cleanExt}`;
 
-    if (!CF_IMAGES_DOMAIN) {
-      throw new Error('CF_IMAGES_DOMAIN is required to generate stable media URLs');
+    if (!MEDIA_CDN_DOMAIN) {
+      throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');
     }
 
     const uploadUrl = await getPresignedUploadUrl(key, contentType, 900);
-    const readUrl = `https://${CF_IMAGES_DOMAIN}/${key}`;
+    const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
 
-    logger.info('Generated image upload URL', {
+    logger.info('Generated media upload URL', {
       userId,
       entityType,
       entityId: resolvedEntityId,
-      imageType,
+      mediaType,
       key,
-      mediaHost: CF_IMAGES_DOMAIN,
+      mediaHost: MEDIA_CDN_DOMAIN,
     });
 
     return { uploadUrl, key, readUrl };
@@ -86,7 +86,7 @@ class ImageService {
     extension: string;
     userId: string;
     username: string;
-  }): Promise<ImageUploadUrl> {
+  }): Promise<MediaUploadUrl> {
     const { eventId, userId, username } = params;
 
     const cleanExt = params.extension.toLowerCase().replace(/^\./, '');
@@ -148,17 +148,17 @@ class ImageService {
     const stagePrefix = STAGE.toLowerCase();
     const key = `${stagePrefix}/event-moments/${sanitizedSlug}/${sanitizedUsername}/${shortId}.${cleanExt}`;
 
-    if (!CF_IMAGES_DOMAIN) {
-      throw new Error('CF_IMAGES_DOMAIN is required to generate stable media URLs');
+    if (!MEDIA_CDN_DOMAIN) {
+      throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');
     }
 
     const uploadUrl = await getPresignedUploadUrl(key, contentType, 900);
-    const readUrl = `https://${CF_IMAGES_DOMAIN}/${key}`;
+    const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
 
-    logger.info('Generated event moment upload URL', { userId, eventId, key, mediaHost: CF_IMAGES_DOMAIN });
+    logger.info('Generated event moment upload URL', { userId, eventId, key, mediaHost: MEDIA_CDN_DOMAIN });
 
     return { uploadUrl, key, readUrl };
   }
 }
 
-export default ImageService;
+export default MediaService;

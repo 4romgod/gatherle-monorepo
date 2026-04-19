@@ -1,6 +1,6 @@
 // Mocks must come before any imports that trigger the module graph.
 jest.mock('@/constants', () => ({
-  CF_IMAGES_DOMAIN: 'cdn.example.com',
+  MEDIA_CDN_DOMAIN: 'cdn.example.com',
   AWS_REGION: 'eu-west-1',
   STAGE: 'Dev',
   MONGO_DB_URL: 'mock-url',
