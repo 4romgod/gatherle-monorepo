@@ -154,13 +154,15 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     [events, user?.userId],
   );
 
-  const profileMomentEvents = useMemo(
-    () =>
-      [...organizedEvents, ...allRsvpdEvents]
-        .filter((e, i, arr) => arr.findIndex((x) => x.eventId === e.eventId) === i)
-        .map((e) => ({ eventId: e.eventId, title: e.title })),
-    [organizedEvents, allRsvpdEvents],
-  );
+  const profileMomentEvents = useMemo(() => {
+    const byId = new Map<string, { eventId: string; title: string }>();
+    [...organizedEvents, ...allRsvpdEvents].forEach((e) => {
+      if (!byId.has(e.eventId)) {
+        byId.set(e.eventId, { eventId: e.eventId, title: e.title });
+      }
+    });
+    return Array.from(byId.values());
+  }, [organizedEvents, allRsvpdEvents]);
 
   const interests = user?.interests ?? [];
   const { age, formattedBirthdate } = getBirthdateDisplay(user?.birthdate);

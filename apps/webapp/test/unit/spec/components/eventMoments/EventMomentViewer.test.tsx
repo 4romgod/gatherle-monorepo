@@ -172,6 +172,23 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       // After load: spinner should be gone
       expect(screen.queryByRole('progressbar')).toBeNull();
     });
+
+    it('hides the loading spinner when the image fires its onError event', async () => {
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/broken.jpg' })]}
+        />,
+      );
+
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+
+      await act(async () => {
+        fireEvent.error(img);
+      });
+
+      expect(screen.queryByRole('progressbar')).toBeNull();
+    });
   });
 
   describe('video moments', () => {
@@ -396,6 +413,40 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       });
 
       // Single moment list — goTo(-1 or 1) → onClose
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('unfreezes the timer when the image fires onError so the viewer does not stall', () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/broken.jpg' })]}
+        />,
+      );
+
+      // Several freeze frames before the image fails
+      let t = 0;
+      act(() => {
+        for (let i = 0; i < 5; i++) {
+          capturedTick?.(t);
+          t += 50;
+        }
+      });
+
+      // Simulate a network/CORS failure on the image
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+      act(() => {
+        fireEvent.error(img);
+      });
+
+      // One tick with delta > STORY_DURATION_MS — timer is now unfrozen, viewer should advance
+      act(() => {
+        capturedTick?.(t + 6000);
+      });
+
       expect(onClose).toHaveBeenCalled();
     });
   });

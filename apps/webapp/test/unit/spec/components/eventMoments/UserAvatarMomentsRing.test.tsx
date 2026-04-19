@@ -219,4 +219,66 @@ describe('UserAvatarMomentsRing', () => {
     expect(mockUseQuery).not.toHaveBeenCalled();
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('hides the ring button when token becomes undefined (sign-out)', async () => {
+    mockUseQuery.mockReturnValue({ data: { readUserEventMoments: [makeMoment()] }, loading: false });
+
+    const { rerender } = renderWithTheme(
+      <UserAvatarMomentsRing
+        {...defaultProps}
+        token="valid-token"
+        events={[{ eventId: 'event-1', title: 'Summer Meetup' }]}
+      />,
+    );
+
+    // Ring should be visible with a token
+    await act(async () => {});
+    expect(screen.getByRole('button', { name: /moments/i })).toBeTruthy();
+
+    // Sign out — token becomes undefined
+    await act(async () => {
+      rerender(
+        <ThemeProvider theme={testTheme}>
+          <UserAvatarMomentsRing
+            {...defaultProps}
+            token={undefined}
+            events={[{ eventId: 'event-1', title: 'Summer Meetup' }]}
+          />
+        </ThemeProvider>,
+      );
+    });
+
+    // Ring should no longer be shown after token is cleared
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('clears cached moments when userId changes (profile navigation)', async () => {
+    mockUseQuery.mockReturnValue({ data: { readUserEventMoments: [makeMoment()] }, loading: false });
+
+    const { rerender } = renderWithTheme(
+      <UserAvatarMomentsRing {...defaultProps} userId="user-A" events={[{ eventId: 'event-1', title: 'Event' }]} />,
+    );
+
+    await act(async () => {});
+    // user-A has moments → ring visible
+    expect(screen.getByRole('button', { name: /moments/i })).toBeTruthy();
+
+    // Navigate to user-B — no moments loaded yet for them
+    mockUseQuery.mockReturnValue({ data: undefined, loading: true });
+
+    await act(async () => {
+      rerender(
+        <ThemeProvider theme={testTheme}>
+          <UserAvatarMomentsRing
+            {...defaultProps}
+            userId="user-B"
+            events={[{ eventId: 'event-2', title: 'Other Event' }]}
+          />
+        </ThemeProvider>,
+      );
+    });
+
+    // Stale ring from user-A should be gone immediately
+    expect(screen.queryByRole('button')).toBeNull();
+  });
 });

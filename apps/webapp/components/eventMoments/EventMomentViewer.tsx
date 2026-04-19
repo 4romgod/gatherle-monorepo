@@ -559,6 +559,13 @@ export default function EventMomentViewer({
                   mediaLoadedRef.current = true;
                   setMediaLoaded(true);
                 }}
+                onError={() => {
+                  // Image failed to load (404, CORS, etc.) — unfreeze the timer so the
+                  // viewer can still advance rather than stalling indefinitely.
+                  mediaLoadedRef.current = true;
+                  setMediaLoaded(true);
+                  setMediaError(true);
+                }}
                 sx={{
                   width: '100%',
                   height: '100%',

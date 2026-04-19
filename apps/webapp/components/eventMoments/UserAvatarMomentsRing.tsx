@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@apollo/client';
 import { Avatar, Box, ButtonBase } from '@mui/material';
 import { ReadUserEventMomentsDocument } from '@/data/graphql/query';
@@ -31,8 +31,7 @@ function EventMomentsFetcher({ userId, eventId, token, onLoaded }: FetcherProps)
   useEffect(() => {
     const ready = (data?.readUserEventMoments ?? []).filter((m) => m.state === EventMomentState.Ready);
     onLoaded(eventId, ready);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, eventId]);
+  }, [data, eventId, onLoaded]);
 
   return null;
 }
@@ -56,6 +55,20 @@ export default function UserAvatarMomentsRing({ userId, avatarSrc, displayName, 
   const [momentsByEvent, setMomentsByEvent] = useState<Map<string, Moment[]>>(new Map());
   const [viewerOpen, setViewerOpen] = useState(false);
 
+  // Clear stale moments and close the viewer when the profile being viewed changes or
+  // the session is lost (sign-out). Without this, a stale ring could remain visible
+  // and the viewer could open with moments from the previous user/session.
+  // Skip the initial mount — data is still being fetched then and nothing is stale yet.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setMomentsByEvent(new Map());
+    setViewerOpen(false);
+  }, [userId, token]);
+
   const handleMomentsLoaded = useCallback((eventId: string, moments: Moment[]) => {
     setMomentsByEvent((prev) => {
       const next = new Map(prev);
@@ -65,7 +78,9 @@ export default function UserAvatarMomentsRing({ userId, avatarSrc, displayName, 
   }, []);
 
   const allMoments = useMemo(() => Array.from(momentsByEvent.values()).flat(), [momentsByEvent]);
-  const hasActiveMoments = allMoments.length > 0;
+  // Gate on token so a signed-out visitor never sees a stale ring even before the
+  // reset effect above fires.
+  const hasActiveMoments = !!token && allMoments.length > 0;
 
   const avatarSizeSx = { width: { xs: 80, md: 96 }, height: { xs: 80, md: 96 } };
 
