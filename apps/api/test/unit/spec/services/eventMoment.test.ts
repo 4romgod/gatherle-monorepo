@@ -62,7 +62,7 @@ jest.mock('@/mongodb/dao', () => ({
 // The service imports POSTING_WINDOW_HOURS_AFTER_EVENT and MAX_STATUSES_PER_WINDOW directly
 // from the DAO module file (not from the barrel), so mock that module separately.
 jest.mock('@/mongodb/dao/eventMoment', () => ({
-  POSTING_WINDOW_HOURS_AFTER_EVENT: 48,
+  POSTING_WINDOW_HOURS_AFTER_EVENT: 72,
   MAX_STATUSES_PER_WINDOW: 5,
 }));
 
@@ -90,8 +90,8 @@ describe('EventMomentService', () => {
   const now = Date.now();
   /** Event still running — posting window is open */
   const futureEndDate = new Date(now + 2 * 60 * 60 * 1000);
-  /** Event ended 50 h ago — 48 h window has closed */
-  const closedEndDate = new Date(now - 50 * 60 * 60 * 1000);
+  /** Event ended 74 h ago — 72 h window has closed */
+  const closedEndDate = new Date(now - 74 * 60 * 60 * 1000);
 
   const mockEvent = {
     eventId: 'event-1',
@@ -323,7 +323,7 @@ describe('EventMomentService', () => {
 
       const result = await EventMomentService.readByEvent('event-1', undefined, 10);
 
-      expect(EventMomentDAO.readByEvent).toHaveBeenCalledWith('event-1', undefined, 10);
+      expect(EventMomentDAO.readByEvent).toHaveBeenCalledWith('event-1', undefined, 10, undefined);
       expect(result).toEqual(page);
     });
   });

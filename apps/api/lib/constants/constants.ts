@@ -142,6 +142,10 @@ export const OPERATIONS = {
     READ_USER_EVENT_MOMENTS: 'readUserEventMoments',
     READ_FOLLOWED_MOMENTS: 'readFollowedMoments',
   },
+  IMAGE: {
+    GET_IMAGE_UPLOAD_URL: 'getImageUploadUrl',
+    GET_EVENT_MOMENT_UPLOAD_URL: 'getEventMomentUploadUrl',
+  },
   ADMIN: {
     READ_ADMIN_DASHBOARD_STATS: 'readAdminDashboardStats',
   },

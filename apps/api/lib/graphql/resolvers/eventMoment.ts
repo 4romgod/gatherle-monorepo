@@ -53,11 +53,13 @@ export class EventMomentResolver {
   @Query(() => EventMomentPage, { description: 'Get all active moments for an event (event page ring view)' })
   async readEventMoments(
     @Arg('eventId', () => String) eventId: string,
-    @Ctx() _context: ServerContext,
+    @Ctx() context: ServerContext,
     @Arg('cursor', () => String, { nullable: true }) cursor?: string,
     @Arg('limit', () => Number, { nullable: true }) limit?: number,
   ): Promise<EventMomentPage> {
-    return EventMomentService.readByEvent(eventId, cursor, limit);
+    // context.user is populated for authenticated requests (no @Authorized required).
+    // Pass the viewer's id so the DAO can include their own Processing moments.
+    return EventMomentService.readByEvent(eventId, cursor, limit, context.user?.userId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

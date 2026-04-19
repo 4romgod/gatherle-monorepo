@@ -34,6 +34,7 @@ import { useChatRealtime } from '@/hooks';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
+import Hls from 'hls.js';
 
 type MomentEventShape = { event?: { slug: string; title: string } | null };
 type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number] & MomentEventShape;
@@ -92,9 +93,18 @@ export default function EventMomentViewer({
   const [paused, setPaused] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [replySent, setReplySent] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  // videoNode mirrors videoRef in React state so the HLS effect can depend on it.
+  // Callback refs are called synchronously during commit, but useEffect fires asynchronously;
+  // storing the element in state ensures the effect sees a non-null node after mount.
+  const [videoNode, setVideoNode] = useState<HTMLVideoElement | null>(null);
+  const videoRefCallback = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    setVideoNode(el);
+  }, []);
   const elapsedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   // Ref-based snapshot of the current moment type, read inside the rAF tick.
@@ -124,6 +134,7 @@ export default function EventMomentViewer({
       setCurrentIndex(index);
       setProgress(0);
       setMediaLoaded(false);
+      setMediaError(false);
     },
     [moments.length, onClose],
   );
@@ -195,6 +206,39 @@ export default function EventMomentViewer({
     setProgress((video.currentTime / video.duration) * 100);
   }, []);
 
+  // Attach hls.js when the current moment is a video with an .m3u8 URL.
+  // For Safari (which supports HLS natively) or plain .mp4 URLs, set src directly.
+  // Depends on videoNode (the mounted <video> element) so the effect is guaranteed to
+  // run only once the element is in the DOM, regardless of async effect scheduling.
+  useEffect(() => {
+    if (!videoNode) return;
+    const url = moment?.type?.toLowerCase() === 'video' ? moment?.mediaUrl : undefined;
+    if (!url) return;
+
+    let hls: Hls | undefined;
+
+    if (url.endsWith('.m3u8') && Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(url);
+      hls.attachMedia(videoNode);
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data.fatal) {
+          setMediaLoaded(true); // hide spinner
+          setMediaError(true);
+          hls?.destroy();
+        }
+      });
+    } else {
+      // Safari natively supports .m3u8; also handles plain .mp4 for both browsers.
+      videoNode.src = url;
+    }
+
+    return () => {
+      hls?.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoNode, moment?.mediaUrl]);
+
   // Keep video play/pause in sync with the viewer's paused state (tap-to-pause)
   useEffect(() => {
     const video = videoRef.current;
@@ -213,6 +257,7 @@ export default function EventMomentViewer({
       setCurrentIndex(startIndex);
       setProgress(0);
       setMediaLoaded(false);
+      setMediaError(false);
     }
   }, [open, startIndex]);
 
@@ -277,16 +322,23 @@ export default function EventMomentViewer({
   const timeAgo = formatDistanceToNow(new Date(moment.createdAt), { addSuffix: true });
 
   return (
-    <Dialog open={open} onClose={onClose} fullScreen slotProps={{ paper: { sx: { bgcolor: 'common.black', m: 0 } } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullScreen
+      slotProps={{ paper: { sx: { bgcolor: 'common.black', m: 0, display: 'flex', flexDirection: 'column' } } }}
+    >
       <Box
         sx={{
           position: 'relative',
           width: '100%',
-          height: '100%',
+          flex: 1,
+          minHeight: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: 'common.black',
+          overflow: 'hidden',
         }}
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
@@ -525,7 +577,7 @@ export default function EventMomentViewer({
 
           {moment.type === EventMomentType.Video && moment.mediaUrl && (
             <>
-              {!mediaLoaded && (
+              {!mediaLoaded && !mediaError && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -539,51 +591,52 @@ export default function EventMomentViewer({
                   <CircularProgress size={40} sx={{ color: (theme) => alpha(theme.palette.common.white, 0.8) }} />
                 </Box>
               )}
+              {mediaError && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2,
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7) }}>
+                    Video unavailable
+                  </Typography>
+                </Box>
+              )}
               <Box
-                component="video"
-                ref={(el: unknown) => {
-                  videoRef.current = el as HTMLVideoElement | null;
-                }}
-                src={moment.mediaUrl}
-                poster={moment.thumbnailUrl ?? undefined}
-                autoPlay
-                muted={isMuted}
-                playsInline
-                onCanPlay={() => setMediaLoaded(true)}
-                onTimeUpdate={handleVideoTimeUpdate}
-                onEnded={goNext}
                 sx={{
                   width: '100%',
                   height: '100%',
                   maxWidth: { xs: '100%', sm: 480, md: 560 },
                   maxHeight: { xs: '100%', sm: '90vh' },
-                  objectFit: 'contain',
+                  overflow: 'hidden',
                   borderRadius: { xs: 0, sm: 2 },
-                  opacity: mediaLoaded ? 1 : 0,
-                  transition: 'opacity 0.25s ease',
                 }}
-              />
+              >
+                <video
+                  ref={videoRefCallback}
+                  poster={moment.thumbnailUrl ?? undefined}
+                  autoPlay
+                  muted={isMuted}
+                  playsInline
+                  onCanPlay={() => setMediaLoaded(true)}
+                  onTimeUpdate={handleVideoTimeUpdate}
+                  onEnded={goNext}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    opacity: mediaLoaded ? 1 : 0,
+                    transition: 'opacity 0.25s ease',
+                  }}
+                />
+              </Box>
             </>
-          )}
-
-          {/* Caption overlay for image/video */}
-          {moment.type !== EventMomentType.Text && moment.caption && (
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: (theme) =>
-                  `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.7)} 0%, transparent 100%)`,
-                p: 2,
-                borderRadius: { xs: '0 0 0 0', sm: '0 0 8px 8px' },
-              }}
-            >
-              <Typography variant="body2" color="common.white">
-                {moment.caption}
-              </Typography>
-            </Box>
           )}
         </Box>
 
@@ -640,51 +693,88 @@ export default function EventMomentViewer({
         )}
       </Box>
 
-      {/* Reply input — only shown to viewers who are not the moment author */}
-      {viewerUserId && viewerUserId !== moment.authorId && moment.authorId && (
+      {/* Reply input — sits below the video as a real footer row, not overlaid */}
+      {viewerUserId && viewerUserId !== moment.authorId && moment.authorId ? (
         <Box
           sx={{
-            position: 'absolute',
-            bottom: 16,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - 32px)',
-            maxWidth: { sm: 480, md: 560 },
-            zIndex: 10,
+            width: '100%',
+            bgcolor: 'common.black',
+            px: 2,
+            py: 1.5,
+            borderTop: '1px solid',
+            borderColor: (theme) => alpha(theme.palette.common.white, 0.12),
+            flexShrink: 0,
+            display: 'flex',
+            justifyContent: 'center',
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onMouseUp={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
-          <MessageComposer
-            variant="overlay"
-            onSend={handleReply}
-            isConnected={isConnected}
-            targetUserId={moment.authorId}
-            placeholder={`Reply to ${displayName}…`}
-            onFocus={() => setPaused(true)}
-            onBlur={() => setPaused(false)}
-            onAfterSend={() => {
-              setReplySent(true);
-              setTimeout(() => setReplySent(false), 2500);
-            }}
-          />
-          {replySent && (
-            <Typography
-              variant="caption"
-              sx={{
-                mt: 0.75,
-                display: 'block',
-                textAlign: 'center',
-                color: (theme) => alpha(theme.palette.common.white, 0.85),
+          <Box sx={{ width: '100%', maxWidth: { sm: 480, md: 560 } }}>
+            {moment.type !== EventMomentType.Text && moment.caption && (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'common.white',
+                  mb: 1,
+                  px: 0.5,
+                }}
+              >
+                {moment.caption}
+              </Typography>
+            )}
+            <MessageComposer
+              variant="overlay"
+              onSend={handleReply}
+              isConnected={isConnected}
+              targetUserId={moment.authorId}
+              placeholder={`Reply to ${displayName}…`}
+              onFocus={() => setPaused(true)}
+              onBlur={() => setPaused(false)}
+              onAfterSend={() => {
+                setReplySent(true);
+                setTimeout(() => setReplySent(false), 2500);
               }}
-            >
-              Message sent
-            </Typography>
-          )}
+            />
+            {replySent && (
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 0.75,
+                  display: 'block',
+                  textAlign: 'center',
+                  color: (theme) => alpha(theme.palette.common.white, 0.85),
+                }}
+              >
+                Message sent
+              </Typography>
+            )}
+          </Box>
         </Box>
-      )}
+      ) : moment.type !== EventMomentType.Text && moment.caption ? (
+        <Box
+          sx={{
+            width: '100%',
+            bgcolor: 'common.black',
+            px: 2,
+            py: 1.5,
+            borderTop: '1px solid',
+            borderColor: (theme) => alpha(theme.palette.common.white, 0.12),
+            flexShrink: 0,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{ color: 'common.white', width: '100%', maxWidth: { sm: 480, md: 560 }, px: 0.5 }}
+          >
+            {moment.caption}
+          </Typography>
+        </Box>
+      ) : null}
 
       {/* Delete confirmation dialog */}
       <Dialog

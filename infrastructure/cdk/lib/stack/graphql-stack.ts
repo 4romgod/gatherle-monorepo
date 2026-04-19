@@ -29,7 +29,7 @@ configDotenv();
 
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
-const pathHandlerFile = join(pathApi, 'lib', 'graphql', 'apollo', 'lambdaHandler.ts');
+const pathHandlerFile = join(pathApi, 'lib', 'lambdaHandlers', 'graphqlHandler.ts');
 
 export interface GraphQLStackProps extends StackProps {
   applicationStage: string;

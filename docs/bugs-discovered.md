@@ -252,6 +252,76 @@ export const dynamic = 'force-dynamic'; // Added
 
 ---
 
+## BUG-004: S3 Upload / DB Moment Race Condition — Video Moments Can Remain Processing Forever
+
+**Date Discovered:** 19 April 2026 **Severity:** High **Status:** 🔴 Open
+
+### Symptoms
+
+- A video moment is uploaded and MediaConvert completes successfully, but the moment document remains in `Processing`
+  state indefinitely with no `mediaUrl`.
+- No error surfaces to the user — the moment ring shows a spinner that never resolves.
+- The bug is silent: `onTranscodeEvent` logs success even though no DB update occurred.
+
+### Root Cause
+
+`EventMomentComposer` uploads the raw video file to S3 first (line 300), then calls `createEventMoment` later (line 348)
+after the upload completes. For short videos on fast connections, MediaConvert can pick up the S3 object, transcode it,
+and fire the EventBridge completion event before `createEventMoment` has written the `EventMoment` document to MongoDB.
+`onTranscodeEvent` looks up the moment by `mediaUrl` (line 65); finding nothing, it returns success at line 68.
+EventBridge marks the invocation as successful and will not retry. The moment document is created after the fact with no
+mechanism to trigger a second transcode or completion handler pass.
+
+### Suggested Fix
+
+- **Option A (preferred):** Create the `EventMoment` document (or a lightweight upload session) _before_ issuing the S3
+  PUT, storing the expected raw S3 key. Embed the `momentId` in the S3 object key or in the MediaConvert `UserMetadata`.
+  `onTranscodeEvent` then looks up by `momentId`/key rather than `mediaUrl`, and the race is eliminated.
+- **Option B:** Change `onTranscodeEvent` to throw (rather than silently return) when no matching moment is found, so
+  EventBridge retries the Lambda. Add a DLQ with bounded backoff (e.g. 3 retries, 30-second delay) to handle the window
+  where the DB write is in flight.
+
+### Tracked In
+
+- API-033 in `docs/project-state.md`
+
+---
+
+## BUG-005: 30-Second / 75 MB Video Limits Are Client-Only (Docs Claim Server Enforcement)
+
+**Date Discovered:** 19 April 2026 **Severity:** High **Status:** 🔴 Open
+
+### Symptoms
+
+- A user can upload a video longer than 30 seconds or larger than 75 MB and the server accepts it, triggering a
+  full-cost MediaConvert job with no rejection.
+- The feature docs (`docs/features/event-moments.md`) state that these limits are enforced server-side, which is
+  incorrect.
+
+### Root Cause
+
+- `CreateEventMomentInput` (`packages/commons/lib/types/eventMoment.ts` line 116) has no `duration` field.
+- The Zod validation schema (`apps/api/lib/validation/zod/social.ts` line 59) only validates `mediaKey` presence; no
+  size or duration check exists.
+- `onTranscodeEvent` marks any completed MediaConvert output `Ready` (line 81) regardless of the actual duration or file
+  size of the output.
+- Client-side checks in the composer (duration ≤ 30 s, file size ≤ 75 MB) are the only enforcement layer.
+
+### Suggested Fix
+
+- **`startTranscodeJob`:** Read `event.detail.object.size` from the EventBridge payload; if it exceeds the 75 MB
+  threshold, skip the MediaConvert job and (optionally) delete the raw S3 object to avoid storage cost.
+- **`onTranscodeEvent`:** Parse duration from the MediaConvert output `OutputGroupDetails` metadata; if the output
+  exceeds 30 s, call `EventMomentDAO.markFailed` and delete both the raw and HLS S3 objects.
+- **Docs:** Update `docs/features/event-moments.md` to clearly distinguish client-side vs. server-side enforcement until
+  the server checks are implemented.
+
+### Tracked In
+
+- API-034 in `docs/project-state.md`
+
+---
+
 ## Template for New Bugs
 
 ```markdown
