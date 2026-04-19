@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BottomNavigation, BottomNavigationAction, Badge, Box, Paper } from '@mui/material';
+import { BottomNavigation, BottomNavigationAction, Badge, Box, Paper, Avatar } from '@mui/material';
 import {
   HomeOutlined,
   Home,
@@ -12,8 +12,6 @@ import {
   Notifications,
   MailOutline,
   Mail,
-  AccountCircleOutlined,
-  AccountCircle,
   LoginOutlined,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
@@ -29,6 +27,7 @@ function resolveNavValue(pathname: string): string {
   if (pathname.startsWith('/account/notifications')) return 'notifications';
   if (pathname.startsWith('/account/messages')) return 'messages';
   if (pathname.startsWith('/account')) return 'profile';
+  if (pathname.startsWith('/auth')) return 'login';
   return '';
 }
 
@@ -64,40 +63,37 @@ export default function MobileBottomNav() {
       >
         <BottomNavigation
           value={currentValue}
-          showLabels
           sx={{
             height: MOBILE_BOTTOM_NAV_HEIGHT,
             bgcolor: 'background.paper',
             '& .MuiBottomNavigationAction-root': {
               minWidth: 0,
               color: 'text.secondary',
+              padding: '6px 0',
               '&.Mui-selected': { color: 'primary.main' },
             },
-            '& .MuiBottomNavigationAction-label': {
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              '&.Mui-selected': { fontSize: '0.65rem' },
-            },
+            '& .MuiBottomNavigationAction-label': { display: 'none' },
+            '& .MuiSvgIcon-root': { fontSize: '1.75rem' },
           }}
         >
           <BottomNavigationAction
             label="Home"
             value="home"
-            icon={currentValue === 'home' ? <Home fontSize="small" /> : <HomeOutlined fontSize="small" />}
+            icon={currentValue === 'home' ? <Home /> : <HomeOutlined />}
             component={Link}
             href={ROUTES.ROOT}
           />
           <BottomNavigationAction
             label="Events"
             value="events"
-            icon={currentValue === 'events' ? <Event fontSize="small" /> : <EventOutlined fontSize="small" />}
+            icon={currentValue === 'events' ? <Event /> : <EventOutlined />}
             component={Link}
             href={ROUTES.EVENTS.ROOT}
           />
           <BottomNavigationAction
             label="Log in"
             value="login"
-            icon={<LoginOutlined fontSize="small" />}
+            icon={<LoginOutlined />}
             component={Link}
             href={ROUTES.AUTH.LOGIN}
           />
@@ -124,33 +120,30 @@ export default function MobileBottomNav() {
     >
       <BottomNavigation
         value={currentValue}
-        showLabels
         sx={{
           height: MOBILE_BOTTOM_NAV_HEIGHT,
           bgcolor: 'background.paper',
           '& .MuiBottomNavigationAction-root': {
             minWidth: 0,
             color: 'text.secondary',
+            padding: '6px 0',
             '&.Mui-selected': { color: 'primary.main' },
           },
-          '& .MuiBottomNavigationAction-label': {
-            fontSize: '0.65rem',
-            fontWeight: 600,
-            '&.Mui-selected': { fontSize: '0.65rem' },
-          },
+          '& .MuiBottomNavigationAction-label': { display: 'none' },
+          '& .MuiSvgIcon-root': { fontSize: '1.75rem' },
         }}
       >
         <BottomNavigationAction
           label="Home"
           value="home"
-          icon={currentValue === 'home' ? <Home fontSize="small" /> : <HomeOutlined fontSize="small" />}
+          icon={currentValue === 'home' ? <Home /> : <HomeOutlined />}
           component={Link}
           href={ROUTES.ROOT}
         />
         <BottomNavigationAction
           label="Events"
           value="events"
-          icon={currentValue === 'events' ? <Event fontSize="small" /> : <EventOutlined fontSize="small" />}
+          icon={currentValue === 'events' ? <Event /> : <EventOutlined />}
           component={Link}
           href={ROUTES.EVENTS.ROOT}
         />
@@ -164,11 +157,7 @@ export default function MobileBottomNav() {
               max={99}
               sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 15, minWidth: 15 } }}
             >
-              {currentValue === 'notifications' ? (
-                <Notifications fontSize="small" />
-              ) : (
-                <NotificationsOutlined fontSize="small" />
-              )}
+              {currentValue === 'notifications' ? <Notifications /> : <NotificationsOutlined />}
             </Badge>
           }
           component={Link}
@@ -184,7 +173,7 @@ export default function MobileBottomNav() {
               max={99}
               sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 15, minWidth: 15 } }}
             >
-              {currentValue === 'messages' ? <Mail fontSize="small" /> : <MailOutline fontSize="small" />}
+              {currentValue === 'messages' ? <Mail /> : <MailOutline />}
             </Badge>
           }
           component={Link}
@@ -194,7 +183,19 @@ export default function MobileBottomNav() {
           label="Profile"
           value="profile"
           icon={
-            currentValue === 'profile' ? <AccountCircle fontSize="small" /> : <AccountCircleOutlined fontSize="small" />
+            <Avatar
+              src={session?.user.profile_picture ?? undefined}
+              sx={{
+                width: 28,
+                height: 28,
+                fontSize: '0.8rem',
+                border: currentValue === 'profile' ? '2px solid' : '2px solid transparent',
+                borderColor: currentValue === 'profile' ? 'primary.main' : 'transparent',
+                bgcolor: 'text.disabled',
+              }}
+            >
+              {session?.user.given_name?.[0] ?? session?.user.name?.[0]}
+            </Avatar>
           }
           component={Link}
           href={ROUTES.ACCOUNT.ROOT}

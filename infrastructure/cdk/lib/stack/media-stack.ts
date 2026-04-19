@@ -5,12 +5,14 @@ import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Role, ServicePrincipal, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { Rule } from 'aws-cdk-lib/aws-events';
 import { LambdaFunction as LambdaEventTarget } from 'aws-cdk-lib/aws-events-targets';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { CfnQueue } from 'aws-cdk-lib/aws-mediaconvert';
 import { join } from 'path';
 import { buildBackendSecretName, buildResourceName } from '../utils/naming';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
@@ -174,6 +176,13 @@ export class MediaStack extends Stack {
     // Allow the Lambda to delete the original raw video after transcoding is complete.
     mediaBucketRef.grantDelete(onTranscodeEventLambda);
 
+    const onTranscodeEventDlq = new Queue(this, 'OnTranscodeEventDlq', {
+      queueName: buildResourceName('OnTranscodeEventDlq', props.applicationStage, props.awsRegion),
+      retentionPeriod: Duration.days(14),
+      enforceSSL: true,
+      removalPolicy: props.applicationStage === APPLICATION_STAGES.PROD ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
+    });
+
     // EventBridge rule: fire OnTranscodeEvent when a MediaConvert job transitions to COMPLETE or ERROR.
     new Rule(this, 'MediaConvertJobStateRule', {
       description: 'Routes MediaConvert COMPLETE/ERROR events to the OnTranscodeEvent Lambda',
@@ -185,7 +194,13 @@ export class MediaStack extends Stack {
           queue: [mediaConvertQueue.attrArn],
         },
       },
-      targets: [new LambdaEventTarget(onTranscodeEventLambda)],
+      targets: [
+        new LambdaEventTarget(onTranscodeEventLambda, {
+          deadLetterQueue: onTranscodeEventDlq,
+          retryAttempts: 3,
+          maxEventAge: Duration.minutes(5),
+        }),
+      ],
     });
   }
 }

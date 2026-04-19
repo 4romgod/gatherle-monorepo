@@ -92,8 +92,9 @@ export const onTranscodeEventHandler = async (
 
   const moment = await EventMomentDAO.findByMediaUrl(rawMediaUrl);
   if (!moment) {
-    logger.error('No moment found for rawMediaUrl', { rawMediaUrl });
-    return;
+    const message = 'No moment found for rawMediaUrl - retrying transcode completion later';
+    logger.error(message, { rawMediaUrl });
+    throw new Error(`${message}: ${rawMediaUrl}`);
   }
 
   const { momentId } = moment;

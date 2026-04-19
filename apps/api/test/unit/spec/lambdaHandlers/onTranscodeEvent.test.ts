@@ -119,15 +119,17 @@ describe('onTranscodeEventHandler', () => {
       await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow('MEDIA_CDN_DOMAIN env var is required');
     });
 
-    it('logs an error and returns early when no moment matches the raw media URL', async () => {
+    it('throws when no moment matches the raw media URL so EventBridge can retry', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
       (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue(null);
 
-      await handler(makeEvent('COMPLETE'));
+      await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow(
+        'No moment found for rawMediaUrl - retrying transcode completion later',
+      );
 
       expect(EventMomentDAO.markReady).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
-        'No moment found for rawMediaUrl',
+        'No moment found for rawMediaUrl - retrying transcode completion later',
         expect.objectContaining({ rawMediaUrl: 'https://cdn.example.com/beta/event-moments/evt/clip.mp4' }),
       );
     });
