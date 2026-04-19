@@ -1,9 +1,25 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AWS_REGION, MEDIA_CDN_DOMAIN, S3_BUCKET_NAME } from '@/constants';
 import { logger } from '@/utils/logger';
 
 let s3Client: S3Client;
+
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    s3Client = new S3Client({ region: AWS_REGION });
+    logger.debug('S3Client initialized', { region: AWS_REGION });
+  }
+  return s3Client;
+}
 
 function getConfiguredMediaHostname(): string | null {
   if (!MEDIA_CDN_DOMAIN) {
@@ -16,14 +32,6 @@ function getConfiguredMediaHostname(): string | null {
   } catch {
     return null;
   }
-}
-
-function getS3Client(): S3Client {
-  if (!s3Client) {
-    s3Client = new S3Client({ region: AWS_REGION });
-    logger.debug('S3Client initialized', { region: AWS_REGION });
-  }
-  return s3Client;
 }
 
 export async function uploadToS3(key: string, body: Buffer, contentType: string): Promise<string> {
@@ -69,6 +77,69 @@ export async function deleteFromS3(key: string): Promise<void> {
     logger.error('Error deleting from S3:', { error });
     throw error;
   }
+}
+
+export async function getS3ObjectSize(key: string): Promise<number | undefined> {
+  if (!S3_BUCKET_NAME) {
+    throw new Error('S3_BUCKET_NAME is not configured');
+  }
+
+  const command = new HeadObjectCommand({
+    Bucket: S3_BUCKET_NAME,
+    Key: key,
+  });
+
+  try {
+    const response = await getS3Client().send(command);
+    return response.ContentLength;
+  } catch (error) {
+    logger.error('Error reading S3 object metadata:', { key, error });
+    throw error;
+  }
+}
+
+/**
+ * Delete all S3 objects whose key starts with the given prefix.
+ * Uses ListObjectsV2 + DeleteObjects (batch) to handle any number of objects.
+ * Returns the total number of deleted objects.
+ */
+export async function deleteS3Prefix(prefix: string): Promise<number> {
+  if (!S3_BUCKET_NAME) {
+    throw new Error('S3_BUCKET_NAME is not configured');
+  }
+
+  let totalDeleted = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const listResp = await getS3Client().send(
+      new ListObjectsV2Command({
+        Bucket: S3_BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const objects =
+      listResp.Contents?.map((obj) => obj.Key)
+        .filter((key): key is string => key != null)
+        .map((Key) => ({ Key })) ?? [];
+
+    if (objects.length > 0) {
+      await getS3Client().send(
+        new DeleteObjectsCommand({
+          Bucket: S3_BUCKET_NAME,
+          Delete: { Objects: objects, Quiet: true },
+        }),
+      );
+      totalDeleted += objects.length;
+    }
+
+    continuationToken = listResp.IsTruncated ? listResp.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  logger.info('Deleted S3 prefix', { prefix, bucket: S3_BUCKET_NAME, totalDeleted });
+  return totalDeleted;
 }
 
 /**

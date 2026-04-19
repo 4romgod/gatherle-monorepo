@@ -7,6 +7,7 @@ jest.mock('@/clients', () => ({
 
 jest.mock('@/constants', () => ({
   SECRET_KEYS: { MONGO_DB_URL: 'MONGO_DB_URL' },
+  MAX_EVENT_MOMENT_VIDEO_DURATION_MS: 30 * 1000,
 }));
 
 jest.mock('@/mongodb/dao', () => ({
@@ -19,6 +20,7 @@ jest.mock('@/mongodb/dao', () => ({
 
 jest.mock('@/clients/AWS/s3Client', () => ({
   deleteFromS3: jest.fn().mockResolvedValue(undefined),
+  deleteS3Prefix: jest.fn().mockResolvedValue(0),
 }));
 
 jest.mock('@/utils/logger', () => ({
@@ -26,8 +28,6 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import type { EventBridgeEvent } from 'aws-lambda';
-
-// ── helpers ──────────────────────────────────────────────────────────────────
 
 interface MediaConvertEventDetail {
   status: string;
@@ -71,18 +71,22 @@ function makeEvent(
   };
 }
 
-// ── module loader ─────────────────────────────────────────────────────────────
-
 async function loadAll() {
   const { onTranscodeEventHandler } = await import('@/lambdaHandlers/onTranscodeEvent');
   const { EventMomentDAO } = await import('@/mongodb/dao');
   const { MongoDbClient, getConfigValue } = await import('@/clients');
   const { logger } = await import('@/utils/logger');
-  const { deleteFromS3 } = await import('@/clients/AWS/s3Client');
-  return { handler: onTranscodeEventHandler, EventMomentDAO, MongoDbClient, getConfigValue, logger, deleteFromS3 };
+  const { deleteFromS3, deleteS3Prefix } = await import('@/clients/AWS/s3Client');
+  return {
+    handler: onTranscodeEventHandler,
+    EventMomentDAO,
+    MongoDbClient,
+    getConfigValue,
+    logger,
+    deleteFromS3,
+    deleteS3Prefix,
+  };
 }
-
-// ── tests ─────────────────────────────────────────────────────────────────────
 
 describe('onTranscodeEventHandler', () => {
   beforeEach(() => {
@@ -247,8 +251,8 @@ describe('onTranscodeEventHandler', () => {
       expect(EventMomentDAO.markFailed).toHaveBeenCalledWith('moment-1');
     });
 
-    it('passes durationSeconds of 0 when durationInMs is absent', async () => {
-      const { handler, EventMomentDAO } = await loadAll();
+    it('marks Failed and cleans up when durationInMs is absent', async () => {
+      const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix, logger } = await loadAll();
       (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(
@@ -258,7 +262,7 @@ describe('onTranscodeEventHandler', () => {
               type: 'HLS_GROUP',
               outputDetails: [
                 {
-                  outputFilePaths: ['s3://bucket/hls/index.m3u8'],
+                  outputFilePaths: ['s3://bucket/beta/event-moments/evt/clip/hls/index.m3u8'],
                   // no durationInMs
                 },
               ],
@@ -267,7 +271,97 @@ describe('onTranscodeEventHandler', () => {
         }),
       );
 
-      expect(EventMomentDAO.markReady).toHaveBeenCalledWith('moment-1', expect.any(String), undefined, 0);
+      expect(EventMomentDAO.markFailed).toHaveBeenCalledWith('moment-1');
+      expect(EventMomentDAO.markReady).not.toHaveBeenCalled();
+      expect(deleteS3Prefix).toHaveBeenCalledWith('beta/event-moments/evt/clip/hls/');
+      expect(deleteFromS3).toHaveBeenCalledWith('beta/event-moments/evt/clip.mp4');
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('No valid duration found in MediaConvert output'),
+        expect.objectContaining({ momentId: 'moment-1' }),
+      );
+    });
+
+    describe('duration limit enforcement', () => {
+      function makeOverDurationEvent(durationInMs: number) {
+        return makeEvent('COMPLETE', {
+          outputGroupDetails: [
+            {
+              type: 'HLS_GROUP',
+              outputDetails: [
+                {
+                  outputFilePaths: ['s3://bucket/beta/event-moments/evt/clip/hls/index.m3u8'],
+                  durationInMs,
+                },
+              ],
+            },
+          ],
+        });
+      }
+
+      it('marks the moment Failed when duration exceeds 30 seconds', async () => {
+        const { handler, EventMomentDAO } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+
+        await handler(makeOverDurationEvent(30001));
+
+        expect(EventMomentDAO.markFailed).toHaveBeenCalledWith('m-over');
+        expect(EventMomentDAO.markReady).not.toHaveBeenCalled();
+      });
+
+      it('logs a warning when the video exceeds the duration limit', async () => {
+        const { handler, EventMomentDAO, logger } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+
+        await handler(makeOverDurationEvent(60000));
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining('Video exceeds maximum duration'),
+          expect.objectContaining({ momentId: 'm-over', durationSeconds: 60 }),
+        );
+      });
+
+      it('deletes the HLS prefix and raw upload when over the duration limit', async () => {
+        const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+
+        await handler(makeOverDurationEvent(31000));
+
+        expect(deleteS3Prefix).toHaveBeenCalledWith('beta/event-moments/evt/clip/hls/');
+        expect(deleteFromS3).toHaveBeenCalledWith('beta/event-moments/evt/clip.mp4');
+      });
+
+      it('allows a video of exactly 30 seconds through (at the limit)', async () => {
+        const { handler, EventMomentDAO } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-exact' });
+
+        await handler(makeOverDurationEvent(30000));
+
+        expect(EventMomentDAO.markReady).toHaveBeenCalledWith('m-exact', expect.any(String), undefined, 30);
+        expect(EventMomentDAO.markFailed).not.toHaveBeenCalled();
+      });
+
+      it('allows a video under 30 seconds through', async () => {
+        const { handler, EventMomentDAO } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-short' });
+
+        await handler(makeEvent('COMPLETE')); // default 15000ms in makeEvent
+
+        expect(EventMomentDAO.markReady).toHaveBeenCalled();
+        expect(EventMomentDAO.markFailed).not.toHaveBeenCalled();
+      });
+
+      it('does not throw when cleanup fails after over-limit detection', async () => {
+        const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix, logger } = await loadAll();
+        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+        (deleteS3Prefix as jest.Mock).mockRejectedValueOnce(new Error('S3 error'));
+
+        await expect(handler(makeOverDurationEvent(60000))).resolves.toBeUndefined();
+        expect(deleteFromS3).toHaveBeenCalledWith('beta/event-moments/evt/clip.mp4');
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to clean up rejected video artifact'),
+          expect.objectContaining({ momentId: 'm-over', target: 'HLS prefix' }),
+        );
+      });
     });
   });
 

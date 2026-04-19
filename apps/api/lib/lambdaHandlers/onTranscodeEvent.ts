@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import type { EventBridgeEvent } from 'aws-lambda';
 import { MongoDbClient, getConfigValue } from '@/clients';
-import { SECRET_KEYS } from '@/constants';
+import { SECRET_KEYS, MAX_EVENT_MOMENT_VIDEO_DURATION_MS } from '@/constants';
 import { EventMomentDAO } from '@/mongodb/dao';
-import { deleteFromS3 } from '@/clients/AWS/s3Client';
+import { deleteFromS3, deleteS3Prefix } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
 
 const MEDIA_CDN_DOMAIN = process.env.MEDIA_CDN_DOMAIN || '';
@@ -43,6 +43,34 @@ function s3UriToKey(s3Uri: string): string {
   return withoutScheme;
 }
 
+async function cleanupRejectedVideoArtifacts(momentId: string, rawS3Key: string, hlsKey: string): Promise<void> {
+  const hlsPrefixSeparatorIndex = hlsKey.lastIndexOf('/');
+  const cleanupTasks: Array<{ target: string; run: () => Promise<unknown> }> = [];
+
+  if (hlsPrefixSeparatorIndex >= 0) {
+    const hlsPrefix = hlsKey.slice(0, hlsPrefixSeparatorIndex + 1);
+    cleanupTasks.push({ target: 'HLS prefix', run: () => deleteS3Prefix(hlsPrefix) });
+  } else {
+    logger.warn('Skipping HLS prefix cleanup because manifest key has no path separator', {
+      momentId,
+      hlsKey,
+    });
+  }
+
+  cleanupTasks.push({ target: 'raw upload', run: () => deleteFromS3(rawS3Key) });
+
+  const results = await Promise.allSettled(cleanupTasks.map((task) => task.run()));
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      logger.warn('Failed to clean up rejected video artifact - not critical', {
+        momentId,
+        target: cleanupTasks[index].target,
+        err: result.reason,
+      });
+    }
+  });
+}
+
 export const onTranscodeEventHandler = async (
   event: EventBridgeEvent<'MediaConvert Job State Change', MediaConvertEventDetail>,
 ): Promise<void> => {
@@ -78,8 +106,7 @@ export const onTranscodeEventHandler = async (
 
     const outputDetail = hlsGroup?.outputDetails?.[0];
     const manifestS3Uri = outputDetail?.outputFilePaths?.find((p) => p.endsWith('.m3u8'));
-    const durationMs = outputDetail?.durationInMs ?? 0;
-    const durationSeconds = Math.round(durationMs / 1000);
+    const durationMs = outputDetail?.durationInMs;
 
     if (!manifestS3Uri) {
       logger.error('No HLS manifest found in MediaConvert output', { momentId });
@@ -89,6 +116,30 @@ export const onTranscodeEventHandler = async (
 
     const hlsKey = s3UriToKey(manifestS3Uri);
     const hlsUrl = `https://${MEDIA_CDN_DOMAIN}/${hlsKey}`;
+    const hasValidDuration = typeof durationMs === 'number' && Number.isFinite(durationMs) && durationMs >= 0;
+
+    if (!hasValidDuration) {
+      logger.error('No valid duration found in MediaConvert output - marking moment Failed and cleaning up', {
+        momentId,
+      });
+      await EventMomentDAO.markFailed(momentId);
+      await cleanupRejectedVideoArtifacts(momentId, rawS3Key, hlsKey);
+      return;
+    }
+
+    const durationSeconds = Math.round(durationMs / 1000);
+
+    // Enforce the 30-second duration limit server-side.
+    if (durationMs > MAX_EVENT_MOMENT_VIDEO_DURATION_MS) {
+      logger.warn('Video exceeds maximum duration — marking moment Failed and cleaning up', {
+        momentId,
+        durationSeconds,
+        maxSeconds: MAX_EVENT_MOMENT_VIDEO_DURATION_MS / 1000,
+      });
+      await EventMomentDAO.markFailed(momentId);
+      await cleanupRejectedVideoArtifacts(momentId, rawS3Key, hlsKey);
+      return;
+    }
 
     logger.info('Marking moment as Ready', { momentId, hlsUrl, durationSeconds });
 
