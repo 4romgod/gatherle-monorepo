@@ -97,9 +97,6 @@ export default function EventMomentViewer({
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [mediaError, setMediaError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // videoNode mirrors videoRef in React state so the HLS effect can depend on it.
-  // Callback refs are called synchronously during commit, but useEffect fires asynchronously;
-  // storing the element in state ensures the effect sees a non-null node after mount.
   const [videoNode, setVideoNode] = useState<HTMLVideoElement | null>(null);
   const videoRefCallback = useCallback((el: HTMLVideoElement | null) => {
     videoRef.current = el;
@@ -107,11 +104,8 @@ export default function EventMomentViewer({
   }, []);
   const elapsedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-  // Ref-based snapshot of the current moment type, read inside the rAF tick.
-  // A ref is used instead of a reactive value so the check is never stale — if the
-  // moment is a video, the tick sees that immediately without waiting for an effect re-run.
   const momentTypeRef = useRef<string | undefined>(undefined);
-  // Stable ref to the current moment's eventId for use in mutation callbacks that run before state resolves
+  const mediaLoadedRef = useRef(false);
   const currentEventIdRef = useRef<string | undefined>(undefined);
 
   const { sendChatMessage, isConnected } = useChatRealtime({ enabled: Boolean(viewerUserId) });
@@ -133,6 +127,7 @@ export default function EventMomentViewer({
       elapsedRef.current = 0;
       setCurrentIndex(index);
       setProgress(0);
+      mediaLoadedRef.current = false;
       setMediaLoaded(false);
       setMediaError(false);
     },
@@ -164,20 +159,23 @@ export default function EventMomentViewer({
 
   const isVideoMoment = moment?.type?.toLowerCase() === 'video';
 
-  // Progress driver — text/image: fixed rAF timer. Video: onTimeUpdate drives progress instead.
-  // momentTypeRef is checked INSIDE the tick so the guard is never a stale closure value.
   useEffect(() => {
     if (!open || paused) return;
 
     let lastTime = performance.now();
 
     const tick = (now: number) => {
-      // Video moment — cancel rAF here; video element owns progress and advancement.
-      // Compare lower-case to handle the codegen enum mismatch (codegen: 'Video', API value: 'video').
       if (momentTypeRef.current?.toLowerCase() === 'video') {
         rafRef.current = null;
         return;
       }
+
+      if (momentTypeRef.current?.toLowerCase() === 'image' && !mediaLoadedRef.current) {
+        lastTime = now;
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
       elapsedRef.current += now - lastTime;
       lastTime = now;
       const pct = Math.min((elapsedRef.current / STORY_DURATION_MS) * 100, 100);
@@ -206,10 +204,6 @@ export default function EventMomentViewer({
     setProgress((video.currentTime / video.duration) * 100);
   }, []);
 
-  // Attach hls.js when the current moment is a video with an .m3u8 URL.
-  // For Safari (which supports HLS natively) or plain .mp4 URLs, set src directly.
-  // Depends on videoNode (the mounted <video> element) so the effect is guaranteed to
-  // run only once the element is in the DOM, regardless of async effect scheduling.
   useEffect(() => {
     if (!videoNode) return;
     const url = moment?.type?.toLowerCase() === 'video' ? moment?.mediaUrl : undefined;
@@ -256,6 +250,7 @@ export default function EventMomentViewer({
       elapsedRef.current = 0;
       setCurrentIndex(startIndex);
       setProgress(0);
+      mediaLoadedRef.current = false;
       setMediaLoaded(false);
       setMediaError(false);
     }
@@ -560,7 +555,10 @@ export default function EventMomentViewer({
                 component="img"
                 src={moment.mediaUrl}
                 alt={moment.caption ?? 'Event moment'}
-                onLoad={() => setMediaLoaded(true)}
+                onLoad={() => {
+                  mediaLoadedRef.current = true;
+                  setMediaLoaded(true);
+                }}
                 sx={{
                   width: '100%',
                   height: '100%',
