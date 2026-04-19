@@ -5,6 +5,7 @@ import { useMutation } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import {
   alpha,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -31,8 +32,11 @@ import { formatDistanceToNow } from 'date-fns';
 import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { useChatRealtime } from '@/hooks';
 import { MessageComposer } from '@/components/messages/MessageComposer';
+import Link from 'next/link';
+import { ROUTES } from '@/lib/constants';
 
-type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number];
+type MomentEventShape = { event?: { slug: string; title: string } | null };
+type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number] & MomentEventShape;
 
 interface EventMomentViewerProps {
   moments: Moment[];
@@ -42,6 +46,8 @@ interface EventMomentViewerProps {
   /** IDs that may delete any moment (organizer IDs) */
   organizerIds: string[];
   onDeleted?: (momentId: string) => void;
+  /** Optional fallback event context shown when the moment doesn't carry its own event field */
+  eventContext?: { slug: string; title: string };
 }
 
 const STORY_DURATION_MS = 5000;
@@ -75,6 +81,7 @@ export default function EventMomentViewer({
   onClose,
   organizerIds,
   onDeleted,
+  eventContext,
 }: EventMomentViewerProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
@@ -85,7 +92,8 @@ export default function EventMomentViewer({
   const [paused, setPaused] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [replySent, setReplySent] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const elapsedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
@@ -115,7 +123,7 @@ export default function EventMomentViewer({
       elapsedRef.current = 0;
       setCurrentIndex(index);
       setProgress(0);
-      setIsMuted(true);
+      setMediaLoaded(false);
     },
     [moments.length, onClose],
   );
@@ -204,6 +212,7 @@ export default function EventMomentViewer({
       elapsedRef.current = 0;
       setCurrentIndex(startIndex);
       setProgress(0);
+      setMediaLoaded(false);
     }
   }, [open, startIndex]);
 
@@ -268,7 +277,7 @@ export default function EventMomentViewer({
   const timeAgo = formatDistanceToNow(new Date(moment.createdAt), { addSuffix: true });
 
   return (
-    <Dialog open={open} onClose={onClose} fullScreen sx={{ '& .MuiDialog-paper': { bgcolor: 'common.black', m: 0 } }}>
+    <Dialog open={open} onClose={onClose} fullScreen slotProps={{ paper: { sx: { bgcolor: 'common.black', m: 0 } } }}>
       <Box
         sx={{
           position: 'relative',
@@ -326,17 +335,84 @@ export default function EventMomentViewer({
           <Avatar
             src={avatarSrc}
             alt={displayName}
-            sx={{ width: 36, height: 36, border: '2px solid', borderColor: 'common.white' }}
+            sx={{ width: 36, height: 36, border: '2px solid', borderColor: 'common.white', flexShrink: 0 }}
           >
             {initials}
           </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700} color="common.white" sx={{ lineHeight: 1.2 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography
+              component={author?.username ? Link : 'span'}
+              href={author?.username ? ROUTES.USERS.USER(author.username) : undefined}
+              onClick={author?.username ? onClose : undefined}
+              variant="body2"
+              fontWeight={700}
+              color="common.white"
+              sx={{
+                lineHeight: 1.2,
+                display: 'block',
+                textDecoration: 'none',
+                '&:hover': author?.username ? { textDecoration: 'underline' } : undefined,
+              }}
+            >
               {displayName}
             </Typography>
-            <Typography variant="caption" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7) }}>
-              {timeAgo}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 0.25 }}>
+              <Typography variant="caption" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7) }}>
+                {timeAgo}
+              </Typography>
+              {(() => {
+                const resolvedEvent = moment.event ?? eventContext;
+                if (!resolvedEvent) return null;
+                const content = (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: (theme) => alpha(theme.palette.common.white, 0.85),
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 140,
+                      display: 'inline-block',
+                      '&:hover': resolvedEvent.slug ? { textDecoration: 'underline' } : undefined,
+                    }}
+                  >
+                    {resolvedEvent.title}
+                  </Typography>
+                );
+                return (
+                  <>
+                    <Typography variant="caption" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.4) }}>
+                      ·
+                    </Typography>
+                    {resolvedEvent.slug ? (
+                      <Typography
+                        component={Link}
+                        href={ROUTES.EVENTS.EVENT(resolvedEvent.slug)}
+                        onClick={onClose}
+                        variant="caption"
+                        sx={{
+                          color: (theme) => alpha(theme.palette.common.white, 0.85),
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: 140,
+                          display: 'inline-block',
+                          '&:hover': { textDecoration: 'underline' },
+                        }}
+                      >
+                        {resolvedEvent.title}
+                      </Typography>
+                    ) : (
+                      content
+                    )}
+                  </>
+                );
+              })()}
+            </Stack>
           </Box>
         </Stack>
 
@@ -413,43 +489,81 @@ export default function EventMomentViewer({
           )}
 
           {moment.type === EventMomentType.Image && moment.mediaUrl && (
-            <Box
-              component="img"
-              src={moment.mediaUrl}
-              alt={moment.caption ?? 'Event moment'}
-              sx={{
-                width: '100%',
-                height: '100%',
-                maxWidth: { xs: '100%', sm: 480, md: 560 },
-                maxHeight: { xs: '100%', sm: '90vh' },
-                objectFit: 'contain',
-                borderRadius: { xs: 0, sm: 2 },
-              }}
-            />
+            <>
+              {!mediaLoaded && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2,
+                  }}
+                >
+                  <CircularProgress size={40} sx={{ color: (theme) => alpha(theme.palette.common.white, 0.8) }} />
+                </Box>
+              )}
+              <Box
+                component="img"
+                src={moment.mediaUrl}
+                alt={moment.caption ?? 'Event moment'}
+                onLoad={() => setMediaLoaded(true)}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  maxWidth: { xs: '100%', sm: 480, md: 560 },
+                  maxHeight: { xs: '100%', sm: '90vh' },
+                  objectFit: 'contain',
+                  borderRadius: { xs: 0, sm: 2 },
+                  opacity: mediaLoaded ? 1 : 0,
+                  transition: 'opacity 0.25s ease',
+                }}
+              />
+            </>
           )}
 
           {moment.type === EventMomentType.Video && moment.mediaUrl && (
-            <Box
-              component="video"
-              ref={(el: unknown) => {
-                videoRef.current = el as HTMLVideoElement | null;
-              }}
-              src={moment.mediaUrl}
-              poster={moment.thumbnailUrl ?? undefined}
-              autoPlay
-              muted={isMuted}
-              playsInline
-              onTimeUpdate={handleVideoTimeUpdate}
-              onEnded={goNext}
-              sx={{
-                width: '100%',
-                height: '100%',
-                maxWidth: { xs: '100%', sm: 480, md: 560 },
-                maxHeight: { xs: '100%', sm: '90vh' },
-                objectFit: 'contain',
-                borderRadius: { xs: 0, sm: 2 },
-              }}
-            />
+            <>
+              {!mediaLoaded && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2,
+                  }}
+                >
+                  <CircularProgress size={40} sx={{ color: (theme) => alpha(theme.palette.common.white, 0.8) }} />
+                </Box>
+              )}
+              <Box
+                component="video"
+                ref={(el: unknown) => {
+                  videoRef.current = el as HTMLVideoElement | null;
+                }}
+                src={moment.mediaUrl}
+                poster={moment.thumbnailUrl ?? undefined}
+                autoPlay
+                muted={isMuted}
+                playsInline
+                onCanPlay={() => setMediaLoaded(true)}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onEnded={goNext}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  maxWidth: { xs: '100%', sm: 480, md: 560 },
+                  maxHeight: { xs: '100%', sm: '90vh' },
+                  objectFit: 'contain',
+                  borderRadius: { xs: 0, sm: 2 },
+                  opacity: mediaLoaded ? 1 : 0,
+                  transition: 'opacity 0.25s ease',
+                }}
+              />
+            </>
           )}
 
           {/* Caption overlay for image/video */}
@@ -579,7 +693,7 @@ export default function EventMomentViewer({
           setConfirmDeleteOpen(false);
           setPaused(false);
         }}
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Delete this moment?</DialogTitle>
         <DialogContent>

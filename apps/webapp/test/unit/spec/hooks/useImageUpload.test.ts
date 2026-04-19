@@ -194,7 +194,7 @@ describe('useImageUpload', () => {
   });
 
   it('rejects and sets error when file exceeds max size', async () => {
-    const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
+    const bigFile = new File([new ArrayBuffer(16 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
     const { result } = renderHook(() => useImageUpload(defaultOptions));
 
     await act(async () => {

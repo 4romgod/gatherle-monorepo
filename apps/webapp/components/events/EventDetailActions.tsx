@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Stack } from '@mui/material';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
@@ -20,6 +21,8 @@ interface EventDetailActionsProps {
    * the visual container.
    */
   compact?: boolean;
+  /** Optional node rendered after the Share button (e.g. a kebab/ops menu). */
+  trailing?: ReactNode;
 }
 
 /**
@@ -34,6 +37,7 @@ export default function EventDetailActions({
   isSavedByMe,
   myRsvpStatus,
   compact = false,
+  trailing,
 }: EventDetailActionsProps) {
   // Local state for immediate UI feedback
   const [isSaved, setIsSaved] = useState(isSavedByMe);
@@ -49,7 +53,7 @@ export default function EventDetailActions({
   }, [myRsvpStatus]);
 
   const actions = (
-    <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
       <RsvpButton
         eventId={eventId}
         currentStatus={rsvpStatus}
@@ -70,6 +74,7 @@ export default function EventDetailActions({
         eventUrl={eventUrl}
         size={compact ? 'medium' : 'large'}
       />
+      {trailing}
     </Stack>
   );
 

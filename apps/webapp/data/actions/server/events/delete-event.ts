@@ -3,6 +3,7 @@
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
 import { DeleteEventByIdDocument } from '@/data/graphql/types/graphql';
+import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from '@/lib/utils';
 
 export async function deleteEventAction(eventId: string) {
@@ -20,9 +21,7 @@ export async function deleteEventAction(eventId: string) {
       mutation: DeleteEventByIdDocument,
       variables: { eventId },
       context: {
-        headers: {
-          token: session.user.token,
-        },
+        headers: getAuthHeader(session.user.token),
       },
     });
 

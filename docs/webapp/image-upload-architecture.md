@@ -126,12 +126,12 @@ All authentication is enforced by the `@Authorized` decorator on `getImageUpload
 
 Consistent across all upload points:
 
-| Constraint                  | Value                                                           |
-| --------------------------- | --------------------------------------------------------------- |
-| Accepted MIME types         | `image/jpeg`, `image/png`, `image/webp`, `image/gif`            |
-| Max file size               | 5 MB (enforced client-side before requesting the presigned URL) |
-| Max gallery images (venue)  | 10                                                              |
-| Presigned upload URL expiry | 15 minutes (`expiresIn: 900` in `getPresignedUploadUrl`)        |
+| Constraint                  | Value                                                            |
+| --------------------------- | ---------------------------------------------------------------- |
+| Accepted MIME types         | `image/jpeg`, `image/png`, `image/webp`, `image/gif`             |
+| Max file size               | 15 MB (enforced client-side before requesting the presigned URL) |
+| Max gallery images (venue)  | 10                                                               |
+| Presigned upload URL expiry | 15 minutes (`expiresIn: 900` in `getPresignedUploadUrl`)         |
 
 ---
 
