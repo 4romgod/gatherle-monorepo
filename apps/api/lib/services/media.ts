@@ -1,26 +1,22 @@
 import { randomBytes } from 'crypto';
 import { getPresignedUploadUrl } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
-import { MEDIA_CDN_DOMAIN, CONTENT_TYPE_MAP, STAGE } from '@/constants';
+import {
+  STAGE,
+  MEDIA_CDN_DOMAIN,
+  CONTENT_TYPE_MAP,
+  EVENT_MOMENT_MEDIA_EXTENSIONS,
+  EVENT_MOMENTS_S3_PREFIX,
+  MEDIA_ENTITY_FOLDER,
+  MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS,
+} from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import type { Event, MediaUploadUrl } from '@gatherle/commons/types';
 import { MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventDAO, EventParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 
-const ALLOWED_MOMENT_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']);
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
-
-/**
- * Explicit S3 folder name for each entity type.
- * Avoids fragile string-append heuristics (e.g. `${entityType}s`).
- */
-const ENTITY_FOLDER: Partial<Record<MediaEntityType, string>> = {
-  [MediaEntityType.User]: 'users',
-  [MediaEntityType.Organization]: 'organizations',
-  [MediaEntityType.Event]: 'events',
-  [MediaEntityType.Venue]: 'venues',
-};
 
 class MediaService {
   static async getMediaUploadUrl(params: {
@@ -48,7 +44,7 @@ class MediaService {
       );
     }
 
-    const entityFolder = ENTITY_FOLDER[entityType];
+    const entityFolder = MEDIA_ENTITY_FOLDER[entityType];
     if (!entityFolder) {
       throw CustomError(`Unsupported entity type: "${entityType}"`, ErrorTypes.BAD_USER_INPUT);
     }
@@ -66,7 +62,7 @@ class MediaService {
       throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');
     }
 
-    const uploadUrl = await getPresignedUploadUrl(key, contentType, 900);
+    const uploadUrl = await getPresignedUploadUrl(key, contentType, MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS);
     const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
 
     logger.info('Generated media upload URL', {
@@ -90,9 +86,9 @@ class MediaService {
     const { eventId, userId, username } = params;
 
     const cleanExt = params.extension.toLowerCase().replace(/^\./, '');
-    if (!ALLOWED_MOMENT_EXTENSIONS.has(cleanExt)) {
+    if (!EVENT_MOMENT_MEDIA_EXTENSIONS.has(cleanExt)) {
       throw CustomError(
-        `Unsupported extension for moment uploads: "${cleanExt}". Allowed: ${[...ALLOWED_MOMENT_EXTENSIONS].join(', ')}`,
+        `Unsupported extension for moment uploads: "${cleanExt}". Allowed: ${[...EVENT_MOMENT_MEDIA_EXTENSIONS].join(', ')}`,
         ErrorTypes.BAD_USER_INPUT,
       );
     }
@@ -146,13 +142,13 @@ class MediaService {
 
     const shortId = randomBytes(8).toString('base64url');
     const stagePrefix = STAGE.toLowerCase();
-    const key = `${stagePrefix}/event-moments/${sanitizedSlug}/${sanitizedUsername}/${shortId}.${cleanExt}`;
+    const key = `${stagePrefix}/${EVENT_MOMENTS_S3_PREFIX}/${sanitizedSlug}/${sanitizedUsername}/${shortId}.${cleanExt}`;
 
     if (!MEDIA_CDN_DOMAIN) {
       throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');
     }
 
-    const uploadUrl = await getPresignedUploadUrl(key, contentType, 900);
+    const uploadUrl = await getPresignedUploadUrl(key, contentType, MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS);
     const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
 
     logger.info('Generated event moment upload URL', { userId, eventId, key, mediaHost: MEDIA_CDN_DOMAIN });

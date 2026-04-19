@@ -102,13 +102,9 @@ time to `createdAt + 24h`. Expired documents are deleted by MongoDB's background
 | 90 s+       | Storage and transcoding cost jumps significantly; no clear UX benefit                                                                          |
 
 **Decision: 30 seconds max.** The client reads `videoEl.duration` after file selection and rejects files longer than 30
-seconds with an immediate error message. The resolver also enforces the limit server-side via the `durationSeconds`
-field as a safety net.
-
-> ⚠️ **Known gap (BUG-005 / API-034):** Server-side enforcement is **not yet implemented**. `CreateEventMomentInput` has
-> no `duration` field, Zod does not validate size/duration, and `onTranscodeEvent` marks any output Ready regardless of
-> length. Client-side checks are the only active gate. Server enforcement (size check in `startTranscodeJob`, duration
-> check in `onTranscodeEvent`) is tracked in API-034.
+seconds with an immediate error message. The API also verifies video object size from S3 before creating the moment,
+`startTranscodeJob` rejects oversized or unverifiable-size raw uploads before MediaConvert, and `onTranscodeEvent`
+enforces the 30-second duration limit from MediaConvert output metadata.
 
 **On multiple quality renditions:** For a 30-second clip, adaptive bitrate (ABR) is not necessary. A single 720p H.264
 output is simpler, cheaper, and good enough — the whole clip buffers in a couple of seconds on a normal connection
@@ -160,11 +156,12 @@ everyone time.
 
 The client calls our GraphQL API: `getEventMomentUploadUrl(eventId: "...", extension: "mp4")`.
 
-The API generates a **pre-signed PUT URL** — a temporary, single-use URL that allows the client to upload a file
-directly to our S3 bucket without going through our servers. The URL expires in 15 minutes and is scoped to a specific
-S3 key path (e.g. `beta/event-moments/{eventId}/{momentId}/raw.mp4`).
+The API generates a **pre-signed PUT URL** — a temporary URL that allows the client to upload a file directly to our S3
+bucket without going through our servers. The URL expires in 15 minutes and is scoped to a specific S3 key path (e.g.
+`beta/event-moments/{event-slug}/{username}/{shortId}.mp4`).
 
-The `momentId` is generated at this point so the S3 key is deterministic.
+The upload key gets a server-generated short ID. The moment document is still created after upload in the current flow;
+API-033 tracks moving to a pre-created moment/upload session.
 
 **Step 3 — Client uploads the raw file directly to S3**
 
@@ -193,8 +190,8 @@ The client immediately shows a "Processing…" skeleton in the stories ring so t
 
 **Step 5 — S3 triggers a Lambda automatically**
 
-When a file is uploaded to S3 with the prefix `event-moments/` and the suffix `/raw.mp4` (or similar), S3 fires an
-**event notification** that invokes our `StartTranscodeJob` Lambda function.
+When a video file is uploaded to S3 under the `event-moments/` path, S3 fires an **event notification** that invokes our
+`StartTranscodeJob` Lambda function.
 
 This Lambda is a small Node.js function that does one thing: it reads the S3 key from the event notification, then calls
 AWS Elemental MediaConvert to start a transcoding job.
@@ -207,12 +204,12 @@ processed (about $0.0075 per minute — a 30-second clip costs less than $0.004)
 
 MediaConvert reads the raw file from S3 and produces:
 
-- **720p HLS rendition** — H.264 encoded, segmented into 2-second `.ts` chunks, with an `index.m3u8` manifest. Written
-  to: `{stage}/event-moments/{event-slug}/{username}/hls/`
+- **720p HLS rendition** — H.264 encoded, segmented into 2-second `.ts` chunks, with an `.m3u8` manifest. Written to:
+  `{stage}/event-moments/{event-slug}/{username}/{shortId}/hls/`
 - **Thumbnail image** — a JPEG poster frame captured by the client before upload.
 
-The manifest (`{shortId}_720p.m3u8`) is the entry point for the player. A 360p fallback rendition can be added later if
-analytics show buffering issues.
+The HLS manifest (`{shortId}_720p.m3u8`) is the entry point for the player. A 360p fallback rendition can be added later
+if analytics show buffering issues.
 
 This whole step typically takes 15–45 seconds for a 30-second clip.
 
@@ -227,8 +224,8 @@ The `OnTranscodeComplete` Lambda:
 2. Builds the CloudFront URLs for the HLS manifest and the thumbnail
 3. Calls the GraphQL API (or writes directly to MongoDB) to update the moment document:
    - Sets `state: Ready`
-   - Sets `mediaUrl` to the CloudFront URL of the HLS master manifest (e.g.
-     `https://cdn.gatherle.com/event-moments/.../hls/index.m3u8`)
+   - Sets `mediaUrl` to the CloudFront URL of the HLS manifest (e.g.
+     `https://cdn.gatherle.com/event-moments/.../hls/{shortId}_720p.m3u8`)
    - Sets `durationSeconds` from the MediaConvert output metadata
    - `thumbnailUrl` is already set from the client-side thumbnail upload; it is not overwritten
 
@@ -262,8 +259,8 @@ In the browser, native HLS support varies:
   browser's Media Source Extensions API. We load it only for video moments.
 
 ```
-┌─────────────┐   PUT raw.mp4     ┌──────────────────────────────────────┐
-│ User device │ ────────────────► │  S3: event-moments/.../raw.mp4       │
+┌─────────────┐   PUT shortId.mp4 ┌──────────────────────────────────────┐
+│ User device │ ────────────────► │  S3: event-moments/.../shortId.mp4   │
 └─────────────┘  (presigned URL)  └───────────────┬──────────────────────┘
                                                    │ S3 ObjectCreated event
                                                    ▼
@@ -281,7 +278,7 @@ In the browser, native HLS support varies:
                                                    ▼
                                   ┌──────────────────────────────────────┐
                                   │  S3: event-moments/.../hls/          │
-                                  │  ├── index.m3u8                      │
+                                  │  ├── shortId_720p.m3u8               │
                                   │  └── *.ts segments (720p)            │
                                   └───────────────┬──────────────────────┘
                                                    │ EventBridge job COMPLETE/ERROR
@@ -301,23 +298,26 @@ In the browser, native HLS support varies:
 
 #### What's actually built today vs what's planned
 
-| Component                                                        | Built? | Notes                                                     |
-| ---------------------------------------------------------------- | ------ | --------------------------------------------------------- |
-| S3 bucket + CloudFront distribution                              | ✅ Yes | Deployed in `S3BucketStack`                               |
-| Pre-signed upload URLs                                           | ✅ Yes | `getEventMomentUploadUrl` mutation works                  |
-| `EventMomentState` model (Processing/Ready/Failed)               | ✅ Yes | In `packages/commons`                                     |
-| `markReady` DAO method                                           | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda |
-| `markFailed` DAO method                                          | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda |
-| `findByMediaUrl` DAO method                                      | ✅ Yes | Used by `OnTranscodeEvent` to map S3 key → moment         |
-| Client-side duration + size validation (30 s / 75 MB)            | ✅ Yes | In `EventMomentComposer`                                  |
-| `StartTranscodeJob` Lambda                                       | ✅ Yes | `apps/api/lib/lambdaHandlers/startTranscodeJob.ts`        |
-| `OnTranscodeEvent` Lambda (handles COMPLETE + ERROR)             | ✅ Yes | `apps/api/lib/lambdaHandlers/onTranscodeEvent.ts`         |
-| S3 → EventBridge notification                                    | ✅ Yes | `eventBridgeEnabled: true` on `S3BucketStack` bucket      |
-| MediaConvert CDK queue + IAM role                                | ✅ Yes | In `MediaStack`                                           |
-| EventBridge rule: S3 ObjectCreated → StartTranscodeJob           | ✅ Yes | In `MediaStack`                                           |
-| EventBridge rule: MediaConvert COMPLETE/ERROR → OnTranscodeEvent | ✅ Yes | In `MediaStack`                                           |
-| HLS playback with `hls.js` in viewer                             | ❌ No  | Viewer still uses raw `<video src>` — Phase 2             |
-| WebSocket push on `state: Ready`                                 | ❌ No  | Not wired in completion Lambda — Phase 2                  |
+| Component                                                        | Built? | Notes                                                                                                                           |
+| ---------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| S3 bucket + CloudFront distribution                              | ✅ Yes | Deployed in `S3BucketStack`                                                                                                     |
+| Pre-signed upload URLs                                           | ✅ Yes | `getEventMomentUploadUrl` mutation works                                                                                        |
+| `EventMomentState` model (Processing/Ready/Failed)               | ✅ Yes | In `packages/commons`                                                                                                           |
+| `markReady` DAO method                                           | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
+| `markFailed` DAO method                                          | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
+| `findByMediaUrl` DAO method                                      | ✅ Yes | Used by `OnTranscodeEvent` to map S3 key → moment                                                                               |
+| Client-side duration + size validation (30 s / 75 MB)            | ✅ Yes | In `EventMomentComposer`                                                                                                        |
+| Server-side size check (75 MB) in `createEventMoment`            | ✅ Yes | Verifies S3 `ContentLength` before creating a video moment                                                                      |
+| Server-side size check (75 MB) in `startTranscodeJob`            | ✅ Yes | Rejects oversized/unverifiable raw uploads before MediaConvert; marks matching existing moments Failed and deletes the raw file |
+| Server-side duration check (30 s) in `onTranscodeEvent`          | ✅ Yes | Marks moment Failed and deletes raw + per-upload HLS output if duration is missing or exceeds 30 s                              |
+| `StartTranscodeJob` Lambda                                       | ✅ Yes | `apps/api/lib/lambdaHandlers/startTranscodeJob.ts`                                                                              |
+| `OnTranscodeEvent` Lambda (handles COMPLETE + ERROR)             | ✅ Yes | `apps/api/lib/lambdaHandlers/onTranscodeEvent.ts`                                                                               |
+| S3 → EventBridge notification                                    | ✅ Yes | `eventBridgeEnabled: true` on `S3BucketStack` bucket                                                                            |
+| MediaConvert CDK queue + IAM role                                | ✅ Yes | In `MediaStack`                                                                                                                 |
+| EventBridge rule: S3 ObjectCreated → StartTranscodeJob           | ✅ Yes | In `MediaStack`                                                                                                                 |
+| EventBridge rule: MediaConvert COMPLETE/ERROR → OnTranscodeEvent | ✅ Yes | In `MediaStack`                                                                                                                 |
+| HLS playback with `hls.js` in viewer                             | ❌ No  | Viewer still uses raw `<video src>` — Phase 2                                                                                   |
+| WebSocket push on `state: Ready`                                 | ❌ No  | Not wired in completion Lambda — Phase 2                                                                                        |
 
 **What this means in practice:** Video moments are uploaded as raw files, then automatically transcoded to 720p HLS by
 the MediaConvert pipeline. After transcoding (~15–45 s), `state` transitions from `Processing` to `Ready` and the HLS
@@ -489,15 +489,15 @@ export class CreateEventMomentInput {
 
 Extends the existing convention in `docs/webapp/media-upload-architecture.md`:
 
-| Media type | Raw upload key                                         | Processed output prefix                           |
-| ---------- | ------------------------------------------------------ | ------------------------------------------------- |
-| Image      | `{stage}/event-moments/{eventId}/{momentId}.{ext}`     | — (served directly from raw key via CF)           |
-| Video raw  | `{stage}/event-moments/{eventId}/{momentId}/raw.{ext}` | `{stage}/event-moments/{eventId}/{momentId}/hls/` |
-| Video HLS  | _(output by MediaConvert)_                             | `…/hls/index.m3u8`, `…/hls/*.ts`                  |
-| Thumbnail  | _(output by MediaConvert)_                             | `…/hls/thumbnail.jpg`                             |
+| Media type | Raw upload key                                                | Processed output prefix                   |
+| ---------- | ------------------------------------------------------------- | ----------------------------------------- |
+| Image      | `{stage}/event-moments/{event-slug}/{username}/{shortId}.ext` | — (served directly from raw key via CF)   |
+| Video raw  | `{stage}/event-moments/{event-slug}/{username}/{shortId}.ext` | `{raw-upload-key-without-ext}/hls/`       |
+| Video HLS  | _(output by MediaConvert)_                                    | `…/hls/{shortId}_720p.m3u8`, `…/hls/*.ts` |
+| Thumbnail  | `{stage}/event-moments/{event-slug}/{username}/{shortId}.jpg` | — (client-generated poster served via CF) |
 
-`momentId` is generated server-side before the upload URL is issued, so the key is deterministic and the DB document can
-be created atomically with the upload.
+A server-generated short ID makes each upload key unique. A future API-033 fix should create the DB moment or upload
+session before issuing the URL so the key and DB state are atomic.
 
 ---
 

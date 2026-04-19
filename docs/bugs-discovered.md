@@ -289,7 +289,7 @@ mechanism to trigger a second transcode or completion handler pass.
 
 ## BUG-005: 30-Second / 75 MB Video Limits Are Client-Only (Docs Claim Server Enforcement)
 
-**Date Discovered:** 19 April 2026 **Severity:** High **Status:** 🔴 Open
+**Date Discovered:** 19 April 2026 **Severity:** High **Status:** ✅ Fixed (API-034)
 
 ### Symptoms
 
@@ -307,14 +307,16 @@ mechanism to trigger a second transcode or completion handler pass.
   size of the output.
 - Client-side checks in the composer (duration ≤ 30 s, file size ≤ 75 MB) are the only enforcement layer.
 
-### Suggested Fix
+### Implemented Fix
 
-- **`startTranscodeJob`:** Read `event.detail.object.size` from the EventBridge payload; if it exceeds the 75 MB
-  threshold, skip the MediaConvert job and (optionally) delete the raw S3 object to avoid storage cost.
-- **`onTranscodeEvent`:** Parse duration from the MediaConvert output `OutputGroupDetails` metadata; if the output
-  exceeds 30 s, call `EventMomentDAO.markFailed` and delete both the raw and HLS S3 objects.
-- **Docs:** Update `docs/features/event-moments.md` to clearly distinguish client-side vs. server-side enforcement until
-  the server checks are implemented.
+- **`createEventMoment`:** Verifies the uploaded video's S3 `ContentLength` before creating a video moment, rejecting
+  missing, unverifiable, or > 75 MB raw objects so rejected uploads do not become permanently Processing moments.
+- **`startTranscodeJob`:** Reads `event.detail.object.size` from the EventBridge payload. If size is missing or exceeds
+  75 MB, it skips MediaConvert, marks a matching existing moment Failed when present, and deletes the raw S3 object.
+- **`startTranscodeJob` HLS output:** Writes HLS output to a per-upload prefix (`{raw-key-without-ext}/hls/`) so cleanup
+  for one rejected video cannot delete another moment's HLS files.
+- **`onTranscodeEvent`:** Parses duration from MediaConvert `OutputGroupDetails`. If duration is missing or exceeds 30
+  s, it calls `EventMomentDAO.markFailed` and deletes both the raw object and that upload's HLS prefix.
 
 ### Tracked In
 

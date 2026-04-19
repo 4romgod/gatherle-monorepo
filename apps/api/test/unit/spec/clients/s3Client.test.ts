@@ -1,4 +1,11 @@
-import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const mockSend = jest.fn();
@@ -10,9 +17,21 @@ jest.mock('@aws-sdk/client-s3', () => ({
     ...input,
     _cmd: 'DeleteObject',
   })),
+  DeleteObjectsCommand: jest.fn().mockImplementation((input: Record<string, unknown>) => ({
+    ...input,
+    _cmd: 'DeleteObjects',
+  })),
   GetObjectCommand: jest.fn().mockImplementation((input: Record<string, unknown>) => ({
     ...input,
     _cmd: 'GetObject',
+  })),
+  HeadObjectCommand: jest.fn().mockImplementation((input: Record<string, unknown>) => ({
+    ...input,
+    _cmd: 'HeadObject',
+  })),
+  ListObjectsV2Command: jest.fn().mockImplementation((input: Record<string, unknown>) => ({
+    ...input,
+    _cmd: 'ListObjectsV2',
   })),
 }));
 
@@ -33,6 +52,8 @@ jest.mock('@/utils/logger', () => ({
 import {
   uploadToS3,
   deleteFromS3,
+  deleteS3Prefix,
+  getS3ObjectSize,
   getPresignedUrl,
   getPresignedUploadUrl,
   getKeyFromPublicUrl,
@@ -85,6 +106,103 @@ describe('s3Client', () => {
       mockSend.mockRejectedValue(new Error('delete error'));
 
       await expect(deleteFromS3('key')).rejects.toThrow('delete error');
+    });
+  });
+
+  describe('getS3ObjectSize', () => {
+    it('sends HeadObjectCommand and returns ContentLength', async () => {
+      mockSend.mockResolvedValue({ ContentLength: 12345 });
+
+      const result = await getS3ObjectSize('media/video.mp4');
+
+      expect(HeadObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Key: 'media/video.mp4',
+      });
+      expect(result).toBe(12345);
+    });
+
+    it('returns undefined when S3 does not include ContentLength', async () => {
+      mockSend.mockResolvedValue({});
+
+      await expect(getS3ObjectSize('media/video.mp4')).resolves.toBeUndefined();
+    });
+
+    it('re-throws when HeadObject fails', async () => {
+      mockSend.mockRejectedValue(new Error('head error'));
+
+      await expect(getS3ObjectSize('key')).rejects.toThrow('head error');
+    });
+  });
+
+  describe('deleteS3Prefix', () => {
+    it('deletes all listed objects across paginated results and returns the deleted count', async () => {
+      mockSend
+        .mockResolvedValueOnce({
+          Contents: [{ Key: 'prefix/a.ts' }, { Key: undefined }, { Key: 'prefix/b.ts' }],
+          IsTruncated: true,
+          NextContinuationToken: 'next-page',
+        })
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          Contents: [{ Key: 'prefix/c.ts' }],
+          IsTruncated: false,
+        })
+        .mockResolvedValueOnce({});
+
+      const result = await deleteS3Prefix('prefix/');
+
+      expect(ListObjectsV2Command).toHaveBeenNthCalledWith(1, {
+        Bucket: 'test-bucket',
+        Prefix: 'prefix/',
+        ContinuationToken: undefined,
+      });
+      expect(DeleteObjectsCommand).toHaveBeenNthCalledWith(1, {
+        Bucket: 'test-bucket',
+        Delete: { Objects: [{ Key: 'prefix/a.ts' }, { Key: 'prefix/b.ts' }], Quiet: true },
+      });
+      expect(ListObjectsV2Command).toHaveBeenNthCalledWith(2, {
+        Bucket: 'test-bucket',
+        Prefix: 'prefix/',
+        ContinuationToken: 'next-page',
+      });
+      expect(DeleteObjectsCommand).toHaveBeenNthCalledWith(2, {
+        Bucket: 'test-bucket',
+        Delete: { Objects: [{ Key: 'prefix/c.ts' }], Quiet: true },
+      });
+      expect(result).toBe(3);
+    });
+
+    it('does not call DeleteObjects when the prefix is empty', async () => {
+      mockSend.mockResolvedValue({
+        Contents: [],
+        IsTruncated: false,
+      });
+
+      const result = await deleteS3Prefix('empty/');
+
+      expect(ListObjectsV2Command).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Prefix: 'empty/',
+        ContinuationToken: undefined,
+      });
+      expect(DeleteObjectsCommand).not.toHaveBeenCalled();
+      expect(result).toBe(0);
+    });
+
+    it('handles a list response with no Contents field', async () => {
+      mockSend.mockResolvedValue({ IsTruncated: false });
+
+      const result = await deleteS3Prefix('missing-contents/');
+
+      expect(DeleteObjectsCommand).not.toHaveBeenCalled();
+      expect(result).toBe(0);
+    });
+
+    it('re-throws when listing objects fails', async () => {
+      mockSend.mockRejectedValue(new Error('list error'));
+
+      await expect(deleteS3Prefix('prefix/')).rejects.toThrow('list error');
     });
   });
 
@@ -172,6 +290,62 @@ describe('s3Client', () => {
     it('returns null for an invalid URL string', () => {
       expect(getKeyFromPublicUrl('not-a-valid-url')).toBeNull();
     });
+
+    it('falls back to S3 host matching when MEDIA_CDN_DOMAIN is empty', () => {
+      jest.resetModules();
+      jest.doMock('@/constants', () => ({
+        AWS_REGION: 'us-east-1',
+        S3_BUCKET_NAME: 'test-bucket',
+        MEDIA_CDN_DOMAIN: '',
+      }));
+      jest.doMock('@aws-sdk/client-s3', () => ({
+        S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
+        PutObjectCommand: jest.fn(),
+        DeleteObjectCommand: jest.fn(),
+        DeleteObjectsCommand: jest.fn(),
+        GetObjectCommand: jest.fn(),
+        HeadObjectCommand: jest.fn(),
+        ListObjectsV2Command: jest.fn(),
+      }));
+      jest.doMock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: jest.fn() }));
+      jest.doMock('@/utils/logger', () => ({
+        logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
+      }));
+
+      const dynamicModule = require('@/clients/AWS/s3Client');
+      expect(dynamicModule.getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/media/photo.jpg')).toBe(
+        'media/photo.jpg',
+      );
+
+      jest.resetModules();
+    });
+
+    it('ignores an invalid MEDIA_CDN_DOMAIN value', () => {
+      jest.resetModules();
+      jest.doMock('@/constants', () => ({
+        AWS_REGION: 'us-east-1',
+        S3_BUCKET_NAME: 'test-bucket',
+        MEDIA_CDN_DOMAIN: 'https://%',
+      }));
+      jest.doMock('@aws-sdk/client-s3', () => ({
+        S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
+        PutObjectCommand: jest.fn(),
+        DeleteObjectCommand: jest.fn(),
+        DeleteObjectsCommand: jest.fn(),
+        GetObjectCommand: jest.fn(),
+        HeadObjectCommand: jest.fn(),
+        ListObjectsV2Command: jest.fn(),
+      }));
+      jest.doMock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: jest.fn() }));
+      jest.doMock('@/utils/logger', () => ({
+        logger: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
+      }));
+
+      const dynamicModule = require('@/clients/AWS/s3Client');
+      expect(dynamicModule.getKeyFromPublicUrl('https://example.com/media/photo.jpg')).toBeNull();
+
+      jest.resetModules();
+    });
   });
 
   describe('when S3_BUCKET_NAME is not configured', () => {
@@ -184,7 +358,10 @@ describe('s3Client', () => {
         S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
         PutObjectCommand: jest.fn(),
         DeleteObjectCommand: jest.fn(),
+        DeleteObjectsCommand: jest.fn(),
         GetObjectCommand: jest.fn(),
+        HeadObjectCommand: jest.fn(),
+        ListObjectsV2Command: jest.fn(),
       }));
       jest.doMock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: jest.fn() }));
       jest.doMock('@/utils/logger', () => ({
@@ -205,6 +382,14 @@ describe('s3Client', () => {
 
     it('deleteFromS3 throws "S3_BUCKET_NAME is not configured"', async () => {
       await expect(unconfiguredModule.deleteFromS3('k')).rejects.toThrow('S3_BUCKET_NAME is not configured');
+    });
+
+    it('getS3ObjectSize throws "S3_BUCKET_NAME is not configured"', async () => {
+      await expect(unconfiguredModule.getS3ObjectSize('k')).rejects.toThrow('S3_BUCKET_NAME is not configured');
+    });
+
+    it('deleteS3Prefix throws "S3_BUCKET_NAME is not configured"', async () => {
+      await expect(unconfiguredModule.deleteS3Prefix('prefix/')).rejects.toThrow('S3_BUCKET_NAME is not configured');
     });
 
     it('getPresignedUrl throws "S3_BUCKET_NAME is not configured"', async () => {

@@ -8,6 +8,7 @@ jest.mock('@/constants', () => ({
   SECRET_ARN: undefined,
   LOG_LEVEL: 1,
   GRAPHQL_API_PATH: '/v1/graphql',
+  MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES: 75 * 1024 * 1024,
   HttpStatusCode: {
     OK: 200,
     CREATED: 201,
@@ -75,8 +76,13 @@ jest.mock('@/utils/logger', () => ({
   },
 }));
 
+jest.mock('@/clients/AWS/s3Client', () => ({
+  getS3ObjectSize: jest.fn().mockResolvedValue(1000),
+}));
+
 import EventMomentService from '@/services/eventMoment';
 import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
   EventMomentState,
@@ -126,6 +132,7 @@ describe('EventMomentService', () => {
     (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
     (EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (EventMomentDAO.create as jest.Mock).mockResolvedValue(mockMoment);
+    (getS3ObjectSize as jest.Mock).mockResolvedValue(1000);
   });
 
   describe('create', () => {
@@ -153,6 +160,71 @@ describe('EventMomentService', () => {
         'https://cdn.example.com/uploads/img.jpg',
         undefined,
       );
+      expect(getS3ObjectSize).not.toHaveBeenCalled();
+    });
+
+    it('builds a CloudFront mediaUrl for a video moment after verifying the S3 object size', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        mediaKey: 'uploads/clip.mp4',
+      };
+
+      await EventMomentService.create(videoInput, 'user-1');
+
+      expect(getS3ObjectSize).toHaveBeenCalledWith('uploads/clip.mp4');
+      expect(EventMomentDAO.create).toHaveBeenCalledWith(
+        videoInput,
+        'user-1',
+        'https://cdn.example.com/uploads/clip.mp4',
+        undefined,
+      );
+    });
+
+    it('rejects a video moment when the uploaded object exceeds 75 MB', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        mediaKey: 'uploads/oversized.mp4',
+      };
+      (getS3ObjectSize as jest.Mock).mockResolvedValueOnce(75 * 1024 * 1024 + 1);
+
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'Video must be 75 MB or smaller.',
+      });
+      expect(EventMomentDAO.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a video moment when the uploaded object has already been deleted', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        mediaKey: 'uploads/deleted.mp4',
+      };
+      const notFoundError = Object.assign(new Error('not found'), {
+        name: 'NotFound',
+        $metadata: { httpStatusCode: 404 },
+      });
+      (getS3ObjectSize as jest.Mock).mockRejectedValueOnce(notFoundError);
+
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'Uploaded video file was not found. Please upload again.',
+      });
+      expect(EventMomentDAO.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a video moment when S3 does not return a content length', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        mediaKey: 'uploads/unknown-size.mp4',
+      };
+      (getS3ObjectSize as jest.Mock).mockResolvedValueOnce(undefined);
+
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'Uploaded video file size could not be verified. Please upload again.',
+      });
+      expect(EventMomentDAO.create).not.toHaveBeenCalled();
     });
 
     it('does not set mediaUrl for a video without mediaKey (Processing path)', async () => {

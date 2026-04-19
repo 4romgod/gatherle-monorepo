@@ -2,11 +2,17 @@ import type { Event, EventMoment, EventMomentPage, CreateEventMomentInput } from
 import { EventMomentType, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
-import { MEDIA_CDN_DOMAIN } from '@/constants';
+import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';
+import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
+
+function isMissingS3ObjectError(error: unknown): boolean {
+  const maybeAwsError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return maybeAwsError.name === 'NotFound' || maybeAwsError.$metadata?.httpStatusCode === 404;
+}
 
 class EventMomentService {
   /**
@@ -59,6 +65,30 @@ class EventMomentService {
       if (!MEDIA_CDN_DOMAIN) {
         throw new Error('MEDIA_CDN_DOMAIN is required to generate media URLs');
       }
+
+      if (input.type === EventMomentType.Video) {
+        let objectSize: number | undefined;
+        try {
+          objectSize = await getS3ObjectSize(input.mediaKey);
+        } catch (error) {
+          if (isMissingS3ObjectError(error)) {
+            throw CustomError('Uploaded video file was not found. Please upload again.', ErrorTypes.BAD_USER_INPUT);
+          }
+          throw error;
+        }
+
+        if (objectSize == null) {
+          throw CustomError(
+            'Uploaded video file size could not be verified. Please upload again.',
+            ErrorTypes.BAD_USER_INPUT,
+          );
+        }
+
+        if (objectSize > MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES) {
+          throw CustomError('Video must be 75 MB or smaller.', ErrorTypes.BAD_USER_INPUT);
+        }
+      }
+
       mediaUrl = `https://${MEDIA_CDN_DOMAIN}/${input.mediaKey}`;
     }
     if (input.thumbnailKey && MEDIA_CDN_DOMAIN) {

@@ -32,6 +32,15 @@ jest.mock('@/constants', () => ({
     mov: 'video/quicktime',
     webm: 'video/webm',
   },
+  EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
+  EVENT_MOMENTS_S3_PREFIX: 'event-moments',
+  MEDIA_ENTITY_FOLDER: {
+    user: 'users',
+    organization: 'organizations',
+    event: 'events',
+    venue: 'venues',
+  },
+  MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS: 900,
   HttpStatusCode: {
     OK: 200,
     CREATED: 201,
@@ -265,6 +274,15 @@ describe('MediaService', () => {
           MEDIA_CDN_DOMAIN: '',
           STAGE: 'test',
           CONTENT_TYPE_MAP: { jpg: 'image/jpeg' },
+          EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
+          EVENT_MOMENTS_S3_PREFIX: 'event-moments',
+          MEDIA_ENTITY_FOLDER: {
+            user: 'users',
+            organization: 'organizations',
+            event: 'events',
+            venue: 'venues',
+          },
+          MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS: 900,
           HttpStatusCode: {
             OK: 200,
             CREATED: 201,
