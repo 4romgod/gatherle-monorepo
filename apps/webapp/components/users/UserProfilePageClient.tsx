@@ -28,7 +28,7 @@ import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
-import UserProfileMomentsBar from '@/components/eventMoments/UserProfileMomentsBar';
+import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
 import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { isEventUpcoming, logger } from '@/lib/utils';
@@ -154,6 +154,16 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     [events, user?.userId],
   );
 
+  const profileMomentEvents = useMemo(() => {
+    const byId = new Map<string, { eventId: string; title: string }>();
+    [...organizedEvents, ...allRsvpdEvents].forEach((e) => {
+      if (!byId.has(e.eventId)) {
+        byId.set(e.eventId, { eventId: e.eventId, title: e.title });
+      }
+    });
+    return Array.from(byId.values());
+  }, [organizedEvents, allRsvpdEvents]);
+
   const interests = user?.interests ?? [];
   const { age, formattedBirthdate } = getBirthdateDisplay(user?.birthdate);
 
@@ -261,31 +271,14 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
               <Box sx={{ maxWidth: 560, mx: 'auto' }}>
                 {/* Row 1: Avatar (left) + Stats (right) — Instagram style */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 3, md: 4 }, mb: 2 }}>
-                  <Box sx={{ position: 'relative', flexShrink: 0 }}>
-                    <Avatar
-                      src={getAvatarSrc(user)}
-                      alt={`${user.given_name} ${user.family_name}`}
-                      sx={{
-                        width: { xs: 80, md: 96 },
-                        height: { xs: 80, md: 96 },
-                        border: '3px solid',
-                        borderColor: 'divider',
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: 4,
-                        right: 4,
-                        width: 14,
-                        height: 14,
-                        bgcolor: 'success.main',
-                        borderRadius: '50%',
-                        border: '2px solid',
-                        borderColor: 'background.paper',
-                      }}
-                    />
-                  </Box>
+                  <UserAvatarMomentsRing
+                    userId={user.userId}
+                    avatarSrc={getAvatarSrc(user) || undefined}
+                    displayName={`${user.given_name} ${user.family_name}`}
+                    events={profileMomentEvents}
+                    token={token}
+                    isOwnProfile={isOwnProfile}
+                  />
 
                   {/* Stats inline beside avatar (compact = no top border/margin) */}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -352,16 +345,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                     fullWidth
                   />
                 )}
-
-                {/* Moments bar — shown for all visitors; hides itself when there are none */}
-                <UserProfileMomentsBar
-                  userId={user.userId}
-                  events={[...organizedEvents, ...allRsvpdEvents]
-                    .filter((e, i, arr) => arr.findIndex((x) => x.eventId === e.eventId) === i)
-                    .map((e) => ({ eventId: e.eventId, title: e.title }))}
-                  token={token}
-                  isOwnProfile={isOwnProfile}
-                />
               </Box>
               {/* end centering box */}
             </CardContent>

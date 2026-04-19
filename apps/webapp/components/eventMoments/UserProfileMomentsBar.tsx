@@ -12,13 +12,10 @@ import EventMomentViewer from './EventMomentViewer';
 type Moment = ReadUserEventMomentsQuery['readUserEventMoments'][number];
 
 interface Props {
-  /** The profile owner's userId */
   userId: string;
   /** Events to display moments for */
   events: { eventId: string; title: string }[];
-  /** Token for authenticated requests; may be undefined for public viewers */
   token: string | undefined;
-  /** Whether the viewer is the profile owner (controls delete permission) */
   isOwnProfile: boolean;
 }
 

@@ -172,6 +172,23 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       // After load: spinner should be gone
       expect(screen.queryByRole('progressbar')).toBeNull();
     });
+
+    it('hides the loading spinner when the image fires its onError event', async () => {
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/broken.jpg' })]}
+        />,
+      );
+
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+
+      await act(async () => {
+        fireEvent.error(img);
+      });
+
+      expect(screen.queryByRole('progressbar')).toBeNull();
+    });
   });
 
   describe('video moments', () => {
@@ -317,6 +334,120 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       // After navigation the new moment's media hasn't loaded yet → spinner back
       // (navigation may close viewer if button not found; just verify no crash)
       expect(true).toBe(true);
+    });
+  });
+
+  describe('image moment — timer freeze while loading', () => {
+    // For these tests we override the global no-op rAF stub to one that captures the
+    // tick callback so we can drive it manually at precise timestamps.
+    let capturedTick: ((now: number) => void) | null = null;
+
+    beforeEach(() => {
+      capturedTick = null;
+      (global.requestAnimationFrame as jest.Mock).mockImplementation((cb: (now: number) => void) => {
+        capturedTick = cb;
+        return 1;
+      });
+    });
+
+    afterEach(() => {
+      capturedTick = null;
+      // Restore to the default no-op so other tests are unaffected
+      (global.requestAnimationFrame as jest.Mock).mockReturnValue(0);
+    });
+
+    it('does not advance the viewer past STORY_DURATION_MS while the image has not loaded', () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/img.jpg' })]}
+        />,
+      );
+
+      // Drive ticks well past STORY_DURATION_MS (5 000 ms) without loading the image.
+      // Each freeze frame resets lastTime = now, so elapsed never accumulates.
+      act(() => {
+        let t = 0;
+        for (let i = 0; i < 200; i++) {
+          capturedTick?.(t);
+          t += 50; // 200 × 50 ms = 10 000 ms total — double STORY_DURATION_MS
+        }
+      });
+
+      // Image never loaded → viewer must NOT have advanced or closed
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('advances and closes the viewer after STORY_DURATION_MS once the image has loaded', async () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/img.jpg' })]}
+        />,
+      );
+
+      // Run some freeze frames (image not yet loaded)
+      let t = 0;
+      act(() => {
+        for (let i = 0; i < 10; i++) {
+          capturedTick?.(t);
+          t += 50; // last freeze frame sets lastTime = t (450 ms)
+        }
+      });
+
+      // Fire onLoad — sets mediaLoadedRef.current = true synchronously
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+      await act(async () => {
+        fireEvent.load(img);
+      });
+
+      // One tick with a delta well above STORY_DURATION_MS relative to the last freeze time
+      act(() => {
+        capturedTick?.(t + 6000); // delta = 6 000 ms > 5 000 ms → triggers goNext → onClose
+      });
+
+      // Single moment list — goTo(-1 or 1) → onClose
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('unfreezes the timer when the image fires onError so the viewer does not stall', () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/broken.jpg' })]}
+        />,
+      );
+
+      // Several freeze frames before the image fails
+      let t = 0;
+      act(() => {
+        for (let i = 0; i < 5; i++) {
+          capturedTick?.(t);
+          t += 50;
+        }
+      });
+
+      // Simulate a network/CORS failure on the image
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+      act(() => {
+        fireEvent.error(img);
+      });
+
+      // One tick with delta > STORY_DURATION_MS — timer is now unfrozen, viewer should advance
+      act(() => {
+        capturedTick?.(t + 6000);
+      });
+
+      expect(onClose).toHaveBeenCalled();
     });
   });
 

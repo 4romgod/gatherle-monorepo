@@ -56,6 +56,10 @@ export const ReadUserEventMomentsDocument = graphql(`
         family_name
         profile_picture
       }
+      event {
+        slug
+        title
+      }
     }
   }
 `);
