@@ -22,9 +22,9 @@ export interface S3BucketStackProps extends StackProps {
 }
 
 export class S3BucketStack extends Stack {
-  public readonly imagesBucket: Bucket;
-  public readonly imagesDistribution: Distribution;
-  public readonly imagesCdnDomainName: string;
+  public readonly mediaBucket: Bucket;
+  public readonly mediaDistribution: Distribution;
+  public readonly mediaCdnDomainName: string;
 
   constructor(scope: Construct, id: string, props: S3BucketStackProps) {
     super(scope, id, props);
@@ -33,8 +33,8 @@ export class S3BucketStack extends Stack {
     const targetSuffix = buildTargetSuffix(stage, props.awsRegion);
     const allowedCorsOrigins = buildAllowedCorsOrigins(stage, process.env.CORS_ALLOWED_ORIGINS);
 
-    this.imagesBucket = new Bucket(this, 'GatherleImagesBucket', {
-      bucketName: `gatherle-images-${targetSuffix}`,
+    this.mediaBucket = new Bucket(this, 'GatherleMediaBucket', {
+      bucketName: `gatherle-media-${targetSuffix}`,
       encryption: BucketEncryption.S3_MANAGED,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL, // Block public access by default (use pre-signed URLs for access)
       publicReadAccess: false,
@@ -78,7 +78,7 @@ export class S3BucketStack extends Stack {
       },
     });
 
-    const imagesCachePolicy = new CachePolicy(this, 'ImagesCachePolicy', {
+    const mediaCachePolicy = new CachePolicy(this, 'MediaCachePolicy', {
       comment: 'Short-lived cache for Gatherle media with stable object keys.',
       minTtl: Duration.seconds(0),
       defaultTtl: Duration.minutes(1),
@@ -90,36 +90,36 @@ export class S3BucketStack extends Stack {
       enableAcceptEncodingGzip: true,
     });
 
-    this.imagesDistribution = new Distribution(this, 'GatherleImagesDistribution', {
+    this.mediaDistribution = new Distribution(this, 'GatherleMediaDistribution', {
       comment: `Gatherle media distribution for ${targetSuffix}`,
       defaultBehavior: {
-        origin: S3BucketOrigin.withOriginAccessControl(this.imagesBucket),
+        origin: S3BucketOrigin.withOriginAccessControl(this.mediaBucket),
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
         cachedMethods: CachedMethods.CACHE_GET_HEAD,
-        cachePolicy: imagesCachePolicy,
+        cachePolicy: mediaCachePolicy,
         responseHeadersPolicy: mediaCorsPolicy,
       },
     });
 
-    this.imagesCdnDomainName = this.imagesDistribution.distributionDomainName;
+    this.mediaCdnDomainName = this.mediaDistribution.distributionDomainName;
 
-    new CfnOutput(this, 'ImagesBucketName', {
-      value: this.imagesBucket.bucketName,
-      description: 'S3 bucket name for storing images',
-      exportName: `${targetSuffix}-ImagesBucketName`,
+    new CfnOutput(this, 'MediaBucketName', {
+      value: this.mediaBucket.bucketName,
+      description: 'S3 bucket name for storing media',
+      exportName: `${targetSuffix}-MediaBucketName`,
     });
 
-    new CfnOutput(this, 'ImagesBucketArn', {
-      value: this.imagesBucket.bucketArn,
-      description: 'S3 bucket ARN for storing images',
-      exportName: `${targetSuffix}-ImagesBucketArn`,
+    new CfnOutput(this, 'MediaBucketArn', {
+      value: this.mediaBucket.bucketArn,
+      description: 'S3 bucket ARN for storing media',
+      exportName: `${targetSuffix}-MediaBucketArn`,
     });
 
-    new CfnOutput(this, 'ImagesCdnDomain', {
-      value: this.imagesCdnDomainName,
+    new CfnOutput(this, 'MediaCdnDomain', {
+      value: this.mediaCdnDomainName,
       description: 'CloudFront distribution domain for serving Gatherle-owned media',
-      exportName: `${targetSuffix}-ImagesCdnDomain`,
+      exportName: `${targetSuffix}-MediaCdnDomain`,
     });
   }
 }

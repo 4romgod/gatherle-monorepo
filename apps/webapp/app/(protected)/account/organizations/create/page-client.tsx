@@ -24,8 +24,8 @@ import { CreateOrganizationDocument } from '@/data/graphql/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
 import type { CreateOrganizationInput } from '@/data/graphql/types/graphql';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 
 export default function CreateOrganizationPage() {
   const router = useRouter();
@@ -52,9 +52,9 @@ export default function CreateOrganizationPage() {
     upload: uploadLogo,
     uploading: logoUploading,
     preview: logoUploadPreview,
-  } = useImageUpload({
-    entityType: ImageEntityType.Organization,
-    imageType: ImageType.Logo,
+  } = useMediaUpload({
+    entityType: MediaEntityType.Organization,
+    mediaType: MediaType.Logo,
     // Stable draft id so repeated uploads before submit overwrite the same S3 path
     entityId: draftEntityId.current,
   });

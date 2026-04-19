@@ -129,7 +129,7 @@ export class CreateEventMomentInput {
 
   @Field(() => String, {
     nullable: true,
-    description: 'S3 key from getImageUploadUrl (required for image and video types)',
+    description: 'S3 key from getEventMomentUploadUrl (required for image and video moments)',
   })
   mediaKey?: string;
 

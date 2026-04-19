@@ -2,7 +2,7 @@ import type { Event, EventMoment, EventMomentPage, CreateEventMomentInput } from
 import { EventMomentType, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
-import { CF_IMAGES_DOMAIN } from '@/constants';
+import { MEDIA_CDN_DOMAIN } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 
@@ -56,13 +56,13 @@ class EventMomentService {
     let mediaUrl: string | undefined;
     let thumbnailUrl: string | undefined;
     if (input.type !== EventMomentType.Text && input.mediaKey) {
-      if (!CF_IMAGES_DOMAIN) {
-        throw new Error('CF_IMAGES_DOMAIN is required to generate media URLs');
+      if (!MEDIA_CDN_DOMAIN) {
+        throw new Error('MEDIA_CDN_DOMAIN is required to generate media URLs');
       }
-      mediaUrl = `https://${CF_IMAGES_DOMAIN}/${input.mediaKey}`;
+      mediaUrl = `https://${MEDIA_CDN_DOMAIN}/${input.mediaKey}`;
     }
-    if (input.thumbnailKey && CF_IMAGES_DOMAIN) {
-      thumbnailUrl = `https://${CF_IMAGES_DOMAIN}/${input.thumbnailKey}`;
+    if (input.thumbnailKey && MEDIA_CDN_DOMAIN) {
+      thumbnailUrl = `https://${MEDIA_CDN_DOMAIN}/${input.thumbnailKey}`;
     }
 
     logger.info('[EventMomentService] Creating event moment', {

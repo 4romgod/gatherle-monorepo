@@ -41,7 +41,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     stackName: buildStackName('s3-bucket', account.applicationStage, account.awsRegion),
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
-    description: 'This stack includes S3 bucket for storing user-uploaded images',
+    description: 'This stack includes S3 bucket for storing user-uploaded media',
   });
 
   const stageInfraStack = new StageInfraStack(app, 'StageInfraStack', {
@@ -60,8 +60,8 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
     enableCustomDomains,
-    s3BucketName: s3BucketStack.imagesBucket.bucketName,
-    cfImagesDomain: s3BucketStack.imagesCdnDomainName,
+    s3BucketName: s3BucketStack.mediaBucket.bucketName,
+    mediaCdnDomain: s3BucketStack.mediaCdnDomainName,
     description: 'This stack includes infrastructure for the GraphQL API. This includes serverless resources.',
   });
 
@@ -83,7 +83,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   webSocketApiStack.addDependency(stageInfraStack);
 
   // Grant Lambda permissions to access S3 bucket
-  s3BucketStack.imagesBucket.grantReadWrite(graphqlStack.graphqlLambda);
+  s3BucketStack.mediaBucket.grantReadWrite(graphqlStack.graphqlLambda);
 
   // Grant Lambda permission to send email via SES
   sesStack.grantSendEmail(graphqlStack.graphqlLambda);
@@ -93,11 +93,11 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     stackName: buildStackName('media', account.applicationStage, account.awsRegion),
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
-    s3BucketName: s3BucketStack.imagesBucket.bucketName,
-    cfImagesDomain: s3BucketStack.imagesCdnDomainName,
+    s3BucketName: s3BucketStack.mediaBucket.bucketName,
+    mediaCdnDomain: s3BucketStack.mediaCdnDomainName,
     description:
       'This stack contains the MediaConvert transcoding pipeline for Gatherle event-moment videos. ' +
-      'Videos are transcoded to 720p HLS on upload and stored back in the images S3 bucket.',
+      'Videos are transcoded to 720p HLS on upload and stored back in the media S3 bucket.',
   });
 
   mediaStack.addDependency(s3BucketStack);

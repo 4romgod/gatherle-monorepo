@@ -23,7 +23,7 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 jest.mock('@/constants', () => ({
   AWS_REGION: 'us-east-1',
   S3_BUCKET_NAME: 'test-bucket',
-  CF_IMAGES_DOMAIN: 'd111111abcdef8.cloudfront.net',
+  MEDIA_CDN_DOMAIN: 'd111111abcdef8.cloudfront.net',
 }));
 
 jest.mock('@/utils/logger', () => ({
@@ -49,16 +49,16 @@ describe('s3Client', () => {
     it('sends PutObjectCommand and returns the public URL', async () => {
       mockSend.mockResolvedValue({});
 
-      const result = await uploadToS3('images/test.jpg', Buffer.from('data'), 'image/jpeg');
+      const result = await uploadToS3('media/test.jpg', Buffer.from('data'), 'image/jpeg');
 
       expect(PutObjectCommand).toHaveBeenCalledWith({
         Bucket: 'test-bucket',
-        Key: 'images/test.jpg',
+        Key: 'media/test.jpg',
         Body: Buffer.from('data'),
         ContentType: 'image/jpeg',
       });
       expect(mockSend).toHaveBeenCalled();
-      expect(result).toBe('https://test-bucket.s3.us-east-1.amazonaws.com/images/test.jpg');
+      expect(result).toBe('https://test-bucket.s3.us-east-1.amazonaws.com/media/test.jpg');
     });
 
     it('re-throws when client send fails', async () => {
@@ -72,11 +72,11 @@ describe('s3Client', () => {
     it('sends DeleteObjectCommand', async () => {
       mockSend.mockResolvedValue({});
 
-      await deleteFromS3('images/test.jpg');
+      await deleteFromS3('media/test.jpg');
 
       expect(DeleteObjectCommand).toHaveBeenCalledWith({
         Bucket: 'test-bucket',
-        Key: 'images/test.jpg',
+        Key: 'media/test.jpg',
       });
       expect(mockSend).toHaveBeenCalled();
     });
@@ -92,9 +92,9 @@ describe('s3Client', () => {
     it('calls getSignedUrl with GetObjectCommand and default expiresIn of 3600', async () => {
       mockGetSignedUrl.mockResolvedValue('https://signed-url.example.com/key?token=abc');
 
-      const url = await getPresignedUrl('images/test.jpg');
+      const url = await getPresignedUrl('media/test.jpg');
 
-      expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'test-bucket', Key: 'images/test.jpg' });
+      expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'test-bucket', Key: 'media/test.jpg' });
       expect(mockGetSignedUrl).toHaveBeenCalledWith(expect.anything(), expect.anything(), { expiresIn: 3600 });
       expect(url).toBe('https://signed-url.example.com/key?token=abc');
     });
@@ -102,7 +102,7 @@ describe('s3Client', () => {
     it('passes a custom expiresIn value', async () => {
       mockGetSignedUrl.mockResolvedValue('https://signed-url.example.com/key?token=abc');
 
-      await getPresignedUrl('images/test.jpg', 7200);
+      await getPresignedUrl('media/test.jpg', 7200);
 
       expect(mockGetSignedUrl).toHaveBeenCalledWith(expect.anything(), expect.anything(), { expiresIn: 7200 });
     });
@@ -146,27 +146,27 @@ describe('s3Client', () => {
 
   describe('getKeyFromPublicUrl', () => {
     it('extracts key from the configured CloudFront URL', () => {
-      expect(getKeyFromPublicUrl('https://d111111abcdef8.cloudfront.net/images/photo.jpg')).toBe('images/photo.jpg');
+      expect(getKeyFromPublicUrl('https://d111111abcdef8.cloudfront.net/media/photo.jpg')).toBe('media/photo.jpg');
     });
 
     it('extracts key from regional URL (bucket.s3.region.amazonaws.com)', () => {
-      expect(getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/images/photo.jpg')).toBe(
-        'images/photo.jpg',
+      expect(getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/media/photo.jpg')).toBe(
+        'media/photo.jpg',
       );
     });
 
     it('extracts key from global URL (bucket.s3.amazonaws.com)', () => {
-      expect(getKeyFromPublicUrl('https://test-bucket.s3.amazonaws.com/images/photo.jpg')).toBe('images/photo.jpg');
+      expect(getKeyFromPublicUrl('https://test-bucket.s3.amazonaws.com/media/photo.jpg')).toBe('media/photo.jpg');
     });
 
     it('extracts key from regional-alt URL (s3.region.amazonaws.com/bucket/key)', () => {
-      expect(getKeyFromPublicUrl('https://s3.us-east-1.amazonaws.com/test-bucket/images/photo.jpg')).toBe(
-        'images/photo.jpg',
+      expect(getKeyFromPublicUrl('https://s3.us-east-1.amazonaws.com/test-bucket/media/photo.jpg')).toBe(
+        'media/photo.jpg',
       );
     });
 
     it('returns null for an unrecognised hostname', () => {
-      expect(getKeyFromPublicUrl('https://example.com/images/photo.jpg')).toBeNull();
+      expect(getKeyFromPublicUrl('https://example.com/media/photo.jpg')).toBeNull();
     });
 
     it('returns null for an invalid URL string', () => {
@@ -175,12 +175,11 @@ describe('s3Client', () => {
   });
 
   describe('when S3_BUCKET_NAME is not configured', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let unconfiguredModule: any;
 
     beforeAll(() => {
       jest.resetModules();
-      jest.doMock('@/constants', () => ({ AWS_REGION: 'us-east-1', S3_BUCKET_NAME: '', CF_IMAGES_DOMAIN: '' }));
+      jest.doMock('@/constants', () => ({ AWS_REGION: 'us-east-1', S3_BUCKET_NAME: '', MEDIA_CDN_DOMAIN: '' }));
       jest.doMock('@aws-sdk/client-s3', () => ({
         S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
         PutObjectCommand: jest.fn(),
@@ -220,7 +219,7 @@ describe('s3Client', () => {
 
     it('getKeyFromPublicUrl returns null', () => {
       expect(
-        unconfiguredModule.getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/images/photo.jpg'),
+        unconfiguredModule.getKeyFromPublicUrl('https://test-bucket.s3.us-east-1.amazonaws.com/media/photo.jpg'),
       ).toBeNull();
     });
   });

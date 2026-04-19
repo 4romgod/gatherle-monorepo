@@ -333,12 +333,12 @@ class RecommendationService {
 
 **Status:** 📋 Future
 
-Handles file uploads and image processing.
+Handles media uploads and processing.
 
 ```typescript
 class MediaService {
-  // Upload and process image
-  static async uploadImage(file: Upload, options?: ImageOptions): Promise<MediaResult>;
+  // Upload and process media
+  static async uploadMedia(file: Upload, options?: MediaOptions): Promise<MediaResult>;
 
   // Generate thumbnails
   static async generateThumbnails(mediaId: string): Promise<void>;

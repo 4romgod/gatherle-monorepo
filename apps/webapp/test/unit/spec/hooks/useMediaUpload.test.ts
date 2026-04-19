@@ -1,10 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { useLazyQuery } from '@apollo/client';
 
 /**
- * Unit tests for useImageUpload hook.
+ * Unit tests for useMediaUpload hook.
  * Covers the upload flow, FileReader preview, presigned URL fetch, S3 PUT,
  * error handling, and reset.
  */
@@ -60,16 +60,16 @@ const READ_URL = 'https://s3.example.com/presigned-read';
 
 function mockSuccessfulUpload() {
   mockGetUploadUrl.mockResolvedValue({
-    data: { getImageUploadUrl: { uploadUrl: UPLOAD_URL, readUrl: READ_URL, key: 'test/key.jpg', publicUrl: '' } },
+    data: { getMediaUploadUrl: { uploadUrl: UPLOAD_URL, readUrl: READ_URL, key: 'test/key.jpg', publicUrl: '' } },
     error: undefined,
   });
   mockFetch.mockResolvedValue({ ok: true });
 }
 
-describe('useImageUpload', () => {
+describe('useMediaUpload', () => {
   const defaultOptions = {
-    entityType: ImageEntityType.Event,
-    imageType: ImageType.Featured,
+    entityType: MediaEntityType.Event,
+    mediaType: MediaType.Featured,
     entityId: 'event-001',
   };
 
@@ -78,7 +78,7 @@ describe('useImageUpload', () => {
   });
 
   it('starts with uploading=false, error=null, preview=null', () => {
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
     expect(result.current.uploading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(result.current.preview).toBeNull();
@@ -86,7 +86,7 @@ describe('useImageUpload', () => {
 
   it('resolves with the readUrl on a successful upload', async () => {
     mockSuccessfulUpload();
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     let returnedUrl: string | undefined;
     await act(async () => {
@@ -98,7 +98,7 @@ describe('useImageUpload', () => {
 
   it('calls getPresignedUploadUrl with correct variables', async () => {
     mockSuccessfulUpload();
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile('shot.png', 'image/png'));
@@ -107,8 +107,8 @@ describe('useImageUpload', () => {
     expect(mockGetUploadUrl).toHaveBeenCalledWith(
       expect.objectContaining({
         variables: expect.objectContaining({
-          entityType: ImageEntityType.Event,
-          imageType: ImageType.Featured,
+          entityType: MediaEntityType.Event,
+          mediaType: MediaType.Featured,
           extension: 'png',
           entityId: 'event-001',
         }),
@@ -117,13 +117,13 @@ describe('useImageUpload', () => {
   });
 
   it('uses fetchPolicy:no-cache to avoid stale presigned URLs', () => {
-    renderHook(() => useImageUpload(defaultOptions));
+    renderHook(() => useMediaUpload(defaultOptions));
     expect(useLazyQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ fetchPolicy: 'no-cache' }));
   });
 
   it('sets error and uploading=false when the presigned URL query fails', async () => {
     mockGetUploadUrl.mockResolvedValue({ data: undefined, error: new Error('Network error') });
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile()).catch(() => {});
@@ -135,12 +135,12 @@ describe('useImageUpload', () => {
 
   it('sets error and uploading=false when the S3 PUT request fails', async () => {
     mockGetUploadUrl.mockResolvedValue({
-      data: { getImageUploadUrl: { uploadUrl: UPLOAD_URL, readUrl: READ_URL, key: 'k', publicUrl: '' } },
+      data: { getMediaUploadUrl: { uploadUrl: UPLOAD_URL, readUrl: READ_URL, key: 'k', publicUrl: '' } },
       error: undefined,
     });
     mockFetch.mockResolvedValue({ ok: false, status: 403, text: async () => 'Forbidden' });
 
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile()).catch(() => {});
@@ -152,7 +152,7 @@ describe('useImageUpload', () => {
 
   it('reset() clears uploading, error, and preview', async () => {
     mockGetUploadUrl.mockResolvedValue({ data: undefined, error: new Error('fail') });
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile()).catch(() => {});
@@ -171,7 +171,7 @@ describe('useImageUpload', () => {
   it('omits entityId from query variables when not provided', async () => {
     mockSuccessfulUpload();
     const { result } = renderHook(() =>
-      useImageUpload({ entityType: ImageEntityType.User, imageType: ImageType.Avatar }),
+      useMediaUpload({ entityType: MediaEntityType.User, mediaType: MediaType.Avatar }),
     );
 
     await act(async () => {
@@ -183,7 +183,7 @@ describe('useImageUpload', () => {
   });
 
   it('rejects and sets error for unsupported MIME type', async () => {
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile('document.pdf', 'application/pdf')).catch(() => {});
@@ -195,7 +195,7 @@ describe('useImageUpload', () => {
 
   it('rejects and sets error when file exceeds max size', async () => {
     const bigFile = new File([new ArrayBuffer(16 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' });
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(bigFile).catch(() => {});
@@ -205,25 +205,25 @@ describe('useImageUpload', () => {
     expect(mockGetUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('throws when getImageUploadUrl returns no data', async () => {
-    mockGetUploadUrl.mockResolvedValue({ data: { getImageUploadUrl: null }, error: undefined });
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+  it('throws when getMediaUploadUrl returns no data', async () => {
+    mockGetUploadUrl.mockResolvedValue({ data: { getMediaUploadUrl: null }, error: undefined });
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile()).catch(() => {});
     });
 
-    expect(result.current.error).toBe('Image upload failed. Please try again.');
+    expect(result.current.error).toBe('Media upload failed. Please try again.');
   });
 
   it('handles non-Error throws in catch block', async () => {
     mockGetUploadUrl.mockRejectedValue('string-error');
-    const { result } = renderHook(() => useImageUpload(defaultOptions));
+    const { result } = renderHook(() => useMediaUpload(defaultOptions));
 
     await act(async () => {
       await result.current.upload(makeFile()).catch(() => {});
     });
 
-    expect(result.current.error).toBe('Image upload failed. Please try again.');
+    expect(result.current.error).toBe('Media upload failed. Please try again.');
   });
 });

@@ -19,12 +19,12 @@ import {
 import { CreateVenueDocument } from '@/data/graphql/mutation/Venue/mutation';
 import { GetAllVenuesDocument } from '@/data/graphql/query';
 import { CreateVenueInput, VenueType } from '@/data/graphql/types/graphql';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { ROUTES } from '@/lib/constants';
 import { logger } from '@/lib/utils';
 import { usePersistentState } from '@/hooks';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { STORAGE_KEYS, STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
@@ -91,9 +91,9 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
     error: featuredImageError,
     preview: featuredImagePreview,
     reset: resetFeaturedImage,
-  } = useImageUpload({
-    entityType: ImageEntityType.Venue,
-    imageType: ImageType.Featured,
+  } = useMediaUpload({
+    entityType: MediaEntityType.Venue,
+    mediaType: MediaType.Featured,
   });
 
   const requiresAddress = useMemo(() => displayState.type !== VenueType.Virtual, [displayState.type]);

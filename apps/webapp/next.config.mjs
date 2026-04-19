@@ -18,7 +18,7 @@ const buildContentSecurityPolicy = () => {
   const connectSources = new Set(["'self'"]);
   const graphqlOrigin = getOrigin(process.env.NEXT_PUBLIC_GRAPHQL_URL);
   const websocketOrigin = getOrigin(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
-  const s3ImagesOrigin = getOrigin(process.env.NEXT_PUBLIC_S3_IMAGES_URL);
+  const s3MediaOrigin = getOrigin(process.env.NEXT_PUBLIC_S3_MEDIA_URL);
   const mediaCdnOrigin = getOrigin(process.env.NEXT_PUBLIC_MEDIA_CDN_URL);
 
   if (graphqlOrigin) {
@@ -29,8 +29,8 @@ const buildContentSecurityPolicy = () => {
     connectSources.add(websocketOrigin);
   }
 
-  if (s3ImagesOrigin) {
-    connectSources.add(s3ImagesOrigin);
+  if (s3MediaOrigin) {
+    connectSources.add(s3MediaOrigin);
   }
 
   // hls.js loads .m3u8 manifests and .ts segments via XHR — the CDN origin must

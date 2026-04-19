@@ -1,13 +1,13 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetImageUploadUrlDocument = graphql(`
-  query GetImageUploadUrl(
-    $entityType: ImageEntityType!
-    $imageType: ImageType!
+export const GetMediaUploadUrlDocument = graphql(`
+  query GetMediaUploadUrl(
+    $entityType: MediaEntityType!
+    $mediaType: MediaType!
     $extension: String!
     $entityId: String
   ) {
-    getImageUploadUrl(entityType: $entityType, imageType: $imageType, extension: $extension, entityId: $entityId) {
+    getMediaUploadUrl(entityType: $entityType, mediaType: $mediaType, extension: $extension, entityId: $entityId) {
       uploadUrl
       key
       readUrl

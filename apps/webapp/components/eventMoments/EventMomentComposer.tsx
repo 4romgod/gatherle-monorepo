@@ -29,7 +29,7 @@ import {
   GetEventMomentUploadUrlDocument,
   ReadEventMomentsDocument,
 } from '@/data/graphql/query';
-import { EventMomentType, ImageType } from '@/data/graphql/types/graphql';
+import { EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { getFileExtension } from '@/lib/utils';
 import { EmojiPickerPopover } from '@/components/core/EmojiPickerPopover';
@@ -135,8 +135,8 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
   const videoInputRef = useRef<HTMLInputElement>(null);
   // Tracks the current object URL for video preview so it can be revoked when cleared
   const videoPreviewUrlRef = useRef<string | null>(null);
-  // Holds the last selected file + its imageType so the upload can be retried without re-selecting
-  const pendingFileRef = useRef<{ file: File; imageType: ImageType } | null>(null);
+  // Holds the last selected file so the upload can be retried without re-selecting
+  const pendingFileRef = useRef<{ file: File } | null>(null);
 
   const [createMoment, { loading: creating }] = useMutation(CreateEventMomentDocument, {
     context: { headers: getAuthHeader(token) },
@@ -206,17 +206,13 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     onClose();
   };
 
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    imageType: ImageType,
-    acceptedTypes: Set<string>,
-  ) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, acceptedTypes: Set<string>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
 
-    pendingFileRef.current = { file, imageType };
-    await uploadFile(file, imageType, acceptedTypes);
+    pendingFileRef.current = { file };
+    await uploadFile(file, acceptedTypes);
   };
 
   const retryUpload = async () => {
@@ -227,10 +223,10 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     setMediaKey(null);
     setThumbnailKey(null);
     setSubmitError(null);
-    await uploadFile(pending.file, pending.imageType, acceptedTypes);
+    await uploadFile(pending.file, acceptedTypes);
   };
 
-  const uploadFile = async (file: File, imageType: ImageType, acceptedTypes: Set<string>) => {
+  const uploadFile = async (file: File, acceptedTypes: Set<string>) => {
     if (!acceptedTypes.has(file.type)) {
       setSubmitError('Unsupported file type. Please choose a different file.');
       return;
@@ -544,7 +540,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 hidden
-                onChange={(e) => handleFileChange(e, ImageType.MomentMedia, ACCEPTED_IMAGE_TYPES)}
+                onChange={(e) => handleFileChange(e, ACCEPTED_IMAGE_TYPES)}
               />
               {mediaPreview ? (
                 <Box sx={{ position: 'relative', mb: 2 }}>
@@ -629,7 +625,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
                 type="file"
                 accept="video/mp4,video/quicktime,video/webm"
                 hidden
-                onChange={(e) => handleFileChange(e, ImageType.MomentMedia, ACCEPTED_VIDEO_TYPES)}
+                onChange={(e) => handleFileChange(e, ACCEPTED_VIDEO_TYPES)}
               />
               {mediaPreview ? (
                 <Box sx={{ position: 'relative', mb: 2 }}>

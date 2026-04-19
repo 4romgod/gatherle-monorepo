@@ -22,8 +22,8 @@ import LocationInput from '@/components/forms/LocationInput';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { signIn, useSession } from 'next-auth/react';
 import { UpdateUserInput, User, UserLocationInput } from '@/data/graphql/types/graphql';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
-import { useImageUpload } from '@/hooks/useImageUpload';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
 
 export default function EditProfilePage({ user }: { user: User }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -36,9 +36,9 @@ export default function EditProfilePage({ user }: { user: User }) {
     upload: uploadAvatar,
     uploading: avatarUploading,
     error: avatarError,
-  } = useImageUpload({
-    entityType: ImageEntityType.User,
-    imageType: ImageType.Avatar,
+  } = useMediaUpload({
+    entityType: MediaEntityType.User,
+    mediaType: MediaType.Avatar,
     // entityId omitted — resolver auto-uses the authenticated user's ID
   });
 

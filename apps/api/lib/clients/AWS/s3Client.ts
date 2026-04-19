@@ -1,17 +1,17 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { AWS_REGION, CF_IMAGES_DOMAIN, S3_BUCKET_NAME } from '@/constants';
+import { AWS_REGION, MEDIA_CDN_DOMAIN, S3_BUCKET_NAME } from '@/constants';
 import { logger } from '@/utils/logger';
 
 let s3Client: S3Client;
 
 function getConfiguredMediaHostname(): string | null {
-  if (!CF_IMAGES_DOMAIN) {
+  if (!MEDIA_CDN_DOMAIN) {
     return null;
   }
 
   try {
-    const candidate = CF_IMAGES_DOMAIN.startsWith('http') ? CF_IMAGES_DOMAIN : `https://${CF_IMAGES_DOMAIN}`;
+    const candidate = MEDIA_CDN_DOMAIN.startsWith('http') ? MEDIA_CDN_DOMAIN : `https://${MEDIA_CDN_DOMAIN}`;
     return new URL(candidate).hostname;
   } catch {
     return null;
@@ -73,7 +73,7 @@ export async function deleteFromS3(key: string): Promise<void> {
 
 /**
  * Generate a pre-signed URL for reading an object from S3
- * Useful for private images that need temporary access
+ * Useful for private media files that need temporary access
  */
 export async function getPresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
   if (!S3_BUCKET_NAME) {

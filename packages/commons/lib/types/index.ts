@@ -16,7 +16,7 @@ export * from './location';
 export * from './query';
 export * from './user';
 export * from './organization';
-export * from './image';
+export * from './media';
 export * from './eventMoment';
 export * from './organizationMembership';
 export * from './venue';

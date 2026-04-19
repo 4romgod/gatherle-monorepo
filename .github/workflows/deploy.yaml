@@ -39,7 +39,7 @@ jobs:
       stage_hosted_zone_name_servers: ${{ steps.get_stage_zone_nameservers.outputs.stage_hosted_zone_name_servers }}
       stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
       secret_arn: ${{ steps.resolve_secret.outputs.secret_arn }}
-      s3_images_url: ${{ steps.get_s3_bucket_url.outputs.s3_images_url }}
+      s3_media_url: ${{ steps.get_s3_bucket_url.outputs.s3_media_url }}
       media_cdn_url: ${{ steps.get_s3_bucket_url.outputs.media_cdn_url }}
     steps:
       - name: Checkout Code
@@ -149,19 +149,19 @@ jobs:
           fi
           echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
 
-      - name: Get S3 Images Bucket URL
+      - name: Get S3 Media Bucket URL
         id: get_s3_bucket_url
         run: |
-          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='ImagesBucketName'].OutputValue" --output text)
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaBucketName'].OutputValue" --output text)
           if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
-            echo "Failed to retrieve ImagesBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
+            echo "Failed to retrieve MediaBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
             exit 1
           fi
           S3_URL="https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com"
-          echo "s3_images_url=$S3_URL" >> "$GITHUB_OUTPUT"
-          CDN_DOMAIN=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='ImagesCdnDomain'].OutputValue" --output text)
+          echo "s3_media_url=$S3_URL" >> "$GITHUB_OUTPUT"
+          CDN_DOMAIN=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaCdnDomain'].OutputValue" --output text)
           if [ -z "$CDN_DOMAIN" ] || [ "$CDN_DOMAIN" = "None" ]; then
-            echo "Failed to retrieve ImagesCdnDomain from gatherle-s3-bucket-${STACK_SUFFIX}."
+            echo "Failed to retrieve MediaCdnDomain from gatherle-s3-bucket-${STACK_SUFFIX}."
             exit 1
           fi
           echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
@@ -240,7 +240,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
-          NEXT_PUBLIC_S3_IMAGES_URL: ${{ needs.deploy-api.outputs.s3_images_url }}
+          NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url }}
           NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -249,7 +249,7 @@ jobs:
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
             --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
-            --build-env NEXT_PUBLIC_S3_IMAGES_URL="$NEXT_PUBLIC_S3_IMAGES_URL" \
+            --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
             --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
             --env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
             --env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \

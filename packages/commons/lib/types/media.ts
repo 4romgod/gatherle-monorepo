@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Field, ObjectType, registerEnumType } from 'type-graphql';
 
-export enum ImageEntityType {
+export enum MediaEntityType {
   User = 'user',
   Organization = 'organization',
   Event = 'event',
@@ -9,7 +9,7 @@ export enum ImageEntityType {
   EventMoment = 'event-moment',
 }
 
-export enum ImageType {
+export enum MediaType {
   Avatar = 'avatar',
   Logo = 'logo',
   Featured = 'featured',
@@ -17,18 +17,18 @@ export enum ImageType {
   MomentMedia = 'moment-media',
 }
 
-registerEnumType(ImageEntityType, {
-  name: 'ImageEntityType',
-  description: 'The type of entity an image belongs to',
+registerEnumType(MediaEntityType, {
+  name: 'MediaEntityType',
+  description: 'The type of entity a media file belongs to',
 });
 
-registerEnumType(ImageType, {
-  name: 'ImageType',
-  description: 'The purpose or slot of the image within the entity',
+registerEnumType(MediaType, {
+  name: 'MediaType',
+  description: 'The purpose or slot of the media file within the entity',
 });
 
-@ObjectType('ImageUploadUrl', { description: 'Pre-signed URL for uploading images directly to S3' })
-export class ImageUploadUrl {
+@ObjectType('MediaUploadUrl', { description: 'Pre-signed URL for uploading media directly to S3' })
+export class MediaUploadUrl {
   @Field(() => String, { description: 'Pre-signed URL for uploading' })
   uploadUrl: string;
 
@@ -37,7 +37,7 @@ export class ImageUploadUrl {
 
   @Field(() => String, {
     description:
-      'Canonical CDN-backed media URL for the uploaded file. Persist this value and use it to display the image.',
+      'Canonical CDN-backed media URL for the uploaded file. Persist this value and use it to display the media.',
   })
   readUrl: string;
 }

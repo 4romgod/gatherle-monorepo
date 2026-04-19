@@ -19,7 +19,7 @@ export interface MediaStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
   s3BucketName: string;
-  cfImagesDomain: string;
+  mediaCdnDomain: string;
 }
 
 export class MediaStack extends Stack {
@@ -32,15 +32,15 @@ export class MediaStack extends Stack {
       pricingPlan: 'ON_DEMAND',
     });
 
-    const imagesBucketRef = Bucket.fromBucketName(this, 'ImportedImagesBucket', props.s3BucketName);
+    const mediaBucketRef = Bucket.fromBucketName(this, 'ImportedMediaBucket', props.s3BucketName);
 
     // MediaConvert assumes this role to read the raw video from S3 and write HLS segments.
     const mediaConvertRole = new Role(this, 'MediaConvertRole', {
       roleName: buildResourceName('MediaConvertRole', props.applicationStage, props.awsRegion),
       assumedBy: new ServicePrincipal('mediaconvert.amazonaws.com'),
-      description: 'Allows MediaConvert to read raw video and write HLS output to the Gatherle images S3 bucket',
+      description: 'Allows MediaConvert to read raw video and write HLS output to the Gatherle media S3 bucket',
     });
-    imagesBucketRef.grantReadWrite(mediaConvertRole);
+    mediaBucketRef.grantReadWrite(mediaConvertRole);
 
     const startTranscodeLambdaName = buildResourceName(
       'StartTranscodeJobLambdaFunction',
@@ -162,7 +162,7 @@ export class MediaStack extends Stack {
       environment: {
         STAGE: props.applicationStage,
         SECRET_ARN: gatherleSecret.secretArn,
-        CF_IMAGES_DOMAIN: props.cfImagesDomain,
+        MEDIA_CDN_DOMAIN: props.mediaCdnDomain,
         S3_BUCKET_NAME: props.s3BucketName,
         NODE_OPTIONS: '--enable-source-maps',
       },
@@ -172,7 +172,7 @@ export class MediaStack extends Stack {
     gatherleSecret.grantRead(onTranscodeEventLambda);
 
     // Allow the Lambda to delete the original raw video after transcoding is complete.
-    imagesBucketRef.grantDelete(onTranscodeEventLambda);
+    mediaBucketRef.grantDelete(onTranscodeEventLambda);
 
     // EventBridge rule: fire OnTranscodeEvent when a MediaConvert job transitions to COMPLETE or ERROR.
     new Rule(this, 'MediaConvertJobStateRule', {

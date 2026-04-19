@@ -51,8 +51,8 @@ import EventLocationInput from './EventLocationInput';
 import EventDateInput from './EventDateInput';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { usePersistentState } from '@/hooks';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { ImageEntityType, ImageType } from '@/data/graphql/types/graphql';
+import { useMediaUpload } from '@/hooks/useMediaUpload';
+import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import { useSession } from 'next-auth/react';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
@@ -170,9 +170,9 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     uploading: featuredImageUploading,
     error: featuredImageError,
     preview: featuredImagePreview,
-  } = useImageUpload({
-    entityType: ImageEntityType.Event,
-    imageType: ImageType.Featured,
+  } = useMediaUpload({
+    entityType: MediaEntityType.Event,
+    mediaType: MediaType.Featured,
     // In edit mode use the real eventId; in create mode use a stable draft UUID so
     // repeated "Change image" calls overwrite the same S3 path instead of scattering orphans.
     entityId: event?.eventId ?? draftEntityId.current,
