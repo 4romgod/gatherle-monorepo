@@ -18,6 +18,12 @@ import {
   Stack,
   Tooltip,
   Button,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -25,10 +31,14 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { DeleteEventMomentDocument, ReadEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { formatDistanceToNow } from 'date-fns';
+import { differenceInSeconds } from 'date-fns';
 import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { useChatRealtime } from '@/hooks';
 import { MessageComposer } from '@/components/messages/MessageComposer';
@@ -92,6 +102,7 @@ export default function EventMomentViewer({
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [replySent, setReplySent] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [mediaLoaded, setMediaLoaded] = useState(false);
@@ -107,6 +118,14 @@ export default function EventMomentViewer({
   const momentTypeRef = useRef<string | undefined>(undefined);
   const mediaLoadedRef = useRef(false);
   const currentEventIdRef = useRef<string | undefined>(undefined);
+
+  // Swipe-down-to-close
+  const touchStartYRef = useRef(0);
+  const touchStartXRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const dragYRef = useRef(0);
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const { sendChatMessage, isConnected } = useChatRealtime({ enabled: Boolean(viewerUserId) });
 
@@ -156,6 +175,43 @@ export default function EventMomentViewer({
       setIsMuted(videoRef.current.muted);
     }
   }, []);
+
+  const handleSwipeTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+    touchStartXRef.current = e.touches[0].clientX;
+    isDraggingRef.current = false;
+    setPaused(true);
+  }, []);
+
+  const handleSwipeTouchMove = useCallback((e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - touchStartYRef.current;
+    const dx = e.touches[0].clientX - touchStartXRef.current;
+    // Lock into vertical drag mode once clearly swiping downward
+    if (!isDraggingRef.current) {
+      if (dy > 10 && dy > Math.abs(dx)) {
+        isDraggingRef.current = true;
+        setIsDragging(true);
+      }
+      return;
+    }
+    if (dy > 0) {
+      dragYRef.current = dy;
+      setDragY(dy);
+    }
+  }, []);
+
+  const handleSwipeTouchEnd = useCallback(() => {
+    setPaused(false);
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    const finalDragY = dragYRef.current;
+    dragYRef.current = 0;
+    setDragY(0);
+    if (finalDragY > 120) {
+      onClose();
+    }
+  }, [onClose]);
 
   const isVideoMoment = moment?.type?.toLowerCase() === 'video';
 
@@ -253,6 +309,12 @@ export default function EventMomentViewer({
       mediaLoadedRef.current = false;
       setMediaLoaded(false);
       setMediaError(false);
+      dragYRef.current = 0;
+      setDragY(0);
+      setIsDragging(false);
+      isDraggingRef.current = false;
+      setContextMenuOpen(false);
+      setConfirmDeleteOpen(false);
     }
   }, [open, startIndex]);
 
@@ -314,14 +376,35 @@ export default function EventMomentViewer({
   const canDelete =
     viewerUserId === moment.authorId || (viewerUserId !== undefined && organizerIds.includes(viewerUserId));
 
-  const timeAgo = formatDistanceToNow(new Date(moment.createdAt), { addSuffix: true });
+  const timeAgo = (() => {
+    const secs = Math.max(0, differenceInSeconds(new Date(), new Date(moment.createdAt)));
+    if (secs < 60) return `${secs}s`;
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d`;
+  })();
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
       fullScreen
-      slotProps={{ paper: { sx: { bgcolor: 'common.black', m: 0, display: 'flex', flexDirection: 'column' } } }}
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: 'common.black',
+            m: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            transform: `translateY(${dragY}px)`,
+            opacity: Math.max(0, 1 - dragY / 400),
+            transition: isDragging ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
+          },
+        },
+      }}
     >
       <Box
         sx={{
@@ -337,8 +420,15 @@ export default function EventMomentViewer({
         }}
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
-        onTouchStart={() => setPaused(true)}
-        onTouchEnd={() => setPaused(false)}
+        onTouchStart={(e) => {
+          if (e.target === e.currentTarget) handleSwipeTouchStart(e);
+        }}
+        onTouchMove={(e) => {
+          if (isDraggingRef.current) handleSwipeTouchMove(e);
+        }}
+        onTouchEnd={(e) => {
+          if (isDraggingRef.current) handleSwipeTouchEnd();
+        }}
       >
         {/* Progress bars */}
         <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }}>
@@ -403,68 +493,22 @@ export default function EventMomentViewer({
             >
               {displayName}
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 0.25 }}>
-              <Typography variant="caption" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7) }}>
-                {timeAgo}
-              </Typography>
-              {(() => {
-                const resolvedEvent = moment.event ?? eventContext;
-                if (!resolvedEvent) return null;
-                const content = (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: (theme) => alpha(theme.palette.common.white, 0.85),
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: 140,
-                      display: 'inline-block',
-                      '&:hover': resolvedEvent.slug ? { textDecoration: 'underline' } : undefined,
-                    }}
-                  >
-                    {resolvedEvent.title}
-                  </Typography>
-                );
-                return (
-                  <>
-                    <Typography variant="caption" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.4) }}>
-                      ·
-                    </Typography>
-                    {resolvedEvent.slug ? (
-                      <Typography
-                        component={Link}
-                        href={ROUTES.EVENTS.EVENT(resolvedEvent.slug)}
-                        onClick={onClose}
-                        variant="caption"
-                        sx={{
-                          color: (theme) => alpha(theme.palette.common.white, 0.85),
-                          textDecoration: 'none',
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: 140,
-                          display: 'inline-block',
-                          '&:hover': { textDecoration: 'underline' },
-                        }}
-                      >
-                        {resolvedEvent.title}
-                      </Typography>
-                    ) : (
-                      content
-                    )}
-                  </>
-                );
-              })()}
-            </Stack>
+            <Typography
+              variant="caption"
+              sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7), mt: 0.25, display: 'block' }}
+            >
+              {timeAgo}
+            </Typography>
           </Box>
         </Stack>
 
-        {/* Close + delete actions */}
-        <Stack direction="row" sx={{ position: 'absolute', top: 20, right: 8, zIndex: 10 }} spacing={0}>
+        {/* Actions: mute · delete · more · close */}
+        <Stack
+          direction="row"
+          alignItems="center"
+          sx={{ position: 'absolute', top: 20, right: 8, zIndex: 10 }}
+          spacing={0}
+        >
           {isVideoMoment && (
             <Tooltip title={isMuted ? 'Unmute' : 'Mute'}>
               <IconButton onClick={handleToggleMute} sx={{ color: 'common.white' }} size="small">
@@ -486,8 +530,21 @@ export default function EventMomentViewer({
               </IconButton>
             </Tooltip>
           )}
-          <IconButton onClick={onClose} sx={{ color: 'common.white' }} size="small">
-            <CloseIcon />
+          <Tooltip title="More options">
+            <IconButton
+              aria-label="More options"
+              onClick={() => {
+                setPaused(true);
+                setContextMenuOpen(true);
+              }}
+              sx={{ color: 'common.white' }}
+              size="small"
+            >
+              <MoreVertIcon />
+            </IconButton>
+          </Tooltip>
+          <IconButton onClick={onClose} sx={{ color: 'common.white', p: '7px' }} size="small">
+            <CloseIcon sx={{ fontSize: '1.35rem' }} />
           </IconButton>
         </Stack>
 
@@ -780,6 +837,104 @@ export default function EventMomentViewer({
           </Typography>
         </Box>
       ) : null}
+
+      {/* Context menu popup */}
+      {(() => {
+        const resolvedEvent = moment.event ?? eventContext;
+        const closeMenu = () => {
+          setContextMenuOpen(false);
+          setPaused(false);
+        };
+        return (
+          <Dialog
+            open={contextMenuOpen}
+            onClose={closeMenu}
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: 3,
+                  minWidth: 280,
+                  maxWidth: 360,
+                  overflow: 'hidden',
+                },
+              },
+            }}
+          >
+            <List disablePadding sx={{ pt: 0.5, pb: 1 }}>
+              {author?.username && (
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={ROUTES.USERS.USER(author.username)}
+                    onClick={() => {
+                      setContextMenuOpen(false);
+                      onClose();
+                    }}
+                    sx={{ px: 3, py: 1.25 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 44 }}>
+                      <PersonOutlineIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="View profile"
+                      secondary={`@${author.username}`}
+                      slotProps={{ primary: { fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              <Divider sx={{ my: 0.5 }} />
+
+              {resolvedEvent?.slug && (
+                <ListItem disablePadding>
+                  <ListItemButton
+                    component={Link}
+                    href={ROUTES.EVENTS.EVENT(resolvedEvent.slug)}
+                    onClick={() => {
+                      setContextMenuOpen(false);
+                      onClose();
+                    }}
+                    sx={{ px: 3, py: 1.25 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 44 }}>
+                      <EventOutlinedIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="View event"
+                      secondary={resolvedEvent.title}
+                      slotProps={{ primary: { fontWeight: 600 } }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              )}
+
+              <Divider sx={{ my: 0.5 }} />
+
+              <ListItem disablePadding>
+                <ListItemButton onClick={closeMenu} sx={{ px: 3, py: 1.25 }}>
+                  <ListItemIcon sx={{ minWidth: 44 }}>
+                    <FlagOutlinedIcon color="error" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Report"
+                    secondary="Flag inappropriate content"
+                    slotProps={{ primary: { fontWeight: 600, color: 'error.main' } }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </List>
+
+            <Divider sx={{ my: 0.5 }} />
+
+            <DialogActions sx={{ px: 2, pb: 2 }}>
+              <Button onClick={closeMenu} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                Cancel
+              </Button>
+            </DialogActions>
+          </Dialog>
+        );
+      })()}
 
       {/* Delete confirmation dialog */}
       <Dialog

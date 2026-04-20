@@ -160,8 +160,9 @@ The API generates a **pre-signed PUT URL** — a temporary URL that allows the c
 bucket without going through our servers. The URL expires in 15 minutes and is scoped to a specific S3 key path (e.g.
 `beta/event-moments/{event-slug}/{username}/{shortId}.mp4`).
 
-The upload key gets a server-generated short ID. The moment document is still created after upload in the current flow;
-API-033 tracks moving to a pre-created moment/upload session.
+The upload key gets a server-generated short ID. The moment document is still created after upload in the current flow.
+To handle the small race window where MediaConvert finishes before MongoDB has the moment document, the completion
+handler fails the invocation and lets EventBridge retry with a bounded retry policy and DLQ.
 
 **Step 3 — Client uploads the raw file directly to S3**
 
@@ -231,6 +232,10 @@ The `OnTranscodeComplete` Lambda:
 
 The `OnTranscodeEvent` Lambda also handles ERROR status from MediaConvert: it sets `state: Failed`, which shows the
 author a "Upload failed, tap to retry" message.
+
+If the completion Lambda cannot find the matching moment yet, it throws instead of acknowledging the event. EventBridge
+then retries the invocation; if the moment is still missing after the configured retry window, the event is retained in
+the transcode DLQ for investigation.
 
 **Step 8 — WebSocket push notifies the author**
 
@@ -316,12 +321,14 @@ In the browser, native HLS support varies:
 | MediaConvert CDK queue + IAM role                                | ✅ Yes | In `MediaStack`                                                                                                                 |
 | EventBridge rule: S3 ObjectCreated → StartTranscodeJob           | ✅ Yes | In `MediaStack`                                                                                                                 |
 | EventBridge rule: MediaConvert COMPLETE/ERROR → OnTranscodeEvent | ✅ Yes | In `MediaStack`                                                                                                                 |
+| Bounded retry + DLQ for transcode completion race                | ✅ Yes | `OnTranscodeEvent` throws on missing moment; EventBridge retries 3 times within 5 minutes, then sends to SQS DLQ                |
 | HLS playback with `hls.js` in viewer                             | ❌ No  | Viewer still uses raw `<video src>` — Phase 2                                                                                   |
 | WebSocket push on `state: Ready`                                 | ❌ No  | Not wired in completion Lambda — Phase 2                                                                                        |
 
 **What this means in practice:** Video moments are uploaded as raw files, then automatically transcoded to 720p HLS by
 the MediaConvert pipeline. After transcoding (~15–45 s), `state` transitions from `Processing` to `Ready` and the HLS
-URL replaces the raw media URL. Phase 2 work (hls.js viewer, WebSocket push on ready) is still pending.
+URL replaces the raw media URL. If the completion event arrives before the DB moment exists, EventBridge retries the
+completion Lambda instead of losing the update. Phase 2 work (hls.js viewer, WebSocket push on ready) is still pending.
 
 **Image** statuses: same path as current avatar/featured image uploads — pre-signed PUT, then served via existing
 CloudFront distribution. No transcoding needed.

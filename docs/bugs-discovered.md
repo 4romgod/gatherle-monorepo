@@ -254,7 +254,7 @@ export const dynamic = 'force-dynamic'; // Added
 
 ## BUG-004: S3 Upload / DB Moment Race Condition — Video Moments Can Remain Processing Forever
 
-**Date Discovered:** 19 April 2026 **Severity:** High **Status:** 🔴 Open
+**Date Discovered:** 19 April 2026 **Severity:** High **Status:** ✅ Fixed
 
 ### Symptoms
 
@@ -272,18 +272,27 @@ and fire the EventBridge completion event before `createEventMoment` has written
 EventBridge marks the invocation as successful and will not retry. The moment document is created after the fact with no
 mechanism to trigger a second transcode or completion handler pass.
 
-### Suggested Fix
+### Implemented Fix
+
+Implemented API-033 with the bounded retry path:
+
+- `onTranscodeEvent` now throws when a MediaConvert terminal event has a `rawS3Key` but no matching `EventMoment`
+  document is found by raw media URL.
+- The MediaConvert EventBridge target retries the Lambda up to 3 times within a 5-minute event age window.
+- Persistent misses are sent to an SQS DLQ for inspection instead of being silently acknowledged.
+
+This keeps the current client flow intact while preventing a fast MediaConvert completion from permanently stranding a
+later-created moment in `Processing`.
+
+### Alternative Future Fix
 
 - **Option A (preferred):** Create the `EventMoment` document (or a lightweight upload session) _before_ issuing the S3
   PUT, storing the expected raw S3 key. Embed the `momentId` in the S3 object key or in the MediaConvert `UserMetadata`.
   `onTranscodeEvent` then looks up by `momentId`/key rather than `mediaUrl`, and the race is eliminated.
-- **Option B:** Change `onTranscodeEvent` to throw (rather than silently return) when no matching moment is found, so
-  EventBridge retries the Lambda. Add a DLQ with bounded backoff (e.g. 3 retries, 30-second delay) to handle the window
-  where the DB write is in flight.
 
 ### Tracked In
 
-- API-033 in `docs/project-state.md`
+- API-033 in `docs/project-state.md` — Done
 
 ---
 
