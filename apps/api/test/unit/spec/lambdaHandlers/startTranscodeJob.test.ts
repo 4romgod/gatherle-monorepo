@@ -75,11 +75,11 @@ describe('startTranscodeJobHandler', () => {
   });
 
   describe('file type filtering', () => {
-    it('skips non-video files and logs at debug level', async () => {
+    it('skips non-video files and logs at warn level', async () => {
       await startTranscodeJobHandler(makeEvent('beta/event-moments/evt/thumb.jpg'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Skipping unsupported transcode key',
         expect.objectContaining({ rawKey: 'beta/event-moments/evt/thumb.jpg' }),
       );
@@ -89,7 +89,7 @@ describe('startTranscodeJobHandler', () => {
       await startTranscodeJobHandler(makeEvent('beta/gallery/event-456/gallery-uuid.mp4'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Skipping unsupported transcode key',
         expect.objectContaining({ rawKey: 'beta/gallery/event-456/gallery-uuid.mp4' }),
       );

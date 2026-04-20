@@ -109,7 +109,7 @@ export const startTranscodeJobHandler = async (
 
   const ext = rawKey.split('.').pop()?.toLowerCase() ?? '';
   if (!EVENT_MOMENT_VIDEO_EXTENSIONS.has(ext) || !isEventMomentKey(rawKey)) {
-    logger.debug('Skipping unsupported transcode key', { rawKey });
+    logger.warn('Skipping unsupported transcode key', { rawKey });
     return;
   }
 
@@ -159,7 +159,9 @@ export const startTranscodeJobHandler = async (
                 DefaultSelection: 'DEFAULT',
               },
             },
-            VideoSelector: {},
+            VideoSelector: {
+              Rotate: 'AUTO',
+            },
           },
         ],
         OutputGroups: [
@@ -179,20 +181,22 @@ export const startTranscodeJobHandler = async (
               {
                 NameModifier: '_720p',
                 VideoDescription: {
-                  Width: 1280,
-                  Height: 720,
-                  ScalingBehavior: 'DEFAULT',
+                  // No Width/Height — MediaConvert preserves the source dimensions and
+                  // orientation (portrait stays portrait, landscape stays landscape).
                   CodecSettings: {
                     Codec: 'H_264',
                     H264Settings: {
-                      Bitrate: 2500000,
-                      RateControlMode: 'CBR',
+                      RateControlMode: 'QVBR',
+                      QvbrSettings: {
+                        QvbrQualityLevel: 7,
+                      },
+                      MaxBitrate: 5000000,
                       FramerateControl: 'INITIALIZE_FROM_SOURCE',
                       GopSize: 2,
                       GopSizeUnits: 'SECONDS',
                       NumberBFramesBetweenReferenceFrames: 2,
                       EntropyEncoding: 'CABAC',
-                      QualityTuningLevel: 'SINGLE_PASS',
+                      QualityTuningLevel: 'SINGLE_PASS_HQ',
                       FlickerAdaptiveQuantization: 'ENABLED',
                       AdaptiveQuantization: 'HIGH',
                     },

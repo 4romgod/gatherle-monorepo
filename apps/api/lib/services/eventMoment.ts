@@ -95,13 +95,17 @@ class EventMomentService {
       thumbnailUrl = `https://${MEDIA_CDN_DOMAIN}/${input.thumbnailKey}`;
     }
 
-    logger.info('[EventMomentService] Creating event moment', {
+    const moment = await EventMomentDAO.create(input, callerId, mediaUrl, thumbnailUrl);
+
+    logger.info('[EventMomentService] Created event moment', {
+      momentId: moment.momentId,
       callerId,
       eventId: input.eventId,
       type: input.type,
+      rawS3Key: input.mediaKey,
     });
 
-    return EventMomentDAO.create(input, callerId, mediaUrl, thumbnailUrl);
+    return moment;
   }
 
   /**
