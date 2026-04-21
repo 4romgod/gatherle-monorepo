@@ -479,24 +479,6 @@ describe('EventMomentDAO', () => {
     });
   });
 
-  describe('releaseTranscodeStart', () => {
-    it('moves a Transcoding moment back to UploadPending', async () => {
-      const releasedMoment = { ...mockMoment, type: EventMomentType.Video, state: EventMomentState.UploadPending };
-      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ toObject: () => releasedMoment }),
-      });
-
-      const result = await EventMomentDAO.releaseTranscodeStart('moment-1');
-
-      expect(EventMomentModel.findOneAndUpdate).toHaveBeenCalledWith(
-        { momentId: 'moment-1', state: EventMomentState.Transcoding },
-        { $set: { state: EventMomentState.UploadPending } },
-        { new: true },
-      );
-      expect(result).toEqual(releasedMoment);
-    });
-  });
-
   describe('delete', () => {
     it('returns true when a moment is deleted', async () => {
       (EventMomentModel.deleteOne as jest.Mock).mockReturnValue({

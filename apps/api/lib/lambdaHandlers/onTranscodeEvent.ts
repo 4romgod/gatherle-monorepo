@@ -5,6 +5,7 @@ import { SECRET_KEYS, MAX_EVENT_MOMENT_VIDEO_DURATION_MS } from '@/constants';
 import { EventMomentDAO } from '@/mongodb/dao';
 import { deleteFromS3, deleteS3Prefix } from '@/clients/AWS/s3Client';
 import { logger } from '@/utils/logger';
+import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 
 const MEDIA_CDN_DOMAIN = process.env.MEDIA_CDN_DOMAIN || '';
 
@@ -116,7 +117,7 @@ export const onTranscodeEventHandler = async (
     }
 
     const hlsKey = s3UriToKey(manifestS3Uri);
-    const hlsUrl = `https://${MEDIA_CDN_DOMAIN}/${hlsKey}`;
+    const hlsUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, hlsKey);
     const hasValidDuration = typeof durationMs === 'number' && Number.isFinite(durationMs) && durationMs >= 0;
 
     if (!hasValidDuration) {

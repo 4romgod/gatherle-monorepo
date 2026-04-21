@@ -305,22 +305,6 @@ class EventMomentDAO {
     }
   }
 
-  /** Reopen a claimed upload when MediaConvert job submission fails before acceptance. */
-  static async releaseTranscodeStart(momentId: string): Promise<EventMomentEntity | null> {
-    try {
-      const doc = await EventMoment.findOneAndUpdate(
-        { momentId, state: EventMomentState.Transcoding },
-        { $set: { state: EventMomentState.UploadPending } },
-        { new: true },
-      ).exec();
-
-      return doc ? doc.toObject() : null;
-    } catch (error) {
-      logDaoError('Error releasing video event moment transcode claim', { error });
-      throw KnownCommonError(error);
-    }
-  }
-
   /** Hard-delete a status. Authorization must be checked in the resolver. */
   static async delete(momentId: string): Promise<boolean> {
     try {

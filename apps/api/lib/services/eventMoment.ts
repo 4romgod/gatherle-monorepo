@@ -11,6 +11,7 @@ import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mon
 import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import { CustomError, ErrorTypes } from '@/utils';
+import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import { logger } from '@/utils/logger';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
@@ -101,10 +102,10 @@ class EventMomentService {
         throw new Error('MEDIA_CDN_DOMAIN is required to generate media URLs');
       }
 
-      mediaUrl = `https://${MEDIA_CDN_DOMAIN}/${input.mediaKey}`;
+      mediaUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, input.mediaKey);
     }
     if (input.thumbnailKey && MEDIA_CDN_DOMAIN) {
-      thumbnailUrl = `https://${MEDIA_CDN_DOMAIN}/${input.thumbnailKey}`;
+      thumbnailUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, input.thumbnailKey);
     }
 
     const moment = await EventMomentDAO.create(input, callerId, mediaUrl, thumbnailUrl);
@@ -171,7 +172,7 @@ class EventMomentService {
       await verifyVideoSize(rawS3Key);
     }
 
-    const thumbnailUrl = input.thumbnailKey ? `https://${MEDIA_CDN_DOMAIN}/${input.thumbnailKey}` : undefined;
+    const thumbnailUrl = input.thumbnailKey ? buildMediaCdnUrl(MEDIA_CDN_DOMAIN, input.thumbnailKey) : undefined;
     const moment = await EventMomentDAO.publishVideoMoment(reservedMoment.momentId, {
       eventId: input.eventId,
       authorId: callerId,

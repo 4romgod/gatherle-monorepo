@@ -16,6 +16,8 @@ jest.mock('jsonwebtoken');
 jest.mock('@/mongodb/dao');
 
 describe('Auth Utilities', () => {
+  const testJwtSecret = 'unit-test-jwt-secret';
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -45,7 +47,7 @@ describe('Auth Utilities', () => {
   describe('generateToken', () => {
     it('should generate a token', async () => {
       (sign as jest.Mock).mockReturnValue('token');
-      const token = await generateToken(mockUser);
+      const token = await generateToken(mockUser, testJwtSecret);
       expect(token).toBe('token');
       expect(sign).toHaveBeenCalledWith(
         {
@@ -73,7 +75,7 @@ describe('Auth Utilities', () => {
         iat: 123,
         exp: 456,
       });
-      const user = await verifyToken('valid-token');
+      const user = await verifyToken('valid-token', testJwtSecret);
       expect(user).toEqual({
         userId: mockUser.userId,
         email: mockUser.email,
@@ -87,7 +89,7 @@ describe('Auth Utilities', () => {
       (verify as jest.Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
-      await expect(verifyToken('invalid-token')).rejects.toThrow(
+      await expect(verifyToken('invalid-token', testJwtSecret)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED),
       );
     });
@@ -101,7 +103,7 @@ describe('Auth Utilities', () => {
         ver: 1,
       });
 
-      await expect(verifyToken('invalid-token')).rejects.toThrow(
+      await expect(verifyToken('invalid-token', testJwtSecret)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED),
       );
     });

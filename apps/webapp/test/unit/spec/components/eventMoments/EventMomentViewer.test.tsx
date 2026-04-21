@@ -188,6 +188,7 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       });
 
       expect(screen.queryByRole('progressbar')).toBeNull();
+      expect(screen.getByText('Image unavailable')).toBeTruthy();
     });
   });
 
@@ -334,6 +335,52 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
       // After navigation the new moment's media hasn't loaded yet → spinner back
       // (navigation may close viewer if button not found; just verify no crash)
       expect(true).toBe(true);
+    });
+  });
+
+  describe('swipe down to close', () => {
+    it('closes the viewer when dragging downward from the moment content', () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/img.jpg' })]}
+        />,
+      );
+
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+
+      act(() => {
+        fireEvent.touchStart(img, { touches: [{ clientX: 120, clientY: 100 }] });
+        fireEvent.touchMove(img, { touches: [{ clientX: 122, clientY: 245 }] });
+        fireEvent.touchEnd(img);
+      });
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close the viewer for a short downward drag', () => {
+      const onClose = jest.fn();
+
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          onClose={onClose}
+          moments={[makeMoment('Image', { mediaUrl: 'https://cdn.example.com/img.jpg' })]}
+        />,
+      );
+
+      const img = screen.getByRole('img', { name: 'A test moment caption' });
+
+      act(() => {
+        fireEvent.touchStart(img, { touches: [{ clientX: 120, clientY: 100 }] });
+        fireEvent.touchMove(img, { touches: [{ clientX: 120, clientY: 180 }] });
+        fireEvent.touchEnd(img);
+      });
+
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
