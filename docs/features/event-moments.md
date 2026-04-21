@@ -176,18 +176,21 @@ transfer at all — the file goes from the user's device straight to S3. This me
 While the upload is in progress, the client shows an upload progress bar (we can track this via the `XMLHttpRequest`
 `progress` event or the fetch API's `ReadableStream`).
 
-**Step 4 — Creating the moment record (state: Processing)**
+**Step 4 — Reserving and publishing the video moment**
 
-Once the upload is complete, the client calls
-`createEventMoment(input: { type: Video, mediaKey: "beta/event-moments/..." })`.
+When the client asks for a video upload URL, the API first creates an unpublished `EventMoment` reservation with
+`state: UploadPending`, stores the expected `rawS3Key`, and returns the reserved `momentId` with the presigned URL.
 
-The API creates a document in MongoDB with `state: Processing`. This state means:
+Once the upload is complete, the client calls `createEventMoment(input: { type: Video, momentId, mediaKey, caption? })`.
 
-- The moment exists in the database
-- It is NOT yet visible to other viewers (only the author can see it in a "pending" state)
-- It is waiting for the transcoding pipeline to finish
+The API publishes the reserved document with the user's caption/thumbnail metadata. Pending video states mean:
 
-The client immediately shows a "Processing…" skeleton in the stories ring so the author knows it's working.
+- `UploadPending`: the raw upload URL was issued, but MediaConvert has not claimed it yet
+- `Transcoding`: the S3 event was accepted and a MediaConvert job was submitted
+- The moment is not visible to other viewers until it reaches `Ready`
+
+After the user publishes the video moment, the client shows a pending indicator in the stories ring so the author knows
+it's working.
 
 **Step 5 — S3 triggers a Lambda automatically**
 
@@ -240,8 +243,8 @@ the transcode DLQ for investigation.
 **Step 8 — WebSocket push notifies the author**
 
 When the moment transitions to `Ready`, the API pushes a `event_status_ready` WebSocket message to the author's open
-connection (if they're still on the page). The client updates the stories ring in real time — the "Processing…" skeleton
-is replaced with the actual bubble.
+connection (if they're still on the page). The client updates the stories ring in real time — the pending indicator is
+replaced with the actual bubble.
 
 Other viewers (followers who are on the event page) receive an `event_status_created` push at this point and see the new
 bubble appear.
@@ -303,32 +306,32 @@ In the browser, native HLS support varies:
 
 #### What's actually built today vs what's planned
 
-| Component                                                        | Built? | Notes                                                                                                                           |
-| ---------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| S3 bucket + CloudFront distribution                              | ✅ Yes | Deployed in `S3BucketStack`                                                                                                     |
-| Pre-signed upload URLs                                           | ✅ Yes | `getEventMomentUploadUrl` mutation works                                                                                        |
-| `EventMomentState` model (Processing/Ready/Failed)               | ✅ Yes | In `packages/commons`                                                                                                           |
-| `markReady` DAO method                                           | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
-| `markFailed` DAO method                                          | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
-| `findByMediaUrl` DAO method                                      | ✅ Yes | Used by `OnTranscodeEvent` to map S3 key → moment                                                                               |
-| Client-side duration + size validation (30 s / 75 MB)            | ✅ Yes | In `EventMomentComposer`                                                                                                        |
-| Server-side size check (75 MB) in `createEventMoment`            | ✅ Yes | Verifies S3 `ContentLength` before creating a video moment                                                                      |
-| Server-side size check (75 MB) in `startTranscodeJob`            | ✅ Yes | Rejects oversized/unverifiable raw uploads before MediaConvert; marks matching existing moments Failed and deletes the raw file |
-| Server-side duration check (30 s) in `onTranscodeEvent`          | ✅ Yes | Marks moment Failed and deletes raw + per-upload HLS output if duration is missing or exceeds 30 s                              |
-| `StartTranscodeJob` Lambda                                       | ✅ Yes | `apps/api/lib/lambdaHandlers/startTranscodeJob.ts`                                                                              |
-| `OnTranscodeEvent` Lambda (handles COMPLETE + ERROR)             | ✅ Yes | `apps/api/lib/lambdaHandlers/onTranscodeEvent.ts`                                                                               |
-| S3 → EventBridge notification                                    | ✅ Yes | `eventBridgeEnabled: true` on `S3BucketStack` bucket                                                                            |
-| MediaConvert CDK queue + IAM role                                | ✅ Yes | In `MediaStack`                                                                                                                 |
-| EventBridge rule: S3 ObjectCreated → StartTranscodeJob           | ✅ Yes | In `MediaStack`                                                                                                                 |
-| EventBridge rule: MediaConvert COMPLETE/ERROR → OnTranscodeEvent | ✅ Yes | In `MediaStack`                                                                                                                 |
-| Bounded retry + DLQ for transcode completion race                | ✅ Yes | `OnTranscodeEvent` throws on missing moment; EventBridge retries 3 times within 5 minutes, then sends to SQS DLQ                |
-| HLS playback with `hls.js` in viewer                             | ❌ No  | Viewer still uses raw `<video src>` — Phase 2                                                                                   |
-| WebSocket push on `state: Ready`                                 | ❌ No  | Not wired in completion Lambda — Phase 2                                                                                        |
+| Component                                                                 | Built? | Notes                                                                                                                           |
+| ------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| S3 bucket + CloudFront distribution                                       | ✅ Yes | Deployed in `S3BucketStack`                                                                                                     |
+| Pre-signed upload URLs                                                    | ✅ Yes | `getEventMomentUploadUrl` mutation works                                                                                        |
+| `EventMomentState` model (`UploadPending`/`Transcoding`/`Ready`/`Failed`) | ✅ Yes | In `packages/commons`                                                                                                           |
+| `markReady` DAO method                                                    | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
+| `markFailed` DAO method                                                   | ✅ Yes | In `EventMomentDAO` — called by `OnTranscodeEvent` Lambda                                                                       |
+| `findByRawS3Key` DAO method + sparse unique index                         | ✅ Yes | Used by transcode start/completion handlers to map S3 key → moment                                                              |
+| Client-side duration + size validation (30 s / 75 MB)                     | ✅ Yes | In `EventMomentComposer`                                                                                                        |
+| Server-side size check (75 MB) in `createEventMoment`                     | ✅ Yes | Verifies S3 `ContentLength` before creating a video moment                                                                      |
+| Server-side size check (75 MB) in `startTranscodeJob`                     | ✅ Yes | Rejects oversized/unverifiable raw uploads before MediaConvert; marks matching reserved moments Failed and deletes the raw file |
+| Server-side duration check (30 s) in `onTranscodeEvent`                   | ✅ Yes | Marks moment Failed and deletes raw + per-upload HLS output if duration is missing or exceeds 30 s                              |
+| `StartTranscodeJob` Lambda                                                | ✅ Yes | `apps/api/lib/lambdaHandlers/startTranscodeJob.ts`                                                                              |
+| `OnTranscodeEvent` Lambda (handles COMPLETE + ERROR)                      | ✅ Yes | `apps/api/lib/lambdaHandlers/onTranscodeEvent.ts`                                                                               |
+| S3 → EventBridge notification                                             | ✅ Yes | `eventBridgeEnabled: true` on `S3BucketStack` bucket                                                                            |
+| MediaConvert CDK queue + IAM role                                         | ✅ Yes | In `MediaStack`                                                                                                                 |
+| EventBridge rule: S3 ObjectCreated → StartTranscodeJob                    | ✅ Yes | In `MediaStack`                                                                                                                 |
+| EventBridge rule: MediaConvert COMPLETE/ERROR → OnTranscodeEvent          | ✅ Yes | In `MediaStack`                                                                                                                 |
+| Bounded retry + DLQ for transcode completion race                         | ✅ Yes | `OnTranscodeEvent` throws on missing moment; EventBridge retries 3 times within 5 minutes, then sends to SQS DLQ                |
+| HLS playback with `hls.js` in viewer                                      | ❌ No  | Viewer still uses raw `<video src>` — Phase 2                                                                                   |
+| WebSocket push on `state: Ready`                                          | ❌ No  | Not wired in completion Lambda — Phase 2                                                                                        |
 
 **What this means in practice:** Video moments are uploaded as raw files, then automatically transcoded to 720p HLS by
-the MediaConvert pipeline. After transcoding (~15–45 s), `state` transitions from `Processing` to `Ready` and the HLS
-URL replaces the raw media URL. If the completion event arrives before the DB moment exists, EventBridge retries the
-completion Lambda instead of losing the update. Phase 2 work (hls.js viewer, WebSocket push on ready) is still pending.
+the MediaConvert pipeline. After transcoding (~15–45 s), `state` transitions from `Transcoding` to `Ready` and the HLS
+URL replaces the raw media URL. The upload URL flow creates the DB reservation before S3 accepts the raw video, so
+completion can be correlated by `rawS3Key`. Phase 2 work (hls.js viewer, WebSocket push on ready) is still pending.
 
 **Image** statuses: same path as current avatar/featured image uploads — pre-signed PUT, then served via existing
 CloudFront distribution. No transcoding needed.
@@ -363,7 +366,8 @@ export enum EventMomentType {
 }
 
 export enum EventMomentState {
-  Processing = 'Processing', // video uploaded, awaiting transcode
+  UploadPending = 'UploadPending', // video upload URL issued, awaiting S3 upload/transcode claim
+  Transcoding = 'Transcoding', // MediaConvert job submitted
   Ready = 'Ready', // visible to viewers
   Failed = 'Failed', // transcoding failed
 }
@@ -374,7 +378,7 @@ export enum EventMomentState {
 @index({ expiresAt: 1 }, { expireAfterSeconds: 0 }) // MongoDB TTL index
 export class EventMoment {
   @Field(() => ID)
-  momentId: string; // uuid
+  momentId: string; // Mongo _id as string
 
   @Field(() => ID)
   eventId: string; // linked event
@@ -391,11 +395,15 @@ export class EventMoment {
   @Field(() => String, { nullable: true })
   mediaUrl?: string; // CF URL for image; HLS .m3u8 URL for video
 
+  rawS3Key?: string; // internal S3 key used to correlate upload/transcode events
+
+  isPublished: boolean; // internal visibility flag; false while a reserved video is unpublished
+
   @Field(() => String, { nullable: true })
   thumbnailUrl?: string; // CF URL for video poster frame (generated by MediaConvert)
 
   @Field(() => EventMomentState)
-  state: EventMomentState; // Processing | Ready | Failed
+  state: EventMomentState; // UploadPending | Transcoding | Ready | Failed
 
   @Field(() => Number, { nullable: true })
   durationSeconds?: number; // for video moments (stored after transcode)
@@ -414,11 +422,12 @@ export class EventMoment {
 
 ### MongoDB indexes
 
-| Index                                           | Type     | Purpose                                              |
-| ----------------------------------------------- | -------- | ---------------------------------------------------- |
-| `{ eventId: 1, authorId: 1 }`                   | Compound | Fetch all moments for an event, or all by one author |
-| `{ expiresAt: 1 }` with `expireAfterSeconds: 0` | TTL      | Auto-delete documents 24 h after creation            |
-| `{ authorId: 1, createdAt: -1 }`                | Compound | Reverse-chronological feed for a followed user       |
+| Index                                           | Type          | Purpose                                                |
+| ----------------------------------------------- | ------------- | ------------------------------------------------------ |
+| `{ eventId: 1, authorId: 1 }`                   | Compound      | Fetch all moments for an event, or all by one author   |
+| `{ expiresAt: 1 }` with `expireAfterSeconds: 0` | TTL           | Auto-delete documents 24 h after creation              |
+| `{ authorId: 1, createdAt: -1 }`                | Compound      | Reverse-chronological feed for a followed user         |
+| `{ rawS3Key: 1 }`                               | Unique sparse | Correlate each raw video upload to one reserved moment |
 
 ---
 
@@ -431,7 +440,7 @@ export class EventMoment {
 | `readFollowedStatuses` — personal feed                        | Any authenticated user — server returns only statuses from authors the caller follows (across all events), plus the caller's own statuses.                                                         |
 | `readUserEventMoments(userId, eventId)` — profile/search mode | Any authenticated user can read statuses from a **public** user (where `followPolicy: Public` or caller is an accepted follower). Private user statuses are restricted to accepted followers only. |
 | `deleteEventMoment`                                           | Author of the status, or event organizer (Host / CoHost role)                                                                                                                                      |
-| View `state: Processing`                                      | Author only — other viewers see nothing until `Ready`                                                                                                                                              |
+| View pending video states (`UploadPending`/`Transcoding`)     | Author only — other viewers see nothing until `Ready`                                                                                                                                              |
 
 **Privacy rule applied in the resolver:**
 
@@ -466,6 +475,9 @@ myEventMomentSummary(eventId: ID!): EventMomentSummary
 ```typescript
 @InputType()
 export class CreateEventMomentInput {
+  @Field(() => ID, { nullable: true })
+  momentId?: string; // reserved moment id returned by getEventMomentUploadUrl for video uploads
+
   @Field(() => ID)
   eventId: string;
 
@@ -482,11 +494,13 @@ export class CreateEventMomentInput {
 
 **Flow for video**:
 
-1. Client calls `getEventMomentUploadUrl(eventId, extension)` → gets pre-signed PUT URL and S3 key
+1. Client calls `getEventMomentUploadUrl(eventId, extension)` → API reserves an unpublished `UploadPending` moment and
+   returns pre-signed PUT URL, S3 key, and `momentId`
 2. Client uploads raw video file directly to S3
-3. Client calls `createEventMoment(input: { type: Video, mediaKey, caption? })` — resolver creates the DB document with
-   `state: Processing`
-4. S3 ObjectCreated event → Lambda → MediaConvert job starts
+3. Client calls `createEventMoment(input: { type: Video, momentId, mediaKey, caption? })` — resolver publishes the
+   reserved row with user metadata
+4. S3 ObjectCreated event → Lambda atomically claims `UploadPending -> Transcoding` by `rawS3Key` → MediaConvert job
+   starts
 5. MediaConvert completion → Lambda updates `state: Ready` and writes `mediaUrl` (HLS .m3u8) + `thumbnailUrl`
 6. Client receives WebSocket push (`status_ready` event) or polls `readEventMoments`
 
@@ -503,8 +517,8 @@ Extends the existing convention in `docs/webapp/media-upload-architecture.md`:
 | Video HLS  | _(output by MediaConvert)_                                    | `…/hls/{shortId}_720p.m3u8`, `…/hls/*.ts` |
 | Thumbnail  | `{stage}/event-moments/{event-slug}/{username}/{shortId}.jpg` | — (client-generated poster served via CF) |
 
-A server-generated short ID makes each upload key unique. A future API-033 fix should create the DB moment or upload
-session before issuing the URL so the key and DB state are atomic.
+A server-generated short ID makes each upload key unique. Video uploads now create the DB reservation before issuing the
+URL so the key and DB state are atomic.
 
 ---
 
@@ -515,8 +529,8 @@ session before issuing the URL so the key and DB state are atomic.
 1. **MediaConvert queue** — an `aws-mediaconvert.CfnQueue` in `S3BucketStack` (or a new `MediaStack`).
 2. **S3 event notification** —
    `mediaBucket.addEventNotification(EventType.OBJECT_CREATED, LambdaDestination(transcodeFunction), { prefix: '{stage}/event-moments/', suffix: '/raw' })`.
-3. **Transcode Lambda** — small Node.js Lambda that receives the S3 key, submits a MediaConvert job (HLS 360p + 720p
-   renditions + thumbnail), and writes `state: Processing` confirmed.
+3. **Transcode Lambda** — small Node.js Lambda that receives the S3 key, atomically claims the reserved moment as
+   `Transcoding`, and submits a MediaConvert job (HLS 360p + 720p renditions + thumbnail).
 4. **MediaConvert completion Lambda** — EventBridge rule triggers on `MediaConvert Job State Change (COMPLETE | ERROR)`
    → Lambda updates MongoDB document (`state: Ready/Failed`, writes `mediaUrl`, `thumbnailUrl`, `durationSeconds`).
 5. **New env var on GraphQL Lambda** — `MEDIACONVERT_ENDPOINT` (account-specific endpoint URL) and
@@ -579,7 +593,7 @@ Three tabs: **Text** | **Photo** | **Video**
   - **Record** — `getUserMedia({ video: true, audio: true })` opens a live viewfinder with a record button. Recording
     stops automatically at 15 s (via `MediaRecorder` + a countdown timer); user can also stop early. The recorded `Blob`
     is then uploaded via the event moment upload URL flow.
-  - Both paths use the same pre-signed URL flow → `createEventMoment` → shows "Processing…" skeleton in the ring while
+  - Both paths use the same pre-signed URL flow → `createEventMoment` → shows a pending indicator in the ring while
     MediaConvert runs
 
 **Browser API notes:**
@@ -653,7 +667,7 @@ storage cost without a server round trip.
 | 15  | `event_status_ready` WebSocket push to author                                     | API         |
 | 16  | Video tab in composer (client-side duration validation, `<video>` preview)        | Webapp      |
 | 17  | HLS playback in story viewer (`hls.js` for Chrome/Firefox; native for Safari/iOS) | Webapp      |
-| 18  | "Processing…" skeleton in ring until `state === Ready`                            | Webapp      |
+| 18  | Pending indicator in ring until `state === Ready`                                 | Webapp      |
 
 ---
 

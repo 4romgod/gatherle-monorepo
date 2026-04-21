@@ -6,13 +6,14 @@ import {
   MEDIA_CDN_DOMAIN,
   CONTENT_TYPE_MAP,
   EVENT_MOMENT_MEDIA_EXTENSIONS,
+  EVENT_MOMENT_VIDEO_EXTENSIONS,
   EVENT_MOMENTS_S3_PREFIX,
   MEDIA_ENTITY_FOLDER,
   MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS,
 } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import type { Event, MediaUploadUrl } from '@gatherle/commons/types';
-import { MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
+import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventDAO, EventParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 
@@ -118,17 +119,7 @@ class MediaService {
       throw CustomError('You must RSVP as Going or CheckedIn to upload a moment', ErrorTypes.UNAUTHORIZED);
     }
 
-    // 3. Rate limit — same window as createEventMoment to prevent cost amplification
-    //    via uploading videos without ever calling createEventMoment.
-    const recentCount = await EventMomentDAO.countRecentByAuthor(eventId, userId);
-    if (recentCount >= MAX_STATUSES_PER_WINDOW) {
-      throw CustomError(
-        `You can upload at most ${MAX_STATUSES_PER_WINDOW} moments per event in a 24-hour period`,
-        ErrorTypes.BAD_USER_INPUT,
-      );
-    }
-
-    // 4. Build the S3 key using the authoritative slug from the DB (never trust client-supplied slug).
+    // 3. Build the S3 key using the authoritative slug from the DB (never trust client-supplied slug).
     const sanitizedSlug =
       event.slug
         .toLowerCase()
@@ -143,17 +134,46 @@ class MediaService {
     const shortId = randomBytes(8).toString('base64url');
     const stagePrefix = STAGE.toLowerCase();
     const key = `${stagePrefix}/${EVENT_MOMENTS_S3_PREFIX}/${sanitizedSlug}/${sanitizedUsername}/${shortId}.${cleanExt}`;
+    const isVideoUpload = EVENT_MOMENT_VIDEO_EXTENSIONS.has(cleanExt);
 
     if (!MEDIA_CDN_DOMAIN) {
       throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');
     }
 
+    if (isVideoUpload) {
+      const recentCount = await EventMomentDAO.countRecentByAuthor(eventId, userId);
+      if (recentCount >= MAX_STATUSES_PER_WINDOW) {
+        throw CustomError(
+          `You can upload at most ${MAX_STATUSES_PER_WINDOW} moments per event in a 24-hour period`,
+          ErrorTypes.BAD_USER_INPUT,
+        );
+      }
+    }
+
     const uploadUrl = await getPresignedUploadUrl(key, contentType, MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS);
     const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
+    let momentId: string | undefined;
 
-    logger.info('Generated event moment upload URL', { userId, eventId, key, mediaHost: MEDIA_CDN_DOMAIN });
+    if (isVideoUpload) {
+      const moment = await EventMomentDAO.createVideoUpload({
+        eventId,
+        authorId: userId,
+        rawS3Key: key,
+        mediaUrl: readUrl,
+      });
+      momentId = moment.momentId;
+    }
 
-    return { uploadUrl, key, readUrl };
+    logger.info('Generated event moment upload URL', {
+      userId,
+      eventId,
+      key,
+      mediaHost: MEDIA_CDN_DOMAIN,
+      type: isVideoUpload ? EventMomentType.Video : EventMomentType.Image,
+      momentId,
+    });
+
+    return { uploadUrl, key, readUrl, momentId };
   }
 }
 

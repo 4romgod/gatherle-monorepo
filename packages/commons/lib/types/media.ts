@@ -40,4 +40,10 @@ export class MediaUploadUrl {
       'Canonical CDN-backed media URL for the uploaded file. Persist this value and use it to display the media.',
   })
   readUrl: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Reserved event moment id for video uploads; null for ordinary media and image moment uploads',
+  })
+  momentId?: string;
 }

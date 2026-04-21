@@ -58,7 +58,7 @@ export class EventMomentResolver {
     @Arg('limit', () => Number, { nullable: true }) limit?: number,
   ): Promise<EventMomentPage> {
     // context.user is populated for authenticated requests (no @Authorized required).
-    // Pass the viewer's id so the DAO can include their own Processing moments.
+    // Pass the viewer's id so the DAO can include their own pending moments.
     return EventMomentService.readByEvent(eventId, cursor, limit, context.user?.userId);
   }
 

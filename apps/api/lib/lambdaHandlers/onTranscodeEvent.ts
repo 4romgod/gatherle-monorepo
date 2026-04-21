@@ -76,9 +76,10 @@ export const onTranscodeEventHandler = async (
 ): Promise<void> => {
   const detail = event.detail;
   const rawS3Key = detail.userMetadata?.rawS3Key;
+  const metadataMomentId = detail.userMetadata?.momentId;
 
   if (!rawS3Key) {
-    logger.error('No rawS3Key in userMetadata — cannot identify moment', { detail });
+    logger.error('No rawS3Key in userMetadata — cannot identify moment', { metadataMomentId, detail });
     return;
   }
 
@@ -86,18 +87,17 @@ export const onTranscodeEventHandler = async (
     throw new Error('MEDIA_CDN_DOMAIN env var is required');
   }
 
-  const rawMediaUrl = `https://${MEDIA_CDN_DOMAIN}/${rawS3Key}`;
-
   await ensureDbConnected();
 
-  const moment = await EventMomentDAO.findByMediaUrl(rawMediaUrl);
+  const moment = await EventMomentDAO.findByRawS3Key(rawS3Key);
   if (!moment) {
-    const message = 'No moment found for rawMediaUrl - retrying transcode completion later';
-    logger.error(message, { rawMediaUrl });
-    throw new Error(`${message}: ${rawMediaUrl}`);
+    const message = 'No moment found for rawS3Key - retrying transcode completion later';
+    logger.error(message, { rawS3Key, metadataMomentId });
+    throw new Error(`${message}: ${rawS3Key}`);
   }
 
   const { momentId } = moment;
+  logger.info('Processing transcode event', { momentId, rawS3Key, status: detail.status });
 
   if (detail.status === 'COMPLETE') {
     // Find the HLS output group and extract the manifest path + duration.
@@ -110,7 +110,7 @@ export const onTranscodeEventHandler = async (
     const durationMs = outputDetail?.durationInMs;
 
     if (!manifestS3Uri) {
-      logger.error('No HLS manifest found in MediaConvert output', { momentId });
+      logger.error('No HLS manifest found in MediaConvert output', { momentId, rawS3Key });
       await EventMomentDAO.markFailed(momentId);
       return;
     }
@@ -122,6 +122,7 @@ export const onTranscodeEventHandler = async (
     if (!hasValidDuration) {
       logger.error('No valid duration found in MediaConvert output - marking moment Failed and cleaning up', {
         momentId,
+        rawS3Key,
       });
       await EventMomentDAO.markFailed(momentId);
       await cleanupRejectedVideoArtifacts(momentId, rawS3Key, hlsKey);
@@ -134,6 +135,7 @@ export const onTranscodeEventHandler = async (
     if (durationMs > MAX_EVENT_MOMENT_VIDEO_DURATION_MS) {
       logger.warn('Video exceeds maximum duration — marking moment Failed and cleaning up', {
         momentId,
+        rawS3Key,
         durationSeconds,
         maxSeconds: MAX_EVENT_MOMENT_VIDEO_DURATION_MS / 1000,
       });
@@ -142,7 +144,7 @@ export const onTranscodeEventHandler = async (
       return;
     }
 
-    logger.info('Marking moment as Ready', { momentId, hlsUrl, durationSeconds });
+    logger.info('Marking moment as Ready', { momentId, rawS3Key, hlsUrl, durationSeconds });
 
     // thumbnailUrl is already set on the moment from the client upload — do not overwrite it.
     await EventMomentDAO.markReady(momentId, hlsUrl, undefined, durationSeconds);
@@ -151,12 +153,12 @@ export const onTranscodeEventHandler = async (
     // Use a non-throwing delete so a storage failure doesn't roll back the Ready state.
     try {
       await deleteFromS3(rawS3Key);
-      logger.info('Deleted original upload after transcoding', { rawS3Key });
+      logger.info('Deleted original upload after transcoding', { momentId, rawS3Key });
     } catch (err) {
-      logger.warn('Failed to delete original upload — not critical', { rawS3Key, err });
+      logger.warn('Failed to delete original upload — not critical', { momentId, rawS3Key, err });
     }
   } else if (detail.status === 'ERROR') {
-    logger.error('MediaConvert job failed', { momentId, errorMessage: detail.errorMessage ?? 'unknown' });
+    logger.error('MediaConvert job failed', { momentId, rawS3Key, errorMessage: detail.errorMessage ?? 'unknown' });
     await EventMomentDAO.markFailed(momentId);
   } else {
     logger.info('Ignoring non-terminal MediaConvert status', { momentId, status: detail.status });

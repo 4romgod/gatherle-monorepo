@@ -27,6 +27,8 @@ const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, Par
 /** Hours after event end during which moments can still be posted. Must match the API constant. */
 const POSTING_WINDOW_HOURS = 72;
 
+const PENDING_MOMENT_STATES = new Set<EventMomentState>([EventMomentState.UploadPending, EventMomentState.Transcoding]);
+
 /** Groups moments by author so each attendee gets one bubble in the ring. */
 function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
   const map = new Map<string, Moment[]>();
@@ -56,21 +58,20 @@ export default function EventMomentsRing({
   });
 
   const allMoments = data?.readEventMoments.items ?? [];
-  const hasProcessing = allMoments.some((m) => m.state === EventMomentState.Processing);
+  const hasPendingMoment = allMoments.some((m) => PENDING_MOMENT_STATES.has(m.state));
 
   // Poll every 10 s while any moment is still processing so the ring refreshes when transcoding finishes.
   useEffect(() => {
-    if (hasProcessing) {
+    if (hasPendingMoment) {
       startPolling(10_000);
     } else {
       stopPolling();
     }
-  }, [hasProcessing, startPolling, stopPolling]);
+  }, [hasPendingMoment, startPolling, stopPolling]);
 
-  // Ready moments are visible to everyone; Processing moments are shown only to their author.
+  // Ready moments are visible to everyone; pending moments are shown only to their author.
   const moments = allMoments.filter(
-    (m) =>
-      m.state === EventMomentState.Ready || (m.state === EventMomentState.Processing && m.authorId === viewerUserId),
+    (m) => m.state === EventMomentState.Ready || (PENDING_MOMENT_STATES.has(m.state) && m.authorId === viewerUserId),
   );
   const authorGroups = groupByAuthor(moments);
   const canPost = myRsvpStatus !== null && ALLOWED_RSVP_STATUSES.includes(myRsvpStatus);
@@ -178,19 +179,21 @@ export default function EventMomentsRing({
         const displayName = author?.given_name ?? author?.username ?? 'User';
         const avatarSrc = author?.profile_picture ?? undefined;
         const initials = author?.given_name?.[0]?.toUpperCase() ?? author?.username?.[0]?.toUpperCase() ?? '?';
-        const isProcessing = authorMoments.some((m) => m.state === EventMomentState.Processing);
+        const readyMoments = authorMoments.filter((m) => m.state === EventMomentState.Ready);
+        const isPending = authorMoments.some((m) => PENDING_MOMENT_STATES.has(m.state));
+        const canOpenMoments = readyMoments.length > 0;
 
         return (
           <Box
             key={authorId}
-            onClick={() => onMomentClick(authorMoments, 0)}
+            onClick={canOpenMoments ? () => onMomentClick(readyMoments, 0) : undefined}
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               gap: 0.75,
               flexShrink: 0,
-              cursor: 'pointer',
+              cursor: canOpenMoments ? 'pointer' : 'default',
             }}
           >
             <Box sx={{ position: 'relative' }}>
@@ -198,12 +201,12 @@ export default function EventMomentsRing({
                 sx={{
                   p: '2px',
                   borderRadius: '50%',
-                  background: isProcessing
+                  background: isPending
                     ? (theme) => theme.palette.action.disabledBackground
                     : (theme) =>
                         `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                   transition: 'transform 0.2s ease',
-                  opacity: isProcessing ? 0.6 : 1,
+                  opacity: isPending ? 0.6 : 1,
                   '&:hover': { transform: 'scale(1.08)' },
                 }}
               >
@@ -222,7 +225,7 @@ export default function EventMomentsRing({
                   {initials}
                 </Avatar>
               </Box>
-              {isProcessing && (
+              {isPending && (
                 <CircularProgress
                   size={60}
                   thickness={2}
@@ -237,7 +240,7 @@ export default function EventMomentsRing({
             </Box>
             <Typography
               variant="caption"
-              color={isProcessing ? 'text.disabled' : 'text.secondary'}
+              color={isPending ? 'text.disabled' : 'text.secondary'}
               sx={{
                 fontSize: '0.65rem',
                 maxWidth: 56,
@@ -247,7 +250,7 @@ export default function EventMomentsRing({
                 textAlign: 'center',
               }}
             >
-              {isProcessing ? 'Processing…' : displayName}
+              {isPending ? 'Pending…' : displayName}
             </Typography>
           </Box>
         );

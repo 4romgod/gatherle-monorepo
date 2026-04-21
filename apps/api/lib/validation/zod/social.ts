@@ -28,6 +28,7 @@ export const CreateActivityInputSchema = z.object({
 
 export const CreateEventMomentInputSchema = z
   .object({
+    momentId: z.string().min(1).optional(),
     eventId: objectIdSchema,
     type: z.nativeEnum(EventMomentType),
     caption: z.string().max(280, 'Caption must be 280 characters or fewer').optional(),
@@ -56,10 +57,24 @@ export const CreateEventMomentInputSchema = z
         path: ['caption'],
       });
     }
-    if ((data.type === EventMomentType.Image || data.type === EventMomentType.Video) && !data.mediaKey) {
+    if (data.type === EventMomentType.Image && !data.mediaKey) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'mediaKey is required for image and video moments',
+        message: 'mediaKey is required for image moments',
+        path: ['mediaKey'],
+      });
+    }
+    if (data.type === EventMomentType.Video && !data.momentId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'momentId is required for video moments',
+        path: ['momentId'],
+      });
+    }
+    if (data.type === EventMomentType.Video && !data.mediaKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'mediaKey is required for video moments',
         path: ['mediaKey'],
       });
     }

@@ -105,19 +105,45 @@ describe('CreateEventMomentInputSchema', () => {
   });
 
   describe('video moments', () => {
-    it('accepts a valid video moment with a mediaKey', () => {
+    it('accepts a valid video moment with a reserved momentId and mediaKey', () => {
       const result = CreateEventMomentInputSchema.safeParse({
         eventId: validId,
         type: EventMomentType.Video,
+        momentId: 'reserved-video-moment',
         mediaKey: 'uploads/video.mp4',
       });
       expect(result.success).toBe(true);
     });
 
-    it('rejects a video moment without mediaKey', () => {
+    it('rejects a video moment with mediaKey but no momentId', () => {
       const result = CreateEventMomentInputSchema.safeParse({
         eventId: validId,
         type: EventMomentType.Video,
+        mediaKey: 'uploads/video.mp4',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.flatten().fieldErrors['momentId']).toBeDefined();
+      }
+    });
+
+    it('rejects a video moment without momentId or mediaKey', () => {
+      const result = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Video,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.flatten().fieldErrors['momentId']).toBeDefined();
+        expect(result.error.flatten().fieldErrors['mediaKey']).toBeDefined();
+      }
+    });
+
+    it('rejects a video moment with momentId but no mediaKey', () => {
+      const result = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Video,
+        momentId: 'reserved-video-moment',
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -129,6 +155,7 @@ describe('CreateEventMomentInputSchema', () => {
       const result = CreateEventMomentInputSchema.safeParse({
         eventId: validId,
         type: EventMomentType.Video,
+        momentId: 'reserved-video-moment',
         mediaKey: 'uploads/video.mp4',
         thumbnailKey: 'uploads/video-thumb.jpg',
       });

@@ -15,7 +15,6 @@ jest.mock('@/clients', () => ({
 }));
 
 jest.mock('@/constants', () => ({
-  MEDIA_CDN_DOMAIN: 'cdn.example.com',
   SECRET_KEYS: { MONGO_DB_URL: 'MONGO_DB_URL' },
   EVENT_MOMENTS_S3_PREFIX: 'event-moments',
   EVENT_MOMENT_VIDEO_EXTENSIONS: new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']),
@@ -24,7 +23,9 @@ jest.mock('@/constants', () => ({
 
 jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
-    findByMediaUrl: jest.fn().mockResolvedValue(null),
+    findByRawS3Key: jest.fn().mockResolvedValue(null),
+    claimTranscodeStart: jest.fn().mockResolvedValue({ momentId: 'moment-claim' }),
+    releaseTranscodeStart: jest.fn().mockResolvedValue({ momentId: 'moment-claim' }),
     markFailed: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -69,17 +70,19 @@ describe('startTranscodeJobHandler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSend.mockResolvedValue({});
-    (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue(null);
+    (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(null);
+    (EventMomentDAO.claimTranscodeStart as jest.Mock).mockResolvedValue({ momentId: 'moment-claim' });
+    (EventMomentDAO.releaseTranscodeStart as jest.Mock).mockResolvedValue({ momentId: 'moment-claim' });
     (EventMomentDAO.markFailed as jest.Mock).mockResolvedValue(undefined);
     (deleteFromS3 as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('file type filtering', () => {
-    it('skips non-video files and logs at debug level', async () => {
+    it('skips non-video files and logs at warn level', async () => {
       await startTranscodeJobHandler(makeEvent('beta/event-moments/evt/thumb.jpg'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Skipping unsupported transcode key',
         expect.objectContaining({ rawKey: 'beta/event-moments/evt/thumb.jpg' }),
       );
@@ -89,7 +92,7 @@ describe('startTranscodeJobHandler', () => {
       await startTranscodeJobHandler(makeEvent('beta/gallery/event-456/gallery-uuid.mp4'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
-      expect(logger.debug).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Skipping unsupported transcode key',
         expect.objectContaining({ rawKey: 'beta/gallery/event-456/gallery-uuid.mp4' }),
       );
@@ -137,8 +140,10 @@ describe('startTranscodeJobHandler', () => {
       );
     });
 
-    it('stores the raw S3 key in UserMetadata for the completion handler', () => {
-      expect(CreateJobCommand).toHaveBeenCalledWith(expect.objectContaining({ UserMetadata: { rawS3Key: key } }));
+    it('stores the raw S3 key and momentId in UserMetadata for the completion handler', () => {
+      expect(CreateJobCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ UserMetadata: { rawS3Key: key, momentId: 'moment-claim' } }),
+      );
     });
 
     it('logs info before and after submitting', () => {
@@ -153,7 +158,7 @@ describe('startTranscodeJobHandler', () => {
 
       expect(CreateJobCommand).toHaveBeenCalledWith(
         expect.objectContaining({
-          UserMetadata: { rawS3Key: 'beta/event-moments/evt/my video file.mp4' },
+          UserMetadata: { rawS3Key: 'beta/event-moments/evt/my video file.mp4', momentId: 'moment-claim' },
         }),
       );
     });
@@ -163,7 +168,7 @@ describe('startTranscodeJobHandler', () => {
 
       expect(CreateJobCommand).toHaveBeenCalledWith(
         expect.objectContaining({
-          UserMetadata: { rawS3Key: 'beta/event-moments/evt/my clip.mp4' },
+          UserMetadata: { rawS3Key: 'beta/event-moments/evt/my clip.mp4', momentId: 'moment-claim' },
         }),
       );
     });
@@ -183,6 +188,41 @@ describe('startTranscodeJobHandler', () => {
       await startTranscodeJobHandler(makeEvent('a/photo.jpg'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('transcode claim handling', () => {
+    it('claims the upload by raw S3 key before submitting MediaConvert', async () => {
+      const key = 'beta/event-moments/evt/clip.mp4';
+
+      await startTranscodeJobHandler(makeEvent(key));
+
+      expect(EventMomentDAO.claimTranscodeStart).toHaveBeenCalledWith(key);
+      expect(CreateJobCommand).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips MediaConvert when no UploadPending moment can be claimed', async () => {
+      const key = 'beta/event-moments/evt/clip.mp4';
+      (EventMomentDAO.claimTranscodeStart as jest.Mock).mockResolvedValueOnce(null);
+
+      await startTranscodeJobHandler(makeEvent(key));
+
+      expect(CreateJobCommand).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        'No upload-pending video moment found for transcode key',
+        expect.objectContaining({ rawKey: key }),
+      );
+    });
+
+    it('releases the transcode claim when MediaConvert submission fails', async () => {
+      const submitError = new Error('MediaConvert down');
+      mockSend.mockRejectedValueOnce(submitError);
+
+      await expect(startTranscodeJobHandler(makeEvent('beta/event-moments/evt/clip.mp4'))).rejects.toThrow(
+        'MediaConvert down',
+      );
+
+      expect(EventMomentDAO.releaseTranscodeStart).toHaveBeenCalledWith('moment-claim');
     });
   });
 
@@ -227,12 +267,12 @@ describe('startTranscodeJobHandler', () => {
       );
     });
 
-    it('marks an already-created matching moment as Failed when the file exceeds 75 MB', async () => {
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValueOnce({ momentId: 'moment-over' });
+    it('marks a matching reserved moment as Failed when the file exceeds 75 MB', async () => {
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValueOnce({ momentId: 'moment-over' });
 
       await startTranscodeJobHandler(makeEvent(validKey, OVER_LIMIT));
 
-      expect(EventMomentDAO.findByMediaUrl).toHaveBeenCalledWith(`https://cdn.example.com/${validKey}`);
+      expect(EventMomentDAO.findByRawS3Key).toHaveBeenCalledWith(validKey);
       expect(EventMomentDAO.markFailed).toHaveBeenCalledWith('moment-over');
     });
 
@@ -271,7 +311,7 @@ describe('startTranscodeJobHandler', () => {
 
     it('still deletes the raw file and rethrows when marking the moment Failed hits a DB error', async () => {
       const dbError = new Error('DB unavailable');
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockRejectedValueOnce(dbError);
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockRejectedValueOnce(dbError);
 
       await expect(startTranscodeJobHandler(makeEvent(validKey, OVER_LIMIT))).rejects.toThrow('DB unavailable');
       expect(deleteFromS3).toHaveBeenCalledWith(validKey);

@@ -50,7 +50,7 @@ jest.mock('@/data/graphql/query', () => ({
 
 jest.mock('@/data/graphql/types/graphql', () => ({
   EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
-  EventMomentState: { Ready: 'READY', Pending: 'PENDING', Processing: 'PROCESSING' },
+  EventMomentState: { UploadPending: 'UploadPending', Transcoding: 'Transcoding', Ready: 'Ready', Failed: 'Failed' },
 }));
 
 jest.mock('@/lib/utils/auth', () => ({

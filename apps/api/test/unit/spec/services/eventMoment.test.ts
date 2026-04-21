@@ -44,6 +44,8 @@ jest.mock('@/mongodb/dao', () => ({
     readByAuthorAndEvent: jest.fn(),
     readFollowedStatuses: jest.fn(),
     countRecentByAuthor: jest.fn(),
+    findByRawS3Key: jest.fn(),
+    publishVideoMoment: jest.fn(),
     delete: jest.fn(),
   },
   EventDAO: {
@@ -112,8 +114,27 @@ describe('EventMomentService', () => {
     authorId: 'user-1',
     type: EventMomentType.Text,
     state: EventMomentState.Ready,
+    isPublished: true,
     expiresAt: new Date(now + 24 * 60 * 60 * 1000),
     createdAt: new Date(now),
+  };
+
+  const mockReservedVideoMoment: EventMoment = {
+    ...mockMoment,
+    momentId: 'video-moment-1',
+    type: EventMomentType.Video,
+    state: EventMomentState.UploadPending,
+    rawS3Key: 'uploads/clip.mp4',
+    mediaUrl: 'https://cdn.example.com/uploads/clip.mp4',
+    isPublished: false,
+  };
+
+  const mockPublishedVideoMoment: EventMoment = {
+    ...mockReservedVideoMoment,
+    state: EventMomentState.Transcoding,
+    caption: 'Video caption',
+    thumbnailUrl: 'https://cdn.example.com/uploads/thumb.jpg',
+    isPublished: true,
   };
 
   const mockGoingParticipant = {
@@ -132,6 +153,9 @@ describe('EventMomentService', () => {
     (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
     (EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (EventMomentDAO.create as jest.Mock).mockResolvedValue(mockMoment);
+    (EventMomentDAO.readById as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
+    (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
+    (EventMomentDAO.publishVideoMoment as jest.Mock).mockResolvedValue(mockPublishedVideoMoment);
     (getS3ObjectSize as jest.Mock).mockResolvedValue(1000);
   });
 
@@ -163,44 +187,104 @@ describe('EventMomentService', () => {
       expect(getS3ObjectSize).not.toHaveBeenCalled();
     });
 
-    it('builds a CloudFront mediaUrl for a video moment after verifying the S3 object size', async () => {
+    it('publishes a reserved video moment after verifying the uploaded object size', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        momentId: 'video-moment-1',
+        mediaKey: 'uploads/clip.mp4',
+        thumbnailKey: 'uploads/thumb.jpg',
+        caption: 'Video caption',
+      };
+
+      const result = await EventMomentService.create(videoInput, 'user-1');
+
+      expect(getS3ObjectSize).toHaveBeenCalledWith('uploads/clip.mp4');
+      expect(EventMomentDAO.publishVideoMoment).toHaveBeenCalledWith('video-moment-1', {
+        eventId: 'event-1',
+        authorId: 'user-1',
+        caption: 'Video caption',
+        thumbnailUrl: 'https://cdn.example.com/uploads/thumb.jpg',
+      });
+      expect(EventMomentDAO.create).not.toHaveBeenCalled();
+      expect(result).toEqual(mockPublishedVideoMoment);
+    });
+
+    it('rejects a video moment without a reserved momentId', async () => {
       const videoInput = {
         eventId: 'event-1',
         type: EventMomentType.Video,
         mediaKey: 'uploads/clip.mp4',
       };
 
-      await EventMomentService.create(videoInput, 'user-1');
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'Use getEventMomentUploadUrl before creating a video moment.',
+      });
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
+    });
 
-      expect(getS3ObjectSize).toHaveBeenCalledWith('uploads/clip.mp4');
-      expect(EventMomentDAO.create).toHaveBeenCalledWith(
-        videoInput,
+    it('rejects a video moment without a mediaKey', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        momentId: 'video-moment-1',
+      };
+
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'mediaKey is required for video moments.',
+      });
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
+    });
+
+    it('skips S3 size verification when the reserved video is already Ready', async () => {
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce({
+        ...mockReservedVideoMoment,
+        state: EventMomentState.Ready,
+      });
+
+      await EventMomentService.create(
+        {
+          eventId: 'event-1',
+          type: EventMomentType.Video,
+          momentId: 'video-moment-1',
+          mediaKey: 'uploads/clip.mp4',
+        },
         'user-1',
-        'https://cdn.example.com/uploads/clip.mp4',
-        undefined,
       );
+
+      expect(getS3ObjectSize).not.toHaveBeenCalled();
     });
 
     it('rejects a video moment when the uploaded object exceeds 75 MB', async () => {
       const videoInput = {
         eventId: 'event-1',
         type: EventMomentType.Video,
+        momentId: 'video-moment-1',
         mediaKey: 'uploads/oversized.mp4',
       };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce({
+        ...mockReservedVideoMoment,
+        rawS3Key: 'uploads/oversized.mp4',
+      });
       (getS3ObjectSize as jest.Mock).mockResolvedValueOnce(75 * 1024 * 1024 + 1);
 
       await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
         message: 'Video must be 75 MB or smaller.',
       });
-      expect(EventMomentDAO.create).not.toHaveBeenCalled();
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
     });
 
     it('rejects a video moment when the uploaded object has already been deleted', async () => {
       const videoInput = {
         eventId: 'event-1',
         type: EventMomentType.Video,
+        momentId: 'video-moment-1',
         mediaKey: 'uploads/deleted.mp4',
       };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce({
+        ...mockReservedVideoMoment,
+        rawS3Key: 'uploads/deleted.mp4',
+      });
       const notFoundError = Object.assign(new Error('not found'), {
         name: 'NotFound',
         $metadata: { httpStatusCode: 404 },
@@ -210,29 +294,63 @@ describe('EventMomentService', () => {
       await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
         message: 'Uploaded video file was not found. Please upload again.',
       });
-      expect(EventMomentDAO.create).not.toHaveBeenCalled();
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
     });
 
     it('rejects a video moment when S3 does not return a content length', async () => {
       const videoInput = {
         eventId: 'event-1',
         type: EventMomentType.Video,
+        momentId: 'video-moment-1',
         mediaKey: 'uploads/unknown-size.mp4',
       };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce({
+        ...mockReservedVideoMoment,
+        rawS3Key: 'uploads/unknown-size.mp4',
+      });
       (getS3ObjectSize as jest.Mock).mockResolvedValueOnce(undefined);
 
       await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
         message: 'Uploaded video file size could not be verified. Please upload again.',
       });
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
+    });
+
+    it('rejects a video moment without a reservation', async () => {
+      const videoInput = {
+        eventId: 'event-1',
+        type: EventMomentType.Video,
+        momentId: 'video-moment-1',
+        mediaKey: 'uploads/clip.mp4',
+      };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(EventMomentService.create(videoInput, 'user-1')).rejects.toMatchObject({
+        message: 'Video upload reservation not found. Please upload again.',
+      });
       expect(EventMomentDAO.create).not.toHaveBeenCalled();
     });
 
-    it('does not set mediaUrl for a video without mediaKey (Processing path)', async () => {
-      const videoInput = { eventId: 'event-1', type: EventMomentType.Video };
+    it('rejects a failed reserved video moment', async () => {
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValueOnce({
+        ...mockReservedVideoMoment,
+        state: EventMomentState.Failed,
+      });
 
-      await EventMomentService.create(videoInput, 'user-1');
-
-      expect(EventMomentDAO.create).toHaveBeenCalledWith(videoInput, 'user-1', undefined, undefined);
+      await expect(
+        EventMomentService.create(
+          {
+            eventId: 'event-1',
+            type: EventMomentType.Video,
+            momentId: 'video-moment-1',
+            mediaKey: 'uploads/clip.mp4',
+          },
+          'user-1',
+        ),
+      ).rejects.toMatchObject({
+        message: 'Uploaded video failed processing. Please upload again.',
+      });
+      expect(EventMomentDAO.publishVideoMoment).not.toHaveBeenCalled();
     });
 
     it('builds thumbnailUrl when thumbnailKey is provided', async () => {
@@ -408,13 +526,13 @@ describe('EventMomentService', () => {
       (EventMomentDAO.readByAuthorAndEvent as jest.Mock).mockResolvedValue([mockMoment]);
     });
 
-    it('own profile passes includeProcessing=true to the DAO', async () => {
+    it('own profile passes includePending=true to the DAO', async () => {
       await EventMomentService.readUserMoments('user-1', 'event-1', 'user-1');
 
       expect(EventMomentDAO.readByAuthorAndEvent).toHaveBeenCalledWith('user-1', 'event-1', true);
     });
 
-    it('public profile passes includeProcessing=false to the DAO', async () => {
+    it('public profile passes includePending=false to the DAO', async () => {
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(publicUser);
 
       const result = await EventMomentService.readUserMoments('user-2', 'event-1', 'user-1');
