@@ -44,7 +44,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
   components: {
     MuiAppBar: {
       styleOverrides: {
-        colorPrimary: ({ theme }: { theme: any }) => ({
+        colorPrimary: ({ theme }) => ({
           background: theme.palette.background.default,
           backdropFilter: 'none',
           boxShadow: 'none',

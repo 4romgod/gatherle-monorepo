@@ -234,7 +234,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                   rsvpdEventsCount={allRsvpdEvents.length}
                   savedEventsCount={savedEvents.length}
                   interestsCount={interests.length}
-                  isOwnProfile={isOwnProfile}
+                  isOwnProfile={false}
                   compact
                 />
               </Box>
@@ -304,7 +304,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                   />
                 </Grid>
 
-                <Grid container></Grid>
               </Grid>
             </Box>
           </Box>

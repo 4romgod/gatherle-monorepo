@@ -1,6 +1,5 @@
 'use client';
 
-import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
 import { EventParticipantPreview } from '@/data/graphql/query/Event/types';

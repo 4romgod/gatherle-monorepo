@@ -22,9 +22,17 @@ interface UserProfileStatsProps {
   compact?: boolean;
 }
 
+const truncateToSingleDecimal = (value: number): number => Math.trunc(value * 10) / 10;
+
 function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
+  if (n >= 1_000_000) {
+    const value = n / 1_000_000;
+    return `${n % 1_000_000 === 0 ? value.toFixed(0) : truncateToSingleDecimal(value).toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const value = n / 1_000;
+    return `${n % 1_000 === 0 ? value.toFixed(0) : truncateToSingleDecimal(value).toFixed(1)}K`;
+  }
   return String(n);
 }
 

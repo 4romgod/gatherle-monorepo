@@ -8,6 +8,31 @@ import {
   getUpdateOrganizationMembershipMutation,
 } from '@/test/utils';
 
+type GraphQLResponseError = {
+  message?: string;
+  extensions?: {
+    code?: string;
+  };
+};
+
+type CleanupRequestFactory = (id: string) => object;
+type CleanupToken = string | (() => string);
+
+export type CleanupFailure = {
+  label: string;
+  id: string;
+  reason: string;
+};
+
+export type CleanupTrackedEntitiesOptions = {
+  url: string;
+  ids: string[];
+  deleteRequest: CleanupRequestFactory;
+  token: CleanupToken;
+  label: string;
+  phase?: string;
+};
+
 export type CreatedEventRef = {
   eventId: string;
   slug: string;
@@ -38,6 +63,75 @@ export const untrackCreatedId = (ids: string[], id: string) => {
   if (index >= 0) {
     ids.splice(index, 1);
   }
+};
+
+const readCleanupToken = (token: CleanupToken): string => (typeof token === 'function' ? token() : token);
+
+const readGraphQLErrors = (body: { errors?: GraphQLResponseError[] } | undefined): GraphQLResponseError[] =>
+  Array.isArray(body?.errors) ? body.errors : [];
+
+const isNotFoundResponse = (status: number, errors: GraphQLResponseError[]): boolean =>
+  status === 404 || errors.some((error) => error.extensions?.code === 'NOT_FOUND');
+
+const formatCleanupFailure = (status: number, errors: GraphQLResponseError[]): string => {
+  if (errors.length === 0) {
+    return `status=${status}`;
+  }
+
+  const errorSummary = errors
+    .map((error) => [error.extensions?.code, error.message].filter(Boolean).join(': '))
+    .join('; ');
+  return `status=${status}, errors=${errorSummary}`;
+};
+
+export const cleanupTrackedEntities = async ({
+  url,
+  ids,
+  deleteRequest,
+  token,
+  label,
+  phase = 'cleanup',
+}: CleanupTrackedEntitiesOptions): Promise<CleanupFailure[]> => {
+  const toDelete = [...ids];
+  const failures: CleanupFailure[] = [];
+  ids.length = 0;
+
+  await Promise.all(
+    toDelete.map(async (id) => {
+      try {
+        const response = await request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + readCleanupToken(token))
+          .send(deleteRequest(id));
+        const errors = readGraphQLErrors(response.body);
+
+        if ((response.status === 200 && errors.length === 0) || isNotFoundResponse(response.status, errors)) {
+          return;
+        }
+
+        const reason = formatCleanupFailure(response.status, errors);
+        console.warn(`[${phase}] Failed to delete ${label} ${id}: ${reason}`);
+        trackCreatedId(ids, id);
+        failures.push({ label, id, reason });
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        console.warn(`[${phase}] Error deleting ${label} ${id}:`, err);
+        trackCreatedId(ids, id);
+        failures.push({ label, id, reason });
+      }
+    }),
+  );
+
+  return failures;
+};
+
+export const assertNoCleanupFailures = (failures: CleanupFailure[]) => {
+  if (failures.length === 0) {
+    return;
+  }
+
+  const summary = failures.map((failure) => `${failure.label} ${failure.id}: ${failure.reason}`).join('; ');
+  throw new Error(`Failed to clean up e2e test data: ${summary}`);
 };
 
 export const createEventOnServer = async (

@@ -13,7 +13,6 @@ import EventBoxSm from '@/components/events/eventBoxSm';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import {
   ROUTES,
-  CARD_STYLES,
   BUTTON_STYLES,
   SECTION_TITLE_STYLES,
   EMPTY_STATE_STYLES,

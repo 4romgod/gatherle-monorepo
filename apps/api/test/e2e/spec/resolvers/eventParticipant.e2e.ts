@@ -9,7 +9,11 @@ import {
   getUpsertEventParticipantMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
-import { createEventOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import {
+  assertNoCleanupFailures,
+  cleanupTrackedEntities,
+  createEventOnServer,
+} from '@/test/e2e/utils/eventResolverHelpers';
 
 describe('EventParticipant Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -18,6 +22,7 @@ describe('EventParticipant Resolver', () => {
   let eventId = '';
   let eventCreatorToken = '';
   let eventCategoryId = '';
+  const allCreatedEventIds: string[] = [];
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
     return rest;
@@ -42,19 +47,31 @@ describe('EventParticipant Resolver', () => {
   });
 
   beforeEach(async () => {
-    const created = await createEventOnServer(url, participantUser.token, buildEventInput(), []);
+    const created = await createEventOnServer(url, participantUser.token, buildEventInput(), allCreatedEventIds);
     eventId = created.eventId;
   });
 
   afterEach(async () => {
-    if (eventId) {
-      await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + eventCreatorToken)
-        .send(getDeleteEventByIdMutation(eventId))
-        .catch(() => {});
-    }
+    await cleanupTrackedEntities({
+      url,
+      ids: allCreatedEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => eventCreatorToken,
+      label: 'event',
+    });
     eventId = '';
+  });
+
+  afterAll(async () => {
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: allCreatedEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => eventCreatorToken,
+      label: 'event',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   it('upserts a participant', async () => {

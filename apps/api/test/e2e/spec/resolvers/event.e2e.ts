@@ -20,6 +20,8 @@ import {
   type EventCategoryRef,
 } from '@/test/e2e/utils/helpers';
 import {
+  assertNoCleanupFailures,
+  cleanupTrackedEntities,
   createEventOnServer,
   createMembershipOnServer,
   createOrganizationOnServer,
@@ -78,38 +80,57 @@ describe('Event Resolver', () => {
   });
 
   afterEach(async () => {
-    await Promise.all(
-      createdEventIds.map((eventId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + testUser.token)
-          .send(getDeleteEventByIdMutation(eventId))
-          .catch(() => {}),
-      ),
-    );
-    createdEventIds.length = 0;
+    await cleanupTrackedEntities({
+      url,
+      ids: createdEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => testUser.token,
+      label: 'event',
+    });
+    await cleanupTrackedEntities({
+      url,
+      ids: createdMembershipIds,
+      deleteRequest: (id) => getDeleteOrganizationMembershipMutation({ membershipId: id }),
+      token: () => adminUser.token,
+      label: 'membership',
+    });
+    await cleanupTrackedEntities({
+      url,
+      ids: createdOrgIds,
+      deleteRequest: getDeleteOrganizationByIdMutation,
+      token: () => adminUser.token,
+      label: 'org',
+    });
+  });
 
-    await Promise.all(
-      createdMembershipIds.map((membershipId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteOrganizationMembershipMutation({ membershipId }))
-          .catch(() => {}),
-      ),
-    );
-    createdMembershipIds.length = 0;
-
-    await Promise.all(
-      createdOrgIds.map((orgId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteOrganizationByIdMutation(orgId))
-          .catch(() => {}),
-      ),
-    );
-    createdOrgIds.length = 0;
+  afterAll(async () => {
+    const failures = [
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdEventIds,
+        deleteRequest: getDeleteEventByIdMutation,
+        token: () => adminUser.token,
+        label: 'event',
+        phase: 'afterAll',
+      })),
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdMembershipIds,
+        deleteRequest: (id) => getDeleteOrganizationMembershipMutation({ membershipId: id }),
+        token: () => adminUser.token,
+        label: 'membership',
+        phase: 'afterAll',
+      })),
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdOrgIds,
+        deleteRequest: getDeleteOrganizationByIdMutation,
+        token: () => adminUser.token,
+        label: 'org',
+        phase: 'afterAll',
+      })),
+    ];
+    assertNoCleanupFailures(failures);
   });
 
   describe('Positive', () => {
