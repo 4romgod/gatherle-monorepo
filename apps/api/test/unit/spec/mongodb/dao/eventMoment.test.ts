@@ -36,6 +36,7 @@ describe('EventMomentDAO', () => {
     authorId: 'user-1',
     type: EventMomentType.Text,
     state: EventMomentState.Ready,
+    isPublished: true,
     expiresAt: new Date('2024-06-02T12:00:00Z'),
     createdAt: new Date('2024-06-01T12:00:00Z'),
   };
@@ -47,7 +48,7 @@ describe('EventMomentDAO', () => {
   describe('create', () => {
     const baseInput = { eventId: 'event-1', type: EventMomentType.Text };
 
-    it('creates a text moment with state Ready', async () => {
+    it('creates a text moment with state Ready and lets the model derive momentId from _id', async () => {
       (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => mockMoment });
 
       const result = await EventMomentDAO.create(baseInput, 'user-1');
@@ -58,10 +59,11 @@ describe('EventMomentDAO', () => {
           authorId: 'user-1',
           type: EventMomentType.Text,
           state: EventMomentState.Ready,
-          momentId: expect.any(String),
+          isPublished: true,
           expiresAt: expect.any(Date),
         }),
       );
+      expect((EventMomentModel.create as jest.Mock).mock.calls[0][0]).not.toHaveProperty('momentId');
       expect(result).toEqual(mockMoment);
     });
 
@@ -83,43 +85,8 @@ describe('EventMomentDAO', () => {
         expect.objectContaining({
           state: EventMomentState.Ready,
           mediaUrl: 'https://cdn.example.com/img.jpg',
+          isPublished: true,
         }),
-      );
-    });
-
-    it('creates a video moment without mediaUrl with state Processing', async () => {
-      const videoMoment: EventMoment = {
-        ...mockMoment,
-        type: EventMomentType.Video,
-        state: EventMomentState.Processing,
-      };
-      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => videoMoment });
-
-      await EventMomentDAO.create({ eventId: 'event-1', type: EventMomentType.Video }, 'user-1');
-
-      expect(EventMomentModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ state: EventMomentState.Processing }),
-      );
-    });
-
-    it('creates a video moment with mediaUrl with state Processing (raw URL stored for transcoding lookup)', async () => {
-      const videoMoment: EventMoment = {
-        ...mockMoment,
-        type: EventMomentType.Video,
-        state: EventMomentState.Processing,
-        mediaUrl: 'https://cdn.example.com/vid.mp4',
-      };
-      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => videoMoment });
-
-      await EventMomentDAO.create(
-        { eventId: 'event-1', type: EventMomentType.Video },
-        'user-1',
-        'https://cdn.example.com/vid.mp4',
-      );
-
-      // Video moments always start as Processing so MediaConvert can replace the raw URL with HLS.
-      expect(EventMomentModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ state: EventMomentState.Processing }),
       );
     });
 
@@ -148,6 +115,54 @@ describe('EventMomentDAO', () => {
       (EventMomentModel.create as jest.Mock).mockRejectedValue(new MockMongoError(0));
 
       await expect(EventMomentDAO.create(baseInput, 'user-1')).rejects.toThrow();
+    });
+  });
+
+  describe('createVideoUpload', () => {
+    it('reserves an unpublished video moment in UploadPending state', async () => {
+      const videoMoment: EventMoment = {
+        ...mockMoment,
+        type: EventMomentType.Video,
+        state: EventMomentState.UploadPending,
+        rawS3Key: 'raw/video.mp4',
+        mediaUrl: 'https://cdn.example.com/raw/video.mp4',
+        isPublished: false,
+      };
+      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => videoMoment });
+
+      const result = await EventMomentDAO.createVideoUpload({
+        eventId: 'event-1',
+        authorId: 'user-1',
+        rawS3Key: 'raw/video.mp4',
+        mediaUrl: 'https://cdn.example.com/raw/video.mp4',
+      });
+
+      expect(EventMomentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'event-1',
+          authorId: 'user-1',
+          type: EventMomentType.Video,
+          state: EventMomentState.UploadPending,
+          rawS3Key: 'raw/video.mp4',
+          mediaUrl: 'https://cdn.example.com/raw/video.mp4',
+          isPublished: false,
+        }),
+      );
+      expect((EventMomentModel.create as jest.Mock).mock.calls[0][0]).not.toHaveProperty('momentId');
+      expect(result).toEqual(videoMoment);
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.create as jest.Mock).mockRejectedValue(new MockMongoError(0));
+
+      await expect(
+        EventMomentDAO.createVideoUpload({
+          eventId: 'event-1',
+          authorId: 'user-1',
+          rawS3Key: 'raw/video.mp4',
+          mediaUrl: 'https://cdn.example.com/raw/video.mp4',
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -221,25 +236,30 @@ describe('EventMomentDAO', () => {
   });
 
   describe('readByAuthorAndEvent', () => {
-    it('includes Processing state when includeProcessing=true', async () => {
+    it('includes pending states when includePending=true', async () => {
       (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));
 
       const result = await EventMomentDAO.readByAuthorAndEvent('user-1', 'event-1', true);
 
       expect(EventMomentModel.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          state: { $in: [EventMomentState.Ready, EventMomentState.Processing] },
+          state: {
+            $in: [EventMomentState.Ready, EventMomentState.UploadPending, EventMomentState.Transcoding],
+          },
+          isPublished: true,
         }),
       );
       expect(result).toEqual([mockMoment]);
     });
 
-    it('filters to Ready only when includeProcessing=false', async () => {
+    it('filters to Ready only when includePending=false', async () => {
       (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));
 
       await EventMomentDAO.readByAuthorAndEvent('user-1', 'event-1', false);
 
-      expect(EventMomentModel.find).toHaveBeenCalledWith(expect.objectContaining({ state: EventMomentState.Ready }));
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({ state: EventMomentState.Ready, isPublished: true }),
+      );
     });
 
     it('throws on DB error', async () => {
@@ -256,7 +276,7 @@ describe('EventMomentDAO', () => {
       const result = await EventMomentDAO.readFollowedStatuses(['user-1', 'user-2']);
 
       expect(EventMomentModel.find).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: { $in: ['user-1', 'user-2'] } }),
+        expect.objectContaining({ authorId: { $in: ['user-1', 'user-2'] }, isPublished: true }),
       );
       expect(result.items).toEqual([mockMoment]);
       expect(result.hasMore).toBe(false);
@@ -323,6 +343,157 @@ describe('EventMomentDAO', () => {
       });
 
       await expect(EventMomentDAO.readById('moment-1')).rejects.toThrow();
+    });
+  });
+
+  describe('findByRawS3Key', () => {
+    it('returns the moment matching the given raw S3 key', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => mockMoment }),
+      });
+
+      const result = await EventMomentDAO.findByRawS3Key('raw/video.mp4');
+
+      expect(EventMomentModel.findOne).toHaveBeenCalledWith({ rawS3Key: 'raw/video.mp4' });
+      expect(result).toEqual(mockMoment);
+    });
+
+    it('returns null when no match found', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await EventMomentDAO.findByRawS3Key('raw/missing.mp4');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(EventMomentDAO.findByRawS3Key('raw/video.mp4')).rejects.toThrow();
+    });
+  });
+
+  describe('publishVideoMoment', () => {
+    it('marks a reserved video as published and stores metadata', async () => {
+      const publishedMoment: EventMoment = {
+        ...mockMoment,
+        type: EventMomentType.Video,
+        state: EventMomentState.Transcoding,
+        caption: 'hello',
+        thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+        isPublished: true,
+      };
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => publishedMoment }),
+      });
+
+      const result = await EventMomentDAO.publishVideoMoment('moment-1', {
+        eventId: 'event-1',
+        authorId: 'user-1',
+        caption: 'hello',
+        thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+      });
+
+      expect(EventMomentModel.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          momentId: 'moment-1',
+          eventId: 'event-1',
+          authorId: 'user-1',
+          type: EventMomentType.Video,
+          state: { $ne: EventMomentState.Failed },
+        }),
+        {
+          $set: {
+            isPublished: true,
+            caption: 'hello',
+            thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
+          },
+        },
+        { new: true },
+      );
+      expect(result).toEqual(publishedMoment);
+    });
+
+    it('omits optional metadata when not provided', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => mockMoment }),
+      });
+
+      await EventMomentDAO.publishVideoMoment('moment-1', {
+        eventId: 'event-1',
+        authorId: 'user-1',
+      });
+
+      expect((EventMomentModel.findOneAndUpdate as jest.Mock).mock.calls[0][1]).toEqual({
+        $set: { isPublished: true },
+      });
+    });
+
+    it('returns null when reservation is not found', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await EventMomentDAO.publishVideoMoment('moment-1', {
+        eventId: 'event-1',
+        authorId: 'user-1',
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('claimTranscodeStart', () => {
+    it('atomically transitions UploadPending video uploads to Transcoding', async () => {
+      const claimedMoment = { ...mockMoment, type: EventMomentType.Video, state: EventMomentState.Transcoding };
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => claimedMoment }),
+      });
+
+      const result = await EventMomentDAO.claimTranscodeStart('raw/video.mp4');
+
+      expect(EventMomentModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          rawS3Key: 'raw/video.mp4',
+          type: EventMomentType.Video,
+          state: EventMomentState.UploadPending,
+        },
+        { $set: { state: EventMomentState.Transcoding } },
+        { new: true },
+      );
+      expect(result).toEqual(claimedMoment);
+    });
+
+    it('returns null when another invocation already claimed the upload', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await EventMomentDAO.claimTranscodeStart('raw/video.mp4');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('releaseTranscodeStart', () => {
+    it('moves a Transcoding moment back to UploadPending', async () => {
+      const releasedMoment = { ...mockMoment, type: EventMomentType.Video, state: EventMomentState.UploadPending };
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => releasedMoment }),
+      });
+
+      const result = await EventMomentDAO.releaseTranscodeStart('moment-1');
+
+      expect(EventMomentModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { momentId: 'moment-1', state: EventMomentState.Transcoding },
+        { $set: { state: EventMomentState.UploadPending } },
+        { new: true },
+      );
+      expect(result).toEqual(releasedMoment);
     });
   });
 
@@ -414,37 +585,6 @@ describe('EventMomentDAO', () => {
       });
 
       await expect(EventMomentDAO.markReady('moment-1', 'url', undefined, 15)).rejects.toThrow();
-    });
-  });
-
-  describe('findByMediaUrl', () => {
-    it('returns the moment matching the given mediaUrl', async () => {
-      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ toObject: () => mockMoment }),
-      });
-
-      const result = await EventMomentDAO.findByMediaUrl('https://cdn.example.com/raw.mp4');
-
-      expect(EventMomentModel.findOne).toHaveBeenCalledWith({ mediaUrl: 'https://cdn.example.com/raw.mp4' });
-      expect(result).toEqual(mockMoment);
-    });
-
-    it('returns null when no match found', async () => {
-      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      });
-
-      const result = await EventMomentDAO.findByMediaUrl('https://cdn.example.com/missing.mp4');
-
-      expect(result).toBeNull();
-    });
-
-    it('throws on DB error', async () => {
-      (EventMomentModel.findOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
-      });
-
-      await expect(EventMomentDAO.findByMediaUrl('url')).rejects.toThrow();
     });
   });
 

@@ -121,6 +121,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
   const [selectedBg, setSelectedBg] = useState(BG_SWATCHES[0].token);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaKey, setMediaKey] = useState<string | null>(null);
+  const [videoMomentId, setVideoMomentId] = useState<string | null>(null);
   const [thumbnailKey, setThumbnailKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -192,6 +193,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     }
     setMediaPreview(null);
     setMediaKey(null);
+    setVideoMomentId(null);
     setThumbnailKey(null);
   };
 
@@ -221,6 +223,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
     const acceptedTypes = ACCEPTED_VIDEO_TYPES.has(pending.file.type) ? ACCEPTED_VIDEO_TYPES : ACCEPTED_IMAGE_TYPES;
     // Reset only the upload result (keep preview) before retrying
     setMediaKey(null);
+    setVideoMomentId(null);
     setThumbnailKey(null);
     setSubmitError(null);
     await uploadFile(pending.file, acceptedTypes);
@@ -287,7 +290,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       });
       if (queryErr || !data?.getEventMomentUploadUrl) throw new Error('Failed to get upload URL');
 
-      const { uploadUrl, key } = data.getEventMomentUploadUrl;
+      const { uploadUrl, key, momentId } = data.getEventMomentUploadUrl;
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
@@ -296,6 +299,10 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       if (!uploadRes.ok) throw new Error(`Upload failed (${uploadRes.status})`);
 
       setMediaKey(key);
+      if (isVideo) {
+        if (!momentId) throw new Error('Video upload URL did not include a moment id');
+        setVideoMomentId(momentId);
+      }
 
       // For video moments: generate a poster frame client-side and upload it
       if (ACCEPTED_VIDEO_TYPES.has(file.type)) {
@@ -327,6 +334,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       setSubmitError('Upload failed. Please try again.');
       // Keep the preview so the user can retry — don't call resetMedia() here
       setMediaKey(null);
+      setVideoMomentId(null);
       setThumbnailKey(null);
     } finally {
       setUploading(false);
@@ -352,7 +360,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
         }
       } else {
         type = EventMomentType.Video;
-        if (!mediaKey) {
+        if (!mediaKey || !videoMomentId) {
           setSubmitError('Please select a video to share.');
           return;
         }
@@ -363,6 +371,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
         type,
         ...(caption.trim() ? { caption: caption.trim() } : {}),
         ...(type === EventMomentType.Text ? { background: selectedBg } : {}),
+        ...(type === EventMomentType.Video && videoMomentId ? { momentId: videoMomentId } : {}),
         ...(mediaKey ? { mediaKey } : {}),
         ...(thumbnailKey ? { thumbnailKey } : {}),
       };

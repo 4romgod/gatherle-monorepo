@@ -113,12 +113,13 @@ ObjectCreated event → EventBridge → `startTranscodeJobHandler`, which submit
 guard. Repeated PUTs or replayed events for the same key will create multiple MediaConvert jobs, each incurring real AWS
 billing.
 
-Suggested fix (deferred): create a pending `EventMoment` document (state: Processing) and store the expected S3 key when
-issuing the upload URL. Apply the rate limit against pending+created moments. In `startTranscodeJobHandler`, look up the
-pending moment by S3 key before submitting a MediaConvert job; skip or no-op if the moment is already Processing or
-Ready.
+Mitigation implemented (2026-04-21): video upload URL issuance now rate-limits before returning a presigned URL,
+reserves an unpublished `EventMoment` with `state: UploadPending` and `rawS3Key`, and returns the reserved `momentId`.
+`createEventMoment` publishes that reservation with caption/thumbnail metadata instead of creating a second video row.
+`startTranscodeJobHandler` atomically claims `UploadPending -> Transcoding` by raw S3 key before submitting
+MediaConvert, so repeated PUTs or replayed S3 events no-op after the first claim.
 
-Status (2026-04-19): Identified and deferred. No mitigation in place.
+Status (2026-04-21): Mitigated by API-032.
 
 ### R-11: L7 DDoS exposure on public API surfaces
 

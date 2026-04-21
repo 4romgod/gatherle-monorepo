@@ -33,6 +33,7 @@ jest.mock('@/constants', () => ({
     webm: 'video/webm',
   },
   EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
+  EVENT_MOMENT_VIDEO_EXTENSIONS: new Set(['mp4', 'mov', 'webm']),
   EVENT_MOMENTS_S3_PREFIX: 'event-moments',
   MEDIA_ENTITY_FOLDER: {
     user: 'users',
@@ -57,7 +58,7 @@ jest.mock('@/constants', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventDAO: { readEventById: jest.fn() },
   EventParticipantDAO: { readByEventAndUser: jest.fn() },
-  EventMomentDAO: { countRecentByAuthor: jest.fn() },
+  EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
 }));
 
 jest.mock('@/mongodb/dao/eventMoment', () => ({
@@ -103,6 +104,7 @@ describe('MediaService', () => {
     (DaoModule.EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
     (DaoModule.EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
     (DaoModule.EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
+    (DaoModule.EventMomentDAO.createVideoUpload as jest.Mock).mockResolvedValue({ momentId: 'moment-reserved-1' });
   });
 
   describe('getMediaUploadUrl', () => {
@@ -275,6 +277,7 @@ describe('MediaService', () => {
           STAGE: 'test',
           CONTENT_TYPE_MAP: { jpg: 'image/jpeg' },
           EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
+          EVENT_MOMENT_VIDEO_EXTENSIONS: new Set(['mp4', 'mov', 'webm']),
           EVENT_MOMENTS_S3_PREFIX: 'event-moments',
           MEDIA_ENTITY_FOLDER: {
             user: 'users',
@@ -298,7 +301,7 @@ describe('MediaService', () => {
         jest.doMock('@/mongodb/dao', () => ({
           EventDAO: { readEventById: jest.fn() },
           EventParticipantDAO: { readByEventAndUser: jest.fn() },
-          EventMomentDAO: { countRecentByAuthor: jest.fn() },
+          EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
         }));
         jest.doMock('@/mongodb/dao/eventMoment', () => ({
           POSTING_WINDOW_HOURS_AFTER_EVENT: 24,
@@ -365,6 +368,25 @@ describe('MediaService', () => {
       const result = await MediaService.getEventMomentUploadUrl(baseMomentParams);
       expect(result.uploadUrl).toBe('https://upload.example.com/signed');
       expect(result.readUrl).toBe(`https://d111111abcdef8.cloudfront.net/${result.key}`);
+    });
+
+    it('reserves a video moment and returns its momentId for video uploads', async () => {
+      const result = await MediaService.getEventMomentUploadUrl(baseMomentParams);
+
+      expect(DaoModule.EventMomentDAO.createVideoUpload).toHaveBeenCalledWith({
+        eventId: baseMomentParams.eventId,
+        authorId: baseMomentParams.userId,
+        rawS3Key: result.key,
+        mediaUrl: result.readUrl,
+      });
+      expect(result.momentId).toBe('moment-reserved-1');
+    });
+
+    it('does not reserve a moment for image uploads', async () => {
+      const result = await MediaService.getEventMomentUploadUrl({ ...baseMomentParams, extension: 'jpg' });
+
+      expect(DaoModule.EventMomentDAO.createVideoUpload).not.toHaveBeenCalled();
+      expect(result.momentId).toBeUndefined();
     });
 
     it('sanitises the event slug (never trusts client input for key path)', async () => {

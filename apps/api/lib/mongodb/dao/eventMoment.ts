@@ -2,17 +2,33 @@ import type { EventMoment as EventMomentEntity, CreateEventMomentInput } from '@
 import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
 import { EventMoment } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
-import { randomUUID } from 'crypto';
 
 const EXPIRY_HOURS = 24;
 const MAX_STATUSES_PER_ROLLING_WINDOW = 5;
 const ROLLING_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PENDING_EVENT_MOMENT_STATES = [EventMomentState.UploadPending, EventMomentState.Transcoding];
+
+const publishedMomentFilter = { isPublished: true };
+
+interface CreateVideoUploadParams {
+  eventId: string;
+  authorId: string;
+  rawS3Key: string;
+  mediaUrl: string;
+}
+
+interface PublishVideoMomentParams {
+  eventId: string;
+  authorId: string;
+  caption?: string;
+  thumbnailUrl?: string;
+}
 
 class EventMomentDAO {
   /**
-   * Create a new event moment. The momentId and expiresAt are generated here.
-   * For image/video, mediaUrl should be provided directly (CloudFront URL or HTTP Live Streaming URL).
-   * Video moments start in Processing state when mediaUrl is absent.
+   * Create a new event moment. The model hook derives momentId from the Mongo _id.
+   * For image moments, mediaUrl should be provided directly as a CloudFront URL.
+   * Video moments should be reserved with createVideoUpload, then published with publishVideoMoment.
    */
   static async create(
     input: CreateEventMomentInput,
@@ -21,15 +37,10 @@ class EventMomentDAO {
     thumbnailUrl?: string,
   ): Promise<EventMomentEntity> {
     try {
-      const momentId = randomUUID();
       const now = new Date();
       const expiresAt = new Date(now.getTime() + EXPIRY_HOURS * 60 * 60 * 1000);
 
-      // Video moments always start Processing; MediaConvert updates the record to Ready with the HLS URL.
-      const state = input.type === EventMomentType.Video ? EventMomentState.Processing : EventMomentState.Ready;
-
       const doc = await EventMoment.create({
-        momentId,
         eventId: input.eventId,
         authorId,
         type: input.type,
@@ -37,13 +48,77 @@ class EventMomentDAO {
         mediaUrl,
         thumbnailUrl,
         background: input.background,
-        state,
+        state: EventMomentState.Ready,
+        isPublished: true,
         expiresAt,
       });
 
       return doc.toObject();
     } catch (error) {
       logDaoError('Error creating event moment', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Reserve a video moment before S3 upload. The row is hidden from readers until
+   * createEventMoment publishes it, but S3/MediaConvert can already advance it.
+   */
+  static async createVideoUpload(params: CreateVideoUploadParams): Promise<EventMomentEntity> {
+    try {
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + EXPIRY_HOURS * 60 * 60 * 1000);
+
+      const doc = await EventMoment.create({
+        eventId: params.eventId,
+        authorId: params.authorId,
+        type: EventMomentType.Video,
+        state: EventMomentState.UploadPending,
+        rawS3Key: params.rawS3Key,
+        mediaUrl: params.mediaUrl,
+        isPublished: false,
+        expiresAt,
+      });
+
+      return doc.toObject();
+    } catch (error) {
+      logDaoError('Error reserving video event moment upload', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Publish a reserved video moment after the client has uploaded the raw file
+   * and supplied optional caption/thumbnail metadata.
+   */
+  static async publishVideoMoment(
+    momentId: string,
+    params: PublishVideoMomentParams,
+  ): Promise<EventMomentEntity | null> {
+    try {
+      const setFields: Record<string, unknown> = { isPublished: true };
+      if (params.caption !== undefined) {
+        setFields.caption = params.caption;
+      }
+      if (params.thumbnailUrl !== undefined) {
+        setFields.thumbnailUrl = params.thumbnailUrl;
+      }
+
+      const doc = await EventMoment.findOneAndUpdate(
+        {
+          momentId,
+          eventId: params.eventId,
+          authorId: params.authorId,
+          type: EventMomentType.Video,
+          state: { $ne: EventMomentState.Failed },
+        },
+        { $set: setFields },
+        { new: true },
+      ).exec();
+
+      return doc ? doc.toObject() : null;
+    } catch (error) {
+      logDaoError('Error publishing reserved video event moment', { error });
       throw KnownCommonError(error);
     }
   }
@@ -78,15 +153,22 @@ class EventMomentDAO {
   ): Promise<{ items: EventMomentEntity[]; nextCursor?: string; hasMore: boolean }> {
     try {
       const now = new Date();
-      // Always include Ready moments; also include the viewer's own Processing moments so
-      // they see their upload immediately while transcoding is in progress.
-      const stateFilter = viewerUserId
-        ? { $or: [{ state: EventMomentState.Ready }, { state: EventMomentState.Processing, authorId: viewerUserId }] }
-        : { state: EventMomentState.Ready };
+      // Always include Ready moments; also include the viewer's own pending moments so
+      // they see their upload after publishing while transcoding is in progress.
       const query: Record<string, unknown> = {
         eventId,
-        ...stateFilter,
         expiresAt: { $gt: now },
+        $and: [
+          publishedMomentFilter,
+          viewerUserId
+            ? {
+                $or: [
+                  { state: EventMomentState.Ready },
+                  { state: { $in: PENDING_EVENT_MOMENT_STATES }, authorId: viewerUserId },
+                ],
+              }
+            : { state: EventMomentState.Ready },
+        ],
       };
 
       if (cursor) {
@@ -111,17 +193,17 @@ class EventMomentDAO {
 
   /**
    * Read a single user's statuses for a specific event (profile/search view).
-   * Includes Processing statuses when the caller is the author.
+   * Includes pending statuses when the caller is the author.
    */
   static async readByAuthorAndEvent(
     authorId: string,
     eventId: string,
-    includeProcessing: boolean,
+    includePending: boolean,
   ): Promise<EventMomentEntity[]> {
     try {
       const now = new Date();
-      const stateFilter = includeProcessing
-        ? { $in: [EventMomentState.Ready, EventMomentState.Processing] }
+      const stateFilter = includePending
+        ? { $in: [EventMomentState.Ready, ...PENDING_EVENT_MOMENT_STATES] }
         : EventMomentState.Ready;
 
       const items = await EventMoment.find({
@@ -129,6 +211,7 @@ class EventMomentDAO {
         eventId,
         state: stateFilter,
         expiresAt: { $gt: now },
+        ...publishedMomentFilter,
       })
         .sort({ createdAt: -1 })
         .exec();
@@ -154,6 +237,7 @@ class EventMomentDAO {
         authorId: { $in: followerAuthorIds },
         state: EventMomentState.Ready,
         expiresAt: { $gt: now },
+        ...publishedMomentFilter,
       };
 
       if (cursor) {
@@ -183,6 +267,56 @@ class EventMomentDAO {
       return doc ? doc.toObject() : null;
     } catch (error) {
       logDaoError('Error reading moment by id', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /** Find a moment by the raw S3 key reserved before upload. */
+  static async findByRawS3Key(rawS3Key: string): Promise<EventMomentEntity | null> {
+    try {
+      const doc = await EventMoment.findOne({ rawS3Key }).exec();
+      return doc ? doc.toObject() : null;
+    } catch (error) {
+      logDaoError('Error finding event moment by raw S3 key', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Atomically claim an upload-pending video for transcoding.
+   * Duplicate S3 ObjectCreated events will not submit a second job once claimed.
+   */
+  static async claimTranscodeStart(rawS3Key: string): Promise<EventMomentEntity | null> {
+    try {
+      const doc = await EventMoment.findOneAndUpdate(
+        {
+          rawS3Key,
+          type: EventMomentType.Video,
+          state: EventMomentState.UploadPending,
+        },
+        { $set: { state: EventMomentState.Transcoding } },
+        { new: true },
+      ).exec();
+
+      return doc ? doc.toObject() : null;
+    } catch (error) {
+      logDaoError('Error claiming video event moment for transcoding', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /** Reopen a claimed upload when MediaConvert job submission fails before acceptance. */
+  static async releaseTranscodeStart(momentId: string): Promise<EventMomentEntity | null> {
+    try {
+      const doc = await EventMoment.findOneAndUpdate(
+        { momentId, state: EventMomentState.Transcoding },
+        { $set: { state: EventMomentState.UploadPending } },
+        { new: true },
+      ).exec();
+
+      return doc ? doc.toObject() : null;
+    } catch (error) {
+      logDaoError('Error releasing video event moment transcode claim', { error });
       throw KnownCommonError(error);
     }
   }
@@ -218,20 +352,6 @@ class EventMomentDAO {
       return doc ? doc.toObject() : null;
     } catch (error) {
       logDaoError('Error marking event moment ready', { error });
-      throw KnownCommonError(error);
-    }
-  }
-
-  /**
-   * Find a moment by its stored mediaUrl (the raw CloudFront URL set at creation time).
-   * Used by the MediaConvert completion Lambda to look up which moment a job belongs to.
-   */
-  static async findByMediaUrl(mediaUrl: string): Promise<EventMomentEntity | null> {
-    try {
-      const doc = await EventMoment.findOne({ mediaUrl }).exec();
-      return doc ? doc.toObject() : null;
-    } catch (error) {
-      logDaoError('Error finding event moment by media URL', { error });
       throw KnownCommonError(error);
     }
   }

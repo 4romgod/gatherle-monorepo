@@ -4,7 +4,6 @@ import { MediaConvertClient, CreateJobCommand } from '@aws-sdk/client-mediaconve
 import { MongoDbClient, getConfigValue } from '@/clients';
 import { deleteFromS3 } from '@/clients/AWS/s3Client';
 import {
-  MEDIA_CDN_DOMAIN,
   SECRET_KEYS,
   EVENT_MOMENTS_S3_PREFIX,
   EVENT_MOMENT_VIDEO_EXTENSIONS,
@@ -55,17 +54,11 @@ async function ensureDbConnected(): Promise<void> {
 }
 
 async function markUploadedMomentFailed(rawKey: string): Promise<void> {
-  if (!MEDIA_CDN_DOMAIN) {
-    logger.warn('Skipping oversized moment failure update because MEDIA_CDN_DOMAIN is not configured', { rawKey });
-    return;
-  }
-
   await ensureDbConnected();
 
-  const rawMediaUrl = `https://${MEDIA_CDN_DOMAIN}/${rawKey}`;
-  const moment = await EventMomentDAO.findByMediaUrl(rawMediaUrl);
+  const moment = await EventMomentDAO.findByRawS3Key(rawKey);
   if (!moment) {
-    logger.warn('No existing moment found for rejected video upload', { rawMediaUrl });
+    logger.warn('No reserved moment found for rejected video upload', { rawKey });
     return;
   }
 
@@ -140,92 +133,112 @@ export const startTranscodeJobHandler = async (
     return;
   }
 
+  await ensureDbConnected();
+  const moment = await EventMomentDAO.claimTranscodeStart(rawKey);
+  if (!moment) {
+    logger.warn('No upload-pending video moment found for transcode key', { rawKey });
+    return;
+  }
+
   const client = getMediaConvertClient();
   const hlsPrefix = hlsOutputPrefix(rawKey);
 
-  logger.info('Submitting MediaConvert job', { rawKey, hlsPrefix, bucketName });
+  logger.info('Submitting MediaConvert job', { momentId: moment.momentId, rawKey, hlsPrefix, bucketName });
 
-  await client.send(
-    new CreateJobCommand({
-      Queue: MEDIA_CONVERT_QUEUE_ARN,
-      Role: MEDIA_CONVERT_ROLE_ARN,
-      UserMetadata: { rawS3Key: rawKey },
-      Settings: {
-        Inputs: [
-          {
-            FileInput: `s3://${bucketName}/${rawKey}`,
-            AudioSelectors: {
-              'Audio Selector 1': {
-                DefaultSelection: 'DEFAULT',
-              },
-            },
-            VideoSelector: {
-              Rotate: 'AUTO',
-            },
-          },
-        ],
-        OutputGroups: [
-          {
-            Name: 'HLS Group',
-            OutputGroupSettings: {
-              Type: 'HLS_GROUP_SETTINGS',
-              HlsGroupSettings: {
-                Destination: `s3://${bucketName}/${hlsPrefix}`,
-                SegmentLength: 2,
-                MinSegmentLength: 0,
-                ManifestDurationFormat: 'INTEGER',
-                OutputSelection: 'MANIFESTS_AND_SEGMENTS',
-              },
-            },
-            Outputs: [
-              {
-                NameModifier: '_720p',
-                VideoDescription: {
-                  // No Width/Height — MediaConvert preserves the source dimensions and
-                  // orientation (portrait stays portrait, landscape stays landscape).
-                  CodecSettings: {
-                    Codec: 'H_264',
-                    H264Settings: {
-                      RateControlMode: 'QVBR',
-                      QvbrSettings: {
-                        QvbrQualityLevel: 7,
-                      },
-                      MaxBitrate: 5000000,
-                      FramerateControl: 'INITIALIZE_FROM_SOURCE',
-                      GopSize: 2,
-                      GopSizeUnits: 'SECONDS',
-                      NumberBFramesBetweenReferenceFrames: 2,
-                      EntropyEncoding: 'CABAC',
-                      QualityTuningLevel: 'SINGLE_PASS_HQ',
-                      FlickerAdaptiveQuantization: 'ENABLED',
-                      AdaptiveQuantization: 'HIGH',
-                    },
-                  },
+  try {
+    await client.send(
+      new CreateJobCommand({
+        Queue: MEDIA_CONVERT_QUEUE_ARN,
+        Role: MEDIA_CONVERT_ROLE_ARN,
+        UserMetadata: { rawS3Key: rawKey, momentId: moment.momentId },
+        Settings: {
+          Inputs: [
+            {
+              FileInput: `s3://${bucketName}/${rawKey}`,
+              AudioSelectors: {
+                'Audio Selector 1': {
+                  DefaultSelection: 'DEFAULT',
                 },
-                AudioDescriptions: [
-                  {
-                    AudioSourceName: 'Audio Selector 1',
+              },
+              VideoSelector: {
+                Rotate: 'AUTO',
+              },
+            },
+          ],
+          OutputGroups: [
+            {
+              Name: 'HLS Group',
+              OutputGroupSettings: {
+                Type: 'HLS_GROUP_SETTINGS',
+                HlsGroupSettings: {
+                  Destination: `s3://${bucketName}/${hlsPrefix}`,
+                  SegmentLength: 2,
+                  MinSegmentLength: 0,
+                  ManifestDurationFormat: 'INTEGER',
+                  OutputSelection: 'MANIFESTS_AND_SEGMENTS',
+                },
+              },
+              Outputs: [
+                {
+                  NameModifier: '_720p',
+                  VideoDescription: {
+                    // No Width/Height — MediaConvert preserves the source dimensions and
+                    // orientation (portrait stays portrait, landscape stays landscape).
                     CodecSettings: {
-                      Codec: 'AAC',
-                      AacSettings: {
-                        Bitrate: 128000,
-                        CodingMode: 'CODING_MODE_2_0',
-                        SampleRate: 48000,
+                      Codec: 'H_264',
+                      H264Settings: {
+                        RateControlMode: 'QVBR',
+                        QvbrSettings: {
+                          QvbrQualityLevel: 7,
+                        },
+                        MaxBitrate: 5000000,
+                        FramerateControl: 'INITIALIZE_FROM_SOURCE',
+                        GopSize: 2,
+                        GopSizeUnits: 'SECONDS',
+                        NumberBFramesBetweenReferenceFrames: 2,
+                        EntropyEncoding: 'CABAC',
+                        QualityTuningLevel: 'SINGLE_PASS_HQ',
+                        FlickerAdaptiveQuantization: 'ENABLED',
+                        AdaptiveQuantization: 'HIGH',
                       },
                     },
                   },
-                ],
-                ContainerSettings: {
-                  Container: 'M3U8',
-                  M3u8Settings: {},
+                  AudioDescriptions: [
+                    {
+                      AudioSourceName: 'Audio Selector 1',
+                      CodecSettings: {
+                        Codec: 'AAC',
+                        AacSettings: {
+                          Bitrate: 128000,
+                          CodingMode: 'CODING_MODE_2_0',
+                          SampleRate: 48000,
+                        },
+                      },
+                    },
+                  ],
+                  ContainerSettings: {
+                    Container: 'M3U8',
+                    M3u8Settings: {},
+                  },
                 },
-              },
-            ],
-          },
-        ],
-      },
-    }),
-  );
+              ],
+            },
+          ],
+        },
+      }),
+    );
+  } catch (err) {
+    try {
+      await EventMomentDAO.releaseTranscodeStart(moment.momentId);
+    } catch (releaseErr) {
+      logger.error('Failed to release video moment transcode claim after MediaConvert submission error', {
+        momentId: moment.momentId,
+        rawKey,
+        err: releaseErr,
+      });
+    }
+    throw err;
+  }
 
-  logger.info('MediaConvert job submitted', { rawKey });
+  logger.info('MediaConvert job submitted', { momentId: moment.momentId, rawKey });
 };

@@ -87,15 +87,13 @@ export const onTranscodeEventHandler = async (
     throw new Error('MEDIA_CDN_DOMAIN env var is required');
   }
 
-  const rawMediaUrl = `https://${MEDIA_CDN_DOMAIN}/${rawS3Key}`;
-
   await ensureDbConnected();
 
-  const moment = await EventMomentDAO.findByMediaUrl(rawMediaUrl);
+  const moment = await EventMomentDAO.findByRawS3Key(rawS3Key);
   if (!moment) {
-    const message = 'No moment found for rawMediaUrl - retrying transcode completion later';
-    logger.error(message, { rawS3Key, metadataMomentId, rawMediaUrl });
-    throw new Error(`${message}: ${rawMediaUrl}`);
+    const message = 'No moment found for rawS3Key - retrying transcode completion later';
+    logger.error(message, { rawS3Key, metadataMomentId });
+    throw new Error(`${message}: ${rawS3Key}`);
   }
 
   const { momentId } = moment;

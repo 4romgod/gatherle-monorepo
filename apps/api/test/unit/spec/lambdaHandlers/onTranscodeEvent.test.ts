@@ -12,7 +12,7 @@ jest.mock('@/constants', () => ({
 
 jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
-    findByMediaUrl: jest.fn(),
+    findByRawS3Key: jest.fn().mockResolvedValue(null),
     markReady: jest.fn().mockResolvedValue(null),
     markFailed: jest.fn().mockResolvedValue(undefined),
   },
@@ -105,7 +105,7 @@ describe('onTranscodeEventHandler', () => {
 
       await handler(makeEvent('COMPLETE', { userMetadata: {} }));
 
-      expect(EventMomentDAO.findByMediaUrl).not.toHaveBeenCalled();
+      expect(EventMomentDAO.findByRawS3Key).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
         'No rawS3Key in userMetadata — cannot identify moment',
         expect.anything(),
@@ -119,18 +119,31 @@ describe('onTranscodeEventHandler', () => {
       await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow('MEDIA_CDN_DOMAIN env var is required');
     });
 
-    it('throws when no moment matches the raw media URL so EventBridge can retry', async () => {
+    it('throws when no moment matches the raw S3 key so EventBridge can retry', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue(null);
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(null);
 
-      await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow(
-        'No moment found for rawMediaUrl - retrying transcode completion later',
-      );
+      await expect(handler(makeEvent('COMPLETE'))).rejects.toThrow('No moment found for rawS3Key');
 
       expect(EventMomentDAO.markReady).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
-        'No moment found for rawMediaUrl - retrying transcode completion later',
-        expect.objectContaining({ rawMediaUrl: 'https://cdn.example.com/beta/event-moments/evt/clip.mp4' }),
+        'No moment found for rawS3Key - retrying transcode completion later',
+        expect.objectContaining({ rawS3Key: 'beta/event-moments/evt/clip.mp4' }),
+      );
+    });
+
+    it('looks up the moment by rawS3Key', async () => {
+      const { handler, EventMomentDAO } = await loadAll();
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-by-key' });
+
+      await handler(makeEvent('COMPLETE'));
+
+      expect(EventMomentDAO.findByRawS3Key).toHaveBeenCalledWith('beta/event-moments/evt/clip.mp4');
+      expect(EventMomentDAO.markReady).toHaveBeenCalledWith(
+        'moment-by-key',
+        'https://cdn.example.com/beta/event-moments/evt/clip/hls/index.m3u8',
+        undefined,
+        15,
       );
     });
   });
@@ -138,7 +151,7 @@ describe('onTranscodeEventHandler', () => {
   describe('database connection', () => {
     it('connects to MongoDB on the first invocation', async () => {
       const { handler, EventMomentDAO, MongoDbClient, getConfigValue } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-1' });
 
       await handler(makeEvent('COMPLETE'));
 
@@ -148,7 +161,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('does not reconnect on subsequent invocations', async () => {
       const { handler, EventMomentDAO, MongoDbClient } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-1' });
 
       await handler(makeEvent('COMPLETE'));
       await handler(makeEvent('COMPLETE'));
@@ -160,7 +173,7 @@ describe('onTranscodeEventHandler', () => {
   describe('COMPLETE status', () => {
     it('calls markReady with the HLS URL and rounded duration in seconds', async () => {
       const { handler, EventMomentDAO } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('COMPLETE'));
 
@@ -174,7 +187,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('deletes the original raw upload from S3 after marking the moment as Ready', async () => {
       const { handler, EventMomentDAO, deleteFromS3 } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('COMPLETE'));
 
@@ -183,7 +196,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('does not delete the original file when the delete call fails (non-throwing)', async () => {
       const { handler, EventMomentDAO, deleteFromS3, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
       (deleteFromS3 as jest.Mock).mockRejectedValueOnce(new Error('Access denied'));
 
       // Should not throw even though deleteFromS3 rejects
@@ -196,7 +209,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('finds the HLS group by outputDetails when type is not HLS_GROUP', async () => {
       const { handler, EventMomentDAO } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(
         makeEvent('COMPLETE', {
@@ -224,7 +237,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('calls markFailed and logs an error when no .m3u8 manifest is found in the output', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(
         makeEvent('COMPLETE', {
@@ -246,7 +259,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('calls markFailed when outputGroupDetails is absent', async () => {
       const { handler, EventMomentDAO } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('COMPLETE', { outputGroupDetails: undefined }));
 
@@ -255,7 +268,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('marks Failed and cleans up when durationInMs is absent', async () => {
       const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(
         makeEvent('COMPLETE', {
@@ -302,7 +315,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('marks the moment Failed when duration exceeds 30 seconds', async () => {
         const { handler, EventMomentDAO } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
 
         await handler(makeOverDurationEvent(30001));
 
@@ -312,7 +325,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('logs a warning when the video exceeds the duration limit', async () => {
         const { handler, EventMomentDAO, logger } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
 
         await handler(makeOverDurationEvent(60000));
 
@@ -324,7 +337,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('deletes the HLS prefix and raw upload when over the duration limit', async () => {
         const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
 
         await handler(makeOverDurationEvent(31000));
 
@@ -334,7 +347,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('allows a video of exactly 30 seconds through (at the limit)', async () => {
         const { handler, EventMomentDAO } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-exact' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-exact' });
 
         await handler(makeOverDurationEvent(30000));
 
@@ -344,7 +357,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('allows a video under 30 seconds through', async () => {
         const { handler, EventMomentDAO } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-short' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-short' });
 
         await handler(makeEvent('COMPLETE')); // default 15000ms in makeEvent
 
@@ -354,7 +367,7 @@ describe('onTranscodeEventHandler', () => {
 
       it('does not throw when cleanup fails after over-limit detection', async () => {
         const { handler, EventMomentDAO, deleteFromS3, deleteS3Prefix, logger } = await loadAll();
-        (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
+        (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'm-over' });
         (deleteS3Prefix as jest.Mock).mockRejectedValueOnce(new Error('S3 error'));
 
         await expect(handler(makeOverDurationEvent(60000))).resolves.toBeUndefined();
@@ -370,7 +383,7 @@ describe('onTranscodeEventHandler', () => {
   describe('ERROR status', () => {
     it('calls markFailed and logs an error with the MediaConvert error message', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('ERROR', { errorMessage: 'Unsupported codec' }));
 
@@ -383,7 +396,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('does not delete the original S3 file on ERROR', async () => {
       const { handler, EventMomentDAO, deleteFromS3 } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('ERROR', { errorMessage: 'Unsupported codec' }));
 
@@ -392,7 +405,7 @@ describe('onTranscodeEventHandler', () => {
 
     it('falls back to "unknown" when errorMessage is absent', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('ERROR', { errorMessage: undefined }));
 
@@ -406,7 +419,7 @@ describe('onTranscodeEventHandler', () => {
   describe('other statuses', () => {
     it('logs info and takes no DAO action for non-terminal statuses', async () => {
       const { handler, EventMomentDAO, logger } = await loadAll();
-      (EventMomentDAO.findByMediaUrl as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
+      (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue({ momentId: 'moment-1' });
 
       await handler(makeEvent('PROGRESSING'));
 

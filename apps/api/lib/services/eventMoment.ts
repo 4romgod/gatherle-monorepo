@@ -1,5 +1,11 @@
 import type { Event, EventMoment, EventMomentPage, CreateEventMomentInput } from '@gatherle/commons/types';
-import { EventMomentType, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import {
+  EventMomentState,
+  EventMomentType,
+  FollowApprovalStatus,
+  FollowTargetType,
+  ParticipantStatus,
+} from '@gatherle/commons/types';
 import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';
@@ -12,6 +18,29 @@ const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, Par
 function isMissingS3ObjectError(error: unknown): boolean {
   const maybeAwsError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
   return maybeAwsError.name === 'NotFound' || maybeAwsError.$metadata?.httpStatusCode === 404;
+}
+
+async function verifyVideoSize(mediaKey: string): Promise<void> {
+  let objectSize: number | undefined;
+  try {
+    objectSize = await getS3ObjectSize(mediaKey);
+  } catch (error) {
+    if (isMissingS3ObjectError(error)) {
+      throw CustomError('Uploaded video file was not found. Please upload again.', ErrorTypes.BAD_USER_INPUT);
+    }
+    throw error;
+  }
+
+  if (objectSize == null) {
+    throw CustomError(
+      'Uploaded video file size could not be verified. Please upload again.',
+      ErrorTypes.BAD_USER_INPUT,
+    );
+  }
+
+  if (objectSize > MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES) {
+    throw CustomError('Video must be 75 MB or smaller.', ErrorTypes.BAD_USER_INPUT);
+  }
 }
 
 class EventMomentService {
@@ -49,6 +78,12 @@ class EventMomentService {
       throw CustomError('You must RSVP as Going or CheckedIn to post a moment', ErrorTypes.BAD_USER_INPUT);
     }
 
+    // Video moments are reserved when getEventMomentUploadUrl is issued. This call
+    // only publishes that reserved row with user-supplied metadata.
+    if (input.type === EventMomentType.Video) {
+      return EventMomentService.publishReservedVideoMoment(input, callerId);
+    }
+
     // 3. Rate limit.
     const recentCount = await EventMomentDAO.countRecentByAuthor(input.eventId, callerId);
     if (recentCount >= MAX_STATUSES_PER_WINDOW) {
@@ -66,29 +101,6 @@ class EventMomentService {
         throw new Error('MEDIA_CDN_DOMAIN is required to generate media URLs');
       }
 
-      if (input.type === EventMomentType.Video) {
-        let objectSize: number | undefined;
-        try {
-          objectSize = await getS3ObjectSize(input.mediaKey);
-        } catch (error) {
-          if (isMissingS3ObjectError(error)) {
-            throw CustomError('Uploaded video file was not found. Please upload again.', ErrorTypes.BAD_USER_INPUT);
-          }
-          throw error;
-        }
-
-        if (objectSize == null) {
-          throw CustomError(
-            'Uploaded video file size could not be verified. Please upload again.',
-            ErrorTypes.BAD_USER_INPUT,
-          );
-        }
-
-        if (objectSize > MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES) {
-          throw CustomError('Video must be 75 MB or smaller.', ErrorTypes.BAD_USER_INPUT);
-        }
-      }
-
       mediaUrl = `https://${MEDIA_CDN_DOMAIN}/${input.mediaKey}`;
     }
     if (input.thumbnailKey && MEDIA_CDN_DOMAIN) {
@@ -103,6 +115,82 @@ class EventMomentService {
       eventId: input.eventId,
       type: input.type,
       rawS3Key: input.mediaKey,
+    });
+
+    return moment;
+  }
+
+  private static async publishReservedVideoMoment(
+    input: CreateEventMomentInput,
+    callerId: string,
+  ): Promise<EventMoment> {
+    if (!input.momentId) {
+      throw CustomError('Use getEventMomentUploadUrl before creating a video moment.', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    if (!input.mediaKey) {
+      throw CustomError('mediaKey is required for video moments.', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    if (!MEDIA_CDN_DOMAIN) {
+      throw new Error('MEDIA_CDN_DOMAIN is required to generate media URLs');
+    }
+
+    const reservedMoment = await EventMomentDAO.readById(input.momentId);
+
+    if (!reservedMoment) {
+      throw CustomError('Video upload reservation not found. Please upload again.', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    if (
+      reservedMoment.eventId !== input.eventId ||
+      reservedMoment.authorId !== callerId ||
+      reservedMoment.type !== EventMomentType.Video
+    ) {
+      throw CustomError('Video upload reservation does not match this moment.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    if (!reservedMoment.rawS3Key) {
+      throw CustomError(
+        'Video upload reservation is missing its S3 key. Please upload again.',
+        ErrorTypes.BAD_USER_INPUT,
+      );
+    }
+
+    if (input.mediaKey !== reservedMoment.rawS3Key) {
+      throw CustomError('Video upload reservation does not match the uploaded file.', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    if (reservedMoment.state === EventMomentState.Failed) {
+      throw CustomError('Uploaded video failed processing. Please upload again.', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    const rawS3Key = reservedMoment.rawS3Key;
+
+    if (reservedMoment.state !== EventMomentState.Ready) {
+      await verifyVideoSize(rawS3Key);
+    }
+
+    const thumbnailUrl = input.thumbnailKey ? `https://${MEDIA_CDN_DOMAIN}/${input.thumbnailKey}` : undefined;
+    const moment = await EventMomentDAO.publishVideoMoment(reservedMoment.momentId, {
+      eventId: input.eventId,
+      authorId: callerId,
+      caption: input.caption,
+      thumbnailUrl,
+    });
+
+    if (!moment) {
+      throw CustomError(
+        'Video upload reservation could not be published. Please upload again.',
+        ErrorTypes.BAD_USER_INPUT,
+      );
+    }
+
+    logger.info('[EventMomentService] Published reserved video event moment', {
+      momentId: moment.momentId,
+      callerId,
+      eventId: input.eventId,
+      rawS3Key,
     });
 
     return moment;

@@ -21,6 +21,7 @@ export const GetEventMomentUploadUrlDocument = graphql(`
       uploadUrl
       key
       readUrl
+      momentId
     }
   }
 `);

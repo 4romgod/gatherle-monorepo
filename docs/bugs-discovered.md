@@ -252,14 +252,14 @@ export const dynamic = 'force-dynamic'; // Added
 
 ---
 
-## BUG-004: S3 Upload / DB Moment Race Condition — Video Moments Can Remain Processing Forever
+## BUG-004: S3 Upload / DB Moment Race Condition — Video Moments Can Fail To Become Ready
 
 **Date Discovered:** 19 April 2026 **Severity:** High **Status:** ✅ Fixed
 
 ### Symptoms
 
-- A video moment is uploaded and MediaConvert completes successfully, but the moment document remains in `Processing`
-  state indefinitely with no `mediaUrl`.
+- A video moment is uploaded and MediaConvert completes successfully, but the moment document remains pending
+  indefinitely with no ready `mediaUrl`.
 - No error surfaces to the user — the moment ring shows a spinner that never resolves.
 - The bug is silent: `onTranscodeEvent` logs success even though no DB update occurred.
 
@@ -281,8 +281,8 @@ Implemented API-033 with the bounded retry path:
 - The MediaConvert EventBridge target retries the Lambda up to 3 times within a 5-minute event age window.
 - Persistent misses are sent to an SQS DLQ for inspection instead of being silently acknowledged.
 
-This keeps the current client flow intact while preventing a fast MediaConvert completion from permanently stranding a
-later-created moment in `Processing`.
+This kept the previous client flow intact while preventing a fast MediaConvert completion from permanently stranding a
+later-created moment in a pending state.
 
 ### Alternative Future Fix
 
@@ -318,10 +318,10 @@ later-created moment in `Processing`.
 
 ### Implemented Fix
 
-- **`createEventMoment`:** Verifies the uploaded video's S3 `ContentLength` before creating a video moment, rejecting
-  missing, unverifiable, or > 75 MB raw objects so rejected uploads do not become permanently Processing moments.
+- **`createEventMoment`:** Verifies the uploaded video's S3 `ContentLength` before publishing a video moment, rejecting
+  missing, unverifiable, or > 75 MB raw objects so rejected uploads do not become permanently pending moments.
 - **`startTranscodeJob`:** Reads `event.detail.object.size` from the EventBridge payload. If size is missing or exceeds
-  75 MB, it skips MediaConvert, marks a matching existing moment Failed when present, and deletes the raw S3 object.
+  75 MB, it skips MediaConvert, marks the matching reserved moment Failed when present, and deletes the raw S3 object.
 - **`startTranscodeJob` HLS output:** Writes HLS output to a per-upload prefix (`{raw-key-without-ext}/hls/`) so cleanup
   for one rejected video cannot delete another moment's HLS files.
 - **`onTranscodeEvent`:** Parses duration from MediaConvert `OutputGroupDetails`. If duration is missing or exceeds 30
