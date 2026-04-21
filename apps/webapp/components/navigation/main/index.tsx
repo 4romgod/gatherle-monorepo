@@ -58,8 +58,6 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
         position="fixed"
         sx={{
           zIndex: 1000,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
           backgroundImage: 'none',
         }}
         color="primary"

@@ -64,8 +64,8 @@ export default function FollowedMomentsBar() {
                 key={i}
                 sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, flexShrink: 0 }}
               >
-                <Skeleton variant="circular" width={60} height={60} />
-                <Skeleton variant="text" width={44} height={12} />
+                <Skeleton variant="circular" width={80} height={80} />
+                <Skeleton variant="text" width={56} height={12} />
               </Box>
             ))}
           </Box>
@@ -123,8 +123,8 @@ export default function FollowedMomentsBar() {
                       src={avatarSrc}
                       alt={displayName}
                       sx={{
-                        width: 56,
-                        height: 56,
+                        width: { xs: 80, md: 96 },
+                        height: { xs: 80, md: 96 },
                         border: '2.5px solid',
                         borderColor: 'background.paper',
                         fontSize: '1.1rem',
@@ -139,7 +139,7 @@ export default function FollowedMomentsBar() {
                     color="text.secondary"
                     sx={{
                       fontSize: '0.65rem',
-                      maxWidth: 60,
+                      maxWidth: 80,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

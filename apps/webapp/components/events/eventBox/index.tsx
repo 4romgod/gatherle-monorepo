@@ -59,22 +59,23 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
 
   return (
     <Surface
-      component={Card}
+      disableShadow
       sx={{
         p: 0,
+        backgroundColor: 'background.default',
+        backgroundImage: 'none',
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', sm: '180px 1fr' },
         gridTemplateRows: { xs: 'auto auto', sm: '180px' },
         gap: 0,
         height: { xs: 'auto', sm: 180 },
-        borderRadius: { xs: 1.5, sm: 3 },
+        borderRadius: { xs: 1, sm: 2 },
         position: 'relative',
         overflow: 'hidden',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
-        borderColor: 'divider',
+        border: 'none',
         '&:hover': {
-          borderColor: 'primary.main',
           boxShadow: theme.shadows[4],
           transform: 'translateY(-2px)',
           '& .event-image': {
