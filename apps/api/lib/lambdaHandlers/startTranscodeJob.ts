@@ -128,7 +128,7 @@ export const startTranscodeJobHandler = async (
       logger.warn('Failed to delete oversized raw upload — not critical', { rawKey, err });
     }
     if (failureUpdateError) {
-      throw failureUpdateError;
+      throw failureUpdateError instanceof Error ? failureUpdateError : new Error(String(failureUpdateError));
     }
     return;
   }
@@ -228,16 +228,39 @@ export const startTranscodeJobHandler = async (
       }),
     );
   } catch (err) {
+    logger.error('MediaConvert job submission failed - marking video moment Failed', {
+      momentId: moment.momentId,
+      rawKey,
+      err,
+    });
+
+    let failureUpdateError: unknown;
     try {
-      await EventMomentDAO.releaseTranscodeStart(moment.momentId);
-    } catch (releaseErr) {
-      logger.error('Failed to release video moment transcode claim after MediaConvert submission error', {
+      await EventMomentDAO.markFailed(moment.momentId);
+    } catch (markFailedErr) {
+      failureUpdateError = markFailedErr;
+      logger.error('Failed to mark video moment Failed after MediaConvert submission error', {
         momentId: moment.momentId,
         rawKey,
-        err: releaseErr,
+        err: markFailedErr,
       });
     }
-    throw err;
+
+    try {
+      await deleteFromS3(rawKey);
+    } catch (deleteErr) {
+      logger.warn('Failed to delete raw upload after MediaConvert submission error - not critical', {
+        momentId: moment.momentId,
+        rawKey,
+        err: deleteErr,
+      });
+    }
+
+    if (failureUpdateError) {
+      throw failureUpdateError instanceof Error ? failureUpdateError : new Error(String(failureUpdateError));
+    }
+
+    return;
   }
 
   logger.info('MediaConvert job submitted', { momentId: moment.momentId, rawKey });

@@ -31,6 +31,7 @@ const createMockSuccessMongooseQuery = <T>(result: T) => ({
   populate: jest.fn().mockReturnThis(),
   exec: jest.fn().mockResolvedValue(result),
   select: jest.fn().mockReturnThis(),
+  lean: jest.fn().mockReturnThis(),
 });
 
 const createMockFailedMongooseQuery = <T>(error: T) => ({
@@ -38,6 +39,7 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
   populate: jest.fn().mockReturnThis(),
   exec: jest.fn().mockRejectedValue(error),
   select: jest.fn().mockReturnThis(),
+  lean: jest.fn().mockReturnThis(),
 });
 
 describe('EventDAO', () => {
@@ -70,6 +72,10 @@ describe('EventDAO', () => {
   };
 
   describe('create', () => {
+    beforeEach(() => {
+      (EventModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+    });
+
     it('should create an event and return the event object', async () => {
       const mockDocument = {
         toObject: jest.fn().mockReturnValue(expectedEvent),
@@ -78,7 +84,20 @@ describe('EventDAO', () => {
 
       const createdEvent = await EventDAO.create(mockEventInput);
       expect(createdEvent).toEqual(expectedEvent);
-      expect(EventModel.create).toHaveBeenCalledWith(expect.objectContaining(mockEventInput));
+      expect(EventModel.findOne).toHaveBeenCalledWith({ slug: 'sample-event' });
+      expect(EventModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...mockEventInput, slug: 'sample-event' }),
+      );
+    });
+
+    it('should throw CONFLICT GraphQLError when the derived slug already exists', async () => {
+      (EventModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ _id: 'existingEventId' }));
+
+      await expect(EventDAO.create(mockEventInput)).rejects.toThrow(
+        CustomError('Slug sample-event already exists', ErrorTypes.CONFLICT),
+      );
+      expect(EventModel.findOne).toHaveBeenCalledWith({ slug: 'sample-event' });
+      expect(EventModel.create).not.toHaveBeenCalled();
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventModel.create throws an UNKNOWN error', async () => {
@@ -87,7 +106,9 @@ describe('EventDAO', () => {
       await expect(EventDAO.create(mockEventInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
-      expect(EventModel.create).toHaveBeenCalledWith(expect.objectContaining(mockEventInput));
+      expect(EventModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...mockEventInput, slug: 'sample-event' }),
+      );
     });
 
     it('should throw BAD_USER_INPUT GraphQLError when EventModel.create throws a mongodb 10334 error', async () => {
@@ -96,7 +117,9 @@ describe('EventDAO', () => {
       await expect(EventDAO.create(mockEventInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.CONTENT_TOO_LARGE, ErrorTypes.BAD_USER_INPUT),
       );
-      expect(EventModel.create).toHaveBeenCalledWith(expect.objectContaining(mockEventInput));
+      expect(EventModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...mockEventInput, slug: 'sample-event' }),
+      );
     });
 
     it('should throw BAD_USER_INPUT GraphQLError when validation errors are returned', async () => {
@@ -112,7 +135,9 @@ describe('EventDAO', () => {
       await expect(EventDAO.create(mockEventInput)).rejects.toThrow(
         CustomError('Title is required', ErrorTypes.BAD_USER_INPUT),
       );
-      expect(EventModel.create).toHaveBeenCalledWith(expect.objectContaining(mockEventInput));
+      expect(EventModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...mockEventInput, slug: 'sample-event' }),
+      );
     });
   });
 

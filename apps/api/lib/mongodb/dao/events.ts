@@ -1,4 +1,5 @@
 import { Event as EventModel } from '@/mongodb/models';
+import { kebabCase } from 'lodash';
 import type {
   Event as EventEntity,
   UpdateEventInput,
@@ -32,7 +33,14 @@ class EventDAO {
         await enrichLocationWithCoordinates(input.location);
       }
 
-      const event = await EventModel.create(input);
+      const slug = kebabCase(input.title);
+      const existingEvent = await EventModel.findOne({ slug }).select('_id').lean().exec();
+
+      if (existingEvent) {
+        throw CustomError(`Slug ${slug} already exists`, ErrorTypes.CONFLICT);
+      }
+
+      const event = await EventModel.create({ ...input, slug });
       return event.toObject();
     } catch (error) {
       logDaoError('Error creating event', { error });

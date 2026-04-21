@@ -89,7 +89,8 @@ export default function EventMomentsRing({
           display: 'flex',
           gap: 2,
           overflowX: 'auto',
-          pb: 1,
+          px: 0.5,
+          py: 1.25,
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
         }}
@@ -114,7 +115,8 @@ export default function EventMomentsRing({
         display: 'flex',
         gap: 2,
         overflowX: 'auto',
-        pb: 1,
+        px: 0.5,
+        py: 1.25,
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
       }}
@@ -179,14 +181,13 @@ export default function EventMomentsRing({
         const displayName = author?.given_name ?? author?.username ?? 'User';
         const avatarSrc = author?.profile_picture ?? undefined;
         const initials = author?.given_name?.[0]?.toUpperCase() ?? author?.username?.[0]?.toUpperCase() ?? '?';
-        const readyMoments = authorMoments.filter((m) => m.state === EventMomentState.Ready);
         const isPending = authorMoments.some((m) => PENDING_MOMENT_STATES.has(m.state));
-        const canOpenMoments = readyMoments.length > 0;
+        const canOpenMoments = authorMoments.length > 0;
 
         return (
           <Box
             key={authorId}
-            onClick={canOpenMoments ? () => onMomentClick(readyMoments, 0) : undefined}
+            onClick={canOpenMoments ? () => onMomentClick(authorMoments, 0) : undefined}
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -201,10 +202,7 @@ export default function EventMomentsRing({
                 sx={{
                   p: '2px',
                   borderRadius: '50%',
-                  background: isPending
-                    ? (theme) => theme.palette.action.disabledBackground
-                    : (theme) =>
-                        `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  bgcolor: isPending ? 'action.disabledBackground' : 'primary.main',
                   transition: 'transform 0.2s ease',
                   opacity: isPending ? 0.6 : 1,
                   '&:hover': { transform: 'scale(1.08)' },

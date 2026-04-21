@@ -12,6 +12,7 @@ import {
   MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS,
 } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
+import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import type { Event, MediaUploadUrl } from '@gatherle/commons/types';
 import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventDAO, EventParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
@@ -64,7 +65,7 @@ class MediaService {
     }
 
     const uploadUrl = await getPresignedUploadUrl(key, contentType, MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS);
-    const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
+    const readUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, key);
 
     logger.info('Generated media upload URL', {
       userId,
@@ -151,7 +152,7 @@ class MediaService {
     }
 
     const uploadUrl = await getPresignedUploadUrl(key, contentType, MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS);
-    const readUrl = `https://${MEDIA_CDN_DOMAIN}/${key}`;
+    const readUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, key);
     let momentId: string | undefined;
 
     if (isVideoUpload) {

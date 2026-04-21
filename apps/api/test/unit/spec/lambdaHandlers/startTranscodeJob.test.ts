@@ -25,7 +25,6 @@ jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
     findByRawS3Key: jest.fn().mockResolvedValue(null),
     claimTranscodeStart: jest.fn().mockResolvedValue({ momentId: 'moment-claim' }),
-    releaseTranscodeStart: jest.fn().mockResolvedValue({ momentId: 'moment-claim' }),
     markFailed: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -72,7 +71,6 @@ describe('startTranscodeJobHandler', () => {
     mockSend.mockResolvedValue({});
     (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(null);
     (EventMomentDAO.claimTranscodeStart as jest.Mock).mockResolvedValue({ momentId: 'moment-claim' });
-    (EventMomentDAO.releaseTranscodeStart as jest.Mock).mockResolvedValue({ momentId: 'moment-claim' });
     (EventMomentDAO.markFailed as jest.Mock).mockResolvedValue(undefined);
     (deleteFromS3 as jest.Mock).mockResolvedValue(undefined);
   });
@@ -214,15 +212,31 @@ describe('startTranscodeJobHandler', () => {
       );
     });
 
-    it('releases the transcode claim when MediaConvert submission fails', async () => {
+    it('marks the moment Failed and deletes the raw upload when MediaConvert submission fails', async () => {
       const submitError = new Error('MediaConvert down');
       mockSend.mockRejectedValueOnce(submitError);
+      const key = 'beta/event-moments/evt/clip.mp4';
 
-      await expect(startTranscodeJobHandler(makeEvent('beta/event-moments/evt/clip.mp4'))).rejects.toThrow(
-        'MediaConvert down',
+      await expect(startTranscodeJobHandler(makeEvent(key))).resolves.toBeUndefined();
+
+      expect(EventMomentDAO.markFailed).toHaveBeenCalledWith('moment-claim');
+      expect(deleteFromS3).toHaveBeenCalledWith(key);
+      expect(logger.error).toHaveBeenCalledWith(
+        'MediaConvert job submission failed - marking video moment Failed',
+        expect.objectContaining({ momentId: 'moment-claim', rawKey: key, err: submitError }),
       );
+    });
 
-      expect(EventMomentDAO.releaseTranscodeStart).toHaveBeenCalledWith('moment-claim');
+    it('rethrows when marking Failed after MediaConvert submission failure hits a DB error', async () => {
+      const submitError = new Error('MediaConvert down');
+      const dbError = new Error('DB unavailable');
+      const key = 'beta/event-moments/evt/clip.mp4';
+      mockSend.mockRejectedValueOnce(submitError);
+      (EventMomentDAO.markFailed as jest.Mock).mockRejectedValueOnce(dbError);
+
+      await expect(startTranscodeJobHandler(makeEvent(key))).rejects.toThrow('DB unavailable');
+
+      expect(deleteFromS3).toHaveBeenCalledWith(key);
     });
   });
 

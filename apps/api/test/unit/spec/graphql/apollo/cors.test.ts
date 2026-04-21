@@ -6,6 +6,11 @@ describe('Apollo CORS helpers', () => {
 
   const loadModule = (): CorsModule => {
     let mod: CorsModule;
+    jest.resetModules();
+    jest.doMock('@/constants', () => ({
+      CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
+      STAGE: process.env.STAGE,
+    }));
     jest.isolateModules(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       mod = require('@/graphql/apollo/cors');
@@ -14,6 +19,8 @@ describe('Apollo CORS helpers', () => {
   };
 
   afterEach(() => {
+    jest.dontMock('@/constants');
+    jest.resetModules();
     process.env.STAGE = ORIGINAL_STAGE;
     process.env.CORS_ALLOWED_ORIGINS = ORIGINAL_CORS_ALLOWED_ORIGINS;
   });

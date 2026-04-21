@@ -122,7 +122,9 @@ export default function EventMomentViewer({
   // Swipe-down-to-close
   const touchStartYRef = useRef(0);
   const touchStartXRef = useRef(0);
+  const touchStartedRef = useRef(false);
   const isDraggingRef = useRef(false);
+  const suppressNextClickRef = useRef(false);
   const dragYRef = useRef(0);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -177,23 +179,30 @@ export default function EventMomentViewer({
   }, []);
 
   const handleSwipeTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
     touchStartYRef.current = e.touches[0].clientY;
     touchStartXRef.current = e.touches[0].clientX;
+    touchStartedRef.current = true;
     isDraggingRef.current = false;
     setPaused(true);
   }, []);
 
   const handleSwipeTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartedRef.current || e.touches.length !== 1) return;
+
     const dy = e.touches[0].clientY - touchStartYRef.current;
     const dx = e.touches[0].clientX - touchStartXRef.current;
     // Lock into vertical drag mode once clearly swiping downward
     if (!isDraggingRef.current) {
       if (dy > 10 && dy > Math.abs(dx)) {
         isDraggingRef.current = true;
+        suppressNextClickRef.current = true;
         setIsDragging(true);
+      } else {
+        return;
       }
-      return;
     }
+
     if (dy > 0) {
       dragYRef.current = dy;
       setDragY(dy);
@@ -201,8 +210,12 @@ export default function EventMomentViewer({
   }, []);
 
   const handleSwipeTouchEnd = useCallback(() => {
+    if (!touchStartedRef.current) return;
+
+    touchStartedRef.current = false;
     setPaused(false);
     if (!isDraggingRef.current) return;
+
     isDraggingRef.current = false;
     setIsDragging(false);
     const finalDragY = dragYRef.current;
@@ -211,7 +224,20 @@ export default function EventMomentViewer({
     if (finalDragY > 120) {
       onClose();
     }
+    // Safety net: clear the suppress flag after the synthetic-click window (~300 ms).
+    // handleClickCapture will clear it first if a click fires normally.
+    setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 300);
   }, [onClose]);
+
+  const handleClickCapture = useCallback((e: React.MouseEvent) => {
+    if (!suppressNextClickRef.current) return;
+
+    suppressNextClickRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
 
   const isVideoMoment = moment?.type?.toLowerCase() === 'video';
 
@@ -313,6 +339,8 @@ export default function EventMomentViewer({
       setDragY(0);
       setIsDragging(false);
       isDraggingRef.current = false;
+      touchStartedRef.current = false;
+      suppressNextClickRef.current = false;
       setContextMenuOpen(false);
       setConfirmDeleteOpen(false);
     }
@@ -417,18 +445,15 @@ export default function EventMomentViewer({
           justifyContent: 'center',
           bgcolor: 'common.black',
           overflow: 'hidden',
+          touchAction: 'none',
         }}
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
-        onTouchStart={(e) => {
-          if (e.target === e.currentTarget) handleSwipeTouchStart(e);
-        }}
-        onTouchMove={(e) => {
-          if (isDraggingRef.current) handleSwipeTouchMove(e);
-        }}
-        onTouchEnd={(e) => {
-          if (isDraggingRef.current) handleSwipeTouchEnd();
-        }}
+        onClickCapture={handleClickCapture}
+        onTouchStart={handleSwipeTouchStart}
+        onTouchMove={handleSwipeTouchMove}
+        onTouchEnd={handleSwipeTouchEnd}
+        onTouchCancel={handleSwipeTouchEnd}
       >
         {/* Progress bars */}
         <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }}>
@@ -594,7 +619,7 @@ export default function EventMomentViewer({
 
           {moment.type === EventMomentType.Image && moment.mediaUrl && (
             <>
-              {!mediaLoaded && (
+              {!mediaLoaded && !mediaError && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -608,32 +633,49 @@ export default function EventMomentViewer({
                   <CircularProgress size={40} sx={{ color: (theme) => alpha(theme.palette.common.white, 0.8) }} />
                 </Box>
               )}
-              <Box
-                component="img"
-                src={moment.mediaUrl}
-                alt={moment.caption ?? 'Event moment'}
-                onLoad={() => {
-                  mediaLoadedRef.current = true;
-                  setMediaLoaded(true);
-                }}
-                onError={() => {
-                  // Image failed to load (404, CORS, etc.) — unfreeze the timer so the
-                  // viewer can still advance rather than stalling indefinitely.
-                  mediaLoadedRef.current = true;
-                  setMediaLoaded(true);
-                  setMediaError(true);
-                }}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  maxWidth: { xs: '100%', sm: 480, md: 560 },
-                  maxHeight: { xs: '100%', sm: '90vh' },
-                  objectFit: 'contain',
-                  borderRadius: { xs: 0, sm: 2 },
-                  opacity: mediaLoaded ? 1 : 0,
-                  transition: 'opacity 0.25s ease',
-                }}
-              />
+              {mediaError ? (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2,
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: (theme) => alpha(theme.palette.common.white, 0.7) }}>
+                    Image unavailable
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  component="img"
+                  src={moment.mediaUrl}
+                  alt={moment.caption ?? 'Event moment'}
+                  onLoad={() => {
+                    mediaLoadedRef.current = true;
+                    setMediaLoaded(true);
+                  }}
+                  onError={() => {
+                    // Image failed to load (404, CORS, etc.) — unfreeze the timer so the
+                    // viewer can still advance rather than stalling indefinitely.
+                    mediaLoadedRef.current = true;
+                    setMediaLoaded(true);
+                    setMediaError(true);
+                  }}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: { xs: '100%', sm: 480, md: 560 },
+                    maxHeight: { xs: '100%', sm: '90vh' },
+                    objectFit: 'contain',
+                    borderRadius: { xs: 0, sm: 2 },
+                    opacity: mediaLoaded ? 1 : 0,
+                    transition: 'opacity 0.25s ease',
+                  }}
+                />
+              )}
             </>
           )}
 

@@ -35,6 +35,11 @@ export class MediaStack extends Stack {
     });
 
     const mediaBucketRef = Bucket.fromBucketName(this, 'ImportedMediaBucket', props.s3BucketName);
+    const gatherleSecret = Secret.fromSecretNameV2(
+      this,
+      'ImportedSecret',
+      buildBackendSecretName(props.applicationStage, props.awsRegion),
+    );
 
     // MediaConvert assumes this role to read the raw video from S3 and write HLS segments.
     const mediaConvertRole = new Role(this, 'MediaConvertRole', {
@@ -75,6 +80,7 @@ export class MediaStack extends Stack {
         STAGE: props.applicationStage,
         AWS_ACCOUNT_ID: this.account,
         S3_BUCKET_NAME: props.s3BucketName,
+        SECRET_ARN: gatherleSecret.secretArn,
         MEDIA_CONVERT_QUEUE_ARN: mediaConvertQueue.attrArn,
         MEDIA_CONVERT_ROLE_ARN: mediaConvertRole.roleArn,
         NODE_OPTIONS: '--enable-source-maps',
@@ -97,6 +103,8 @@ export class MediaStack extends Stack {
         resources: [mediaConvertRole.roleArn],
       }),
     );
+    gatherleSecret.grantRead(startTranscodeLambda);
+    mediaBucketRef.grantDelete(startTranscodeLambda);
 
     // EventBridge rule: fire StartTranscodeJob only for raw video uploads (.mp4/.mov/.webm/.avi/.mkv).
     // Using a positive suffix filter at EventBridge level means HLS output files (.m3u8, .ts) written
@@ -125,12 +133,6 @@ export class MediaStack extends Stack {
       },
       targets: [new LambdaEventTarget(startTranscodeLambda)],
     });
-
-    const gatherleSecret = Secret.fromSecretNameV2(
-      this,
-      'ImportedSecret',
-      buildBackendSecretName(props.applicationStage, props.awsRegion),
-    );
 
     const onTranscodeEventName = buildResourceName(
       'OnTranscodeEventLambdaFunction',
