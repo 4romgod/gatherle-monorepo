@@ -22,6 +22,12 @@ interface UserProfileStatsProps {
   compact?: boolean;
 }
 
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
+  return String(n);
+}
+
 /**
  * Displays user profile statistics including followers, following, events, etc.
  * Clickable stats either open modals (followers/following) or scroll to sections (events).
@@ -111,15 +117,15 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant={compact ? 'h6' : 'h5'}
+            variant="subtitle1"
             fontWeight={700}
             color="secondary"
             className="stat-number"
-            sx={{ transition: 'color 0.2s' }}
+            sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
           >
-            {followersCount}
+            {formatCount(followersCount)}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.7rem' : undefined }}>
             Followers
           </Typography>
         </Box>
@@ -130,15 +136,15 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant={compact ? 'h6' : 'h5'}
+            variant="subtitle1"
             fontWeight={700}
             color="secondary"
             className="stat-number"
-            sx={{ transition: 'color 0.2s' }}
+            sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
           >
-            {followingCount}
+            {formatCount(followingCount)}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.7rem' : undefined }}>
             Following
           </Typography>
         </Box>
@@ -149,15 +155,15 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant={compact ? 'h6' : 'h5'}
+            variant="subtitle1"
             fontWeight={700}
             color="secondary"
             className="stat-number"
-            sx={{ transition: 'color 0.2s' }}
+            sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
           >
-            {organizedEventsCount}
+            {formatCount(organizedEventsCount)}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.6rem' : undefined }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.7rem' : undefined }}>
             {compact ? 'Events' : 'Events Created'}
           </Typography>
         </Box>
@@ -168,15 +174,15 @@ export default function UserProfileStats({
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
-            variant={compact ? 'h6' : 'h5'}
+            variant="subtitle1"
             fontWeight={700}
             color="secondary"
             className="stat-number"
-            sx={{ transition: 'color 0.2s' }}
+            sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
           >
-            {rsvpdEventsCount}
+            {formatCount(rsvpdEventsCount)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: compact ? '0.7rem' : undefined }}>
             RSVPs
           </Typography>
         </Box>
@@ -185,13 +191,13 @@ export default function UserProfileStats({
         {isOwnProfile && !compact && (
           <Box onClick={() => scrollToSection('saved-events')} sx={clickableStatSx}>
             <Typography
-              variant="h5"
+              variant="subtitle1"
               fontWeight={700}
               color="secondary"
               className="stat-number"
-              sx={{ transition: 'color 0.2s' }}
+              sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
             >
-              {savedEventsCount}
+              {formatCount(savedEventsCount)}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Saved
@@ -206,13 +212,13 @@ export default function UserProfileStats({
             sx={isOwnProfile ? clickableStatSx : staticStatSx}
           >
             <Typography
-              variant="h5"
+              variant="subtitle1"
               fontWeight={700}
               color="secondary"
               className="stat-number"
-              sx={{ transition: 'color 0.2s' }}
+              sx={{ transition: 'color 0.2s', lineHeight: 1.2 }}
             >
-              {interestsCount}
+              {formatCount(interestsCount)}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Interests

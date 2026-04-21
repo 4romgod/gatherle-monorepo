@@ -3,15 +3,8 @@ import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { Avatar, Box, Button, Card, CardContent, Container, Divider, Grid, Stack, Typography } from '@mui/material';
-import {
-  Cake as CakeIcon,
-  Email as EmailIcon,
-  Event as EventIcon,
-  LocationOn as LocationIcon,
-  Phone as PhoneIcon,
-  Edit as EditIcon,
-} from '@mui/icons-material';
+import { Box, Button, Grid, Stack, Typography } from '@mui/material';
+import { Edit as EditIcon } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
   FollowTargetType,
@@ -23,16 +16,14 @@ import {
   SocialVisibility,
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
-import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
-import { ROUTES, CARD_STYLES, BUTTON_STYLES, SECTION_TITLE_STYLES, SPACING } from '@/lib/constants';
+import { ROUTES, BUTTON_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { isEventUpcoming, logger } from '@/lib/utils';
-import { getBirthdateDisplay } from '@/lib/utils/birthdate';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
@@ -165,7 +156,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   }, [organizedEvents, allRsvpdEvents]);
 
   const interests = user?.interests ?? [];
-  const { age, formattedBirthdate } = getBirthdateDisplay(user?.birthdate);
 
   const isLoading = userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading));
   const hasError = userError || eventsError;
@@ -195,44 +185,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     return <UserProfilePageSkeleton />;
   }
 
-  const InfoItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
-    <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 44,
-          height: 44,
-          borderRadius: 2,
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ flex: 1 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          display="block"
-          sx={{ fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.75rem' }}
-        >
-          {label}
-        </Typography>
-        <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-          {value}
-        </Typography>
-      </Box>
-    </Stack>
-  );
-
-  const locationText = user.location ? `${user.location.city}, ${user.location.country}` : 'Not provided';
-  const birthdayText =
-    formattedBirthdate && age != null
-      ? `${formattedBirthdate} (${age} years old)`
-      : (formattedBirthdate ?? 'Not provided');
-
   const emptyCreatedCTA = isOwnProfile ? (
     <Button
       variant="contained"
@@ -256,102 +208,89 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: { xs: 2, md: 4 } }}>
-      <Container maxWidth="lg">
-        <Stack spacing={SPACING.relaxed}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              overflow: 'hidden',
-            }}
-          >
-            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-              {/* Constrain header content width and center it on large screens (Instagram-style) */}
-              <Box sx={{ maxWidth: 560, mx: 'auto' }}>
-                {/* Row 1: Avatar (left) + Stats (right) — Instagram style */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 3, md: 4 }, mb: 2 }}>
-                  <UserAvatarMomentsRing
-                    userId={user.userId}
-                    avatarSrc={getAvatarSrc(user) || undefined}
-                    displayName={`${user.given_name} ${user.family_name}`}
-                    events={profileMomentEvents}
-                    token={token}
-                    isOwnProfile={isOwnProfile}
-                  />
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box sx={{ maxWidth: 935, mx: 'auto', width: '100%', overflowX: 'hidden' }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 4 }, pb: 2 }}>
+          <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+            {/* Row 1: Avatar (left) + Stats (right) — Instagram style */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 3, md: 4 }, mb: 2 }}>
+              <UserAvatarMomentsRing
+                userId={user.userId}
+                avatarSrc={getAvatarSrc(user) || undefined}
+                displayName={`${user.given_name} ${user.family_name}`}
+                events={profileMomentEvents}
+                token={token}
+                isOwnProfile={isOwnProfile}
+              />
 
-                  {/* Stats inline beside avatar (compact = no top border/margin) */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <UserProfileStats
-                      userId={user.userId}
-                      displayName={getDisplayName(user)}
-                      initialFollowersCount={user.followersCount ?? 0}
-                      initialFollowingCount={0}
-                      organizedEventsCount={organizedEvents.length}
-                      rsvpdEventsCount={allRsvpdEvents.length}
-                      savedEventsCount={savedEvents.length}
-                      interestsCount={interests.length}
-                      isOwnProfile={isOwnProfile}
-                      compact
-                    />
-                  </Box>
-                </Box>
-
-                {/* Row 2: Display name */}
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 800, fontSize: { xs: '1rem', md: '1.15rem' }, lineHeight: 1.3 }}
-                >
-                  {user.given_name} {user.family_name}
-                </Typography>
-
-                {/* Row 3: @username */}
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: user.bio ? 0.75 : 1.5 }}>
-                  @{user.username}
-                </Typography>
-
-                {/* Row 4: Bio */}
-                {user.bio && (
-                  <Typography variant="body2" sx={{ lineHeight: 1.55, mb: 1.5, maxWidth: 480 }}>
-                    {user.bio}
-                  </Typography>
-                )}
-
-                {/* Row 5: Full-width action buttons */}
-                {isOwnProfile ? (
-                  <Button
-                    component={Link}
-                    href={ROUTES.ACCOUNT.ROOT}
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<EditIcon />}
-                    sx={{
-                      ...BUTTON_STYLES,
-                      borderColor: 'divider',
-                      '&:hover': {
-                        bgcolor: 'background.default',
-                        borderColor: 'text.secondary',
-                      },
-                    }}
-                  >
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <UserProfileActions
-                    userId={user.userId}
-                    username={user.username}
-                    canMessage={canMessageUser}
-                    messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
-                    fullWidth
-                  />
-                )}
+              {/* Stats inline beside avatar (compact = no top border/margin) */}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <UserProfileStats
+                  userId={user.userId}
+                  displayName={getDisplayName(user)}
+                  initialFollowersCount={user.followersCount ?? 0}
+                  initialFollowingCount={0}
+                  organizedEventsCount={organizedEvents.length}
+                  rsvpdEventsCount={allRsvpdEvents.length}
+                  savedEventsCount={savedEvents.length}
+                  interestsCount={interests.length}
+                  isOwnProfile={isOwnProfile}
+                  compact
+                />
               </Box>
-              {/* end centering box */}
-            </CardContent>
-          </Card>
+            </Box>
 
-          <Box sx={{ position: 'relative' }}>
-            <Box sx={detailBlurSx}>
+            {/* Row 2: Display name */}
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', md: '1.15rem' }, lineHeight: 1.3 }}>
+              {user.given_name} {user.family_name}
+            </Typography>
+
+            {/* Row 3: @username */}
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: user.bio ? 0.75 : 1.5 }}>
+              @{user.username}
+            </Typography>
+
+            {/* Row 4: Bio */}
+            {user.bio && (
+              <Typography variant="body2" sx={{ lineHeight: 1.55, mb: 1.5, maxWidth: 480 }}>
+                {user.bio}
+              </Typography>
+            )}
+
+            {/* Row 5: Full-width action buttons */}
+            {isOwnProfile ? (
+              <Button
+                component={Link}
+                href={ROUTES.ACCOUNT.ROOT}
+                variant="outlined"
+                fullWidth
+                startIcon={<EditIcon />}
+                sx={{
+                  ...BUTTON_STYLES,
+                  borderColor: 'divider',
+                  '&:hover': {
+                    bgcolor: 'background.default',
+                    borderColor: 'text.secondary',
+                  },
+                }}
+              >
+                Edit Profile
+              </Button>
+            ) : (
+              <UserProfileActions
+                userId={user.userId}
+                username={user.username}
+                canMessage={canMessageUser}
+                messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
+                fullWidth
+              />
+            )}
+          </Box>
+        </Box>
+
+        <Box sx={{ position: 'relative' }}>
+          <Box sx={detailBlurSx}>
+            <Box sx={{ overflow: 'hidden' }}>
               <Grid container spacing={SPACING.standard}>
                 {/* ── Main content: tabbed events ── */}
                 <Grid size={{ xs: 12 }}>
@@ -365,95 +304,38 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                   />
                 </Grid>
 
-                <Grid container>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    {/* Personal Information */}
-                    <Card elevation={0} sx={CARD_STYLES}>
-                      <CardContent>
-                        <Stack spacing={2}>
-                          <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                            Personal Information
-                          </Typography>
-                          <Divider />
-                          <Stack spacing={0} divider={<Divider />}>
-                            <InfoItem icon={<EmailIcon fontSize="small" />} label="Email" value={user.email} />
-                            <InfoItem
-                              icon={<PhoneIcon fontSize="small" />}
-                              label="Phone"
-                              value={user.phone_number || 'Not provided'}
-                            />
-                            <InfoItem icon={<LocationIcon fontSize="small" />} label="Location" value={locationText} />
-                            <InfoItem icon={<CakeIcon fontSize="small" />} label="Birthday" value={birthdayText} />
-                            <InfoItem
-                              icon={<EventIcon fontSize="small" />}
-                              label="Gender"
-                              value={user.gender || 'Not specified'}
-                            />
-                          </Stack>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    {/* Interests */}
-                    <Card id="interests" elevation={0} sx={CARD_STYLES}>
-                      <CardContent>
-                        <Stack spacing={2}>
-                          <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                            Interests
-                          </Typography>
-                          <Divider />
-                          {interests.length > 0 ? (
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, pt: 1 }}>
-                              {interests
-                                .filter((interest) => interest.eventCategoryId != null)
-                                .map((interest) => (
-                                  <EventCategoryBadge key={interest.eventCategoryId} category={interest} />
-                                ))}
-                            </Box>
-                          ) : (
-                            <Box sx={{ textAlign: 'center', py: 3 }}>
-                              <Typography variant="body2" color="text.secondary">
-                                No interests selected yet
-                              </Typography>
-                            </Box>
-                          )}
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
+                <Grid container></Grid>
               </Grid>
             </Box>
-            {shouldMaskProfileDetails && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 3,
-                  bgcolor: 'rgba(0, 0, 0, 0.65)',
-                  zIndex: 5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  px: { xs: 2, md: 6 },
-                  py: { xs: 3, md: 6 },
-                }}
-              >
-                <Stack spacing={1.25} alignItems="center">
-                  <Typography variant="h6" fontWeight={700} color="common.white">
-                    {maskLabel}
-                  </Typography>
-                  <Typography variant="body2" color="common.white">
-                    Follow @{user.username} to unlock this profile.
-                  </Typography>
-                </Stack>
-              </Box>
-            )}
           </Box>
-        </Stack>
-      </Container>
+          {shouldMaskProfileDetails && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 3,
+                bgcolor: 'rgba(0, 0, 0, 0.65)',
+                zIndex: 5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                px: { xs: 2, md: 6 },
+                py: { xs: 3, md: 6 },
+              }}
+            >
+              <Stack spacing={1.25} alignItems="center">
+                <Typography variant="h6" fontWeight={700} color="common.white">
+                  {maskLabel}
+                </Typography>
+                <Typography variant="body2" color="common.white">
+                  Follow @{user.username} to unlock this profile.
+                </Typography>
+              </Stack>
+            </Box>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 }

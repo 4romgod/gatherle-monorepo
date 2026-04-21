@@ -52,15 +52,15 @@ export default function ProfileEventsTabs({
   );
 
   return (
-    <Card elevation={0} sx={{ ...CARD_STYLES, p: 0, overflow: 'hidden' }}>
+    <Card
+      elevation={0}
+      sx={{ p: 0, overflow: 'hidden', borderRadius: 0, border: 'none', bgcolor: 'background.default' }}
+    >
       <Tabs
         value={activeTab}
         onChange={(_, v) => setActiveTab(v)}
-        variant="scrollable"
-        scrollButtons="auto"
+        variant="fullWidth"
         sx={{
-          borderBottom: '1px solid',
-          borderColor: 'divider',
           '& .MuiTab-root': {
             textTransform: 'none',
             fontWeight: 600,
@@ -76,7 +76,7 @@ export default function ProfileEventsTabs({
           iconPosition="start"
           label={
             <Tooltip title="Events you've RSVPed to that are coming up" placement="bottom" arrow>
-              <span>{`Going (${upcomingRsvpdEvents.length})`}</span>
+              <span>Going</span>
             </Tooltip>
           }
         />
@@ -85,7 +85,7 @@ export default function ProfileEventsTabs({
           iconPosition="start"
           label={
             <Tooltip title="Events you RSVPed to that have already taken place" placement="bottom" arrow>
-              <span>{`Attended (${pastRsvpdEvents.length})`}</span>
+              <span>Attended</span>
             </Tooltip>
           }
         />
@@ -94,7 +94,7 @@ export default function ProfileEventsTabs({
           iconPosition="start"
           label={
             <Tooltip title="Events you've created or co-hosted" placement="bottom" arrow>
-              <span>{`Hosted (${organizedEvents.length})`}</span>
+              <span>Hosted</span>
             </Tooltip>
           }
         />
@@ -104,7 +104,7 @@ export default function ProfileEventsTabs({
             iconPosition="start"
             label={
               <Tooltip title="Events you've bookmarked to keep an eye on" placement="bottom" arrow>
-                <span>{`Saved (${savedEvents.length})`}</span>
+                <span>Saved</span>
               </Tooltip>
             }
           />
