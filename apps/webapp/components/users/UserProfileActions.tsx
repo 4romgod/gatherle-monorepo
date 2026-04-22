@@ -107,7 +107,7 @@ export default function UserProfileActions({
               borderRadius: 2,
               bgcolor: 'background.paper',
               border: '1px solid',
-              borderColor: 'divider',
+              borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
               color: 'text.primary',
               textTransform: 'none',
               fontWeight: 600,
@@ -132,7 +132,7 @@ export default function UserProfileActions({
           flexShrink: 0,
           bgcolor: 'background.paper',
           border: '1px solid',
-          borderColor: 'divider',
+          borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
           '&:hover': {
             bgcolor: 'background.default',
             borderColor: 'text.secondary',

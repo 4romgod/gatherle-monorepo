@@ -44,21 +44,11 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
   components: {
     MuiAppBar: {
       styleOverrides: {
-        ...(mode === 'light'
-          ? {
-              colorPrimary: {
-                background: 'rgba(255, 255, 255, 0.82)',
-                backdropFilter: 'blur(12px)',
-                boxShadow: '0 12px 32px rgba(16, 24, 40, 0.06)',
-              },
-            }
-          : {
-              colorPrimary: {
-                background: 'rgba(12, 18, 35, 0.9)',
-                backdropFilter: 'blur(14px)',
-                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-              },
-            }),
+        colorPrimary: ({ theme }) => ({
+          background: theme.palette.background.default,
+          backdropFilter: 'none',
+          boxShadow: 'none',
+        }),
       },
     },
     MuiButton: {

@@ -129,7 +129,7 @@ export default function FollowButton({
               bgcolor: 'background.paper',
               color: 'text.primary',
               border: '1px solid',
-              borderColor: 'divider',
+              borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
               boxShadow: 'none',
               '&:hover': {
                 bgcolor: 'background.default',

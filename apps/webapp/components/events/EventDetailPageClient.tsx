@@ -4,21 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import {
-  alpha,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Divider,
-  Grid,
-  Paper,
-  Stack,
-  Theme,
-  Typography,
-} from '@mui/material';
+import { alpha, Box, Button, Chip, Container, Divider, Grid, Paper, Stack, Theme, Typography } from '@mui/material';
 import {
   CalendarMonth,
   LocationOn,
@@ -113,7 +99,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     elevation: 0,
     sx: previewPaperSx,
   };
-  const contentPadding = { xs: 1, md: 2 };
   const { following } = useFollowing();
   const viewerUserId = session?.user?.userId;
   const isAdmin = useIsAdmin();
@@ -199,7 +184,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       <Box
         sx={{
           position: 'relative',
-          height: { xs: 200, sm: 340, md: 380 },
+          height: { xs: 320, sm: 400, md: 460 },
           width: '100%',
           overflow: 'hidden',
           bgcolor: 'grey.900',
@@ -209,11 +194,11 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             bottom: 0,
             left: 0,
             right: 0,
-            height: '45%',
-            background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.65)} 0%, ${alpha(
+            height: '75%',
+            background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.85)} 0%, ${alpha(
               theme.palette.common.black,
-              0.25,
-            )} 60%, transparent 100%)`,
+              0.4,
+            )} 50%, transparent 100%)`,
           }),
         }}
       >
@@ -266,15 +251,9 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             Back to Events
           </Button>
         </Box>
+
         {event.organization && (
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 16,
-              right: 16,
-              zIndex: 2,
-            }}
-          >
+          <Box sx={{ position: 'absolute', top: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: 2 }}>
             <Button
               component={Link}
               href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
@@ -288,22 +267,80 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 bgcolor: 'background.paper',
                 color: 'text.primary',
                 boxShadow: 1,
-                '&:hover': {
-                  bgcolor: 'background.paper',
-                },
+                '&:hover': { bgcolor: 'background.paper' },
               }}
             >
               {event.organization.name}
             </Button>
           </Box>
         )}
+
+        {/* Title & meta overlay — rendered over the gradient */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2,
+            px: { xs: 2, md: 3 },
+            pb: { xs: 2, md: 3 },
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: '1.4rem', sm: '1.9rem', md: '2.3rem' },
+              color: 'common.white',
+              textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+              mb: 1.5,
+              lineHeight: 1.15,
+            }}
+          >
+            {title}
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={{ xs: 1.5, md: 2.5 }}>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <CalendarMonth sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.3 }}>
+                {formatRecurrenceRule(recurrenceRule)}
+              </Typography>
+            </Stack>
+            {location.locationType !== 'online' && (
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <LocationOn sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.3 }}>
+                  {formatLocationText(location)}
+                </Typography>
+              </Stack>
+            )}
+            {location.locationType === 'online' && (
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Language sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+                  Online Event
+                </Typography>
+              </Stack>
+            )}
+            {goingCount > 0 && (
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Groups sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {goingCount} going{interestedCount > 0 ? ` · ${interestedCount} interested` : ''}
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
+        </Box>
       </Box>
 
       {/* Main Content */}
       <Container
         maxWidth="lg"
         sx={{
-          mt: { xs: -4.5, md: -5.5 },
+          mt: { xs: 2, md: 3 },
           mb: 8,
           position: 'relative',
           zIndex: 1,
@@ -313,84 +350,25 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         <Grid container spacing={4}>
           {/* Left Column */}
           <Grid size={{ xs: 12, md: 8 }}>
-            {/* Title & Actions */}
-            <Card
-              elevation={0}
-              sx={{
-                mb: { xs: 2, md: 4 },
-                borderRadius: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                overflow: 'visible',
-              }}
-            >
-              <CardContent sx={{ p: contentPadding, '&:last-child': { pb: { xs: 1, md: undefined } } }}>
-                <Typography
-                  variant="h3"
-                  component="h1"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
-                    lineHeight: 1,
-                    m: 2,
-                  }}
-                >
-                  {title}
-                </Typography>
-
-                {/* Mobile-only quick info strip — date/location immediately under title */}
-                <Box sx={{ display: { xs: 'block', md: 'none' }, mx: 2, mb: 0 }}>
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CalendarMonth sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
-                      <Typography variant="subtitle2" fontWeight={200} sx={{ lineHeight: 1.3 }}>
-                        {formatRecurrenceRule(recurrenceRule)}
-                      </Typography>
-                    </Stack>
-                    {location.locationType !== 'online' && (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <LocationOn sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
-                        <Typography variant="subtitle2" fontWeight={200} sx={{ lineHeight: 1.3 }}>
-                          {formatLocationText(location)}
-                        </Typography>
-                      </Stack>
-                    )}
-                    {location.locationType === 'online' && (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Language sx={{ fontSize: 15, color: 'success.main', flexShrink: 0 }} />
-                        <Chip label="Online Event" size="small" color="success" sx={{ fontWeight: 200 }} />
-                      </Stack>
-                    )}
-                    {goingCount > 0 && (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Groups sx={{ fontSize: 15, color: 'primary.main', flexShrink: 0 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>{goingCount}</strong> going
-                          {interestedCount > 0 && ` · ${interestedCount} interested`}
-                        </Typography>
-                      </Stack>
-                    )}
-                  </Stack>
-                </Box>
-
-                {/* Desktop actions inline in card */}
-                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                  <EventDetailActions
-                    eventId={eventId}
-                    eventTitle={title}
-                    eventSlug={slug}
-                    eventUrl={eventUrl}
-                    isSavedByMe={isSavedByMe ?? false}
-                    myRsvpStatus={myRsvp?.status ?? null}
-                    trailing={
-                      canEditEvent ? (
-                        <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                      ) : undefined
-                    }
-                  />
-                </Box>
-              </CardContent>
-            </Card>
+            {/* Actions */}
+            <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
+              {/* Desktop actions */}
+              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                <EventDetailActions
+                  eventId={eventId}
+                  eventTitle={title}
+                  eventSlug={slug}
+                  eventUrl={eventUrl}
+                  isSavedByMe={isSavedByMe ?? false}
+                  myRsvpStatus={myRsvp?.status ?? null}
+                  trailing={
+                    canEditEvent ? (
+                      <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                    ) : undefined
+                  }
+                />
+              </Box>
+            </Box>
 
             {/* Mobile sticky action bar */}
             <Paper
@@ -428,337 +406,269 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             </Paper>
 
             {/* Event Moments */}
-            <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: contentPadding }}>
-                <Typography
-                  variant="h3"
-                  component="h2"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
-                    lineHeight: 1,
-                    m: 2,
-                  }}
-                >
-                  Moments
-                </Typography>
-                <EventMomentsRing
-                  eventId={eventId}
-                  myRsvpStatus={myRsvp?.status ?? null}
-                  eventEndAt={event.primarySchedule?.endAt ?? null}
-                  onAddClick={() => setComposerOpen(true)}
-                  onMomentClick={openViewer}
-                />
-              </CardContent>
-            </Card>
+            <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                Moments
+              </Typography>
+              <EventMomentsRing
+                eventId={eventId}
+                myRsvpStatus={myRsvp?.status ?? null}
+                eventEndAt={event.primarySchedule?.endAt ?? null}
+                onAddClick={() => setComposerOpen(true)}
+                onMomentClick={openViewer}
+              />
+            </Box>
 
             {/* About */}
-            <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: contentPadding }}>
-                <Typography
-                  variant="h3"
-                  component="h2"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
-                    lineHeight: 1,
-                    m: 2,
-                  }}
-                >
-                  About This Event
-                </Typography>
-                <Typography
-                  variant="subtitle2"
-                  color="text.secondary"
-                  sx={{ fontSize: '1rem', whiteSpace: 'pre-line' }}
-                >
-                  {description}
-                </Typography>
-              </CardContent>
-            </Card>
+            <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                About This Event
+              </Typography>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '1rem', whiteSpace: 'pre-line' }}>
+                {description}
+              </Typography>
+            </Box>
 
             {/* Organizers */}
-            <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: contentPadding }}>
-                <Typography
-                  variant="h3"
-                  component="h2"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
-                    lineHeight: 1,
-                    m: 2,
-                  }}
-                >
-                  Organized By
-                </Typography>
-                {organizerData.length === 0 ? (
-                  <Typography color="text.secondary">No organizers listed.</Typography>
-                ) : (
-                  <Stack spacing={2}>
-                    {organizerData
-                      .filter((organizer) => organizer.user)
-                      .map((organizer) => {
-                        const user = organizer.user!;
-                        const displayName =
-                          user.given_name && user.family_name
-                            ? `${user.given_name} ${user.family_name}`
-                            : user.username || 'Unknown User';
+            <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                Organized By
+              </Typography>
+              {organizerData.length === 0 ? (
+                <Typography color="text.secondary">No organizers listed.</Typography>
+              ) : (
+                <Stack spacing={2}>
+                  {organizerData
+                    .filter((organizer) => organizer.user)
+                    .map((organizer) => {
+                      const user = organizer.user!;
+                      const displayName =
+                        user.given_name && user.family_name
+                          ? `${user.given_name} ${user.family_name}`
+                          : user.username || 'Unknown User';
 
+                      return (
+                        <UserPreviewItem
+                          key={user.userId}
+                          paperProps={previewPaperProps}
+                          name={displayName}
+                          username={user.username}
+                          avatarUrl={user.profile_picture || undefined}
+                          chipLabel={organizer.role}
+                          chipColor="secondary"
+                          chipVariant="filled"
+                        />
+                      );
+                    })}
+                </Stack>
+              )}
+            </Box>
+
+            {/* Participants */}
+            <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                Who&apos;s Attending
+                {participantList.length > 0 && (
+                  <Chip
+                    label={participantList.length}
+                    size="small"
+                    color="primary"
+                    sx={{ fontWeight: 700, minWidth: 32, ml: 1, verticalAlign: 'middle' }}
+                  />
+                )}
+              </Typography>
+
+              {participantList.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'action.hover', borderRadius: 2 }}>
+                  <Groups sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
+                  <Typography color="text.secondary">Be the first to RSVP!</Typography>
+                </Box>
+              ) : (
+                <>
+                  <Stack spacing={2} sx={{ mb: 3 }}>
+                    {attendeePreview
+                      .filter(
+                        (
+                          participant,
+                        ): participant is EventParticipant & {
+                          user: NonNullable<EventParticipant['user']>;
+                        } => Boolean(participant.user),
+                      )
+                      .map((participant) => {
+                        const isVisible = canViewAttendee(participant.user);
+                        const visibilityLabel = getVisibilityLabel(participant.user.defaultVisibility);
                         return (
                           <UserPreviewItem
-                            key={user.userId}
+                            key={participant.participantId}
                             paperProps={previewPaperProps}
-                            name={displayName}
-                            username={user.username}
-                            avatarUrl={user.profile_picture || undefined}
-                            chipLabel={organizer.role}
-                            chipColor="secondary"
-                            chipVariant="filled"
+                            name={getParticipantDisplayName(participant)}
+                            username={participant.user.username}
+                            avatarUrl={participant.user.profile_picture || undefined}
+                            chipLabel={getParticipantStatusLabel(participant)}
+                            chipColor={getParticipantChipColor(participant.status)}
+                            chipVariant="outlined"
+                            masked={!isVisible}
+                            maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
                           />
                         );
                       })}
                   </Stack>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Participants */}
-            <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: contentPadding }}>
-                <Typography
-                  variant="h3"
-                  component="h2"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.1rem', sm: '1.75rem', md: '2.15rem' },
-                    lineHeight: 1,
-                    m: 2,
-                  }}
-                >
-                  Who&apos;s Attending
-                  {participantList.length > 0 && (
-                    <Chip
-                      label={participantList.length}
-                      size="small"
-                      color="primary"
-                      sx={{ fontWeight: 700, minWidth: 32, ml: 1, verticalAlign: 'middle' }}
-                    />
+                  {participantList.length > attendeePreview.length && (
+                    <Button component={Link} href={attendeeRoute} variant="text" sx={{ fontWeight: 600 }}>
+                      View all {participantList.length} attendees
+                    </Button>
                   )}
-                </Typography>
-
-                {participantList.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'action.hover', borderRadius: 2 }}>
-                    <Groups sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-                    <Typography color="text.secondary">Be the first to RSVP!</Typography>
-                  </Box>
-                ) : (
-                  <>
-                    <Stack spacing={2} sx={{ mb: 3 }}>
-                      {attendeePreview
-                        .filter(
-                          (
-                            participant,
-                          ): participant is EventParticipant & {
-                            user: NonNullable<EventParticipant['user']>;
-                          } => Boolean(participant.user),
-                        )
-                        .map((participant) => {
-                          const isVisible = canViewAttendee(participant.user);
-                          const visibilityLabel = getVisibilityLabel(participant.user.defaultVisibility);
-                          return (
-                            <UserPreviewItem
-                              key={participant.participantId}
-                              paperProps={previewPaperProps}
-                              name={getParticipantDisplayName(participant)}
-                              username={participant.user.username}
-                              avatarUrl={participant.user.profile_picture || undefined}
-                              chipLabel={getParticipantStatusLabel(participant)}
-                              chipColor={getParticipantChipColor(participant.status)}
-                              chipVariant="outlined"
-                              masked={!isVisible}
-                              maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
-                            />
-                          );
-                        })}
-                    </Stack>
-                    {participantList.length > attendeePreview.length && (
-                      <Button component={Link} href={attendeeRoute} variant="text" sx={{ fontWeight: 600 }}>
-                        View all {participantList.length} attendees
-                      </Button>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                </>
+              )}
+            </Box>
           </Grid>
-
-          {/* Sidebar */}
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: 'sticky', top: 24 }}>
-              <Card
-                elevation={0}
-                sx={{
-                  mb: 3,
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  display: { xs: 'none', md: 'block' },
-                }}
-              >
-                <CardContent sx={{ p: contentPadding }}>
-                  <Stack spacing={2.5}>
-                    <Box>
-                      <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 1 }}>
-                        <CalendarMonth sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
-                        <Box>
-                          <Typography
-                            variant="overline"
-                            color="text.secondary"
-                            fontWeight={600}
-                            sx={{ letterSpacing: 1 }}
-                          >
-                            Date &amp; Time
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                            {formatRecurrenceRule(recurrenceRule)}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
+              <Box sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
+                <Stack spacing={2.5}>
+                  <Box>
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 1 }}>
+                      <CalendarMonth sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
+                      <Box>
+                        <Typography
+                          variant="overline"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ letterSpacing: 1 }}
+                        >
+                          Date &amp; Time
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
+                          {formatRecurrenceRule(recurrenceRule)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
 
-                    <Divider />
+                  <Divider />
 
-                    <Box>
-                      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                        <LocationOn sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
-                        <Box>
-                          <Typography
-                            variant="overline"
-                            color="text.secondary"
-                            fontWeight={600}
-                            sx={{ letterSpacing: 1 }}
-                          >
-                            Location
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                            {location.locationType === 'online' && (
-                              <Chip
-                                icon={<Language />}
-                                label="Online Event"
-                                size="small"
-                                color="success"
-                                sx={{ fontWeight: 600 }}
-                              />
-                            )}
-                            {location.locationType !== 'online' && formatLocationText(location)}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
+                  <Box>
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                      <LocationOn sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
+                      <Box>
+                        <Typography
+                          variant="overline"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ letterSpacing: 1 }}
+                        >
+                          Location
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
+                          {location.locationType === 'online' && (
+                            <Chip
+                              icon={<Language />}
+                              label="Online Event"
+                              size="small"
+                              color="success"
+                              sx={{ fontWeight: 600 }}
+                            />
+                          )}
+                          {location.locationType !== 'online' && formatLocationText(location)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
 
-                    <Divider />
+                  <Divider />
 
-                    <Box>
-                      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                        <ConfirmationNumber sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
-                        <Box>
-                          <Typography
-                            variant="overline"
-                            color="text.secondary"
-                            fontWeight={600}
-                            sx={{ letterSpacing: 1 }}
-                          >
-                            Admission
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
-                            Free
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
+                  <Box>
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                      <ConfirmationNumber sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
+                      <Box>
+                        <Typography
+                          variant="overline"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ letterSpacing: 1 }}
+                        >
+                          Admission
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
+                          Free
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
 
-                    {goingCount > 0 && (
-                      <>
-                        <Divider />
-                        <Box>
-                          <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                            <Groups sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
-                            <Box sx={{ flex: 1 }}>
-                              <Typography
-                                variant="overline"
-                                color="text.secondary"
-                                fontWeight={600}
-                                sx={{ letterSpacing: 1 }}
-                              >
-                                Attendance
-                              </Typography>
-                              <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                                {goingCount > 0 && (
-                                  <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">
-                                      Going
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={700} color="primary.main">
-                                      {goingCount}
-                                    </Typography>
-                                  </Stack>
-                                )}
-                                {interestedCount > 0 && (
-                                  <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">
-                                      Interested
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={700} color="info.main">
-                                      {interestedCount}
-                                    </Typography>
-                                  </Stack>
-                                )}
-                                {waitlistedCount > 0 && (
-                                  <Stack direction="row" justifyContent="space-between">
-                                    <Typography variant="body2" color="text.secondary">
-                                      Waitlisted
-                                    </Typography>
-                                    <Typography variant="body2" fontWeight={700} color="warning.main">
-                                      {waitlistedCount}
-                                    </Typography>
-                                  </Stack>
-                                )}
-                                {participantList.length === 0 && (
-                                  <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                                    No RSVPs yet
+                  {goingCount > 0 && (
+                    <>
+                      <Divider />
+                      <Box>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                          <Groups sx={{ fontSize: 24, color: 'primary.main', mt: 0.5 }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="overline"
+                              color="text.secondary"
+                              fontWeight={600}
+                              sx={{ letterSpacing: 1 }}
+                            >
+                              Attendance
+                            </Typography>
+                            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                              {goingCount > 0 && (
+                                <Stack direction="row" justifyContent="space-between">
+                                  <Typography variant="body2" color="text.secondary">
+                                    Going
                                   </Typography>
-                                )}
-                              </Stack>
-                            </Box>
-                          </Stack>
-                        </Box>
-                      </>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
+                                  <Typography variant="body2" fontWeight={700} color="primary.main">
+                                    {goingCount}
+                                  </Typography>
+                                </Stack>
+                              )}
+                              {interestedCount > 0 && (
+                                <Stack direction="row" justifyContent="space-between">
+                                  <Typography variant="body2" color="text.secondary">
+                                    Interested
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={700} color="info.main">
+                                    {interestedCount}
+                                  </Typography>
+                                </Stack>
+                              )}
+                              {waitlistedCount > 0 && (
+                                <Stack direction="row" justifyContent="space-between">
+                                  <Typography variant="body2" color="text.secondary">
+                                    Waitlisted
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={700} color="warning.main">
+                                    {waitlistedCount}
+                                  </Typography>
+                                </Stack>
+                              )}
+                              {participantList.length === 0 && (
+                                <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                                  No RSVPs yet
+                                </Typography>
+                              )}
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    </>
+                  )}
+                </Stack>
+              </Box>
 
               {location.locationType === 'venue' && <EventLocationMap location={location} />}
 
               {eventCategories.length > 0 && (
-                <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                  <CardContent sx={{ p: contentPadding }}>
-                    <Typography
-                      variant="overline"
-                      color="text.secondary"
-                      fontWeight={600}
-                      sx={{ letterSpacing: 1, mb: 2, display: 'block' }}
-                    >
-                      Categories
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {eventCategories.map((category, index) => (
-                        <EventCategoryBadge key={`${category.name}.${index}`} category={category} />
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
+                <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
+                  <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                    Categories
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={1}>
+                    {eventCategories.map((category, index) => (
+                      <EventCategoryBadge key={`${category.name}.${index}`} category={category} />
+                    ))}
+                  </Stack>
+                </Box>
               )}
             </Box>
           </Grid>

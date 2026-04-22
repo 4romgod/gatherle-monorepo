@@ -58,14 +58,14 @@ export default function MobileBottomNav() {
           borderTop: '1px solid',
           borderColor: 'divider',
           pb: 'env(safe-area-inset-bottom, 0px)',
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
         }}
       >
         <BottomNavigation
           value={currentValue}
           sx={{
             height: MOBILE_BOTTOM_NAV_HEIGHT,
-            bgcolor: 'background.paper',
+            bgcolor: 'background.default',
             '& .MuiBottomNavigationAction-root': {
               minWidth: 0,
               color: 'text.secondary',
@@ -115,14 +115,14 @@ export default function MobileBottomNav() {
         borderTop: '1px solid',
         borderColor: 'divider',
         pb: 'env(safe-area-inset-bottom, 0px)',
-        bgcolor: 'background.paper',
+        bgcolor: 'background.default',
       }}
     >
       <BottomNavigation
         value={currentValue}
         sx={{
           height: MOBILE_BOTTOM_NAV_HEIGHT,
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           '& .MuiBottomNavigationAction-root': {
             minWidth: 0,
             color: 'text.secondary',
