@@ -9,6 +9,44 @@ import {
 import { ERROR_MESSAGES } from '@/validation';
 import mongoose from 'mongoose';
 
+const CoordinatesSchema = z.object({
+  latitude: z
+    .number({ message: 'Latitude must be a number' })
+    .min(-90, { message: 'Latitude must be between -90 and 90' })
+    .max(90, { message: 'Latitude must be between -90 and 90' }),
+  longitude: z
+    .number({ message: 'Longitude must be a number' })
+    .min(-180, { message: 'Longitude must be between -180 and 180' })
+    .max(180, { message: 'Longitude must be between -180 and 180' }),
+});
+
+const AddressSchema = z.object({
+  street: z.string().optional(),
+  city: z.string().min(1, { message: 'City is required' }),
+  state: z.string().min(1, { message: 'State is required' }),
+  zipCode: z.string().min(1, { message: 'Zip code is required' }),
+  country: z.string().min(1, { message: 'Country is required' }),
+});
+
+export const LocationSchema = z
+  .object({
+    locationType: z.enum(['venue', 'online', 'tba'], {
+      message: "Location type must be 'venue', 'online', or 'tba'",
+    }),
+    coordinates: CoordinatesSchema.optional(),
+    address: AddressSchema.optional(),
+    details: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.locationType === 'venue' && !data.address) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Address is required for venue events',
+        path: ['address'],
+      });
+    }
+  });
+
 export const EventSchema = z.object({
   eventId: z
     .string()
@@ -58,8 +96,7 @@ export const EventSchema = z.object({
     })
     .describe('Single source of truth for all event dates and recurrence.'),
 
-  // TODO add validation for location
-  location: z.any().describe('The location where the event will take place.'),
+  location: LocationSchema.describe('The location where the event will take place.'),
 
   locationSnapshot: z.string().optional().describe('Snapshot of location'),
 

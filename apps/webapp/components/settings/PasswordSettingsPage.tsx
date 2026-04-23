@@ -4,6 +4,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment, LinearProgress, Stack } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
+import { passwordSchema } from '@/data/validation/auth';
 import { useAppContext } from '@/hooks/useAppContext';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
@@ -137,8 +138,9 @@ export default function PasswordSettingsPage() {
       return false;
     }
 
-    if (settings.newPassword.length < 8) {
-      showError('New password must be at least 8 characters long');
+    const passwordResult = passwordSchema.safeParse(settings.newPassword);
+    if (!passwordResult.success) {
+      showError(passwordResult.error.issues[0].message);
       return false;
     }
 
@@ -154,11 +156,6 @@ export default function PasswordSettingsPage() {
 
     if (settings.newPassword !== settings.confirmNewPassword) {
       showError('New passwords do not match');
-      return false;
-    }
-
-    if (passwordStrength.score < 40) {
-      showError('Password is too weak. Please follow the suggestions to strengthen it.');
       return false;
     }
 
@@ -190,7 +187,10 @@ export default function PasswordSettingsPage() {
   };
 
   const isFormValid =
-    settings.currentPassword && settings.newPassword && settings.confirmNewPassword && passwordStrength.score >= 40;
+    settings.currentPassword &&
+    settings.newPassword &&
+    settings.confirmNewPassword &&
+    passwordSchema.safeParse(settings.newPassword).success;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

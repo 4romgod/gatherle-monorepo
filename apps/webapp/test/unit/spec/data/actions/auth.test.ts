@@ -145,14 +145,14 @@ describe('resetPasswordAction', () => {
   });
 
   it('returns apiError when the token is missing', async () => {
-    const result = await resetPasswordAction('', {}, makeFormData('newPassword123', 'newPassword123'));
+    const result = await resetPasswordAction('', {}, makeFormData('NewP@ssword1', 'NewP@ssword1'));
     expect(result.apiError).toBeTruthy();
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it('returns { data: { reset: true } } on success', async () => {
     mockMutate.mockResolvedValue({ data: { resetPassword: true } });
-    const result = await resetPasswordAction('valid-token', {}, makeFormData('newPassword123', 'newPassword123'));
+    const result = await resetPasswordAction('valid-token', {}, makeFormData('NewP@ssword1', 'NewP@ssword1'));
     expect(result.data).toEqual({ reset: true });
     expect(result.apiError).toBeNull();
     expect(mockMutate).toHaveBeenCalledTimes(1);
@@ -165,7 +165,7 @@ describe('resetPasswordAction', () => {
     });
     mockMutate.mockRejectedValue(apolloError);
 
-    const result = await resetPasswordAction('bad-token', {}, makeFormData('newPassword123', 'newPassword123'));
+    const result = await resetPasswordAction('bad-token', {}, makeFormData('NewP@ssword1', 'NewP@ssword1'));
     expect(result.apiError).toContain('invalid or has expired');
   });
 
@@ -176,7 +176,7 @@ describe('resetPasswordAction', () => {
     });
     mockMutate.mockRejectedValue(apolloError);
 
-    const result = await resetPasswordAction('valid-token', {}, makeFormData('newPassword123', 'newPassword123'));
+    const result = await resetPasswordAction('valid-token', {}, makeFormData('NewP@ssword1', 'NewP@ssword1'));
     expect(result.apiError).toBe('Internal server error');
   });
 });
