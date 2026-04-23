@@ -148,7 +148,7 @@ const events: EventSeedData[] = [
     summary: 'Hybrid summit for AI, climate, and cultural founders.',
     description: 'Two-day salon of talks, hands-on labs, and guided networking for future-focused founders.',
     location: {
-      locationType: 'virtual',
+      locationType: 'online',
       details: 'Private stream link shared 48h before start',
     },
     primarySchedule: {

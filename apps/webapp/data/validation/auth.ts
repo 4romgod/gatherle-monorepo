@@ -4,6 +4,19 @@ import { Gender, UserRole, FollowPolicy, SocialVisibility } from '../graphql/typ
 
 const InputMaybe = z.union([z.string(), z.undefined()]);
 
+/**
+ * Shared password complexity schema — mirrors packages/commons/lib/validation/auth.ts.
+ * Rules: min 8 chars, at least one lowercase, one uppercase, one digit, one special character.
+ * NOT applied to LoginUserInputSchema — doing so would lock out users with pre-existing weak passwords.
+ */
+export const passwordSchema = z
+  .string()
+  .min(8, { message: 'Password must be at least 8 characters long' })
+  .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+  .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+  .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+  .regex(/[^a-zA-Z0-9]/, { message: 'Password must contain at least one special character' });
+
 export const CreateUserInputSchema = z.object({
   birthdate: z.string().refine((date) => isValid(parseISO(date)), {
     message: 'Birthdate should be in YYYY-MM-DD format',
@@ -11,7 +24,7 @@ export const CreateUserInputSchema = z.object({
   email: z.string().email({ message: 'Invalid email format' }),
   family_name: z.string().min(1, { message: 'Last name is required' }),
   given_name: z.string().min(1, { message: 'First name is required' }),
-  password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
+  password: passwordSchema,
   phone_number: InputMaybe,
   profile_picture: InputMaybe,
   username: InputMaybe,
@@ -30,7 +43,7 @@ export const UpdateUserInputSchema = z.object({
     .optional(),
   phone_number: z.string().optional().nullable(),
   profile_picture: z.string().url({ message: 'Must be a valid URL' }).optional().nullable(),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }).optional(),
+  password: passwordSchema.optional(),
   address: z
     .union([z.string(), z.record(z.any())])
     .optional()
@@ -71,6 +84,6 @@ export const ForgotPasswordInputTypeSchema = z.object({
 });
 
 export const ResetPasswordInputTypeSchema = z.object({
-  password: z.string().min(8, { message: 'Password should be at least 8 characters long' }),
-  'confirm-password': z.string().min(8, { message: 'Password should be at least 8 characters long' }),
+  password: passwordSchema,
+  'confirm-password': passwordSchema,
 });

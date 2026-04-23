@@ -3,6 +3,19 @@ import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
 import { isDateNotInFuture, validateDate, validateMongodbId } from '../utils';
 import { Gender, FollowPolicy, OAuthProvider, SocialVisibility, UserRole } from '../types';
 
+/**
+ * Shared password complexity schema.
+ * Rules: min 8 chars, at least one lowercase, one uppercase, one digit, one special character.
+ * NOT applied to LoginUserInputSchema — doing so would lock out users with pre-existing weak passwords.
+ */
+export const passwordSchema = z
+  .string()
+  .min(8, { message: 'Password must be at least 8 characters long' })
+  .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+  .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+  .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+  .regex(/[^a-zA-Z0-9]/, { message: 'Password must contain at least one special character' });
+
 export const CreateUserInputSchema = z.object({
   address: z
     .string()
@@ -16,7 +29,7 @@ export const CreateUserInputSchema = z.object({
   family_name: z.string().min(1, { message: `Last name ${ERROR_MESSAGES.REQUIRED}` }),
   gender: z.nativeEnum(Gender, { message: ERROR_MESSAGES.INVALID_GENDER }),
   given_name: z.string().min(1, { message: `First name ${ERROR_MESSAGES.REQUIRED}` }),
-  password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }),
+  password: passwordSchema,
   phone_number: z.string().regex(REGEX_PHONE_NUMBER, { message: ERROR_MESSAGES.INVALID_PHONE_NUMBER }),
   profile_picture: z.string().optional(),
   username: z.string().min(3, `username ${ERROR_MESSAGES.TOO_SHORT}`).optional(),
@@ -40,7 +53,7 @@ export const UpdateUserInputSchema = z.object({
     .string()
     .min(1, { message: `First name ${ERROR_MESSAGES.INVALID}` })
     .optional(),
-  password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }).optional(),
+  password: passwordSchema.optional(),
   phone_number: z.string().regex(REGEX_PHONE_NUMBER, { message: ERROR_MESSAGES.INVALID_PHONE_NUMBER }).optional(),
   profile_picture: z.string().optional(),
   username: z.string().optional(),
@@ -93,5 +106,5 @@ export const ForgotPasswordInputTypeSchema = z.object({
 });
 
 export const ResetPasswordInputTypeSchema = z.object({
-  password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }),
+  password: passwordSchema,
 });

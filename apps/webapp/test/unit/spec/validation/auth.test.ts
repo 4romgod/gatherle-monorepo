@@ -4,13 +4,77 @@ import {
   LoginUserInputSchema,
   ForgotPasswordInputTypeSchema,
   ResetPasswordInputTypeSchema,
+  passwordSchema,
 } from '@/data/validation/auth';
 import { Gender, UserRole } from '@/data/graphql/types/graphql';
+
+describe('passwordSchema', () => {
+  it('should accept a password meeting all complexity requirements', () => {
+    const result = passwordSchema.safeParse('Secure@123');
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject a password shorter than 8 characters', () => {
+    const result = passwordSchema.safeParse('Ab1!');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe('Password must be at least 8 characters long');
+    }
+  });
+
+  it('should reject a password with no lowercase letter', () => {
+    const result = passwordSchema.safeParse('SECURE@123');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.message === 'Password must contain at least one lowercase letter')).toBe(
+        true,
+      );
+    }
+  });
+
+  it('should reject a password with no uppercase letter', () => {
+    const result = passwordSchema.safeParse('secure@123');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.message === 'Password must contain at least one uppercase letter')).toBe(
+        true,
+      );
+    }
+  });
+
+  it('should reject a password with no number', () => {
+    const result = passwordSchema.safeParse('Secure@abc');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.message === 'Password must contain at least one number')).toBe(true);
+    }
+  });
+
+  it('should reject a password with no special character', () => {
+    const result = passwordSchema.safeParse('Secure123');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.message === 'Password must contain at least one special character'),
+      ).toBe(true);
+    }
+  });
+
+  it('should reject a typical weak password like 123456789', () => {
+    const result = passwordSchema.safeParse('123456789');
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject a typical weak password like password123', () => {
+    const result = passwordSchema.safeParse('password123');
+    expect(result.success).toBe(false);
+  });
+});
 
 describe('CreateUserInputSchema', () => {
   const validInput = {
     email: 'test@example.com',
-    password: 'password123',
+    password: 'Secure@123',
     given_name: 'John',
     family_name: 'Doe',
     birthdate: '1990-01-15',
@@ -39,7 +103,7 @@ describe('CreateUserInputSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe('Password should be at least 8 characters long');
+      expect(result.error.issues[0].message).toBe('Password must be at least 8 characters long');
     }
   });
 
@@ -195,7 +259,7 @@ describe('LoginUserInputSchema', () => {
   it('should accept valid login input', () => {
     const result = LoginUserInputSchema.safeParse({
       email: 'test@example.com',
-      password: 'password123',
+      password: 'password123', // Login only checks min(8) — does not enforce complexity
     });
     expect(result.success).toBe(true);
   });
@@ -242,10 +306,18 @@ describe('ForgotPasswordInputTypeSchema', () => {
 describe('ResetPasswordInputTypeSchema', () => {
   it('should accept valid matching passwords', () => {
     const result = ResetPasswordInputTypeSchema.safeParse({
-      password: 'newpassword123',
-      'confirm-password': 'newpassword123',
+      password: 'Secure@123',
+      'confirm-password': 'Secure@123',
     });
     expect(result.success).toBe(true);
+  });
+
+  it('should reject a weak password', () => {
+    const result = ResetPasswordInputTypeSchema.safeParse({
+      password: 'password123',
+      'confirm-password': 'password123',
+    });
+    expect(result.success).toBe(false);
   });
 
   it('should reject short password', () => {
@@ -259,8 +331,8 @@ describe('ResetPasswordInputTypeSchema', () => {
   // Note: Schema doesn't enforce password match - that would be done at form level
   it('should accept passwords even if they do not match (schema does not validate match)', () => {
     const result = ResetPasswordInputTypeSchema.safeParse({
-      password: 'password123',
-      'confirm-password': 'different123',
+      password: 'Secure@123',
+      'confirm-password': 'Different@456',
     });
     // The schema only validates individual field requirements, not cross-field validation
     expect(result.success).toBe(true);
