@@ -88,8 +88,7 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
     );
   }
 
-  const coverImage =
-    logo || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80';
+  const coverImage = logo || '/images/placeholder-org.svg';
 
   const eventDefaultsMeta = [
     { label: 'Visibility', value: eventDefaults?.visibility ?? 'Public' },

@@ -18,6 +18,12 @@ export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
   event: WebSocketRequestEvent,
   context: Context,
 ): Promise<APIGatewayProxyResultV2> => {
+  // EventBridge warm-up pings don't carry WebSocket fields — return early without processing
+  if (!(event as unknown as Record<string, unknown>).requestContext) {
+    logger.info('Lambda warm-up ping received');
+    return { statusCode: 200, body: JSON.stringify({ message: 'warm' }) };
+  }
+
   logger.setRequestId(context.awsRequestId);
 
   try {

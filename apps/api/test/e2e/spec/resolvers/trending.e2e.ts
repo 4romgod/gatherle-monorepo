@@ -19,9 +19,11 @@ describe('readTrendingEvents e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    actorUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
-
-    const category = await readFirstEventCategory(url);
+    const [user, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
+      readFirstEventCategory(url),
+    ]);
+    actorUser = user;
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventsMockData[0];
 
     // Create a Published, Public, Upcoming event to ensure at least one result

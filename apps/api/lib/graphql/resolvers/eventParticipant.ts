@@ -12,6 +12,7 @@ import { EventParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { EventParticipantService } from '@/services';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import { logger } from '@/utils/logger';
 
@@ -52,6 +53,19 @@ export class EventParticipantResolver {
     });
 
     return participant;
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => EventParticipant, { description: 'Check the current user in to an event' })
+  async checkInEventParticipant(
+    @Arg('eventId', () => String) eventId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventParticipant> {
+    validateMongodbId(eventId);
+    if (!context.user?.userId) {
+      throw CustomError('User not authenticated', ErrorTypes.UNAUTHENTICATED);
+    }
+    return EventParticipantService.checkIn(eventId, context.user.userId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

@@ -29,3 +29,4 @@ test-results.txt
 packages/commons/schema.graphql
 .secrets
 .codex
+mcp.json

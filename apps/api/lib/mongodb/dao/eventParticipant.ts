@@ -33,6 +33,9 @@ class EventParticipantDAO {
         if (quantity !== undefined) participant.quantity = quantity;
         if (invitedBy !== undefined) participant.invitedBy = invitedBy;
         if (sharedVisibility !== undefined) participant.sharedVisibility = sharedVisibility;
+        if (status === ParticipantStatus.CheckedIn && !participant.checkedInAt) {
+          participant.checkedInAt = new Date();
+        }
         await participant.save();
       } else {
         participant = await EventParticipant.create({
@@ -43,6 +46,7 @@ class EventParticipantDAO {
           invitedBy,
           sharedVisibility,
           rsvpAt: new Date(),
+          checkedInAt: status === ParticipantStatus.CheckedIn ? new Date() : undefined,
         });
       }
 

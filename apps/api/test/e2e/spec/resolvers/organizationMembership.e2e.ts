@@ -28,8 +28,10 @@ describe('OrganizationMembership Resolver', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
-    testUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
+    [adminUser, testUser2] = await Promise.all([
+      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
+      loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password),
+    ]);
   });
 
   afterEach(async () => {

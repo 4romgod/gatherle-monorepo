@@ -34,35 +34,22 @@ import { useSavedLocation } from '@/hooks/useSavedLocation';
 import { useSession } from 'next-auth/react';
 import { logger } from '@/lib/utils';
 
-// TODO: Refactor filter menu components (CategoryMenu, StatusMenu, DateMenu, LocationMenu) to avoid dual-mode (controlled/uncontrolled) complexity. Prefer either fully controlled or fully uncontrolled with callback props for clarity and maintainability.
+// Previously had dual-mode (controlled/uncontrolled) complexity. Simplified to always-uncontrolled.
 
 export function CategoryMenu({
   categories,
   selectedCategories,
   onChange,
-  anchorEl,
-  onClose,
   onToggle,
-  hideButton,
 }: {
   categories: EventCategory[];
   selectedCategories: string[];
   onChange?: (categories: string[]) => void;
-  anchorEl?: HTMLElement | null;
-  onClose?: () => void;
   onToggle?: (category: string) => void;
-  hideButton?: boolean;
 }) {
-  const [internalAnchorEl, setInternalAnchorEl] = useState<null | HTMLElement>(null);
-  const isControlled = typeof anchorEl !== 'undefined';
-  const menuAnchor = isControlled ? anchorEl : internalAnchorEl;
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!isControlled) setInternalAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    if (!isControlled) setInternalAnchorEl(null);
-    if (onClose) onClose();
-  };
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const handleOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
   const handleToggle = (category: string) => {
     if (onToggle) {
       onToggle(category);
@@ -75,39 +62,37 @@ export function CategoryMenu({
   };
   return (
     <>
-      {!hideButton && (
-        <Button
-          onClick={handleOpen}
-          variant="outlined"
-          endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          startIcon={<TuneIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          className="glass-button"
-          sx={{
-            borderRadius: '50px',
-            px: { xs: 1.5, sm: 2, md: 2.5 },
-            py: { xs: 0.75, sm: 1, md: 1.15 },
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-            borderWidth: 1,
-            borderColor: selectedCategories.length > 0 ? 'primary.light' : 'primary.light',
-            bgcolor: selectedCategories.length > 0 ? 'primary.light' : 'background.paper',
-            color: selectedCategories.length > 0 ? 'text.disabled' : 'text.primary',
-            whiteSpace: 'nowrap',
-            minWidth: 'auto',
-            '&:hover': {
-              color: 'text.primary',
-              bgcolor: 'action.hover',
-              borderColor: 'primary.main',
-            },
-          }}
-        >
-          {selectedCategories.length > 0 ? `Categories (${selectedCategories.length})` : 'Categories'}
-        </Button>
-      )}
+      <Button
+        onClick={handleOpen}
+        variant="outlined"
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        startIcon={<TuneIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: 1,
+          borderColor: selectedCategories.length > 0 ? 'primary.light' : 'primary.light',
+          bgcolor: selectedCategories.length > 0 ? 'primary.light' : 'background.paper',
+          color: selectedCategories.length > 0 ? 'text.disabled' : 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            color: 'text.primary',
+            bgcolor: 'action.hover',
+            borderColor: 'primary.main',
+          },
+        }}
+      >
+        {selectedCategories.length > 0 ? `Categories (${selectedCategories.length})` : 'Categories'}
+      </Button>
       <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
         onClose={handleClose}
         slotProps={{
           paper: {
@@ -142,29 +127,16 @@ export function StatusMenu({
   statuses,
   selectedStatuses,
   onChange,
-  anchorEl,
-  onClose,
   onToggle,
-  hideButton,
 }: {
   statuses: EventStatus[];
   selectedStatuses: EventStatus[];
   onChange?: (statuses: EventStatus[]) => void;
-  anchorEl?: HTMLElement | null;
-  onClose?: () => void;
   onToggle?: (status: EventStatus) => void;
-  hideButton?: boolean;
 }) {
-  const [internalAnchorEl, setInternalAnchorEl] = useState<null | HTMLElement>(null);
-  const isControlled = typeof anchorEl !== 'undefined';
-  const menuAnchor = isControlled ? anchorEl : internalAnchorEl;
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!isControlled) setInternalAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    if (!isControlled) setInternalAnchorEl(null);
-    if (onClose) onClose();
-  };
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const handleOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
   const handleToggle = (status: EventStatus) => {
     if (onToggle) {
       onToggle(status);
@@ -177,38 +149,36 @@ export function StatusMenu({
   };
   return (
     <>
-      {!hideButton && (
-        <Button
-          onClick={handleOpen}
-          variant="outlined"
-          endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          className="glass-button"
-          sx={{
-            borderRadius: '50px',
-            px: { xs: 1.5, sm: 2, md: 2.5 },
-            py: { xs: 0.75, sm: 1, md: 1.15 },
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-            borderWidth: 1,
-            borderColor: selectedStatuses.length > 0 ? 'primary.light' : 'primary.light',
-            bgcolor: selectedStatuses.length > 0 ? 'primary.light' : 'background.paper',
-            color: selectedStatuses.length > 0 ? 'text.disabled' : 'text.primary',
-            whiteSpace: 'nowrap',
-            minWidth: 'auto',
-            '&:hover': {
-              color: 'text.primary',
-              bgcolor: 'action.hover',
-              borderColor: 'primary.main',
-            },
-          }}
-        >
-          {selectedStatuses.length > 0 ? `Status (${selectedStatuses.length})` : 'Status'}
-        </Button>
-      )}
+      <Button
+        onClick={handleOpen}
+        variant="outlined"
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: 1,
+          borderColor: selectedStatuses.length > 0 ? 'primary.light' : 'primary.light',
+          bgcolor: selectedStatuses.length > 0 ? 'primary.light' : 'background.paper',
+          color: selectedStatuses.length > 0 ? 'text.disabled' : 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            color: 'text.primary',
+            bgcolor: 'action.hover',
+            borderColor: 'primary.main',
+          },
+        }}
+      >
+        {selectedStatuses.length > 0 ? `Status (${selectedStatuses.length})` : 'Status'}
+      </Button>
       <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
         onClose={handleClose}
         slotProps={{
           paper: {
@@ -236,23 +206,15 @@ export function DateMenu({
   selectedOption,
   onChange,
   onCustomDateChange,
-  anchorEl,
-  onClose,
-  hideButton,
 }: {
   dateOptions: string[];
   selectedOption: string | null;
   onChange: (option: string) => void;
   onCustomDateChange: (date: Dayjs | null) => void;
-  anchorEl?: HTMLElement | null;
-  onClose?: () => void;
-  hideButton?: boolean;
 }) {
   const [internalAnchorEl, setInternalAnchorEl] = useState<null | HTMLElement>(null);
   const [customDateAnchor, setCustomDateAnchor] = useState<null | HTMLElement>(null);
   const [shouldOpenCustom, setShouldOpenCustom] = useState(false);
-  const isControlled = typeof anchorEl !== 'undefined';
-  const menuAnchor = isControlled ? anchorEl : internalAnchorEl;
 
   useEffect(() => {
     if (selectedOption !== DATE_FILTER_OPTIONS.CUSTOM) {
@@ -261,13 +223,8 @@ export function DateMenu({
     }
   }, [selectedOption]);
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!isControlled) setInternalAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    if (!isControlled) setInternalAnchorEl(null);
-    if (onClose) onClose();
-  };
+  const handleOpen = (event: React.MouseEvent<HTMLElement>) => setInternalAnchorEl(event.currentTarget);
+  const handleClose = () => setInternalAnchorEl(null);
   const handleSelect = (option: string, event?: React.MouseEvent<HTMLElement>) => {
     if (option === DATE_FILTER_OPTIONS.CUSTOM) {
       // Close the menu, then open the popover anchored to the button
@@ -282,14 +239,14 @@ export function DateMenu({
 
   // Open the custom date popover after menu closes
   useEffect(() => {
-    if (shouldOpenCustom && !menuAnchor) {
+    if (shouldOpenCustom && !internalAnchorEl) {
       const button = document.querySelector('[data-date-filter-button]') as HTMLElement | null;
       if (button) {
         setCustomDateAnchor(button);
       }
       setShouldOpenCustom(false);
     }
-  }, [shouldOpenCustom, menuAnchor]);
+  }, [shouldOpenCustom, internalAnchorEl]);
   const handleCustomDateClose = () => setCustomDateAnchor(null);
   // Show user-friendly label for selected date filter
   // Track the selected custom date in local state for display
@@ -310,40 +267,38 @@ export function DateMenu({
   }
   return (
     <>
-      {!hideButton && (
-        <Button
-          onClick={handleOpen}
-          variant="outlined"
-          endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          startIcon={<CalendarTodayIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          className="glass-button"
-          data-date-filter-button
-          sx={{
-            borderRadius: '50px',
-            px: { xs: 1.5, sm: 2, md: 2.5 },
-            py: { xs: 0.75, sm: 1, md: 1.15 },
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-            borderWidth: 1,
-            borderColor: selectedOption ? 'primary.light' : 'primary.light',
-            bgcolor: selectedOption ? 'primary.light' : 'background.paper',
-            color: selectedOption ? 'text.disabled' : 'text.primary',
-            whiteSpace: 'nowrap',
-            minWidth: 'auto',
-            '&:hover': {
-              color: 'text.primary',
-              bgcolor: 'action.hover',
-              borderColor: 'primary.main',
-            },
-          }}
-        >
-          {buttonLabel}
-        </Button>
-      )}
+      <Button
+        onClick={handleOpen}
+        variant="outlined"
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        startIcon={<CalendarTodayIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        data-date-filter-button
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: 1,
+          borderColor: selectedOption ? 'primary.light' : 'primary.light',
+          bgcolor: selectedOption ? 'primary.light' : 'background.paper',
+          color: selectedOption ? 'text.disabled' : 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            color: 'text.primary',
+            bgcolor: 'action.hover',
+            borderColor: 'primary.main',
+          },
+        }}
+      >
+        {buttonLabel}
+      </Button>
       <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
+        anchorEl={internalAnchorEl}
+        open={Boolean(internalAnchorEl)}
         onClose={handleClose}
         slotProps={{
           paper: {
@@ -414,24 +369,16 @@ export function LocationMenu({
   currentLocation,
   onApply,
   onClear,
-  anchorEl,
-  onClose,
-  hideButton,
 }: {
   currentLocation: LocationFilter;
   onApply: (location: LocationFilter) => void;
   onClear: () => void;
-  anchorEl?: HTMLElement | null;
-  onClose?: () => void;
-  hideButton?: boolean;
 }) {
   const { setToastProps, toastProps } = useAppContext();
   const { data: session } = useSession();
   const userId = session?.user?.userId;
   const { location: savedLocation, setLocation: setSavedLocation } = useSavedLocation(userId);
   const [internalAnchorEl, setInternalAnchorEl] = useState<null | HTMLElement>(null);
-  const isControlled = typeof anchorEl !== 'undefined';
-  const menuAnchor = isControlled ? anchorEl : internalAnchorEl;
   const [city, setCity] = useState(currentLocation.city || '');
   const [state, setState] = useState(currentLocation.state || '');
   const [country, setCountry] = useState(currentLocation.country || '');
@@ -466,13 +413,8 @@ export function LocationMenu({
     });
   };
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!isControlled) setInternalAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    if (!isControlled) setInternalAnchorEl(null);
-    if (onClose) onClose();
-  };
+  const handleOpen = (event: React.MouseEvent<HTMLElement>) => setInternalAnchorEl(event.currentTarget);
+  const handleClose = () => setInternalAnchorEl(null);
 
   const handleGetMyLocation = () => {
     if (savedLocation.latitude && savedLocation.longitude) {
@@ -557,39 +499,37 @@ export function LocationMenu({
 
   return (
     <>
-      {!hideButton && (
-        <Button
-          onClick={handleOpen}
-          variant="outlined"
-          endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          startIcon={<LocationOnIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
-          className="glass-button"
-          sx={{
-            borderRadius: '50px',
-            px: { xs: 1.5, sm: 2, md: 2.5 },
-            py: { xs: 0.75, sm: 1, md: 1.15 },
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-            borderWidth: 1,
-            borderColor: hasValues ? 'primary.light' : 'primary.light',
-            bgcolor: hasValues ? 'primary.light' : 'background.paper',
-            color: hasValues ? 'text.disabled' : 'text.primary',
-            whiteSpace: 'nowrap',
-            minWidth: 'auto',
-            '&:hover': {
-              color: 'text.primary',
-              bgcolor: 'action.hover',
-              borderColor: 'primary.main',
-            },
-          }}
-        >
-          {buttonLabel}
-        </Button>
-      )}
+      <Button
+        onClick={handleOpen}
+        variant="outlined"
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        startIcon={<LocationOnIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
+        className="glass-button"
+        sx={{
+          borderRadius: '50px',
+          px: { xs: 1.5, sm: 2, md: 2.5 },
+          py: { xs: 0.75, sm: 1, md: 1.15 },
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+          borderWidth: 1,
+          borderColor: hasValues ? 'primary.light' : 'primary.light',
+          bgcolor: hasValues ? 'primary.light' : 'background.paper',
+          color: hasValues ? 'text.disabled' : 'text.primary',
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          '&:hover': {
+            color: 'text.primary',
+            bgcolor: 'action.hover',
+            borderColor: 'primary.main',
+          },
+        }}
+      >
+        {buttonLabel}
+      </Button>
       <Popover
-        open={Boolean(menuAnchor)}
-        anchorEl={menuAnchor}
+        open={Boolean(internalAnchorEl)}
+        anchorEl={internalAnchorEl}
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}

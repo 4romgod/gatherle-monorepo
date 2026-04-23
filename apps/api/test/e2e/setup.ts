@@ -1,8 +1,30 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
+
+/**
+ * Recursively count e2e test files so warm-up concurrency always matches
+ * the number of parallel Jest workers (one worker per file).
+ */
+function countE2eFiles(dir: string): number {
+  let count = 0;
+  try {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        count += countE2eFiles(join(dir, entry.name));
+      } else if (/\.e2e\.[jt]sx?$/.test(entry.name)) {
+        count++;
+      }
+    }
+  } catch {
+    // ignore unreadable directories
+  }
+  return count;
+}
 
 /**
  * Lightweight GraphQL query used to trigger Lambda cold starts before tests run.
@@ -65,10 +87,10 @@ const setup = async () => {
   const isRemote = !new URL(graphqlUrl).hostname.includes('localhost');
 
   if (isRemote) {
-    // Warm up Lambda containers before Jest workers start their beforeAll hooks.
-    // 5 concurrent requests provisions 5 execution environments, preventing the
-    // thundering-herd cold-start problem that causes flaky first-run failures.
-    const concurrency = 5;
+    // Warm up one Lambda container per test file so every parallel worker
+    // starts with a warm execution environment. Previously 5 was hardcoded,
+    // which left the remaining workers hitting cold starts.
+    const concurrency = Math.max(5, countE2eFiles(__dirname));
     console.log(`Warming up ${concurrency} Lambda containers at ${graphqlUrl}`);
     await warmUpLambda(graphqlUrl, concurrency);
     console.log('Lambda warm-up complete.');

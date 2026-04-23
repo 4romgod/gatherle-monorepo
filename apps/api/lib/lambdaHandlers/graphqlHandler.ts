@@ -96,6 +96,12 @@ export const graphqlLambdaHandler = async (
   event: APIGatewayProxyEvent,
   context: Context,
 ): Promise<APIGatewayProxyResult> => {
+  // EventBridge warm-up pings don't carry HTTP fields — return early without processing
+  if (!(event as unknown as Record<string, unknown>).httpMethod) {
+    logger.info('Lambda warm-up ping received');
+    return { statusCode: 200, body: JSON.stringify({ message: 'warm' }) };
+  }
+
   const requestOrigin = event.headers.origin ?? event.headers.Origin;
 
   // Set request ID for all logs in this invocation

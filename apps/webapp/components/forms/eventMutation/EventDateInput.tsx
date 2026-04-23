@@ -21,17 +21,59 @@ import { ALL_WEEKDAYS, Frequency, RRule, Weekday, WeekdayStr } from 'rrule';
 import dayjs, { Dayjs } from 'dayjs';
 import EventRadioButtons from '@/components/buttons/EventTypeRadioButton';
 import { EventDateInputProps } from '@/lib/constants';
+import { z } from 'zod';
 
-// TODO: persist the recurrence rule in local storage
 // TODO: add date like in AddressInput
+
+const RECURRENCE_STORAGE_KEY = 'gatherle:eventDateInput';
+
+const PersistedRecurrenceSchema = z.object({
+  eventType: z.enum(['single', 'recurring']),
+  frequency: z.nativeEnum(Frequency),
+  interval: z.number().int().positive(),
+  daysOfWeek: z.array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const)),
+});
+
+type PersistedRecurrenceState = z.infer<typeof PersistedRecurrenceSchema>;
+
+function loadPersistedState(): PersistedRecurrenceState | null {
+  try {
+    const raw = localStorage.getItem(RECURRENCE_STORAGE_KEY);
+    if (!raw) return null;
+    const result = PersistedRecurrenceSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function EventDateInput({ onChange }: EventDateInputProps) {
-  const [eventType, setEvent] = useState<string>('single');
+  const [eventType, setEvent] = useState<'single' | 'recurring'>('single');
   const [startDateTime, setStartDateTime] = useState<Dayjs | null>(dayjs());
   const [endDateTime, setEndDateTime] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
 
   const [frequency, setFrequency] = useState<Frequency>(Frequency.WEEKLY);
   const [interval, setInterval] = useState<number>(1);
   const [daysOfWeek, setDaysOfWeek] = useState<WeekdayStr[]>([]);
+
+  // Restore persisted recurrence state on client mount only (avoids SSR hydration mismatch)
+  useEffect(() => {
+    const persisted = loadPersistedState();
+    if (!persisted) return;
+    setEvent(persisted.eventType);
+    setFrequency(persisted.frequency);
+    setInterval(persisted.interval);
+    setDaysOfWeek(persisted.daysOfWeek);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const state: PersistedRecurrenceState = { eventType, frequency, interval, daysOfWeek };
+      localStorage.setItem(RECURRENCE_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // localStorage may be unavailable (e.g. in SSR or private mode)
+    }
+  }, [eventType, frequency, interval, daysOfWeek]);
 
   useEffect(() => {
     if (!startDateTime || !endDateTime) return;
@@ -69,7 +111,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
   return (
     <Box>
       <FormControl component="fieldset" sx={{ width: '100%', mb: 3 }}>
-        <EventRadioButtons selectedType={eventType} onChange={setEvent} />
+        <EventRadioButtons selectedType={eventType} onChange={(v) => setEvent(v as 'single' | 'recurring')} />
       </FormControl>
 
       {/* Date and Time Pickers */}

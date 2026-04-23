@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 600" fill="none">
+  <rect width="2000" height="600" fill="#f3f4f6"/>
+  <rect x="900" y="180" width="200" height="200" rx="8" fill="#d1d5db"/>
+  <rect x="920" y="260" width="160" height="120" fill="#e5e7eb"/>
+  <rect x="950" y="300" width="30" height="60" fill="#d1d5db"/>
+  <rect x="1020" y="300" width="30" height="60" fill="#d1d5db"/>
+  <rect x="940" y="220" width="40" height="30" rx="4" fill="#c4c4c4"/>
+  <rect x="1020" y="220" width="40" height="30" rx="4" fill="#c4c4c4"/>
+  <text x="1000" y="430" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#9ca3af">Venue</text>
+</svg>

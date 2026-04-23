@@ -18,9 +18,11 @@ describe('Feed resolver e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    actorUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
-
-    const category = await readFirstEventCategory(url);
+    const [user, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
+      readFirstEventCategory(url),
+    ]);
+    actorUser = user;
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventsMockData[0];
 
     const eventInput: CreateEventInput = {

@@ -43,6 +43,7 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
         ],
       },
     },
+    context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
 

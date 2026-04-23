@@ -35,8 +35,7 @@ import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 
-const DEFAULT_VENUE_IMAGE =
-  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2000&q=80';
+const DEFAULT_VENUE_IMAGE = '/images/placeholder-venue.svg';
 
 type VenueLocationSource = NonNullable<GetVenueBySlugQuery['readVenueBySlug']>;
 

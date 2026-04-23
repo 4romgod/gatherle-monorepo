@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" fill="none">
+  <rect width="1200" height="400" fill="#f3f4f6"/>
+  <rect x="560" y="150" width="80" height="80" rx="8" fill="#d1d5db"/>
+  <path d="M580 170 h40 M580 185 h40 M580 200 h40" stroke="#9ca3af" stroke-width="4" stroke-linecap="round"/>
+  <path d="M540 230 h120 a8 8 0 0 1 8 8 v12 H532 v-12 a8 8 0 0 1 8-8z" fill="#d1d5db"/>
+  <text x="600" y="300" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#9ca3af">Organization</text>
+</svg>
