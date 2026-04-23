@@ -1,17 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  IconButton,
-  InputAdornment,
-  LinearProgress,
-  Stack,
-  Card,
-} from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, InputAdornment, LinearProgress, Stack } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
 import { useAppContext } from '@/hooks/useAppContext';
@@ -214,15 +204,7 @@ export default function PasswordSettingsPage() {
       </Box>
 
       <form onSubmit={handleChangePassword} style={{ width: '100%', maxWidth: 600 }}>
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            p: { xs: 3, md: 4 },
-          }}
-        >
+        <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Change Password
           </Typography>
@@ -398,7 +380,7 @@ export default function PasswordSettingsPage() {
               {isPending ? 'Changing Password...' : 'Change Password'}
             </Button>
           </Stack>
-        </Card>
+        </Box>
       </form>
     </Box>
   );

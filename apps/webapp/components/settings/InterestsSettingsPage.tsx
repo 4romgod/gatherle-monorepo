@@ -16,7 +16,6 @@ import {
   TextField,
   InputAdornment,
   Stack,
-  Card,
   CircularProgress,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -153,13 +152,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
         </Stack>
 
         {/* Selected Interests Display */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            p: 3,
-          }}
-        >
+        <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Your Interests ({selectedInterests.length})
           </Typography>
@@ -185,7 +178,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
               ))}
             </Box>
           )}
-        </Card>
+        </Box>
       </Stack>
 
       {/* Interest Selection Modal */}

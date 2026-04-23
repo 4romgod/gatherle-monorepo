@@ -23,7 +23,7 @@ export default async function ConversationPage({ params }: Props) {
     <Box
       sx={{
         height: '100%',
-        backgroundColor: 'background.paper',
+        backgroundColor: 'background.default',
       }}
     >
       <ConversationThread username={username} />

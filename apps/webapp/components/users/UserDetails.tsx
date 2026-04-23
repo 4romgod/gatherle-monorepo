@@ -1,9 +1,10 @@
 import React from 'react';
 import { Email, Phone, Public, Visibility, Share, CheckCircle, Cake, Wc } from '@mui/icons-material';
-import { Typography, Avatar, Box, Paper, Chip, Stack, Button } from '@mui/material';
+import { Typography, Avatar, Box, Paper, Stack, Button } from '@mui/material';
 import { LocationOn as LocationIcon } from '@mui/icons-material';
 import { User, SocialVisibility } from '@/data/graphql/types/graphql';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
+import UserRoleBadge from '@/components/users/UserRoleBadge';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
 import { getBirthdateDisplay } from '@/lib/utils';
@@ -96,15 +97,15 @@ export default function UserDetails({ user, isOwnProfile = false }: UserDetailsP
 
         {/* Name and Username */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight={600} gutterBottom>
-            {user.given_name} {user.family_name}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+            <Typography variant="h4" fontWeight={600}>
+              {user.given_name} {user.family_name}
+            </Typography>
+            <UserRoleBadge role={user.userRole} size={24} />
+          </Stack>
+          <Typography variant="body1" color="text.secondary">
             @{user.username}
           </Typography>
-          {user.userRole && (
-            <Chip label={user.userRole} size="small" color="primary" sx={{ mt: 1.5, textTransform: 'capitalize' }} />
-          )}
         </Box>
 
         {/* Bio */}

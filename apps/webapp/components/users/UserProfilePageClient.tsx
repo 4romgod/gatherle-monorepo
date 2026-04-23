@@ -80,7 +80,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   });
 
   const { data: myRsvpsData, loading: myRsvpsLoading } = useQuery(GetMyRsvpsDocument, {
-    variables: { includeCancelled: false },
+    variables: { includeCancelled: true }, // fetch cancelled too — moments persist after cancellation
     skip: !isOwnProfile || !token,
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
@@ -116,7 +116,9 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   // For own profile use the dedicated myRsvps query; for others filter all events
   const allRsvpdEvents = useMemo(() => {
     if (isOwnProfile && myRsvpsData?.myRsvps) {
+      // Exclude cancelled for tabs (Going, Attended, etc.) — moments are handled separately
       const rsvpdEvents = myRsvpsData.myRsvps
+        .filter((r) => r.status !== ParticipantStatus.Cancelled)
         .map((r) => {
           if (!r.event) {
             logger.warn('UserProfilePageClient: myRsvps entry without associated event encountered');
@@ -145,15 +147,25 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     [events, user?.userId],
   );
 
+  // Moments ring needs ALL events the user was ever a participant in (including cancelled RSVPs)
+  // because moments persist after RSVP cancellation.
+  const allRsvpdEventsForMoments = useMemo(() => {
+    if (isOwnProfile && myRsvpsData?.myRsvps) {
+      return myRsvpsData.myRsvps.map((r) => r.event).filter((e): e is EventPreview => e != null);
+    }
+    // For other profiles include any participant status (including Cancelled)
+    return events.filter((event) => event.participants?.some((p) => p.userId === user?.userId));
+  }, [isOwnProfile, myRsvpsData, events, user?.userId]);
+
   const profileMomentEvents = useMemo(() => {
     const byId = new Map<string, { eventId: string; title: string }>();
-    [...organizedEvents, ...allRsvpdEvents].forEach((e) => {
+    [...organizedEvents, ...allRsvpdEventsForMoments].forEach((e) => {
       if (!byId.has(e.eventId)) {
         byId.set(e.eventId, { eventId: e.eventId, title: e.title });
       }
     });
     return Array.from(byId.values());
-  }, [organizedEvents, allRsvpdEvents]);
+  }, [organizedEvents, allRsvpdEventsForMoments]);
 
   const interests = user?.interests ?? [];
 
@@ -303,7 +315,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                     emptyCreatedCta={emptyCreatedCTA}
                   />
                 </Grid>
-
               </Grid>
             </Box>
           </Box>

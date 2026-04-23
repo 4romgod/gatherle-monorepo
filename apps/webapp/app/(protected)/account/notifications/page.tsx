@@ -15,7 +15,7 @@ export default function NotificationsPage() {
   return (
     <Box
       sx={{
-        backgroundColor: 'background.paper',
+        backgroundColor: 'background.default',
         minHeight: '100vh',
       }}
     >

@@ -53,7 +53,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
         {isAuthN && session?.user ? (
           <Link
-            href={ROUTES.ACCOUNT.PROFILE}
+            href={session.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT}
             aria-label="View profile"
             style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}
           >

@@ -136,9 +136,10 @@ scope. Pages are grouped by purpose and access level.
 
 ~~### 15. My Profile (done)~~
 
-**Route:** `/account/profile`
+**Route:** `/users/[username]`
 
-- Just to see public information
+- Public profile view (own profile redirects here)
+- See hosted, attended, and saved events
 - Privacy settings
 
 ---

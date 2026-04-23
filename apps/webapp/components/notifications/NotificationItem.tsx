@@ -124,8 +124,7 @@ export default function NotificationItem({
       sx={{
         px: 2,
         py: 1.5,
-        bgcolor: notification.isRead ? 'transparent' : 'action.hover',
-        '&:hover': isClickable ? { bgcolor: 'action.selected' } : {},
+        '&:hover': isClickable ? { bgcolor: 'action.hover' } : {},
         alignItems: 'flex-start',
         cursor: isClickable ? 'pointer' : 'default',
         opacity: isLoading ? 0.6 : 1,
@@ -141,7 +140,7 @@ export default function NotificationItem({
               width: 40,
               height: 40,
               bgcolor: color,
-              color: 'white',
+              color: 'common.white',
             }}
           >
             {icon}

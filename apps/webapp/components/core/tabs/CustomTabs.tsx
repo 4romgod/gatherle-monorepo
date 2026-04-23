@@ -114,11 +114,10 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         elevation={0}
         sx={{
           borderRadius: { xs: 3, md: 3 },
-          border: '1px solid',
-          borderColor: 'divider',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'background.paper',
+          backgroundColor: 'background.default',
+          backgroundImage: 'none',
           minHeight: effectiveOrientation === 'vertical' ? 'auto' : 'auto',
           position: effectiveOrientation === 'vertical' ? { md: 'sticky' } : 'static',
           top: effectiveOrientation === 'vertical' ? { md: 24 } : 'auto',
@@ -265,9 +264,8 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         sx={{
           flex: 1,
           borderRadius: { xs: 3, md: 3 },
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: 'background.paper',
+          backgroundColor: 'background.default',
+          backgroundImage: 'none',
           minHeight: { xs: 'auto', md: '100vh' },
         }}
       >

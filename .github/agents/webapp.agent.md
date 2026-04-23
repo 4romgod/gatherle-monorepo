@@ -337,7 +337,7 @@ Agent: Opens http://localhost:3000 in Simple Browser
 4. After authentication, suggest navigating to relevant page:
    - `/account/events` - for testing event management
    - `/events` - for testing public events
-   - `/account/profile` - for testing user profile
+   - `/users/{username}` - for testing user profile
 
 **Example Usage**:
 

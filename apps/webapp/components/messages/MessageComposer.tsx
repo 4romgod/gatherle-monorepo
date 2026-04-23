@@ -195,7 +195,13 @@ export function MessageComposer({
           placeholder={placeholder}
           slotProps={{ input: { disableUnderline: true } }}
           sx={{
-            '& .MuiInputBase-root': { py: 0, minHeight: 42, display: 'flex', alignItems: 'center' },
+            '& .MuiInputBase-root': {
+              py: 0,
+              minHeight: 42,
+              display: 'flex',
+              alignItems: 'center',
+              ...(variant === 'overlay' && { color: 'common.white' }),
+            },
             '& .MuiInputBase-inputMultiline': {
               paddingTop: '10px',
               paddingBottom: '10px',

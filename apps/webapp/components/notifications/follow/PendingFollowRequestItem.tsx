@@ -86,94 +86,33 @@ export default function PendingFollowRequestItem({
 
       <ListItemText
         primary={
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: 2,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Link href={`/users/${follower.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  sx={{
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' },
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {displayName}
-                </Typography>
-              </Link>
+          <Box sx={{ minWidth: 0 }}>
+            <Link href={`/users/${follower.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <Typography
-                variant="body2"
-                color="text.secondary"
+                variant="subtitle1"
+                fontWeight={600}
                 sx={{
+                  cursor: 'pointer',
+                  '&:hover': { color: 'primary.main' },
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}
               >
-                @{follower.username}
+                {displayName}
               </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-              {isPending ? (
-                <>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    startIcon={<CheckIcon />}
-                    onClick={handleAccept}
-                    disabled={loading}
-                    sx={{
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      borderRadius: 2,
-                      minWidth: 90,
-                    }}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<CloseIcon />}
-                    onClick={handleReject}
-                    disabled={loading}
-                    sx={{
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      borderRadius: 2,
-                      minWidth: 90,
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </>
-              ) : (
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 0.75,
-                    borderRadius: 2,
-                    bgcolor: 'action.selected',
-                    color: 'text.secondary',
-                  }}
-                >
-                  <Typography variant="caption" fontWeight={700}>
-                    {approvalStatus === FollowApprovalStatus.Accepted ? 'Accepted' : 'Rejected'}
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
+            </Link>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              @{follower.username}
+            </Typography>
           </Box>
         }
         secondary={
@@ -197,6 +136,48 @@ export default function PendingFollowRequestItem({
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
               {formatDistanceToNow(timestamp, { addSuffix: true })}
             </Typography>
+
+            <Box sx={{ mt: 1.5 }}>
+              {isPending ? (
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<CheckIcon />}
+                    onClick={handleAccept}
+                    disabled={loading}
+                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<CloseIcon />}
+                    onClick={handleReject}
+                    disabled={loading}
+                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+                  >
+                    Reject
+                  </Button>
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'inline-block',
+                    px: 2,
+                    py: 0.75,
+                    borderRadius: 2,
+                    bgcolor: 'action.selected',
+                    color: 'text.secondary',
+                  }}
+                >
+                  <Typography variant="caption" fontWeight={700}>
+                    {approvalStatus === FollowApprovalStatus.Accepted ? 'Accepted' : 'Rejected'}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
         }
         slotProps={{

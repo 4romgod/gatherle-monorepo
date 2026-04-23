@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useActionState, useEffect, useState } from 'react';
-import { Box, Typography, Switch, FormControlLabel, Button, Stack, Card, CircularProgress } from '@mui/material';
+import { Box, Typography, Switch, FormControlLabel, Button, Stack, CircularProgress } from '@mui/material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
 import { useAppContext } from '@/hooks/useAppContext';
@@ -127,13 +127,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
 
         <Stack spacing={3}>
           {/* Communication Preferences */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-            }}
-          >
+          <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Communication Preferences
             </Typography>
@@ -185,17 +179,10 @@ export default function EventSettingsPage({ user }: { user: User }) {
                 />
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Info Card */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-              bgcolor: 'action.hover',
-            }}
-          >
+          <Box sx={{ borderRadius: 2, p: 2.5, bgcolor: 'action.hover', mb: 2 }}>
             <Typography variant="body2" color="text.secondary">
               <strong>Looking to manage your event interests?</strong> Visit the{' '}
               <Typography component="span" color="primary.main" fontWeight={600}>
@@ -203,7 +190,7 @@ export default function EventSettingsPage({ user }: { user: User }) {
               </Typography>{' '}
               tab to customize the types of events you want to see.
             </Typography>
-          </Card>
+          </Box>
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>

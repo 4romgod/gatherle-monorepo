@@ -15,7 +15,6 @@ export const ROUTES = {
     MESSAGES: '/account/messages',
     MESSAGE_WITH_USERNAME: (username: string) => `/account/messages/${encodeURIComponent(username)}`,
     NOTIFICATIONS: '/account/notifications',
-    PROFILE: '/account/profile',
     ROOT: '/account',
   },
   API_AUTH_PREFIX: '/api/auth',
