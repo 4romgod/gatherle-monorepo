@@ -51,6 +51,14 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         }),
       },
     },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          backgroundImage: 'none',
+        }),
+      },
+    },
     MuiButton: {
       defaultProps: {
         disableElevation: true,
