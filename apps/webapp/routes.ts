@@ -17,7 +17,7 @@ export const publicRoutes: string[] = [
 
 /**
  * An array of routes that are used for authentication
- * These routes will redirect authenticated users to '/account/profile'
+ * These routes will redirect authenticated users to the home page
  * @type {string[]}
  */
 export const authRoutes: string[] = [

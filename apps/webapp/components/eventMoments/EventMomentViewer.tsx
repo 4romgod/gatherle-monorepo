@@ -171,6 +171,12 @@ export default function EventMomentViewer({
   const goNext = useCallback(() => goTo(currentIndex + 1), [currentIndex, goTo]);
   const goPrev = useCallback(() => goTo(currentIndex - 1), [currentIndex, goTo]);
 
+  // Keep a stable ref so the RAF timer can always call the latest goNext without
+  // being listed as a useEffect dependency (which would restart the loop on every
+  // render whenever onClose / goTo gets a new reference).
+  const goNextRef = useRef(goNext);
+  goNextRef.current = goNext;
+
   const handleToggleMute = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.muted = !videoRef.current.muted;
@@ -263,7 +269,7 @@ export default function EventMomentViewer({
       const pct = Math.min((elapsedRef.current / STORY_DURATION_MS) * 100, 100);
       setProgress(pct);
       if (elapsedRef.current >= STORY_DURATION_MS) {
-        goNext();
+        goNextRef.current();
       } else {
         rafRef.current = requestAnimationFrame(tick);
       }
@@ -277,7 +283,7 @@ export default function EventMomentViewer({
         rafRef.current = null;
       }
     };
-  }, [open, currentIndex, paused, goNext]);
+  }, [open, currentIndex, paused]);
 
   // Video progress — sync progress bar with video currentTime
   const handleVideoTimeUpdate = useCallback(() => {

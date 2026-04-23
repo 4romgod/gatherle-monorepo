@@ -157,17 +157,8 @@ export default function AccountSettingsPage({ user }: { user: User }) {
 
       <Stack spacing={3}>
         <Box component="form" action={updateUserFormAction} noValidate>
-          {/* Account Details Card */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              p: { xs: 3, md: 4 },
-              mb: 3,
-            }}
-          >
+          {/* Account Details */}
+          <Box sx={{ mb: 3 }}>
             <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Account Details
             </Typography>
@@ -205,7 +196,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
                 />
               </Grid>
             </Grid>
-          </Card>
+          </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end">
             <SubmitButton />

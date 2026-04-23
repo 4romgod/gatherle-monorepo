@@ -136,9 +136,30 @@ export const GetSavedEventsDocument = graphql(`
           iconName
           color
         }
+        participants {
+          participantId
+          eventId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
         savedByCount
         isSavedByMe
         rsvpCount
+        myRsvp {
+          participantId
+          status
+          quantity
+        }
       }
       createdAt
     }

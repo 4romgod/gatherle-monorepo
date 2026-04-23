@@ -141,9 +141,14 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
               >
                 <CardContent>
                   <Stack spacing={1}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Stack spacing={0.5}>
-                        <Typography variant="subtitle1" fontWeight={700}>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      spacing={{ xs: 1, sm: 0 }}
+                    >
+                      <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle1" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
                           {event.title}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">

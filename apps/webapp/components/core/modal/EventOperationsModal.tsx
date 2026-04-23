@@ -30,9 +30,11 @@ import { deleteEventAction } from '@/data/actions/server/events/delete-event';
 import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { useAppContext } from '@/hooks/useAppContext';
+import { useSession } from 'next-auth/react';
 
 const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail; redirectOnDelete?: string }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -95,7 +97,8 @@ const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail;
 
     setConfirmDeleteOpen(false);
     handleMenuClose();
-    router.replace(redirectOnDelete ?? ROUTES.ACCOUNT.PROFILE);
+    const fallback = session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.HOME;
+    router.replace(redirectOnDelete ?? fallback);
   };
 
   return (

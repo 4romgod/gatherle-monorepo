@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Alert, Box, CircularProgress, Divider, List, Paper, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Divider, List, Typography } from '@mui/material';
 import { PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import { FollowTargetType } from '@/data/graphql/types/graphql';
 import { useFollowRequests } from '@/hooks';
@@ -36,12 +36,8 @@ export default function PendingFollowRequestsList() {
   // Show empty state
   if (requests.length === 0) {
     return (
-      <Paper
-        elevation={0}
+      <Box
         sx={{
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
           p: { xs: 4, md: 6 },
           textAlign: 'center',
         }}
@@ -63,29 +59,12 @@ export default function PendingFollowRequestsList() {
         <Typography variant="body2" color="text.secondary">
           Follow requests will appear here when someone wants to follow you.
         </Typography>
-      </Paper>
+      </Box>
     );
   }
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        overflow: 'hidden',
-      }}
-    >
-      <Box sx={{ px: 3, py: 2, bgcolor: 'background.default' }}>
-        <Typography variant="overline" color="primary" fontWeight={700} letterSpacing="0.1em">
-          Follow Requests
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {requests.length} {requests.length === 1 ? 'request' : 'requests'}
-        </Typography>
-      </Box>
-      <Divider />
+    <Box>
       <List disablePadding>
         {requests.map((request, index) => (
           <React.Fragment key={request.followId}>
@@ -103,6 +82,6 @@ export default function PendingFollowRequestsList() {
           </React.Fragment>
         ))}
       </List>
-    </Paper>
+    </Box>
   );
 }

@@ -1,11 +1,12 @@
 import { Metadata } from 'next';
-import { Box, Container, Paper, Typography, Button, Stack } from '@mui/material';
+import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import { ArrowBack, AddCircleOutline } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
 import { GetAllEventCategoriesDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
 import { ROUTES } from '@/lib/constants';
 import { buildPageMetadata } from '@/lib/metadata';
+import { auth } from '@/auth';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Create Event',
@@ -14,6 +15,10 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function CreateEvent() {
+  const session = await auth();
+  const username = session?.user?.username;
+  const profileUrl = username ? ROUTES.USERS.USER(username) : ROUTES.ACCOUNT.ROOT;
+
   const { data: eventCategories } = await getClient().query({
     query: GetAllEventCategoriesDocument,
   });
@@ -42,7 +47,7 @@ export default async function CreateEvent() {
             <Box>
               <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
                 <Button
-                  href={ROUTES.ACCOUNT.PROFILE}
+                  href={profileUrl}
                   startIcon={<ArrowBack />}
                   sx={{
                     textTransform: 'none',
@@ -65,18 +70,8 @@ export default async function CreateEvent() {
       </Box>
 
       {/* Form Container */}
-      <Container maxWidth="md">
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 3, md: 4 },
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <EventMutationForm categoryList={eventCategories.readEventCategories} />
-        </Paper>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <EventMutationForm categoryList={eventCategories.readEventCategories} />
       </Container>
     </Box>
   );

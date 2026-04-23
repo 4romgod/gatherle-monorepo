@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FormEvent, useRef, useMemo, useState } from 'react';
+import React, { FormEvent, useRef, useMemo, useState, useEffect } from 'react';
 import {
   TextField,
   Button,
@@ -13,7 +13,6 @@ import {
   FormHelperText,
   Box,
   SelectChangeEvent,
-  Card,
   Stack,
   FormControlLabel,
   Switch,
@@ -23,17 +22,7 @@ import {
   IconButton,
   Snackbar,
 } from '@mui/material';
-import {
-  Event as EventIcon,
-  Description,
-  Category,
-  Settings,
-  People,
-  Link as LinkIcon,
-  Save,
-  CloudUpload,
-  Close,
-} from '@mui/icons-material';
+import { Link as LinkIcon, Save, CloudUpload, Close } from '@mui/icons-material';
 import { useQuery, useMutation } from '@apollo/client';
 import { useRouter } from 'next/navigation';
 import {
@@ -182,6 +171,11 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const [isDiscardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [createEvent, { loading: createLoading }] = useMutation(CreateEventDocument, {
     context: { headers: getAuthHeader(sessionData?.user?.token) },
@@ -331,29 +325,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     <>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
-          <Box sx={{ mb: 1 }}>
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                letterSpacing: '0.1em',
-              }}
-            >
-              {isEditMode ? 'UPDATE EVENT' : 'NEW EVENT'}
-            </Typography>
-            <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-              {isEditMode ? 'Update Event Details' : 'Create Your Event'}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-              {isEditMode
-                ? 'Make changes to your event information below'
-                : 'Fill in the details below to create an amazing event that people will love to attend'}
-            </Typography>
-          </Box>
-
-          <FormControl fullWidth disabled={myOrganizationsLoading}>
+          <FormControl fullWidth disabled={!isMounted || myOrganizationsLoading}>
             <InputLabel id="organization-select-label">Organization</InputLabel>
             <Select
               labelId="organization-select-label"
@@ -380,24 +352,11 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
             </Alert>
           )}
 
-          <Card elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+          <Box sx={{ py: 4 }}>
             <Stack spacing={3}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    color: 'primary.main',
-                    display: 'flex',
-                  }}
-                >
-                  <EventIcon />
-                </Box>
-                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                  Basic Information
-                </Typography>
-              </Stack>
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                Basic Information
+              </Typography>
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
@@ -469,28 +428,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 />
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Date and Location */}
-          <Card elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+          <Box sx={{ mb: 4 }}>
             <Stack spacing={3}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    color: 'primary.main',
-                    display: 'flex',
-                  }}
-                >
-                  <Description />
-                </Box>
-                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                  Date & Location
-                </Typography>
-              </Stack>
-
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                Date & Location
+              </Typography>
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
                   When is your event? *
@@ -502,7 +447,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   </Typography>
                 )}
               </Box>
-
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
                   Where is it happening? *
@@ -515,28 +459,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 />
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Categories & Media */}
-          <Card elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+          <Box sx={{ mb: 4 }}>
             <Stack spacing={3}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    color: 'primary.main',
-                    display: 'flex',
-                  }}
-                >
-                  <Category />
-                </Box>
-                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                  Categories & Media
-                </Typography>
-              </Stack>
-
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                Categories & Media
+              </Typography>
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                   Event Categories *
@@ -548,6 +478,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   categoryList={categoryList}
                   onChange={handleEventCategoryListChange}
                   value={displayEventData.eventCategories}
+                  sxProps={{ backgroundColor: 'transparent', backgroundImage: 'none', border: 'none', p: 0 }}
                 />
                 {errors.categories && (
                   <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
@@ -555,7 +486,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   </Typography>
                 )}
               </Box>
-
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                   Featured Image
@@ -631,7 +561,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   />
                 )}
               </Box>
-
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                   Event Link
@@ -660,28 +589,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 />
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Capacity & Attendees */}
-          <Card elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+          <Box sx={{ mb: 4 }}>
             <Stack spacing={3}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    color: 'primary.main',
-                    display: 'flex',
-                  }}
-                >
-                  <People />
-                </Box>
-                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                  Capacity & Attendee Settings
-                </Typography>
-              </Stack>
-
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                Capacity & Attendee Settings
+              </Typography>
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
@@ -725,7 +640,6 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   />
                 </Grid>
               </Grid>
-
               <Stack spacing={2}>
                 <FormControlLabel
                   control={
@@ -812,27 +726,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 />
               </Stack>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Settings */}
-          <Card elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+          <Box sx={{ py: 4 }}>
             <Stack spacing={3}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    color: 'primary.main',
-                    display: 'flex',
-                  }}
-                >
-                  <Settings />
-                </Box>
-                <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                  Event Settings
-                </Typography>
-              </Stack>
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                Event Settings
+              </Typography>
 
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 4 }}>
@@ -896,10 +797,10 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 </Grid>
               </Grid>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Submit */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={2} sx={{ mt: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={2} sx={{ pt: 2 }}>
             <Button
               variant="outlined"
               color="secondary"

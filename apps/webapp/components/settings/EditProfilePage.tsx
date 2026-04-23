@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useTransition } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Avatar,
-  Grid,
-  IconButton,
-  CircularProgress,
-  Stack,
-  Card,
-} from '@mui/material';
+import { Box, Typography, TextField, Button, Avatar, Grid, IconButton, CircularProgress, Stack } from '@mui/material';
 import { Edit as EditIcon, CameraAlt as CameraIcon, Save as SaveIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { useActionState } from 'react';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
@@ -211,14 +200,7 @@ export default function EditProfilePage({ user }: { user: User }) {
         <input type="hidden" name="profile_picture" value={profile.profile_picture || ''} />
 
         {/* Profile Picture Section */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            p: 3,
-            mb: 3,
-          }}
-        >
+        <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Profile Picture
           </Typography>
@@ -288,17 +270,10 @@ export default function EditProfilePage({ user }: { user: User }) {
               </Typography>
             )}
           </Stack>
-        </Card>
+        </Box>
 
         {/* Contact Information */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            p: 3,
-            mb: 3,
-          }}
-        >
+        <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Contact Information
           </Typography>
@@ -364,17 +339,10 @@ export default function EditProfilePage({ user }: { user: User }) {
               <FormErrors error={formState?.zodErrors?.bio} />
             </Grid>
           </Grid>
-        </Card>
+        </Box>
 
         {/* Location Information */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            p: 3,
-            mb: 3,
-          }}
-        >
+        <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
             Location
           </Typography>
@@ -385,7 +353,7 @@ export default function EditProfilePage({ user }: { user: User }) {
             disabled={!isEditing}
             name="location"
           />
-        </Card>
+        </Box>
 
         {/* Action Buttons */}
         {isEditing && (

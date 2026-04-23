@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { Box, Container, Typography, Button, Stack, Card } from '@mui/material';
+import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import { ArrowBack, Edit } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
 import { GetAllEventCategoriesDocument, GetEventBySlugDocument } from '@/data/graphql/types/graphql';
@@ -42,16 +42,18 @@ export default async function Page(props: Props) {
 
   const event = eventRetrieved.readEventBySlug as EventDetail;
 
+  const username = session?.user?.username;
+
   // Check if event exists
   if (!event) {
-    redirect(ROUTES.ACCOUNT.PROFILE);
+    redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 
   const isOrganizer = event.organizers.some((organizer) => organizer.user.userId === currentUserId);
   const isAdmin = session?.user?.userRole === 'Admin';
 
   if (!isOrganizer && !isAdmin) {
-    redirect(ROUTES.ACCOUNT.PROFILE);
+    redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 
   return (
@@ -71,7 +73,7 @@ export default async function Page(props: Props) {
           py: { xs: 4, md: 5 },
         }}
       >
-        <Container maxWidth="lg">
+        <Container maxWidth="md">
           <Button href={ROUTES.EVENTS.EVENT(params.slug)} startIcon={<ArrowBack />} sx={{ ...BUTTON_STYLES, mb: 2 }}>
             Back to Event
           </Button>
@@ -100,16 +102,8 @@ export default async function Page(props: Props) {
       </Box>
 
       {/* Form Container */}
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            p: { xs: 3, md: 4 },
-          }}
-        >
-          <EventMutationForm categoryList={eventCategories.readEventCategories} event={event} />
-        </Card>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <EventMutationForm categoryList={eventCategories.readEventCategories} event={event} />
       </Container>
     </Box>
   );

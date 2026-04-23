@@ -52,7 +52,6 @@ component:
 - `apps/webapp/app/(protected)/account/events/[slug]/edit/page.tsx`
 - `apps/webapp/app/(protected)/account/page.tsx`
 - `apps/webapp/app/(protected)/account/events/page.tsx`
-- `apps/webapp/app/(protected)/account/profile/page.tsx` (multiple queries)
 - `apps/webapp/app/(protected)/account/events/[slug]/page.tsx`
 - `apps/webapp/app/(protected)/account/events/create/page.tsx`
 

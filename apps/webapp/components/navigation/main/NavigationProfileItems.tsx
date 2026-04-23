@@ -12,6 +12,7 @@ import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import NProgress from 'nprogress';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAppContext } from '@/hooks/useAppContext';
+import { useSession } from 'next-auth/react';
 import { logger } from '@/lib/utils';
 
 type ProfilesMenuProps = {
@@ -31,6 +32,8 @@ export default function ProfilesMenu({
   const apolloClient = useApolloClient();
   const isAdmin = useIsAdmin();
   const { themeMode, setThemeMode } = useAppContext();
+  const { data: session } = useSession();
+  const profileUrl = session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT;
 
   const handleNavClick = (targetPath: string) => {
     // Only start progress bar if navigating to a different page
@@ -64,7 +67,7 @@ export default function ProfilesMenu({
         },
       }}
     >
-      <MenuItem component={Link} href={ROUTES.ACCOUNT.PROFILE} onClick={() => handleNavClick(ROUTES.ACCOUNT.PROFILE)}>
+      <MenuItem component={Link} href={profileUrl} onClick={() => handleNavClick(profileUrl)}>
         <ListItemIcon>
           <AccountCircle fontSize="medium" />
         </ListItemIcon>

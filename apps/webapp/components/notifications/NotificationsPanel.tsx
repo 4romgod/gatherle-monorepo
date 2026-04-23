@@ -8,7 +8,6 @@ import {
   Container,
   Divider,
   List,
-  Paper,
   Skeleton,
   Tab,
   Tabs,
@@ -129,7 +128,7 @@ export default function NotificationsPage() {
           </Box>
         </Box>
 
-        <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+        <Box>
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
@@ -210,7 +209,7 @@ export default function NotificationsPage() {
           <TabPanel value={tabValue} index={1}>
             <PendingFollowRequestsList />
           </TabPanel>
-        </Paper>
+        </Box>
       </Container>
     </Box>
   );

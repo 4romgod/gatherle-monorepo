@@ -74,6 +74,31 @@ disabled with a tooltip once the window closes, preventing the user from even op
 The rolling window is checked by counting documents in `event_moments` where `authorId = userId`, `eventId = eventId`,
 and `createdAt > now - 24h`. If the count is ≥ 5, the resolver rejects with a user-facing rate-limit error.
 
+### What happens when a user cancels their RSVP after posting a moment?
+
+The moment is **not deleted and remains fully visible** on all surfaces.
+
+**Rationale:** The user created the content under a valid RSVP state (`Going` or `CheckedIn`). Silently removing it
+because they later cancelled their RSVP is destructive and surprising — they have no way to anticipate it. The moment
+was legitimately authored and should persist for its natural 24-hour TTL.
+
+**Behaviour by surface:**
+
+| Surface                  | After RSVP cancelled                                                     |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Event page ring          | Moment stays visible                                                     |
+| Follower home feed       | Moment stays visible                                                     |
+| Author's own profile     | Moment stays visible                                                     |
+| Author's moment composer | Can no longer **post new** moments (RSVP gate still applies to creation) |
+
+**Why not hide from the event ring?** Removing cancelled-RSVP users from the event ring would require the query to join
+participant status on every read. The simpler and less surprising rule: the gate applies at **creation time** only. Once
+a moment exists, it lives until it naturally expires.
+
+**Why not open posting to everyone?** Removing the RSVP gate entirely would turn every public event ring into an
+unmoderated public board. The edge case of "attended without RSVPing" is handled by allowing a late RSVP — a user can
+set their status to `Going` even after the event has started, which opens the posting window without removing the gate.
+
 ### Who can see statuses?
 
 Visibility depends on the surface:

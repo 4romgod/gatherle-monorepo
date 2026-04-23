@@ -23,7 +23,7 @@ interface ProfileEventsTabsProps {
   upcomingRsvpdEvents: EventPreview[];
   pastRsvpdEvents: EventPreview[];
   organizedEvents: EventPreview[];
-  savedEvents: EventPreview[];
+  savedEvents?: EventPreview[];
   isOwnProfile: boolean;
   emptyCreatedCta?: React.ReactNode;
 }
@@ -32,7 +32,7 @@ export default function ProfileEventsTabs({
   upcomingRsvpdEvents,
   pastRsvpdEvents,
   organizedEvents,
-  savedEvents,
+  savedEvents = [],
   isOwnProfile,
   emptyCreatedCta,
 }: ProfileEventsTabsProps) {
@@ -61,49 +61,45 @@ export default function ProfileEventsTabs({
         variant="fullWidth"
         sx={{
           '& .MuiTab-root': {
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.9rem',
             py: 2,
             minWidth: 'auto',
-            px: { xs: 2, sm: 3 },
+            minHeight: 56,
+          },
+          '& .MuiTab-iconWrapper': {
+            mb: 0,
           },
         }}
       >
         <Tab
-          icon={<GoingIcon sx={{ fontSize: 20 }} />}
-          iconPosition="start"
-          label={
-            <Tooltip title="Events you've RSVPed to that are coming up" placement="bottom" arrow>
-              <span>Going</span>
+          aria-label="Going"
+          icon={
+            <Tooltip title="Going — events you've RSVPed to" placement="bottom" arrow>
+              <GoingIcon sx={{ fontSize: 28 }} />
             </Tooltip>
           }
         />
         <Tab
-          icon={<PastIcon sx={{ fontSize: 20 }} />}
-          iconPosition="start"
-          label={
-            <Tooltip title="Events you RSVPed to that have already taken place" placement="bottom" arrow>
-              <span>Attended</span>
+          aria-label="Attended"
+          icon={
+            <Tooltip title="Attended — past events you went to" placement="bottom" arrow>
+              <PastIcon sx={{ fontSize: 28 }} />
             </Tooltip>
           }
         />
         <Tab
-          icon={<EventIcon sx={{ fontSize: 20 }} />}
-          iconPosition="start"
-          label={
-            <Tooltip title="Events you've created or co-hosted" placement="bottom" arrow>
-              <span>Hosted</span>
+          aria-label="Hosted"
+          icon={
+            <Tooltip title="Hosted — events you've created or co-hosted" placement="bottom" arrow>
+              <EventIcon sx={{ fontSize: 28 }} />
             </Tooltip>
           }
         />
         {isOwnProfile && (
           <Tab
-            icon={<BookmarkIcon sx={{ fontSize: 20 }} />}
-            iconPosition="start"
-            label={
-              <Tooltip title="Events you've bookmarked to keep an eye on" placement="bottom" arrow>
-                <span>Saved</span>
+            aria-label="Saved"
+            icon={
+              <Tooltip title="Saved — bookmarked events" placement="bottom" arrow>
+                <BookmarkIcon sx={{ fontSize: 28 }} />
               </Tooltip>
             }
           />
@@ -163,10 +159,10 @@ export default function ProfileEventsTabs({
 
         {isOwnProfile && activeTab === 3 && (
           <EventTabPanel
-            events={savedEvents}
+            events={savedEvents ?? []}
             emptyIcon={<BookmarkIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
             emptyTitle="No saved events yet"
-            emptyDescription="Save events you're interested in to view them later"
+            emptyDescription="Bookmark events you're interested in to view them later"
             emptyCta={
               <Button
                 variant="contained"

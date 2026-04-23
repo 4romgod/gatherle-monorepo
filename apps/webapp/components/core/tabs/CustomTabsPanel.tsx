@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Box, Paper } from '@mui/material';
+import { Box } from '@mui/material';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -14,15 +14,13 @@ export function CustomTabPanel(props: TabPanelProps) {
   return (
     <Box role="tabpanel" hidden={value !== index} id={`${id}-panel-${index}`} aria-labelledby={`${id}-tab-${index}`}>
       {value === index && (
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            borderColor: 'divider',
             p: { xs: 2, sm: 3, md: 4 },
           }}
         >
           {children}
-        </Paper>
+        </Box>
       )}
     </Box>
   );

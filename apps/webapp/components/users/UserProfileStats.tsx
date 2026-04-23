@@ -111,12 +111,28 @@ export default function UserProfileStats({
     <>
       <Stack
         direction="row"
-        spacing={compact ? { xs: 0 } : { xs: 2, sm: 4 }}
         sx={{
           ...(compact ? {} : { mt: 3, pt: 3, borderTop: 1, borderColor: 'divider' }),
           flexWrap: compact ? 'nowrap' : 'wrap',
+          gap: compact ? 0 : { xs: 2, sm: 4 },
           rowGap: compact ? 0 : 2,
-          justifyContent: compact ? 'space-between' : 'flex-start',
+          justifyContent: compact ? 'space-around' : 'flex-start',
+          ...(compact
+            ? {
+                '& > .MuiBox-root': {
+                  flex: '1 1 0',
+                  minWidth: 0,
+                  textAlign: 'center',
+                },
+                '& .MuiTypography-caption': {
+                  fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'block',
+                },
+              }
+            : {}),
         }}
       >
         {/* Followers - opens modal on own profile */}

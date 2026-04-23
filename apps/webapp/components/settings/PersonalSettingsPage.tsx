@@ -13,7 +13,6 @@ import {
   FormControl,
   InputLabel,
   Stack,
-  Card,
   TextField,
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
@@ -159,14 +158,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
           <input type="hidden" name="phone_number" value={settings.phone_number} />
 
           {/* Personal Details */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-              mb: 3,
-            }}
-          >
+          <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Personal Details
             </Typography>
@@ -232,17 +224,10 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 />
               </Grid>
             </Grid>
-          </Card>
+          </Box>
 
           {/* Privacy Settings */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-              mb: 3,
-            }}
-          >
+          <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Privacy Settings
             </Typography>
@@ -423,17 +408,10 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 </FormControl>
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Activity Sharing */}
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              p: 3,
-              mb: 3,
-            }}
-          >
+          <Box sx={{ mb: 4 }}>
             <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
               Activity Sharing
             </Typography>
@@ -483,10 +461,10 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 />
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Blocked Users Card */}
-          <Card sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ mb: 4 }}>
             <Stack spacing={2}>
               <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
                 Blocked Users
@@ -506,7 +484,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
                 </Button>
               </Box>
             </Stack>
-          </Card>
+          </Box>
 
           {/* Action Button */}
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
