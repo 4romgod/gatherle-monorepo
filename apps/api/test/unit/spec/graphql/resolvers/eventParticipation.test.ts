@@ -362,6 +362,78 @@ describe('EventParticipantResolver', () => {
     });
   });
 
+  describe('checkInEventParticipant', () => {
+    const eventId = '507f1f77bcf86cd799439011';
+    const userId = '507f1f77bcf86cd799439012';
+
+    const mockCheckedInParticipant: EventParticipant = {
+      participantId: 'participant123',
+      eventId,
+      userId,
+      status: ParticipantStatus.CheckedIn,
+      quantity: 1,
+      rsvpAt: new Date(),
+      checkedInAt: new Date(),
+    };
+
+    it('validates eventId and checks in the current user', async () => {
+      const mockContext = createMockContext({ user: { userId } as User });
+      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockCheckedInParticipant);
+
+      const result = await resolver.checkInEventParticipant(eventId, mockContext);
+
+      expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
+      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId, userId, status: ParticipantStatus.CheckedIn }),
+      );
+      expect(result).toEqual(mockCheckedInParticipant);
+    });
+
+    it('throws validation error for invalid eventId', async () => {
+      const mockContext = createMockContext({ user: { userId } as User });
+      const validationError = new Error('Invalid MongoDB ID');
+      (validation.validateMongodbId as jest.Mock).mockImplementation(() => {
+        throw validationError;
+      });
+
+      await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toThrow(validationError);
+      expect(EventParticipantDAO.upsert).not.toHaveBeenCalled();
+    });
+
+    it('throws UNAUTHENTICATED when context.user is missing', async () => {
+      const mockContext = createMockContext({ user: undefined });
+
+      await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toMatchObject({
+        extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+      });
+      expect(EventParticipantDAO.upsert).not.toHaveBeenCalled();
+    });
+
+    it('uses the userId from context, not from any input', async () => {
+      const differentUserId = '507f1f77bcf86cd799439099';
+      const mockContext = createMockContext({ user: { userId: differentUserId } as User });
+      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue({
+        ...mockCheckedInParticipant,
+        userId: differentUserId,
+      });
+
+      await resolver.checkInEventParticipant(eventId, mockContext);
+
+      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(expect.objectContaining({ userId: differentUserId }));
+    });
+
+    it('propagates DAO errors', async () => {
+      const mockContext = createMockContext({ user: { userId } as User });
+      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      const daoError = new Error('Database error');
+      (EventParticipantDAO.upsert as jest.Mock).mockRejectedValue(daoError);
+
+      await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toThrow(daoError);
+    });
+  });
+
   describe('myRsvps', () => {
     const userId = '507f1f77bcf86cd799439012';
 

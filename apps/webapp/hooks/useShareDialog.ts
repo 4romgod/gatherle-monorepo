@@ -61,8 +61,9 @@ export function useShareDialog({ eventTitle, resolvedEventUrl }: UseShareDialogO
           },
         });
       } catch (error) {
-        // TODO: Surface error state instead of allowing an unhandled promise rejection.
         logger.error('Failed to load share users', error);
+        setFeedbackMessage('Failed to load users. Please try again.');
+        setFeedbackOpen(true);
       }
     },
     [loadUsers, token],

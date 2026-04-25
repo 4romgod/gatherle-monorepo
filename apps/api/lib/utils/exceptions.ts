@@ -63,8 +63,9 @@ export const CustomError = (
 };
 
 /**
- * Get the errors that we are familiar with
- * //TODO Maybe use this in a middleware https://mongoosejs.com/docs/middleware.html
+ * Translates known Mongoose/MongoDB errors into typed GraphQLErrors.
+ * Called in every DAO catch block — this is the correct boundary for error
+ * translation (model-layer middleware cannot throw GraphQLErrors).
  */
 export const KnownCommonError = (error: unknown): GraphQLError => {
   // Preserve existing GraphQLErrors (e.g. NOT_FOUND, UNAUTHORIZED) instead of wrapping them

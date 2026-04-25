@@ -38,10 +38,13 @@ describe('EventParticipant Resolver', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    participantUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
-    participantUser2 = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
-
-    const category = await readFirstEventCategory(url);
+    const [user, user2, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
+      loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password),
+      readFirstEventCategory(url),
+    ]);
+    participantUser = user;
+    participantUser2 = user2;
     eventCategoryId = category.eventCategoryId;
     eventCreatorToken = participantUser.token;
   });
@@ -155,27 +158,30 @@ describe('EventParticipant Resolver', () => {
   });
 
   it('handles multiple participants for same event', async () => {
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-          status: ParticipantStatus.Going,
-        }),
-      );
-
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser2.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser2.userId,
-          status: ParticipantStatus.Going,
-        }),
-      );
+    // Both upserts are independent (different users, same event) — run them in parallel
+    // to avoid exhausting the 20 s per-test budget with 3 sequential round-trips.
+    await Promise.all([
+      request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + participantUser.token)
+        .send(
+          getUpsertEventParticipantMutation({
+            eventId,
+            userId: participantUser.userId,
+            status: ParticipantStatus.Going,
+          }),
+        ),
+      request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + participantUser2.token)
+        .send(
+          getUpsertEventParticipantMutation({
+            eventId,
+            userId: participantUser2.userId,
+            status: ParticipantStatus.Going,
+          }),
+        ),
+    ]);
 
     const response = await request(url)
       .post('')

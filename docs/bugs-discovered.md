@@ -4,7 +4,7 @@
 
 **Date Discovered:** January 21, 2026  
 **Severity:** Medium  
-**Status:** 🚩 Open
+**Status:** ✅ Fixed
 
 ### Symptoms
 
@@ -14,7 +14,7 @@
 
 ### Root Cause
 
-When making Apollo Client queries that return context-based fields, the user's token must be passed in the context (usually via headers). If the token is omitted, the backend cannot resolve user-specific fields, leading to incorrect or missing data in the response.
+Neither `apollo-client.ts` (server RSC) nor `apollo-wrapper.tsx` (client) has an auth link in the Apollo link chain. Auth is passed **per-call** via `context: { headers: getAuthHeader(token) }`. Components that forget to pass the auth context make unauthenticated requests, returning `false` for all user-specific resolver fields.
 
 #### Example (broken):
 
@@ -34,15 +34,19 @@ const { data } = useQuery(GetAllEventsDocument, {
 });
 ```
 
-### Resolution
+### Fix
 
-- Always pass the user's token in the Apollo context for queries/mutations that return user-specific or context-dependent fields.
-- Use a utility (e.g., `getAuthHeader`) to inject the token from the session into the Apollo context for all relevant queries.
+Audited all 53 `useQuery`/`useMutation` calls across the webapp. Found one genuinely missing auth context:
+
+- **`apps/webapp/components/account/UserEventsList.tsx`** — `GetAllEventsDocument` (line 28) had no `context` option. Added `context: { headers: getAuthHeader(token) }`.
+
+All other components that query fields like `isSavedByMe`, `isRsvpedByMe`, `myRsvp`, and `isFollowedByMe` already pass auth context correctly via `useSession` + `getAuthHeader`.
 
 ### Prevention
 
-- Review all data-fetching hooks/components to ensure the token is included where needed.
-- Consider centralizing Apollo Client setup or using a custom hook to always attach the token when available.
+- Every component that calls `useQuery`/`useMutation` for queries including user-specific fields (`isSavedByMe`, `isRsvpedByMe`, `myRsvp`, `isFollowedByMe`) must pass `context: { headers: getAuthHeader(token) }`.
+- Public-data queries (venues list, categories, users list) do not need auth context.
+- Consider adding an `authLink` to `apollo-wrapper.tsx` in the future to make auth automatic for all client-side requests.
 # Bugs Discovered & Fixed
 
 This document tracks bugs discovered during development and testing, along with their root causes and fixes. It serves
@@ -330,6 +334,67 @@ later-created moment in a pending state.
 ### Tracked In
 
 - API-034 in `docs/project-state.md`
+
+---
+
+## BUG-006: Video Moment Progress Bar Completes Before Video Finishes
+
+**Date Discovered:** April 2026  
+**Severity:** Medium  
+**Status:** ✅ Fixed
+
+### Symptoms
+
+- When viewing video moments in `EventMomentViewer`, the story progress bar filled to 100% before the video actually
+  ended.
+- The progress bar should track `video.currentTime / video.duration` in real time, not run on a fixed-rate rAF timer.
+
+### Root Cause
+
+`EventMomentViewer` uses a `requestAnimationFrame` (rAF) timer to advance the progress bar for image/text moments at a
+fixed rate. For video moments, this rAF timer must be suppressed so that only the `timeupdate` event drives progress via
+`handleVideoTimeUpdate`.
+
+The suppression check compared `momentTypeRef.current` against the lowercase string `'video'`, but the Apollo client
+received `EventMomentType` values from TypeGraphQL in PascalCase (`"Video"`), matching the generated
+`EventMomentType.Video = 'Video'` (codegen maps GraphQL enum names, not TypeScript values).
+
+```typescript
+// BEFORE (broken) — exact-match comparison failed for PascalCase wire value
+if (momentTypeRef.current === 'video') {
+  // 'Video' !== 'video' → RAF not suppressed
+  rafRef.current = null;
+  return;
+}
+```
+
+TypeScript enum value in commons: `Video = 'video'` (lowercase, DB storage)  
+GraphQL wire format from TypeGraphQL: `"Video"` (PascalCase, enum key name)  
+Codegen generated type: `EventMomentType.Video = 'Video'` (matches wire format)
+
+### Fix
+
+`.toLowerCase()` normalization was added to all critical comparison paths in `EventMomentViewer.tsx`:
+
+- **Line 256**: `momentTypeRef.current?.toLowerCase() === 'video'` — RAF timer suppression ✅
+- **Line 261**: `momentTypeRef.current?.toLowerCase() === 'image'` — RAF early-exit for loading images ✅
+- **Line 248**: `moment?.type?.toLowerCase() === 'video'` — `isVideoMoment` flag ✅
+- **Line 293**: `moment?.type?.toLowerCase() === 'video'` — HLS video source resolution ✅
+
+Render-section comparisons (`moment.type === EventMomentType.Video`) use the codegen enum value `'Video'` which
+correctly matches the API wire format — no change needed there.
+
+### Files Changed
+
+- `apps/webapp/components/eventMoments/EventMomentViewer.tsx` — added `.toLowerCase()` at RAF/HLS check sites
+
+### Lessons Learned
+
+- TypeGraphQL serializes enum values using the **GraphQL enum key name** (PascalCase), not the TypeScript value
+  (lowercase). Always check generated codegen types, not raw TypeScript enum values, when comparing GraphQL response
+  data.
+- When a TypeScript enum uses lowercase values for DB storage but GraphQL serializes as PascalCase, either normalize on
+  comparison (`.toLowerCase()`) or align all layers to use the same casing.
 
 ---
 

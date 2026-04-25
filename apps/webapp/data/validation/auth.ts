@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValid, parseISO } from 'date-fns'; // TODO replace with datejs???
+import { isValid, parseISO } from 'date-fns';
 import { Gender, UserRole, FollowPolicy, SocialVisibility } from '../graphql/types/graphql';
 
 const InputMaybe = z.union([z.string(), z.undefined()]);

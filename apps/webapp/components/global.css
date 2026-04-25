@@ -6,7 +6,6 @@
   z-index: 1200; /* Ensure it's above the AppBar */
 }
 
-/* TODO remember to use theme colors for this */
 #nprogress .bar {
-  background: #7986cb;
+  background: #4f46e5;
 }

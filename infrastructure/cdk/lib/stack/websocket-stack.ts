@@ -9,10 +9,12 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { HostedZone, ARecord, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
+import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { DEFAULT_STAGE_WEBAPP_ORIGINS } from '@gatherle/commons';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
 import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
@@ -85,6 +87,14 @@ export class WebSocketApiStack extends Stack {
     });
 
     gatherleSecret.grantRead(this.websocketLambda);
+
+    const warmUpIntervalMinutes = props.applicationStage === APPLICATION_STAGES.PROD ? 5 : 14;
+    new Schedule(this, 'WebSocketLambdaWarmUpSchedule', {
+      scheduleName: buildResourceName('websocket-lambda-warmup', props.applicationStage, props.awsRegion),
+      description: `Keeps the WebSocket Lambda warm by invoking it every ${warmUpIntervalMinutes} minutes`,
+      schedule: ScheduleExpression.rate(Duration.minutes(warmUpIntervalMinutes)),
+      target: new LambdaInvoke(this.websocketLambda, { retryAttempts: 0 }),
+    });
 
     this.websocketApi = new WebSocketApi(this, 'GatherleWebSocketApi', {
       apiName: buildResourceName('gatherle-websocket-api', props.applicationStage, props.awsRegion),

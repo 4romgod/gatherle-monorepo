@@ -242,28 +242,26 @@ export default function NearbyEventsSection() {
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
-      <Container>
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{ mb: { xs: 0.5, md: 1 }, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-            {locationLabel ? `Events near ${locationLabel}` : 'Events near you'}
-            {shouldShowActionButton && (
-              <Button variant="outlined" size="small" onClick={requestLocation}>
-                Share my location
-              </Button>
-            )}
-          </Box>
+      <Typography
+        variant="h6"
+        fontWeight={700}
+        sx={{ mb: { xs: 0.5, md: 1 }, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          {locationLabel ? `Events near ${locationLabel}` : 'Events near you'}
+          {shouldShowActionButton && (
+            <Button variant="outlined" size="small" onClick={requestLocation}>
+              Share my location
+            </Button>
+          )}
+        </Box>
+      </Typography>
+      {permissionState !== 'idle' && permissionState !== 'requesting' && isLocationHydrated && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {helperText}
         </Typography>
-        {permissionState !== 'idle' && permissionState !== 'requesting' && isLocationHydrated && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {helperText}
-          </Typography>
-        )}
-        {renderContent()}
-      </Container>
+      )}
+      {renderContent()}
     </Box>
   );
 }

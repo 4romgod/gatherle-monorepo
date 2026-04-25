@@ -20,8 +20,10 @@ import { Certificate } from 'aws-cdk-lib/aws-certificatemanager';
 import { ARecord, HostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
+import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import { join } from 'path';
-import { DEFAULT_STAGE_WEBAPP_ORIGINS } from '@gatherle/commons';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
 import { DNS_STACK_CONFIG } from '../constants/dns';
 import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
 
@@ -106,6 +108,14 @@ export class GraphQLStack extends Stack {
     });
 
     gatherleSecret.grantRead(this.graphqlLambda);
+
+    const warmUpIntervalMinutes = props.applicationStage === APPLICATION_STAGES.PROD ? 5 : 14;
+    new Schedule(this, 'GraphqlLambdaWarmUpSchedule', {
+      scheduleName: buildResourceName('graphql-lambda-warmup', props.applicationStage, props.awsRegion),
+      description: `Keeps the GraphQL Lambda warm by invoking it every ${warmUpIntervalMinutes} minutes`,
+      schedule: ScheduleExpression.rate(Duration.minutes(warmUpIntervalMinutes)),
+      target: new LambdaInvoke(this.graphqlLambda, { retryAttempts: 0 }),
+    });
 
     this.graphqlApiAccessLogGroup = new LogGroup(this, 'GraphqlRestApiAccessLogs', {
       logGroupName: `/aws/apigateway/${buildResourceName(

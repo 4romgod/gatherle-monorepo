@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Avatar,
   Box,
@@ -32,6 +33,7 @@ const CHAT_CONVERSATIONS_LIMIT = 100;
 
 export default function MessagesPanel() {
   const theme = useTheme();
+  const pathname = usePathname();
   const surfaceLineColor =
     theme.palette.mode === 'light' ? alpha(theme.palette.common.black, 0.14) : alpha(theme.palette.common.white, 0.18);
   const { data: session } = useSession();
@@ -257,10 +259,13 @@ export default function MessagesPanel() {
                       <ListItemButton
                         component={Link}
                         href={conversation.href}
+                        selected={pathname === conversation.href}
                         sx={{
                           px: 2,
                           py: 1.5,
                           '&:hover': { backgroundColor: 'action.hover' },
+                          '&.Mui-selected': { backgroundColor: 'action.selected' },
+                          '&.Mui-selected:hover': { backgroundColor: 'action.selected' },
                         }}
                       >
                         {rowContent}

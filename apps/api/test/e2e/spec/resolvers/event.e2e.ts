@@ -1,5 +1,4 @@
 import request from 'supertest';
-import { kebabCase } from 'lodash';
 import { eventsMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
@@ -35,9 +34,6 @@ describe('Event Resolver', () => {
   let testUser: UserWithToken;
   let testUser2: UserWithToken;
   let testEventCategory: EventCategoryRef;
-  const testRunId = Date.now();
-  const testEventTitle = `Test Event Title ${testRunId}`;
-  const testEventSlug = kebabCase(testEventTitle);
   const testEventDescription = 'Test Event Description';
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
@@ -51,7 +47,7 @@ describe('Event Resolver', () => {
 
   const buildEventInput = (): CreateEventInput => ({
     ...baseEventData,
-    title: testEventTitle,
+    title: `Test Event Title ${Date.now()}`,
     description: testEventDescription,
     eventCategories: [testEventCategory.eventCategoryId],
     organizers: [{ user: testUser.userId, role: 'Host' }],
@@ -137,7 +133,7 @@ describe('Event Resolver', () => {
     it('creates a new event with valid input', async () => {
       const createdEvent = await createEvent();
       expect(createdEvent).toHaveProperty('eventId');
-      expect(createdEvent.title).toBe(testEventTitle);
+      expect(createdEvent.title).toMatch(/^Test Event Title \d+$/);
     });
 
     it('reads the event by id and slug after creation', async () => {
@@ -171,10 +167,10 @@ describe('Event Resolver', () => {
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + testUser.token)
-          .send(getDeleteEventBySlugMutation(testEventSlug));
+          .send(getDeleteEventBySlugMutation(createdEvent.slug));
 
         expect(response.status).toBe(200);
-        expect(response.body.data.deleteEventBySlug.slug).toBe(testEventSlug);
+        expect(response.body.data.deleteEventBySlug.slug).toBe(createdEvent.slug);
         untrackCreatedId(createdEventIds, createdEvent.eventId);
       });
 
@@ -350,12 +346,13 @@ describe('Event Resolver', () => {
 
   describe('Negative', () => {
     it('returns conflict when duplicate event is created', async () => {
-      await createEvent();
+      const input = buildEventInput();
+      await createEvent(input);
 
       const response = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + testUser.token)
-        .send(getCreateEventMutation(buildEventInput()));
+        .send(getCreateEventMutation(input));
 
       expect(response.status).toBe(409);
       expect(response.body.errors).toBeDefined();
