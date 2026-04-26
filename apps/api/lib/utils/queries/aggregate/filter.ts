@@ -1,6 +1,6 @@
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/types';
-import { FilterOperatorInput } from '@gatherle/commons/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 import { buildTextSearchRegex } from '../text-search';
 
@@ -184,8 +184,47 @@ export const createEventPipelineStages = (filters: FilterInput[]): PipelineStage
     };
   };
 
-  const matchClauses = filters.map(buildMatchClause);
-  const matchPayload = matchClauses.length === 1 ? matchClauses[0] : { $and: matchClauses };
+  // Group filters by selectorOperator ($and by default).
+  // Any selectorOperator that is not explicitly 'or' or 'nor' falls into the
+  // $and bucket so unknown values are never silently dropped.
+  const orFilters = filters.filter((f) => f.selectorOperator === SelectorOperatorInput.or);
+  const norFilters = filters.filter((f) => f.selectorOperator === SelectorOperatorInput.nor);
+  const andFilters = filters.filter(
+    (f) => f.selectorOperator !== SelectorOperatorInput.or && f.selectorOperator !== SelectorOperatorInput.nor,
+  );
+
+  // Warn at runtime about unexpected selectorOperator values that fall into the $and group
+  // (e.g. a future enum value or a client sending a typo).
+  andFilters.forEach((f) => {
+    if (
+      f.selectorOperator !== undefined &&
+      f.selectorOperator !== SelectorOperatorInput.and &&
+      f.selectorOperator !== SelectorOperatorInput.or &&
+      f.selectorOperator !== SelectorOperatorInput.nor
+    ) {
+      console.warn(
+        `[createEventPipelineStages] Unknown selectorOperator "${String(f.selectorOperator)}" on field "${f.field}" — treating as $and.`,
+      );
+    }
+  });
+
+  const matchSegments: Record<string, unknown>[] = [];
+
+  if (andFilters.length === 1) {
+    matchSegments.push(buildMatchClause(andFilters[0]));
+  } else if (andFilters.length > 1) {
+    matchSegments.push({ $and: andFilters.map(buildMatchClause) });
+  }
+
+  if (orFilters.length > 0) {
+    matchSegments.push({ $or: orFilters.map(buildMatchClause) });
+  }
+
+  if (norFilters.length > 0) {
+    matchSegments.push({ $nor: norFilters.map(buildMatchClause) });
+  }
+
+  const matchPayload = matchSegments.length === 1 ? matchSegments[0] : { $and: matchSegments };
 
   const matchStage: PipelineStage.Match = {
     $match: matchPayload,

@@ -332,6 +332,15 @@ export default function EventMomentViewer({
     }
   }, [paused, isVideoMoment]);
 
+  // Auto-advance past a video that failed to load (HLS fatal error or native error).
+  // Gives the viewer 3 s to read "Video unavailable" before moving on.
+  useEffect(() => {
+    if (!mediaError || !isVideoMoment || !open) return;
+    const timer = setTimeout(() => goNextRef.current(), 3000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- goNextRef is a stable ref updated on every render; adding it would restart the timer on every navigation
+  }, [mediaError, isVideoMoment, open]);
+
   // Reset when opened or start index changes
   useEffect(() => {
     if (open) {
@@ -736,6 +745,10 @@ export default function EventMomentViewer({
                   onCanPlay={() => setMediaLoaded(true)}
                   onTimeUpdate={handleVideoTimeUpdate}
                   onEnded={goNext}
+                  onError={() => {
+                    setMediaLoaded(true);
+                    setMediaError(true);
+                  }}
                   style={{
                     width: '100%',
                     height: '100%',

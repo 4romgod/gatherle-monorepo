@@ -53,7 +53,6 @@ export class UserResolver {
     return result;
   }
 
-  // TODO https://hygraph.com/learn/graphql/authentication-and-authorization
   @Mutation(() => UserWithToken, { description: RESOLVER_DESCRIPTIONS.USER.loginUser })
   async loginUser(@Arg('input', () => LoginUserInput) input: LoginUserInput): Promise<UserWithToken> {
     validateInput<LoginUserInput>(LoginUserInputSchema, input);

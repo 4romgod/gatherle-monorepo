@@ -164,7 +164,10 @@ class EventMomentDAO {
             ? {
                 $or: [
                   { state: EventMomentState.Ready },
-                  { state: { $in: PENDING_EVENT_MOMENT_STATES }, authorId: viewerUserId },
+                  {
+                    state: { $in: [...PENDING_EVENT_MOMENT_STATES, EventMomentState.Failed] },
+                    authorId: viewerUserId,
+                  },
                 ],
               }
             : { state: EventMomentState.Ready },
@@ -203,7 +206,7 @@ class EventMomentDAO {
     try {
       const now = new Date();
       const stateFilter = includePending
-        ? { $in: [EventMomentState.Ready, ...PENDING_EVENT_MOMENT_STATES] }
+        ? { $in: [EventMomentState.Ready, ...PENDING_EVENT_MOMENT_STATES, EventMomentState.Failed] }
         : EventMomentState.Ready;
 
       const items = await EventMoment.find({

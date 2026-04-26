@@ -9,7 +9,11 @@ import {
   getUpsertEventParticipantMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
-import { createEventOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import {
+  createEventOnServer,
+  cleanupTrackedEntities,
+  assertNoCleanupFailures,
+} from '@/test/e2e/utils/eventResolverHelpers';
 
 describe('Feed resolver e2e', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -41,15 +45,15 @@ describe('Feed resolver e2e', () => {
   });
 
   afterAll(async () => {
-    await Promise.all(
-      createdEventIds.map((id) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + actorUser.token)
-          .send(getDeleteEventByIdMutation(id))
-          .catch(() => {}),
-      ),
-    );
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: createdEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => actorUser.token,
+      label: 'event',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   describe('readRecommendedFeed', () => {

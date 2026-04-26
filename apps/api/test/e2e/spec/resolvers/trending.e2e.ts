@@ -10,7 +10,11 @@ import {
   getUpsertEventParticipantMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
-import { createEventOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import {
+  createEventOnServer,
+  cleanupTrackedEntities,
+  assertNoCleanupFailures,
+} from '@/test/e2e/utils/eventResolverHelpers';
 
 describe('readTrendingEvents e2e', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -43,15 +47,15 @@ describe('readTrendingEvents e2e', () => {
   });
 
   afterAll(async () => {
-    await Promise.all(
-      createdEventIds.map((id) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + actorUser.token)
-          .send(getDeleteEventByIdMutation(id))
-          .catch(() => {}),
-      ),
-    );
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: createdEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => actorUser.token,
+      label: 'event',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   it('returns 200 with an array for an unauthenticated request (public query)', async () => {
@@ -228,15 +232,15 @@ describe('cold-start feed fallback e2e', () => {
   });
 
   afterAll(async () => {
-    await Promise.all(
-      createdEventIds.map((id) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + freshUser.token)
-          .send(getDeleteEventByIdMutation(id))
-          .catch(() => {}),
-      ),
-    );
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: createdEventIds,
+      deleteRequest: getDeleteEventByIdMutation,
+      token: () => freshUser.token,
+      label: 'cold-start event',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   it('refreshFeed succeeds for a user with no personalisation signals', async () => {

@@ -1,4 +1,4 @@
-import type { Model, Query } from 'mongoose';
+import mongoose, { type Model, type Query } from 'mongoose';
 import {
   MAX_QUERY_PAGE_SIZE,
   addSortToQuery,
@@ -7,7 +7,7 @@ import {
   transformOptionsToQuery,
 } from '@/utils';
 import type { FilterInput, SortInput } from '@gatherle/commons/types';
-import { FilterOperatorInput, SortOrderInput } from '@gatherle/commons/types';
+import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/types';
 
 describe('Query', () => {
   describe('addSortToQuery', () => {
@@ -79,10 +79,7 @@ describe('Query', () => {
 
   describe('addFiltersToQuery', () => {
     it('should add "equality" filter to the query', () => {
-      const mockQuery = { where: jest.fn().mockReturnThis(), equals: jest.fn().mockReturnThis() } as unknown as Query<
-        any,
-        any
-      >;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'status',
@@ -91,15 +88,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.where).toHaveBeenCalledWith('status');
-      expect(mockQuery.equals).toHaveBeenCalledWith('Completed');
+      expect(mockQuery.and).toHaveBeenCalledWith([{ status: { $eq: 'Completed' } }]);
     });
 
     it('should add "not equal" than filter to the query', () => {
-      const mockQuery = { where: jest.fn().mockReturnThis(), ne: jest.fn().mockReturnThis() } as unknown as Query<
-        any,
-        any
-      >;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'capacity',
@@ -108,12 +101,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.where).toHaveBeenCalledWith('capacity');
-      expect(mockQuery.ne).toHaveBeenCalledWith(50);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ capacity: { $ne: 50 } }]);
     });
 
     it('should add "greater than" filter to the query', () => {
-      const mockQuery = { gt: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'capacity',
@@ -122,11 +114,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.gt).toHaveBeenCalledWith('capacity', 50);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ capacity: { $gt: 50 } }]);
     });
 
     it('should add "greater than or equal" filter to the query', () => {
-      const mockQuery = { gte: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'capacity',
@@ -135,11 +127,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.gte).toHaveBeenCalledWith('capacity', 50);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ capacity: { $gte: 50 } }]);
     });
 
     it('should add "less than" filter to the query', () => {
-      const mockQuery = { lt: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'capacity',
@@ -148,11 +140,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.lt).toHaveBeenCalledWith('capacity', 50);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ capacity: { $lt: 50 } }]);
     });
 
     it('should add "less than or equal" filter to the query', () => {
-      const mockQuery = { lte: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'capacity',
@@ -161,14 +153,11 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.lte).toHaveBeenCalledWith('capacity', 50);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ capacity: { $lte: 50 } }]);
     });
 
     it('should add "default (equality)" filter to the query', () => {
-      const mockQuery = { where: jest.fn().mockReturnThis(), equals: jest.fn().mockReturnThis() } as unknown as Query<
-        any,
-        any
-      >;
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
       const filters: FilterInput[] = [
         {
           field: 'status',
@@ -176,8 +165,127 @@ describe('Query', () => {
         },
       ];
       addFiltersToQuery(mockQuery, filters);
-      expect(mockQuery.where).toHaveBeenCalledWith('status');
-      expect(mockQuery.equals).toHaveBeenCalledWith('Completed');
+      expect(mockQuery.and).toHaveBeenCalledWith([{ status: { $eq: 'Completed' } }]);
+    });
+
+    it('should support nested dot-notation fields', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        { field: 'organizers.user.gender', value: 'Male', operator: FilterOperatorInput.eq },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ 'organizers.user.gender': { $eq: 'Male' } }]);
+    });
+
+    it('should use $in when a filter value is an array with eq operator', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        { field: 'status', value: ['Active', 'Upcoming'], operator: FilterOperatorInput.eq },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ status: { $in: ['Active', 'Upcoming'] } }]);
+    });
+
+    it('should use $nin when a filter value is an array with ne operator', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        { field: 'status', value: ['Cancelled', 'Completed'], operator: FilterOperatorInput.ne },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ status: { $nin: ['Cancelled', 'Completed'] } }]);
+    });
+
+    it('should apply $or when selectorOperator is "or"', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        {
+          field: 'status',
+          value: 'Active',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.or,
+        },
+        {
+          field: 'status',
+          value: 'Upcoming',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.or,
+        },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([
+        {
+          $or: [{ status: { $eq: 'Active' } }, { status: { $eq: 'Upcoming' } }],
+        },
+      ]);
+    });
+
+    it('should apply $nor when selectorOperator is "nor"', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        {
+          field: 'status',
+          value: 'Cancelled',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.nor,
+        },
+        {
+          field: 'status',
+          value: 'Completed',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.nor,
+        },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([
+        {
+          $nor: [{ status: { $eq: 'Cancelled' } }, { status: { $eq: 'Completed' } }],
+        },
+      ]);
+    });
+
+    it('should combine $and, $or, and $nor groups from mixed selectorOperators', () => {
+      const mockQuery = { and: jest.fn().mockReturnThis() } as unknown as Query<any, any>;
+      const filters: FilterInput[] = [
+        { field: 'type', value: 'concert', operator: FilterOperatorInput.eq },
+        {
+          field: 'status',
+          value: 'Active',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.or,
+        },
+        {
+          field: 'status',
+          value: 'Upcoming',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.or,
+        },
+        {
+          field: 'status',
+          value: 'Cancelled',
+          operator: FilterOperatorInput.eq,
+          selectorOperator: SelectorOperatorInput.nor,
+        },
+      ];
+      addFiltersToQuery(mockQuery, filters);
+      expect(mockQuery.and).toHaveBeenCalledWith([
+        { type: { $eq: 'concert' } },
+        { $or: [{ status: { $eq: 'Active' } }, { status: { $eq: 'Upcoming' } }] },
+        { $nor: [{ status: { $eq: 'Cancelled' } }] },
+      ]);
+    });
+
+    it('should throw BAD_REQUEST when an array value is empty', () => {
+      const mockQuery = {} as unknown as Query<any, any>;
+      const filters: FilterInput[] = [{ field: 'status', value: [], operator: FilterOperatorInput.eq }];
+      expect(() => addFiltersToQuery(mockQuery, filters)).toThrow('Filter "status" must not use an empty array value.');
+    });
+
+    it('should throw BAD_REQUEST when an array value is used with a non-eq/ne operator', () => {
+      const mockQuery = {} as unknown as Query<any, any>;
+      const filters: FilterInput[] = [{ field: 'capacity', value: [10, 20], operator: FilterOperatorInput.gt }];
+      expect(() => addFiltersToQuery(mockQuery, filters)).toThrow(
+        'Filter "capacity" only supports array values with "eq" or "ne" operators.',
+      );
     });
   });
 
@@ -193,7 +301,9 @@ describe('Query', () => {
       sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
+      and: jest.fn().mockReturnThis(),
       or: jest.fn().mockReturnThis(),
+      nor: jest.fn().mockReturnThis(),
     });
     const buildMockModel = () => {
       const mockQuery = createMockSuccessMongooseQuery({});
@@ -242,10 +352,12 @@ describe('Query', () => {
 
       transformOptionsToQuery(mockModel, options);
 
-      expect(mockQuery.or).toHaveBeenCalledWith([{ username: expect.any(RegExp) }, { email: expect.any(RegExp) }]);
+      expect(mockQuery.and).toHaveBeenCalledWith([
+        { $or: [{ username: expect.any(RegExp) }, { email: expect.any(RegExp) }] },
+      ]);
     });
 
-    it('should apply text search via or for a single field', () => {
+    it('should apply text search directly for a single field', () => {
       const { mockModel, mockQuery } = buildMockModel();
       const options = {
         search: {
@@ -256,7 +368,7 @@ describe('Query', () => {
 
       transformOptionsToQuery(mockModel, options);
 
-      expect(mockQuery.or).toHaveBeenCalledWith([{ username: expect.any(RegExp) }]);
+      expect(mockQuery.and).toHaveBeenCalledWith([{ username: expect.any(RegExp) }]);
       expect(mockQuery.where).not.toHaveBeenCalled();
       expect(mockQuery.regex).not.toHaveBeenCalled();
     });
@@ -272,7 +384,7 @@ describe('Query', () => {
 
       transformOptionsToQuery(mockModel, options);
 
-      expect(mockQuery.or).not.toHaveBeenCalled();
+      expect(mockQuery.and).not.toHaveBeenCalled();
       expect(mockQuery.where).not.toHaveBeenCalled();
     });
 
@@ -288,6 +400,52 @@ describe('Query', () => {
       expect(() => transformOptionsToQuery(mockModel, options)).toThrow(
         'Text search requires at least one field to search against.',
       );
+    });
+
+    it('keeps selectorOperator or filters AND-scoped relative to text search', () => {
+      const modelName = 'QueryTransformOptionsToQueryTestModel';
+      const model =
+        mongoose.models[modelName] ||
+        mongoose.model(
+          modelName,
+          new mongoose.Schema({
+            status: String,
+            title: String,
+            description: String,
+          }),
+        );
+
+      const query = transformOptionsToQuery(model, {
+        filters: [
+          {
+            field: 'status',
+            value: 'Active',
+            operator: FilterOperatorInput.eq,
+            selectorOperator: SelectorOperatorInput.or,
+          },
+          {
+            field: 'status',
+            value: 'Upcoming',
+            operator: FilterOperatorInput.eq,
+            selectorOperator: SelectorOperatorInput.or,
+          },
+        ],
+        search: {
+          fields: ['title', 'description'],
+          value: 'Ali',
+        },
+      });
+
+      expect(query.getQuery()).toEqual({
+        $and: [
+          {
+            $or: [{ status: { $eq: 'Active' } }, { status: { $eq: 'Upcoming' } }],
+          },
+          {
+            $or: [{ title: /Ali/i }, { description: /Ali/i }],
+          },
+        ],
+      });
     });
   });
 });

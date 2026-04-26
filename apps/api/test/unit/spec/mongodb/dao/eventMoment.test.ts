@@ -244,7 +244,12 @@ describe('EventMomentDAO', () => {
       expect(EventMomentModel.find).toHaveBeenCalledWith(
         expect.objectContaining({
           state: {
-            $in: [EventMomentState.Ready, EventMomentState.UploadPending, EventMomentState.Transcoding],
+            $in: [
+              EventMomentState.Ready,
+              EventMomentState.UploadPending,
+              EventMomentState.Transcoding,
+              EventMomentState.Failed,
+            ],
           },
           isPublished: true,
         }),
