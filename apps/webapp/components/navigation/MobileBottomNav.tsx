@@ -27,6 +27,7 @@ function resolveNavValue(pathname: string): string {
   if (pathname.startsWith('/account/notifications')) return 'notifications';
   if (pathname.startsWith('/account/messages')) return 'messages';
   if (pathname.startsWith('/account')) return 'profile';
+  if (pathname.startsWith('/users/')) return 'profile';
   if (pathname.startsWith('/auth')) return 'login';
   return '';
 }
@@ -198,7 +199,7 @@ export default function MobileBottomNav() {
             </Avatar>
           }
           component={Link}
-          href={ROUTES.ACCOUNT.ROOT}
+          href={session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT}
         />
       </BottomNavigation>
     </Paper>

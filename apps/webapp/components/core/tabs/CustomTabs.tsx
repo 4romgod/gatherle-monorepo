@@ -184,7 +184,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
               textAlign: effectiveOrientation === 'horizontal' ? 'center' : 'left',
               justifyContent: effectiveOrientation === 'horizontal' ? 'center' : 'flex-start',
               alignItems: 'center',
-              borderRadius: effectiveOrientation === 'vertical' ? 2 : 0,
+              borderRadius: effectiveOrientation === 'vertical' ? 1 : 0,
               mx: effectiveOrientation === 'vertical' ? 0.5 : 0,
               my: effectiveOrientation === 'vertical' ? 0.25 : 0,
               px: effectiveOrientation === 'horizontal' ? 2 : 2,
@@ -235,7 +235,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
               icon={
                 isCompactHorizontal ? (
                   // Wrap in Tooltip for accessibility when label is hidden
-                  <Tooltip title={name} placement="top">
+                  <Tooltip title={name} placement="top" disableTouchListener disableFocusListener>
                     <span style={{ display: 'flex' }}>{icon}</span>
                   </Tooltip>
                 ) : (
@@ -266,6 +266,7 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
           borderRadius: { xs: 3, md: 3 },
           backgroundColor: 'background.default',
           backgroundImage: 'none',
+          overflow: 'visible',
           minHeight: { xs: 'auto', md: '100vh' },
         }}
       >
