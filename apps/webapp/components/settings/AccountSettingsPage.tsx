@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useActionState, useEffect, useState, useTransition } from 'react';
+import { alpha } from '@mui/material/styles';
 import {
   Box,
   Typography,
@@ -14,6 +15,7 @@ import {
   Stack,
   Card,
   CircularProgress,
+  useTheme,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
@@ -50,6 +52,7 @@ function SubmitButton() {
 
 export default function AccountSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useAppContext();
+  const theme = useTheme();
   const [updateUserFormState, updateUserFormAction] = useActionState(updateUserProfileAction, {});
   const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, {});
   const [isPending, startTransition] = useTransition();
@@ -211,6 +214,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
             border: '2px solid',
             borderColor: 'error.main',
             p: 3,
+            overflow: 'visible',
             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'error.dark' : 'error.lighter'),
           }}
         >
@@ -229,31 +233,50 @@ export default function AccountSettingsPage({ user }: { user: User }) {
                 height: 48,
                 borderRadius: 2,
                 bgcolor: 'error.main',
-                color: 'white',
+                color: 'error.contrastText',
               }}
             >
               <DeleteIcon />
             </Box>
             <Box>
-              <Typography variant="h6" fontWeight={600} color="error.main" gutterBottom>
+              <Typography
+                variant="h6"
+                fontWeight={600}
+                gutterBottom
+                sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'error.main') }}
+              >
                 Danger Zone
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'text.secondary') }}
+              >
                 Irreversible and destructive actions
               </Typography>
             </Box>
           </Stack>
 
           <Box sx={{ mb: 3, mt: 2 }}>
-            <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              gutterBottom
+              sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'inherit') }}
+            >
               Delete Account
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'text.secondary'),
+                mb: 3,
+              }}
+            >
               Permanently remove your account and all associated data. This action cannot be undone and all your events,
               purchases, and profile information will be permanently deleted.
             </Typography>
             <Button
-              variant="contained"
+              variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
               onClick={() => setOpenDeleteAccountDialog(true)}
@@ -263,6 +286,14 @@ export default function AccountSettingsPage({ user }: { user: User }) {
                 ...BUTTON_STYLES,
                 px: 3,
                 width: { xs: '100%', sm: 'auto' },
+                ...(theme.palette.mode === 'dark' && {
+                  color: theme.palette.error.contrastText,
+                  borderColor: theme.palette.error.contrastText,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.error.contrastText, 0.15),
+                    borderColor: theme.palette.error.contrastText,
+                  },
+                }),
               }}
             >
               Delete My Account
