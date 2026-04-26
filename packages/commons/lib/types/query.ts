@@ -23,8 +23,6 @@ export enum SelectorOperatorInput {
   and = 'and',
   nor = 'nor',
   or = 'or',
-  search = 'search',
-  caseSensitive = 'caseSensitive',
 }
 
 registerEnumType(SortOrderInput, {
@@ -90,6 +88,12 @@ export class FilterInput {
     description: QUERY_DESCRIPTIONS.FILTER.OPERATOR,
   })
   operator?: FilterOperatorInput;
+
+  @Field(() => SelectorOperatorInput, {
+    nullable: true,
+    description: QUERY_DESCRIPTIONS.FILTER.SELECTOR_OPERATOR,
+  })
+  selectorOperator?: SelectorOperatorInput;
 }
 
 @InputType('TextSearchInput', { description: QUERY_DESCRIPTIONS.SEARCH.INPUT })

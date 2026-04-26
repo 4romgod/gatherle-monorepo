@@ -5,6 +5,7 @@ import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { Box, Avatar, Typography, Skeleton, Tooltip, CircularProgress } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { ReadEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentState, ParticipantStatus } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -28,6 +29,7 @@ const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, Par
 const POSTING_WINDOW_HOURS = 72;
 
 const PENDING_MOMENT_STATES = new Set<EventMomentState>([EventMomentState.UploadPending, EventMomentState.Transcoding]);
+const FAILED_MOMENT_STATE = EventMomentState.Failed;
 
 /** Groups moments by author so each attendee gets one bubble in the ring. */
 function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
@@ -69,9 +71,12 @@ export default function EventMomentsRing({
     }
   }, [hasPendingMoment, startPolling, stopPolling]);
 
-  // Ready moments are visible to everyone; pending moments are shown only to their author.
+  // Ready moments are visible to everyone; pending and failed moments are shown only to their author.
   const moments = allMoments.filter(
-    (m) => m.state === EventMomentState.Ready || (PENDING_MOMENT_STATES.has(m.state) && m.authorId === viewerUserId),
+    (m) =>
+      m.state === EventMomentState.Ready ||
+      (PENDING_MOMENT_STATES.has(m.state) && m.authorId === viewerUserId) ||
+      (m.state === FAILED_MOMENT_STATE && m.authorId === viewerUserId),
   );
   const authorGroups = groupByAuthor(moments);
   const canPost = myRsvpStatus !== null && ALLOWED_RSVP_STATUSES.includes(myRsvpStatus);
@@ -182,6 +187,7 @@ export default function EventMomentsRing({
         const avatarSrc = author?.profile_picture ?? undefined;
         const initials = author?.given_name?.[0]?.toUpperCase() ?? author?.username?.[0]?.toUpperCase() ?? '?';
         const isPending = authorMoments.some((m) => PENDING_MOMENT_STATES.has(m.state));
+        const isFailed = !isPending && authorMoments.some((m) => m.state === FAILED_MOMENT_STATE);
         const canOpenMoments = authorMoments.length > 0;
 
         return (
@@ -202,7 +208,7 @@ export default function EventMomentsRing({
                 sx={{
                   p: '2px',
                   borderRadius: '50%',
-                  bgcolor: isPending ? 'action.disabledBackground' : 'primary.main',
+                  bgcolor: isFailed ? 'error.main' : isPending ? 'action.disabledBackground' : 'primary.main',
                   transition: 'transform 0.2s ease',
                   opacity: isPending ? 0.6 : 1,
                   '&:hover': { transform: 'scale(1.08)' },
@@ -235,10 +241,23 @@ export default function EventMomentsRing({
                   }}
                 />
               )}
+              {isFailed && (
+                <ErrorOutlineIcon
+                  sx={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    fontSize: 20,
+                    color: 'error.main',
+                    bgcolor: 'background.paper',
+                    borderRadius: '50%',
+                  }}
+                />
+              )}
             </Box>
             <Typography
               variant="caption"
-              color={isPending ? 'text.disabled' : 'text.secondary'}
+              color={isFailed ? 'error' : isPending ? 'text.disabled' : 'text.secondary'}
               sx={{
                 fontSize: '0.65rem',
                 maxWidth: 56,
@@ -248,7 +267,7 @@ export default function EventMomentsRing({
                 textAlign: 'center',
               }}
             >
-              {isPending ? 'Pending…' : displayName}
+              {isFailed ? 'Failed' : isPending ? 'Pending…' : displayName}
             </Typography>
           </Box>
         );

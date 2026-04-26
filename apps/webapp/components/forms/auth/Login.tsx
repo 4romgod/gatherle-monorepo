@@ -57,8 +57,6 @@ export default function LoginForm() {
         severity: 'success',
         message: 'You have successfully logged in!',
       });
-
-      // TODO: Redirect logic here
     }
   }, [formState]);
 

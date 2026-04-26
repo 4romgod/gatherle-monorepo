@@ -5,6 +5,7 @@ import type {
   SortInput,
   TextSearchInput,
 } from '@gatherle/commons/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
 import type { Model, Query } from 'mongoose';
 import { CustomError, ErrorTypes } from '../exceptions';
 import { buildTextSearchRegex } from './text-search';
@@ -23,8 +24,13 @@ const addTextSearchToQuery = <ResultType, DocType>(query: Query<ResultType, DocT
   }
 
   const regex = buildTextSearchRegex(trimmed, textSearch.caseSensitive);
+  const textSearchCondition =
+    terms.length === 1 ? { [terms[0]]: regex } : { $or: terms.map((targetField) => ({ [targetField]: regex })) };
 
-  query.or(terms.map((targetField) => ({ [targetField]: regex })));
+  // Keep text search as its own AND-scoped clause so it does not merge into
+  // selectorOperator-driven $or groups from addFiltersToQuery.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query.and([textSearchCondition] as any);
 };
 
 export const addSortToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, sortInput: SortInput[]) => {
@@ -50,36 +56,46 @@ export const addPaginationToQuery = <ResultType, DocType>(
   }
 };
 
-// TODO fix this and make it filter for nested fields, filter event based on gender of organizers
 export const addFiltersToQuery = <ResultType, DocType>(query: Query<ResultType, DocType>, filters: FilterInput[]) => {
-  filters.forEach(({ field, value, operator }) => {
-    const fieldParts = field.split('.');
-    if (fieldParts.length === 1) {
-      switch (operator) {
-        case 'eq':
-          query.where(field).equals(value);
-          break;
-        case 'ne':
-          query.where(field).ne(value);
-          break;
-        case 'gt':
-          query.gt(field, value);
-          break;
-        case 'lt':
-          query.lt(field, value);
-          break;
-        case 'gte':
-          query.gte(field, value);
-          break;
-        case 'lte':
-          query.lte(field, value);
-          break;
-        default:
-          query.where(field).equals(value);
-          break;
+  const buildCondition = ({ field, value, operator }: FilterInput): Record<string, unknown> => {
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        throw CustomError(`Filter "${field}" must not use an empty array value.`, ErrorTypes.BAD_REQUEST);
       }
+      const effectiveOperator = operator ?? FilterOperatorInput.eq;
+      if (effectiveOperator !== FilterOperatorInput.eq && effectiveOperator !== FilterOperatorInput.ne) {
+        throw CustomError(
+          `Filter "${field}" only supports array values with "eq" or "ne" operators.`,
+          ErrorTypes.BAD_REQUEST,
+        );
+      }
+      return { [field]: { [effectiveOperator === FilterOperatorInput.ne ? '$nin' : '$in']: value } };
     }
-  });
+    return { [field]: { [`$${operator ?? FilterOperatorInput.eq}`]: value } };
+  };
+
+  const orFilters = filters.filter((f) => f.selectorOperator === SelectorOperatorInput.or);
+  const norFilters = filters.filter((f) => f.selectorOperator === SelectorOperatorInput.nor);
+  const andFilters = filters.filter(
+    (f) => f.selectorOperator !== SelectorOperatorInput.or && f.selectorOperator !== SelectorOperatorInput.nor,
+  );
+
+  const andConditions: Record<string, unknown>[] = [];
+
+  if (andFilters.length > 0) {
+    andConditions.push(...andFilters.map(buildCondition));
+  }
+  if (orFilters.length > 0) {
+    andConditions.push({ $or: orFilters.map(buildCondition) });
+  }
+  if (norFilters.length > 0) {
+    andConditions.push({ $nor: norFilters.map(buildCondition) });
+  }
+
+  if (andConditions.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query.and(andConditions as any);
+  }
 };
 
 export const transformOptionsToQuery = <T>(model: Model<T>, options: QueryOptionsInput) => {

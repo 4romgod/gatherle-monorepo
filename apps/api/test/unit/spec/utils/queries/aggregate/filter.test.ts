@@ -1,7 +1,7 @@
 import { createEventPipelineStages, createLocationMatchStage, createTextSearchMatchStage } from '@/utils';
 import type { PipelineStage } from 'mongoose';
 import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/types';
-import { FilterOperatorInput } from '@gatherle/commons/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
 
 describe('createEventPipelineStages', () => {
   it('should return a valid pipeline for simple equality filters', () => {
@@ -109,6 +109,88 @@ describe('createEventPipelineStages', () => {
       {
         $match: {
           status: { $nin: ['Cancelled', 'Completed'] },
+        },
+      },
+    ];
+
+    const pipelineStages = createEventPipelineStages(filters);
+    expect(pipelineStages).toEqual(expectedPipeline);
+  });
+
+  it('should produce $or when filters use selectorOperator or', () => {
+    const filters: FilterInput[] = [
+      {
+        field: 'status',
+        value: 'Active',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.or,
+      },
+      {
+        field: 'status',
+        value: 'Upcoming',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.or,
+      },
+    ];
+    const expectedPipeline: PipelineStage[] = [
+      {
+        $match: {
+          $or: [{ status: { $eq: 'Active' } }, { status: { $eq: 'Upcoming' } }],
+        },
+      },
+    ];
+
+    const pipelineStages = createEventPipelineStages(filters);
+    expect(pipelineStages).toEqual(expectedPipeline);
+  });
+
+  it('should produce $nor when filters use selectorOperator nor', () => {
+    const filters: FilterInput[] = [
+      {
+        field: 'status',
+        value: 'Cancelled',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.nor,
+      },
+      {
+        field: 'status',
+        value: 'Completed',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.nor,
+      },
+    ];
+    const expectedPipeline: PipelineStage[] = [
+      {
+        $match: {
+          $nor: [{ status: { $eq: 'Cancelled' } }, { status: { $eq: 'Completed' } }],
+        },
+      },
+    ];
+
+    const pipelineStages = createEventPipelineStages(filters);
+    expect(pipelineStages).toEqual(expectedPipeline);
+  });
+
+  it('should combine $and and $or groups when mixing selectorOperators', () => {
+    const filters: FilterInput[] = [
+      { field: 'capacity', value: 10, operator: FilterOperatorInput.gte },
+      {
+        field: 'status',
+        value: 'Active',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.or,
+      },
+      {
+        field: 'status',
+        value: 'Upcoming',
+        operator: FilterOperatorInput.eq,
+        selectorOperator: SelectorOperatorInput.or,
+      },
+    ];
+    const expectedPipeline: PipelineStage[] = [
+      {
+        $match: {
+          $and: [{ capacity: { $gte: 10 } }, { $or: [{ status: { $eq: 'Active' } }, { status: { $eq: 'Upcoming' } }] }],
         },
       },
     ];
