@@ -56,6 +56,8 @@ export const EVENT_DESCRIPTIONS = {
     ORGANIZATION: 'Organization that owns this event (resolved via field resolver).',
     PARTICIPANTS:
       'Resolved participants populated via aggregation or field resolvers; not persisted directly on the event series document.',
+    UPCOMING_OCCURRENCES:
+      'Upcoming concrete occurrences for this event series, sourced from generated occurrence rows or a temporary single-event projection.',
     SAVED_BY_COUNT: 'Number of users who have saved the event, computed from follows.',
     RSVP_COUNT: 'Number of active RSVPs (Going or Interested), computed during aggregation.',
   },
@@ -72,6 +74,7 @@ export const EVENT_DESCRIPTIONS = {
     STATUS: 'Lifecycle status of this occurrence.',
     IS_EXCEPTION: 'Whether this occurrence diverges from the generated default for the series.',
     SERIES_SCHEDULE_VERSION: 'Schedule version from the parent event series that produced this occurrence.',
+    EVENT_SERIES: 'Parent event series that owns this occurrence.',
     CREATED_AT: 'Timestamp when the occurrence was created.',
     UPDATED_AT: 'Timestamp when the occurrence was last updated.',
   },
@@ -284,6 +287,8 @@ export const RESOLVER_DESCRIPTIONS = {
     readEventBySlug: 'Read an event by its slug. Requires the slug and returns the event or a 404 Error if not found.',
     readEvents:
       'Read a list of events. Accepts optional query options for pagination, sorting, and filtering and returns a list of events.',
+    readEventOccurrences:
+      'Read occurrence-oriented event results within a required date window. Recurring series are served from EventOccurrence rows inside the current materialization window, while one-time series are temporarily projected as synthetic occurrences.',
   },
   EVENT_CATEGORY: {
     createEventCategory:

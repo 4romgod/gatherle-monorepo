@@ -1,14 +1,50 @@
 import { RRule } from 'rrule';
-import { EventOccurrenceDAO } from '@/mongodb/dao';
-import { getOccurrencesInRange, getOccurrencesInRangeOrThrow } from '@/utils';
-import type { EventOccurrence, EventSchedule, EventSeries } from '@gatherle/commons/types';
+import { EventOccurrenceDAO, EventSeriesDAO } from '@/mongodb/dao';
+import {
+  CustomError,
+  ErrorTypes,
+  getDateRangeForFilter,
+  getOccurrencesInRange,
+  getOccurrencesInRangeOrThrow,
+} from '@/utils';
+import type {
+  EventOccurrence,
+  EventSchedule,
+  EventSeries,
+  EventsQueryOptionsInput,
+  SortInput,
+} from '@gatherle/commons/types';
+import { SortOrderInput } from '@gatherle/commons/types';
 import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
+import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
+import { logger } from '@/utils/logger';
 
 /** Maximum look-ahead window for materialising occurrence rows. Balances pre-computation cost with enough runway for schedulers and calendar integrations. */
 const MATERIALIZATION_WINDOW_MONTHS = 6;
 /** Hard cap on occurrences generated per sync run. Guards against runaway infinite RRULE expansions exhausting database write capacity. */
 const MAX_WINDOW_OCCURRENCES = 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+type OccurrenceQuerySeries = Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'> & {
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+const DEFAULT_OCCURRENCE_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.asc }];
+const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
+  'createdAt',
+  'endAt',
+  'eventSeriesId',
+  'occurrenceId',
+  'occurrenceKey',
+  'originalStartAt',
+  'seriesScheduleVersion',
+  'startAt',
+  'status',
+  'timezone',
+  'updatedAt',
+]);
 
 function extractRuleLine(rruleString: string): string {
   const lines = rruleString.split(/\r?\n/).map((line) => line.trim());
@@ -59,6 +95,171 @@ function mapOccurrenceStatus(eventStatus: EventStatus): EventOccurrenceStatus {
     default:
       return EventOccurrenceStatus.Scheduled;
   }
+}
+
+function resolveOccurrenceDateRange(
+  options?: Pick<EventsQueryOptionsInput, 'customDate' | 'dateFilterOption' | 'dateRange'>,
+) {
+  if (options?.customDate) {
+    const { startDate, endDate } = getDateRangeForFilter(DATE_FILTER_OPTIONS.CUSTOM, new Date(options.customDate));
+    return { startDate, endDate };
+  }
+
+  if (options?.dateFilterOption) {
+    const { startDate, endDate } = getDateRangeForFilter(options.dateFilterOption, undefined);
+    return { startDate, endDate };
+  }
+
+  const startDate = options?.dateRange?.startDate ? new Date(options.dateRange.startDate) : undefined;
+  const endDate = options?.dateRange?.endDate ? new Date(options.dateRange.endDate) : undefined;
+
+  if (!startDate || !endDate) {
+    throw CustomError(
+      'readEventOccurrences requires customDate, dateFilterOption, or a dateRange with both startDate and endDate.',
+      ErrorTypes.BAD_REQUEST,
+    );
+  }
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    throw CustomError('Occurrence date filters must be valid dates.', ErrorTypes.BAD_REQUEST);
+  }
+
+  if (startDate.getTime() > endDate.getTime()) {
+    throw CustomError(
+      'Occurrence date range startDate must be earlier than or equal to endDate.',
+      ErrorTypes.BAD_REQUEST,
+    );
+  }
+
+  return { startDate, endDate };
+}
+
+function getOccurrenceComparableValue(occurrence: EventOccurrence, field: string): number | string | boolean | null {
+  const value = (occurrence as unknown as Record<string, unknown>)[field];
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+
+  return String(value);
+}
+
+function compareOccurrenceValues(
+  left: number | string | boolean | null,
+  right: number | string | boolean | null,
+): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left === null) {
+    return 1;
+  }
+
+  if (right === null) {
+    return -1;
+  }
+
+  if (typeof left === 'number' && typeof right === 'number') {
+    return left - right;
+  }
+
+  if (typeof left === 'boolean' && typeof right === 'boolean') {
+    return Number(left) - Number(right);
+  }
+
+  return String(left).localeCompare(String(right));
+}
+
+function sortOccurrences(occurrences: EventOccurrence[], sort?: SortInput[]): EventOccurrence[] {
+  const sortInput = sort && sort.length > 0 ? sort : DEFAULT_OCCURRENCE_SORT;
+
+  for (const sortEntry of sortInput) {
+    if (!SUPPORTED_OCCURRENCE_SORT_FIELDS.has(sortEntry.field)) {
+      throw CustomError(
+        `Occurrence sorting only supports: ${Array.from(SUPPORTED_OCCURRENCE_SORT_FIELDS).sort().join(', ')}.`,
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+  }
+
+  return [...occurrences].sort((left, right) => {
+    for (const sortEntry of sortInput) {
+      const comparison = compareOccurrenceValues(
+        getOccurrenceComparableValue(left, sortEntry.field),
+        getOccurrenceComparableValue(right, sortEntry.field),
+      );
+
+      if (comparison !== 0) {
+        return sortEntry.order === 'desc' ? -comparison : comparison;
+      }
+    }
+
+    return left.occurrenceKey.localeCompare(right.occurrenceKey);
+  });
+}
+
+function paginateOccurrences(occurrences: EventOccurrence[], options?: EventsQueryOptionsInput): EventOccurrence[] {
+  if (!options?.pagination) {
+    return occurrences;
+  }
+
+  const { skip, limit } = validatePaginationInput(options.pagination);
+  return occurrences.slice(skip ?? 0, (skip ?? 0) + limit);
+}
+
+function doesScheduleOverlapWindow(schedule: EventSchedule, startDate: Date, endDate: Date): boolean {
+  const scheduleStart = new Date(schedule.startAt);
+  const scheduleEnd = schedule.endAt ? new Date(schedule.endAt) : scheduleStart;
+
+  return scheduleStart.getTime() <= endDate.getTime() && scheduleEnd.getTime() >= startDate.getTime();
+}
+
+function projectSingleSeriesOccurrence(eventSeries: OccurrenceQuerySeries): EventOccurrence {
+  const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(
+    eventSeries.eventId,
+    eventSeries.primarySchedule.startAt,
+  );
+  const fallbackTimestamp = new Date(eventSeries.primarySchedule.startAt);
+
+  return {
+    occurrenceId: occurrenceKey,
+    eventSeriesId: eventSeries.eventId,
+    occurrenceKey,
+    originalStartAt: new Date(eventSeries.primarySchedule.startAt),
+    startAt: new Date(eventSeries.primarySchedule.startAt),
+    endAt: eventSeries.primarySchedule.endAt ? new Date(eventSeries.primarySchedule.endAt) : undefined,
+    timezone: eventSeries.primarySchedule.timezone,
+    status: mapOccurrenceStatus(eventSeries.status),
+    isException: false,
+    seriesScheduleVersion: eventSeries.scheduleVersion ?? 1,
+    createdAt: eventSeries.createdAt ? new Date(eventSeries.createdAt) : fallbackTimestamp,
+    updatedAt: eventSeries.updatedAt ? new Date(eventSeries.updatedAt) : fallbackTimestamp,
+  };
+}
+
+function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean, endDate: Date): void {
+  if (!hasRecurringCandidates) {
+    return;
+  }
+
+  const materializationWindowEnd = buildWindowEnd(new Date());
+  if (endDate.getTime() <= materializationWindowEnd.getTime()) {
+    return;
+  }
+
+  logger.warn('Occurrence query exceeds the current recurring materialization window.', {
+    requestedEndDate: endDate,
+    materializationWindowEnd,
+  });
 }
 
 class EventOccurrenceService {
@@ -153,6 +354,58 @@ class EventOccurrenceService {
     });
   }
 
+  static async readEventOccurrences(options: EventsQueryOptionsInput): Promise<EventOccurrence[]> {
+    const { startDate, endDate } = resolveOccurrenceDateRange(options);
+    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
+      options,
+    )) as OccurrenceQuerySeries[];
+
+    const recurringEventSeriesIds: string[] = [];
+    const syntheticSingleOccurrences: EventOccurrence[] = [];
+
+    for (const eventSeries of candidateEventSeries) {
+      if (this.isRecurringSeries(eventSeries)) {
+        recurringEventSeriesIds.push(eventSeries.eventId);
+        continue;
+      }
+
+      if (doesScheduleOverlapWindow(eventSeries.primarySchedule, startDate, endDate)) {
+        syntheticSingleOccurrences.push(projectSingleSeriesOccurrence(eventSeries));
+      }
+    }
+
+    const recurringOccurrences =
+      recurringEventSeriesIds.length > 0
+        ? await EventOccurrenceDAO.readByEventSeriesIdsInRange(recurringEventSeriesIds, startDate, endDate)
+        : [];
+
+    warnIfQueryExceedsMaterializationWindow(recurringEventSeriesIds.length > 0, endDate);
+
+    return paginateOccurrences(
+      sortOccurrences([...recurringOccurrences, ...syntheticSingleOccurrences], options.sort),
+      options,
+    );
+  }
+
+  static async readUpcomingOccurrencesForSeries(
+    eventSeries: OccurrenceQuerySeries,
+    limit: number = 5,
+    fromDate: Date = new Date(),
+  ): Promise<EventOccurrence[]> {
+    const safeLimit = sanitizeQueryLimit(limit, 5);
+
+    if (this.isRecurringSeries(eventSeries)) {
+      return EventOccurrenceDAO.readUpcomingByEventSeriesId(eventSeries.eventId, fromDate, safeLimit);
+    }
+
+    const singleOccurrenceEnd = eventSeries.primarySchedule.endAt ?? eventSeries.primarySchedule.startAt;
+    if (singleOccurrenceEnd.getTime() < fromDate.getTime()) {
+      return [];
+    }
+
+    return [projectSingleSeriesOccurrence(eventSeries)];
+  }
+
   static async syncRecurringSeriesOccurrences(
     eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
   ): Promise<void> {
@@ -162,7 +415,12 @@ class EventOccurrenceService {
     }
 
     const occurrences = this.buildOccurrencesForSeries(eventSeries);
-    await EventOccurrenceDAO.bulkUpsert(occurrences);
+    if (occurrences.length > 0) {
+      await EventOccurrenceDAO.bulkUpsert(occurrences);
+    }
+    // An empty generated set means this recurring series currently has no dates
+    // inside the rolling materialization window, so stale generated rows should
+    // be cleared rather than preserved indefinitely.
     await EventOccurrenceDAO.deleteMissingGeneratedOccurrences(
       eventSeries.eventId,
       occurrences.map((occurrence) => occurrence.occurrenceKey),

@@ -28,6 +28,7 @@ export const OPERATIONS = {
     READ_EVENT_BY_ID: 'readEventById',
     READ_EVENT_BY_SLUG: 'readEventBySlug',
     READ_EVENTS: 'readEvents',
+    READ_EVENT_OCCURRENCES: 'readEventOccurrences',
     READ_TRENDING_EVENTS: 'readTrendingEvents',
   },
   EVENT_CATEGORY: {

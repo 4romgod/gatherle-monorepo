@@ -139,6 +139,25 @@ class EventSeriesDAO {
     }
   }
 
+  static async readCandidateEventSeriesForOccurrences(options?: EventsQueryOptionsInput): Promise<EventEntity[]> {
+    try {
+      const pipeline = transformEventOptionsToPipeline(
+        options
+          ? {
+              ...options,
+              pagination: undefined,
+              sort: undefined,
+            }
+          : undefined,
+      );
+
+      return await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
+    } catch (error) {
+      logDaoError('Error reading candidate event series for occurrence query', { error, options });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
     const { eventId, ...restInput } = input;
     let event;

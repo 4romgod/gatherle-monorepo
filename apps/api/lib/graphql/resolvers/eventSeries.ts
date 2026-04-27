@@ -8,6 +8,7 @@ import {
   UserRole,
   EventsQueryOptionsInput,
   EventCategory,
+  EventOccurrence,
   EventOrganizer,
   EventSeriesParticipant,
   ParticipantStatus,
@@ -17,7 +18,7 @@ import {
 } from '@gatherle/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
-import { HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
+import { EVENT_DESCRIPTIONS, HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
 import { EventSeriesDAO, FollowDAO, EventSeriesParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
@@ -25,6 +26,8 @@ import { getAuthenticatedUser } from '@/utils/auth';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import EventSeriesService from '@/services/eventSeries';
+import EventOccurrenceService from '@/services/eventOccurrence';
+import { sanitizeQueryLimit } from '@/utils';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 
@@ -264,6 +267,18 @@ export class EventSeriesResolver {
       return null;
     }
     return EventSeriesParticipantDAO.readByEventAndUser(event.eventId, context.user.userId);
+  }
+
+  @FieldResolver(() => [EventOccurrence], {
+    description: EVENT_DESCRIPTIONS.EVENT.UPCOMING_OCCURRENCES,
+  })
+  async upcomingOccurrences(
+    @Root() event: EventSeries,
+    @Arg('limit', () => Int, { nullable: true, defaultValue: 5 }) limit?: number | null,
+    @Arg('fromDate', () => Date, { nullable: true }) fromDate?: Date,
+  ): Promise<EventOccurrence[]> {
+    const safeLimit = sanitizeQueryLimit(limit, 5);
+    return EventOccurrenceService.readUpcomingOccurrencesForSeries(event, safeLimit, fromDate ?? new Date());
   }
 
   public async ensureUserCanUseOrganization(orgId: string, userId: string): Promise<void> {
