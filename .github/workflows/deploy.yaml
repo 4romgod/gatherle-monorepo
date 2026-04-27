@@ -22,152 +22,152 @@ permissions:
   contents: read
 
 jobs:
-  deploy-api:
-    runs-on: ubuntu-latest
-    # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
-    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
-    env:
-      STAGE: ${{ inputs.stage }}
-      AWS_REGION: ${{ inputs.region }}
-      ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
-      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
-      WEBAPP_URL: ${{ vars.WEBAPP_URL }}
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-    outputs:
-      graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
-      websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
-      stage_hosted_zone_name_servers: ${{ steps.get_stage_zone_nameservers.outputs.stage_hosted_zone_name_servers }}
-      stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
-      secret_arn: ${{ steps.resolve_secret.outputs.secret_arn }}
-      s3_media_url: ${{ steps.get_s3_bucket_url.outputs.s3_media_url }}
-      media_cdn_url: ${{ steps.get_s3_bucket_url.outputs.media_cdn_url }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+  # deploy-api:
+  #   runs-on: ubuntu-latest
+  #   # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
+  #   environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+  #   env:
+  #     STAGE: ${{ inputs.stage }}
+  #     AWS_REGION: ${{ inputs.region }}
+  #     ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
+  #     EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
+  #     WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+  #     GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  #   outputs:
+  #     graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
+  #     websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
+  #     stage_hosted_zone_name_servers: ${{ steps.get_stage_zone_nameservers.outputs.stage_hosted_zone_name_servers }}
+  #     stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
+  #     secret_arn: ${{ steps.resolve_secret.outputs.secret_arn }}
+  #     s3_media_url: ${{ steps.get_s3_bucket_url.outputs.s3_media_url }}
+  #     media_cdn_url: ${{ steps.get_s3_bucket_url.outputs.media_cdn_url }}
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-          cache: npm
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: 24.x
+  #         cache: npm
 
-      - name: Validate Deployment Configuration
-        env:
-          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
-        run: |
-          test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
-          test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
-          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
+  #     - name: Validate Deployment Configuration
+  #       env:
+  #         ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
+  #       run: |
+  #         test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
+  #         test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
+  #         test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
 
-      - name: Derive Deployment Suffix
-        id: derive_suffix
-        run: |
-          STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
-          STACK_SUFFIX="${STAGE_SEGMENT}-${AWS_REGION}"
-          echo "STACK_SUFFIX=$STACK_SUFFIX" >> "$GITHUB_ENV"
-          echo "stack_suffix=$STACK_SUFFIX" >> "$GITHUB_OUTPUT"
+  #     - name: Derive Deployment Suffix
+  #       id: derive_suffix
+  #       run: |
+  #         STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
+  #         STACK_SUFFIX="${STAGE_SEGMENT}-${AWS_REGION}"
+  #         echo "STACK_SUFFIX=$STACK_SUFFIX" >> "$GITHUB_ENV"
+  #         echo "stack_suffix=$STACK_SUFFIX" >> "$GITHUB_OUTPUT"
 
-      - name: Install Dependencies
-        run: npm ci
+  #     - name: Install Dependencies
+  #       run: npm ci
 
-      - name: Commons TypeScript Artifacts Build
-        run: npm run build:ts -w @gatherle/commons
+  #     - name: Commons TypeScript Artifacts Build
+  #       run: npm run build:ts -w @gatherle/commons
 
-      - name: API TypeScript Artifacts Build
-        run: npm run build:ts -w @gatherle/api
+  #     - name: API TypeScript Artifacts Build
+  #       run: npm run build:ts -w @gatherle/api
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+  #         aws-region: ${{ env.AWS_REGION }}
 
-      - name: Synthesize AWS CDK
-        run: npm run build:cdk -w @gatherle/cdk
+  #     - name: Synthesize AWS CDK
+  #       run: npm run build:cdk -w @gatherle/cdk
 
-      - name: Validate CDK Synth Output
-        run: |
-          TEMPLATE="infrastructure/cdk/cdk.out/GraphQLStack.template.json"
-          if [ ! -f "$TEMPLATE" ]; then
-            echo "GraphQLStack template not found at $TEMPLATE"
-            exit 1
-          fi
-          GOOGLE_CLIENT_ID_IN_TEMPLATE=$(jq -r '.Resources | to_entries[] | .value.Properties.Environment.Variables.GOOGLE_CLIENT_ID // empty' "$TEMPLATE" 2>/dev/null | head -1)
-          if [ -z "$GOOGLE_CLIENT_ID_IN_TEMPLATE" ]; then
-            echo "ERROR: GOOGLE_CLIENT_ID is empty in the synthesized GraphQLStack template."
-            echo "GOOGLE_CLIENT_ID env var present in shell: $(test -n "$GOOGLE_CLIENT_ID" && echo yes || echo no)"
-            exit 1
-          fi
-          echo "GOOGLE_CLIENT_ID is present in synthesized template."
+  #     - name: Validate CDK Synth Output
+  #       run: |
+  #         TEMPLATE="infrastructure/cdk/cdk.out/GraphQLStack.template.json"
+  #         if [ ! -f "$TEMPLATE" ]; then
+  #           echo "GraphQLStack template not found at $TEMPLATE"
+  #           exit 1
+  #         fi
+  #         GOOGLE_CLIENT_ID_IN_TEMPLATE=$(jq -r '.Resources | to_entries[] | .value.Properties.Environment.Variables.GOOGLE_CLIENT_ID // empty' "$TEMPLATE" 2>/dev/null | head -1)
+  #         if [ -z "$GOOGLE_CLIENT_ID_IN_TEMPLATE" ]; then
+  #           echo "ERROR: GOOGLE_CLIENT_ID is empty in the synthesized GraphQLStack template."
+  #           echo "GOOGLE_CLIENT_ID env var present in shell: $(test -n "$GOOGLE_CLIENT_ID" && echo yes || echo no)"
+  #           exit 1
+  #         fi
+  #         echo "GOOGLE_CLIENT_ID is present in synthesized template."
 
-      - name: Resolve Backend Secret ARN
-        id: resolve_secret
-        run: |
-          STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
-          SECRET_NAME="gatherle/backend/${STAGE_SEGMENT}-${AWS_REGION}"
-          SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --query "ARN" --output text)
-          if [ -z "$SECRET_ARN" ] || [ "$SECRET_ARN" = "None" ]; then
-            echo "Failed to resolve secret ARN for $SECRET_NAME."
-            exit 1
-          fi
-          echo "SECRET_ARN=$SECRET_ARN" >> "$GITHUB_ENV"
-          echo "secret_arn=$SECRET_ARN" >> "$GITHUB_OUTPUT"
+  #     - name: Resolve Backend Secret ARN
+  #       id: resolve_secret
+  #       run: |
+  #         STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
+  #         SECRET_NAME="gatherle/backend/${STAGE_SEGMENT}-${AWS_REGION}"
+  #         SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --query "ARN" --output text)
+  #         if [ -z "$SECRET_ARN" ] || [ "$SECRET_ARN" = "None" ]; then
+  #           echo "Failed to resolve secret ARN for $SECRET_NAME."
+  #           exit 1
+  #         fi
+  #         echo "SECRET_ARN=$SECRET_ARN" >> "$GITHUB_ENV"
+  #         echo "secret_arn=$SECRET_ARN" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy AWS CDK
-        run: |
-          CDK_DEPLOY_STACKS="SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack MediaStack"
-          # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
-          npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
+  #     - name: Deploy AWS CDK
+  #       run: |
+  #         CDK_DEPLOY_STACKS="SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack MediaStack"
+  #         # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
+  #         npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
 
-      - name: Get API Gateway endpoint
-        id: get_graphql_endpoint
-        run: |
-          ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
-          if [ -z "$ENDPOINT" ] || [ "$ENDPOINT" = "None" ]; then
-            echo "Failed to retrieve GraphQL endpoint from gatherle-graphql-${STACK_SUFFIX} output apiPath."
-            exit 1
-          fi
-          echo "graphql_url=$ENDPOINT" >> "$GITHUB_OUTPUT"
+  #     - name: Get API Gateway endpoint
+  #       id: get_graphql_endpoint
+  #       run: |
+  #         ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+  #         if [ -z "$ENDPOINT" ] || [ "$ENDPOINT" = "None" ]; then
+  #           echo "Failed to retrieve GraphQL endpoint from gatherle-graphql-${STACK_SUFFIX} output apiPath."
+  #           exit 1
+  #         fi
+  #         echo "graphql_url=$ENDPOINT" >> "$GITHUB_OUTPUT"
 
-      - name: Get WebSocket API endpoint
-        id: get_websocket_endpoint
-        run: |
-          WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-websocket-api-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
-          if [ -z "$WS_ENDPOINT" ] || [ "$WS_ENDPOINT" = "None" ]; then
-            echo "Failed to retrieve WebSocket endpoint from gatherle-websocket-api-${STACK_SUFFIX} output websocketApiUrl."
-            exit 1
-          fi
-          echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
+  #     - name: Get WebSocket API endpoint
+  #       id: get_websocket_endpoint
+  #       run: |
+  #         WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-websocket-api-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
+  #         if [ -z "$WS_ENDPOINT" ] || [ "$WS_ENDPOINT" = "None" ]; then
+  #           echo "Failed to retrieve WebSocket endpoint from gatherle-websocket-api-${STACK_SUFFIX} output websocketApiUrl."
+  #           exit 1
+  #         fi
+  #         echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
 
-      - name: Get Stage Hosted Zone Name Servers
-        id: get_stage_zone_nameservers
-        run: |
-          ZONE_NAME_SERVERS=$(aws cloudformation describe-stacks --stack-name "gatherle-stage-infra-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" --output text)
-          if [ -z "$ZONE_NAME_SERVERS" ] || [ "$ZONE_NAME_SERVERS" = "None" ]; then
-            echo "Failed to retrieve stageHostedZoneNameServers from gatherle-stage-infra-${STACK_SUFFIX}."
-            exit 1
-          fi
-          echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
+  #     - name: Get Stage Hosted Zone Name Servers
+  #       id: get_stage_zone_nameservers
+  #       run: |
+  #         ZONE_NAME_SERVERS=$(aws cloudformation describe-stacks --stack-name "gatherle-stage-infra-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" --output text)
+  #         if [ -z "$ZONE_NAME_SERVERS" ] || [ "$ZONE_NAME_SERVERS" = "None" ]; then
+  #           echo "Failed to retrieve stageHostedZoneNameServers from gatherle-stage-infra-${STACK_SUFFIX}."
+  #           exit 1
+  #         fi
+  #         echo "stage_hosted_zone_name_servers=$ZONE_NAME_SERVERS" >> "$GITHUB_OUTPUT"
 
-      - name: Get S3 Media Bucket URL
-        id: get_s3_bucket_url
-        run: |
-          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaBucketName'].OutputValue" --output text)
-          if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
-            echo "Failed to retrieve MediaBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
-            exit 1
-          fi
-          S3_URL="https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com"
-          echo "s3_media_url=$S3_URL" >> "$GITHUB_OUTPUT"
-          CDN_DOMAIN=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaCdnDomain'].OutputValue" --output text)
-          if [ -z "$CDN_DOMAIN" ] || [ "$CDN_DOMAIN" = "None" ]; then
-            echo "Failed to retrieve MediaCdnDomain from gatherle-s3-bucket-${STACK_SUFFIX}."
-            exit 1
-          fi
-          echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
+  #     - name: Get S3 Media Bucket URL
+  #       id: get_s3_bucket_url
+  #       run: |
+  #         BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaBucketName'].OutputValue" --output text)
+  #         if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
+  #           echo "Failed to retrieve MediaBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
+  #           exit 1
+  #         fi
+  #         S3_URL="https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com"
+  #         echo "s3_media_url=$S3_URL" >> "$GITHUB_OUTPUT"
+  #         CDN_DOMAIN=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaCdnDomain'].OutputValue" --output text)
+  #         if [ -z "$CDN_DOMAIN" ] || [ "$CDN_DOMAIN" = "None" ]; then
+  #           echo "Failed to retrieve MediaCdnDomain from gatherle-s3-bucket-${STACK_SUFFIX}."
+  #           exit 1
+  #         fi
+  #         echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
 
   e2e-api:
-    needs: [deploy-api]
+    # needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
@@ -197,142 +197,142 @@ jobs:
 
       - name: Run API E2E Tests
         env:
-          GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
+          GRAPHQL_URL: https://api.beta.af-south-1.gatherle.com/graphql
         run: npm run test:e2e:api
 
-  deploy-webapp:
-    needs: [deploy-api, e2e-api]
-    runs-on: ubuntu-latest
-    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
-    env:
-      STAGE: ${{ inputs.stage }}
-      AWS_REGION: ${{ inputs.region }}
-    outputs:
-      deployment_url: ${{ steps.deploy_webapp.outputs.deployment_url }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+  # deploy-webapp:
+  #   needs: [deploy-api, e2e-api]
+  #   runs-on: ubuntu-latest
+  #   environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+  #   env:
+  #     STAGE: ${{ inputs.stage }}
+  #     AWS_REGION: ${{ inputs.region }}
+  #   outputs:
+  #     deployment_url: ${{ steps.deploy_webapp.outputs.deployment_url }}
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-          cache: npm
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: 24.x
+  #         cache: npm
 
-      - name: Install Dependencies
-        run: npm ci
+  #     - name: Install Dependencies
+  #       run: npm ci
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+  #     - name: Install Vercel CLI
+  #       run: npm install --global vercel@latest
 
-      - name: Pull Vercel Environment Information
-        working-directory: ./apps/webapp
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+  #     - name: Pull Vercel Environment Information
+  #       working-directory: ./apps/webapp
+  #       env:
+  #         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  #         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  #       run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy Preview to Vercel
-        id: deploy_webapp
-        working-directory: ./apps/webapp
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-          NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
-          NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url }}
-          NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-        run: |
-          vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
-            --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
-            --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
-            --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
-            --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
-            --env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-            --env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
-            --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-            > deployment-url.txt
-          DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | tail -n 1)
-          fi
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "Failed to capture deployment URL from Vercel CLI output."
-            echo "Captured output:"
-            cat deployment-url.txt
-            exit 1
-          fi
-          echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+  #     - name: Deploy Preview to Vercel
+  #       id: deploy_webapp
+  #       working-directory: ./apps/webapp
+  #       env:
+  #         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  #         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  #         NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
+  #         NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
+  #         NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url }}
+  #         NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url }}
+  #         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  #         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  #         NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+  #       run: |
+  #         vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
+  #           --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
+  #           --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
+  #           --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
+  #           --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
+  #           --env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+  #           --env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
+  #           --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
+  #           > deployment-url.txt
+  #         DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)
+  #         if [ -z "$DEPLOYMENT_URL" ]; then
+  #           DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | tail -n 1)
+  #         fi
+  #         if [ -z "$DEPLOYMENT_URL" ]; then
+  #           echo "Failed to capture deployment URL from Vercel CLI output."
+  #           echo "Captured output:"
+  #           cat deployment-url.txt
+  #           exit 1
+  #         fi
+  #         echo "deployment_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Alias Webapp Custom Domain in Vercel
-        if: ${{ inputs.web_domain_alias != '' }}
-        working-directory: ./apps/webapp
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "Missing deployment URL for Vercel alias."
-            exit 1
-          fi
-          vercel alias set "$DEPLOYMENT_URL" "${{ inputs.web_domain_alias }}" --token=${{ secrets.VERCEL_TOKEN }}
+  #     - name: Alias Webapp Custom Domain in Vercel
+  #       if: ${{ inputs.web_domain_alias != '' }}
+  #       working-directory: ./apps/webapp
+  #       env:
+  #         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  #         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  #       run: |
+  #         DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
+  #         if [ -z "$DEPLOYMENT_URL" ]; then
+  #           echo "Missing deployment URL for Vercel alias."
+  #           exit 1
+  #         fi
+  #         vercel alias set "$DEPLOYMENT_URL" "${{ inputs.web_domain_alias }}" --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Verify Webapp Custom Domain
-        if: ${{ inputs.web_domain_alias != '' }}
-        run: |
-          curl -fsSIL "https://${{ inputs.web_domain_alias }}" | head -n 1
+  #     - name: Verify Webapp Custom Domain
+  #       if: ${{ inputs.web_domain_alias != '' }}
+  #       run: |
+  #         curl -fsSIL "https://${{ inputs.web_domain_alias }}" | head -n 1
 
-      - name: Verify Captured Deployment URL
-        run: |
-          DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "PLAYWRIGHT_BASE_URL is empty."
-            exit 1
-          fi
-          curl -fsSIL "$DEPLOYMENT_URL" | head -n 1
+  #     - name: Verify Captured Deployment URL
+  #       run: |
+  #         DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
+  #         if [ -z "$DEPLOYMENT_URL" ]; then
+  #           echo "PLAYWRIGHT_BASE_URL is empty."
+  #           exit 1
+  #         fi
+  #         curl -fsSIL "$DEPLOYMENT_URL" | head -n 1
 
-  e2e-webapp:
-    needs: [deploy-webapp]
-    runs-on: ubuntu-latest
-    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
-    env:
-      STAGE: ${{ inputs.stage }}
-      AWS_REGION: ${{ inputs.region }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+  # e2e-webapp:
+  #   needs: [deploy-webapp]
+  #   runs-on: ubuntu-latest
+  #   environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+  #   env:
+  #     STAGE: ${{ inputs.stage }}
+  #     AWS_REGION: ${{ inputs.region }}
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-          cache: npm
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: 24.x
+  #         cache: npm
 
-      - name: Install Dependencies
-        run: npm ci
+  #     - name: Install Dependencies
+  #       run: npm ci
 
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('apps/webapp/package-lock.json', 'apps/webapp/package.json') }}
+  #     - name: Cache Playwright Browsers
+  #       id: playwright-cache
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: ~/.cache/ms-playwright
+  #         key: playwright-${{ runner.os }}-${{ hashFiles('apps/webapp/package-lock.json', 'apps/webapp/package.json') }}
 
-      - name: Install Playwright Browser Dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: ./apps/webapp
-        run: npx playwright install --with-deps chromium
+  #     - name: Install Playwright Browser Dependencies
+  #       if: steps.playwright-cache.outputs.cache-hit != 'true'
+  #       working-directory: ./apps/webapp
+  #       run: npx playwright install --with-deps chromium
 
-      - name: Install Playwright System Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: ./apps/webapp
-        run: npx playwright install-deps chromium
+  #     - name: Install Playwright System Dependencies
+  #       if: steps.playwright-cache.outputs.cache-hit == 'true'
+  #       working-directory: ./apps/webapp
+  #       run: npx playwright install-deps chromium
 
-      - name: Run Webapp E2E Tests
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-webapp.outputs.deployment_url }}
-        run: npm run test:e2e:web
+  #     - name: Run Webapp E2E Tests
+  #       env:
+  #         PLAYWRIGHT_BASE_URL: ${{ needs.deploy-webapp.outputs.deployment_url }}
+  #       run: npm run test:e2e:web
