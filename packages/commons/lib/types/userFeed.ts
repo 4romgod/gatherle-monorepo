@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Field, Float, ID, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop } from '@typegoose/typegoose';
 
-import { Event } from './event';
+import { EventSeries } from './eventSeries';
 
 export enum FeedReason {
   CategoryMatch = 'CategoryMatch',
@@ -68,9 +68,9 @@ export class UserFeedItem {
   /**
    * Computed field — resolved via @FieldResolver, not stored in MongoDB.
    */
-  @Field(() => Event, {
+  @Field(() => EventSeries, {
     nullable: true,
     description: 'The full event object, populated via FieldResolver',
   })
-  event?: Event;
+  event?: EventSeries;
 }

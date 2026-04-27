@@ -1,11 +1,11 @@
 import 'reflect-metadata';
-import { EventParticipantResolver } from '@/graphql/resolvers/eventParticipant';
-import { EventParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
+import { EventSeriesParticipantResolver } from '@/graphql/resolvers/eventSeriesParticipant';
+import { EventSeriesParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
 import RecommendationService from '@/services/recommendation';
 import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
-  EventParticipant,
+  EventSeriesParticipant,
   User,
 } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
@@ -13,7 +13,7 @@ import * as validation from '@/validation';
 import { createMockContext } from '../../../../utils/mockContext';
 
 jest.mock('@/mongodb/dao', () => {
-  class EventParticipantDAO {
+  class EventSeriesParticipantDAO {
     static upsert = jest.fn();
     static cancel = jest.fn();
     static readByEvent = jest.fn();
@@ -28,7 +28,7 @@ jest.mock('@/mongodb/dao', () => {
   class UserFeedDAO {
     static removeEventFromFeed = jest.fn();
   }
-  return { EventParticipantDAO, UserDAO, UserFeedDAO };
+  return { EventSeriesParticipantDAO, UserDAO, UserFeedDAO };
 });
 
 jest.mock('@/services/recommendation', () => ({
@@ -49,11 +49,11 @@ jest.mock('@/validation', () => ({
   validateMongodbId: jest.fn(),
 }));
 
-describe('EventParticipantResolver', () => {
-  let resolver: EventParticipantResolver;
+describe('EventSeriesParticipantResolver', () => {
+  let resolver: EventSeriesParticipantResolver;
 
   beforeEach(() => {
-    resolver = new EventParticipantResolver();
+    resolver = new EventSeriesParticipantResolver();
     jest.clearAllMocks();
     // Reset validateMongodbId to default no-op behavior
     (validation.validateMongodbId as jest.Mock).mockImplementation(() => {});
@@ -70,7 +70,7 @@ describe('EventParticipantResolver', () => {
       quantity: 1,
     };
 
-    const mockParticipant: EventParticipant = {
+    const mockParticipant: EventSeriesParticipant = {
       participantId: 'participant123',
       eventId: mockInput.eventId,
       userId: mockInput.userId,
@@ -80,12 +80,12 @@ describe('EventParticipantResolver', () => {
     };
 
     it('should validate eventId and upsert participant successfully', async () => {
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
 
       const result = await resolver.upsertEventParticipant(mockInput);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith(mockInput);
       expect(result).toEqual(mockParticipant);
     });
 
@@ -97,20 +97,20 @@ describe('EventParticipantResolver', () => {
 
       await expect(resolver.upsertEventParticipant(mockInput)).rejects.toThrow(validationError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.upsert).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.upsert).not.toHaveBeenCalled();
     });
 
     it('should propagate DAO errors', async () => {
       const daoError = new Error('Database error');
-      (EventParticipantDAO.upsert as jest.Mock).mockRejectedValue(daoError);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockRejectedValue(daoError);
 
       await expect(resolver.upsertEventParticipant(mockInput)).rejects.toThrow(daoError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith(mockInput);
     });
 
     it('removes the event from the feed after a successful RSVP', async () => {
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
 
       await resolver.upsertEventParticipant(mockInput);
 
@@ -118,7 +118,7 @@ describe('EventParticipantResolver', () => {
     });
 
     it('triggers a feed recomputation (fire-and-forget) after a successful RSVP', async () => {
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
 
       await resolver.upsertEventParticipant(mockInput);
       // Allow microtask queue to flush the fire-and-forget promise
@@ -128,7 +128,7 @@ describe('EventParticipantResolver', () => {
     });
 
     it('returns the participant even when feed removal fails', async () => {
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
       (UserFeedDAO.removeEventFromFeed as jest.Mock).mockRejectedValue(new Error('feed error'));
 
       // feed removal error is swallowed via .catch() — resolver still resolves with the participant
@@ -143,7 +143,7 @@ describe('EventParticipantResolver', () => {
       userId: '507f1f77bcf86cd799439012',
     };
 
-    const mockCancelledParticipant: EventParticipant = {
+    const mockCancelledParticipant: EventSeriesParticipant = {
       participantId: 'participant123',
       eventId: mockInput.eventId,
       userId: mockInput.userId,
@@ -154,12 +154,12 @@ describe('EventParticipantResolver', () => {
     };
 
     it('should validate eventId and cancel participant successfully', async () => {
-      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
+      (EventSeriesParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
 
       const result = await resolver.cancelEventParticipant(mockInput);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.cancel).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantDAO.cancel).toHaveBeenCalledWith(mockInput);
       expect(result).toEqual(mockCancelledParticipant);
     });
 
@@ -171,20 +171,20 @@ describe('EventParticipantResolver', () => {
 
       await expect(resolver.cancelEventParticipant(mockInput)).rejects.toThrow(validationError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.cancel).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.cancel).not.toHaveBeenCalled();
     });
 
     it('should propagate DAO errors', async () => {
       const daoError = new Error('Participant not found');
-      (EventParticipantDAO.cancel as jest.Mock).mockRejectedValue(daoError);
+      (EventSeriesParticipantDAO.cancel as jest.Mock).mockRejectedValue(daoError);
 
       await expect(resolver.cancelEventParticipant(mockInput)).rejects.toThrow(daoError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockInput.eventId);
-      expect(EventParticipantDAO.cancel).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantDAO.cancel).toHaveBeenCalledWith(mockInput);
     });
 
     it('triggers a feed recomputation (fire-and-forget) after cancellation', async () => {
-      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
+      (EventSeriesParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
 
       await resolver.cancelEventParticipant(mockInput);
       await new Promise((r) => setTimeout(r, 0));
@@ -193,7 +193,7 @@ describe('EventParticipantResolver', () => {
     });
 
     it('returns the cancelled participant even when feed trigger errors are swallowed', async () => {
-      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
+      (EventSeriesParticipantDAO.cancel as jest.Mock).mockResolvedValue(mockCancelledParticipant);
       (RecommendationService.computeFeedForUser as jest.Mock).mockRejectedValue(new Error('reco error'));
 
       const result = await resolver.cancelEventParticipant(mockInput);
@@ -205,7 +205,7 @@ describe('EventParticipantResolver', () => {
   describe('readEventParticipants', () => {
     const eventId = '507f1f77bcf86cd799439011';
 
-    const mockParticipants: EventParticipant[] = [
+    const mockParticipants: EventSeriesParticipant[] = [
       {
         participantId: 'participant1',
         eventId,
@@ -225,8 +225,8 @@ describe('EventParticipantResolver', () => {
     ];
 
     it('should validate eventId and return participants successfully', async () => {
-      (EventParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockParticipants);
-      (EventParticipantDAO.readByEvents as jest.Mock).mockResolvedValue(mockParticipants);
+      (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockParticipants);
+      (EventSeriesParticipantDAO.readByEvents as jest.Mock).mockResolvedValue(mockParticipants);
       const mockContext = createMockContext();
       const result = await resolver.readEventParticipants(eventId, mockContext);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
@@ -234,8 +234,8 @@ describe('EventParticipantResolver', () => {
     });
 
     it('should return empty array when no participants found', async () => {
-      (EventParticipantDAO.readByEvent as jest.Mock).mockResolvedValue([]);
-      (EventParticipantDAO.readByEvents as jest.Mock).mockResolvedValue([]);
+      (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue([]);
+      (EventSeriesParticipantDAO.readByEvents as jest.Mock).mockResolvedValue([]);
       const mockContext = createMockContext();
       const result = await resolver.readEventParticipants(eventId, mockContext);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
@@ -254,8 +254,8 @@ describe('EventParticipantResolver', () => {
 
     it('should propagate DAO errors', async () => {
       const daoError = new Error('Database connection error');
-      (EventParticipantDAO.readByEvent as jest.Mock).mockRejectedValue(daoError);
-      (EventParticipantDAO.readByEvents as jest.Mock).mockRejectedValue(daoError);
+      (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockRejectedValue(daoError);
+      (EventSeriesParticipantDAO.readByEvents as jest.Mock).mockRejectedValue(daoError);
       const mockContext = createMockContext();
       await expect(resolver.readEventParticipants(eventId, mockContext)).rejects.toThrow(daoError);
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
@@ -263,7 +263,7 @@ describe('EventParticipantResolver', () => {
   });
 
   describe('user field resolver', () => {
-    const mockParticipant: EventParticipant = {
+    const mockParticipant: EventSeriesParticipant = {
       participantId: 'participant123',
       eventId: '507f1f77bcf86cd799439011',
       userId: '507f1f77bcf86cd799439012',
@@ -290,7 +290,7 @@ describe('EventParticipantResolver', () => {
       const participantWithoutUser = {
         ...mockParticipant,
         userId: undefined,
-      } as unknown as EventParticipant;
+      } as unknown as EventSeriesParticipant;
       const mockContext = createMockContext();
 
       const result = await resolver.user(participantWithoutUser, mockContext);
@@ -306,7 +306,7 @@ describe('EventParticipantResolver', () => {
     });
 
     it('should return null when userId is empty string', async () => {
-      const participantWithEmptyUserId: EventParticipant = {
+      const participantWithEmptyUserId: EventSeriesParticipant = {
         ...mockParticipant,
         userId: '',
       };
@@ -322,7 +322,7 @@ describe('EventParticipantResolver', () => {
     const eventId = '507f1f77bcf86cd799439011';
     const userId = '507f1f77bcf86cd799439012';
 
-    const mockParticipant: EventParticipant = {
+    const mockParticipant: EventSeriesParticipant = {
       participantId: 'participant123',
       eventId,
       userId,
@@ -333,22 +333,22 @@ describe('EventParticipantResolver', () => {
 
     it('should return user RSVP status for an event', async () => {
       const mockContext = createMockContext({ user: { userId } as User });
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
 
       const result = await resolver.myRsvpStatus(eventId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventParticipantDAO.readByEventAndUser).toHaveBeenCalledWith(eventId, userId);
+      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith(eventId, userId);
       expect(result).toEqual(mockParticipant);
     });
 
     it('should return null when user has not RSVPd', async () => {
       const mockContext = createMockContext({ user: { userId } as User });
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
 
       const result = await resolver.myRsvpStatus(eventId, mockContext);
 
-      expect(EventParticipantDAO.readByEventAndUser).toHaveBeenCalledWith(eventId, userId);
+      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith(eventId, userId);
       expect(result).toBeNull();
     });
 
@@ -358,7 +358,7 @@ describe('EventParticipantResolver', () => {
       const result = await resolver.myRsvpStatus(eventId, mockContext);
 
       expect(result).toBeNull();
-      expect(EventParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
     });
   });
 
@@ -366,7 +366,7 @@ describe('EventParticipantResolver', () => {
     const eventId = '507f1f77bcf86cd799439011';
     const userId = '507f1f77bcf86cd799439012';
 
-    const mockCheckedInParticipant: EventParticipant = {
+    const mockCheckedInParticipant: EventSeriesParticipant = {
       participantId: 'participant123',
       eventId,
       userId,
@@ -378,13 +378,13 @@ describe('EventParticipantResolver', () => {
 
     it('validates eventId and checks in the current user', async () => {
       const mockContext = createMockContext({ user: { userId } as User });
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockCheckedInParticipant);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockCheckedInParticipant);
 
       const result = await resolver.checkInEventParticipant(eventId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(
+      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith(
         expect.objectContaining({ eventId, userId, status: ParticipantStatus.CheckedIn }),
       );
       expect(result).toEqual(mockCheckedInParticipant);
@@ -398,7 +398,7 @@ describe('EventParticipantResolver', () => {
       });
 
       await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toThrow(validationError);
-      expect(EventParticipantDAO.upsert).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.upsert).not.toHaveBeenCalled();
     });
 
     it('throws UNAUTHENTICATED when context.user is missing', async () => {
@@ -407,28 +407,30 @@ describe('EventParticipantResolver', () => {
       await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toMatchObject({
         extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
       });
-      expect(EventParticipantDAO.upsert).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.upsert).not.toHaveBeenCalled();
     });
 
     it('uses the userId from context, not from any input', async () => {
       const differentUserId = '507f1f77bcf86cd799439099';
       const mockContext = createMockContext({ user: { userId: differentUserId } as User });
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue({
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue({
         ...mockCheckedInParticipant,
         userId: differentUserId,
       });
 
       await resolver.checkInEventParticipant(eventId, mockContext);
 
-      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith(expect.objectContaining({ userId: differentUserId }));
+      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: differentUserId }),
+      );
     });
 
     it('propagates DAO errors', async () => {
       const mockContext = createMockContext({ user: { userId } as User });
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
       const daoError = new Error('Database error');
-      (EventParticipantDAO.upsert as jest.Mock).mockRejectedValue(daoError);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockRejectedValue(daoError);
 
       await expect(resolver.checkInEventParticipant(eventId, mockContext)).rejects.toThrow(daoError);
     });
@@ -437,7 +439,7 @@ describe('EventParticipantResolver', () => {
   describe('myRsvps', () => {
     const userId = '507f1f77bcf86cd799439012';
 
-    const mockRsvps: EventParticipant[] = [
+    const mockRsvps: EventSeriesParticipant[] = [
       {
         participantId: 'participant1',
         eventId: '507f1f77bcf86cd799439011',
@@ -458,11 +460,11 @@ describe('EventParticipantResolver', () => {
 
     it('should return all RSVPs for current user (excluding cancelled)', async () => {
       const mockContext = createMockContext({ user: { userId } as User });
-      (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue(mockRsvps);
+      (EventSeriesParticipantDAO.readByUser as jest.Mock).mockResolvedValue(mockRsvps);
 
       const result = await resolver.myRsvps(false, mockContext);
 
-      expect(EventParticipantDAO.readByUser).toHaveBeenCalledWith(userId, true);
+      expect(EventSeriesParticipantDAO.readByUser).toHaveBeenCalledWith(userId, true);
       expect(result).toEqual(mockRsvps);
     });
 
@@ -480,11 +482,11 @@ describe('EventParticipantResolver', () => {
           cancelledAt: new Date(),
         },
       ];
-      (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue(rsvpsWithCancelled);
+      (EventSeriesParticipantDAO.readByUser as jest.Mock).mockResolvedValue(rsvpsWithCancelled);
 
       const result = await resolver.myRsvps(true, mockContext);
 
-      expect(EventParticipantDAO.readByUser).toHaveBeenCalledWith(userId, false);
+      expect(EventSeriesParticipantDAO.readByUser).toHaveBeenCalledWith(userId, false);
       expect(result).toEqual(rsvpsWithCancelled);
     });
 
@@ -494,7 +496,7 @@ describe('EventParticipantResolver', () => {
       const result = await resolver.myRsvps(false, mockContext);
 
       expect(result).toEqual([]);
-      expect(EventParticipantDAO.readByUser).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.readByUser).not.toHaveBeenCalled();
     });
   });
 });

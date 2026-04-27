@@ -13,7 +13,7 @@ import {
   getUpdateVenueMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import { createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 describe('Venue Resolver', () => {
   const url = process.env.GRAPHQL_URL!;

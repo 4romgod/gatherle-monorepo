@@ -1,4 +1,4 @@
-export * from './eventsPipeline';
+export * from './eventSeriesPipeline';
 export * from './filter';
 export * from './lookup';
 export * from './pagination';

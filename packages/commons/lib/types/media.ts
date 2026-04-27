@@ -4,7 +4,7 @@ import { Field, ObjectType, registerEnumType } from 'type-graphql';
 export enum MediaEntityType {
   User = 'user',
   Organization = 'organization',
-  Event = 'event',
+  EventSeries = 'event',
   Venue = 'venue',
   EventMoment = 'event-moment',
 }

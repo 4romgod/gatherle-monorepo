@@ -50,7 +50,7 @@ describe('useShareDialog', () => {
 
   it('initialises with dialog closed', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
     expect(result.current.open).toBe(false);
     expect(result.current.users).toEqual([]);
@@ -61,7 +61,7 @@ describe('useShareDialog', () => {
 
   it('openDialog sets open to true and triggers initial user load', async () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     await act(async () => {
@@ -74,7 +74,7 @@ describe('useShareDialog', () => {
 
   it('closeDialog resets state', async () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     await act(async () => {
@@ -96,7 +96,7 @@ describe('useShareDialog', () => {
 
   it('toggleUserSelection adds and removes userIds', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -112,7 +112,7 @@ describe('useShareDialog', () => {
 
   it('handleSendSelected does nothing when no users selected', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -125,7 +125,7 @@ describe('useShareDialog', () => {
 
   it('handleSendSelected sends messages and shows success feedback', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -138,7 +138,7 @@ describe('useShareDialog', () => {
     });
 
     expect(mockSendChatMessage).toHaveBeenCalledTimes(2);
-    expect(mockSendChatMessage).toHaveBeenCalledWith('user-1', 'My Event\nhttps://example.com/event');
+    expect(mockSendChatMessage).toHaveBeenCalledWith('user-1', 'My Event\nhttps://example.com/events');
     expect(result.current.feedbackMessage).toBe('Sent to 2 people.');
     expect(result.current.feedbackOpen).toBe(true);
     expect(result.current.selectedUserIds.size).toBe(0);
@@ -166,7 +166,7 @@ describe('useShareDialog', () => {
     mockSendChatMessage.mockReturnValueOnce(false);
 
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -186,14 +186,14 @@ describe('useShareDialog', () => {
     Object.assign(navigator, { clipboard: { writeText } });
 
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     await act(async () => {
       await result.current.handleCopyLink();
     });
 
-    expect(writeText).toHaveBeenCalledWith('https://example.com/event');
+    expect(writeText).toHaveBeenCalledWith('https://example.com/events');
     expect(result.current.feedbackMessage).toBe('Link copied.');
     expect(result.current.feedbackOpen).toBe(true);
   });
@@ -203,7 +203,7 @@ describe('useShareDialog', () => {
     Object.assign(navigator, { clipboard: { writeText } });
 
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     await act(async () => {
@@ -215,7 +215,7 @@ describe('useShareDialog', () => {
 
   it('closeFeedback closes the feedback snackbar', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -246,7 +246,7 @@ describe('useShareDialog', () => {
     (useLazyQuery as jest.Mock).mockReturnValue([mockLoadUsers, { data: userData, loading: false }]);
 
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     expect(result.current.users).toEqual([{ userId: 'user-2', username: 'other' }]);
@@ -254,7 +254,7 @@ describe('useShareDialog', () => {
 
   it('debounces search value changes to trigger loadShareUsers', async () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     // Open dialog first
@@ -280,7 +280,7 @@ describe('useShareDialog', () => {
 
   it('does not trigger search reload when dialog is closed', () => {
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     act(() => {
@@ -299,7 +299,7 @@ describe('useShareDialog', () => {
     mockLoadUsers.mockRejectedValueOnce(new Error('Network error'));
 
     const { result } = renderHook(() =>
-      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/event' }),
+      useShareDialog({ eventTitle: 'My Event', resolvedEventUrl: 'https://example.com/events' }),
     );
 
     await act(async () => {

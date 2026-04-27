@@ -33,7 +33,7 @@ export function useSaveEvent() {
     return saveMutation({
       variables: {
         input: {
-          targetType: FollowTargetType.Event,
+          targetType: FollowTargetType.EventSeries,
           targetId: eventId,
         },
       },
@@ -46,7 +46,7 @@ export function useSaveEvent() {
   const unsaveEvent = async (eventId: string) => {
     return unsaveMutation({
       variables: {
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: eventId,
       },
     });

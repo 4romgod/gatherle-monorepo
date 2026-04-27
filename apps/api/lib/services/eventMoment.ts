@@ -1,4 +1,4 @@
-import type { Event, EventMoment, EventMomentPage, CreateEventMomentInput } from '@gatherle/commons/types';
+import type { EventSeries, EventMoment, EventMomentPage, CreateEventMomentInput } from '@gatherle/commons/types';
 import {
   EventMomentState,
   EventMomentType,
@@ -6,7 +6,7 @@ import {
   FollowTargetType,
   ParticipantStatus,
 } from '@gatherle/commons/types';
-import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import { EventMomentDAO, EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
@@ -48,7 +48,7 @@ class EventMomentService {
   /**
    * Create an event moment.
    * Enforces:
-   *   - Event exists
+   *   - EventSeries exists
    *   - Posting window is open (until 48 h after event.endDate)
    *   - Caller has an active Going or CheckedIn RSVP
    *   - Rate limit (max 5 moments per rolling 24-hour window per event)
@@ -56,11 +56,11 @@ class EventMomentService {
    */
   static async create(input: CreateEventMomentInput, callerId: string): Promise<EventMoment> {
     // 1. Verify event exists and check posting window.
-    let event: Event;
+    let event: EventSeries;
     try {
-      event = await EventDAO.readEventById(input.eventId);
+      event = await EventSeriesDAO.readEventById(input.eventId);
     } catch {
-      throw CustomError('Event not found', ErrorTypes.NOT_FOUND);
+      throw CustomError('EventSeries not found', ErrorTypes.NOT_FOUND);
     }
 
     const windowCloseMs =
@@ -74,7 +74,7 @@ class EventMomentService {
     }
 
     // 2. RSVP gate — caller must be Going or CheckedIn.
-    const participant = await EventParticipantDAO.readByEventAndUser(input.eventId, callerId);
+    const participant = await EventSeriesParticipantDAO.readByEventAndUser(input.eventId, callerId);
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to post a moment', ErrorTypes.BAD_USER_INPUT);
     }
@@ -212,11 +212,11 @@ class EventMomentService {
     }
 
     // Allow event organizers to remove moments from their event.
-    let event: Event | null = null;
+    let event: EventSeries | null = null;
     try {
-      event = await EventDAO.readEventById(moment.eventId);
+      event = await EventSeriesDAO.readEventById(moment.eventId);
     } catch {
-      // Event not found — caller is not an organizer.
+      // EventSeries not found — caller is not an organizer.
     }
 
     const isOrganizer = event?.organizers?.some((o) => {

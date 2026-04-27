@@ -316,7 +316,7 @@ export const createNotificationRealtimeCacheHandlers = ({
           const nextMyRsvp =
             payload.participant.userId === userId
               ? {
-                  __typename: 'EventParticipant',
+                  __typename: 'EventSeriesParticipant',
                   participantId: payload.participant.participantId,
                   status: payload.participant.status,
                   quantity: payload.participant.quantity ?? null,
@@ -367,7 +367,7 @@ export const createNotificationRealtimeCacheHandlers = ({
             const nextMyRsvp =
               payload.participant.userId === userId
                 ? {
-                    __typename: 'EventParticipant',
+                    __typename: 'EventSeriesParticipant',
                     participantId: payload.participant.participantId,
                     status: payload.participant.status,
                     quantity: payload.participant.quantity ?? null,

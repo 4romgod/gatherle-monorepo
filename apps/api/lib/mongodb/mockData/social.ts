@@ -59,7 +59,7 @@ export const activitySeedData: ActivitySeed[] = [
   {
     actorEmail: 'jay@rocknation.com',
     verb: ActivityVerb.RSVPd,
-    objectType: ActivityObjectType.Event,
+    objectType: ActivityObjectType.EventSeries,
     objectRef: 'event',
     objectIdentifier: 'Signal Studios Urban Maker Fair',
     visibility: ActivityVisibility.Public,

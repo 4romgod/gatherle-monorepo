@@ -9,7 +9,7 @@ import { publishNotificationCreated, publishNotificationsCreated } from '@/webso
  *
  * For actionUrl generation:
  * - User notifications (FOLLOW_*): uses actorUserId to fetch username
- * - Event notifications: targetSlug should be the event slug
+ * - EventSeries notifications: targetSlug should be the event slug
  * - Organization notifications: targetSlug should be the org slug
  * - Security notifications: no targetSlug needed
  */

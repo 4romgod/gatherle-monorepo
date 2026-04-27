@@ -129,7 +129,7 @@ describe('MongoDbClient', () => {
     // Call with op in _mongooseOptions instead of top-level
     const context = {
       _mongooseOptions: { op: 'aggregate' },
-      model: { modelName: 'Event' },
+      model: { modelName: 'EventSeries' },
     };
     await mockQuery.prototype.exec.call(context);
 
@@ -146,7 +146,7 @@ describe('MongoDbClient', () => {
 
     // Call with neither op nor _mongooseOptions.op (should default to 'query')
     const context = {
-      model: { modelName: 'Event' },
+      model: { modelName: 'EventSeries' },
     };
     await mockQuery.prototype.exec.call(context);
 

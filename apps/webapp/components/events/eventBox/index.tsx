@@ -2,7 +2,7 @@
 
 import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
-import { EventParticipantPreview } from '@/data/graphql/query/Event/types';
+import { EventSeriesParticipantPreview } from '@/data/graphql/query/Event/types';
 import type { AnyEventPreview } from '@/components/events/EventTileGrid';
 import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
@@ -34,21 +34,21 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
 
   const recurrenceText = RRule.fromString(recurrenceRule).toText();
   const imageUrl = media?.featuredImageUrl ?? null;
-  const participantList = (participants ?? []) as EventParticipantPreview[];
+  const participantList = (participants ?? []) as EventSeriesParticipantPreview[];
   const activeParticipants = participantList.filter(
     (participant) => participant.status !== ParticipantStatus.Cancelled,
   );
   const participantCount = activeParticipants.length;
   const visibleParticipants = activeParticipants.slice(0, 3);
 
-  const getParticipantLabel = (participant: EventParticipantPreview) => {
+  const getParticipantLabel = (participant: EventSeriesParticipantPreview) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
     const displayName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
     return nameParts.length ? nameParts.join(' ') : displayName;
   };
 
-  const getParticipantAvatarLetter = (participant: EventParticipantPreview) =>
+  const getParticipantAvatarLetter = (participant: EventSeriesParticipantPreview) =>
     participant.user?.given_name?.charAt(0) ??
     participant.user?.username?.charAt(0) ??
     participant.userId?.charAt(0) ??

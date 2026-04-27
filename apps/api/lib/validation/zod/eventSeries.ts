@@ -5,7 +5,7 @@ import {
   EventPrivacySetting,
   EventStatus,
   EventVisibility,
-} from '@gatherle/commons/types/event';
+} from '@gatherle/commons/types/eventSeries';
 import { ERROR_MESSAGES } from '@/validation';
 import mongoose from 'mongoose';
 
@@ -50,8 +50,8 @@ export const LocationSchema = z
 export const EventSchema = z.object({
   eventId: z
     .string()
-    .refine(mongoose.Types.ObjectId.isValid, { message: `Event ID ${ERROR_MESSAGES.INVALID}` })
-    .describe('The unique ID of the Event.'),
+    .refine(mongoose.Types.ObjectId.isValid, { message: `EventSeries ID ${ERROR_MESSAGES.INVALID}` })
+    .describe('The unique ID of the EventSeries.'),
 
   slug: z
     .string()
@@ -172,9 +172,9 @@ export const UpdateEventInputSchema = EventSchema.partial()
   .extend({
     eventId: z
       .string()
-      .describe('The unique ID of the Event. (It is a required field)')
+      .describe('The unique ID of the EventSeries. (It is a required field)')
       .refine(mongoose.Types.ObjectId.isValid, {
-        message: `Event with eventCategoryId ${ERROR_MESSAGES.DOES_NOT_EXIST}`,
+        message: `EventSeries with eventCategoryId ${ERROR_MESSAGES.DOES_NOT_EXIST}`,
       }),
   })
   .omit({ slug: true });

@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventsMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
 import {
@@ -14,7 +14,7 @@ import {
   createEventOnServer,
   cleanupTrackedEntities,
   assertNoCleanupFailures,
-} from '@/test/e2e/utils/eventResolverHelpers';
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 describe('readTrendingEvents e2e', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -28,12 +28,12 @@ describe('readTrendingEvents e2e', () => {
       readFirstEventCategory(url),
     ]);
     actorUser = user;
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
 
     // Create a Published, Public, Upcoming event to ensure at least one result
     const eventInput: CreateEventInput = {
       ...baseEventData,
-      title: `Trending E2E Test Event ${Date.now()}`,
+      title: `Trending E2E Test EventSeries ${Date.now()}`,
       description: 'A published public event for trending e2e tests',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: actorUser.userId, role: 'Host' }],
@@ -213,12 +213,12 @@ describe('cold-start feed fallback e2e', () => {
     freshUser = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
 
     const category = await readFirstEventCategory(url);
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
 
     // Create a Published event so there are candidates for any cold-start path
     const eventInput: CreateEventInput = {
       ...baseEventData,
-      title: `Cold Start E2E Event ${Date.now()}`,
+      title: `Cold Start E2E EventSeries ${Date.now()}`,
       description: 'Feed fallback integration test event',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: freshUser.userId, role: 'Host' }],

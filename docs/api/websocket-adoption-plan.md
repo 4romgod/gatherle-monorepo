@@ -315,7 +315,7 @@ This section documents what is implemented today so this plan can evolve as a li
 - Follow:
   - `apps/api/lib/services/follow.ts` -> `publishFollowRequestCreated` / `publishFollowRequestUpdated`
 - Event RSVP:
-  - `apps/api/lib/services/eventParticipant.ts` -> `publishEventRsvpUpdated`
+  - `apps/api/lib/services/eventSeriesParticipant.ts` -> `publishEventRsvpUpdated`
 - Chat:
   - `apps/api/lib/services/chatMessaging.ts`
   - send path publishes `chat.message` + `chat.conversation.updated`

@@ -13,10 +13,10 @@ import {
   createUserLoader,
   createEventCategoryLoader,
   createEventCategoryInterestCountLoader,
-  createEventLoader,
+  createEventSeriesLoader,
   createOrganizationLoader,
-  createEventParticipantLoader,
-  createEventParticipantsByEventLoader,
+  createEventSeriesParticipantLoader,
+  createEventSeriesParticipantsByEventLoader,
 } from '@/graphql/loaders';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
@@ -83,10 +83,10 @@ export const startExpressApolloServer = async (
             user: createUserLoader(),
             eventCategory: createEventCategoryLoader(),
             eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
-            event: createEventLoader(),
+            eventSeries: createEventSeriesLoader(),
             organization: createOrganizationLoader(),
-            eventParticipant: createEventParticipantLoader(),
-            eventParticipantsByEvent: createEventParticipantsByEventLoader(),
+            eventSeriesParticipant: createEventSeriesParticipantLoader(),
+            eventSeriesParticipantsByEvent: createEventSeriesParticipantsByEventLoader(),
           },
         };
       },

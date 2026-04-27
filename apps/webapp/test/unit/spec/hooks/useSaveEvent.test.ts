@@ -48,16 +48,16 @@ describe('useSaveEvent', () => {
     });
 
     expect(saveMutation).toHaveBeenCalledWith({
-      variables: { input: { targetType: FollowTargetType.Event, targetId: 'event-1' } },
+      variables: { input: { targetType: FollowTargetType.EventSeries, targetId: 'event-1' } },
     });
     expect(unsaveMutation).toHaveBeenCalledWith({
-      variables: { targetType: FollowTargetType.Event, targetId: 'event-2' },
+      variables: { targetType: FollowTargetType.EventSeries, targetId: 'event-2' },
     });
     expect(saveMutation).toHaveBeenCalledWith({
-      variables: { input: { targetType: FollowTargetType.Event, targetId: 'event-3' } },
+      variables: { input: { targetType: FollowTargetType.EventSeries, targetId: 'event-3' } },
     });
     expect(unsaveMutation).toHaveBeenCalledWith({
-      variables: { targetType: FollowTargetType.Event, targetId: 'event-4' },
+      variables: { targetType: FollowTargetType.EventSeries, targetId: 'event-4' },
     });
     expect(result.current.isLoading).toBe(false);
   });

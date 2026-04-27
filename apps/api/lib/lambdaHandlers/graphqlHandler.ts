@@ -8,10 +8,10 @@ import {
   createUserLoader,
   createEventCategoryLoader,
   createEventCategoryInterestCountLoader,
-  createEventLoader,
+  createEventSeriesLoader,
   createOrganizationLoader,
-  createEventParticipantLoader,
-  createEventParticipantsByEventLoader,
+  createEventSeriesParticipantLoader,
+  createEventSeriesParticipantsByEventLoader,
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
@@ -77,10 +77,10 @@ async function initializeResources() {
               user: createUserLoader(),
               eventCategory: createEventCategoryLoader(),
               eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
-              event: createEventLoader(),
+              eventSeries: createEventSeriesLoader(),
               organization: createOrganizationLoader(),
-              eventParticipant: createEventParticipantLoader(),
-              eventParticipantsByEvent: createEventParticipantsByEventLoader(),
+              eventSeriesParticipant: createEventSeriesParticipantLoader(),
+              eventSeriesParticipantsByEvent: createEventSeriesParticipantsByEventLoader(),
             },
           };
         },

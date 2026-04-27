@@ -5,10 +5,10 @@ jest.mock('@/mongodb/dao', () => ({
   UserDAO: {
     readUserById: jest.fn(),
   },
-  EventDAO: {
+  EventSeriesDAO: {
     readUpcomingPublished: jest.fn(),
   },
-  EventParticipantDAO: {
+  EventSeriesParticipantDAO: {
     readByUser: jest.fn(),
     readByUserIds: jest.fn(),
   },
@@ -26,7 +26,7 @@ jest.mock('@/utils/logger', () => ({
   logger: { debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { UserDAO, EventDAO, EventParticipantDAO, FollowDAO, UserFeedDAO } from '@/mongodb/dao';
+import { UserDAO, EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserFeedDAO } from '@/mongodb/dao';
 
 const makeUser = (overrides: Record<string, unknown> = {}) => ({
   userId: 'user-1',
@@ -39,7 +39,7 @@ const makeUser = (overrides: Record<string, unknown> = {}) => ({
 
 const makeEvent = (overrides: Record<string, unknown> = {}) => ({
   eventId: 'event-1',
-  title: 'Test Event',
+  title: 'Test EventSeries',
   lifecycleStatus: 'Published',
   status: 'Upcoming',
   visibility: 'Public',
@@ -69,10 +69,10 @@ const makeFollow = (targetType: FollowTargetType, targetId: string, followerUser
 
 const DEFAULT_STUBS = () => {
   (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser());
-  (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue([]);
+  (EventSeriesParticipantDAO.readByUser as jest.Mock).mockResolvedValue([]);
   (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
-  (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
-  (EventParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue([]);
+  (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
+  (EventSeriesParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue([]);
   (FollowDAO.readSavedEventsByUserIds as jest.Mock).mockResolvedValue([]);
   (UserFeedDAO.clearFeedForUser as jest.Mock).mockResolvedValue(undefined);
   (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mockResolvedValue(undefined);
@@ -112,7 +112,7 @@ describe('RecommendationService', () => {
 
   describe('computeFeedForUser', () => {
     it('does nothing when no candidate events exist', async () => {
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -122,8 +122,8 @@ describe('RecommendationService', () => {
 
     it('excludes events the user has already RSVPd to', async () => {
       const event = makeEvent({ eventId: 'event-1', eventCategories: ['cat-a'] });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
-      (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue([makeParticipant('user-1', 'event-1')]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesParticipantDAO.readByUser as jest.Mock).mockResolvedValue([makeParticipant('user-1', 'event-1')]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -133,7 +133,7 @@ describe('RecommendationService', () => {
     it('excludes events from muted organisations', async () => {
       const event = makeEvent({ orgId: 'muted-org', eventCategories: ['cat-a'] });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ mutedOrgIds: ['muted-org'] }));
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -142,9 +142,9 @@ describe('RecommendationService', () => {
 
     it('excludes events already saved by the user', async () => {
       const event = makeEvent({ eventId: 'event-saved', eventCategories: ['cat-a'] });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
-        makeFollow(FollowTargetType.Event, 'event-saved'),
+        makeFollow(FollowTargetType.EventSeries, 'event-saved'),
       ]);
 
       await RecommendationService.computeFeedForUser('user-1');
@@ -155,7 +155,7 @@ describe('RecommendationService', () => {
     it('awards CategoryMatch score when event matches user interests', async () => {
       const event = makeEvent({ eventId: 'event-1', eventCategories: ['cat-a'], orgId: null });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['cat-a'] }));
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -167,9 +167,11 @@ describe('RecommendationService', () => {
 
     it('awards FriendAttending score when a followed user has RSVPd', async () => {
       const event = makeEvent({ eventId: 'event-1', eventCategories: [], orgId: null });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([makeFollow(FollowTargetType.User, 'friend-1')]);
-      (EventParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue([makeParticipant('friend-1', 'event-1')]);
+      (EventSeriesParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue([
+        makeParticipant('friend-1', 'event-1'),
+      ]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -195,12 +197,12 @@ describe('RecommendationService', () => {
         savedByCount: 0,
       });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: [] }));
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
       const friends = ['f1', 'f2', 'f3', 'f4'].map((id) => makeFollow(FollowTargetType.User, id));
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue(friends);
       // 4 friends all attending — 4 × 25 = 100, capped at 50
       const participations = ['f1', 'f2', 'f3', 'f4'].map((id) => makeParticipant(id, 'event-1'));
-      (EventParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue(participations);
+      (EventSeriesParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue(participations);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -212,7 +214,7 @@ describe('RecommendationService', () => {
 
     it('awards FollowedOrgHosting score when followed org is hosting', async () => {
       const event = makeEvent({ eventId: 'event-1', eventCategories: [], orgId: 'org-1' });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
         makeFollow(FollowTargetType.Organization, 'org-1'),
       ]);
@@ -230,14 +232,14 @@ describe('RecommendationService', () => {
         orgId: null,
         primarySchedule: { startAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1_000) }, // 3 days out
       });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
       // Need some score to be included — give it a category match
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: [] }));
       // But time urgency fires independent of other signals; add category match to ensure inclusion
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: [] }));
       // Force inclusion by giving category match
       const eventWithCategory = { ...event, eventCategories: ['cat-a'] };
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([eventWithCategory]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([eventWithCategory]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -251,7 +253,7 @@ describe('RecommendationService', () => {
         eventCategories: ['cat-a'],
         createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1_000), // 1 day ago
       });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -260,7 +262,7 @@ describe('RecommendationService', () => {
     });
 
     it('stores zero-signal events via cold-start fallback with score 1 (floor)', async () => {
-      // Event with no matching signals — personalised score is 0 so cold-start kicks in
+      // EventSeries with no matching signals — personalised score is 0 so cold-start kicks in
       const event = makeEvent({ eventId: 'event-zero', eventCategories: ['unknown-cat'], orgId: null });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['different-cat'] }));
       const staleCreatedAt = new Date(Date.now() - 14 * 24 * 60 * 60 * 1_000);
@@ -272,7 +274,7 @@ describe('RecommendationService', () => {
         rsvpCount: 0,
         savedByCount: 0,
       };
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([eventWithNoSignals]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([eventWithNoSignals]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -286,7 +288,7 @@ describe('RecommendationService', () => {
 
     it('clears existing feed before writing new items', async () => {
       const event = makeEvent({ eventCategories: ['cat-a'] });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -300,11 +302,11 @@ describe('RecommendationService', () => {
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
         makeFollow(FollowTargetType.Organization, 'org-1'),
       ]);
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([makeEvent()]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([makeEvent()]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
-      expect(EventParticipantDAO.readByUserIds).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.readByUserIds).not.toHaveBeenCalled();
       expect(FollowDAO.readSavedEventsByUserIds).not.toHaveBeenCalled();
     });
 
@@ -354,7 +356,7 @@ describe('RecommendationService', () => {
 
     it('stores candidateEvents as fallback items with Popularity reason', async () => {
       const candidate = makeZeroSignalEvent({ eventId: 'candidate-1' });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -366,7 +368,7 @@ describe('RecommendationService', () => {
 
     it('assigns score 1 (floor) to candidates with no popularity signal', async () => {
       const candidate = makeZeroSignalEvent({ eventId: 'candidate-1', rsvpCount: 0, savedByCount: 0 });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([candidate]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -377,7 +379,7 @@ describe('RecommendationService', () => {
     it('sorts fallback candidates by popularity descending', async () => {
       const low = makeZeroSignalEvent({ eventId: 'low', rsvpCount: 1, savedByCount: 0 });
       const high = makeZeroSignalEvent({ eventId: 'high', rsvpCount: 3, savedByCount: 0 });
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([low, high]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([low, high]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -388,7 +390,7 @@ describe('RecommendationService', () => {
 
     it('slices fallback to at most COLD_START_FALLBACK_LIMIT (20) candidates', async () => {
       const candidates = Array.from({ length: 25 }, (_, i) => makeZeroSignalEvent({ eventId: `e-${i}` }));
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue(candidates);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue(candidates);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -397,8 +399,8 @@ describe('RecommendationService', () => {
     });
 
     it('excludes already RSVPd events from the fallback', async () => {
-      (EventParticipantDAO.readByUser as jest.Mock).mockResolvedValue([makeParticipant('user-1', 'candidate-1')]);
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+      (EventSeriesParticipantDAO.readByUser as jest.Mock).mockResolvedValue([makeParticipant('user-1', 'candidate-1')]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
         makeZeroSignalEvent({ eventId: 'candidate-1' }),
       ]);
 
@@ -409,9 +411,9 @@ describe('RecommendationService', () => {
 
     it('excludes already saved events from the fallback', async () => {
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
-        makeFollow(FollowTargetType.Event, 'candidate-1'),
+        makeFollow(FollowTargetType.EventSeries, 'candidate-1'),
       ]);
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
         makeZeroSignalEvent({ eventId: 'candidate-1' }),
       ]);
 
@@ -424,7 +426,7 @@ describe('RecommendationService', () => {
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(
         makeUser({ mutedOrgIds: ['muted-org'], interests: ['other-cat'] }),
       );
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([
         makeZeroSignalEvent({ eventId: 'candidate-1', orgId: 'muted-org' }),
       ]);
 
@@ -434,7 +436,7 @@ describe('RecommendationService', () => {
     });
 
     it('does not call bulkUpsertFeedItems when no candidateEvents remain after filtering', async () => {
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
 
       await RecommendationService.computeFeedForUser('user-1');
 
@@ -445,7 +447,7 @@ describe('RecommendationService', () => {
       // Category match fires — there will be scored items.
       const event = makeEvent({ eventId: 'event-1', eventCategories: ['cat-a'] });
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(makeUser({ interests: ['cat-a'] }));
-      (EventDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
 
       await RecommendationService.computeFeedForUser('user-1');
 

@@ -140,9 +140,9 @@ If MongoDB is the database and the MongoDB Node driver is the low-level client, 
 
 In this repository, Mongoose is the runtime engine behind the models. For example:
 
-- [event.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/event.ts)
+- [eventSeries.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventSeries.ts)
 - [user.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/user.ts)
-- [eventParticipant.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventParticipant.ts)
+- [eventSeriesParticipant.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventSeriesParticipant.ts)
 
 ### Important Distinction
 
@@ -182,7 +182,7 @@ Example patterns in this repo:
 See:
 
 - [user.ts](/home/bigfish/code/projects/gatherle-monorepo/packages/commons/lib/types/user.ts)
-- [event.ts](/home/bigfish/code/projects/gatherle-monorepo/packages/commons/lib/types/event.ts)
+- [eventSeries.ts](/home/bigfish/code/projects/gatherle-monorepo/packages/commons/lib/types/eventSeries.ts)
 - [userFeed.ts](/home/bigfish/code/projects/gatherle-monorepo/packages/commons/lib/types/userFeed.ts)
 
 This gives the project one shared domain definition layer that is reused by the API and aligned with GraphQL types.
@@ -200,8 +200,8 @@ This system mostly uses references, not large embedded documents.
 ### Main Collections
 
 - `users`
-- `events`
-- `eventparticipants`
+- `eventseries`
+- `eventseriesparticipants`
 - `organizations`
 - `organizationmemberships`
 - `follows`
@@ -216,7 +216,7 @@ This system mostly uses references, not large embedded documents.
 Examples:
 
 - an event stores organizer user IDs, not the full user documents
-- event participants live in a separate `eventparticipants` collection
+- event participants live in a separate `eventseriesparticipants` collection
 - follows are separate relationship documents
 - organization memberships are separate relationship documents
 
@@ -250,9 +250,9 @@ Reference when:
 
 In Gatherle:
 
-- `Event.organizers` is embedded enough to keep the organizer role next to the event, but the actual user data is still
-  referenced
-- `EventParticipant` is separate because participants can grow and need independent querying
+- `EventSeries.organizers` is embedded enough to keep the organizer role next to the event, but the actual user data is
+  still referenced
+- `EventSeriesParticipant` is separate because participants can grow and need independent querying
 - `OrganizationMembership` is separate because it is a relationship edge
 - `UserFeedItem` is its own collection because it is a denormalized read model, per user, with TTL
 
@@ -270,7 +270,7 @@ And in model hooks, those IDs are often set from `_id.toString()`.
 
 Examples:
 
-- [event.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/event.ts)
+- [eventSeries.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventSeries.ts)
 - [user.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/user.ts)
 - [follow.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/follow.ts)
 
@@ -334,8 +334,8 @@ This project already uses several important index types.
 Examples:
 
 - `User.userId`, `User.email`, `User.username`
-- `Event.eventId`, `Event.slug`
-- `EventParticipant.participantId`
+- `EventSeries.eventId`, `EventSeries.slug`
+- `EventSeriesParticipant.participantId`
 
 These support direct lookups and uniqueness guarantees.
 
@@ -343,7 +343,7 @@ These support direct lookups and uniqueness guarantees.
 
 Examples:
 
-- `EventParticipant`: `{ eventId: 1, userId: 1 }` unique
+- `EventSeriesParticipant`: `{ eventId: 1, userId: 1 }` unique
 - `OrganizationMembership`: `{ orgId: 1, userId: 1 }` unique
 - `Follow`: `{ followerUserId: 1, targetType: 1, targetId: 1 }` unique
 
@@ -643,7 +643,7 @@ The strongest example is the event lookup pipeline:
 
 See:
 
-- [events.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/dao/events.ts)
+- [eventSeries.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/dao/eventSeries.ts)
 - [lookup.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/utils/queries/aggregate/lookup.ts)
 
 This is a strong example because it shows that the team is using aggregation not just for reports, but to build API
@@ -1118,7 +1118,7 @@ are:
 - `notifications`
 - `activities`
 - `follows`
-- `eventparticipants`
+- `eventseriesparticipants`
 - possibly `websocketconnections`
 
 Why?
@@ -1466,7 +1466,7 @@ Problems:
 - risk around size limits
 - awkward querying
 
-This repo avoids that by using `EventParticipant` as a separate collection.
+This repo avoids that by using `EventSeriesParticipant` as a separate collection.
 
 ### Anti-Pattern: Over-Normalizing Everything
 

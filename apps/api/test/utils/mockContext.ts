@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
-import { EventParticipantDAO } from '@/mongodb/dao';
-import type { User, EventCategory, Event, Organization } from '@gatherle/commons/types';
+import { EventSeriesParticipantDAO } from '@/mongodb/dao';
+import type { User, EventCategory, EventSeries, Organization } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 
 /**
@@ -12,7 +12,7 @@ export const createMockContext = (
   mockData?: {
     users?: Map<string, User>;
     categories?: Map<string, EventCategory>;
-    events?: Map<string, Event>;
+    events?: Map<string, EventSeries>;
     organizations?: Map<string, Organization>;
   },
 ): ServerContext => {
@@ -24,7 +24,7 @@ export const createMockContext = (
     return keys.map((key) => mockData?.categories?.get(key) ?? null);
   });
 
-  const eventLoader = new DataLoader<string, Event | null>(async (keys) => {
+  const eventSeriesLoader = new DataLoader<string, EventSeries | null>(async (keys) => {
     return keys.map((key) => mockData?.events?.get(key) ?? null);
   });
 
@@ -41,12 +41,12 @@ export const createMockContext = (
     return keys.map((key) => mockData?.organizations?.get(key) ?? null);
   });
 
-  const eventParticipantLoader = new DataLoader<string, any>(async (keys) => {
+  const eventSeriesParticipantLoader = new DataLoader<string, any>(async (keys) => {
     return keys.map(() => null);
   });
 
   const eventParticipantsByEventLoader = new DataLoader<string, any[]>(async (eventIds) => {
-    const allParticipants = await EventParticipantDAO.readByEvents([...eventIds]);
+    const allParticipants = await EventSeriesParticipantDAO.readByEvents([...eventIds]);
     const map = new Map<string, any[]>();
     for (const id of eventIds) map.set(id, []);
     for (const participant of allParticipants) {
@@ -65,10 +65,10 @@ export const createMockContext = (
       user: userLoader,
       eventCategory: categoryLoader,
       eventCategoryInterestCount: eventCategoryInterestCountLoader,
-      event: eventLoader,
+      eventSeries: eventSeriesLoader,
       organization: organizationLoader,
-      eventParticipant: eventParticipantLoader,
-      eventParticipantsByEvent: eventParticipantsByEventLoader,
+      eventSeriesParticipant: eventSeriesParticipantLoader,
+      eventSeriesParticipantsByEvent: eventParticipantsByEventLoader,
     },
     ...overrides,
   };

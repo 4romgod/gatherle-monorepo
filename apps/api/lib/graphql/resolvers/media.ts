@@ -19,7 +19,7 @@ export class MediaResolver {
     extension: string,
     @Arg('entityId', () => String, {
       nullable: true,
-      description: 'ID of the entity. Required for Organization, Event, Venue. Auto-resolved from auth for User.',
+      description: 'ID of the entity. Required for Organization, EventSeries, Venue. Auto-resolved from auth for User.',
     })
     entityId: string | null,
     @Ctx() context: ServerContext,

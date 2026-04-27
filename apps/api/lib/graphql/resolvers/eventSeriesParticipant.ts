@@ -2,80 +2,80 @@ import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root } from 'type-graphql';
 import {
   CancelEventParticipantInput,
-  EventParticipant,
+  EventSeriesParticipant,
   UpsertEventParticipantInput,
   User,
   UserRole,
-  Event,
+  EventSeries,
 } from '@gatherle/commons/types';
-import { EventParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
+import { EventSeriesParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';
-import { EventParticipantService } from '@/services';
+import { EventSeriesParticipantService } from '@/services';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import { logger } from '@/utils/logger';
 
-@Resolver(() => EventParticipant)
-export class EventParticipantResolver {
+@Resolver(() => EventSeriesParticipant)
+export class EventSeriesParticipantResolver {
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventParticipant)
+  @Mutation(() => EventSeriesParticipant)
   async upsertEventParticipant(
     @Arg('input', () => UpsertEventParticipantInput) input: UpsertEventParticipantInput,
-  ): Promise<EventParticipant> {
+  ): Promise<EventSeriesParticipant> {
     validateMongodbId(input.eventId);
     validateMongodbId(input.userId);
-    const participant = await EventParticipantService.rsvp(input);
+    const participant = await EventSeriesParticipantService.rsvp(input);
 
     UserFeedDAO.removeEventFromFeed(input.userId, input.eventId).catch((err) => {
-      logger.warn('[EventParticipantResolver] Failed to remove event from feed after upsertEventParticipant', {
+      logger.warn('[EventSeriesParticipantResolver] Failed to remove event from feed after upsertEventParticipant', {
         error: err,
       });
     });
     RecommendationService.computeFeedForUser(input.userId).catch((err) => {
-      logger.warn('[EventParticipantResolver] Feed trigger failed after upsertEventParticipant', { error: err });
+      logger.warn('[EventSeriesParticipantResolver] Feed trigger failed after upsertEventParticipant', { error: err });
     });
 
     return participant;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventParticipant)
+  @Mutation(() => EventSeriesParticipant)
   async cancelEventParticipant(
     @Arg('input', () => CancelEventParticipantInput) input: CancelEventParticipantInput,
-  ): Promise<EventParticipant> {
+  ): Promise<EventSeriesParticipant> {
     validateMongodbId(input.eventId);
     validateMongodbId(input.userId);
-    const participant = await EventParticipantService.cancel(input);
+    const participant = await EventSeriesParticipantService.cancel(input);
 
     RecommendationService.computeFeedForUser(input.userId).catch((err) => {
-      logger.warn('[EventParticipantResolver] Feed trigger failed after cancelEventParticipant', { error: err });
+      logger.warn('[EventSeriesParticipantResolver] Feed trigger failed after cancelEventParticipant', { error: err });
     });
 
     return participant;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => EventParticipant, { description: 'Check the current user in to an event' })
+  @Mutation(() => EventSeriesParticipant, { description: 'Check the current user in to an event' })
   async checkInEventParticipant(
     @Arg('eventId', () => String) eventId: string,
     @Ctx() context: ServerContext,
-  ): Promise<EventParticipant> {
+  ): Promise<EventSeriesParticipant> {
     validateMongodbId(eventId);
     if (!context.user?.userId) {
       throw CustomError('User not authenticated', ErrorTypes.UNAUTHENTICATED);
     }
-    return EventParticipantService.checkIn(eventId, context.user.userId);
+    return EventSeriesParticipantService.checkIn(eventId, context.user.userId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Query(() => [EventParticipant])
+  @Query(() => [EventSeriesParticipant])
   async readEventParticipants(
     @Arg('eventId', () => String) eventId: string,
     @Ctx() context: ServerContext,
-  ): Promise<EventParticipant[]> {
+  ): Promise<EventSeriesParticipant[]> {
     validateMongodbId(eventId);
-    return context.loaders.eventParticipantsByEvent.load(eventId);
+    return context.loaders.eventSeriesParticipantsByEvent.load(eventId);
   }
 
   /**
@@ -83,18 +83,21 @@ export class EventParticipantResolver {
    * Returns null if the user has not RSVP'd to the event.
    */
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Query(() => EventParticipant, { nullable: true, description: "Get the current user's RSVP for a specific event" })
+  @Query(() => EventSeriesParticipant, {
+    nullable: true,
+    description: "Get the current user's RSVP for a specific event",
+  })
   async myRsvpStatus(
     @Arg('eventId', () => String) eventId: string,
     @Ctx() context: ServerContext,
-  ): Promise<EventParticipant | null> {
+  ): Promise<EventSeriesParticipant | null> {
     validateMongodbId(eventId);
     if (!context.user?.userId) {
       return null;
     }
     // TODO Use the DataLoader if you have the participantId, otherwise fallback to DAO
     // Here, we still need to query by eventId+userId, so use DAO
-    return EventParticipantDAO.readByEventAndUser(eventId, context.user.userId);
+    return EventSeriesParticipantDAO.readByEventAndUser(eventId, context.user.userId);
   }
 
   /**
@@ -102,20 +105,20 @@ export class EventParticipantResolver {
    * Returns active RSVPs by default (excludes cancelled).
    */
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Query(() => [EventParticipant], { description: "Get all events the current user has RSVP'd to" })
+  @Query(() => [EventSeriesParticipant], { description: "Get all events the current user has RSVP'd to" })
   async myRsvps(
     @Arg('includeCancelled', () => Boolean, { nullable: true, defaultValue: false }) includeCancelled: boolean,
     @Ctx() context: ServerContext,
-  ): Promise<EventParticipant[]> {
+  ): Promise<EventSeriesParticipant[]> {
     if (!context.user?.userId) {
       return [];
     }
     // TODO Still need to query by userId, so use DAO for now
-    return EventParticipantDAO.readByUser(context.user.userId, !includeCancelled);
+    return EventSeriesParticipantDAO.readByUser(context.user.userId, !includeCancelled);
   }
 
   @FieldResolver(() => User, { nullable: true })
-  async user(@Root() participant: EventParticipant, @Ctx() context: ServerContext): Promise<User | null> {
+  async user(@Root() participant: EventSeriesParticipant, @Ctx() context: ServerContext): Promise<User | null> {
     if (!participant.userId) return null;
     try {
       return await context.loaders.user.load(participant.userId);
@@ -124,11 +127,11 @@ export class EventParticipantResolver {
     }
   }
 
-  @FieldResolver(() => Event, { nullable: true })
-  async event(@Root() participant: EventParticipant, @Ctx() context: ServerContext): Promise<Event | null> {
+  @FieldResolver(() => EventSeries, { nullable: true })
+  async event(@Root() participant: EventSeriesParticipant, @Ctx() context: ServerContext): Promise<EventSeries | null> {
     if (!participant.eventId) return null;
     try {
-      return await context.loaders.event.load(participant.eventId);
+      return await context.loaders.eventSeries.load(participant.eventId);
     } catch {
       return null;
     }

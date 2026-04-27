@@ -22,7 +22,7 @@ import { Search, Event as EventIcon, LocationOn } from '@mui/icons-material';
 import Link from 'next/link';
 import { GetAllEventsDocument } from '@/data/graphql/query';
 import { ROUTES } from '@/lib/constants';
-import type { Event } from '@/data/graphql/types/graphql';
+import type { EventSeries } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
 
 interface EventSearchBarProps {
@@ -66,11 +66,11 @@ export default function EventSearchBar({
 }: EventSearchBarProps) {
   const inputId = 'event-search-input';
   const [searchInput, setSearchInput] = useState('');
-  const [eventOptions, setEventOptions] = useState<Event[]>([]);
+  const [eventOptions, setEventOptions] = useState<EventSeries[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [searchEvents, { loading: searchLoading }] = useLazyQuery<{ readEvents: Event[] }>(GetAllEventsDocument, {
+  const [searchEvents, { loading: searchLoading }] = useLazyQuery<{ readEvents: EventSeries[] }>(GetAllEventsDocument, {
     fetchPolicy: 'network-only',
   });
 

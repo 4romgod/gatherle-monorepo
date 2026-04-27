@@ -48,10 +48,10 @@ jest.mock('@/mongodb/dao', () => ({
     publishVideoMoment: jest.fn(),
     delete: jest.fn(),
   },
-  EventDAO: {
+  EventSeriesDAO: {
     readEventById: jest.fn(),
   },
-  EventParticipantDAO: {
+  EventSeriesParticipantDAO: {
     readByEventAndUser: jest.fn(),
   },
   FollowDAO: {
@@ -83,7 +83,7 @@ jest.mock('@/clients/AWS/s3Client', () => ({
 }));
 
 import EventMomentService from '@/services/eventMoment';
-import { EventMomentDAO, EventDAO, EventParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import { EventMomentDAO, EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
@@ -96,14 +96,14 @@ import {
 
 describe('EventMomentService', () => {
   const now = Date.now();
-  /** Event still running — posting window is open */
+  /** EventSeries still running — posting window is open */
   const futureEndDate = new Date(now + 2 * 60 * 60 * 1000);
-  /** Event ended 74 h ago — 72 h window has closed */
+  /** EventSeries ended 74 h ago — 72 h window has closed */
   const closedEndDate = new Date(now - 74 * 60 * 60 * 1000);
 
   const mockEvent = {
     eventId: 'event-1',
-    title: 'Test Event',
+    title: 'Test EventSeries',
     primarySchedule: { endAt: futureEndDate },
     organizers: [{ user: 'organizer-1' }],
   };
@@ -149,8 +149,8 @@ describe('EventMomentService', () => {
   });
 
   beforeEach(() => {
-    (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
     (EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (EventMomentDAO.create as jest.Mock).mockResolvedValue(mockMoment);
     (EventMomentDAO.readById as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
@@ -390,7 +390,7 @@ describe('EventMomentService', () => {
     });
 
     it('allows a CheckedIn participant to post', async () => {
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
         ...mockGoingParticipant,
         status: ParticipantStatus.CheckedIn,
       });
@@ -401,15 +401,15 @@ describe('EventMomentService', () => {
     });
 
     it('throws NOT_FOUND when the event does not exist', async () => {
-      (EventDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
+      (EventSeriesDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
 
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
-        message: 'Event not found',
+        message: 'EventSeries not found',
       });
     });
 
     it('throws BAD_USER_INPUT when the posting window has closed', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         primarySchedule: { endAt: closedEndDate },
       });
@@ -420,7 +420,7 @@ describe('EventMomentService', () => {
     });
 
     it('throws BAD_USER_INPUT when caller has no RSVP', async () => {
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
 
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
         message: 'You must RSVP as Going or CheckedIn to post a moment',
@@ -428,7 +428,7 @@ describe('EventMomentService', () => {
     });
 
     it('throws BAD_USER_INPUT when RSVP status is Interested', async () => {
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
         ...mockGoingParticipant,
         status: ParticipantStatus.Interested,
       });
@@ -471,7 +471,7 @@ describe('EventMomentService', () => {
     it('event organizer can delete a moment from their event', async () => {
       const othersMoment = { ...mockMoment, authorId: 'other-user' };
       (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         organizers: [{ user: 'organizer-1' }],
       });
@@ -485,7 +485,7 @@ describe('EventMomentService', () => {
     it('throws UNAUTHORIZED when caller is neither author nor organizer', async () => {
       const othersMoment = { ...mockMoment, authorId: 'other-user' };
       (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         organizers: [{ user: 'organizer-1' }],
       });
@@ -498,7 +498,7 @@ describe('EventMomentService', () => {
     it('throws UNAUTHORIZED when event not found and caller is not author', async () => {
       const othersMoment = { ...mockMoment, authorId: 'other-user' };
       (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);
-      (EventDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
+      (EventSeriesDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
 
       await expect(EventMomentService.delete('moment-1', 'random-user')).rejects.toMatchObject({
         message: 'You are not authorized to delete this moment',

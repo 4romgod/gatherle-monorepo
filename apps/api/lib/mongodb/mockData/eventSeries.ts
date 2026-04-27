@@ -1,12 +1,17 @@
 import type { CreateEventInput } from '@gatherle/commons/types';
-import { EventLifecycleStatus, EventPrivacySetting, EventStatus, EventVisibility } from '@gatherle/commons/types/event';
+import {
+  EventLifecycleStatus,
+  EventPrivacySetting,
+  EventStatus,
+  EventVisibility,
+} from '@gatherle/commons/types/eventSeries';
 
-export type EventSeedData = CreateEventInput & {
+export type EventSeriesSeedData = CreateEventInput & {
   orgSlug?: string;
   venueSlug?: string;
 };
 
-const events: EventSeedData[] = [
+const eventSeriesList: EventSeriesSeedData[] = [
   {
     title: 'Signal Studios Urban Maker Fair',
     summary: 'Experience design, art, and tech installations across two floors.',
@@ -641,4 +646,4 @@ const events: EventSeedData[] = [
   },
 ];
 
-export default events;
+export default eventSeriesList;

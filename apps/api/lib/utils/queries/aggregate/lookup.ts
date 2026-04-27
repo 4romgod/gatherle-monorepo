@@ -73,10 +73,10 @@ export const createEventLookupStages = (options?: { skipCounts?: boolean }): Pip
         organizersUserMap: 0,
       },
     },
-    // Lookup participants from EventParticipant collection
+    // Lookup participants from EventSeriesParticipant collection
     {
       $lookup: {
-        from: 'eventparticipants',
+        from: 'eventseriesparticipants',
         localField: 'eventId',
         foreignField: 'eventId',
         as: 'participants',
@@ -154,7 +154,7 @@ export const createEventLookupStages = (options?: { skipCounts?: boolean }): Pip
                   $match: {
                     $expr: {
                       $and: [
-                        { $eq: ['$targetType', FollowTargetType.Event] },
+                        { $eq: ['$targetType', FollowTargetType.EventSeries] },
                         { $eq: ['$targetId', '$$eventId'] },
                         { $eq: ['$approvalStatus', FollowApprovalStatus.Accepted] },
                       ],

@@ -1,12 +1,12 @@
 import type {
-  EventParticipant,
+  EventSeriesParticipant,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
-  Event,
+  EventSeries,
   User,
 } from '@gatherle/commons/types';
 import { ParticipantStatus, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
-import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
+import { EventSeriesParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
 import NotificationService from './notification';
@@ -24,7 +24,7 @@ function extractUserId(user: unknown): string | null {
  * Get all organizer user IDs from an event (Host, CoHost, and any other organizer roles)
  * All organizers receive notifications about event activity (RSVPs, check-ins, etc.)
  */
-function getEventOrganizerIds(event: Event): string[] {
+function getEventOrganizerIds(event: EventSeries): string[] {
   if (!event.organizers || event.organizers.length === 0) {
     return [];
   }
@@ -43,9 +43,9 @@ function toIsoDateString(value?: Date | string | null): string | null {
 /**
  * Service for managing event participation with notification integration
  */
-class EventParticipantService {
+class EventSeriesParticipantService {
   private static toEventRsvpRealtimeSnapshot(
-    participant: EventParticipant,
+    participant: EventSeriesParticipant,
     user: Pick<User, 'userId' | 'username' | 'given_name' | 'family_name' | 'profile_picture'>,
   ): EventRsvpRealtimeSnapshot {
     return {
@@ -69,14 +69,17 @@ class EventParticipantService {
   }
 
   private static async publishRsvpUpdatedRealtime(
-    participant: EventParticipant,
+    participant: EventSeriesParticipant,
     previousStatus: ParticipantStatus | null,
   ): Promise<void> {
     const [event, actor, participants, rsvpCount] = await Promise.all([
-      EventDAO.readEventById(participant.eventId),
+      EventSeriesDAO.readEventById(participant.eventId),
       UserDAO.readUserById(participant.userId),
-      EventParticipantDAO.readByEvent(participant.eventId),
-      EventParticipantDAO.countByEvent(participant.eventId, [ParticipantStatus.Going, ParticipantStatus.Interested]),
+      EventSeriesParticipantDAO.readByEvent(participant.eventId),
+      EventSeriesParticipantDAO.countByEvent(participant.eventId, [
+        ParticipantStatus.Going,
+        ParticipantStatus.Interested,
+      ]),
     ]);
 
     const organizerIds = getEventOrganizerIds(event);
@@ -98,18 +101,18 @@ class EventParticipantService {
    * RSVP to an event (create or update participation)
    * Sends EVENT_RSVP notification to event owner when user RSVPs as Going
    */
-  static async rsvp(input: UpsertEventParticipantInput): Promise<EventParticipant> {
+  static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant> {
     const { eventId, userId, status = ParticipantStatus.Going } = input;
 
     // Check if this is a new RSVP or an update
-    const existingParticipant = await EventParticipantDAO.readByEventAndUser(eventId, userId);
+    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
     const isNewRsvp = !existingParticipant;
     const wasNotGoing =
       existingParticipant &&
       existingParticipant.status !== ParticipantStatus.Going &&
       existingParticipant.status !== ParticipantStatus.CheckedIn;
 
-    const participant = await EventParticipantDAO.upsert(input);
+    const participant = await EventSeriesParticipantDAO.upsert(input);
 
     this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
       logger.warn('Failed to publish RSVP realtime update', {
@@ -134,9 +137,9 @@ class EventParticipantService {
    * Cancel RSVP for an event
    * No notification sent for cancellations (by design - avoid negative notifications)
    */
-  static async cancel(input: CancelEventParticipantInput): Promise<EventParticipant> {
-    const existingParticipant = await EventParticipantDAO.readByEventAndUser(input.eventId, input.userId);
-    const participant = await EventParticipantDAO.cancel(input);
+  static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant> {
+    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(input.eventId, input.userId);
+    const participant = await EventSeriesParticipantDAO.cancel(input);
 
     this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
       logger.warn('Failed to publish RSVP cancellation realtime update', {
@@ -153,9 +156,9 @@ class EventParticipantService {
    * Check in to an event
    * Sends EVENT_CHECKIN notification to event owner
    */
-  static async checkIn(eventId: string, userId: string): Promise<EventParticipant> {
-    const existingParticipant = await EventParticipantDAO.readByEventAndUser(eventId, userId);
-    const participant = await EventParticipantDAO.upsert({
+  static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant> {
+    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
+    const participant = await EventSeriesParticipantDAO.upsert({
       eventId,
       userId,
       status: ParticipantStatus.CheckedIn,
@@ -186,7 +189,7 @@ class EventParticipantService {
     status: ParticipantStatus,
   ): Promise<void> {
     try {
-      const event = await EventDAO.readEventById(eventId);
+      const event = await EventSeriesDAO.readEventById(eventId);
       const organizerIds = getEventOrganizerIds(event);
 
       // Don't notify if no organizers found
@@ -198,7 +201,7 @@ class EventParticipantService {
       await NotificationService.notifyMany(organizerIds, {
         type: NotificationType.EVENT_RSVP,
         actorUserId,
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: event.slug,
         rsvpStatus: status,
       });
@@ -212,7 +215,7 @@ class EventParticipantService {
    */
   private static async sendCheckInNotification(eventId: string, actorUserId: string): Promise<void> {
     try {
-      const event = await EventDAO.readEventById(eventId);
+      const event = await EventSeriesDAO.readEventById(eventId);
       const organizerIds = getEventOrganizerIds(event);
 
       // Don't notify if no organizers found
@@ -224,7 +227,7 @@ class EventParticipantService {
       await NotificationService.notifyMany(organizerIds, {
         type: NotificationType.EVENT_CHECKIN,
         actorUserId,
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: event.slug,
       });
     } catch (error) {
@@ -233,4 +236,4 @@ class EventParticipantService {
   }
 }
 
-export default EventParticipantService;
+export default EventSeriesParticipantService;

@@ -9,7 +9,12 @@ config({ path: resolve(__dirname, '../../.env') });
  * Title prefixes used in e2e test events. Any event whose title starts with
  * one of these strings is assumed to be test data and safe to delete.
  */
-const TEST_TITLE_PREFIXES = ['Test Event Title', 'Trending E2E Test Event', 'Feed Test Event', 'Cold Start E2E Event'];
+const TEST_TITLE_PREFIXES = [
+  'Test EventSeries Title',
+  'Trending E2E Test EventSeries',
+  'Feed Test EventSeries',
+  'Cold Start E2E EventSeries',
+];
 
 type JsonBody = Record<string, unknown>;
 type ReadEventsResult = Array<{ eventId: string; title: string }>;

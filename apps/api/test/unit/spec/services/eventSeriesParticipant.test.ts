@@ -45,14 +45,14 @@ jest.mock('@/utils', () => ({
 }));
 
 jest.mock('@/mongodb/dao', () => ({
-  EventParticipantDAO: {
+  EventSeriesParticipantDAO: {
     upsert: jest.fn(),
     cancel: jest.fn(),
     readByEventAndUser: jest.fn(),
     readByEvent: jest.fn(),
     countByEvent: jest.fn(),
   },
-  EventDAO: {
+  EventSeriesDAO: {
     readEventById: jest.fn(),
   },
   UserDAO: {
@@ -78,11 +78,11 @@ jest.mock('@/websocket/publisher', () => ({
   publishEventRsvpUpdated: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { EventParticipantService } from '@/services';
-import { EventParticipantDAO, EventDAO, UserDAO } from '@/mongodb/dao';
+import { EventSeriesParticipantService } from '@/services';
+import { EventSeriesParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishEventRsvpUpdated } from '@/websocket/publisher';
-import type { EventParticipant, Event } from '@gatherle/commons/types';
+import type { EventSeriesParticipant, EventSeries } from '@gatherle/commons/types';
 import {
   ParticipantStatus,
   EventOrganizerRole,
@@ -90,8 +90,8 @@ import {
   NotificationTargetType,
 } from '@gatherle/commons/types';
 
-describe('EventParticipantService', () => {
-  const mockParticipant: EventParticipant = {
+describe('EventSeriesParticipantService', () => {
+  const mockParticipant: EventSeriesParticipant = {
     participantId: 'participant-1',
     eventId: 'event-1',
     userId: 'user-1',
@@ -100,10 +100,10 @@ describe('EventParticipantService', () => {
     rsvpAt: new Date('2024-01-01T00:00:00Z'),
   };
 
-  const mockEvent: Partial<Event> = {
+  const mockEvent: Partial<EventSeries> = {
     eventId: 'event-1',
     slug: 'test-event',
-    title: 'Test Event',
+    title: 'Test EventSeries',
     organizers: [
       {
         user: 'host-user-id' as any, // String reference
@@ -116,10 +116,10 @@ describe('EventParticipantService', () => {
     ],
   };
 
-  const mockEventWithPopulatedOrganizers: Partial<Event> = {
+  const mockEventWithPopulatedOrganizers: Partial<EventSeries> = {
     eventId: 'event-1',
     slug: 'test-event',
-    title: 'Test Event',
+    title: 'Test EventSeries',
     organizers: [
       {
         user: { userId: 'host-user-id' } as any, // Populated User object
@@ -147,26 +147,26 @@ describe('EventParticipantService', () => {
   });
 
   beforeEach(() => {
-    (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
     (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockActorUser);
-    (EventParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockEventParticipants);
-    (EventParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(1);
+    (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockEventParticipants);
+    (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(1);
   });
 
   describe('rsvp', () => {
     describe('new RSVP', () => {
       it('creates RSVP and sends notification to all organizers', async () => {
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
 
-        const result = await EventParticipantService.rsvp({
+        const result = await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
         });
 
-        expect(EventParticipantDAO.upsert).toHaveBeenCalledWith({
+        expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -182,7 +182,7 @@ describe('EventParticipantService', () => {
           expect.objectContaining({
             type: NotificationType.EVENT_RSVP,
             actorUserId: 'user-1',
-            targetType: NotificationTargetType.Event,
+            targetType: NotificationTargetType.EventSeries,
             targetSlug: 'test-event',
             rsvpStatus: ParticipantStatus.Going,
           }),
@@ -204,11 +204,11 @@ describe('EventParticipantService', () => {
       });
 
       it('handles populated organizer user objects', async () => {
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEventWithPopulatedOrganizers);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEventWithPopulatedOrganizers);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -226,11 +226,11 @@ describe('EventParticipantService', () => {
 
       it('sends notification for Interested status', async () => {
         const interestedParticipant = { ...mockParticipant, status: ParticipantStatus.Interested };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(interestedParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(interestedParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Interested,
@@ -253,11 +253,11 @@ describe('EventParticipantService', () => {
           ...mockEvent,
           organizers: [{ user: 'user-1', role: EventOrganizerRole.Host }],
         };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -275,11 +275,11 @@ describe('EventParticipantService', () => {
 
       it('does not send notification when event has no organizers', async () => {
         const noOrganizersEvent = { ...mockEvent, organizers: [] };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(noOrganizersEvent);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(noOrganizersEvent);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -295,11 +295,11 @@ describe('EventParticipantService', () => {
     describe('updating existing RSVP', () => {
       it('sends notification when changing from non-Going to Going', async () => {
         const cancelledParticipant = { ...mockParticipant, status: ParticipantStatus.Cancelled };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(cancelledParticipant);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(cancelledParticipant);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -313,10 +313,10 @@ describe('EventParticipantService', () => {
 
       it('does not send notification when already Going', async () => {
         const goingParticipant = { ...mockParticipant, status: ParticipantStatus.Going };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(goingParticipant);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(goingParticipant);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(goingParticipant);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(goingParticipant);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -330,10 +330,10 @@ describe('EventParticipantService', () => {
 
       it('does not send notification when already CheckedIn', async () => {
         const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(checkedInParticipant);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(checkedInParticipant);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Going,
@@ -346,13 +346,13 @@ describe('EventParticipantService', () => {
       });
 
       it('does not send notification when changing to Waitlisted', async () => {
-        (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue({
+        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue({
           ...mockParticipant,
           status: ParticipantStatus.Waitlisted,
         });
 
-        await EventParticipantService.rsvp({
+        await EventSeriesParticipantService.rsvp({
           eventId: 'event-1',
           userId: 'user-1',
           status: ParticipantStatus.Waitlisted,
@@ -369,15 +369,15 @@ describe('EventParticipantService', () => {
   describe('cancel', () => {
     it('cancels RSVP and does NOT send notification', async () => {
       const cancelledParticipant = { ...mockParticipant, status: ParticipantStatus.Cancelled };
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
-      (EventParticipantDAO.cancel as jest.Mock).mockResolvedValue(cancelledParticipant);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.cancel as jest.Mock).mockResolvedValue(cancelledParticipant);
 
-      const result = await EventParticipantService.cancel({
+      const result = await EventSeriesParticipantService.cancel({
         eventId: 'event-1',
         userId: 'user-1',
       });
 
-      expect(EventParticipantDAO.cancel).toHaveBeenCalledWith({
+      expect(EventSeriesParticipantDAO.cancel).toHaveBeenCalledWith({
         eventId: 'event-1',
         userId: 'user-1',
       });
@@ -402,12 +402,12 @@ describe('EventParticipantService', () => {
   describe('checkIn', () => {
     it('checks in and sends notification to all organizers', async () => {
       const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
 
-      const result = await EventParticipantService.checkIn('event-1', 'user-1');
+      const result = await EventSeriesParticipantService.checkIn('event-1', 'user-1');
 
-      expect(EventParticipantDAO.upsert).toHaveBeenCalledWith({
+      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith({
         eventId: 'event-1',
         userId: 'user-1',
         status: ParticipantStatus.CheckedIn,
@@ -423,7 +423,7 @@ describe('EventParticipantService', () => {
         expect.objectContaining({
           type: NotificationType.EVENT_CHECKIN,
           actorUserId: 'user-1',
-          targetType: NotificationTargetType.Event,
+          targetType: NotificationTargetType.EventSeries,
           targetSlug: 'test-event',
         }),
       );
@@ -446,10 +446,10 @@ describe('EventParticipantService', () => {
         organizers: [{ user: 'user-1', role: EventOrganizerRole.Host }],
       };
       const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-      (EventParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
+      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
 
-      await EventParticipantService.checkIn('event-1', 'user-1');
+      await EventSeriesParticipantService.checkIn('event-1', 'user-1');
 
       // Wait for async notification
       await new Promise((resolve) => setTimeout(resolve, 10));

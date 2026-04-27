@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop } from '@typegoose/typegoose';
 import { User } from './user';
-import { Event } from './event';
+import { EventSeries } from './eventSeries';
 
 export enum EventMomentType {
   Text = 'text',
@@ -105,8 +105,8 @@ export class EventMoment {
   author?: User;
 
   // GraphQL-only field resolved via @FieldResolver
-  @Field(() => Event, { nullable: true })
-  event?: Event;
+  @Field(() => EventSeries, { nullable: true })
+  event?: EventSeries;
 }
 
 @ObjectType('EventMomentPage', { description: 'Paginated list of event moments' })

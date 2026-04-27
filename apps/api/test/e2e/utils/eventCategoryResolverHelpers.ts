@@ -1,7 +1,7 @@
 import request from 'supertest';
 import type { CreateEventCategoryInput } from '@gatherle/commons/types';
 import { getCreateEventCategoryMutation } from '@/test/utils';
-import { trackCreatedId } from './eventResolverHelpers';
+import { trackCreatedId } from './eventSeriesResolverHelpers';
 
 export type CreatedEventCategoryRef = {
   eventCategoryId: string;

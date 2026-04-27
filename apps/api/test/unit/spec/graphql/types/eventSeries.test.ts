@@ -1,6 +1,13 @@
 import 'reflect-metadata';
-import { Media, Event, CreateEventInput, UpdateEventInput, RsvpInput, CancelRsvpInput } from '@gatherle/commons/types';
-import { EventPrivacySetting, EventStatus } from '@gatherle/commons/types/event';
+import {
+  Media,
+  EventSeries,
+  CreateEventInput,
+  UpdateEventInput,
+  RsvpInput,
+  CancelRsvpInput,
+} from '@gatherle/commons/types';
+import { EventPrivacySetting, EventStatus } from '@gatherle/commons/types/eventSeries';
 
 describe('Enums', () => {
   it('should ensure that EventPrivacySetting enum have the correct values', () => {
@@ -40,14 +47,14 @@ describe('Media ObjectType', () => {
   });
 });
 
-describe('Event', () => {
+describe('EventSeries', () => {
   it('should define ObjectType correctly', () => {
-    const eventType = new Event();
+    const eventType = new EventSeries();
     expect(eventType).toBeDefined();
   });
 
   it('should have fields with correct decorators', () => {
-    const eventType = new Event();
+    const eventType = new EventSeries();
 
     expect(eventType.eventId).toBeUndefined(); // Because we are testing default values
     expect(eventType.slug).toBeUndefined();

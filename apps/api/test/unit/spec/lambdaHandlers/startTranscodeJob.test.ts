@@ -87,12 +87,12 @@ describe('startTranscodeJobHandler', () => {
     });
 
     it('skips video files outside the event-moments area', async () => {
-      await startTranscodeJobHandler(makeEvent('beta/gallery/event-456/gallery-uuid.mp4'));
+      await startTranscodeJobHandler(makeEvent('beta/events/eventSeries-456/gallery-uuid.mp4'));
 
       expect(CreateJobCommand).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
         'Skipping unsupported transcode key',
-        expect.objectContaining({ rawKey: 'beta/gallery/event-456/gallery-uuid.mp4' }),
+        expect.objectContaining({ rawKey: 'beta/events/eventSeries-456/gallery-uuid.mp4' }),
       );
     });
 

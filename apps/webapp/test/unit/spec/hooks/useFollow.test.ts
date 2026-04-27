@@ -58,17 +58,17 @@ describe('useFollow and related hooks', () => {
     const { result } = renderHook(() => useFollow());
 
     await act(async () => {
-      await result.current.follow(FollowTargetType.Event, 'target-1');
+      await result.current.follow(FollowTargetType.EventSeries, 'target-1');
     });
     await act(async () => {
-      await result.current.unfollow(FollowTargetType.Event, 'target-1');
+      await result.current.unfollow(FollowTargetType.EventSeries, 'target-1');
     });
 
     expect(followMutation).toHaveBeenCalledWith({
-      variables: { input: { targetType: FollowTargetType.Event, targetId: 'target-1' } },
+      variables: { input: { targetType: FollowTargetType.EventSeries, targetId: 'target-1' } },
     });
     expect(unfollowMutation).toHaveBeenCalledWith({
-      variables: { targetType: FollowTargetType.Event, targetId: 'target-1' },
+      variables: { targetType: FollowTargetType.EventSeries, targetId: 'target-1' },
     });
     expect(result.current.isLoading).toBe(false);
   });

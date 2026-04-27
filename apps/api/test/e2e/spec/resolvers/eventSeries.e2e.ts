@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventsMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
 import {
@@ -26,28 +26,28 @@ import {
   createOrganizationOnServer,
   untrackCreatedId,
   updateMembershipRoleOnServer,
-} from '@/test/e2e/utils/eventResolverHelpers';
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
-describe('Event Resolver', () => {
+describe('EventSeries Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let testUser: UserWithToken;
   let testUser2: UserWithToken;
   let testEventCategory: EventCategoryRef;
-  const testEventDescription = 'Test Event Description';
+  const testEventDescription = 'Test EventSeries Description';
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
   const createdMembershipIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
 
   const baseEventData = (() => {
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
     return rest;
   })();
 
   const buildEventInput = (): CreateEventInput => ({
     ...baseEventData,
-    title: `Test Event Title ${Date.now()}`,
+    title: `Test EventSeries Title ${Date.now()}`,
     description: testEventDescription,
     eventCategories: [testEventCategory.eventCategoryId],
     organizers: [{ user: testUser.userId, role: 'Host' }],
@@ -133,7 +133,7 @@ describe('Event Resolver', () => {
     it('creates a new event with valid input', async () => {
       const createdEvent = await createEvent();
       expect(createdEvent).toHaveProperty('eventId');
-      expect(createdEvent.title).toMatch(/^Test Event Title \d+$/);
+      expect(createdEvent.title).toMatch(/^Test EventSeries Title \d+$/);
     });
 
     it('reads the event by id and slug after creation', async () => {
@@ -151,7 +151,7 @@ describe('Event Resolver', () => {
     describe('updateEvent Mutation', () => {
       it('updates an event when valid input is provided', async () => {
         const createdEvent = await createEvent();
-        const updatedTitle = 'Updated Event Title';
+        const updatedTitle = 'Updated EventSeries Title';
         const response = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + testUser.token)
@@ -192,7 +192,7 @@ describe('Event Resolver', () => {
     it('reads multiple events with no filters', async () => {
       const event1 = await createEvent();
       const input2 = buildEventInput();
-      input2.title = `Test Event Two ${Date.now()}`;
+      input2.title = `Test EventSeries Two ${Date.now()}`;
       const event2 = await createEvent(input2);
 
       const readResponse = await request(url)

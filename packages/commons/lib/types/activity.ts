@@ -5,7 +5,7 @@ import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
 
 import { SOCIAL_DESCRIPTIONS } from '../constants';
 import { User } from './user';
-import { Event } from './event';
+import { EventSeries } from './eventSeries';
 import { Organization } from './organization';
 
 export enum ActivityVerb {
@@ -21,7 +21,7 @@ export enum ActivityVerb {
 export enum ActivityObjectType {
   User = 'User',
   Organization = 'Organization',
-  Event = 'Event',
+  EventSeries = 'EventSeries',
   Comment = 'Comment',
 }
 
@@ -101,8 +101,8 @@ export class Activity {
   @Field(() => User, { nullable: true, description: 'The target user if objectType is User' })
   objectUser?: User;
 
-  @Field(() => Event, { nullable: true, description: 'The target event if objectType is Event' })
-  objectEvent?: Event;
+  @Field(() => EventSeries, { nullable: true, description: 'The target event if objectType is EventSeries' })
+  objectEvent?: EventSeries;
 
   @Field(() => Organization, { nullable: true, description: 'The target organization if objectType is Organization' })
   objectOrganization?: Organization;

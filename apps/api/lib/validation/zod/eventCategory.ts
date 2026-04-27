@@ -5,7 +5,9 @@ import mongoose from 'mongoose';
 export const EventCategorySchema = z.object({
   eventCategoryId: z
     .string()
-    .refine(mongoose.Types.ObjectId.isValid, { message: `Event Category eventCategoryId ${ERROR_MESSAGES.INVALID}` })
+    .refine(mongoose.Types.ObjectId.isValid, {
+      message: `Event Category eventCategoryId ${ERROR_MESSAGES.INVALID}`,
+    })
     .describe('The unique ID of the Event Category.'),
 
   color: z.string().min(2).optional().describe('The color associated with the Event Category.'),
@@ -39,7 +41,9 @@ export const UpdateEventCategorySchema = EventCategorySchema.partial()
   .extend({
     eventCategoryId: z
       .string()
-      .refine(mongoose.Types.ObjectId.isValid, { message: `Event Category eventCategoryId ${ERROR_MESSAGES.INVALID}` })
+      .refine(mongoose.Types.ObjectId.isValid, {
+        message: `Event Category eventCategoryId ${ERROR_MESSAGES.INVALID}`,
+      })
       .describe('The unique ID of the Event Category. This field is required for updates.'),
   })
   .describe('Schema for updating an existing Event Category. Fields are optional.');

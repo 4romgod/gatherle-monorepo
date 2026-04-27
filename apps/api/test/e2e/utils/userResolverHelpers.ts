@@ -1,7 +1,7 @@
 import request from 'supertest';
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
-import { trackCreatedId } from './eventResolverHelpers';
+import { trackCreatedId } from './eventSeriesResolverHelpers';
 
 export const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 

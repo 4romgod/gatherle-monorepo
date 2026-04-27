@@ -218,7 +218,7 @@ const hasValidCoordinates = (location: Record<string, any>): boolean =>
  * Nominatim requires max 1 request/second. Callers must implement rate limiting
  * when calling this function in loops or bulk operations.
  *
- * @param location - Event location object (may be modified)
+ * @param location - EventSeries location object (may be modified)
  * @returns The same location object, potentially with coordinates added
  */
 export async function enrichLocationWithCoordinates(

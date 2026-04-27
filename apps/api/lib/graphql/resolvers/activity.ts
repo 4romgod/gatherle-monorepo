@@ -6,7 +6,7 @@ import {
   Activity,
   UserRole,
   User,
-  Event,
+  EventSeries,
   Organization,
   ActivityObjectType,
 } from '@gatherle/commons/types';
@@ -39,11 +39,11 @@ export class ActivityResolver {
     }
   }
 
-  @FieldResolver(() => Event, { nullable: true, description: 'The target event if objectType is Event' })
-  async objectEvent(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<Event | null> {
-    if (activity.objectType !== ActivityObjectType.Event) return null;
+  @FieldResolver(() => EventSeries, { nullable: true, description: 'The target event if objectType is EventSeries' })
+  async objectEvent(@Root() activity: Activity, @Ctx() context: ServerContext): Promise<EventSeries | null> {
+    if (activity.objectType !== ActivityObjectType.EventSeries) return null;
     try {
-      return await context.loaders.event.load(activity.objectId);
+      return await context.loaders.eventSeries.load(activity.objectId);
     } catch {
       return null;
     }

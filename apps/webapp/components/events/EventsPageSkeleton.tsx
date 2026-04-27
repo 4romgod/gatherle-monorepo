@@ -4,7 +4,7 @@ import { Box, Grid, Skeleton, Stack } from '@mui/material';
 import EventTileSkeletonGrid from './EventTileSkeleton';
 
 /**
- * Full-page skeleton for the /events page that mirrors the actual layout:
+ * Full-page skeleton for the events page that mirrors the actual layout:
  * heading, search bar, filter buttons, and event cards.
  */
 export default function EventsPageSkeleton() {

@@ -29,8 +29,8 @@ const mockUser = { userId: 'user-abc', email: 'test@example.com', username: 'tes
 const mockContext = {} as any;
 const mockUploadResult = {
   uploadUrl: 'https://upload.example.com/signed',
-  key: 'test/events/event-1/featured.jpg',
-  readUrl: 'https://cdn.example.com/test/events/event-1/featured.jpg',
+  key: 'test/events/eventSeries-1/featured.jpg',
+  readUrl: 'https://cdn.example.com/test/events/eventSeries-1/featured.jpg',
 };
 
 describe('MediaResolver', () => {
@@ -46,9 +46,9 @@ describe('MediaResolver', () => {
 
   describe('getMediaUploadUrl', () => {
     it('delegates to MediaService.getMediaUploadUrl with correct params', async () => {
-      await resolver.getMediaUploadUrl(MediaEntityType.Event, MediaType.Featured, 'jpg', 'event-1', mockContext);
+      await resolver.getMediaUploadUrl(MediaEntityType.EventSeries, MediaType.Featured, 'jpg', 'event-1', mockContext);
       expect(ServicesModule.MediaService.getMediaUploadUrl).toHaveBeenCalledWith({
-        entityType: MediaEntityType.Event,
+        entityType: MediaEntityType.EventSeries,
         mediaType: MediaType.Featured,
         extension: 'jpg',
         entityId: 'event-1',
@@ -65,7 +65,7 @@ describe('MediaResolver', () => {
 
     it('returns the result from MediaService unchanged', async () => {
       const result = await resolver.getMediaUploadUrl(
-        MediaEntityType.Event,
+        MediaEntityType.EventSeries,
         MediaType.Featured,
         'jpg',
         'event-1',

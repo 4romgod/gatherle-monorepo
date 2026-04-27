@@ -1,7 +1,13 @@
-import { EventResolver } from '@/graphql/resolvers/event';
-import { FollowDAO, EventParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
-import EventService from '@/services/event';
-import type { Event, EventCategory, User, EventParticipant, OrganizationMembership } from '@gatherle/commons/types';
+import { EventSeriesResolver } from '@/graphql/resolvers/eventSeries';
+import { FollowDAO, EventSeriesParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import EventSeriesService from '@/services/eventSeries';
+import type {
+  EventSeries,
+  EventCategory,
+  User,
+  EventSeriesParticipant,
+  OrganizationMembership,
+} from '@gatherle/commons/types';
 import { ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
@@ -11,7 +17,7 @@ jest.mock('@/mongodb/dao', () => ({
     countSavesForEvent: jest.fn(),
     isEventSavedByUser: jest.fn(),
   },
-  EventParticipantDAO: {
+  EventSeriesParticipantDAO: {
     countByEvent: jest.fn(),
     readByEventAndUser: jest.fn(),
   },
@@ -20,21 +26,21 @@ jest.mock('@/mongodb/dao', () => ({
   },
 }));
 
-jest.mock('@/services/event', () => ({
+jest.mock('@/services/eventSeries', () => ({
   __esModule: true,
   default: {
     readTrending: jest.fn(),
   },
 }));
 
-describe('EventResolver Field Resolvers', () => {
-  let resolver: EventResolver;
+describe('EventSeriesResolver Field Resolvers', () => {
+  let resolver: EventSeriesResolver;
   let mockContext: ServerContext;
   let mockEventCategoryLoader: DataLoader<string, EventCategory | null>;
   let mockUserLoader: DataLoader<string, User | null>;
 
   beforeEach(() => {
-    resolver = new EventResolver();
+    resolver = new EventSeriesResolver();
 
     // Create mock DataLoaders
     mockEventCategoryLoader = new DataLoader(async (ids) => {
@@ -64,13 +70,13 @@ describe('EventResolver Field Resolvers', () => {
 
   describe('eventCategories field resolver', () => {
     it('should return empty array when eventCategories is undefined', async () => {
-      const event = { eventId: 'event1' } as unknown as Event;
+      const event = { eventId: 'event1' } as unknown as EventSeries;
       const result = await resolver.eventCategories(event, mockContext);
       expect(result).toEqual([]);
     });
 
     it('should return empty array when eventCategories is empty', async () => {
-      const event = { eventId: 'event1', eventCategories: [] } as unknown as Event;
+      const event = { eventId: 'event1', eventCategories: [] } as unknown as EventSeries;
       const result = await resolver.eventCategories(event, mockContext);
       expect(result).toEqual([]);
     });
@@ -84,7 +90,7 @@ describe('EventResolver Field Resolvers', () => {
       const event = {
         eventId: 'event1',
         eventCategories: populatedCategories,
-      } as unknown as Event;
+      } as unknown as EventSeries;
 
       const loadSpy = jest.spyOn(mockEventCategoryLoader, 'load');
 
@@ -98,7 +104,7 @@ describe('EventResolver Field Resolvers', () => {
       const event = {
         eventId: 'event1',
         eventCategories: ['cat1', 'cat2'] as unknown as EventCategory[],
-      } as unknown as Event;
+      } as unknown as EventSeries;
 
       const loadSpy = jest.spyOn(mockEventCategoryLoader, 'load');
 
@@ -115,7 +121,7 @@ describe('EventResolver Field Resolvers', () => {
       const event = {
         eventId: 'event1',
         eventCategories: ['cat1', 'nonexistent', 'cat2'] as unknown as EventCategory[],
-      } as unknown as Event;
+      } as unknown as EventSeries;
 
       const result = await resolver.eventCategories(event, mockContext);
 
@@ -126,13 +132,13 @@ describe('EventResolver Field Resolvers', () => {
 
   describe('organizers field resolver', () => {
     it('should return empty array when organizers is undefined', async () => {
-      const event = { eventId: 'event1' } as unknown as Event;
+      const event = { eventId: 'event1' } as unknown as EventSeries;
       const result = await resolver.organizers(event, mockContext);
       expect(result).toEqual([]);
     });
 
     it('should return empty array when organizers is empty', async () => {
-      const event = { eventId: 'event1', organizers: [] } as unknown as Event;
+      const event = { eventId: 'event1', organizers: [] } as unknown as EventSeries;
       const result = await resolver.organizers(event, mockContext);
       expect(result).toEqual([]);
     });
@@ -151,8 +157,8 @@ describe('EventResolver Field Resolvers', () => {
 
       const event = {
         eventId: 'event1',
-        organizers: populatedOrganizers as unknown as Event['organizers'],
-      } as unknown as Event;
+        organizers: populatedOrganizers as unknown as EventSeries['organizers'],
+      } as unknown as EventSeries;
 
       const loadSpy = jest.spyOn(mockUserLoader, 'load');
 
@@ -168,8 +174,8 @@ describe('EventResolver Field Resolvers', () => {
         organizers: [
           { role: 'HOST', user: 'user1' },
           { role: 'CO_HOST', user: 'user2' },
-        ] as unknown as Event['organizers'],
-      } as unknown as Event;
+        ] as unknown as EventSeries['organizers'],
+      } as unknown as EventSeries;
 
       const loadSpy = jest.spyOn(mockUserLoader, 'load');
 
@@ -189,8 +195,8 @@ describe('EventResolver Field Resolvers', () => {
           { role: 'HOST', user: 'user1' },
           { role: 'CO_HOST', user: 'nonexistent' },
           { role: 'SPEAKER', user: 'user2' },
-        ] as unknown as Event['organizers'],
-      } as unknown as Event;
+        ] as unknown as EventSeries['organizers'],
+      } as unknown as EventSeries;
 
       const result = await resolver.organizers(event, mockContext);
 
@@ -205,7 +211,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return the count of users who saved the event', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       (FollowDAO.countSavesForEvent as jest.Mock).mockResolvedValue(42);
 
       const result = await resolver.savedByCount(event);
@@ -215,7 +221,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return 0 when no users have saved the event', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       (FollowDAO.countSavesForEvent as jest.Mock).mockResolvedValue(0);
 
       const result = await resolver.savedByCount(event);
@@ -225,7 +231,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('prefers pipeline-supplied savedByCount when available', async () => {
-      const event = { eventId: 'event1', savedByCount: 13 } as Event;
+      const event = { eventId: 'event1', savedByCount: 13 } as EventSeries;
 
       const result = await resolver.savedByCount(event);
 
@@ -240,7 +246,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return true when user has saved the event', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
       (FollowDAO.isEventSavedByUser as jest.Mock).mockResolvedValue(true);
 
@@ -251,7 +257,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return false when user has not saved the event', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
       (FollowDAO.isEventSavedByUser as jest.Mock).mockResolvedValue(false);
 
@@ -262,7 +268,7 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return false when user is not authenticated', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithoutUser = { ...mockContext, user: undefined };
 
       const result = await resolver.isSavedByMe(event, contextWithoutUser);
@@ -278,12 +284,12 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return the count of RSVPs for the event', async () => {
-      const event = { eventId: 'event1' } as Event;
-      (EventParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(25);
+      const event = { eventId: 'event1' } as EventSeries;
+      (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(25);
 
       const result = await resolver.rsvpCount(event);
 
-      expect(EventParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
+      expect(EventSeriesParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
         ParticipantStatus.Going,
         ParticipantStatus.Interested,
       ]);
@@ -291,12 +297,12 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('should return 0 when no RSVPs exist', async () => {
-      const event = { eventId: 'event1' } as Event;
-      (EventParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(0);
+      const event = { eventId: 'event1' } as EventSeries;
+      (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(0);
 
       const result = await resolver.rsvpCount(event);
 
-      expect(EventParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
+      expect(EventSeriesParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
         ParticipantStatus.Going,
         ParticipantStatus.Interested,
       ]);
@@ -304,11 +310,11 @@ describe('EventResolver Field Resolvers', () => {
     });
 
     it('uses precomputed rsvpCount when the pipeline already provided one', async () => {
-      const event = { eventId: 'event1', rsvpCount: 18 } as Event;
+      const event = { eventId: 'event1', rsvpCount: 18 } as EventSeries;
 
       const result = await resolver.rsvpCount(event);
 
-      expect(EventParticipantDAO.countByEvent).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.countByEvent).not.toHaveBeenCalled();
       expect(result).toBe(18);
     });
   });
@@ -318,7 +324,7 @@ describe('EventResolver Field Resolvers', () => {
       jest.clearAllMocks();
     });
 
-    const mockRsvp: EventParticipant = {
+    const mockRsvp: EventSeriesParticipant = {
       participantId: 'participant1',
       eventId: 'event1',
       userId: 'user1',
@@ -328,34 +334,34 @@ describe('EventResolver Field Resolvers', () => {
     };
 
     it('should return the user RSVP when it exists', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockRsvp);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockRsvp);
 
       const result = await resolver.myRsvp(event, contextWithUser);
 
-      expect(EventParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
+      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
       expect(result).toEqual(mockRsvp);
     });
 
     it('should return null when user has not RSVPd', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
 
       const result = await resolver.myRsvp(event, contextWithUser);
 
-      expect(EventParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
+      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
       expect(result).toBeNull();
     });
 
     it('should return null when user is not authenticated', async () => {
-      const event = { eventId: 'event1' } as Event;
+      const event = { eventId: 'event1' } as EventSeries;
       const contextWithoutUser = { ...mockContext, user: undefined };
 
       const result = await resolver.myRsvp(event, contextWithoutUser);
 
-      expect(EventParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
+      expect(EventSeriesParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });
@@ -412,49 +418,49 @@ describe('EventResolver Field Resolvers', () => {
   });
 
   describe('readTrendingEvents', () => {
-    const makeEvent = (overrides: Partial<Event> = {}): Event =>
-      ({ eventId: 'event-1', title: 'Test', ...overrides }) as Event;
+    const makeEvent = (overrides: Partial<EventSeries> = {}): EventSeries =>
+      ({ eventId: 'event-1', title: 'Test', ...overrides }) as EventSeries;
 
     beforeEach(() => {
       jest.clearAllMocks();
     });
 
-    it('returns events from EventService.readTrending with the provided limit', async () => {
+    it('returns events from EventSeriesService.readTrending with the provided limit', async () => {
       const mockEvents = [makeEvent({ eventId: 'e-1' }), makeEvent({ eventId: 'e-2' })];
-      (EventService.readTrending as jest.Mock).mockResolvedValue(mockEvents);
+      (EventSeriesService.readTrending as jest.Mock).mockResolvedValue(mockEvents);
 
       const result = await resolver.readTrendingEvents(5);
 
-      expect(EventService.readTrending).toHaveBeenCalledWith(5);
+      expect(EventSeriesService.readTrending).toHaveBeenCalledWith(5);
       expect(result).toEqual(mockEvents);
     });
 
     it('falls back to limit 10 when limit is null', async () => {
-      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+      (EventSeriesService.readTrending as jest.Mock).mockResolvedValue([]);
 
       await resolver.readTrendingEvents(null);
 
-      expect(EventService.readTrending).toHaveBeenCalledWith(10);
+      expect(EventSeriesService.readTrending).toHaveBeenCalledWith(10);
     });
 
     it('clamps limit to 1 when a value below 1 is provided', async () => {
-      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+      (EventSeriesService.readTrending as jest.Mock).mockResolvedValue([]);
 
       await resolver.readTrendingEvents(0);
 
-      expect(EventService.readTrending).toHaveBeenCalledWith(1);
+      expect(EventSeriesService.readTrending).toHaveBeenCalledWith(1);
     });
 
     it('returns an empty array when no trending events exist', async () => {
-      (EventService.readTrending as jest.Mock).mockResolvedValue([]);
+      (EventSeriesService.readTrending as jest.Mock).mockResolvedValue([]);
 
       const result = await resolver.readTrendingEvents(10);
 
       expect(result).toEqual([]);
     });
 
-    it('propagates errors from EventService.readTrending', async () => {
-      (EventService.readTrending as jest.Mock).mockRejectedValue(new Error('service error'));
+    it('propagates errors from EventSeriesService.readTrending', async () => {
+      (EventSeriesService.readTrending as jest.Mock).mockRejectedValue(new Error('service error'));
 
       await expect(resolver.readTrendingEvents(10)).rejects.toThrow('service error');
     });

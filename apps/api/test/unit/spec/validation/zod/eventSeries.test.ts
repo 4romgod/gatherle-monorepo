@@ -1,8 +1,8 @@
 import { EventSchema, CreateEventInputSchema, UpdateEventInputSchema, LocationSchema } from '@/validation';
 import mongoose from 'mongoose';
-import { EventStatus } from '@gatherle/commons/types/event';
+import { EventStatus } from '@gatherle/commons/types/eventSeries';
 
-describe('Event', () => {
+describe('EventSeries', () => {
   const mockID = new mongoose.Types.ObjectId().toString();
 
   const validVenueLocation = {
@@ -95,8 +95,8 @@ describe('Event', () => {
       const validInput = {
         eventId: mockID,
         slug: 'event-slug',
-        title: 'Event Title',
-        description: 'Event Description',
+        title: 'EventSeries Title',
+        description: 'EventSeries Description',
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
         primarySchedule: {
@@ -116,7 +116,7 @@ describe('Event', () => {
         additionalDetails: { detail1: 'value1' },
         comments: { comment1: 'comment' },
         privacySetting: 'Public',
-        eventLink: 'https://example.com/event',
+        eventLink: 'https://example.com/events',
       };
       const errors = EventSchema.safeParse(validInput);
       expect(errors.success).toBe(true);
@@ -132,8 +132,8 @@ describe('Event', () => {
       const result = EventSchema.safeParse({
         eventId: mockID,
         slug: 'event-slug',
-        title: 'Event Title',
-        description: 'Event Description',
+        title: 'EventSeries Title',
+        description: 'EventSeries Description',
         primarySchedule: {
           startAt: '2024-06-30T10:00:00Z',
           timezone: 'Africa/Johannesburg',
@@ -151,8 +151,8 @@ describe('Event', () => {
       const result = EventSchema.safeParse({
         eventId: mockID,
         slug: 'event-slug',
-        title: 'Event Title',
-        description: 'Event Description',
+        title: 'EventSeries Title',
+        description: 'EventSeries Description',
         primarySchedule: {
           startAt: '2024-06-30T10:00:00Z',
           timezone: 'Africa/Johannesburg',
@@ -170,8 +170,8 @@ describe('Event', () => {
   describe('CreateEventInputSchema', () => {
     it('should validate valid CreateEventInputSchema', () => {
       const validInput = {
-        title: 'Event Title',
-        description: 'Event Description',
+        title: 'EventSeries Title',
+        description: 'EventSeries Description',
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
         primarySchedule: {
@@ -191,7 +191,7 @@ describe('Event', () => {
         additionalDetails: { detail1: 'value1' },
         comments: { comment1: 'comment' },
         privacySetting: 'Public',
-        eventLink: 'https://example.com/event',
+        eventLink: 'https://example.com/events',
       };
       const errors = CreateEventInputSchema.safeParse(validInput);
       expect(errors.success).toBe(true);
@@ -208,7 +208,7 @@ describe('Event', () => {
     it('should validate valid UpdateEventInputSchema', () => {
       const validInput = {
         eventId: mockID,
-        title: 'Updated Event Title',
+        title: 'Updated EventSeries Title',
       };
 
       const errors = UpdateEventInputSchema.safeParse(validInput);
@@ -218,7 +218,7 @@ describe('Event', () => {
     it('should invalidate invalid id format', () => {
       const invalidInput = {
         eventId: 'invalid-id-format',
-        title: 'Updated Event Title',
+        title: 'Updated EventSeries Title',
       };
       const errors = UpdateEventInputSchema.safeParse(invalidInput);
       expect(errors.success).toBe(false);

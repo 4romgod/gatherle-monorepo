@@ -6,7 +6,7 @@ import {
   NotificationType,
   NotificationTargetType,
 } from '@gatherle/commons/types';
-import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
+import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 import NotificationService from './notification';
@@ -93,8 +93,8 @@ class FollowService {
         (targetOrg.followPolicy ?? FollowPolicy.Public) === FollowPolicy.Public
           ? FollowApprovalStatus.Accepted
           : FollowApprovalStatus.Pending;
-    } else if (targetType === FollowTargetType.Event) {
-      await EventDAO.readEventById(targetId);
+    } else if (targetType === FollowTargetType.EventSeries) {
+      await EventSeriesDAO.readEventById(targetId);
       // Events are always publicly saveable - no approval needed
       approvalStatus = FollowApprovalStatus.Accepted;
     }

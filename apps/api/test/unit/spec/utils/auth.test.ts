@@ -5,7 +5,7 @@ import type { User } from '@gatherle/commons/types';
 import { UserRole } from '@gatherle/commons/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
-import { EventDAO } from '@/mongodb/dao';
+import { EventSeriesDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import type { ArgsDictionary } from 'type-graphql';
 import type { GraphQLResolveInfo } from 'graphql';
@@ -129,26 +129,32 @@ describe('Auth Utilities', () => {
     });
 
     it('should authorize user for their own event update', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({ organizers: [{ user: 'user-id', role: 'Host' }] });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'user-id', role: 'Host' }],
+      });
       const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
       expect(result).toBe(true);
     });
 
     it("should deny user for another user's event update", async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({ organizers: [{ user: 'another-id', role: 'Host' }] });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'another-id', role: 'Host' }],
+      });
       const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
       expect(result).toBe(false);
     });
 
     it('should handle various organizer ID formats - string ID', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({ organizers: [{ user: 'user-id', role: 'Host' }] });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'user-id', role: 'Host' }],
+      });
       const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
       expect(result).toBe(true);
     });
 
     it('should handle various organizer ID formats - ObjectId', async () => {
       const _mockObjectId = new Types.ObjectId('507f1f77bcf86cd799439011');
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: '507f1f77bcf86cd799439011', role: 'Host' }],
       });
       const mockUserWithObjectId = { ...mockUser, userId: '507f1f77bcf86cd799439011' };
@@ -161,7 +167,7 @@ describe('Auth Utilities', () => {
     });
 
     it('should handle various organizer ID formats - object with userId', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: '507f1f77bcf86cd799439011', role: 'Host' }],
       });
       const mockUserWithObjectId = { ...mockUser, userId: '507f1f77bcf86cd799439011' };
@@ -174,7 +180,7 @@ describe('Auth Utilities', () => {
     });
 
     it('should handle organizer with valid userId', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: 'user-id', role: 'CoHost' }],
       });
       const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
@@ -182,7 +188,7 @@ describe('Auth Utilities', () => {
     });
 
     it('should filter out invalid organizer formats', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [
           { userId: undefined, role: 'Host' },
           { userId: null, role: 'Host' },
@@ -193,7 +199,7 @@ describe('Auth Utilities', () => {
     });
 
     it('should handle mixed organizer formats', async () => {
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [
           { user: 'other-user-id', role: 'Host' },
           { user: 'user-id', role: 'CoHost' },
@@ -340,7 +346,7 @@ describe('Auth Utilities', () => {
             const mockResolveInfo: GraphQLResolveInfo = { fieldName: operationName } as any;
 
             if (mockDAO) {
-              (EventDAO.readEventById as jest.Mock).mockResolvedValue({ organizers: eventDAOResult });
+              (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({ organizers: eventDAOResult });
             }
             if (expectAuthorized) {
               const result = await authChecker(

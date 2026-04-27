@@ -1,7 +1,7 @@
-import { Event as EventModel } from '@/mongodb/models';
+import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import { kebabCase } from 'lodash';
 import type {
-  Event as EventEntity,
+  EventSeries as EventEntity,
   UpdateEventInput,
   CreateEventInput,
   EventsQueryOptionsInput,
@@ -20,12 +20,12 @@ import {
   logDaoError,
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
-import { EventParticipantDAO } from '@/mongodb/dao';
+import { EventSeriesParticipantDAO } from '@/mongodb/dao';
 import { ParticipantStatus, DATE_FILTER_OPTIONS } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
 
-class EventDAO {
+class EventSeriesDAO {
   static async create(input: CreateEventInput): Promise<EventEntity> {
     try {
       // Geocode address to coordinates if location has address but no coordinates
@@ -34,19 +34,19 @@ class EventDAO {
       }
 
       const slug = kebabCase(input.title);
-      const existingEvent = await EventModel.findOne({ slug }).select('_id').lean().exec();
+      const existingEvent = await EventSeriesModel.findOne({ slug }).select('_id').lean().exec();
 
       if (existingEvent) {
         throw CustomError(`Slug ${slug} already exists`, ErrorTypes.CONFLICT);
       }
 
-      const event = await EventModel.create({ ...input, slug });
+      const event = await EventSeriesModel.create({ ...input, slug });
       return event.toObject();
     } catch (error) {
       logDaoError('Error creating event', { error });
-      const validationMessage = extractValidationErrorMessage(error, 'Event validation failed');
+      const validationMessage = extractValidationErrorMessage(error, 'EventSeries validation failed');
 
-      if (validationMessage !== 'Event validation failed') {
+      if (validationMessage !== 'EventSeries validation failed') {
         throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
       }
       throw KnownCommonError(error);
@@ -57,13 +57,13 @@ class EventDAO {
     let events;
     try {
       const pipeline = [{ $match: { eventId: eventId } }, ...createEventLookupStages()];
-      events = await EventModel.aggregate<EventEntity>(pipeline).exec();
+      events = await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logDaoError('Error reading event by id', { error });
       throw KnownCommonError(error);
     }
     if (!events || events.length === 0) {
-      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+      throw CustomError(`EventSeries with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
     }
     return events[0];
   }
@@ -73,13 +73,13 @@ class EventDAO {
     try {
       // Use aggregation pipeline to include participants lookup
       const pipeline = [{ $match: { slug: slug } }, ...createEventLookupStages()];
-      events = await EventModel.aggregate<EventEntity>(pipeline).exec();
+      events = await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logDaoError('Error reading event by slug:', { error });
       throw KnownCommonError(error);
     }
     if (!events || events.length === 0) {
-      throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+      throw CustomError(`EventSeries with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
     }
     return events[0];
   }
@@ -91,7 +91,7 @@ class EventDAO {
       // Transform options to aggregation pipeline (handles filters, location, sort, pagination)
       const pipeline = transformEventOptionsToPipeline(options);
 
-      let events = await EventModel.aggregate<EventEntity>(pipeline).exec();
+      let events = await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
 
       // Apply date range filtering if provided (filter in application layer since RRULEs are strings)
       // Handle customDate (takes precedence), dateFilterOption, and direct dateRange (for backwards compatibility)
@@ -141,14 +141,14 @@ class EventDAO {
     const { eventId, ...restInput } = input;
     let event;
     try {
-      event = await EventModel.findById(eventId).exec();
+      event = await EventSeriesModel.findById(eventId).exec();
     } catch (error) {
       logDaoError('Error finding event for update', { error });
       throw KnownCommonError(error);
     }
 
     if (!event) {
-      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+      throw CustomError(`EventSeries with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
     }
 
     try {
@@ -171,13 +171,13 @@ class EventDAO {
   static async deleteEventById(eventId: string): Promise<EventEntity> {
     let deletedEvent;
     try {
-      deletedEvent = await EventModel.findByIdAndDelete(eventId).exec();
+      deletedEvent = await EventSeriesModel.findByIdAndDelete(eventId).exec();
     } catch (error) {
       logDaoError(`Error deleting event by eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedEvent) {
-      throw CustomError(`Event with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+      throw CustomError(`EventSeries with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
     }
     return deletedEvent.toObject();
   }
@@ -185,13 +185,13 @@ class EventDAO {
   static async deleteEventBySlug(slug: string): Promise<EventEntity> {
     let deletedEvent;
     try {
-      deletedEvent = await EventModel.findOneAndDelete({ slug }).exec();
+      deletedEvent = await EventSeriesModel.findOneAndDelete({ slug }).exec();
     } catch (error) {
       logDaoError(`Error deleting event with slug ${slug}`, { error });
       throw KnownCommonError(error);
     }
     if (!deletedEvent) {
-      throw CustomError(`Event with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
+      throw CustomError(`EventSeries with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
     }
     return deletedEvent.toObject();
   }
@@ -203,19 +203,19 @@ class EventDAO {
     let event;
     try {
       validUserIds = await validateUserIdentifiers(input);
-      event = await EventModel.findById(eventId).exec();
+      event = await EventSeriesModel.findById(eventId).exec();
     } catch (error) {
       logDaoError(`Error reading event for RSVP with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
 
     if (!event) {
-      throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
+      throw CustomError(ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId), ErrorTypes.NOT_FOUND);
     }
 
     try {
       for (const userId of validUserIds) {
-        await EventParticipantDAO.upsert({ eventId, userId, status: ParticipantStatus.Going });
+        await EventSeriesParticipantDAO.upsert({ eventId, userId, status: ParticipantStatus.Going });
       }
       return event.toObject();
     } catch (error) {
@@ -231,19 +231,19 @@ class EventDAO {
     let event;
     try {
       validUserIds = await validateUserIdentifiers(input);
-      event = await EventModel.findById(eventId).exec();
+      event = await EventSeriesModel.findById(eventId).exec();
     } catch (error) {
       logDaoError(`Error reading event for cancel RSVP with eventId ${eventId}`, { error });
       throw KnownCommonError(error);
     }
 
     if (!event) {
-      throw CustomError(ERROR_MESSAGES.NOT_FOUND('Event', 'ID', eventId), ErrorTypes.NOT_FOUND);
+      throw CustomError(ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId), ErrorTypes.NOT_FOUND);
     }
 
     try {
       for (const userId of validUserIds) {
-        await EventParticipantDAO.cancel({ eventId, userId });
+        await EventSeriesParticipantDAO.cancel({ eventId, userId });
       }
       return event.toObject();
     } catch (error) {
@@ -254,7 +254,7 @@ class EventDAO {
 
   static async count(filter: Record<string, unknown> = {}): Promise<number> {
     try {
-      return EventModel.countDocuments(filter).exec();
+      return EventSeriesModel.countDocuments(filter).exec();
     } catch (error) {
       logDaoError('Error counting events', { error });
       throw KnownCommonError(error);
@@ -286,7 +286,7 @@ class EventDAO {
         // Count RSVPs (Going + Interested) per event
         {
           $lookup: {
-            from: 'eventparticipants',
+            from: 'eventseriesparticipants',
             let: { eid: '$eventId' },
             pipeline: [
               {
@@ -301,7 +301,7 @@ class EventDAO {
             as: '_rsvpAgg',
           },
         },
-        // Count saves (Follow where targetType = Event) per event
+        // Count saves (Follow where targetType = EventSeries) per event
         {
           $lookup: {
             from: 'follows',
@@ -312,7 +312,7 @@ class EventDAO {
                   $expr: {
                     $and: [
                       { $eq: ['$targetId', '$$eid'] },
-                      { $eq: ['$targetType', 'Event'] },
+                      { $eq: ['$targetType', 'EventSeries'] },
                       { $eq: ['$approvalStatus', 'Accepted'] },
                     ],
                   },
@@ -341,7 +341,7 @@ class EventDAO {
         ...createEventLookupStages({ skipCounts: true }),
       ];
 
-      return await EventModel.aggregate<EventEntity>(pipeline).exec();
+      return await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logDaoError('Error reading trending events', { error });
       throw KnownCommonError(error);
@@ -355,7 +355,7 @@ class EventDAO {
    */
   static async readUpcomingPublished(limit: number): Promise<EventEntity[]> {
     try {
-      const events = await EventModel.find({
+      const events = await EventSeriesModel.find({
         lifecycleStatus: 'Published',
         status: { $in: ['Upcoming', 'Ongoing'] },
         visibility: { $in: ['Public', 'Unlisted'] },
@@ -371,4 +371,4 @@ class EventDAO {
   }
 }
 
-export default EventDAO;
+export default EventSeriesDAO;

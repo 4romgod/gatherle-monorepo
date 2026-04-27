@@ -160,7 +160,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     error: featuredImageError,
     preview: featuredImagePreview,
   } = useMediaUpload({
-    entityType: MediaEntityType.Event,
+    entityType: MediaEntityType.EventSeries,
     mediaType: MediaType.Featured,
     // In edit mode use the real eventId; in create mode use a stable draft UUID so
     // repeated "Change image" calls overwrite the same S3 path instead of scattering orphans.

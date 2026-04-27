@@ -53,7 +53,7 @@ queries.
 
 ```
 CategoryMatch        user.interests ∩ event.eventCategories
-FriendAttending      followed user has an active RSVP (EventParticipant)
+FriendAttending      followed user has an active RSVP (EventSeriesParticipant)
 FollowedOrgHosting   event.orgId is in user's followed organisations
 NetworkSaved         followed user saved the event
 TimeUrgency          event starts within 30 days
@@ -88,7 +88,7 @@ Events with a score of 0 (no signal fired) are not stored in the feed.
 
 Events are never surfaced if:
 
-- The user has already RSVPd for the event (`EventParticipant` record exists)
+- The user has already RSVPd for the event (`EventSeriesParticipant` record exists)
 - The user has saved the event (Follow → Event)
 - The `orgId` is in `user.mutedOrgIds`
 - `lifecycleStatus !== Published`
@@ -143,11 +143,11 @@ items.
 
 Three write paths each fire a feed trigger after their primary operation:
 
-| Trigger call                     | Where                       | What it does                                       |
-| -------------------------------- | --------------------------- | -------------------------------------------------- |
-| `onRsvpUpdated(userId)`          | `EventParticipantResolver`  | Removes event from feed (sync) + recomputes feed   |
-| `onUserFollowed(followerUserId)` | `FollowService.follow`      | Recomputes the new follower's feed                 |
-| `onEventPublished(eventId)`      | `EventResolver.updateEvent` | Logs; lazy recompute on next `readRecommendedFeed` |
+| Trigger call                     | Where                             | What it does                                       |
+| -------------------------------- | --------------------------------- | -------------------------------------------------- |
+| `onRsvpUpdated(userId)`          | `EventSeriesParticipantResolver`  | Removes event from feed (sync) + recomputes feed   |
+| `onUserFollowed(followerUserId)` | `FollowService.follow`            | Recomputes the new follower's feed                 |
+| `onEventPublished(eventId)`      | `EventSeriesResolver.updateEvent` | Logs; lazy recompute on next `readRecommendedFeed` |
 
 All triggers are **fire-and-forget** — they cannot block the primary mutation response. Errors are logged at `warn`
 level.

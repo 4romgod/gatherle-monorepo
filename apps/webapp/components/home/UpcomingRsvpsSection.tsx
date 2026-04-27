@@ -2,7 +2,7 @@
 
 import { Box, Typography, Stack } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { GetMyRsvpsDocument } from '@/data/graphql/query/EventParticipant/query';
+import { GetMyRsvpsDocument } from '@/data/graphql/query/EventSeriesParticipant/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
 import Carousel from '@/components/carousel';
