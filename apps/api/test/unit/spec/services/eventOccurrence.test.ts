@@ -7,12 +7,14 @@ import { logger } from '@/utils/logger';
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceDAO: {
     bulkUpsert: jest.fn(),
+    readByOccurrenceId: jest.fn(),
     readByEventSeriesIdsInRange: jest.fn(),
     readUpcomingByEventSeriesId: jest.fn(),
     deleteMissingGeneratedOccurrences: jest.fn(),
     deleteByEventSeriesId: jest.fn(),
   },
   EventSeriesDAO: {
+    readEventById: jest.fn(),
     readCandidateEventSeriesForOccurrences: jest.fn(),
   },
 }));
@@ -40,6 +42,44 @@ describe('EventOccurrenceService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('readOccurrenceById', () => {
+    it('returns a persisted occurrence when one exists in storage', async () => {
+      const persistedOccurrence = {
+        occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-1',
+      } as any;
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(persistedOccurrence);
+
+      const result = await EventOccurrenceService.readOccurrenceById(persistedOccurrence.occurrenceId);
+
+      expect(EventOccurrenceDAO.readByOccurrenceId).toHaveBeenCalledWith(persistedOccurrence.occurrenceId);
+      expect(result).toBe(persistedOccurrence);
+      expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    });
+
+    it('projects a synthetic single occurrence when the DB row does not exist', async () => {
+      const singleSeries = buildSeries({
+        eventId: 'series-2',
+        primarySchedule: {
+          startAt: new Date('2026-05-07T10:00:00.000Z'),
+          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
+        },
+      });
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(null);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(singleSeries);
+
+      const result = await EventOccurrenceService.readOccurrenceById('series-2#2026-05-07T10:00:00.000Z');
+
+      expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith('series-2');
+      expect(result).toMatchObject({
+        occurrenceId: 'series-2#2026-05-07T10:00:00.000Z',
+        eventSeriesId: 'series-2',
+      });
+    });
   });
 
   describe('isRecurringSeries', () => {

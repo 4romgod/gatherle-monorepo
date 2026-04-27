@@ -14,7 +14,15 @@ import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
-import type { User, EventCategory, Organization, EventSeries, EventSeriesParticipant } from '@gatherle/commons/types';
+import type {
+  User,
+  EventCategory,
+  Organization,
+  EventSeries,
+  EventSeriesParticipant,
+  EventOccurrence,
+  EventOccurrenceParticipant,
+} from '@gatherle/commons/types';
 import type { AuthClaims } from '@/utils/auth';
 
 export interface ServerContext {
@@ -27,9 +35,14 @@ export interface ServerContext {
     eventCategory: DataLoader<string, EventCategory | null>;
     eventCategoryInterestCount: DataLoader<string, number>;
     eventSeries: DataLoader<string, EventSeries | null>;
+    eventOccurrence: DataLoader<string, EventOccurrence | null>;
     organization: DataLoader<string, Organization | null>;
     eventSeriesParticipant: DataLoader<string, EventSeriesParticipant | null>;
     eventSeriesParticipantsByEvent: DataLoader<string, EventSeriesParticipant[]>;
+    eventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
+    eventOccurrenceParticipantsByOccurrence: DataLoader<string, EventOccurrenceParticipant[]>;
+    eventOccurrenceParticipantCountByOccurrence: DataLoader<string, number>;
+    myEventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
   };
 }
 

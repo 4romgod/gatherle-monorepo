@@ -1,0 +1,187 @@
+import type {
+  EventOccurrenceParticipant,
+  ParticipantVisibility,
+  UpsertEventOccurrenceParticipantInput,
+} from '@gatherle/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
+import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
+import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
+
+type UpsertOccurrenceParticipantPayload = UpsertEventOccurrenceParticipantInput & {
+  userId: string;
+  status: ParticipantStatus;
+};
+
+class EventOccurrenceParticipantDAO {
+  static async upsert(input: UpsertOccurrenceParticipantPayload): Promise<EventOccurrenceParticipant> {
+    try {
+      const { occurrenceId, userId, status, quantity, invitedBy, sharedVisibility } = input;
+
+      let participant = await EventOccurrenceParticipantModel.findOne({ occurrenceId, userId }).exec();
+
+      if (participant) {
+        const wasCancelled = participant.status === ParticipantStatus.Cancelled;
+        participant.status = status;
+        if (quantity !== undefined) participant.quantity = quantity;
+        if (invitedBy !== undefined) participant.invitedBy = invitedBy;
+        if (sharedVisibility !== undefined) participant.sharedVisibility = sharedVisibility as ParticipantVisibility;
+        if (status !== ParticipantStatus.Cancelled) {
+          participant.cancelledAt = undefined;
+          if (wasCancelled) {
+            participant.rsvpAt = new Date();
+          }
+        }
+        if (status === ParticipantStatus.CheckedIn && !participant.checkedInAt) {
+          participant.checkedInAt = new Date();
+        }
+        await participant.save();
+      } else {
+        participant = await EventOccurrenceParticipantModel.create({
+          occurrenceId,
+          userId,
+          status,
+          quantity,
+          invitedBy,
+          sharedVisibility,
+          rsvpAt: new Date(),
+          checkedInAt: status === ParticipantStatus.CheckedIn ? new Date() : undefined,
+        });
+      }
+
+      return participant.toObject();
+    } catch (error) {
+      logDaoError('Error upserting event occurrence participant', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async cancel(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
+    let participant;
+    try {
+      participant = await EventOccurrenceParticipantModel.findOne({ occurrenceId, userId }).exec();
+    } catch (error) {
+      logDaoError('Error finding event occurrence participant for cancellation', { error });
+      throw KnownCommonError(error);
+    }
+
+    if (!participant) {
+      throw CustomError(`Participant not found for occurrence ${occurrenceId}`, ErrorTypes.NOT_FOUND);
+    }
+
+    try {
+      participant.status = ParticipantStatus.Cancelled;
+      participant.cancelledAt = new Date();
+      await participant.save();
+      return participant.toObject();
+    } catch (error) {
+      logDaoError('Error cancelling event occurrence participant', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByOccurrence(occurrenceId: string): Promise<EventOccurrenceParticipant[]> {
+    try {
+      const participants = await EventOccurrenceParticipantModel.find({ occurrenceId }).sort({ rsvpAt: 1 }).exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading occurrence participants', { error, occurrenceId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByOccurrences(occurrenceIds: string[]): Promise<EventOccurrenceParticipant[]> {
+    if (occurrenceIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const participants = await EventOccurrenceParticipantModel.find({
+        occurrenceId: { $in: occurrenceIds },
+      })
+        .sort({ occurrenceId: 1, rsvpAt: 1 })
+        .exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading occurrence participants by occurrence IDs', { error, occurrenceIds });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByOccurrenceAndUser(
+    occurrenceId: string,
+    userId: string,
+  ): Promise<EventOccurrenceParticipant | null> {
+    try {
+      const participant = await EventOccurrenceParticipantModel.findOne({ occurrenceId, userId }).exec();
+      return participant ? participant.toObject() : null;
+    } catch (error) {
+      logDaoError('Error reading occurrence participant by occurrence and user', { error, occurrenceId, userId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByOccurrencesAndUser(
+    occurrenceIds: string[],
+    userId: string,
+  ): Promise<EventOccurrenceParticipant[]> {
+    if (occurrenceIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const participants = await EventOccurrenceParticipantModel.find({
+        occurrenceId: { $in: occurrenceIds },
+        userId,
+      }).exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading occurrence participants by occurrence IDs and user', {
+        error,
+        occurrenceIds,
+        userId,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readWaitlistedByOccurrence(occurrenceId: string): Promise<EventOccurrenceParticipant[]> {
+    try {
+      const participants = await EventOccurrenceParticipantModel.find({
+        occurrenceId,
+        status: ParticipantStatus.Waitlisted,
+      })
+        .sort({ rsvpAt: 1, createdAt: 1 })
+        .exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading waitlisted occurrence participants', { error, occurrenceId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async promoteWaitlisted(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant | null> {
+    try {
+      const participant = await EventOccurrenceParticipantModel.findOneAndUpdate(
+        {
+          occurrenceId,
+          userId,
+          status: ParticipantStatus.Waitlisted,
+        },
+        {
+          $set: { status: ParticipantStatus.Going },
+          $unset: { cancelledAt: 1 },
+        },
+        {
+          new: true,
+        },
+      ).exec();
+
+      return participant ? participant.toObject() : null;
+    } catch (error) {
+      logDaoError('Error promoting waitlisted occurrence participant', { error, occurrenceId, userId });
+      throw KnownCommonError(error);
+    }
+  }
+}
+
+export default EventOccurrenceParticipantDAO;

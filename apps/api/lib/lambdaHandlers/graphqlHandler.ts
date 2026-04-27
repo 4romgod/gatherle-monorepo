@@ -9,9 +9,14 @@ import {
   createEventCategoryLoader,
   createEventCategoryInterestCountLoader,
   createEventSeriesLoader,
+  createEventOccurrenceLoader,
   createOrganizationLoader,
   createEventSeriesParticipantLoader,
   createEventSeriesParticipantsByEventLoader,
+  createEventOccurrenceParticipantLoader,
+  createEventOccurrenceParticipantsByOccurrenceLoader,
+  createEventOccurrenceParticipantCountByOccurrenceLoader,
+  createMyEventOccurrenceParticipantLoader,
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
@@ -78,9 +83,14 @@ async function initializeResources() {
               eventCategory: createEventCategoryLoader(),
               eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
               eventSeries: createEventSeriesLoader(),
+              eventOccurrence: createEventOccurrenceLoader(),
               organization: createOrganizationLoader(),
               eventSeriesParticipant: createEventSeriesParticipantLoader(),
               eventSeriesParticipantsByEvent: createEventSeriesParticipantsByEventLoader(),
+              eventOccurrenceParticipant: createEventOccurrenceParticipantLoader(),
+              eventOccurrenceParticipantsByOccurrence: createEventOccurrenceParticipantsByOccurrenceLoader(),
+              eventOccurrenceParticipantCountByOccurrence: createEventOccurrenceParticipantCountByOccurrenceLoader(),
+              myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
             },
           };
         },

@@ -10,6 +10,8 @@ export * from './user/mutation';
 export * from './user/auth';
 export * from './eventSeriesParticipant/query';
 export * from './eventSeriesParticipant/mutation';
+export * from './eventOccurrenceParticipant/query';
+export * from './eventOccurrenceParticipant/mutation';
 export * from './organization/query';
 export * from './organization/mutation';
 export * from './venue/query';

@@ -46,6 +46,8 @@ interface FollowRequestEventPayload {
 export interface EventRsvpRealtimeSnapshot {
   participantId: string;
   eventId: string;
+  occurrenceId?: string;
+  occurrenceKey?: string;
   userId: string;
   status: ParticipantStatus;
   quantity?: number | null;

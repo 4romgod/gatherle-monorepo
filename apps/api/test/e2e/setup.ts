@@ -32,6 +32,36 @@ function countE2eFiles(dir: string): number {
  */
 const WARMUP_QUERY = JSON.stringify({ query: '{ __typename }' });
 
+const assertLocalServerReady = async (graphqlUrl: string): Promise<void> => {
+  const healthUrl = new URL(graphqlUrl);
+  healthUrl.pathname = '/health';
+  healthUrl.search = '';
+  healthUrl.hash = '';
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+
+  try {
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`health check returned HTTP ${response.status}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Local API is not reachable at ${healthUrl.toString()}. ` +
+        'Start it with `STAGE=Dev npm run dev:api` before running e2e tests. ' +
+        `Original error: ${message}`,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 /**
  * Fire `count` concurrent POST requests to the GraphQL endpoint.
  * Each concurrent request provisions a separate Lambda execution environment,
@@ -94,6 +124,8 @@ const setup = async () => {
     console.log(`Warming up ${concurrency} Lambda containers at ${graphqlUrl}`);
     await warmUpLambda(graphqlUrl, concurrency);
     console.log('Lambda warm-up complete.');
+  } else {
+    await assertLocalServerReady(graphqlUrl);
   }
 
   console.log('Done setting up e2e tests...');

@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { Field, ID, Int, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop } from '@typegoose/typegoose';
 import { EVENT_DESCRIPTIONS } from '../constants';
+import { EventOccurrenceParticipant } from './eventOccurrenceParticipant';
+import { EventSeries } from './eventSeries';
 
 export enum EventOccurrenceStatus {
   Scheduled = 'Scheduled',
@@ -60,6 +62,28 @@ export class EventOccurrence {
   @prop({ required: true, default: 1, type: () => Number })
   @Field(() => Int, { description: EVENT_DESCRIPTIONS.OCCURRENCE.SERIES_SCHEDULE_VERSION })
   seriesScheduleVersion: number;
+
+  // Internal counter used for atomic occurrence-capacity enforcement.
+  @prop({ required: true, default: 0, type: () => Number })
+  reservedSlotCount?: number;
+
+  @Field(() => EventSeries, { nullable: true, description: EVENT_DESCRIPTIONS.OCCURRENCE.EVENT_SERIES })
+  eventSeries?: EventSeries;
+
+  @Field(() => [EventOccurrenceParticipant], {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.OCCURRENCE.PARTICIPANTS,
+  })
+  participants?: EventOccurrenceParticipant[];
+
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.OCCURRENCE.RSVP_COUNT })
+  rsvpCount?: number;
+
+  @Field(() => EventOccurrenceParticipant, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.OCCURRENCE.MY_RSVP,
+  })
+  myRsvp?: EventOccurrenceParticipant | null;
 
   @prop({ type: () => Date })
   @Field(() => Date, { description: EVENT_DESCRIPTIONS.OCCURRENCE.CREATED_AT })
