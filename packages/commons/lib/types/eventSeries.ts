@@ -56,17 +56,17 @@ registerEnumType(EventStatus, {
 
 registerEnumType(EventVisibility, {
   name: 'EventVisibility',
-  description: 'Visibility of the event',
+  description: EVENT_DESCRIPTIONS.EVENT.VISIBILITY,
 });
 
 registerEnumType(EventLifecycleStatus, {
   name: 'EventLifecycleStatus',
-  description: 'Lifecycle status of the event',
+  description: EVENT_DESCRIPTIONS.EVENT.LIFECYCLE_STATUS,
 });
 
 registerEnumType(EventOrganizerRole, {
   name: 'EventOrganizerRole',
-  description: 'Role of an event organizer',
+  description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_ROLE,
 });
 
 @modelOptions({ options: { allowMixed: Severity.ALLOW } })
@@ -81,33 +81,33 @@ export class Media {
   otherMediaData?: Record<string, any>;
 }
 
-@ObjectType('EventSchedule')
+@ObjectType('EventSchedule', { description: EVENT_DESCRIPTIONS.EVENT.SCHEDULE_TYPE })
 export class EventSchedule {
   @prop({ type: () => Date, required: true })
-  @Field(() => Date, { description: 'Start date/time of the event' })
+  @Field(() => Date, { description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME })
   startAt: Date;
 
   @prop({ type: () => Date })
-  @Field(() => Date, { nullable: true, description: 'End date/time of each occurrence (optional)' })
+  @Field(() => Date, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME })
   endAt?: Date;
 
   @prop({ type: () => String, required: true })
-  @Field(() => String, { description: 'IANA timezone identifier (e.g. Africa/Johannesburg)' })
+  @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.TIMEZONE })
   timezone: string;
 
   @prop({ type: () => String, required: true })
-  @Field(() => String, { description: 'RRULE string — single source of truth for event recurrence and scheduling' })
+  @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.RECURRENCE_RULE })
   recurrenceRule: string;
 }
 
-@ObjectType('EventOrganizer')
+@ObjectType('EventOrganizer', { description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_TYPE })
 export class EventOrganizer {
   @prop({ ref: () => User, type: () => String, required: true })
-  @Field(() => User, { description: 'User reference for the organizer' })
+  @Field(() => User, { description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_USER })
   user: Ref<User>;
 
   @prop({ enum: EventOrganizerRole, type: () => String, required: true })
-  @Field(() => EventOrganizerRole, { description: 'Role of the organizer' })
+  @Field(() => EventOrganizerRole, { description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_ROLE })
   role: EventOrganizerRole;
 }
 
@@ -127,7 +127,7 @@ export class EventSeries {
   title: string;
 
   @prop({ type: () => String })
-  @Field(() => String, { nullable: true, description: 'Short summary for listings' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SUMMARY })
   summary?: string;
 
   @prop({ required: true, type: () => String })
@@ -135,19 +135,24 @@ export class EventSeries {
   description: string;
 
   @prop({ type: () => EventSchedule, required: true, _id: false })
-  @Field(() => EventSchedule, { description: 'Single source of truth for all event dates and recurrence' })
+  @Field(() => EventSchedule, { description: EVENT_DESCRIPTIONS.EVENT.PRIMARY_SCHEDULE })
   primarySchedule: EventSchedule;
+
+  // Internal counter bumped on schedule changes so occurrence regeneration can
+  // tell which version of the series schedule produced a given occurrence row.
+  @prop({ type: () => Number, default: 1 })
+  scheduleVersion?: number;
 
   @prop({ type: () => Location, required: true })
   @Field(() => Location, { description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
   location: Location;
 
   @prop({ type: () => String })
-  @Field(() => String, { nullable: true, description: 'Snapshot of location for history' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION_SNAPSHOT })
   locationSnapshot?: string;
 
   @prop({ ref: () => String, type: () => String })
-  @Field(() => ID, { nullable: true, description: 'Reference to a venue when available' })
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VENUE_ID })
   venueId?: string;
 
   @prop({ required: true, enum: EventStatus, type: () => String })
@@ -155,11 +160,11 @@ export class EventSeries {
   status: EventStatus;
 
   @prop({ enum: EventLifecycleStatus, type: () => String })
-  @Field(() => EventLifecycleStatus, { nullable: true, description: 'Lifecycle status (draft/published/etc)' })
+  @Field(() => EventLifecycleStatus, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LIFECYCLE_STATUS })
   lifecycleStatus?: EventLifecycleStatus;
 
   @prop({ enum: EventVisibility, type: () => String })
-  @Field(() => EventVisibility, { nullable: true, description: 'Visibility controls for discovery' })
+  @Field(() => EventVisibility, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VISIBILITY })
   visibility?: EventVisibility;
 
   @prop({ type: () => Number })
@@ -167,23 +172,23 @@ export class EventSeries {
   capacity?: number;
 
   @prop({ type: () => Number })
-  @Field(() => Int, { nullable: true, description: 'Optional RSVP/participant limit' })
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIMIT })
   rsvpLimit?: number;
 
   @prop({ default: false, type: () => Boolean })
-  @Field(() => Boolean, { nullable: true, description: 'Enable waitlist when capacity is reached' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.WAITLIST_ENABLED })
   waitlistEnabled?: boolean;
 
   @prop({ default: false, type: () => Boolean })
-  @Field(() => Boolean, { nullable: true, description: 'Allow plus ones for guests' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ALLOW_GUEST_PLUS_ONES })
   allowGuestPlusOnes?: boolean;
 
   @prop({ default: false, type: () => Boolean })
-  @Field(() => Boolean, { nullable: true, description: 'Enable reminders for attendees' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.REMINDERS_ENABLED })
   remindersEnabled?: boolean;
 
   @prop({ default: true, type: () => Boolean })
-  @Field(() => Boolean, { nullable: true, description: 'Whether attendees list is visible' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SHOW_ATTENDEES })
   showAttendees?: boolean;
 
   @prop({ type: () => [String], ref: () => EventCategory, required: true })
@@ -219,32 +224,31 @@ export class EventSeries {
   eventLink?: string;
 
   @prop({ type: () => String })
-  @Field(() => String, { nullable: true, description: 'Organization owning the event' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION_ID })
   orgId?: string;
 
   @Field(() => Organization, {
     nullable: true,
-    description: 'Organization that owns this event (resolved via field resolver)',
+    description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION,
   })
   organization?: Organization;
 
   @Field(() => [EventSeriesParticipant], {
     nullable: true,
-    description:
-      'Resolved participants populated via $lookup aggregation (not persisted in EventSeries document; queried from EventSeriesParticipant collection)',
+    description: EVENT_DESCRIPTIONS.EVENT.PARTICIPANTS,
   })
   participants?: EventSeriesParticipant[];
 
   // Computed fields populated via aggregation helpers (not persisted on the document)
   @Field(() => Number, {
     nullable: true,
-    description: 'Number of users who have saved the event (computed via follows lookup)',
+    description: EVENT_DESCRIPTIONS.EVENT.SAVED_BY_COUNT,
   })
   savedByCount?: number;
 
   @Field(() => Number, {
     nullable: true,
-    description: 'Number of RSVPs (Going or Interested) computed during aggregation',
+    description: EVENT_DESCRIPTIONS.EVENT.RSVP_COUNT,
   })
   rsvpCount?: number;
 }
@@ -257,44 +261,44 @@ export class CreateEventInput {
   @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION })
   description: string;
 
-  @Field(() => GraphQLJSON, { description: 'Primary schedule — contains startAt, endAt, timezone, and recurrenceRule' })
+  @Field(() => GraphQLJSON, { description: EVENT_DESCRIPTIONS.EVENT.PRIMARY_SCHEDULE })
   primarySchedule: Record<string, any>;
 
   // TODO Should the type be like this (or be location type)
   @Field(() => GraphQLJSON, { description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
   location: Record<string, any>;
 
-  @Field(() => String, { nullable: true, description: 'Snapshot of location' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION_SNAPSHOT })
   locationSnapshot?: string;
 
-  @Field(() => ID, { nullable: true, description: 'Venue reference' })
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VENUE_ID })
   venueId?: string;
 
   @Field(() => EventStatus, { description: EVENT_DESCRIPTIONS.EVENT.STATUS })
   status: EventStatus;
 
-  @Field(() => EventLifecycleStatus, { nullable: true, description: 'Lifecycle status' })
+  @Field(() => EventLifecycleStatus, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LIFECYCLE_STATUS })
   lifecycleStatus?: EventLifecycleStatus;
 
-  @Field(() => EventVisibility, { nullable: true, description: 'Visibility controls' })
+  @Field(() => EventVisibility, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VISIBILITY })
   visibility?: EventVisibility;
 
   @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.CAPACITY })
   capacity?: number;
 
-  @Field(() => Int, { nullable: true, description: 'Optional RSVP/participant limit' })
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIMIT })
   rsvpLimit?: number;
 
-  @Field(() => Boolean, { nullable: true, description: 'Enable waitlist' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.WAITLIST_ENABLED })
   waitlistEnabled?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Allow plus ones' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ALLOW_GUEST_PLUS_ONES })
   allowGuestPlusOnes?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Send reminders' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.REMINDERS_ENABLED })
   remindersEnabled?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Show attendee list' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SHOW_ATTENDEES })
   showAttendees?: boolean;
 
   @Field(() => [String], { description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -321,10 +325,10 @@ export class CreateEventInput {
   @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_LINK })
   eventLink?: string;
 
-  @Field(() => String, { nullable: true, description: 'Organization owning the event' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION_ID })
   orgId?: string;
 
-  @Field(() => String, { nullable: true, description: 'Short summary' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SUMMARY })
   summary?: string;
 }
 
@@ -341,7 +345,7 @@ export class UpdateEventInput {
 
   @Field(() => GraphQLJSON, {
     nullable: true,
-    description: 'Primary schedule — contains startAt, endAt, timezone, and recurrenceRule',
+    description: EVENT_DESCRIPTIONS.EVENT.PRIMARY_SCHEDULE,
   })
   primarySchedule?: Record<string, any>;
 
@@ -349,37 +353,37 @@ export class UpdateEventInput {
   @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
   location?: Record<string, any>;
 
-  @Field(() => String, { nullable: true, description: 'Location snapshot' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION_SNAPSHOT })
   locationSnapshot?: string;
 
-  @Field(() => ID, { nullable: true, description: 'Venue reference' })
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VENUE_ID })
   venueId?: string;
 
   @Field(() => EventStatus, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.STATUS })
   status?: EventStatus;
 
-  @Field(() => EventLifecycleStatus, { nullable: true, description: 'Lifecycle status' })
+  @Field(() => EventLifecycleStatus, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LIFECYCLE_STATUS })
   lifecycleStatus?: EventLifecycleStatus;
 
-  @Field(() => EventVisibility, { nullable: true, description: 'Visibility controls' })
+  @Field(() => EventVisibility, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VISIBILITY })
   visibility?: EventVisibility;
 
   @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.CAPACITY })
   capacity?: number;
 
-  @Field(() => Int, { nullable: true, description: 'RSVP limit' })
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIMIT })
   rsvpLimit?: number;
 
-  @Field(() => Boolean, { nullable: true, description: 'Enable waitlist' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.WAITLIST_ENABLED })
   waitlistEnabled?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Allow plus ones' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ALLOW_GUEST_PLUS_ONES })
   allowGuestPlusOnes?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Send reminders' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.REMINDERS_ENABLED })
   remindersEnabled?: boolean;
 
-  @Field(() => Boolean, { nullable: true, description: 'Show attendee list' })
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SHOW_ATTENDEES })
   showAttendees?: boolean;
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
@@ -406,10 +410,10 @@ export class UpdateEventInput {
   @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_LINK })
   eventLink?: string;
 
-  @Field(() => String, { nullable: true, description: 'Organization owning the event' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION_ID })
   orgId?: string;
 
-  @Field(() => String, { nullable: true, description: 'Short summary' })
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SUMMARY })
   summary?: string;
 }
 

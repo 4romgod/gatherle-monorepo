@@ -16,7 +16,7 @@ near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/T
 
 **Implemented today**
 
-- User, EventSeries, EventCategory, EventCategoryGroup
+- User, EventSeries, EventOccurrence, EventCategory, EventCategoryGroup
 - EventSeriesParticipant
 - Organization, OrganizationMembership, Venue
 - Follow, Activity
@@ -80,6 +80,15 @@ classDiagram
         +string userId
         +ParticipantStatus status
     }
+    class EventOccurrence {
+        +string occurrenceId
+        +string eventSeriesId
+        +string occurrenceKey
+        +Date originalStartAt
+        +Date startAt
+        +Date endAt
+        +EventOccurrenceStatus status
+    }
     class Activity {
         +string activityId
         +string actorId
@@ -95,7 +104,9 @@ classDiagram
     EventSeries "many" --> "1" Organization : ownedBy
     EventSeries "0..1" --> "1" Venue : at
     EventSeries "1" --> "many" EventOrganizer : includes
+    EventSeries "1" --> "many" EventOccurrence : materializes
     EventSeries "1" --> "many" EventSeriesParticipant : resolved
+    EventOccurrence "many" --> "1" EventSeries : eventSeriesId
     EventOrganizer "many" --> "1" User : userId
     EventSeriesParticipant "many" --> "1" User : userId
     Activity "many" --> "1" EventSeries : references
@@ -181,8 +192,8 @@ storing it as a single source of truth for listing feeds and resolver pipelines.
 - Status: `status` (Cancelled|Completed|Ongoing|Upcoming).
 - Lifecycle: `lifecycleStatus` (Draft|Published|Cancelled|Completed).
 - Visibility: `visibility` (Public|Private|Unlisted|Invitation), `privacySetting` (Public|Private|Invitation).
-- Schedule: `recurrenceRule` (required), plus `primarySchedule? { startAt, endAt, timezone, recurrenceRule }` and
-  `occurrences?[]`.
+- Schedule: `primarySchedule { startAt, endAt, timezone, recurrenceRule }`.
+- Internal scheduling metadata: `scheduleVersion` for idempotent recurring-occurrence regeneration.
 - Location: `location` (Location type above), `venueId?` and `locationSnapshot?`.
 - People: `organizers [{ user: Ref<User>, role: Host|CoHost|Volunteer }]`.
 - Taxonomy: `eventCategories[]` (EventCategory refs) for flattened ids.
@@ -202,6 +213,26 @@ storing it as a single source of truth for listing feeds and resolver pipelines.
     - `[{"userId": "u123", "text": "Doors open at 7pm", "createdAt": "2024-01-01T18:00:00Z"}]`
   - `eventLink`: canonical URL for the event’s public landing page (may point to an internal or external site).
 - `participants` is resolved by GraphQL via `EventSeriesParticipant` and is not stored on the EventSeries document.
+
+### EventOccurrence
+
+`EventOccurrence` is the new concrete scheduling layer for recurring `EventSeries`. It is generated from the
+series-level RRULE and stored separately so the platform can move toward occurrence-based RSVP, cancellation,
+rescheduling, and calendar querying without overloading the parent series document.
+
+As of the current implementation:
+
+- occurrences are materialized only for recurring `EventSeries`
+- single-date `EventSeries` still read directly from the parent series record
+- occurrence generation uses a rolling six-month window
+- regeneration is idempotent via `occurrenceKey = ${eventSeriesId}#${originalStartAt.toISOString()}`
+
+Stored fields:
+
+- Identity: `occurrenceId`, `eventSeriesId`, `occurrenceKey`.
+- Timing: `originalStartAt`, `startAt`, `endAt`, `timezone`.
+- Lifecycle: `status` (Scheduled|Cancelled|Completed), `isException`.
+- Regeneration bookkeeping: `seriesScheduleVersion`.
 
 ### EventSeriesParticipant
 

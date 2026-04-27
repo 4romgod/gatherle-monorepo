@@ -17,6 +17,10 @@ describe('Models Index Exports', () => {
     expect(Models.EventSeriesParticipant).toBeDefined();
   });
 
+  it('should export EventOccurrence model', () => {
+    expect(Models.EventOccurrence).toBeDefined();
+  });
+
   it('should export ChatMessage model', () => {
     expect(Models.ChatMessage).toBeDefined();
   });

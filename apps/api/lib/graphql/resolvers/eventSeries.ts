@@ -41,7 +41,7 @@ export class EventSeriesResolver {
     if (input.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
-    return EventSeriesDAO.create(input);
+    return EventSeriesService.create(input);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -59,7 +59,7 @@ export class EventSeriesResolver {
     if (input.orgId && input.orgId !== existingEvent.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
-    const updatedEvent = await EventSeriesDAO.updateEvent(input);
+    const updatedEvent = await EventSeriesService.update(input);
 
     // If this update transitioned the event to Published, notify the recommendation engine.
     // Fire-and-forget: errors must not block the mutation response.
@@ -79,13 +79,13 @@ export class EventSeriesResolver {
   @Mutation(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventById })
   async deleteEventById(@Arg('eventId', () => String) eventId: string): Promise<EventSeries> {
     validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId));
-    return EventSeriesDAO.deleteEventById(eventId);
+    return EventSeriesService.deleteById(eventId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventBySlug })
   async deleteEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventSeries> {
-    return EventSeriesDAO.deleteEventBySlug(slug);
+    return EventSeriesService.deleteBySlug(slug);
   }
 
   @Query(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventById })

@@ -43,7 +43,7 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
 });
 
 describe('EventSeriesDAO', () => {
-  afterEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
@@ -67,6 +67,7 @@ describe('EventSeriesDAO', () => {
     ...mockEventInput,
     eventId: 'mockEventId',
     slug: 'sample-event-series',
+    scheduleVersion: 1,
     organizers: [],
     eventCategories: [],
   };
@@ -746,6 +747,60 @@ describe('EventSeriesDAO', () => {
       const updatedEvent = await EventSeriesDAO.updateEvent(mockUpdatedEventInput);
       expect({ ...updatedEvent, slug: 'updated-event-title' }).toEqual(expectedUpdatedEvent);
       expect(EventSeriesModel.findById).toHaveBeenCalledWith(eventId);
+      expect(mockEvent.save).toHaveBeenCalled();
+    });
+
+    it('increments scheduleVersion and syncs occurrences when primarySchedule changes', async () => {
+      const expectedScheduleUpdate = {
+        ...expectedEvent,
+        scheduleVersion: 2,
+        primarySchedule: {
+          startAt: new Date('2026-09-20T10:00:00Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=SU',
+        },
+      };
+      const mockEvent = {
+        ...expectedEvent,
+        scheduleVersion: 1,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue(expectedScheduleUpdate),
+      };
+
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvent));
+
+      const updatedEvent = await EventSeriesDAO.updateEvent({
+        eventId: 'mockEventId',
+        primarySchedule: expectedScheduleUpdate.primarySchedule,
+      });
+
+      expect(updatedEvent).toEqual(expectedScheduleUpdate);
+      expect(mockEvent.scheduleVersion).toBe(2);
+      expect(mockEvent.save).toHaveBeenCalled();
+    });
+
+    it('syncs occurrences when status changes without incrementing scheduleVersion', async () => {
+      const expectedStatusUpdate = {
+        ...expectedEvent,
+        status: EventStatus.Cancelled,
+        scheduleVersion: 1,
+      };
+      const mockEvent = {
+        ...expectedEvent,
+        scheduleVersion: 1,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue(expectedStatusUpdate),
+      };
+
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvent));
+
+      const updatedEvent = await EventSeriesDAO.updateEvent({
+        eventId: 'mockEventId',
+        status: EventStatus.Cancelled,
+      });
+
+      expect(updatedEvent).toEqual(expectedStatusUpdate);
+      expect(mockEvent.scheduleVersion).toBe(1);
       expect(mockEvent.save).toHaveBeenCalled();
     });
 

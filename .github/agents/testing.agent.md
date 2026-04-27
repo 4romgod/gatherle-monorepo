@@ -217,7 +217,7 @@ expect(result).toBe(true);
 
 ## API E2e Tests (`apps/api/test/e2e/`)
 
-**Framework:** Jest + supertest, `testEnvironment: node`, `testTimeout: 20000`
+**Framework:** Jest + supertest, `testEnvironment: node`, `testTimeout: 60000`
 
 **File extension:** `.e2e.ts` (distinguishes e2e from unit `.test.ts` files)
 

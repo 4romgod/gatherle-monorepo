@@ -3,6 +3,7 @@ export { default as User } from './user';
 export { default as EventCategory } from './eventCategory';
 export { default as EventCategoryGroup } from './eventCategoryGroup';
 export { default as EventSeriesParticipant } from './eventSeriesParticipant';
+export { default as EventOccurrence } from './eventOccurrence';
 export { default as EventMoment } from './eventMoment';
 export { default as Organization } from './organization';
 export { default as OrganizationMembership } from './organizationMembership';

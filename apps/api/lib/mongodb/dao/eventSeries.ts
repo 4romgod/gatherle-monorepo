@@ -159,6 +159,10 @@ class EventSeriesDAO {
 
       // Filter out undefined values to avoid overwriting with undefined
       const fieldsToUpdate = Object.fromEntries(Object.entries(restInput).filter(([_, value]) => value !== undefined));
+      const isScheduleUpdate = 'primarySchedule' in fieldsToUpdate;
+      if (isScheduleUpdate) {
+        fieldsToUpdate.scheduleVersion = (event.scheduleVersion ?? 1) + 1;
+      }
       Object.assign(event, fieldsToUpdate);
       await event.save();
       return event.toObject();

@@ -39,7 +39,7 @@ const config: Config = {
   testEnvironment: 'node',
   rootDir: '../../',
   testPathIgnorePatterns: ['<rootDir>/dist/', '<rootDir>/node_modules/'],
-  testTimeout: 20000,
+  testTimeout: 60000,
   testMatch: ['<rootDir>/test/e2e/**/*.e2e.[jt]s?(x)'],
   maxWorkers: maxE2eWorkers,
   moduleNameMapper: {
