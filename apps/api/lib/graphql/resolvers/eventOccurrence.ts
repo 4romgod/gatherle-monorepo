@@ -1,10 +1,21 @@
 import 'reflect-metadata';
-import { Arg, Ctx, FieldResolver, Query, Resolver, Root } from 'type-graphql';
-import { EventOccurrence, EventSeries, EventsQueryOptionsInput } from '@gatherle/commons/types';
+import { Arg, Ctx, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
+import {
+  EventOccurrence,
+  EventOccurrenceParticipant,
+  EventSeries,
+  EventsQueryOptionsInput,
+} from '@gatherle/commons/types';
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';
-import { logger } from '@/utils/logger';
+import { EventSeriesParticipantDAO } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
+import {
+  buildMyEventOccurrenceParticipantLoadKey,
+  projectSeriesParticipantToOccurrenceParticipant,
+  sumActiveOccurrenceRsvpCount,
+} from '@/utils';
+import { logger } from '@/utils/logger';
 
 @Resolver(() => EventOccurrence)
 export class EventOccurrenceResolver {
@@ -22,5 +33,96 @@ export class EventOccurrenceResolver {
   })
   async eventSeries(@Root() occurrence: EventOccurrence, @Ctx() context: ServerContext): Promise<EventSeries | null> {
     return context.loaders.eventSeries.load(occurrence.eventSeriesId);
+  }
+
+  @FieldResolver(() => [EventOccurrenceParticipant], {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.OCCURRENCE.PARTICIPANTS,
+  })
+  async participants(
+    @Root() occurrence: EventOccurrence,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrenceParticipant[]> {
+    const eventSeries = await context.loaders.eventSeries.load(occurrence.eventSeriesId);
+    if (!eventSeries) {
+      return [];
+    }
+
+    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
+      const seriesParticipants = await context.loaders.eventSeriesParticipantsByEvent.load(eventSeries.eventId);
+      const users = await Promise.all(
+        seriesParticipants.map((participant) => context.loaders.user.load(participant.userId)),
+      );
+
+      return seriesParticipants.map((participant, index) =>
+        projectSeriesParticipantToOccurrenceParticipant(
+          occurrence.occurrenceId,
+          {
+            ...participant,
+            user: users[index] ?? undefined,
+          },
+          occurrence,
+        ),
+      );
+    }
+
+    const participants = await context.loaders.eventOccurrenceParticipantsByOccurrence.load(occurrence.occurrenceId);
+    const users = await Promise.all(participants.map((participant) => context.loaders.user.load(participant.userId)));
+
+    return participants.map((participant, index) => ({
+      ...participant,
+      user: users[index] ?? undefined,
+    }));
+  }
+
+  @FieldResolver(() => Int, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.OCCURRENCE.RSVP_COUNT,
+  })
+  async rsvpCount(@Root() occurrence: EventOccurrence, @Ctx() context: ServerContext): Promise<number> {
+    if (typeof occurrence.rsvpCount === 'number') {
+      return occurrence.rsvpCount;
+    }
+
+    const eventSeries = await context.loaders.eventSeries.load(occurrence.eventSeriesId);
+    if (!eventSeries) {
+      return 0;
+    }
+
+    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
+      const participants = await EventSeriesParticipantDAO.readByEvent(eventSeries.eventId);
+      return sumActiveOccurrenceRsvpCount(participants);
+    }
+
+    return context.loaders.eventOccurrenceParticipantCountByOccurrence.load(occurrence.occurrenceId);
+  }
+
+  @FieldResolver(() => EventOccurrenceParticipant, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.OCCURRENCE.MY_RSVP,
+  })
+  async myRsvp(
+    @Root() occurrence: EventOccurrence,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrenceParticipant | null> {
+    if (!context.user?.userId) {
+      return null;
+    }
+
+    const eventSeries = await context.loaders.eventSeries.load(occurrence.eventSeriesId);
+    if (!eventSeries) {
+      return null;
+    }
+
+    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
+      const participant = await EventSeriesParticipantDAO.readByEventAndUser(eventSeries.eventId, context.user.userId);
+      return participant
+        ? projectSeriesParticipantToOccurrenceParticipant(occurrence.occurrenceId, participant, occurrence)
+        : null;
+    }
+
+    return context.loaders.myEventOccurrenceParticipant.load(
+      buildMyEventOccurrenceParticipantLoadKey(occurrence.occurrenceId, context.user.userId),
+    );
   }
 }

@@ -14,9 +14,14 @@ import {
   createEventCategoryLoader,
   createEventCategoryInterestCountLoader,
   createEventSeriesLoader,
+  createEventOccurrenceLoader,
   createOrganizationLoader,
   createEventSeriesParticipantLoader,
   createEventSeriesParticipantsByEventLoader,
+  createEventOccurrenceParticipantLoader,
+  createEventOccurrenceParticipantsByOccurrenceLoader,
+  createEventOccurrenceParticipantCountByOccurrenceLoader,
+  createMyEventOccurrenceParticipantLoader,
 } from '@/graphql/loaders';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
@@ -84,9 +89,14 @@ export const startExpressApolloServer = async (
             eventCategory: createEventCategoryLoader(),
             eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
             eventSeries: createEventSeriesLoader(),
+            eventOccurrence: createEventOccurrenceLoader(),
             organization: createOrganizationLoader(),
             eventSeriesParticipant: createEventSeriesParticipantLoader(),
             eventSeriesParticipantsByEvent: createEventSeriesParticipantsByEventLoader(),
+            eventOccurrenceParticipant: createEventOccurrenceParticipantLoader(),
+            eventOccurrenceParticipantsByOccurrence: createEventOccurrenceParticipantsByOccurrenceLoader(),
+            eventOccurrenceParticipantCountByOccurrence: createEventOccurrenceParticipantCountByOccurrenceLoader(),
+            myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
           },
         };
       },

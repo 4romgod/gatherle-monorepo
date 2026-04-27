@@ -12,6 +12,7 @@ export * from './eventCategory';
 export * from './eventCategoryGroup';
 export * from './eventSeriesParticipant';
 export * from './eventOccurrence';
+export * from './eventOccurrenceParticipant';
 export * from './general';
 export * from './location';
 export * from './query';

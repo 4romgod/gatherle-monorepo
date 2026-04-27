@@ -1,4 +1,5 @@
 import { RRule } from 'rrule';
+import { GraphQLError } from 'graphql';
 import { EventOccurrenceDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
   CustomError,
@@ -6,6 +7,7 @@ import {
   getDateRangeForFilter,
   getOccurrencesInRange,
   getOccurrencesInRangeOrThrow,
+  parseOccurrenceId,
 } from '@/utils';
 import type {
   EventOccurrence,
@@ -265,6 +267,36 @@ function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean
 class EventOccurrenceService {
   static buildOccurrenceKey(eventSeriesId: string, originalStartAt: Date): string {
     return `${eventSeriesId}#${originalStartAt.toISOString()}`;
+  }
+
+  static async readOccurrenceById(occurrenceId: string): Promise<EventOccurrence | null> {
+    const persistedOccurrence = await EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
+    if (persistedOccurrence) {
+      return persistedOccurrence;
+    }
+
+    const parsedOccurrenceId = parseOccurrenceId(occurrenceId);
+    if (!parsedOccurrenceId) {
+      return null;
+    }
+
+    try {
+      const eventSeries = (await EventSeriesDAO.readEventById(
+        parsedOccurrenceId.eventSeriesId,
+      )) as OccurrenceQuerySeries;
+      if (this.isRecurringSeries(eventSeries)) {
+        return null;
+      }
+
+      const projectedOccurrence = projectSingleSeriesOccurrence(eventSeries);
+      return projectedOccurrence.occurrenceId === occurrenceId ? projectedOccurrence : null;
+    } catch (error) {
+      if (error instanceof GraphQLError && error.extensions?.code === ErrorTypes.NOT_FOUND.errorCode) {
+        return null;
+      }
+
+      throw error;
+    }
   }
 
   static async deleteOccurrencesForSeries(eventSeriesId: string): Promise<void> {

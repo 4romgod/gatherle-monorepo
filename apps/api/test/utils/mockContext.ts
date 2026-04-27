@@ -1,7 +1,15 @@
 import DataLoader from 'dataloader';
-import { EventSeriesParticipantDAO } from '@/mongodb/dao';
-import type { User, EventCategory, EventSeries, Organization } from '@gatherle/commons/types';
+import { EventOccurrenceParticipantDAO, EventSeriesParticipantDAO } from '@/mongodb/dao';
+import type {
+  User,
+  EventCategory,
+  EventSeries,
+  Organization,
+  EventOccurrence,
+  EventOccurrenceParticipant,
+} from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
+import { getActiveOccurrenceRsvpCountContribution } from '@/utils';
 
 /**
  * Creates a mock ServerContext with loaders for testing.
@@ -13,7 +21,9 @@ export const createMockContext = (
     users?: Map<string, User>;
     categories?: Map<string, EventCategory>;
     events?: Map<string, EventSeries>;
+    occurrences?: Map<string, EventOccurrence>;
     organizations?: Map<string, Organization>;
+    occurrenceParticipants?: Map<string, EventOccurrenceParticipant>;
   },
 ): ServerContext => {
   const userLoader = new DataLoader<string, User | null>(async (keys) => {
@@ -41,6 +51,10 @@ export const createMockContext = (
     return keys.map((key) => mockData?.organizations?.get(key) ?? null);
   });
 
+  const eventOccurrenceLoader = new DataLoader<string, EventOccurrence | null>(async (keys) => {
+    return keys.map((key) => mockData?.occurrences?.get(key) ?? null);
+  });
+
   const eventSeriesParticipantLoader = new DataLoader<string, any>(async (keys) => {
     return keys.map(() => null);
   });
@@ -57,6 +71,43 @@ export const createMockContext = (
     return eventIds.map((id) => map.get(id) ?? []);
   });
 
+  const eventOccurrenceParticipantLoader = new DataLoader<string, EventOccurrenceParticipant | null>(async (keys) => {
+    return keys.map((key) => mockData?.occurrenceParticipants?.get(key) ?? null);
+  });
+
+  const eventOccurrenceParticipantsByOccurrenceLoader = new DataLoader<string, EventOccurrenceParticipant[]>(
+    async (occurrenceIds) => {
+      const allParticipants = await EventOccurrenceParticipantDAO.readByOccurrences([...occurrenceIds]);
+      const map = new Map<string, EventOccurrenceParticipant[]>();
+      for (const id of occurrenceIds) map.set(id, []);
+      for (const participant of allParticipants) {
+        if (participant && map.has(participant.occurrenceId)) {
+          map.get(participant.occurrenceId)!.push(participant);
+        }
+      }
+      return occurrenceIds.map((id) => map.get(id) ?? []);
+    },
+  );
+
+  const eventOccurrenceParticipantCountByOccurrenceLoader = new DataLoader<string, number>(async (occurrenceIds) => {
+    const allParticipants = await EventOccurrenceParticipantDAO.readByOccurrences([...occurrenceIds]);
+    const map = new Map<string, number>();
+    for (const id of occurrenceIds) map.set(id, 0);
+    for (const participant of allParticipants) {
+      if (participant) {
+        map.set(
+          participant.occurrenceId,
+          (map.get(participant.occurrenceId) ?? 0) + getActiveOccurrenceRsvpCountContribution(participant),
+        );
+      }
+    }
+    return occurrenceIds.map((id) => map.get(id) ?? 0);
+  });
+
+  const myEventOccurrenceParticipantLoader = new DataLoader<string, EventOccurrenceParticipant | null>(async (keys) => {
+    return keys.map((key) => mockData?.occurrenceParticipants?.get(key) ?? null);
+  });
+
   return {
     token: undefined,
     req: undefined,
@@ -66,9 +117,14 @@ export const createMockContext = (
       eventCategory: categoryLoader,
       eventCategoryInterestCount: eventCategoryInterestCountLoader,
       eventSeries: eventSeriesLoader,
+      eventOccurrence: eventOccurrenceLoader,
       organization: organizationLoader,
       eventSeriesParticipant: eventSeriesParticipantLoader,
       eventSeriesParticipantsByEvent: eventParticipantsByEventLoader,
+      eventOccurrenceParticipant: eventOccurrenceParticipantLoader,
+      eventOccurrenceParticipantsByOccurrence: eventOccurrenceParticipantsByOccurrenceLoader,
+      eventOccurrenceParticipantCountByOccurrence: eventOccurrenceParticipantCountByOccurrenceLoader,
+      myEventOccurrenceParticipant: myEventOccurrenceParticipantLoader,
     },
     ...overrides,
   };

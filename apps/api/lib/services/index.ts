@@ -4,6 +4,7 @@ export { default as EventOccurrenceService } from './eventOccurrence';
 export { default as FollowService } from './follow';
 export { default as RecommendationService } from './recommendation';
 export { default as EventSeriesParticipantService } from './eventSeriesParticipant';
+export { default as EventOccurrenceParticipantService } from './eventOccurrenceParticipant';
 export { default as UserService } from './user';
 export { default as OrganizationMembershipService } from './organizationMembership';
 export { default as MediaService } from './media';

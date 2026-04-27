@@ -9,6 +9,9 @@ jest.mock('@/mongodb/models', () => ({
     bulkWrite: jest.fn(),
     deleteMany: jest.fn(),
     find: jest.fn(),
+    findOne: jest.fn(),
+    findOneAndUpdate: jest.fn(),
+    updateOne: jest.fn(),
   },
 }));
 
@@ -32,6 +35,55 @@ describe('EventOccurrenceDAO', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('readByOccurrenceId', () => {
+    it('reads one occurrence by occurrenceId', async () => {
+      (EventOccurrenceModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(occurrence, { chainMethods: ['lean'] }),
+      );
+
+      const result = await EventOccurrenceDAO.readByOccurrenceId(occurrence.occurrenceId);
+
+      expect(result).toEqual(occurrence);
+      expect(EventOccurrenceModel.findOne).toHaveBeenCalledWith({ occurrenceId: occurrence.occurrenceId });
+    });
+
+    it('wraps read failures when querying one occurrence by occurrenceId', async () => {
+      (EventOccurrenceModel.findOne as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed')),
+      );
+
+      await expect(EventOccurrenceDAO.readByOccurrenceId(occurrence.occurrenceId)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByOccurrenceIds', () => {
+    it('returns early when no occurrenceIds are provided', async () => {
+      const results = await EventOccurrenceDAO.readByOccurrenceIds([]);
+
+      expect(results).toEqual([]);
+      expect(EventOccurrenceModel.find).not.toHaveBeenCalled();
+    });
+
+    it('reads occurrences by occurrenceIds', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([occurrence], { chainMethods: ['lean'] }),
+      );
+
+      const results = await EventOccurrenceDAO.readByOccurrenceIds([occurrence.occurrenceId]);
+
+      expect(results).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        occurrenceId: { $in: [occurrence.occurrenceId] },
+      });
+    });
+
+    it('wraps read failures when querying occurrenceIds', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('read failed')));
+
+      await expect(EventOccurrenceDAO.readByOccurrenceIds([occurrence.occurrenceId])).rejects.toThrow(GraphQLError);
+    });
   });
 
   describe('bulkUpsert', () => {
@@ -65,6 +117,7 @@ describe('EventOccurrenceDAO', () => {
                 },
                 $setOnInsert: {
                   occurrenceId: occurrence.occurrenceId,
+                  reservedSlotCount: 0,
                 },
               },
               upsert: true,
@@ -103,6 +156,7 @@ describe('EventOccurrenceDAO', () => {
                 },
                 $setOnInsert: {
                   occurrenceId: occurrence.occurrenceId,
+                  reservedSlotCount: 0,
                 },
               },
               upsert: true,
@@ -238,6 +292,87 @@ describe('EventOccurrenceDAO', () => {
       await expect(
         EventOccurrenceDAO.readUpcomingByEventSeriesId('series-1', new Date('2026-05-01T00:00:00.000Z'), 5),
       ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('reserveSlots', () => {
+    it('returns true without writing when slots are zero or negative', async () => {
+      await expect(EventOccurrenceDAO.reserveSlots(occurrence.occurrenceId, 0, 10)).resolves.toBe(true);
+      await expect(EventOccurrenceDAO.reserveSlots(occurrence.occurrenceId, -1, 10)).resolves.toBe(true);
+
+      expect(EventOccurrenceModel.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('atomically reserves slots when capacity allows', async () => {
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(occurrence));
+
+      const result = await EventOccurrenceDAO.reserveSlots(occurrence.occurrenceId, 2, 10);
+
+      expect(result).toBe(true);
+      expect(EventOccurrenceModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          occurrenceId: occurrence.occurrenceId,
+          $expr: {
+            $lte: [{ $add: [{ $ifNull: ['$reservedSlotCount', 0] }, 2] }, 10],
+          },
+        },
+        {
+          $inc: { reservedSlotCount: 2 },
+        },
+        {
+          new: true,
+        },
+      );
+    });
+
+    it('returns false when reserving the slots would exceed capacity', async () => {
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      const result = await EventOccurrenceDAO.reserveSlots(occurrence.occurrenceId, 2, 1);
+
+      expect(result).toBe(false);
+    });
+
+    it('wraps reserve slot failures', async () => {
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('reserve failed')),
+      );
+
+      await expect(EventOccurrenceDAO.reserveSlots(occurrence.occurrenceId, 2, 10)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('releaseReservedSlots', () => {
+    it('returns early without writing when slots are zero or negative', async () => {
+      await expect(EventOccurrenceDAO.releaseReservedSlots(occurrence.occurrenceId, 0)).resolves.toBeUndefined();
+      await expect(EventOccurrenceDAO.releaseReservedSlots(occurrence.occurrenceId, -1)).resolves.toBeUndefined();
+
+      expect(EventOccurrenceModel.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('decrements reserved slots when capacity is released', async () => {
+      (EventOccurrenceModel.updateOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ acknowledged: true }),
+      );
+
+      await EventOccurrenceDAO.releaseReservedSlots(occurrence.occurrenceId, 2);
+
+      expect(EventOccurrenceModel.updateOne).toHaveBeenCalledWith(
+        {
+          occurrenceId: occurrence.occurrenceId,
+        },
+        {
+          $inc: { reservedSlotCount: -2 },
+        },
+      );
+    });
+
+    it('wraps release slot failures', async () => {
+      (EventOccurrenceModel.updateOne as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('release failed')),
+      );
+
+      await expect(EventOccurrenceDAO.releaseReservedSlots(occurrence.occurrenceId, 2)).rejects.toThrow(GraphQLError);
     });
   });
 });

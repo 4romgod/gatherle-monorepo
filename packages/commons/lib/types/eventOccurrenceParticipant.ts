@@ -1,44 +1,23 @@
 import 'reflect-metadata';
-import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
+import { Field, ID, InputType, Int, ObjectType } from 'type-graphql';
 import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
 import { EVENT_DESCRIPTIONS } from '../constants';
-import { EventSeries } from './eventSeries';
+import { EventOccurrence } from './eventOccurrence';
+import { ParticipantStatus, ParticipantVisibility } from './eventSeriesParticipant';
 import { User } from './user';
 
-export enum ParticipantStatus {
-  Interested = 'Interested',
-  Going = 'Going',
-  Waitlisted = 'Waitlisted',
-  Cancelled = 'Cancelled',
-  CheckedIn = 'CheckedIn',
-}
-
-export enum ParticipantVisibility {
-  Public = 'Public',
-  Followers = 'Followers',
-  Private = 'Private',
-}
-
-registerEnumType(ParticipantStatus, {
-  name: 'ParticipantStatus',
-  description: EVENT_DESCRIPTIONS.PARTICIPANT.STATUS_ENUM,
-});
-registerEnumType(ParticipantVisibility, {
-  name: 'ParticipantVisibility',
-  description: EVENT_DESCRIPTIONS.PARTICIPANT.VISIBILITY_ENUM,
-});
-
-@ObjectType('EventSeriesParticipant', { description: EVENT_DESCRIPTIONS.PARTICIPANT.SERIES_TYPE })
+@ObjectType('EventOccurrenceParticipant', { description: EVENT_DESCRIPTIONS.PARTICIPANT.OCCURRENCE_TYPE })
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
-@index({ eventId: 1, userId: 1 }, { unique: true })
-export class EventSeriesParticipant {
+@index({ occurrenceId: 1, userId: 1 }, { unique: true })
+@index({ occurrenceId: 1, status: 1, rsvpAt: 1 })
+export class EventOccurrenceParticipant {
   @prop({ required: true, unique: true, index: true, type: () => String })
   @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.ID })
   participantId: string;
 
   @prop({ required: true, type: () => String })
-  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.EVENT_SERIES_ID })
-  eventId: string;
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.OCCURRENCE_ID })
+  occurrenceId: string;
 
   @prop({ required: true, type: () => String })
   @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.USER_ID })
@@ -49,7 +28,7 @@ export class EventSeriesParticipant {
   status: ParticipantStatus;
 
   @prop({ default: 1, type: () => Number })
-  @Field(() => Number, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.QUANTITY })
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.QUANTITY })
   quantity?: number;
 
   @prop({ type: () => String })
@@ -75,22 +54,19 @@ export class EventSeriesParticipant {
   @Field(() => Date, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.CHECKED_IN_AT })
   checkedInAt?: Date;
 
-  // GraphQL-only field resolved via field resolvers
-  @Field(() => EventSeries, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.EVENT_SERIES })
-  event?: EventSeries;
+  @Field(() => EventOccurrence, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.EVENT_OCCURRENCE })
+  occurrence?: EventOccurrence;
 
-  // GraphQL-only field resolved via field resolvers
   @Field(() => User, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.USER })
   user?: User;
 }
 
-@InputType('UpsertEventParticipantInput', { description: EVENT_DESCRIPTIONS.PARTICIPANT.UPSERT_SERIES_INPUT })
-export class UpsertEventParticipantInput {
-  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.EVENT_SERIES_ID })
-  eventId: string;
-
-  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.USER_ID })
-  userId: string;
+@InputType('UpsertEventOccurrenceParticipantInput', {
+  description: EVENT_DESCRIPTIONS.PARTICIPANT.UPSERT_OCCURRENCE_INPUT,
+})
+export class UpsertEventOccurrenceParticipantInput {
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.OCCURRENCE_ID })
+  occurrenceId: string;
 
   @Field(() => ParticipantStatus, {
     defaultValue: ParticipantStatus.Going,
@@ -98,7 +74,7 @@ export class UpsertEventParticipantInput {
   })
   status?: ParticipantStatus;
 
-  @Field(() => Number, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.QUANTITY })
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.QUANTITY })
   quantity?: number;
 
   @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.INVITED_BY })
@@ -111,11 +87,10 @@ export class UpsertEventParticipantInput {
   sharedVisibility?: ParticipantVisibility;
 }
 
-@InputType('CancelEventParticipantInput', { description: EVENT_DESCRIPTIONS.PARTICIPANT.CANCEL_SERIES_INPUT })
-export class CancelEventParticipantInput {
-  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.EVENT_SERIES_ID })
-  eventId: string;
-
-  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.USER_ID })
-  userId: string;
+@InputType('CancelEventOccurrenceParticipantInput', {
+  description: EVENT_DESCRIPTIONS.PARTICIPANT.CANCEL_OCCURRENCE_INPUT,
+})
+export class CancelEventOccurrenceParticipantInput {
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.OCCURRENCE_ID })
+  occurrenceId: string;
 }
