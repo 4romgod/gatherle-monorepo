@@ -200,7 +200,7 @@ describe('exceptions', () => {
     it('should extract validation message when error message contains "validation failed"', () => {
       const error = {
         name: 'SomeError',
-        message: 'Event validation failed: age must be positive',
+        message: 'EventSeries validation failed: age must be positive',
         errors: {
           age: { message: 'Age must be a positive number' },
         },
@@ -251,8 +251,8 @@ describe('exceptions', () => {
 
     it('should use custom default message when provided', () => {
       const error = { name: 'SomeError' };
-      const result = extractValidationErrorMessage(error, 'Event validation failed');
-      expect(result).toBe('Event validation failed');
+      const result = extractValidationErrorMessage(error, 'EventSeries validation failed');
+      expect(result).toBe('EventSeries validation failed');
     });
   });
 

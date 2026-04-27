@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { FollowResolver } from '@/graphql/resolvers/follow';
-import { FollowDAO, UserDAO, EventDAO } from '@/mongodb/dao';
-import type { CreateFollowInput, Follow, User, Event } from '@gatherle/commons/types';
+import { FollowDAO, UserDAO, EventSeriesDAO } from '@/mongodb/dao';
+import type { CreateFollowInput, Follow, User, EventSeries } from '@gatherle/commons/types';
 import {
   FollowTargetType,
   FollowApprovalStatus,
@@ -28,7 +28,7 @@ jest.mock('@/mongodb/dao', () => ({
   UserDAO: {
     readUserById: jest.fn(),
   },
-  EventDAO: {
+  EventSeriesDAO: {
     readEventById: jest.fn(),
   },
 }));
@@ -292,33 +292,33 @@ describe('FollowResolver', () => {
     });
   });
 
-  describe('Save Events (follow Event)', () => {
-    const mockEvent: Partial<Event> = {
+  describe('Save Events (follow EventSeries)', () => {
+    const mockEvent: Partial<EventSeries> = {
       eventId: new Types.ObjectId().toString(),
-      title: 'Test Event',
+      title: 'Test EventSeries',
       slug: 'test-event',
     };
 
     it('saves an event by following it', async () => {
       const mockInput: CreateFollowInput = {
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: mockEvent.eventId!,
       };
       const mockFollow: Follow = {
         followId: 'follow-event-1',
         followerUserId: mockUser.userId,
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: mockEvent.eventId!,
         approvalStatus: FollowApprovalStatus.Accepted,
         createdAt: new Date(),
       };
 
-      (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
       (FollowDAO.upsert as jest.Mock).mockResolvedValue(mockFollow);
 
       const result = await resolver.follow(mockInput, mockContext as ServerContext);
 
-      expect(EventDAO.readEventById).toHaveBeenCalledWith(mockInput.targetId);
+      expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(mockInput.targetId);
       expect(FollowDAO.upsert).toHaveBeenCalledWith({
         ...mockInput,
         followerUserId: mockUser.userId,
@@ -330,27 +330,31 @@ describe('FollowResolver', () => {
     it('throws error when saving non-existent event', async () => {
       const nonExistentEventId = new Types.ObjectId().toString();
       const mockInput: CreateFollowInput = {
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: nonExistentEventId,
       };
 
-      (EventDAO.readEventById as jest.Mock).mockRejectedValue(
-        new Error(`Event with eventId ${nonExistentEventId} not found`),
+      (EventSeriesDAO.readEventById as jest.Mock).mockRejectedValue(
+        new Error(`EventSeries with eventId ${nonExistentEventId} not found`),
       );
 
       await expect(resolver.follow(mockInput, mockContext as ServerContext)).rejects.toThrow(
-        `Event with eventId ${nonExistentEventId} not found`,
+        `EventSeries with eventId ${nonExistentEventId} not found`,
       );
     });
 
     it('unsaves an event by unfollowing it', async () => {
       (FollowDAO.remove as jest.Mock).mockResolvedValue(true);
 
-      const result = await resolver.unfollow(FollowTargetType.Event, mockEvent.eventId!, mockContext as ServerContext);
+      const result = await resolver.unfollow(
+        FollowTargetType.EventSeries,
+        mockEvent.eventId!,
+        mockContext as ServerContext,
+      );
 
       expect(FollowDAO.remove).toHaveBeenCalledWith({
         followerUserId: mockUser.userId,
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: mockEvent.eventId,
       });
       expect(result).toBe(true);
@@ -361,7 +365,7 @@ describe('FollowResolver', () => {
         {
           followId: 'follow-1',
           followerUserId: mockUser.userId,
-          targetType: FollowTargetType.Event,
+          targetType: FollowTargetType.EventSeries,
           targetId: mockEvent.eventId!,
           approvalStatus: FollowApprovalStatus.Accepted,
           createdAt: new Date(),

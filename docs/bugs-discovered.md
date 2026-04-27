@@ -71,14 +71,14 @@ as a knowledge base to prevent similar issues in the future.
 The `readEventBySlug` and `readEventById` DAO methods used simple `findOne()` / `findById()` queries, which do **not**
 include the `$lookup` aggregation pipeline.
 
-The `participants` field on the `Event` type is a **virtual field** (not stored in the Event document) that gets
-populated via `$lookup` from the `EventParticipant` collection. Without the aggregation pipeline, this field was always
-empty.
+The `participants` field on the `EventSeries` type is a **virtual field** (not stored in the EventSeries document) that
+gets populated via `$lookup` from the `EventSeriesParticipant` collection. Without the aggregation pipeline, this field
+was always empty.
 
 ```typescript
 // BEFORE (broken) - No aggregation, participants empty
-static async readEventBySlug(slug: string): Promise<EventEntity> {
-  const event = await EventModel.findOne({slug}).exec();
+static async readEventBySlug(slug: string): Promise<EventSeriesEntity> {
+  const event = await EventSeriesModel.findOne({slug}).exec();
   return event.toObject();  // participants = undefined
 }
 ```
@@ -97,12 +97,12 @@ Updated `readEventById` and `readEventBySlug` to use aggregation with `createEve
 
 ```typescript
 // AFTER (fixed)
-static async readEventBySlug(slug: string): Promise<EventEntity> {
+static async readEventBySlug(slug: string): Promise<EventSeriesEntity> {
   const pipeline = [
     {$match: {slug: slug}},
     ...createEventLookupStages(),  // Includes $lookup for participants
   ];
-  const events = await EventModel.aggregate<EventEntity>(pipeline).exec();
+  const events = await EventSeriesModel.aggregate<EventSeriesEntity>(pipeline).exec();
   return events[0];
 }
 ```
@@ -110,22 +110,22 @@ static async readEventBySlug(slug: string): Promise<EventEntity> {
 Additionally, added a **field resolver fallback** for `participants` to handle mutation responses:
 
 ```typescript
-@FieldResolver(() => [EventParticipant], {nullable: true})
-async participants(@Root() event: Event, @Ctx() context: ServerContext) {
+@FieldResolver(() => [EventSeriesParticipant], {nullable: true})
+async participants(@Root() event: EventSeries, @Ctx() context: ServerContext) {
   // If already populated (from aggregation), return as-is
   if (event.participants?.[0]?.participantId) {
     return event.participants;
   }
-  // Fallback: fetch from EventParticipant collection
-  return EventParticipantDAO.readByEvent(event.eventId);
+  // Fallback: fetch from EventSeriesParticipant collection
+  return EventSeriesParticipantDAO.readByEvent(event.eventId);
 }
 ```
 
 ### Files Changed
 
-- `apps/api/lib/mongodb/dao/events.ts` - Updated `readEventById` and `readEventBySlug`
-- `apps/api/lib/graphql/resolvers/event.ts` - Added `participants` field resolver
-- `apps/api/test/unit/spec/mongodb/dao/event.test.ts` - Updated tests
+- `apps/api/lib/mongodb/dao/eventSeries.ts` - Updated `readEventById` and `readEventBySlug`
+- `apps/api/lib/graphql/resolvers/eventSeries.ts` - Added `participants` field resolver
+- `apps/api/test/unit/spec/mongodb/dao/eventSeries.test.ts` - Updated tests
 
 ### Lessons Learned
 
@@ -196,7 +196,7 @@ case NotificationType.EVENT_RSVP:
   };
 ```
 
-Updated `EventParticipantService.rsvpToEvent()` to pass the status:
+Updated `EventSeriesParticipantService.rsvpToEvent()` to pass the status:
 
 ```typescript
 await NotificationService.notifyMany({
@@ -208,7 +208,7 @@ await NotificationService.notifyMany({
 ### Files Changed
 
 - `apps/api/lib/services/notification.ts` - Added `rsvpStatus` to params and template
-- `apps/api/lib/services/eventParticipant.ts` - Pass status to notification
+- `apps/api/lib/services/eventSeriesParticipant.ts` - Pass status to notification
 - `apps/api/test/unit/spec/services/notification.test.ts` - Added status-specific tests
 
 ### Lessons Learned

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Authorized, Query, Resolver } from 'type-graphql';
 import { AdminDashboardStats, EventLifecycleStatus, EventStatus, UserRole } from '@gatherle/commons/types';
-import { EventCategoryDAO, EventCategoryGroupDAO, EventDAO, UserDAO } from '@/mongodb/dao';
+import { EventCategoryDAO, EventCategoryGroupDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 
 @Resolver()
@@ -23,11 +23,11 @@ export class AdminResolver {
       adminUsers,
       hostUsers,
     ] = await Promise.all([
-      EventDAO.count(),
-      EventDAO.count({ lifecycleStatus: EventLifecycleStatus.Draft }),
-      EventDAO.count({ lifecycleStatus: EventLifecycleStatus.Published }),
-      EventDAO.count({ status: EventStatus.Upcoming }),
-      EventDAO.count({ status: EventStatus.Cancelled }),
+      EventSeriesDAO.count(),
+      EventSeriesDAO.count({ lifecycleStatus: EventLifecycleStatus.Draft }),
+      EventSeriesDAO.count({ lifecycleStatus: EventLifecycleStatus.Published }),
+      EventSeriesDAO.count({ status: EventStatus.Upcoming }),
+      EventSeriesDAO.count({ status: EventStatus.Cancelled }),
       EventCategoryDAO.count(),
       EventCategoryGroupDAO.count(),
       UserDAO.count(),

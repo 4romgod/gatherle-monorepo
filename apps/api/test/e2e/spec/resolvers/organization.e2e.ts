@@ -14,7 +14,7 @@ import {
   getUpdateOrganizationMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 type TrackedOrg = { orgId: string; token: string };
 type TrackedMembership = { membershipId: string; token: string };

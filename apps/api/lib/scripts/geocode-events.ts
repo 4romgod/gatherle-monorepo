@@ -7,7 +7,7 @@
  */
 
 import { getConfigValue, MongoDbClient } from '@/clients';
-import { Event as EventModel } from '@/mongodb/models';
+import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import { geocodeAddress } from '@/utils/geocode';
 import { logger } from '@/utils/logger';
 import { SECRET_KEYS } from '@/constants';
@@ -39,7 +39,7 @@ async function geocodeExistingEvents() {
 
   try {
     // Find all events with venue location that have address but no coordinates
-    const events = await EventModel.find({
+    const events = await EventSeriesModel.find({
       'location.locationType': 'venue',
       'location.address': { $exists: true },
       $or: [
@@ -87,7 +87,7 @@ async function geocodeExistingEvents() {
 
         if (coordinates) {
           // Update the event in the database
-          await EventModel.updateOne({ _id: event._id }, { $set: { 'location.coordinates': coordinates } });
+          await EventSeriesModel.updateOne({ _id: event._id }, { $set: { 'location.coordinates': coordinates } });
 
           logger.info(`  ✓ Geocoded to: ${coordinates.latitude}, ${coordinates.longitude}`);
           successCount++;

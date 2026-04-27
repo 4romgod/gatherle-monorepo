@@ -53,7 +53,7 @@ full key.
 | -------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------- |
 | `packages/commons/lib/types/user.ts`         | `User` / `UpdateUserInput`                                             | `profile_picture: String`                        | EditProfilePage                              |
 | `packages/commons/lib/types/organization.ts` | `Organization` / `CreateOrganizationInput` / `UpdateOrganizationInput` | `logo: String`                                   | CreateOrganizationPage, EditOrganizationPage |
-| `packages/commons/lib/types/event.ts`        | `Media` (nested in `Event`)                                            | `featuredImageUrl: String` inside `media: Media` | EventMutationForm (create + edit)            |
+| `packages/commons/lib/types/eventSeries.ts`  | `Media` (nested in `EventSeries`)                                      | `featuredImageUrl: String` inside `media: Media` | EventMutationForm (create + edit)            |
 | `packages/commons/lib/types/venue.ts`        | `Venue` / `CreateVenueInput` / `UpdateVenueInput`                      | `featuredImageUrl: String`, `images: [String]`   | CreateVenuePage, EditVenuePage               |
 
 ---

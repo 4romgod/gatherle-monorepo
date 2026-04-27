@@ -79,7 +79,7 @@ const getActorDisplayName = (activity: FeedActivity): string => {
 };
 
 const getObjectLabel = (activity: FeedActivity): string => {
-  if (activity.objectType === 'Event' && activity.objectEvent) {
+  if (activity.objectType === 'EventSeries' && activity.objectEvent) {
     return activity.objectEvent.title || 'an event';
   }
   if (activity.objectType === 'User' && activity.objectUser) {
@@ -96,7 +96,7 @@ const getObjectLabel = (activity: FeedActivity): string => {
 };
 
 const getObjectLink = (activity: FeedActivity): string | null => {
-  if (activity.objectType === 'Event' && activity.objectEvent?.slug) {
+  if (activity.objectType === 'EventSeries' && activity.objectEvent?.slug) {
     return ROUTES.EVENTS.EVENT(activity.objectEvent.slug);
   }
   if (activity.objectType === 'User' && activity.objectUser?.username) {
@@ -213,7 +213,7 @@ export default function SocialFeed({ isAuthenticated, hasToken, socialFeed }: So
                     const actorLink = activity.actor?.username ? ROUTES.USERS.USER(activity.actor.username) : null;
 
                     const getActivityIcon = () => {
-                      if (activity.objectType === 'Event') return <EventIcon sx={{ fontSize: 14 }} />;
+                      if (activity.objectType === 'EventSeries') return <EventIcon sx={{ fontSize: 14 }} />;
                       if (activity.objectType === 'User') return <Person sx={{ fontSize: 14 }} />;
                       if (activity.objectType === 'Organization') return <Business sx={{ fontSize: 14 }} />;
                       return null;

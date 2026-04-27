@@ -68,7 +68,7 @@ function mockSuccessfulUpload() {
 
 describe('useMediaUpload', () => {
   const defaultOptions = {
-    entityType: MediaEntityType.Event,
+    entityType: MediaEntityType.EventSeries,
     mediaType: MediaType.Featured,
     entityId: 'event-001',
   };
@@ -107,7 +107,7 @@ describe('useMediaUpload', () => {
     expect(mockGetUploadUrl).toHaveBeenCalledWith(
       expect.objectContaining({
         variables: expect.objectContaining({
-          entityType: MediaEntityType.Event,
+          entityType: MediaEntityType.EventSeries,
           mediaType: MediaType.Featured,
           extension: 'png',
           entityId: 'event-001',

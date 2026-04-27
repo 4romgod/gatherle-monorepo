@@ -8,7 +8,7 @@ import { UserRole, OrganizationRole } from '@gatherle/commons/types';
 import { verify, sign } from 'jsonwebtoken';
 import type { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
-import { EventDAO, EventParticipantDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { EventSeriesDAO, EventSeriesParticipantDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import { getConfigValue } from '@/clients';
 import { Types } from 'mongoose';
 import { logger } from '@/utils/logger';
@@ -109,12 +109,12 @@ const operationsRequiringOwnership = new Set<string>([
   OPERATIONS.USER.DELETE_USER_BY_ID,
   OPERATIONS.USER.DELETE_USER_BY_EMAIL,
   OPERATIONS.USER.DELETE_USER_BY_USERNAME,
-  // Event operations
+  // EventSeries operations
   OPERATIONS.EVENT.UPDATE_EVENT,
   OPERATIONS.EVENT.DELETE_EVENT,
   OPERATIONS.EVENT.DELETE_EVENT_BY_SLUG,
   OPERATIONS.EVENT.CREATE_EVENT,
-  // Event participant operations
+  // EventSeries participant operations
   OPERATIONS.EVENT_PARTICIPANT.UPSERT_EVENT_PARTICIPANT,
   OPERATIONS.EVENT_PARTICIPANT.CANCEL_EVENT_PARTICIPANT,
   OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
@@ -249,7 +249,7 @@ export const isAuthorizedByOperation = async (
       return args.email == user.email;
     case OPERATIONS.USER.DELETE_USER_BY_USERNAME:
       return args.username == user.username;
-    // Event operations
+    // EventSeries operations
     case OPERATIONS.EVENT.UPDATE_EVENT:
     case OPERATIONS.EVENT.DELETE_EVENT:
       return await isAuthorizedByEventId(args.eventId ?? args.input?.eventId, user);
@@ -257,7 +257,7 @@ export const isAuthorizedByOperation = async (
       return await isAuthorizedByEventSlug(args.slug, user);
     case OPERATIONS.EVENT.CREATE_EVENT:
       return true;
-    // Event participant operations
+    // EventSeries participant operations
     case OPERATIONS.EVENT_PARTICIPANT.UPSERT_EVENT_PARTICIPANT:
     case OPERATIONS.EVENT_PARTICIPANT.CANCEL_EVENT_PARTICIPANT:
       return args.input?.userId === user.userId;
@@ -454,7 +454,7 @@ const isAuthorizedByEventId = async (eventId: string | undefined, user: AuthClai
   if (!eventId) {
     return false;
   }
-  const event = await EventDAO.readEventById(eventId);
+  const event = await EventSeriesDAO.readEventById(eventId);
   return isUserOrganizer(event, user);
 };
 
@@ -462,7 +462,7 @@ const isAuthorizedByEventSlug = async (slug: string | undefined, user: AuthClaim
   if (!slug) {
     return false;
   }
-  const event = await EventDAO.readEventBySlug(slug);
+  const event = await EventSeriesDAO.readEventBySlug(slug);
   return isUserOrganizer(event, user);
 };
 
@@ -471,8 +471,8 @@ const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, 
     return false;
   }
   const [event, participants] = await Promise.all([
-    EventDAO.readEventById(eventId),
-    EventParticipantDAO.readByEvent(eventId),
+    EventSeriesDAO.readEventById(eventId),
+    EventSeriesParticipantDAO.readByEvent(eventId),
   ]);
   if (isUserOrganizer(event, user)) {
     return true;

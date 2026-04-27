@@ -3,7 +3,7 @@
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { alpha, Avatar, AvatarGroup, Box, CardContent, Typography, Tooltip, Stack } from '@mui/material';
-import { EventParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
+import { EventSeriesParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
 import { RRule } from 'rrule';
 import Link from 'next/link';
@@ -43,19 +43,19 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
 
   const cityLabel = location?.address?.city || 'Featured';
   const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
-  const participantList = (participants ?? []) as EventParticipantPreview[];
+  const participantList = (participants ?? []) as EventSeriesParticipantPreview[];
   const activeParticipants = participantList.filter(
     (participant) => participant.status !== ParticipantStatus.Cancelled,
   );
   const participantCount = activeParticipants.length;
   const visibleParticipants = activeParticipants.slice(0, 3);
-  const getParticipantLabel = (participant: EventParticipantPreview) => {
+  const getParticipantLabel = (participant: EventSeriesParticipantPreview) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
     const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
     return nameParts.length ? nameParts.join(' ') : fallbackName;
   };
-  const getParticipantAvatarLetter = (participant: EventParticipantPreview) =>
+  const getParticipantAvatarLetter = (participant: EventSeriesParticipantPreview) =>
     participant.user?.given_name?.charAt(0) ??
     participant.user?.username?.charAt(0) ??
     participant.userId?.charAt(0) ??

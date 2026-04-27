@@ -14,7 +14,7 @@ import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
 import type DataLoader from 'dataloader';
-import type { User, EventCategory, Organization, Event, EventParticipant } from '@gatherle/commons/types';
+import type { User, EventCategory, Organization, EventSeries, EventSeriesParticipant } from '@gatherle/commons/types';
 import type { AuthClaims } from '@/utils/auth';
 
 export interface ServerContext {
@@ -26,10 +26,10 @@ export interface ServerContext {
     user: DataLoader<string, User | null>;
     eventCategory: DataLoader<string, EventCategory | null>;
     eventCategoryInterestCount: DataLoader<string, number>;
-    event: DataLoader<string, Event | null>;
+    eventSeries: DataLoader<string, EventSeries | null>;
     organization: DataLoader<string, Organization | null>;
-    eventParticipant: DataLoader<string, EventParticipant | null>;
-    eventParticipantsByEvent: DataLoader<string, EventParticipant[]>;
+    eventSeriesParticipant: DataLoader<string, EventSeriesParticipant | null>;
+    eventSeriesParticipantsByEvent: DataLoader<string, EventSeriesParticipant[]>;
   };
 }
 

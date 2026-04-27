@@ -30,7 +30,7 @@ import { getAuthHeader } from '@/lib/utils/auth';
 import { formatLocationText } from '@/components/events/location-utils';
 import { formatRecurrenceRule } from '@/components/events/date-utils';
 import {
-  EventParticipant,
+  EventSeriesParticipantRecord,
   getParticipantChipColor,
   getParticipantDisplayName,
   getParticipantStatusLabel,
@@ -58,7 +58,7 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   });
 
   const event = data?.readEventBySlug;
-  const participantList = (event?.participants ?? []) as EventParticipant[];
+  const participantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
   const heroImage = event?.media?.featuredImageUrl;
 
   const { following } = useFollowing();
@@ -76,7 +76,7 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
     });
     return set;
   }, [following]);
-  const canViewParticipant = (user?: EventParticipant['user']) =>
+  const canViewParticipant = (user?: EventSeriesParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
   const goingCount = participantList.filter(
@@ -150,8 +150,11 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   };
 
   const participantsWithUser = participantList.filter(
-    (participant): participant is EventParticipant & { user: NonNullable<EventParticipant['user']> } =>
-      Boolean(participant.user),
+    (
+      participant,
+    ): participant is EventSeriesParticipantRecord & {
+      user: NonNullable<EventSeriesParticipantRecord['user']>;
+    } => Boolean(participant.user),
   );
 
   return (
@@ -258,28 +261,25 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
                     <Divider />
 
                     {participantsWithUser.length === 0 ? (
-                      <Box sx={{ textAlign: 'center', py: 6 }}>
-                        <Typography variant="body1" color="text.secondary">
-                          No one has RSVP’d yet. Share the event to invite friends!
-                        </Typography>
-                      </Box>
+                      <Typography color="text.secondary">No one has RSVP&apos;d yet.</Typography>
                     ) : (
                       <Stack spacing={2}>
                         {participantsWithUser.map((participant) => {
-                          const isVisible = canViewParticipant(participant.user);
-                          const visibilityLabel = getVisibilityLabel(participant.user.defaultVisibility);
+                          const user = participant.user;
+                          const canView = canViewParticipant(user);
+
                           return (
                             <UserPreviewItem
                               key={participant.participantId}
-                              paperProps={attendeePaperProps}
                               name={getParticipantDisplayName(participant)}
-                              username={participant.user.username}
-                              avatarUrl={participant.user.profile_picture || undefined}
+                              username={user.username}
+                              avatarUrl={user.profile_picture}
                               chipLabel={getParticipantStatusLabel(participant)}
                               chipColor={getParticipantChipColor(participant.status)}
-                              chipVariant="outlined"
-                              masked={!isVisible}
-                              maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
+                              secondaryText={canView ? getVisibilityLabel(user.defaultVisibility) : 'Hidden attendee'}
+                              paperProps={attendeePaperProps}
+                              masked={!canView}
+                              maskLabel="Hidden attendee"
                             />
                           );
                         })}
@@ -293,58 +293,76 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
             <Box sx={{ flex: 1 }}>
               <Card sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }} elevation={0}>
                 <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    Event Snapshot
-                  </Typography>
+                  <Stack spacing={2.5}>
+                    <Typography variant="h6" fontWeight={700}>
+                      Event Snapshot
+                    </Typography>
 
-                  <Stack spacing={2}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <CalendarMonth sx={{ color: 'primary.main' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {formatRecurrenceRule(recurrenceRule)}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <LocationOn sx={{ color: 'primary.main' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {locationText}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Groups sx={{ color: 'primary.main' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {participantList.length} total RSVPs
-                      </Typography>
-                    </Stack>
-
-                    <Divider />
-
-                    <Stack spacing={1}>
-                      {statusSummary.map((status) => (
-                        <Stack key={status.label} direction="row" justifyContent="space-between">
+                    <Stack spacing={1.5}>
+                      <Box display="flex" alignItems="center" gap={1.25}>
+                        <CalendarMonth color="action" />
+                        <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {status.label}
+                            Schedule
                           </Typography>
-                          <Typography variant="body2" fontWeight={700}>
-                            {status.count}
-                          </Typography>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </Stack>
+                          <Typography variant="body1">{formatRecurrenceRule(recurrenceRule)}</Typography>
+                        </Box>
+                      </Box>
 
-                  <Button
-                    component={Link}
-                    href={`/events/${slug}`}
-                    variant="contained"
-                    fullWidth
-                    sx={{ mt: 3 }}
-                    startIcon={<ArrowBack />}
-                  >
-                    Back to event page
-                  </Button>
+                      <Box display="flex" alignItems="center" gap={1.25}>
+                        <LocationOn color="action" />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            Location
+                          </Typography>
+                          <Typography variant="body1">{locationText}</Typography>
+                        </Box>
+                      </Box>
+
+                      <Box display="flex" alignItems="center" gap={1.25}>
+                        <Groups color="action" />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            Attendance mix
+                          </Typography>
+                          <Stack direction="row" gap={1} flexWrap="wrap" mt={0.5}>
+                            {statusSummary.map((status) => (
+                              <Stack
+                                key={status.label}
+                                direction="row"
+                                alignItems="center"
+                                spacing={1}
+                                sx={{
+                                  px: 1,
+                                  py: 0.75,
+                                  borderRadius: 999,
+                                  bgcolor: 'action.hover',
+                                }}
+                              >
+                                <Typography variant="caption" color="text.secondary">
+                                  {status.label}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {status.count}
+                                </Typography>
+                              </Stack>
+                            ))}
+                          </Stack>
+                        </Box>
+                      </Box>
+                    </Stack>
+
+                    <Button
+                      component={Link}
+                      href={`/events/${slug}`}
+                      variant="contained"
+                      fullWidth
+                      sx={{ mt: 3 }}
+                      startIcon={<ArrowBack />}
+                    >
+                      Back to event page
+                    </Button>
+                  </Stack>
                 </CardContent>
               </Card>
             </Box>

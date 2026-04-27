@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Field, ID, InputType, ObjectType } from 'type-graphql';
 import { modelOptions, prop, Severity } from '@typegoose/typegoose';
 
-import { EventVisibility } from './event';
+import { EventVisibility } from './eventSeries';
 import { OrganizationMembership } from './organizationMembership';
 import { FollowPolicy, SocialVisibility } from './user';
 import { ORGANIZATION_DESCRIPTIONS, ORGANIZATION_LINK_DESCRIPTIONS } from '../constants';

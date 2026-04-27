@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
-import { Event as EventEntity } from '@gatherle/commons/types';
+import { EventSeries as EventEntity } from '@gatherle/commons/types';
 
-@pre<EventModel>('validate', function (next) {
+@pre<EventSeriesModel>('validate', function (next) {
   try {
     if (!this.eventId && this._id) {
       this.eventId = this._id.toString();
@@ -17,10 +17,10 @@ import { Event as EventEntity } from '@gatherle/commons/types';
     next(error as Error);
   }
 })
-class EventModel extends EventEntity {}
+class EventSeriesModel extends EventEntity {}
 
-const Event = getModelForClass(EventModel, {
-  options: { customName: 'Event' },
+const EventSeries = getModelForClass(EventSeriesModel, {
+  options: { customName: 'EventSeries' },
 });
 
-export default Event;
+export default EventSeries;

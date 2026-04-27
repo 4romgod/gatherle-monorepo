@@ -16,8 +16,8 @@ near-term gaps we expect to fill. All types referenced here map to TypeGraphQL/T
 
 **Implemented today**
 
-- User, Event, EventCategory, EventCategoryGroup
-- EventParticipant
+- User, EventSeries, EventCategory, EventCategoryGroup
+- EventSeriesParticipant
 - Organization, OrganizationMembership, Venue
 - Follow, Activity
 
@@ -35,7 +35,7 @@ file has a richer layout if you prefer a canvas view).
 
 ```mermaid
 classDiagram
-    class Event {
+    class EventSeries {
         +string eventId
         +string slug
         +EventStatus status
@@ -74,7 +74,7 @@ classDiagram
         +string userId
         +EventOrganizerRole role
     }
-    class EventParticipant {
+    class EventSeriesParticipant {
         +string participantId
         +string eventId
         +string userId
@@ -90,15 +90,15 @@ classDiagram
         +string followerUserId
     }
 
-    Event "1" --> "many" EventCategory : references
-    Event "1" --> "many" EventCategoryGroup : groups
-    Event "many" --> "1" Organization : ownedBy
-    Event "0..1" --> "1" Venue : at
-    Event "1" --> "many" EventOrganizer : includes
-    Event "1" --> "many" EventParticipant : resolved
+    EventSeries "1" --> "many" EventCategory : references
+    EventSeries "1" --> "many" EventCategoryGroup : groups
+    EventSeries "many" --> "1" Organization : ownedBy
+    EventSeries "0..1" --> "1" Venue : at
+    EventSeries "1" --> "many" EventOrganizer : includes
+    EventSeries "1" --> "many" EventSeriesParticipant : resolved
     EventOrganizer "many" --> "1" User : userId
-    EventParticipant "many" --> "1" User : userId
-    Activity "many" --> "1" Event : references
+    EventSeriesParticipant "many" --> "1" User : userId
+    Activity "many" --> "1" EventSeries : references
     Activity "many" --> "1" User : actor
     Follow "many" --> "1" User : follower
     Follow "many" --> "1" Organization : target
@@ -161,20 +161,20 @@ hierarchies without hardcoding them into business logic.
 
 - `eventCategoryGroupId`, `name`, `slug`, `eventCategories[]`.
 
-### Location (embedded in Event)
+### Location (embedded in EventSeries)
 
-Embeds the spatial context of an event without separating it into its own collection, so each Event owns a snapshot of
-where it will happen (useful for recurrence, history, and location changes).
+Embeds the spatial context of an event without separating it into its own collection, so each EventSeries owns a
+snapshot of where it will happen (useful for recurrence, history, and location changes).
 
 - `locationType`: `venue` | `online` | `tba`.
 - `coordinates { latitude, longitude }`.
 - `address { street, city, state, postalCode, country }`.
 - `details` (string) for arbitrary location notes.
 
-### Event
+### EventSeries
 
-The `Event` document is the heart of the platform—taking organizer intent, location, schedules, and metadata and storing
-it as a single source of truth for listing feeds and resolver pipelines.
+The `EventSeries` document is the heart of the platform—taking organizer intent, location, schedules, and metadata and
+storing it as a single source of truth for listing feeds and resolver pipelines.
 
 - Identity: `eventId`, `slug`, `orgId?`.
 - Content: `title`, `summary`, `description`, `heroImage`, `media`.
@@ -201,9 +201,9 @@ it as a single source of truth for listing feeds and resolver pipelines.
     user data, for example:
     - `[{"userId": "u123", "text": "Doors open at 7pm", "createdAt": "2024-01-01T18:00:00Z"}]`
   - `eventLink`: canonical URL for the event’s public landing page (may point to an internal or external site).
-- `participants` is resolved by GraphQL via `EventParticipant` and is not stored on the Event document.
+- `participants` is resolved by GraphQL via `EventSeriesParticipant` and is not stored on the EventSeries document.
 
-### EventParticipant
+### EventSeriesParticipant
 
 Event participants are stored separately so RSVP/attendance history can be audited, shared visibility honored, and
 quantities tracked without mutating the Event document frequently.
@@ -226,7 +226,7 @@ Activities capture actions taken by actors (users/orgs) so the feed knows what h
 should be.
 
 - `activityId`, `actorId`, `verb` (Followed|RSVPd|Commented|Published|CreatedOrg|CheckedIn|Invited).
-- `objectType` (User|Organization|Event|Comment), `objectId`.
+- `objectType` (User|Organization|EventSeries|Comment), `objectId`.
 - `targetType?`, `targetId?`, `visibility` (Public|Followers|Private), `eventAt`, `metadata`.
 
 ## Planned Entities & Extensions
@@ -244,9 +244,9 @@ should be.
 ## Privacy & Visibility Rules
 
 - User defaults: `socialVisibility`, `shareRSVPByDefault`, `shareCheckinsByDefault`.
-- EventParticipant `sharedVisibility` determines attendee visibility in feeds and event pages.
+- EventSeriesParticipant `sharedVisibility` determines attendee visibility in feeds and event pages.
 - Follow status `Muted` suppresses feed items while keeping the edge.
-- Event `showAttendees` hides attendee lists from non-organizers; counts can still be exposed.
+- EventSeries `showAttendees` hides attendee lists from non-organizers; counts can still be exposed.
 
 ## GraphQL Query Patterns
 
@@ -284,8 +284,8 @@ export const createEventLookupStages = (): PipelineStage[] => [
   // Join organizers.user
   { $lookup: { from: 'users', let: {organizerUserIds: '$organizers.user'}, ... } },
 
-  // Join participants from EventParticipant collection
-  { $lookup: { from: 'eventparticipants', localField: 'eventId', foreignField: 'eventId', as: 'participants' } },
+  // Join participants from EventSeriesParticipant collection
+  { $lookup: { from: 'eventseriesparticipants', localField: 'eventId', foreignField: 'eventId', as: 'participants' } },
 
   // Enrich participants with user data
   { $lookup: { from: 'users', let: {participantUserIds: '$participants.userId'}, ... } },
@@ -298,16 +298,16 @@ Mutations (`createEvent`, `updateEvent`, `deleteEvent`) return raw documents wit
 this and fetch data on-demand using DataLoaders:
 
 ```typescript
-// apps/api/lib/graphql/resolvers/event.ts
-@FieldResolver(() => [EventParticipant], {nullable: true})
-async participants(@Root() event: Event, @Ctx() context: ServerContext) {
+// apps/api/lib/graphql/resolvers/eventSeries.ts
+@FieldResolver(() => [EventSeriesParticipant], {nullable: true})
+async participants(@Root() event: EventSeries, @Ctx() context: ServerContext) {
   // Fast path: already populated from aggregation
   if (event.participants?.[0]?.participantId) {
     return event.participants;
   }
 
   // Fallback: fetch and enrich via DataLoader
-  const participants = await EventParticipantDAO.readByEvent(event.eventId);
+  const participants = await EventSeriesParticipantDAO.readByEvent(event.eventId);
   return Promise.all(participants.map(async (p) => ({
     ...p,
     user: await context.loaders.user.load(p.userId),
@@ -339,8 +339,8 @@ const user = await context.loaders.user.load(participant.userId);
 ### Key Files
 
 - **Lookup stages:** `apps/api/lib/utils/queries/aggregate/lookup.ts`
-- **Pipeline builder:** `apps/api/lib/utils/queries/aggregate/eventsPipeline.ts`
-- **Field resolvers:** `apps/api/lib/graphql/resolvers/event.ts`
+- **Pipeline builder:** `apps/api/lib/utils/queries/aggregate/eventSeriesPipeline.ts`
+- **Field resolvers:** `apps/api/lib/graphql/resolvers/eventSeries.ts`
 - **DataLoaders:** `apps/api/lib/graphql/context/loaders.ts`
 
 ### Why This Pattern?
@@ -353,7 +353,7 @@ const user = await context.loaders.user.load(participant.userId);
 ## Feed & FOMO Flow
 
 1. User follows User/Organization → `Follow` created, `Activity: Followed`.
-2. User RSVPs → `EventParticipant` is upserted.
+2. User RSVPs → `EventSeriesParticipant` is upserted.
 3. Feed query pulls Activities where:
    - actor is in my follow set, and
    - activity visibility allows (Public or Followers when I follow), and
@@ -362,13 +362,13 @@ const user = await context.loaders.user.load(participant.userId);
 
 ## Mongo/NoSQL Adaptation Strategy (current)
 
-- **Reference + resolve:** Most relationships are stored as IDs and resolved in GraphQL (e.g., Event → EventParticipant,
-  Organization → OrganizationMembership).
+- **Reference + resolve:** Most relationships are stored as IDs and resolved in GraphQL (e.g., EventSeries →
+  EventSeriesParticipant, Organization → OrganizationMembership).
 - **Use JSON for flexible fields:** `tags`, `additionalDetails`, `comments`, and several metadata blobs are stored as
   JSON to move fast.
 - **Indexes (implemented):**
   - Event: `eventId`, `slug` are unique; `eventCategories` and `organizers.user` are populated for reads.
-  - EventParticipant: unique `{eventId, userId}`.
+  - EventSeriesParticipant: unique `{eventId, userId}`.
   - Organization: unique `slug`.
   - OrganizationMembership: unique `{orgId, userId}`.
   - Follow: unique `{followerUserId, targetType, targetId}`.

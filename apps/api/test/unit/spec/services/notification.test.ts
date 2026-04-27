@@ -201,7 +201,7 @@ describe('NotificationService', () => {
       await NotificationService.notify({
         type: NotificationType.EVENT_REMINDER_24H,
         recipientUserId: 'user-1',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'my-event-slug',
       });
 
@@ -246,7 +246,7 @@ describe('NotificationService', () => {
       const result = await NotificationService.notifyMany(['user-3', 'user-4'], {
         type: NotificationType.EVENT_UPDATED,
         actorUserId: 'user-2',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
       });
 
@@ -264,7 +264,7 @@ describe('NotificationService', () => {
       await NotificationService.notifyMany(['user-2', 'user-3'], {
         type: NotificationType.EVENT_UPDATED,
         actorUserId: 'user-2', // Should be filtered out
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
       });
 
@@ -278,7 +278,7 @@ describe('NotificationService', () => {
       const result = await NotificationService.notifyMany(['user-2'], {
         type: NotificationType.EVENT_UPDATED,
         actorUserId: 'user-2', // Only recipient is the actor
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
       });
 
@@ -317,19 +317,19 @@ describe('NotificationService', () => {
         NotificationTargetType.User,
         undefined,
       ],
-      // Event notifications - use event slug
+      // Event notifications targeting an EventSeries - use event slug
       [
         NotificationType.EVENT_RSVP,
         'New RSVP',
         '/events/summer-festival',
-        NotificationTargetType.Event,
+        NotificationTargetType.EventSeries,
         'summer-festival',
       ],
       [
         NotificationType.EVENT_CHECKIN,
         'Event Check-in',
         '/events/summer-festival',
-        NotificationTargetType.Event,
+        NotificationTargetType.EventSeries,
         'summer-festival',
       ],
       // Security notifications - no targetSlug needed
@@ -365,7 +365,7 @@ describe('NotificationService', () => {
         type: NotificationType.EVENT_RSVP,
         recipientUserId: 'user-1',
         actorUserId: 'user-2',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
         rsvpStatus: ParticipantStatus.Going,
       });
@@ -382,7 +382,7 @@ describe('NotificationService', () => {
         type: NotificationType.EVENT_RSVP,
         recipientUserId: 'user-1',
         actorUserId: 'user-2',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
         rsvpStatus: ParticipantStatus.Interested,
       });
@@ -399,7 +399,7 @@ describe('NotificationService', () => {
         type: NotificationType.EVENT_RSVP,
         recipientUserId: 'user-1',
         actorUserId: 'user-2',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
         rsvpStatus: ParticipantStatus.Waitlisted,
       });
@@ -416,7 +416,7 @@ describe('NotificationService', () => {
         type: NotificationType.EVENT_RSVP,
         recipientUserId: 'user-1',
         actorUserId: 'user-2',
-        targetType: NotificationTargetType.Event,
+        targetType: NotificationTargetType.EventSeries,
         targetSlug: 'summer-festival',
       });
 

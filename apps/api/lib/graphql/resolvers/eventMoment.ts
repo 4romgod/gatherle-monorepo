@@ -1,6 +1,13 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { CreateEventMomentInput, Event, EventMoment, EventMomentPage, User, UserRole } from '@gatherle/commons/types';
+import {
+  CreateEventMomentInput,
+  EventSeries,
+  EventMoment,
+  EventMomentPage,
+  User,
+  UserRole,
+} from '@gatherle/commons/types';
 import { validateInput } from '@/validation';
 import { CreateEventMomentInputSchema } from '@/validation/zod';
 import type { ServerContext } from '@/graphql';
@@ -19,11 +26,11 @@ export class EventMomentResolver {
     }
   }
 
-  @FieldResolver(() => Event, { nullable: true })
-  async event(@Root() moment: EventMoment, @Ctx() context: ServerContext): Promise<Event | null> {
+  @FieldResolver(() => EventSeries, { nullable: true })
+  async event(@Root() moment: EventMoment, @Ctx() context: ServerContext): Promise<EventSeries | null> {
     if (!moment.eventId) return null;
     try {
-      return await context.loaders.event.load(moment.eventId);
+      return await context.loaders.eventSeries.load(moment.eventId);
     } catch {
       return null;
     }

@@ -112,17 +112,17 @@ async readFollowers(targetType, targetId) {
 }
 ```
 
-**EventParticipantResolver:**
+**EventSeriesParticipantResolver:**
 
 ```typescript
 // ✅ Mutations → Service (sends notifications to event host)
 async upsertEventParticipant(input) {
-  return EventParticipantService.rsvp(input);
+  return EventSeriesParticipantService.rsvp(input);
 }
 
 // ✅ Queries → DAO directly (pure data retrieval)
 async readEventParticipants(eventId) {
-  return EventParticipantDAO.readByEvent(eventId);
+  return EventSeriesParticipantDAO.readByEvent(eventId);
 }
 ```
 
@@ -228,44 +228,44 @@ class EmailService {
 }
 ```
 
-### EventService
+### EventSeriesService
 
 **Status:** 📋 Planned
 
 Orchestrates event-related operations beyond simple CRUD.
 
 ```typescript
-class EventService {
+class EventSeriesService {
   // Create event with all side effects
-  static async createEvent(input: CreateEventInput, organizerId: string): Promise<Event>;
+  static async createEvent(input: CreateEventInput, organizerId: string): Promise<EventSeries>;
 
   // Cancel event and notify all attendees
-  static async cancelEvent(eventId: string, reason?: string): Promise<Event>;
+  static async cancelEvent(eventId: string, reason?: string): Promise<EventSeries>;
 
   // Update event and notify attendees of changes
-  static async updateEvent(eventId: string, input: UpdateEventInput): Promise<Event>;
+  static async updateEvent(eventId: string, input: UpdateEventInput): Promise<EventSeries>;
 
   // Schedule reminders for upcoming event
   static async scheduleReminders(eventId: string): Promise<void>;
 }
 ```
 
-### EventParticipantService
+### EventSeriesParticipantService
 
 **Status:** ✅ Implemented
 
 Handles event RSVP and check-in with notifications to event host.
 
 ```typescript
-class EventParticipantService {
+class EventSeriesParticipantService {
   // RSVP to event with notification to host
-  static async rsvp(input: UpsertEventParticipantInput): Promise<EventParticipant>;
+  static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant>;
 
   // Cancel RSVP (no notification)
-  static async cancel(input: CancelEventParticipantInput): Promise<EventParticipant>;
+  static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant>;
 
   // Check-in with notification to host
-  static async checkIn(eventId: string, userId: string): Promise<EventParticipant>;
+  static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant>;
 }
 ```
 
@@ -356,17 +356,17 @@ The following existing features have business logic in resolvers that should be 
 
 ### High Priority
 
-| Feature               | Current Location                | Reason to Migrate                                                          |
-| --------------------- | ------------------------------- | -------------------------------------------------------------------------- |
-| **Follow system**     | `resolvers/follow.ts`           | Complex logic: blocking checks, approval workflow, now needs notifications |
-| **Event RSVP**        | `resolvers/eventParticipant.ts` | Needs to trigger notifications to organizer                                |
-| **User registration** | `resolvers/user.ts`             | Could trigger welcome email, verification flow                             |
+| Feature               | Current Location                      | Reason to Migrate                                                          |
+| --------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| **Follow system**     | `resolvers/follow.ts`                 | Complex logic: blocking checks, approval workflow, now needs notifications |
+| **Event RSVP**        | `resolvers/eventSeriesParticipant.ts` | Needs to trigger notifications to organizer                                |
+| **User registration** | `resolvers/user.ts`                   | Could trigger welcome email, verification flow                             |
 
 ### Medium Priority
 
 | Feature                     | Current Location                      | Reason to Migrate                                 |
 | --------------------------- | ------------------------------------- | ------------------------------------------------- |
-| **Event creation**          | `resolvers/event.ts`                  | Could notify followers of org, schedule reminders |
+| **Event creation**          | `resolvers/eventSeries.ts`            | Could notify followers of org, schedule reminders |
 | **Password update**         | `resolvers/user.ts`                   | Should send security notification email           |
 | **Organization membership** | `resolvers/organizationMembership.ts` | Invite notifications, role change notifications   |
 
@@ -389,7 +389,7 @@ apps/api/lib/
 │   ├── notification.ts
 │   ├── auth.ts
 │   ├── email.ts
-│   ├── event.ts
+│   ├── eventSeries.ts
 │   ├── follow.ts
 │   └── ...
 ├── graphql/
@@ -476,7 +476,7 @@ export class FollowResolver {
 
 1. **Start with NotificationService** - New feature, no migration needed
 2. **Create FollowService** - Extract logic from resolver, add notification calls
-3. **Create EventService** - Add RSVP/check-in notifications
+3. **Create EventSeriesParticipantService** - Add RSVP/check-in notifications
 4. **Create AuthService** - Consolidate auth logic, add security notifications
 5. **Remaining services** - As features require them
 

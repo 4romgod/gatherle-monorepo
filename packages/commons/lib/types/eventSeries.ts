@@ -8,7 +8,7 @@ import { EVENT_DESCRIPTIONS } from '../constants';
 import { EventCategory } from './eventCategory';
 import { Location } from './location';
 import { User } from './user';
-import { EventParticipant } from './eventParticipant';
+import { EventSeriesParticipant } from './eventSeriesParticipant';
 import { Organization } from './organization';
 
 export enum EventPrivacySetting {
@@ -112,8 +112,8 @@ export class EventOrganizer {
 }
 
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
-@ObjectType('Event', { description: EVENT_DESCRIPTIONS.EVENT.TYPE })
-export class Event {
+@ObjectType('EventSeries', { description: EVENT_DESCRIPTIONS.EVENT.TYPE })
+export class EventSeries {
   @prop({ required: true, unique: true, index: true, type: () => String })
   @Field(() => ID, { description: EVENT_DESCRIPTIONS.EVENT.ID })
   eventId: string;
@@ -228,12 +228,12 @@ export class Event {
   })
   organization?: Organization;
 
-  @Field(() => [EventParticipant], {
+  @Field(() => [EventSeriesParticipant], {
     nullable: true,
     description:
-      'Resolved participants populated via $lookup aggregation (not persisted in Event document; queried from EventParticipant collection)',
+      'Resolved participants populated via $lookup aggregation (not persisted in EventSeries document; queried from EventSeriesParticipant collection)',
   })
-  participants?: EventParticipant[];
+  participants?: EventSeriesParticipant[];
 
   // Computed fields populated via aggregation helpers (not persisted on the document)
   @Field(() => Number, {

@@ -27,6 +27,6 @@ export const EVENT_MOMENTS_S3_PREFIX = 'event-moments';
 export const MEDIA_ENTITY_FOLDER: Partial<Record<MediaEntityType, string>> = {
   [MediaEntityType.User]: 'users',
   [MediaEntityType.Organization]: 'organizations',
-  [MediaEntityType.Event]: 'events',
+  [MediaEntityType.EventSeries]: 'events',
   [MediaEntityType.Venue]: 'venues',
 };

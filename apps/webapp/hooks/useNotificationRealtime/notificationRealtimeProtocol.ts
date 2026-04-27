@@ -267,7 +267,7 @@ export const normalizeEventParticipantForEventParticipantsCache = (
   participant: RealtimeEventRsvpPayload['participant'],
 ): EventParticipantsCacheItem => {
   return {
-    __typename: 'EventParticipant',
+    __typename: 'EventSeriesParticipant',
     participantId: participant.participantId,
     eventId: participant.eventId,
     userId: participant.userId,
@@ -290,7 +290,7 @@ export const normalizeEventParticipantForMyRsvpStatusCache = (
   participant: RealtimeEventRsvpPayload['participant'],
 ): MyRsvpStatusCacheItem => {
   return {
-    __typename: 'EventParticipant',
+    __typename: 'EventSeriesParticipant',
     participantId: participant.participantId,
     eventId: participant.eventId,
     userId: participant.userId,
@@ -307,7 +307,7 @@ export const normalizeEventParticipantForMyRsvpsCache = (
   existingParticipant?: MyRsvpsCacheItem,
 ): MyRsvpsCacheItem => {
   return {
-    __typename: 'EventParticipant',
+    __typename: 'EventSeriesParticipant',
     participantId: participant.participantId,
     eventId: participant.eventId,
     userId: participant.userId,
@@ -333,7 +333,7 @@ export const normalizeEventParticipantForEventQueryCache = (
   existingParticipant?: EventQueryParticipantCacheItem,
 ): EventQueryParticipantCacheItem => {
   return {
-    __typename: 'EventParticipant',
+    __typename: 'EventSeriesParticipant',
     participantId: participant.participantId,
     eventId: participant.eventId,
     userId: participant.userId,

@@ -51,7 +51,7 @@ describe('createEventLookupStages', () => {
     const participantsStage = lookupStages[5] as PipelineStage.Lookup;
 
     expect(participantsStage).toHaveProperty('$lookup');
-    expect(participantsStage.$lookup).toHaveProperty('from', 'eventparticipants');
+    expect(participantsStage.$lookup).toHaveProperty('from', 'eventseriesparticipants');
     expect(participantsStage.$lookup).toHaveProperty('localField', 'eventId');
     expect(participantsStage.$lookup).toHaveProperty('foreignField', 'eventId');
     expect(participantsStage.$lookup).toHaveProperty('as', 'participants');
@@ -102,7 +102,7 @@ describe('createEventLookupStages', () => {
       const categoriesStage = stages[0] as PipelineStage.Lookup;
       const participantsStage = stages[5] as PipelineStage.Lookup;
       expect(categoriesStage.$lookup.from).toBe('eventcategories');
-      expect(participantsStage.$lookup.from).toBe('eventparticipants');
+      expect(participantsStage.$lookup.from).toBe('eventseriesparticipants');
     });
 
     it('does not include a follows savedByCount lookup stage', () => {

@@ -721,7 +721,7 @@ headers
    - Missing: Composite indexes on common queries
 
    ```typescript
-   // apps/api/lib/mongodb/models/event.ts
+   // apps/api/lib/mongodb/models/eventSeries.ts
    @index({status: 1, 'primarySchedule.startAt': -1})
    @index({orgId: 1, createdAt: -1})
    @index({eventCategories: 1, visibility: 1})

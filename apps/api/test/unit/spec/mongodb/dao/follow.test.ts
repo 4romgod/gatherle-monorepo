@@ -459,14 +459,14 @@ describe('FollowDAO', () => {
   });
 
   // ============================================================================
-  // SAVED EVENTS METHODS (Event as targetType)
+  // SAVED EVENTS METHODS (EventSeries as targetType)
   // ============================================================================
 
   describe('readSavedEventsForUser', () => {
     const mockEventFollow: Follow = {
       followId: 'follow-event-1',
       followerUserId: 'user-1',
-      targetType: FollowTargetType.Event,
+      targetType: FollowTargetType.EventSeries,
       targetId: 'event-1',
       approvalStatus: FollowApprovalStatus.Accepted,
       createdAt: new Date('2024-01-01T00:00:00Z'),
@@ -484,7 +484,7 @@ describe('FollowDAO', () => {
 
       expect(FollowModel.find).toHaveBeenCalledWith({
         followerUserId: 'user-1',
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         approvalStatus: FollowApprovalStatus.Accepted,
       });
       expect(result).toHaveLength(2);
@@ -515,7 +515,7 @@ describe('FollowDAO', () => {
       const result = await FollowDAO.countSavesForEvent('event-1');
 
       expect(FollowModel.countDocuments).toHaveBeenCalledWith({
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: 'event-1',
         approvalStatus: FollowApprovalStatus.Accepted,
       });
@@ -546,7 +546,7 @@ describe('FollowDAO', () => {
           toObject: () => ({
             followId: 'follow-1',
             followerUserId: 'user-1',
-            targetType: FollowTargetType.Event,
+            targetType: FollowTargetType.EventSeries,
             targetId: 'event-1',
             approvalStatus: FollowApprovalStatus.Accepted,
           }),
@@ -557,7 +557,7 @@ describe('FollowDAO', () => {
 
       expect(FollowModel.findOne).toHaveBeenCalledWith({
         followerUserId: 'user-1',
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: 'event-1',
         approvalStatus: FollowApprovalStatus.Accepted,
       });
@@ -585,7 +585,7 @@ describe('FollowDAO', () => {
     const mockSavedFollow: Follow = {
       followId: 'save-1',
       followerUserId: 'user-a',
-      targetType: FollowTargetType.Event,
+      targetType: FollowTargetType.EventSeries,
       targetId: 'event-1',
       approvalStatus: FollowApprovalStatus.Accepted,
       createdAt: new Date('2024-01-01T00:00:00Z'),
@@ -601,7 +601,7 @@ describe('FollowDAO', () => {
       expect(FollowModel.find).toHaveBeenCalledWith(
         expect.objectContaining({
           followerUserId: { $in: ['user-a', 'user-b'] },
-          targetType: FollowTargetType.Event,
+          targetType: FollowTargetType.EventSeries,
           approvalStatus: FollowApprovalStatus.Accepted,
         }),
       );

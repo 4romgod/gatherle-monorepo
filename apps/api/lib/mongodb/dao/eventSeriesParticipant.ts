@@ -1,13 +1,13 @@
 import type {
-  EventParticipant as EventParticipantEntity,
+  EventSeriesParticipant as EventParticipantEntity,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
 } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
-import { EventParticipant } from '@/mongodb/models';
+import { EventSeriesParticipant } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
-class EventParticipantDAO {
+class EventSeriesParticipantDAO {
   /**
    * Batch fetch all participants for multiple eventIds.
    * Returns a flat array of participants for all given eventIds.
@@ -15,7 +15,7 @@ class EventParticipantDAO {
    */
   static async readByEvents(eventIds: string[]): Promise<EventParticipantEntity[]> {
     try {
-      const participants = await EventParticipant.find({ eventId: { $in: eventIds } }).exec();
+      const participants = await EventSeriesParticipant.find({ eventId: { $in: eventIds } }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
       logDaoError('Error reading participants by events', { error });
@@ -26,7 +26,7 @@ class EventParticipantDAO {
     try {
       const { eventId, userId, status = ParticipantStatus.Going, quantity, invitedBy, sharedVisibility } = input;
 
-      let participant = await EventParticipant.findOne({ eventId, userId }).exec();
+      let participant = await EventSeriesParticipant.findOne({ eventId, userId }).exec();
 
       if (participant) {
         participant.status = status;
@@ -38,7 +38,7 @@ class EventParticipantDAO {
         }
         await participant.save();
       } else {
-        participant = await EventParticipant.create({
+        participant = await EventSeriesParticipant.create({
           eventId,
           userId,
           status,
@@ -61,7 +61,7 @@ class EventParticipantDAO {
     const { eventId, userId } = input;
     let participant;
     try {
-      participant = await EventParticipant.findOne({ eventId, userId }).exec();
+      participant = await EventSeriesParticipant.findOne({ eventId, userId }).exec();
     } catch (error) {
       logDaoError('Error finding event participant for cancellation', { error });
       throw KnownCommonError(error);
@@ -84,7 +84,7 @@ class EventParticipantDAO {
 
   static async readByEvent(eventId: string): Promise<EventParticipantEntity[]> {
     try {
-      const participants = await EventParticipant.find({ eventId }).exec();
+      const participants = await EventSeriesParticipant.find({ eventId }).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
       logDaoError('Error reading participants', { error });
@@ -102,7 +102,7 @@ class EventParticipantDAO {
       if (activeOnly) {
         query.status = { $ne: ParticipantStatus.Cancelled };
       }
-      const participants = await EventParticipant.find(query).exec();
+      const participants = await EventSeriesParticipant.find(query).exec();
       return participants.map((p) => p.toObject());
     } catch (error) {
       logDaoError('Error reading user RSVPs', { error });
@@ -116,7 +116,7 @@ class EventParticipantDAO {
    */
   static async readByEventAndUser(eventId: string, userId: string): Promise<EventParticipantEntity | null> {
     try {
-      const participant = await EventParticipant.findOne({ eventId, userId }).exec();
+      const participant = await EventSeriesParticipant.findOne({ eventId, userId }).exec();
       return participant ? participant.toObject() : null;
     } catch (error) {
       logDaoError('Error reading user RSVP for event', { error });
@@ -131,7 +131,7 @@ class EventParticipantDAO {
   static async readByUserIds(userIds: string[]): Promise<EventParticipantEntity[]> {
     if (userIds.length === 0) return [];
     try {
-      const participants = await EventParticipant.find({
+      const participants = await EventSeriesParticipant.find({
         userId: { $in: userIds },
         status: { $ne: ParticipantStatus.Cancelled },
       }).exec();
@@ -155,7 +155,7 @@ class EventParticipantDAO {
         // By default, exclude cancelled
         query.status = { $ne: ParticipantStatus.Cancelled };
       }
-      return await EventParticipant.countDocuments(query).exec();
+      return await EventSeriesParticipant.countDocuments(query).exec();
     } catch (error) {
       logDaoError('Error counting event participants', { error });
       throw KnownCommonError(error);
@@ -163,4 +163,4 @@ class EventParticipantDAO {
   }
 }
 
-export default EventParticipantDAO;
+export default EventSeriesParticipantDAO;

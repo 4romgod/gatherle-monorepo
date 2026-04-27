@@ -3,7 +3,7 @@ import { Field, ID, InputType, Int, ObjectType, registerEnumType } from 'type-gr
 import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
 import { NOTIFICATION_DESCRIPTIONS } from '../constants';
 import { User } from './user';
-import { Event } from './event';
+import { EventSeries } from './eventSeries';
 import { Organization } from './organization';
 
 /**
@@ -51,7 +51,7 @@ export enum NotificationType {
  */
 export enum NotificationTargetType {
   User = 'User',
-  Event = 'Event',
+  EventSeries = 'EventSeries',
   Organization = 'Organization',
   Comment = 'Comment',
 }
@@ -119,11 +119,11 @@ export class Notification {
   })
   targetUser?: User;
 
-  @Field(() => Event, {
+  @Field(() => EventSeries, {
     nullable: true,
-    description: 'The target event if targetType is Event. Resolved via FieldResolver.',
+    description: 'The target event if targetType is EventSeries. Resolved via FieldResolver.',
   })
-  targetEvent?: Event;
+  targetEvent?: EventSeries;
 
   @Field(() => Organization, {
     nullable: true,

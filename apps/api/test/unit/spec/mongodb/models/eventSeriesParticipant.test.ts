@@ -1,8 +1,8 @@
 import { Types } from 'mongoose';
-import EventParticipant from '@/mongodb/models/eventParticipant';
+import EventSeriesParticipant from '@/mongodb/models/eventSeriesParticipant';
 import { ParticipantStatus } from '@gatherle/commons/types';
 
-describe('EventParticipant Model', () => {
+describe('EventSeriesParticipant Model', () => {
   describe('pre-validate hook', () => {
     it('should auto-generate participantId from _id when participantId is not set', async () => {
       const mockId = new Types.ObjectId();
@@ -105,9 +105,9 @@ describe('EventParticipant Model', () => {
   });
 
   describe('model export', () => {
-    it('should export EventParticipant model', () => {
-      expect(EventParticipant).toBeDefined();
-      expect(EventParticipant.modelName).toBe('EventParticipant');
+    it('should export EventSeriesParticipant model', () => {
+      expect(EventSeriesParticipant).toBeDefined();
+      expect(EventSeriesParticipant.modelName).toBe('EventSeriesParticipant');
     });
   });
 });

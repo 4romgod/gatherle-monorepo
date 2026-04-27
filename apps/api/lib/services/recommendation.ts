@@ -1,5 +1,5 @@
 import { FeedReason, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
-import { EventDAO, EventParticipantDAO, FollowDAO, UserDAO, UserFeedDAO } from '@/mongodb/dao';
+import { EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO, UserFeedDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 
 const SCORE_WEIGHTS = {
@@ -38,9 +38,9 @@ class RecommendationService {
       // Parallelise all four independent queries to reduce round-trip latency.
       const [user, activeParticipations, following, candidateEvents] = await Promise.all([
         UserDAO.readUserById(userId),
-        EventParticipantDAO.readByUser(userId),
+        EventSeriesParticipantDAO.readByUser(userId),
         FollowDAO.readFollowingForUser(userId),
-        EventDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS),
+        EventSeriesDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS),
       ]);
 
       // user.interests stores Ref<EventCategory>[] which at runtime are string IDs
@@ -68,7 +68,9 @@ class RecommendationService {
 
       const savedEventIds = new Set(
         following
-          .filter((f) => f.targetType === FollowTargetType.Event && f.approvalStatus === FollowApprovalStatus.Accepted)
+          .filter(
+            (f) => f.targetType === FollowTargetType.EventSeries && f.approvalStatus === FollowApprovalStatus.Accepted,
+          )
           .map((f) => f.targetId),
       );
 
@@ -77,7 +79,7 @@ class RecommendationService {
 
       if (followedUserIds.length > 0) {
         const [friendParticipations, friendSaves] = await Promise.all([
-          EventParticipantDAO.readByUserIds(followedUserIds),
+          EventSeriesParticipantDAO.readByUserIds(followedUserIds),
           FollowDAO.readSavedEventsByUserIds(followedUserIds),
         ]);
 
@@ -253,7 +255,7 @@ class RecommendationService {
    * Instead we rely on the lazy-staleness strategy in `readRecommendedFeed`:
    * the next time a user reads their feed, `isFeedStale()` detects that it is
    * >24 h old and triggers a background recompute, which will naturally include
-   * the newly published event via `EventDAO.readUpcomingPublished()`.
+   * the newly published event via `EventSeriesDAO.readUpcomingPublished()`.
    *
    * If sub-24 h propagation becomes a product requirement, consider one of:
    *   1. Shortening `FEED_STALE_AFTER_HOURS` (simplest, no new infrastructure).
@@ -264,7 +266,7 @@ class RecommendationService {
    *      of affected users in the background.
    */
   async onEventPublished(eventId: string): Promise<void> {
-    logger.debug('[RecommendationService] Event published — feeds will refresh lazily', { eventId });
+    logger.debug('[RecommendationService] EventSeries published — feeds will refresh lazily', { eventId });
   }
 }
 

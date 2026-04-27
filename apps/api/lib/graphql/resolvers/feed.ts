@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Int, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { Event, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/types';
+import { EventSeries, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/types';
 import { UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
@@ -12,10 +12,10 @@ const MAX_FEED_LIMIT = 50;
 
 @Resolver(() => UserFeedItem)
 export class FeedResolver {
-  @FieldResolver(() => Event, { nullable: true })
-  async event(@Root() feedItem: UserFeedItem, @Ctx() context: ServerContext): Promise<Event | null> {
+  @FieldResolver(() => EventSeries, { nullable: true })
+  async event(@Root() feedItem: UserFeedItem, @Ctx() context: ServerContext): Promise<EventSeries | null> {
     try {
-      return await context.loaders.event.load(feedItem.eventId);
+      return await context.loaders.eventSeries.load(feedItem.eventId);
     } catch {
       return null;
     }

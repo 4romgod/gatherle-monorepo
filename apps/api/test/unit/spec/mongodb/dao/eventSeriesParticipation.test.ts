@@ -1,7 +1,7 @@
-import { EventParticipantDAO } from '@/mongodb/dao';
-import { EventParticipant as EventParticipantModel } from '@/mongodb/models';
+import { EventSeriesParticipantDAO } from '@/mongodb/dao';
+import { EventSeriesParticipant as EventParticipantModel } from '@/mongodb/models';
 import type {
-  EventParticipant,
+  EventSeriesParticipant,
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
 } from '@gatherle/commons/types';
@@ -12,7 +12,7 @@ import { MockMongoError } from '@/test/utils';
 import { Types } from 'mongoose';
 
 jest.mock('@/mongodb/models', () => ({
-  EventParticipant: {
+  EventSeriesParticipant: {
     findOne: jest.fn(),
     create: jest.fn(),
     find: jest.fn(),
@@ -33,7 +33,7 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
   exec: jest.fn().mockRejectedValue(error),
 });
 
-describe('EventParticipantDAO', () => {
+describe('EventSeriesParticipantDAO', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -42,7 +42,7 @@ describe('EventParticipantDAO', () => {
   const mockEventId = 'event123';
   const mockUserId = 'user456';
 
-  const mockEventParticipant: EventParticipant = {
+  const mockEventParticipant: EventSeriesParticipant = {
     participantId: mockParticipantId,
     eventId: mockEventId,
     userId: mockUserId,
@@ -73,7 +73,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingParticipant));
 
-      const result = await EventParticipantDAO.upsert(mockUpsertInput);
+      const result = await EventSeriesParticipantDAO.upsert(mockUpsertInput);
 
       expect(result.status).toBe(ParticipantStatus.Going);
       expect(result.quantity).toBe(2);
@@ -91,7 +91,7 @@ describe('EventParticipantDAO', () => {
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
       (EventParticipantModel.create as jest.Mock).mockResolvedValue(newParticipant);
 
-      const result = await EventParticipantDAO.upsert(mockUpsertInput);
+      const result = await EventSeriesParticipantDAO.upsert(mockUpsertInput);
 
       expect(result.quantity).toBe(2);
       expect(EventParticipantModel.create).toHaveBeenCalledWith(
@@ -108,14 +108,14 @@ describe('EventParticipantDAO', () => {
       const mockError = new Error('Database Error');
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(GraphQLError);
     });
 
     it('should re-throw GraphQLError', async () => {
       const mockGraphqlError = new GraphQLError('GraphQL Error');
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
 
-      await expect(EventParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(mockGraphqlError);
+      await expect(EventSeriesParticipantDAO.upsert(mockUpsertInput)).rejects.toThrow(mockGraphqlError);
     });
 
     it('should default status to Going when not provided', async () => {
@@ -133,7 +133,7 @@ describe('EventParticipantDAO', () => {
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
       (EventParticipantModel.create as jest.Mock).mockResolvedValue(newParticipant);
 
-      const result = await EventParticipantDAO.upsert(minimalInput);
+      const result = await EventSeriesParticipantDAO.upsert(minimalInput);
 
       expect(result.status).toBe(ParticipantStatus.Going);
     });
@@ -158,7 +158,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingParticipant));
 
-      const result = await EventParticipantDAO.cancel(mockCancelInput);
+      const result = await EventSeriesParticipantDAO.cancel(mockCancelInput);
 
       expect(result.status).toBe(ParticipantStatus.Cancelled);
       expect(EventParticipantModel.findOne).toHaveBeenCalledWith({ eventId: mockEventId, userId: mockUserId });
@@ -168,7 +168,7 @@ describe('EventParticipantDAO', () => {
     it('should throw NOT_FOUND GraphQLError when participant is not found', async () => {
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
-      await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(
+      await expect(EventSeriesParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(
         CustomError(`Participant not found for event ${mockEventId}`, ErrorTypes.NOT_FOUND),
       );
     });
@@ -177,14 +177,14 @@ describe('EventParticipantDAO', () => {
       const mockError = new MockMongoError(0);
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(GraphQLError);
     });
 
     it('should re-throw GraphQLError', async () => {
       const mockGraphqlError = new GraphQLError('GraphQL Error');
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockGraphqlError));
 
-      await expect(EventParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(mockGraphqlError);
+      await expect(EventSeriesParticipantDAO.cancel(mockCancelInput)).rejects.toThrow(mockGraphqlError);
     });
   });
 
@@ -205,7 +205,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
 
-      const result = await EventParticipantDAO.readByEvent(mockEventId);
+      const result = await EventSeriesParticipantDAO.readByEvent(mockEventId);
 
       expect(result).toHaveLength(2);
       expect(result[0].userId).toBe('user1');
@@ -216,7 +216,7 @@ describe('EventParticipantDAO', () => {
     it('should return an empty array when no participants are found for an event', async () => {
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
-      const result = await EventParticipantDAO.readByEvent(mockEventId);
+      const result = await EventSeriesParticipantDAO.readByEvent(mockEventId);
 
       expect(result).toEqual([]);
       expect(EventParticipantModel.find).toHaveBeenCalledWith({ eventId: mockEventId });
@@ -226,7 +226,7 @@ describe('EventParticipantDAO', () => {
       const mockError = new Error('Database Error');
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.readByEvent(mockEventId)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.readByEvent(mockEventId)).rejects.toThrow(GraphQLError);
     });
 
     it('should handle multiple participants with different statuses', async () => {
@@ -259,7 +259,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
 
-      const result = await EventParticipantDAO.readByEvent(mockEventId);
+      const result = await EventSeriesParticipantDAO.readByEvent(mockEventId);
 
       expect(result).toHaveLength(3);
       expect(result[0].status).toBe(ParticipantStatus.Going);
@@ -285,7 +285,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
 
-      const result = await EventParticipantDAO.readByUser(mockUserId);
+      const result = await EventSeriesParticipantDAO.readByUser(mockUserId);
 
       expect(result).toHaveLength(2);
       expect(EventParticipantModel.find).toHaveBeenCalledWith({
@@ -305,7 +305,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
 
-      const result = await EventParticipantDAO.readByUser(mockUserId, false);
+      const result = await EventSeriesParticipantDAO.readByUser(mockUserId, false);
 
       expect(result).toHaveLength(1);
       expect(EventParticipantModel.find).toHaveBeenCalledWith({ userId: mockUserId });
@@ -314,7 +314,7 @@ describe('EventParticipantDAO', () => {
     it('should return empty array when user has no RSVPs', async () => {
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
-      const result = await EventParticipantDAO.readByUser(mockUserId);
+      const result = await EventSeriesParticipantDAO.readByUser(mockUserId);
 
       expect(result).toEqual([]);
     });
@@ -323,7 +323,7 @@ describe('EventParticipantDAO', () => {
       const mockError = new Error('Database Error');
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.readByUser(mockUserId)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.readByUser(mockUserId)).rejects.toThrow(GraphQLError);
     });
   });
 
@@ -336,7 +336,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipant));
 
-      const result = await EventParticipantDAO.readByEventAndUser(mockEventId, mockUserId);
+      const result = await EventSeriesParticipantDAO.readByEventAndUser(mockEventId, mockUserId);
 
       expect(result).toEqual(mockEventParticipant);
       expect(EventParticipantModel.findOne).toHaveBeenCalledWith({ eventId: mockEventId, userId: mockUserId });
@@ -345,7 +345,7 @@ describe('EventParticipantDAO', () => {
     it('should return null when participant is not found', async () => {
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
-      const result = await EventParticipantDAO.readByEventAndUser(mockEventId, mockUserId);
+      const result = await EventSeriesParticipantDAO.readByEventAndUser(mockEventId, mockUserId);
 
       expect(result).toBeNull();
     });
@@ -354,7 +354,7 @@ describe('EventParticipantDAO', () => {
       const mockError = new Error('Database Error');
       (EventParticipantModel.findOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.readByEventAndUser(mockEventId, mockUserId)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.readByEventAndUser(mockEventId, mockUserId)).rejects.toThrow(GraphQLError);
     });
   });
 
@@ -362,7 +362,7 @@ describe('EventParticipantDAO', () => {
     it('should count participants excluding cancelled by default', async () => {
       (EventParticipantModel.countDocuments as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(5));
 
-      const result = await EventParticipantDAO.countByEvent(mockEventId);
+      const result = await EventSeriesParticipantDAO.countByEvent(mockEventId);
 
       expect(result).toBe(5);
       expect(EventParticipantModel.countDocuments).toHaveBeenCalledWith({
@@ -374,7 +374,7 @@ describe('EventParticipantDAO', () => {
     it('should count participants with specific statuses when provided', async () => {
       (EventParticipantModel.countDocuments as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(3));
 
-      const result = await EventParticipantDAO.countByEvent(mockEventId, [ParticipantStatus.Going]);
+      const result = await EventSeriesParticipantDAO.countByEvent(mockEventId, [ParticipantStatus.Going]);
 
       expect(result).toBe(3);
       expect(EventParticipantModel.countDocuments).toHaveBeenCalledWith({
@@ -386,7 +386,7 @@ describe('EventParticipantDAO', () => {
     it('should count participants with multiple statuses', async () => {
       (EventParticipantModel.countDocuments as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(7));
 
-      const result = await EventParticipantDAO.countByEvent(mockEventId, [
+      const result = await EventSeriesParticipantDAO.countByEvent(mockEventId, [
         ParticipantStatus.Going,
         ParticipantStatus.Interested,
       ]);
@@ -401,7 +401,7 @@ describe('EventParticipantDAO', () => {
     it('should return 0 when no participants match', async () => {
       (EventParticipantModel.countDocuments as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(0));
 
-      const result = await EventParticipantDAO.countByEvent(mockEventId);
+      const result = await EventSeriesParticipantDAO.countByEvent(mockEventId);
 
       expect(result).toBe(0);
     });
@@ -410,7 +410,7 @@ describe('EventParticipantDAO', () => {
       const mockError = new MockMongoError(0);
       (EventParticipantModel.countDocuments as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(EventParticipantDAO.countByEvent(mockEventId)).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.countByEvent(mockEventId)).rejects.toThrow(GraphQLError);
     });
   });
 
@@ -431,7 +431,7 @@ describe('EventParticipantDAO', () => {
 
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockParticipants));
 
-      const result = await EventParticipantDAO.readByUserIds(['user-a', 'user-b']);
+      const result = await EventSeriesParticipantDAO.readByUserIds(['user-a', 'user-b']);
 
       expect(EventParticipantModel.find).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -442,7 +442,7 @@ describe('EventParticipantDAO', () => {
     });
 
     it('returns empty array when passed empty userIds list', async () => {
-      const result = await EventParticipantDAO.readByUserIds([]);
+      const result = await EventSeriesParticipantDAO.readByUserIds([]);
 
       // Should short-circuit without hitting the DB
       expect(EventParticipantModel.find).not.toHaveBeenCalled();
@@ -452,7 +452,7 @@ describe('EventParticipantDAO', () => {
     it('wraps errors', async () => {
       (EventParticipantModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
-      await expect(EventParticipantDAO.readByUserIds(['user-a'])).rejects.toThrow(GraphQLError);
+      await expect(EventSeriesParticipantDAO.readByUserIds(['user-a'])).rejects.toThrow(GraphQLError);
     });
   });
 });

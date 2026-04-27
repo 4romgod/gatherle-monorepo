@@ -13,9 +13,9 @@ import {
 } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
-import type { Event, MediaUploadUrl } from '@gatherle/commons/types';
+import type { EventSeries, MediaUploadUrl } from '@gatherle/commons/types';
 import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
-import { EventDAO, EventParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
+import { EventSeriesDAO, EventSeriesParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
@@ -97,11 +97,11 @@ class MediaService {
     const contentType = CONTENT_TYPE_MAP[cleanExt]!;
 
     // 1. Verify the event exists and the posting window is still open.
-    let event: Event;
+    let event: EventSeries;
     try {
-      event = await EventDAO.readEventById(eventId);
+      event = await EventSeriesDAO.readEventById(eventId);
     } catch {
-      throw CustomError('Event not found', ErrorTypes.NOT_FOUND);
+      throw CustomError('EventSeries not found', ErrorTypes.NOT_FOUND);
     }
 
     const windowCloseMs =
@@ -115,7 +115,7 @@ class MediaService {
     }
 
     // 2. Caller must have an active Going or CheckedIn RSVP.
-    const participant = await EventParticipantDAO.readByEventAndUser(eventId, userId);
+    const participant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to upload a moment', ErrorTypes.UNAUTHORIZED);
     }

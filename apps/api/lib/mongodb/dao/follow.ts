@@ -221,19 +221,19 @@ class FollowDAO {
   }
 
   // ============================================================================
-  // SAVED EVENTS METHODS (Event as targetType)
+  // SAVED EVENTS METHODS (EventSeries as targetType)
   // ============================================================================
 
   /**
    * Get all saved events for a user.
    * @param userId - The user who saved the events
-   * @returns Array of Follow entities where targetType is Event
+   * @returns Array of Follow entities where targetType is EventSeries
    */
   static async readSavedEventsForUser(userId: string): Promise<FollowEntity[]> {
     try {
       const follows = await FollowModel.find({
         followerUserId: userId,
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         approvalStatus: FollowApprovalStatus.Accepted,
       })
         .sort({ createdAt: -1 })
@@ -253,7 +253,7 @@ class FollowDAO {
   static async countSavesForEvent(eventId: string): Promise<number> {
     try {
       return await FollowModel.countDocuments({
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: eventId,
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
@@ -273,7 +273,7 @@ class FollowDAO {
     try {
       const follow = await FollowModel.findOne({
         followerUserId: userId,
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         targetId: eventId,
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
@@ -293,7 +293,7 @@ class FollowDAO {
     try {
       const follows = await FollowModel.find({
         followerUserId: { $in: userIds },
-        targetType: FollowTargetType.Event,
+        targetType: FollowTargetType.EventSeries,
         approvalStatus: FollowApprovalStatus.Accepted,
       }).exec();
       return follows.map((f) => f.toObject());

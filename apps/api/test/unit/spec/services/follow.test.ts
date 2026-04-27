@@ -77,7 +77,7 @@ jest.mock('@/mongodb/dao', () => ({
   OrganizationDAO: {
     readOrganizationById: jest.fn(),
   },
-  EventDAO: {
+  EventSeriesDAO: {
     readEventById: jest.fn(),
   },
 }));
@@ -102,11 +102,11 @@ jest.mock('@/websocket/publisher', () => ({
 }));
 
 import { FollowService } from '@/services';
-import { FollowDAO, UserDAO, OrganizationDAO, EventDAO } from '@/mongodb/dao';
+import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishFollowRequestCreated, publishFollowRequestUpdated } from '@/websocket/publisher';
 import { CustomError, ErrorTypes } from '@/utils';
-import type { Follow, User, Organization, Event } from '@gatherle/commons/types';
+import type { Follow, User, Organization, EventSeries } from '@gatherle/commons/types';
 import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@gatherle/commons/types';
 import { GraphQLError } from 'graphql';
 
@@ -162,9 +162,9 @@ describe('FollowService', () => {
     followPolicy: FollowPolicy.Public,
   };
 
-  const mockEvent: Partial<Event> = {
+  const mockEvent: Partial<EventSeries> = {
     eventId: 'event-1',
-    title: 'Test Event',
+    title: 'Test EventSeries',
   };
 
   afterEach(() => {
@@ -348,14 +348,14 @@ describe('FollowService', () => {
 
     describe('saving an event', () => {
       it('creates follow with Accepted status (events are always public)', async () => {
-        const eventFollow = { ...mockFollow, targetType: FollowTargetType.Event, targetId: 'event-1' };
+        const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
         (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
 
         await FollowService.follow({
           followerUserId: 'user-1',
-          targetType: FollowTargetType.Event,
+          targetType: FollowTargetType.EventSeries,
           targetId: 'event-1',
         });
 
@@ -367,14 +367,14 @@ describe('FollowService', () => {
       });
 
       it('does not send notification for event saves', async () => {
-        const eventFollow = { ...mockFollow, targetType: FollowTargetType.Event, targetId: 'event-1' };
+        const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
-        (EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
         (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
 
         await FollowService.follow({
           followerUserId: 'user-1',
-          targetType: FollowTargetType.Event,
+          targetType: FollowTargetType.EventSeries,
           targetId: 'event-1',
         });
 

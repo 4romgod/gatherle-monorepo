@@ -29,7 +29,7 @@ import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
 import EventLocationMap from '@/components/events/EventLocationMap';
 import { formatLocationText } from '@/components/events/location-utils';
 import {
-  EventParticipant,
+  EventSeriesParticipantRecord,
   getParticipantChipColor,
   getParticipantDisplayName,
   getParticipantStatusLabel,
@@ -64,7 +64,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   });
 
   const event = data?.readEventBySlug;
-  const participantList = (event?.participants ?? []) as EventParticipant[];
+  const participantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
 
   const goingCount = participantList.filter(
     (p) => p.status === ParticipantStatus.Going || p.status === ParticipantStatus.CheckedIn,
@@ -120,7 +120,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     });
     return set;
   }, [following]);
-  const canViewAttendee = (user?: EventParticipant['user']) =>
+  const canViewAttendee = (user?: EventSeriesParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
   const notFoundError = isNotFoundGraphQLError(error);
@@ -490,8 +490,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                       .filter(
                         (
                           participant,
-                        ): participant is EventParticipant & {
-                          user: NonNullable<EventParticipant['user']>;
+                        ): participant is EventSeriesParticipantRecord & {
+                          user: NonNullable<EventSeriesParticipantRecord['user']>;
                         } => Boolean(participant.user),
                       )
                       .map((participant) => {

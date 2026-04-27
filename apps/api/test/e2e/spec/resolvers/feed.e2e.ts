@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventsMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
 import {
@@ -13,7 +13,7 @@ import {
   createEventOnServer,
   cleanupTrackedEntities,
   assertNoCleanupFailures,
-} from '@/test/e2e/utils/eventResolverHelpers';
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 describe('Feed resolver e2e', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -27,11 +27,11 @@ describe('Feed resolver e2e', () => {
       readFirstEventCategory(url),
     ]);
     actorUser = user;
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
 
     const eventInput: CreateEventInput = {
       ...baseEventData,
-      title: `Feed Test Event ${Date.now()}`,
+      title: `Feed Test EventSeries ${Date.now()}`,
       description: 'An event for feed testing',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: actorUser.userId, role: 'Host' }],

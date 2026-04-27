@@ -5,13 +5,13 @@ import { FeedReason, UserRole } from '@gatherle/commons/types';
 import { createMockContext } from '../../../../utils/mockContext';
 
 jest.mock('@/mongodb/dao', () => {
-  class EventParticipantDAO {
+  class EventSeriesParticipantDAO {
     static readByEvents = jest.fn();
   }
   class UserFeedDAO {
     static readFeedForUser = jest.fn();
   }
-  return { EventParticipantDAO, UserFeedDAO };
+  return { EventSeriesParticipantDAO, UserFeedDAO };
 });
 
 jest.mock('@/services/recommendation', () => ({
@@ -178,7 +178,7 @@ describe('FeedResolver', () => {
   describe('event', () => {
     it('loads event via DataLoader', async () => {
       const mockEvent = { eventId: 'event-1', title: 'Test' } as any;
-      const loaderSpy = jest.spyOn(ctx.loaders.event, 'load').mockResolvedValue(mockEvent);
+      const loaderSpy = jest.spyOn(ctx.loaders.eventSeries, 'load').mockResolvedValue(mockEvent);
 
       const item = makeFeedItem({ eventId: 'event-1' });
       const result = await resolver.event(item, ctx);
@@ -188,7 +188,7 @@ describe('FeedResolver', () => {
     });
 
     it('returns null when DataLoader throws', async () => {
-      jest.spyOn(ctx.loaders.event, 'load').mockRejectedValue(new Error('loader error'));
+      jest.spyOn(ctx.loaders.eventSeries, 'load').mockRejectedValue(new Error('loader error'));
 
       const item = makeFeedItem({ eventId: 'event-1' });
       const result = await resolver.event(item, ctx);

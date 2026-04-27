@@ -1,5 +1,5 @@
 export * from './user';
-export * from './event';
+export * from './eventSeries';
 export * from './eventCategory';
 export * from './organization';
 export * from './organizationMembership';

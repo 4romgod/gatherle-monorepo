@@ -11,7 +11,7 @@ import {
   getUpdateOrganizationMembershipMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 describe('OrganizationMembership Resolver', () => {
   const url = process.env.GRAPHQL_URL!;

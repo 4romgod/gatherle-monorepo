@@ -3,12 +3,12 @@ import {
   ActivityDAO,
   EventCategoryDAO,
   EventCategoryGroupDAO,
-  EventDAO,
+  EventSeriesDAO,
   FollowDAO,
   OrganizationDAO,
   OrganizationMembershipDAO,
   UserDAO,
-  EventParticipantDAO,
+  EventSeriesParticipantDAO,
   VenueDAO,
 } from '@/mongodb/dao';
 import {
@@ -16,14 +16,14 @@ import {
   testAdminSeedUser,
   testUserSeedUser,
   testUser2SeedUser,
-  eventsMockData,
+  eventSeriesMockData,
   eventCategoryMockData,
   eventCategoryGroupMockData,
   followSeedData,
   activitySeedData,
 } from '@/mongodb/mockData';
 import type { FollowSeed, ActivitySeed } from '@/mongodb/mockData/social';
-import type { EventSeedData } from '@/mongodb/mockData';
+import type { EventSeriesSeedData } from '@/mongodb/mockData';
 import type { OrganizationSeedData } from '@/mongodb/mockData/organizations';
 import organizationsData from '@/mongodb/mockData/organizations';
 import type { VenueSeedData } from '@/mongodb/mockData/venues';
@@ -37,7 +37,7 @@ import type {
   CreateOrganizationInput,
   CreateUserInput,
   CreateVenueInput,
-  Event,
+  EventSeries,
   EventCategory,
   Organization,
   UpdateVenueInput,
@@ -46,7 +46,7 @@ import type {
 } from '@gatherle/commons/types';
 import { SECRET_KEYS, validateEnv } from '@/constants';
 import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@gatherle/commons/types';
-import { EventVisibility } from '@gatherle/commons/types/event';
+import { EventVisibility } from '@gatherle/commons/types/eventSeries';
 import { logger } from '@/utils/logger';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
@@ -460,22 +460,22 @@ async function seedOrganizationMemberships(
 }
 
 async function seedEvents(
-  events: EventSeedData[],
+  events: EventSeriesSeedData[],
   userIds: Array<string>,
   eventCategoryIds: Array<string>,
   organizations: Organization[],
   venues: Venue[],
-): Promise<Event[]> {
+): Promise<EventSeries[]> {
   logger.info('Starting to seed event data...');
-  const createdEvents: Event[] = [];
-  const existingEvents = await EventDAO.readEvents();
+  const createdEvents: EventSeries[] = [];
+  const existingEvents = await EventSeriesDAO.readEvents();
 
   for (const event of events) {
     try {
       // Check if event with this title already exists
       const found = existingEvents.find((e) => e.title === event.title);
       if (found) {
-        logger.info(`   Event "${event.title}" already exists, using existing...`);
+        logger.info(`   EventSeries "${event.title}" already exists, using existing...`);
         createdEvents.push(found);
         continue;
       }
@@ -494,7 +494,7 @@ async function seedEvents(
       const resolvedLocation = locationFromVenue ?? eventBase.location;
 
       if (!resolvedLocation) {
-        throw new Error(`Event "${event.title}" is missing a location`);
+        throw new Error(`EventSeries "${event.title}" is missing a location`);
       }
       const eventInput: CreateEventInput = {
         ...eventBase,
@@ -508,12 +508,12 @@ async function seedEvents(
         venueId: venue?.venueId,
       };
 
-      const eventResponse = await EventDAO.create(eventInput);
+      const eventResponse = await EventSeriesDAO.create(eventInput);
 
-      logger.info(`   Created Event item with id: ${eventResponse.eventId}`);
+      logger.info(`   Created EventSeries item with id: ${eventResponse.eventId}`);
       createdEvents.push(eventResponse);
     } catch (error) {
-      logger.warn(`   Failed to create Event:`, { error });
+      logger.warn(`   Failed to create EventSeries:`, { error });
     }
   }
   logger.info('Completed seeding event data.');
@@ -545,7 +545,7 @@ async function seedFollows(seedData: FollowSeed[], usersByEmail: Map<string, Use
   logger.info('Completed seeding follow edges.');
 }
 
-async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string, User>, events: Event[]) {
+async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string, User>, events: EventSeries[]) {
   logger.info('Starting to seed activity feed...');
   for (const seed of seedData) {
     const actor = usersByEmail.get(seed.actorEmail.toLowerCase());
@@ -597,7 +597,7 @@ async function main() {
   const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
   await MongoDbClient.connectToDatabase(secret);
 
-  async function seedEventParticipants(events: Event[], userIds: string[]) {
+  async function seedEventParticipants(events: EventSeries[], userIds: string[]) {
     if (events.length === 0 || userIds.length === 0) {
       return;
     }
@@ -614,7 +614,7 @@ async function main() {
       const rsvpCount = getRandomInt(0, maxRsvpsPerEvent);
       const selectedUserIds = getRandomUniqueItems(userIds, rsvpCount);
       if (event.visibility === undefined) {
-        logger.warn('Event visibility is undefined during RSVP seed; defaulting to Public', {
+        logger.warn('EventSeries visibility is undefined during RSVP seed; defaulting to Public', {
           eventId: event.eventId,
         });
       }
@@ -634,7 +634,7 @@ async function main() {
         await Promise.all(
           batch.map(async (input) => {
             try {
-              await EventParticipantDAO.upsert(input);
+              await EventSeriesParticipantDAO.upsert(input);
             } catch (error) {
               logger.warn('Failed to upsert event participant during seed', {
                 eventId: input.eventId,
@@ -673,7 +673,7 @@ async function main() {
   await seedOrganizationMemberships(organizationMembershipsData, createdOrganizations, userByEmail);
 
   const createdEvents = await seedEvents(
-    eventsMockData,
+    eventSeriesMockData,
     allUserIds,
     allEventCategoriesIds,
     createdOrganizations,

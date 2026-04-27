@@ -1,8 +1,8 @@
 import * as Models from '@/mongodb/models';
 
 describe('Models Index Exports', () => {
-  it('should export Event model', () => {
-    expect(Models.Event).toBeDefined();
+  it('should export EventSeries model', () => {
+    expect(Models.EventSeries).toBeDefined();
   });
 
   it('should export User model', () => {
@@ -13,8 +13,8 @@ describe('Models Index Exports', () => {
     expect(Models.EventCategory).toBeDefined();
   });
 
-  it('should export EventParticipant model', () => {
-    expect(Models.EventParticipant).toBeDefined();
+  it('should export EventSeriesParticipant model', () => {
+    expect(Models.EventSeriesParticipant).toBeDefined();
   });
 
   it('should export ChatMessage model', () => {

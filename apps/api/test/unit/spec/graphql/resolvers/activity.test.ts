@@ -48,7 +48,7 @@ describe('ActivityResolver', () => {
   it('logs an activity', async () => {
     const activityInput: CreateActivityInput = {
       verb: ActivityVerb.RSVPd,
-      objectType: ActivityObjectType.Event,
+      objectType: ActivityObjectType.EventSeries,
       objectId: new Types.ObjectId().toString(),
       visibility: ActivityVisibility.Public,
     };
@@ -56,7 +56,7 @@ describe('ActivityResolver', () => {
       activityId: 'activity-1',
       actorId: mockUser.userId,
       verb: ActivityVerb.RSVPd,
-      objectType: ActivityObjectType.Event,
+      objectType: ActivityObjectType.EventSeries,
       objectId: 'event-1',
       visibility: ActivityVisibility.Public,
       createdAt: new Date(),

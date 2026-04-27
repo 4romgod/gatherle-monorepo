@@ -8,7 +8,7 @@ import {
   UserRole,
   Organization,
   SocialVisibility,
-  Event,
+  EventSeries,
 } from '@gatherle/commons/types';
 import { CreateFollowInputSchema } from '@/validation/zod';
 import { validateInput } from '@/validation';
@@ -45,12 +45,12 @@ export class FollowResolver {
     return context.loaders.organization.load(follow.targetId);
   }
 
-  @FieldResolver(() => Event, { nullable: true })
-  async targetEvent(@Root() follow: Follow, @Ctx() context: ServerContext): Promise<Event | null> {
-    if (follow.targetType !== FollowTargetType.Event) {
+  @FieldResolver(() => EventSeries, { nullable: true })
+  async targetEvent(@Root() follow: Follow, @Ctx() context: ServerContext): Promise<EventSeries | null> {
+    if (follow.targetType !== FollowTargetType.EventSeries) {
       return null;
     }
-    return context.loaders.event.load(follow.targetId);
+    return context.loaders.eventSeries.load(follow.targetId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

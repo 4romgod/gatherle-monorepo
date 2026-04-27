@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { EventParticipant as EventParticipantEntity } from '@gatherle/commons/types';
+import { EventSeriesParticipant as EventParticipantEntity } from '@gatherle/commons/types';
 
 @pre<EventParticipantModel>('validate', function (next) {
   try {
@@ -14,8 +14,8 @@ import { EventParticipant as EventParticipantEntity } from '@gatherle/commons/ty
 })
 class EventParticipantModel extends EventParticipantEntity {}
 
-const EventParticipant = getModelForClass(EventParticipantModel, {
-  options: { customName: 'EventParticipant' },
+const EventSeriesParticipant = getModelForClass(EventParticipantModel, {
+  options: { customName: 'EventSeriesParticipant' },
 });
 
-export default EventParticipant;
+export default EventSeriesParticipant;

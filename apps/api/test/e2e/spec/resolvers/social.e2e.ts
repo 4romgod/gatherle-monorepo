@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventsMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import {
   FollowTargetType,
@@ -24,7 +24,7 @@ import {
   getUpdateUserMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser, readFirstEventCategory } from '@/test/e2e/utils/helpers';
-import { createEventOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventResolverHelpers';
+import { createEventOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 const getReadFollowRequestsQuery = (targetType: FollowTargetType) => ({
   query: `
@@ -78,7 +78,7 @@ describe('Social resolver e2e', () => {
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
   const baseEventData = (() => {
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
     return rest;
   })();
 
@@ -91,7 +91,7 @@ describe('Social resolver e2e', () => {
 
     const eventInput: CreateEventInput = {
       ...baseEventData,
-      title: `Social Feed Event ${Date.now()}`,
+      title: `Social Feed EventSeries ${Date.now()}`,
       description: 'A gathering for social signals',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: actorUser.userId, role: 'Host' }],
@@ -187,7 +187,7 @@ describe('Social resolver e2e', () => {
       .send(
         getLogActivityMutation({
           verb: ActivityVerb.RSVPd,
-          objectType: ActivityObjectType.Event,
+          objectType: ActivityObjectType.EventSeries,
           objectId: eventId,
           visibility: ActivityVisibility.Public,
         }),
@@ -358,7 +358,7 @@ describe('Social resolver e2e', () => {
       .send(
         getLogActivityMutation({
           verb: ActivityVerb.RSVPd,
-          objectType: ActivityObjectType.Event,
+          objectType: ActivityObjectType.EventSeries,
           objectId: eventId,
           visibility: ActivityVisibility.Public,
         }),
@@ -407,7 +407,7 @@ describe('Social resolver e2e', () => {
       .send(
         getLogActivityMutation({
           verb: ActivityVerb.Commented,
-          objectType: ActivityObjectType.Event,
+          objectType: ActivityObjectType.EventSeries,
           objectId: eventId,
           visibility: ActivityVisibility.Private,
         }),
@@ -422,7 +422,7 @@ describe('Social resolver e2e', () => {
       .send(
         getLogActivityMutation({
           verb: ActivityVerb.CheckedIn,
-          objectType: ActivityObjectType.Event,
+          objectType: ActivityObjectType.EventSeries,
           objectId: eventId,
           visibility: ActivityVisibility.Followers,
         }),

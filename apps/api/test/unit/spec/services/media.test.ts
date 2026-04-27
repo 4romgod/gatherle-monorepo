@@ -56,8 +56,8 @@ jest.mock('@/constants', () => ({
 }));
 
 jest.mock('@/mongodb/dao', () => ({
-  EventDAO: { readEventById: jest.fn() },
-  EventParticipantDAO: { readByEventAndUser: jest.fn() },
+  EventSeriesDAO: { readEventById: jest.fn() },
+  EventSeriesParticipantDAO: { readByEventAndUser: jest.fn() },
   EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
 }));
 
@@ -83,7 +83,7 @@ const mockEvent = {
 const mockParticipant = { status: ParticipantStatus.Going };
 
 const baseMediaParams = {
-  entityType: MediaEntityType.Event,
+  entityType: MediaEntityType.EventSeries,
   mediaType: MediaType.Featured,
   extension: 'jpg',
   entityId: 'event-456',
@@ -101,8 +101,8 @@ describe('MediaService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (s3Client.getPresignedUploadUrl as jest.Mock).mockResolvedValue('https://upload.example.com/signed');
-    (DaoModule.EventDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (DaoModule.EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
+    (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
     (DaoModule.EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (DaoModule.EventMomentDAO.createVideoUpload as jest.Mock).mockResolvedValue({ momentId: 'moment-reserved-1' });
   });
@@ -299,8 +299,8 @@ describe('MediaService', () => {
           REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
         }));
         jest.doMock('@/mongodb/dao', () => ({
-          EventDAO: { readEventById: jest.fn() },
-          EventParticipantDAO: { readByEventAndUser: jest.fn() },
+          EventSeriesDAO: { readEventById: jest.fn() },
+          EventSeriesParticipantDAO: { readByEventAndUser: jest.fn() },
           EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
         }));
         jest.doMock('@/mongodb/dao/eventMoment', () => ({
@@ -326,12 +326,12 @@ describe('MediaService', () => {
     });
 
     it('throws NOT_FOUND when the event does not exist', async () => {
-      (DaoModule.EventDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
-      await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('Event not found');
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockRejectedValue(new Error('not found'));
+      await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('EventSeries not found');
     });
 
     it('throws BAD_USER_INPUT when the posting window has closed', async () => {
-      (DaoModule.EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         primarySchedule: {
           startAt: new Date('2000-01-01T00:00:00Z'),
@@ -342,12 +342,12 @@ describe('MediaService', () => {
     });
 
     it('throws UNAUTHORIZED when the caller has no RSVP', async () => {
-      (DaoModule.EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('RSVP');
     });
 
     it('throws UNAUTHORIZED when the caller RSVP status is Interested (not Going/CheckedIn)', async () => {
-      (DaoModule.EventParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
         status: ParticipantStatus.Interested,
       });
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('RSVP');
@@ -359,7 +359,7 @@ describe('MediaService', () => {
     });
 
     it('allows uploads when primarySchedule is absent (no window constraint)', async () => {
-      (DaoModule.EventDAO.readEventById as jest.Mock).mockResolvedValue({ ...mockEvent, primarySchedule: null });
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({ ...mockEvent, primarySchedule: null });
       const result = await MediaService.getEventMomentUploadUrl(baseMomentParams);
       expect(result.key).toMatch(/^test\/event-moments\/summer-bbq\/testuser\/[A-Za-z0-9_-]+\.mp4$/);
     });
@@ -390,13 +390,13 @@ describe('MediaService', () => {
     });
 
     it('sanitises the event slug (never trusts client input for key path)', async () => {
-      (DaoModule.EventDAO.readEventById as jest.Mock).mockResolvedValue({
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
-        slug: 'My Fancy Event!!',
+        slug: 'My Fancy EventSeries!!',
         primarySchedule: null,
       });
       const result = await MediaService.getEventMomentUploadUrl(baseMomentParams);
-      expect(result.key).toContain('/event-moments/my-fancy-event/');
+      expect(result.key).toContain('event-moments/my-fancy-eventseries/');
     });
   });
 });

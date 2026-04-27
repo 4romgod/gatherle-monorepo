@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
-import { EventStatus } from '@gatherle/commons/types/event';
+import { EventStatus } from '@gatherle/commons/types/eventSeries';
 import { Gender } from '@gatherle/commons/types/user';
 import { isValid, parseISO } from 'date-fns';
 

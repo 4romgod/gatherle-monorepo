@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventsMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
 import {
@@ -13,9 +13,9 @@ import {
   assertNoCleanupFailures,
   cleanupTrackedEntities,
   createEventOnServer,
-} from '@/test/e2e/utils/eventResolverHelpers';
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
-describe('EventParticipant Resolver', () => {
+describe('EventSeriesParticipant Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
@@ -24,13 +24,13 @@ describe('EventParticipant Resolver', () => {
   let eventCategoryId = '';
   const allCreatedEventIds: string[] = [];
   const baseEventData = (() => {
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventsMockData[0];
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
     return rest;
   })();
 
   const buildEventInput = (): CreateEventInput => ({
     ...baseEventData,
-    title: `Participant Event ${Date.now()}`,
+    title: `Participant EventSeries ${Date.now()}`,
     description: 'Testing participants',
     eventCategories: [eventCategoryId],
     organizers: [{ user: participantUser.userId, role: 'Host' }],

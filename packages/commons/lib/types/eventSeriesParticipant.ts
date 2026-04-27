@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
-import { Event } from './event';
+import { EventSeries } from './eventSeries';
 import { User } from './user';
 
 export enum ParticipantStatus {
@@ -21,10 +21,10 @@ export enum ParticipantVisibility {
 registerEnumType(ParticipantStatus, { name: 'ParticipantStatus' });
 registerEnumType(ParticipantVisibility, { name: 'ParticipantVisibility' });
 
-@ObjectType('EventParticipant')
+@ObjectType('EventSeriesParticipant')
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
 @index({ eventId: 1, userId: 1 }, { unique: true })
-export class EventParticipant {
+export class EventSeriesParticipant {
   @prop({ required: true, unique: true, index: true, type: () => String })
   @Field(() => ID)
   participantId: string;
@@ -66,8 +66,8 @@ export class EventParticipant {
   checkedInAt?: Date;
 
   // GraphQL-only field resolved via field resolvers
-  @Field(() => Event, { nullable: true })
-  event?: Event;
+  @Field(() => EventSeries, { nullable: true })
+  event?: EventSeries;
 
   // GraphQL-only field resolved via field resolvers
   @Field(() => User, { nullable: true })
