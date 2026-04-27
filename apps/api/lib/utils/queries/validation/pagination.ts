@@ -3,6 +3,10 @@ import { CustomError, ErrorTypes } from '../../exceptions';
 
 export const MAX_QUERY_PAGE_SIZE = 50;
 
+const clampQueryLimit = (value: number): number => {
+  return Math.max(1, Math.min(MAX_QUERY_PAGE_SIZE, Math.trunc(value)));
+};
+
 const validatePaginationLimit = (limit?: number) => {
   if (typeof limit === 'undefined') {
     return MAX_QUERY_PAGE_SIZE;
@@ -25,6 +29,18 @@ const validatePaginationSkip = (skip?: number) => {
   }
 
   return skip;
+};
+
+export const sanitizeQueryLimit = (limit: number | null | undefined, defaultValue: number = 5): number => {
+  if (typeof limit === 'number' && Number.isFinite(limit)) {
+    return clampQueryLimit(limit);
+  }
+
+  if (typeof defaultValue === 'number' && Number.isFinite(defaultValue)) {
+    return clampQueryLimit(defaultValue);
+  }
+
+  return 1;
 };
 
 export const validatePaginationInput = (paginationInput: PaginationInput) => ({

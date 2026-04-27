@@ -715,6 +715,34 @@ describe('EventSeriesDAO', () => {
     });
   });
 
+  describe('readCandidateEventSeriesForOccurrences', () => {
+    it('reads matching series without applying occurrence-layer pagination or sorting', async () => {
+      const options: EventsQueryOptionsInput = {
+        pagination: { skip: 10, limit: 5 },
+        sort: [{ field: 'title', order: SortOrderInput.desc }],
+        filters: [{ field: 'status', value: EventStatus.Upcoming }],
+      };
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([expectedEvent]));
+
+      const events = await EventSeriesDAO.readCandidateEventSeriesForOccurrences(options);
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0] as PipelineStage[];
+
+      expect(events).toEqual([expectedEvent]);
+      expect(pipeline.some((stage) => '$sort' in stage)).toBe(false);
+      expect(pipeline.some((stage) => '$skip' in stage || '$limit' in stage)).toBe(false);
+    });
+
+    it('wraps errors when reading candidate series for occurrence queries', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(
+        EventSeriesDAO.readCandidateEventSeriesForOccurrences({
+          filters: [{ field: 'status', value: EventStatus.Upcoming }],
+        }),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
   describe('updateEvent', () => {
     const mockUpdatedEventInput: UpdateEventInput = {
       eventId: 'mockEventId',

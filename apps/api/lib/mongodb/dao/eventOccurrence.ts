@@ -68,6 +68,60 @@ class EventOccurrenceDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async readByEventSeriesIdsInRange(
+    eventSeriesIds: string[],
+    startDate: Date,
+    endDate: Date,
+  ): Promise<EventOccurrence[]> {
+    if (eventSeriesIds.length === 0) {
+      return [];
+    }
+
+    try {
+      return await EventOccurrenceModel.find({
+        eventSeriesId: { $in: eventSeriesIds },
+        startAt: { $lte: endDate },
+        $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
+      })
+        .sort({ startAt: 1, occurrenceKey: 1 })
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading event occurrences in date range', {
+        error,
+        eventSeriesIds,
+        startDate,
+        endDate,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readUpcomingByEventSeriesId(
+    eventSeriesId: string,
+    fromDate: Date,
+    limit: number,
+  ): Promise<EventOccurrence[]> {
+    try {
+      return await EventOccurrenceModel.find({
+        eventSeriesId,
+        $or: [{ endAt: { $gte: fromDate } }, { endAt: { $exists: false }, startAt: { $gte: fromDate } }],
+      })
+        .sort({ startAt: 1, occurrenceKey: 1 })
+        .limit(limit)
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading upcoming event occurrences by eventSeriesId', {
+        error,
+        eventSeriesId,
+        fromDate,
+        limit,
+      });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventOccurrenceDAO;

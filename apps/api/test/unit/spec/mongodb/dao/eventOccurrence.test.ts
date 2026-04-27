@@ -2,21 +2,17 @@ import { GraphQLError } from 'graphql';
 import { EventOccurrenceDAO } from '@/mongodb/dao';
 import { EventOccurrence as EventOccurrenceModel } from '@/mongodb/models';
 import { EventOccurrenceStatus, type EventOccurrence } from '@gatherle/commons/types';
+import { createMockSuccessMongooseQuery, createMockFailedMongooseQuery, type MockQueryOptions } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({
   EventOccurrence: {
     bulkWrite: jest.fn(),
     deleteMany: jest.fn(),
+    find: jest.fn(),
   },
 }));
 
-const createMockSuccessMongooseQuery = <T>(result: T) => ({
-  exec: jest.fn().mockResolvedValue(result),
-});
-
-const createMockFailedMongooseQuery = <T>(error: T) => ({
-  exec: jest.fn().mockRejectedValue(error),
-});
+const FIND_CHAIN_METHODS: MockQueryOptions = { chainMethods: ['sort', 'limit', 'lean'] };
 
 describe('EventOccurrenceDAO', () => {
   const occurrence: EventOccurrence = {
@@ -167,6 +163,81 @@ describe('EventOccurrenceDAO', () => {
       );
 
       await expect(EventOccurrenceDAO.deleteByEventSeriesId('series-1')).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByEventSeriesIdsInRange', () => {
+    it('reads overlapping occurrences for the provided series IDs', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([occurrence], FIND_CHAIN_METHODS),
+      );
+
+      const startDate = new Date('2026-05-01T00:00:00.000Z');
+      const endDate = new Date('2026-05-31T23:59:59.999Z');
+      const results = await EventOccurrenceDAO.readByEventSeriesIdsInRange(
+        ['series-1', 'series-2'],
+        startDate,
+        endDate,
+      );
+
+      expect(results).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        eventSeriesId: { $in: ['series-1', 'series-2'] },
+        startAt: { $lte: endDate },
+        $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
+      });
+    });
+
+    it('returns early when no series IDs are provided', async () => {
+      const results = await EventOccurrenceDAO.readByEventSeriesIdsInRange(
+        [],
+        new Date('2026-05-01T00:00:00.000Z'),
+        new Date('2026-05-31T23:59:59.999Z'),
+      );
+
+      expect(results).toEqual([]);
+      expect(EventOccurrenceModel.find).not.toHaveBeenCalled();
+    });
+
+    it('wraps read failures when querying overlapping occurrences', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), FIND_CHAIN_METHODS),
+      );
+
+      await expect(
+        EventOccurrenceDAO.readByEventSeriesIdsInRange(
+          ['series-1'],
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-05-31T23:59:59.999Z'),
+        ),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readUpcomingByEventSeriesId', () => {
+    it('reads upcoming overlapping occurrences for one series in ascending start order', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([occurrence], FIND_CHAIN_METHODS),
+      );
+
+      const fromDate = new Date('2026-05-01T00:00:00.000Z');
+      const results = await EventOccurrenceDAO.readUpcomingByEventSeriesId('series-1', fromDate, 5);
+
+      expect(results).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        eventSeriesId: 'series-1',
+        $or: [{ endAt: { $gte: fromDate } }, { endAt: { $exists: false }, startAt: { $gte: fromDate } }],
+      });
+    });
+
+    it('wraps read failures when querying upcoming occurrences', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), FIND_CHAIN_METHODS),
+      );
+
+      await expect(
+        EventOccurrenceDAO.readUpcomingByEventSeriesId('series-1', new Date('2026-05-01T00:00:00.000Z'), 5),
+      ).rejects.toThrow(GraphQLError);
     });
   });
 });

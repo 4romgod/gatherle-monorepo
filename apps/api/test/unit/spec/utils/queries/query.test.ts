@@ -4,12 +4,29 @@ import {
   addSortToQuery,
   addPaginationToQuery,
   addFiltersToQuery,
+  sanitizeQueryLimit,
   transformOptionsToQuery,
 } from '@/utils';
 import type { FilterInput, SortInput } from '@gatherle/commons/types';
 import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/types';
 
 describe('Query', () => {
+  describe('sanitizeQueryLimit', () => {
+    it('clamps an explicit limit into the supported range', () => {
+      expect(sanitizeQueryLimit(MAX_QUERY_PAGE_SIZE + 10)).toBe(MAX_QUERY_PAGE_SIZE);
+      expect(sanitizeQueryLimit(0)).toBe(1);
+    });
+
+    it('clamps the fallback default when limit is missing', () => {
+      expect(sanitizeQueryLimit(undefined, MAX_QUERY_PAGE_SIZE + 10)).toBe(MAX_QUERY_PAGE_SIZE);
+      expect(sanitizeQueryLimit(undefined, 0)).toBe(1);
+    });
+
+    it('falls back to 1 when both limit and default are non-finite', () => {
+      expect(sanitizeQueryLimit(undefined, Number.NaN)).toBe(1);
+    });
+  });
+
   describe('addSortToQuery', () => {
     it('should add sorting to the query', () => {
       const mockQuery = { sort: jest.fn() } as unknown as Query<any, any>;
