@@ -61,6 +61,7 @@ describe('EventSeries', () => {
     expect(eventType.title).toBeUndefined();
     expect(eventType.description).toBeUndefined();
     expect(eventType.primarySchedule).toBeUndefined();
+    expect(eventType.scheduleVersion).toBeUndefined();
     expect(eventType.location).toBeUndefined();
     expect(eventType.status).toBeUndefined();
     expect(eventType.capacity).toBeUndefined();

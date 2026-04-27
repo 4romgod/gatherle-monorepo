@@ -1,6 +1,8 @@
-import type { EventSeries } from '@gatherle/commons/types';
+import type { CreateEventInput, EventSchedule, EventSeries, UpdateEventInput } from '@gatherle/commons/types';
 import { EventSeriesDAO } from '@/mongodb/dao';
+import { KnownCommonError, areEventSchedulesEqual } from '@/utils';
 import { logger } from '@/utils/logger';
+import EventOccurrenceService from './eventOccurrence';
 
 /**
  * Service for event domain logic.
@@ -10,6 +12,68 @@ import { logger } from '@/utils/logger';
  * not in the DAO.
  */
 class EventSeriesService {
+  private static async syncOccurrencesForSeries(
+    eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
+  ): Promise<void> {
+    try {
+      await EventOccurrenceService.syncRecurringSeriesOccurrences(eventSeries);
+    } catch (error) {
+      logger.error('[EventSeriesService] Failed to sync recurring event occurrences', {
+        eventSeriesId: eventSeries.eventId,
+        error,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
+  private static async deleteOccurrencesForSeries(eventSeriesId: string): Promise<void> {
+    try {
+      await EventOccurrenceService.deleteOccurrencesForSeries(eventSeriesId);
+    } catch (error) {
+      logger.error('[EventSeriesService] Failed to delete recurring event occurrences', {
+        eventSeriesId,
+        error,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async create(input: CreateEventInput): Promise<EventSeries> {
+    const createdEvent = await EventSeriesDAO.create(input);
+    await this.syncOccurrencesForSeries(createdEvent);
+    return createdEvent;
+  }
+
+  static async update(
+    input: UpdateEventInput,
+    existingEvent?: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status'>,
+  ): Promise<EventSeries> {
+    const currentEvent = existingEvent ?? (await EventSeriesDAO.readEventById(input.eventId));
+    const didScheduleChange =
+      input.primarySchedule !== undefined &&
+      !areEventSchedulesEqual(currentEvent.primarySchedule, input.primarySchedule as EventSchedule);
+    const didStatusChange = input.status !== undefined && input.status !== currentEvent.status;
+    const updatedEvent = await EventSeriesDAO.updateEvent(input);
+
+    if (didScheduleChange || didStatusChange) {
+      await this.syncOccurrencesForSeries(updatedEvent);
+    }
+
+    return updatedEvent;
+  }
+
+  static async deleteById(eventId: string): Promise<EventSeries> {
+    const deletedEvent = await EventSeriesDAO.deleteEventById(eventId);
+    await this.deleteOccurrencesForSeries(deletedEvent.eventId);
+    return deletedEvent;
+  }
+
+  static async deleteBySlug(slug: string): Promise<EventSeries> {
+    const deletedEvent = await EventSeriesDAO.deleteEventBySlug(slug);
+    await this.deleteOccurrencesForSeries(deletedEvent.eventId);
+    return deletedEvent;
+  }
+
   /**
    * Return the top trending upcoming events, ranked by a composite score of
    * RSVP count + saved-by count, descending.

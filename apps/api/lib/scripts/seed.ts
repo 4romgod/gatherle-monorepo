@@ -48,6 +48,7 @@ import { SECRET_KEYS, validateEnv } from '@/constants';
 import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@gatherle/commons/types';
 import { EventVisibility } from '@gatherle/commons/types/eventSeries';
 import { logger } from '@/utils/logger';
+import EventSeriesService from '@/services/eventSeries';
 
 function getRandomUniqueItems(array: Array<string>, count: number) {
   const copyArray = [...array];
@@ -508,7 +509,7 @@ async function seedEvents(
         venueId: venue?.venueId,
       };
 
-      const eventResponse = await EventSeriesDAO.create(eventInput);
+      const eventResponse = await EventSeriesService.create(eventInput);
 
       logger.info(`   Created EventSeries item with id: ${eventResponse.eventId}`);
       createdEvents.push(eventResponse);

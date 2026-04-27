@@ -1,4 +1,4 @@
-import { getDateRangeForFilter, hasOccurrenceInRange, getNextOccurrence } from '@/utils/rrule';
+import { getDateRangeForFilter, getOccurrencesInRange, hasOccurrenceInRange, getNextOccurrence } from '@/utils/rrule';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 
 describe('RRule Utilities', () => {
@@ -65,6 +65,20 @@ describe('RRule Utilities', () => {
       const nextOccurrence = getNextOccurrence(rrule, yesterday);
       expect(nextOccurrence).not.toBeNull();
       expect(nextOccurrence?.getTime()).toBeGreaterThanOrEqual(yesterday.getTime());
+    });
+  });
+
+  describe('getOccurrencesInRange', () => {
+    it('caps the number of returned occurrences', () => {
+      const startDate = new Date('2025-01-01T00:00:00Z');
+      const endDate = new Date('2025-01-01T23:59:59Z');
+      const rrule = 'DTSTART:20250101T000000Z\nRRULE:FREQ=MINUTELY';
+
+      const occurrences = getOccurrencesInRange(rrule, startDate, endDate, 5);
+
+      expect(occurrences).toHaveLength(5);
+      expect(occurrences[0].toISOString()).toBe('2025-01-01T00:00:00.000Z');
+      expect(occurrences[4].toISOString()).toBe('2025-01-01T00:04:00.000Z');
     });
   });
 

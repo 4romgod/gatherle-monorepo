@@ -1,5 +1,12 @@
 import * as DAO from '@/mongodb/dao';
-import { ChatMessageDAO, EventCategoryDAO, EventSeriesDAO, UserDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
+import {
+  ChatMessageDAO,
+  EventCategoryDAO,
+  EventOccurrenceDAO,
+  EventSeriesDAO,
+  UserDAO,
+  WebSocketConnectionDAO,
+} from '@/mongodb/dao';
 
 describe('Index Exports', () => {
   it('should export EventSeriesDAO', () => {
@@ -15,6 +22,11 @@ describe('Index Exports', () => {
   it('should export EventCategoryDAO', () => {
     expect(DAO.EventCategoryDAO).toBeDefined();
     expect(new DAO.EventCategoryDAO()).toBeInstanceOf(EventCategoryDAO);
+  });
+
+  it('should export EventOccurrenceDAO', () => {
+    expect(DAO.EventOccurrenceDAO).toBeDefined();
+    expect(new DAO.EventOccurrenceDAO()).toBeInstanceOf(EventOccurrenceDAO);
   });
 
   it('should export ChatMessageDAO', () => {
