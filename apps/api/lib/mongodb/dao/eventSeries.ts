@@ -2,6 +2,7 @@ import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import { kebabCase } from 'lodash';
 import type {
   EventSeries as EventEntity,
+  EventSchedule,
   UpdateEventInput,
   CreateEventInput,
   EventsQueryOptionsInput,
@@ -18,6 +19,7 @@ import {
   enrichLocationWithCoordinates,
   createEventLookupStages,
   logDaoError,
+  areEventSchedulesEqual,
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { EventSeriesParticipantDAO } from '@/mongodb/dao';
@@ -158,9 +160,14 @@ class EventSeriesDAO {
       }
 
       // Filter out undefined values to avoid overwriting with undefined
-      const fieldsToUpdate = Object.fromEntries(Object.entries(restInput).filter(([_, value]) => value !== undefined));
+      const fieldsToUpdate = Object.fromEntries(
+        Object.entries(restInput).filter(([_, value]) => value !== undefined),
+      ) as Partial<Omit<UpdateEventInput, 'eventId'>> & { scheduleVersion?: number };
       const isScheduleUpdate = 'primarySchedule' in fieldsToUpdate;
-      if (isScheduleUpdate) {
+      const didScheduleChange =
+        isScheduleUpdate &&
+        !areEventSchedulesEqual(event.primarySchedule, fieldsToUpdate.primarySchedule as EventSchedule);
+      if (didScheduleChange) {
         fieldsToUpdate.scheduleVersion = (event.scheduleVersion ?? 1) + 1;
       }
       Object.assign(event, fieldsToUpdate);

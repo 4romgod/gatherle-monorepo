@@ -10,28 +10,35 @@ class EventOccurrenceDAO {
 
     try {
       await EventOccurrenceModel.bulkWrite(
-        occurrences.map((occurrence) => ({
-          updateOne: {
-            filter: { occurrenceKey: occurrence.occurrenceKey },
-            update: {
-              $set: {
-                eventSeriesId: occurrence.eventSeriesId,
-                occurrenceKey: occurrence.occurrenceKey,
-                originalStartAt: occurrence.originalStartAt,
-                startAt: occurrence.startAt,
-                endAt: occurrence.endAt,
-                timezone: occurrence.timezone,
-                status: occurrence.status,
-                isException: occurrence.isException,
-                seriesScheduleVersion: occurrence.seriesScheduleVersion,
+        occurrences.map((occurrence) => {
+          const setPayload: Record<string, unknown> = {
+            eventSeriesId: occurrence.eventSeriesId,
+            occurrenceKey: occurrence.occurrenceKey,
+            originalStartAt: occurrence.originalStartAt,
+            startAt: occurrence.startAt,
+            timezone: occurrence.timezone,
+            status: occurrence.status,
+            isException: occurrence.isException,
+            seriesScheduleVersion: occurrence.seriesScheduleVersion,
+          };
+
+          if (occurrence.endAt !== undefined) {
+            setPayload.endAt = occurrence.endAt;
+          }
+
+          return {
+            updateOne: {
+              filter: { occurrenceKey: occurrence.occurrenceKey },
+              update: {
+                $set: setPayload,
+                $setOnInsert: {
+                  occurrenceId: occurrence.occurrenceId,
+                },
               },
-              $setOnInsert: {
-                occurrenceId: occurrence.occurrenceId,
-              },
+              upsert: true,
             },
-            upsert: true,
-          },
-        })),
+          };
+        }),
         { ordered: false },
       );
     } catch (error) {

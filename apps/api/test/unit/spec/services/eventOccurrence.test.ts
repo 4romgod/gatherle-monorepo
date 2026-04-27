@@ -134,5 +134,18 @@ describe('EventOccurrenceService', () => {
         'series-1#2026-05-20T16:00:00.000Z',
       ]);
     });
+
+    it('throws and skips pruning when occurrence expansion fails', async () => {
+      const eventSeries = buildSeries({
+        primarySchedule: {
+          ...buildSeries().primarySchedule,
+          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE\nINVALID:TRUE',
+        },
+      });
+
+      await expect(EventOccurrenceService.syncRecurringSeriesOccurrences(eventSeries)).rejects.toThrow();
+      expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
+      expect(EventOccurrenceDAO.deleteMissingGeneratedOccurrences).not.toHaveBeenCalled();
+    });
   });
 });

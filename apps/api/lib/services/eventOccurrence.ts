@@ -1,6 +1,6 @@
 import { RRule } from 'rrule';
 import { EventOccurrenceDAO } from '@/mongodb/dao';
-import { getOccurrencesInRange } from '@/utils';
+import { getOccurrencesInRange, getOccurrencesInRangeOrThrow } from '@/utils';
 import type { EventOccurrence, EventSchedule, EventSeries } from '@gatherle/commons/types';
 import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
 
@@ -122,7 +122,7 @@ class EventOccurrenceService {
     const hasEndAt = Boolean(schedule.endAt);
     const windowStart = new Date(now.getTime() - durationMs);
     const windowEnd = buildWindowEnd(now);
-    const originalStartTimes = getOccurrencesInRange(
+    const originalStartTimes = getOccurrencesInRangeOrThrow(
       schedule.recurrenceRule,
       windowStart,
       windowEnd,

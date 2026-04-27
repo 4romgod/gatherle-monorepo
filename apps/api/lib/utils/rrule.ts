@@ -3,6 +3,33 @@ import { rrulestr } from 'rrule';
 import { logger } from './logger';
 import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@gatherle/commons';
 
+function parseRRuleSet(rruleString: string): RRuleSet {
+  return rrulestr(rruleString, { forceset: true }) as RRuleSet;
+}
+
+function collectOccurrencesInRange(
+  rule: Pick<RRuleSet, 'after'>,
+  startDate: Date,
+  endDate: Date,
+  maxOccurrences: number,
+): Date[] {
+  const occurrences: Date[] = [];
+  let nextOccurrence = rule.after(startDate, true);
+
+  while (nextOccurrence && nextOccurrence <= endDate && occurrences.length < maxOccurrences) {
+    occurrences.push(nextOccurrence);
+    const followingOccurrence = rule.after(nextOccurrence, false);
+
+    if (!followingOccurrence || followingOccurrence.getTime() === nextOccurrence.getTime()) {
+      break;
+    }
+
+    nextOccurrence = followingOccurrence;
+  }
+
+  return occurrences;
+}
+
 /**
  * Parse an RRULE string and return occurrences within a date range
  */
@@ -13,18 +40,21 @@ export function getOccurrencesInRange(
   maxOccurrences: number = 100,
 ): Date[] {
   try {
-    // Parse the RRULE string
-    const rule = rrulestr(rruleString, { forceset: true }) as RRuleSet;
-
-    // Get occurrences between the date range
-    const occurrences = rule.between(startDate, endDate, true);
-
-    // Limit the number of occurrences to prevent performance issues
-    return occurrences.slice(0, maxOccurrences);
+    return getOccurrencesInRangeOrThrow(rruleString, startDate, endDate, maxOccurrences);
   } catch (error) {
     logger.error('Error parsing RRULE string:', { rruleString, error });
     return [];
   }
+}
+
+export function getOccurrencesInRangeOrThrow(
+  rruleString: string,
+  startDate: Date,
+  endDate: Date,
+  maxOccurrences: number = 100,
+): Date[] {
+  const rule = parseRRuleSet(rruleString);
+  return collectOccurrencesInRange(rule, startDate, endDate, maxOccurrences);
 }
 
 /**

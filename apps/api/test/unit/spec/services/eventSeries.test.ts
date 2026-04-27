@@ -5,6 +5,7 @@ import { EventStatus } from '@gatherle/commons/types';
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
     create: jest.fn(),
+    readEventById: jest.fn(),
     updateEvent: jest.fn(),
     deleteEventById: jest.fn(),
     deleteEventBySlug: jest.fn(),
@@ -113,6 +114,13 @@ describe('EventSeriesService', () => {
 
   describe('update', () => {
     it('syncs occurrences after a schedule update', async () => {
+      const existingEvent = makeEvent({
+        primarySchedule: {
+          startAt: new Date('2026-05-01T18:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        } as any,
+      });
       const input = makeUpdateInput({
         primarySchedule: {
           startAt: new Date('2026-05-08T18:00:00.000Z'),
@@ -123,7 +131,7 @@ describe('EventSeriesService', () => {
       const updatedEvent = makeEvent({ scheduleVersion: 2, primarySchedule: input.primarySchedule });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
-      const result = await EventSeriesService.update(input);
+      const result = await EventSeriesService.update(input, existingEvent);
 
       expect(EventSeriesDAO.updateEvent).toHaveBeenCalledWith(input);
       expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
@@ -135,7 +143,7 @@ describe('EventSeriesService', () => {
       const updatedEvent = makeEvent({ status: input.status });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
-      await EventSeriesService.update(input);
+      await EventSeriesService.update(input, makeEvent({ status: EventStatus.Upcoming }));
 
       expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
     });
@@ -145,7 +153,25 @@ describe('EventSeriesService', () => {
       const updatedEvent = makeEvent({ title: 'Renamed EventSeries' });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
-      const result = await EventSeriesService.update(input);
+      const result = await EventSeriesService.update(input, makeEvent());
+
+      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).not.toHaveBeenCalled();
+      expect(result).toEqual(updatedEvent);
+    });
+
+    it('does not sync occurrences when the provided schedule is identical', async () => {
+      const existingEvent = makeEvent({
+        primarySchedule: {
+          startAt: new Date('2026-05-01T18:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        } as any,
+      });
+      const input = makeUpdateInput({ primarySchedule: existingEvent.primarySchedule });
+      const updatedEvent = makeEvent({ primarySchedule: existingEvent.primarySchedule });
+      (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
+
+      const result = await EventSeriesService.update(input, existingEvent);
 
       expect(EventOccurrenceService.syncRecurringSeriesOccurrences).not.toHaveBeenCalled();
       expect(result).toEqual(updatedEvent);
@@ -156,9 +182,11 @@ describe('EventSeriesService', () => {
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(makeEvent({ status: input.status }));
       (EventOccurrenceService.syncRecurringSeriesOccurrences as jest.Mock).mockRejectedValue(new Error('sync failed'));
 
-      await expect(EventSeriesService.update(input)).rejects.toMatchObject({
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
+      await expect(EventSeriesService.update(input, makeEvent({ status: EventStatus.Upcoming }))).rejects.toMatchObject(
+        {
+          extensions: { code: 'INTERNAL_SERVER_ERROR' },
+        },
+      );
     });
   });
 

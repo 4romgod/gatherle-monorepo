@@ -1,6 +1,6 @@
-import type { CreateEventInput, EventSeries, UpdateEventInput } from '@gatherle/commons/types';
+import type { CreateEventInput, EventSchedule, EventSeries, UpdateEventInput } from '@gatherle/commons/types';
 import { EventSeriesDAO } from '@/mongodb/dao';
-import { KnownCommonError } from '@/utils';
+import { KnownCommonError, areEventSchedulesEqual } from '@/utils';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 
@@ -44,10 +44,18 @@ class EventSeriesService {
     return createdEvent;
   }
 
-  static async update(input: UpdateEventInput): Promise<EventSeries> {
+  static async update(
+    input: UpdateEventInput,
+    existingEvent?: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status'>,
+  ): Promise<EventSeries> {
+    const currentEvent = existingEvent ?? (await EventSeriesDAO.readEventById(input.eventId));
+    const didScheduleChange =
+      input.primarySchedule !== undefined &&
+      !areEventSchedulesEqual(currentEvent.primarySchedule, input.primarySchedule as EventSchedule);
+    const didStatusChange = input.status !== undefined && input.status !== currentEvent.status;
     const updatedEvent = await EventSeriesDAO.updateEvent(input);
 
-    if (input.primarySchedule !== undefined || input.status !== undefined) {
+    if (didScheduleChange || didStatusChange) {
       await this.syncOccurrencesForSeries(updatedEvent);
     }
 

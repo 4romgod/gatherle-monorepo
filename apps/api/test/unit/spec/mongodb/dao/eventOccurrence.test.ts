@@ -79,6 +79,44 @@ describe('EventOccurrenceDAO', () => {
       );
     });
 
+    it('omits endAt from the update payload when an occurrence has no end time', async () => {
+      (EventOccurrenceModel.bulkWrite as jest.Mock).mockResolvedValue(undefined);
+
+      await EventOccurrenceDAO.bulkUpsert([
+        {
+          ...occurrence,
+          endAt: undefined,
+        },
+      ]);
+
+      expect(EventOccurrenceModel.bulkWrite).toHaveBeenCalledWith(
+        [
+          {
+            updateOne: {
+              filter: { occurrenceKey: occurrence.occurrenceKey },
+              update: {
+                $set: {
+                  eventSeriesId: occurrence.eventSeriesId,
+                  occurrenceKey: occurrence.occurrenceKey,
+                  originalStartAt: occurrence.originalStartAt,
+                  startAt: occurrence.startAt,
+                  timezone: occurrence.timezone,
+                  status: occurrence.status,
+                  isException: occurrence.isException,
+                  seriesScheduleVersion: occurrence.seriesScheduleVersion,
+                },
+                $setOnInsert: {
+                  occurrenceId: occurrence.occurrenceId,
+                },
+              },
+              upsert: true,
+            },
+          },
+        ],
+        { ordered: false },
+      );
+    });
+
     it('wraps bulk write failures', async () => {
       (EventOccurrenceModel.bulkWrite as jest.Mock).mockRejectedValue(new Error('bulk write failed'));
 

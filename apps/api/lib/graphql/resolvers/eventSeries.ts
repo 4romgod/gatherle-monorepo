@@ -59,7 +59,7 @@ export class EventSeriesResolver {
     if (input.orgId && input.orgId !== existingEvent.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
-    const updatedEvent = await EventSeriesService.update(input);
+    const updatedEvent = await EventSeriesService.update(input, existingEvent);
 
     // If this update transitioned the event to Published, notify the recommendation engine.
     // Fire-and-forget: errors must not block the mutation response.

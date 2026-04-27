@@ -779,6 +779,33 @@ describe('EventSeriesDAO', () => {
       expect(mockEvent.save).toHaveBeenCalled();
     });
 
+    it('does not increment scheduleVersion when the provided primarySchedule is unchanged', async () => {
+      const unchangedSchedule = {
+        ...expectedEvent.primarySchedule,
+      };
+      const mockEvent = {
+        ...expectedEvent,
+        scheduleVersion: 1,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          ...expectedEvent,
+          scheduleVersion: 1,
+          primarySchedule: unchangedSchedule,
+        }),
+      };
+
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvent));
+
+      const updatedEvent = await EventSeriesDAO.updateEvent({
+        eventId: 'mockEventId',
+        primarySchedule: unchangedSchedule,
+      });
+
+      expect(updatedEvent.scheduleVersion).toBe(1);
+      expect(mockEvent.scheduleVersion).toBe(1);
+      expect(mockEvent.save).toHaveBeenCalled();
+    });
+
     it('syncs occurrences when status changes without incrementing scheduleVersion', async () => {
       const expectedStatusUpdate = {
         ...expectedEvent,
