@@ -1,8 +1,15 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/mockData';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
-import { SortOrderInput } from '@gatherle/commons/types';
-import { getDeleteEventByIdMutation } from '@/test/utils';
+import { ParticipantStatus, SortOrderInput } from '@gatherle/commons/types';
+import {
+  getCancelEventOccurrenceMutation,
+  getDeleteEventByIdMutation,
+  getMyEventOccurrenceRsvpStatusQuery,
+  getReadEventOccurrenceParticipantsQuery,
+  getUpdateEventOccurrenceMutation,
+  getUpsertEventOccurrenceParticipantMutation,
+} from '@/test/utils';
 import {
   getSeededTestUsers,
   loginSeededUser,
@@ -34,6 +41,35 @@ describe('EventOccurrence Resolver', () => {
     organizers: [{ user: testUser.userId, role: 'Host' }],
     ...overrides,
   });
+
+  const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
+    const response = await request(url)
+      .post('')
+      .send({
+        query: `query ReadEventById($eventId: String!) {
+          readEventById(eventId: $eventId) {
+            eventId
+            upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+              occurrenceId
+              occurrenceKey
+              eventSeriesId
+              startAt
+              endAt
+              timezone
+              status
+              isException
+            }
+          }
+        }`,
+        variables: {
+          eventId,
+        },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.errors).toBeUndefined();
+    return response.body.data.readEventById.upcomingOccurrences;
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -232,5 +268,148 @@ describe('EventOccurrence Resolver', () => {
         endAt: '2026-05-07T12:00:00.000Z',
       },
     ]);
+  });
+
+  it('updates one recurring occurrence as an exception without changing later occurrences', async () => {
+    const createdEvent = await createEventOnServer(
+      url,
+      testUser.token,
+      buildEventInput({
+        title: 'Occurrence Exception Update Series',
+        primarySchedule: {
+          startAt: new Date('2026-05-06T16:00:00.000Z'),
+          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+        },
+      }),
+      createdEventIds,
+    );
+
+    const [firstOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 3);
+
+    const updateResponse = await request(url)
+      .post('')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send(
+        getUpdateEventOccurrenceMutation({
+          occurrenceId: firstOccurrence.occurrenceId,
+          startAt: '2026-05-06T17:30:00.000Z',
+          endAt: '2026-05-06T20:30:00.000Z',
+          timezone: 'UTC',
+        }),
+      );
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.errors).toBeUndefined();
+    expect(updateResponse.body.data.updateEventOccurrence).toEqual(
+      expect.objectContaining({
+        occurrenceId: firstOccurrence.occurrenceId,
+        startAt: '2026-05-06T17:30:00.000Z',
+        endAt: '2026-05-06T20:30:00.000Z',
+        timezone: 'UTC',
+        isException: true,
+      }),
+    );
+
+    const upcomingOccurrences = await readUpcomingOccurrences(createdEvent.eventId, 3);
+    expect(upcomingOccurrences).toEqual([
+      expect.objectContaining({
+        occurrenceId: firstOccurrence.occurrenceId,
+        startAt: '2026-05-06T17:30:00.000Z',
+        endAt: '2026-05-06T20:30:00.000Z',
+        timezone: 'UTC',
+        isException: true,
+      }),
+      expect.objectContaining({
+        startAt: '2026-05-13T16:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+        isException: false,
+      }),
+      expect.objectContaining({
+        startAt: '2026-05-20T16:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+        isException: false,
+      }),
+    ]);
+  });
+
+  it('cancels one recurring occurrence and cancels its RSVP participants', async () => {
+    const createdEvent = await createEventOnServer(
+      url,
+      testUser.token,
+      buildEventInput({
+        title: 'Occurrence Cancellation Series',
+        primarySchedule: {
+          startAt: new Date('2026-05-06T16:00:00.000Z'),
+          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+        },
+      }),
+      createdEventIds,
+    );
+
+    const [firstOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 2);
+
+    const rsvpResponse = await request(url)
+      .post('')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send(
+        getUpsertEventOccurrenceParticipantMutation({
+          occurrenceId: firstOccurrence.occurrenceId,
+          status: ParticipantStatus.Going,
+        }),
+      );
+
+    expect(rsvpResponse.status).toBe(200);
+    expect(rsvpResponse.body.errors).toBeUndefined();
+
+    const cancelResponse = await request(url)
+      .post('')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send(getCancelEventOccurrenceMutation({ occurrenceId: firstOccurrence.occurrenceId }));
+
+    expect(cancelResponse.status).toBe(200);
+    expect(cancelResponse.body.errors).toBeUndefined();
+    expect(cancelResponse.body.data.cancelEventOccurrence).toEqual(
+      expect.objectContaining({
+        occurrenceId: firstOccurrence.occurrenceId,
+        status: 'Cancelled',
+        isException: true,
+      }),
+    );
+
+    const participantsResponse = await request(url)
+      .post('')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send(getReadEventOccurrenceParticipantsQuery(firstOccurrence.occurrenceId));
+
+    expect(participantsResponse.status).toBe(200);
+    expect(participantsResponse.body.errors).toBeUndefined();
+    expect(participantsResponse.body.data.readEventOccurrenceParticipants).toEqual([
+      expect.objectContaining({
+        occurrenceId: firstOccurrence.occurrenceId,
+        status: ParticipantStatus.Cancelled,
+      }),
+    ]);
+
+    const myStatusResponse = await request(url)
+      .post('')
+      .set('Authorization', `Bearer ${testUser.token}`)
+      .send(getMyEventOccurrenceRsvpStatusQuery(firstOccurrence.occurrenceId));
+
+    expect(myStatusResponse.status).toBe(200);
+    expect(myStatusResponse.body.errors).toBeUndefined();
+    expect(myStatusResponse.body.data.myEventOccurrenceRsvpStatus.status).toBe(ParticipantStatus.Cancelled);
+
+    const [cancelledOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 2);
+    expect(cancelledOccurrence).toEqual(
+      expect.objectContaining({
+        occurrenceId: firstOccurrence.occurrenceId,
+        status: 'Cancelled',
+        isException: true,
+      }),
+    );
   });
 });

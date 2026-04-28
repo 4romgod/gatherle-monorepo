@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Field, ID, Int, ObjectType, registerEnumType } from 'type-graphql';
+import { Field, ID, InputType, Int, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop } from '@typegoose/typegoose';
 import { EVENT_DESCRIPTIONS } from '../constants';
 import { EventOccurrenceParticipant } from './eventOccurrenceParticipant';
@@ -92,4 +92,25 @@ export class EventOccurrence {
   @prop({ type: () => Date })
   @Field(() => Date, { description: EVENT_DESCRIPTIONS.OCCURRENCE.UPDATED_AT })
   updatedAt: Date;
+}
+
+@InputType('UpdateEventOccurrenceInput', { description: EVENT_DESCRIPTIONS.OCCURRENCE.UPDATE_INPUT })
+export class UpdateEventOccurrenceInput {
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.OCCURRENCE.ID })
+  occurrenceId: string;
+
+  @Field(() => Date, { nullable: true, description: EVENT_DESCRIPTIONS.OCCURRENCE.START_AT })
+  startAt?: Date | null;
+
+  @Field(() => Date, { nullable: true, description: EVENT_DESCRIPTIONS.OCCURRENCE.END_AT })
+  endAt?: Date | null;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.OCCURRENCE.TIMEZONE })
+  timezone?: string | null;
+}
+
+@InputType('CancelEventOccurrenceInput', { description: EVENT_DESCRIPTIONS.OCCURRENCE.CANCEL_INPUT })
+export class CancelEventOccurrenceInput {
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.OCCURRENCE.ID })
+  occurrenceId: string;
 }

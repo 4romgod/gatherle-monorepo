@@ -2,8 +2,11 @@ import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, Int } from 'type-graphql';
 import type { User } from '@gatherle/commons/types';
 import {
+  CancelEventOccurrenceInput,
   CreateEventInput,
   EventSeries,
+  SplitEventSeriesInput,
+  UpdateEventOccurrenceInput,
   UpdateEventInput,
   UserRole,
   EventsQueryOptionsInput,
@@ -17,7 +20,13 @@ import {
   EventLifecycleStatus,
 } from '@gatherle/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
-import { CreateEventInputSchema, UpdateEventInputSchema } from '@/validation/zod';
+import {
+  CancelEventOccurrenceInputSchema,
+  CreateEventInputSchema,
+  SplitEventSeriesInputSchema,
+  UpdateEventInputSchema,
+  UpdateEventOccurrenceInputSchema,
+} from '@/validation/zod';
 import { EVENT_DESCRIPTIONS, HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
 import { EventSeriesDAO, FollowDAO, EventSeriesParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
@@ -56,9 +65,7 @@ export class EventSeriesResolver {
     validateInput<UpdateEventInput>(UpdateEventInputSchema, input);
     const user = getAuthenticatedUser(context);
     const existingEvent = await EventSeriesDAO.readEventById(input.eventId);
-    if (existingEvent.orgId) {
-      await this.ensureUserCanUseOrganization(existingEvent.orgId, user.userId);
-    }
+    await this.ensureUserCanManageEventSeries(existingEvent, user.userId, user.userRole);
     if (input.orgId && input.orgId !== existingEvent.orgId) {
       await this.ensureUserCanUseOrganization(input.orgId, user.userId);
     }
@@ -80,15 +87,66 @@ export class EventSeriesResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventById })
-  async deleteEventById(@Arg('eventId', () => String) eventId: string): Promise<EventSeries> {
+  async deleteEventById(
+    @Arg('eventId', () => String) eventId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeries> {
     validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId));
+    const user = getAuthenticatedUser(context);
+    const event = await EventSeriesDAO.readEventById(eventId);
+    await this.ensureUserCanManageEventSeries(event, user.userId, user.userRole);
     return EventSeriesService.deleteById(eventId);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.deleteEventBySlug })
-  async deleteEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventSeries> {
+  async deleteEventBySlug(
+    @Arg('slug', () => String) slug: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeries> {
+    const user = getAuthenticatedUser(context);
+    const event = await EventSeriesDAO.readEventBySlug(slug);
+    await this.ensureUserCanManageEventSeries(event, user.userId, user.userRole);
     return EventSeriesService.deleteBySlug(slug);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => EventOccurrence, { description: RESOLVER_DESCRIPTIONS.EVENT.updateEventOccurrence })
+  async updateEventOccurrence(
+    @Arg('input', () => UpdateEventOccurrenceInput) input: UpdateEventOccurrenceInput,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrence> {
+    validateInput<UpdateEventOccurrenceInput>(UpdateEventOccurrenceInputSchema, input);
+    const user = getAuthenticatedUser(context);
+    const { eventSeries } = await EventOccurrenceService.readRecurringOccurrenceContext(input.occurrenceId);
+    await this.ensureUserCanManageEventSeries(eventSeries, user.userId, user.userRole);
+    return EventOccurrenceService.updateOccurrenceException(input);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => EventOccurrence, { description: RESOLVER_DESCRIPTIONS.EVENT.cancelEventOccurrence })
+  async cancelEventOccurrence(
+    @Arg('input', () => CancelEventOccurrenceInput) input: CancelEventOccurrenceInput,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrence> {
+    validateInput<CancelEventOccurrenceInput>(CancelEventOccurrenceInputSchema, input);
+    const user = getAuthenticatedUser(context);
+    const { eventSeries } = await EventOccurrenceService.readRecurringOccurrenceContext(input.occurrenceId);
+    await this.ensureUserCanManageEventSeries(eventSeries, user.userId, user.userRole);
+    return EventOccurrenceService.cancelOccurrence(input.occurrenceId);
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.splitEventSeriesAtOccurrence })
+  async splitEventSeriesAtOccurrence(
+    @Arg('input', () => SplitEventSeriesInput) input: SplitEventSeriesInput,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeries> {
+    validateInput<SplitEventSeriesInput>(SplitEventSeriesInputSchema, input);
+    const user = getAuthenticatedUser(context);
+    const { eventSeries } = await EventOccurrenceService.readRecurringOccurrenceContext(input.occurrenceId);
+    await this.ensureUserCanManageEventSeries(eventSeries, user.userId, user.userRole);
+    return EventSeriesService.splitAtOccurrence(input);
   }
 
   @Query(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventById })
@@ -289,6 +347,43 @@ export class EventSeriesResolver {
         ErrorTypes.UNAUTHORIZED,
         { http: { status: HttpStatusCode.UNAUTHORIZED } },
       );
+    }
+  }
+
+  public async ensureUserCanManageEventSeries(
+    event: Pick<EventSeries, 'orgId' | 'organizers'>,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    if (userRole === UserRole.Admin) {
+      return;
+    }
+
+    if (event.orgId) {
+      await this.ensureUserCanUseOrganization(event.orgId, userId);
+      return;
+    }
+
+    const isOrganizer = (event.organizers ?? []).some((organizer) => {
+      if (typeof organizer.user === 'string') {
+        return organizer.user === userId;
+      }
+
+      if (organizer.user && typeof organizer.user === 'object' && 'userId' in organizer.user) {
+        return organizer.user.userId === userId;
+      }
+
+      if (organizer.user && typeof organizer.user === 'object' && '_id' in organizer.user) {
+        return organizer.user._id?.toString() === userId;
+      }
+
+      return false;
+    });
+
+    if (!isOrganizer) {
+      throw CustomError('You do not have permission to manage this event series.', ErrorTypes.UNAUTHORIZED, {
+        http: { status: HttpStatusCode.UNAUTHORIZED },
+      });
     }
   }
 }

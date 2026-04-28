@@ -1,5 +1,5 @@
 import EventOccurrenceService from '@/services/eventOccurrence';
-import { EventOccurrenceDAO, EventSeriesDAO } from '@/mongodb/dao';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { EventOccurrenceStatus, EventStatus, type EventSeries } from '@gatherle/commons/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
@@ -7,11 +7,23 @@ import { logger } from '@/utils/logger';
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceDAO: {
     bulkUpsert: jest.fn(),
+    cancelOccurrence: jest.fn(),
+    clearReservedSlotCount: jest.fn(),
+    deleteByOccurrenceIds: jest.fn(),
     readByOccurrenceId: jest.fn(),
     readByEventSeriesIdsInRange: jest.fn(),
+    readByEventSeriesIdFromOriginalStart: jest.fn(),
+    readExceptionOccurrenceKeysByEventSeriesId: jest.fn(),
     readUpcomingByEventSeriesId: jest.fn(),
+    reassignOccurrencesToSeries: jest.fn(),
     deleteMissingGeneratedOccurrences: jest.fn(),
     deleteByEventSeriesId: jest.fn(),
+    updateException: jest.fn(),
+  },
+  EventOccurrenceParticipantDAO: {
+    cancelAllByOccurrence: jest.fn(),
+    deleteByOccurrenceIds: jest.fn(),
+    reassignOccurrenceIds: jest.fn(),
   },
   EventSeriesDAO: {
     readEventById: jest.fn(),
@@ -42,6 +54,7 @@ describe('EventOccurrenceService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([]);
   });
 
   describe('readOccurrenceById', () => {
@@ -182,6 +195,26 @@ describe('EventOccurrenceService', () => {
       ]);
     });
 
+    it('preserves exception rows by skipping generated upserts for matching occurrence keys', async () => {
+      const eventSeries = buildSeries();
+      (EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([
+        'series-1#2026-05-13T16:00:00.000Z',
+      ]);
+
+      await EventOccurrenceService.syncRecurringSeriesOccurrences(eventSeries);
+
+      const upsertedOccurrences = (EventOccurrenceDAO.bulkUpsert as jest.Mock).mock.calls[0][0];
+      expect(upsertedOccurrences.map((occurrence: { occurrenceKey: string }) => occurrence.occurrenceKey)).toEqual([
+        'series-1#2026-05-06T16:00:00.000Z',
+        'series-1#2026-05-20T16:00:00.000Z',
+      ]);
+      expect(EventOccurrenceDAO.deleteMissingGeneratedOccurrences).toHaveBeenCalledWith('series-1', [
+        'series-1#2026-05-06T16:00:00.000Z',
+        'series-1#2026-05-13T16:00:00.000Z',
+        'series-1#2026-05-20T16:00:00.000Z',
+      ]);
+    });
+
     it('throws and skips pruning when occurrence expansion fails', async () => {
       const eventSeries = buildSeries({
         primarySchedule: {
@@ -209,6 +242,199 @@ describe('EventOccurrenceService', () => {
 
       expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
       expect(EventOccurrenceDAO.deleteMissingGeneratedOccurrences).toHaveBeenCalledWith('series-1', []);
+    });
+  });
+
+  describe('updateOccurrenceException', () => {
+    it('marks a recurring occurrence as an exception with updated schedule fields', async () => {
+      const persistedOccurrence = {
+        occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-1',
+        occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+        startAt: new Date('2026-05-06T16:00:00.000Z'),
+        endAt: new Date('2026-05-06T19:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(persistedOccurrence);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(buildSeries());
+      (EventOccurrenceDAO.updateException as jest.Mock).mockResolvedValue({
+        ...persistedOccurrence,
+        startAt: new Date('2026-05-06T17:00:00.000Z'),
+        endAt: new Date('2026-05-06T20:00:00.000Z'),
+        timezone: 'UTC',
+        isException: true,
+      });
+
+      const result = await EventOccurrenceService.updateOccurrenceException({
+        occurrenceId: persistedOccurrence.occurrenceId,
+        startAt: new Date('2026-05-06T17:00:00.000Z'),
+        endAt: new Date('2026-05-06T20:00:00.000Z'),
+        timezone: 'UTC',
+      });
+
+      expect(EventOccurrenceDAO.updateException).toHaveBeenCalledWith(
+        persistedOccurrence.occurrenceId,
+        expect.objectContaining({
+          startAt: new Date('2026-05-06T17:00:00.000Z'),
+          endAt: new Date('2026-05-06T20:00:00.000Z'),
+          timezone: 'UTC',
+        }),
+      );
+      expect(result.isException).toBe(true);
+    });
+
+    it('rejects editing a cancelled occurrence', async () => {
+      const persistedOccurrence = {
+        occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-1',
+        occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+        startAt: new Date('2026-05-06T16:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Cancelled,
+        isException: true,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(persistedOccurrence);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(buildSeries());
+
+      await expect(
+        EventOccurrenceService.updateOccurrenceException({
+          occurrenceId: persistedOccurrence.occurrenceId,
+          timezone: 'UTC',
+        }),
+      ).rejects.toMatchObject({
+        extensions: { code: 'BAD_REQUEST' },
+      });
+      expect(EventOccurrenceDAO.updateException).not.toHaveBeenCalled();
+    });
+
+    it('allows clearing an occurrence endAt by passing null', async () => {
+      const persistedOccurrence = {
+        occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-1',
+        occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+        startAt: new Date('2026-05-06T16:00:00.000Z'),
+        endAt: new Date('2026-05-06T19:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(persistedOccurrence);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(buildSeries());
+      (EventOccurrenceDAO.updateException as jest.Mock).mockResolvedValue({
+        ...persistedOccurrence,
+        endAt: undefined,
+        isException: true,
+      });
+
+      const result = await EventOccurrenceService.updateOccurrenceException({
+        occurrenceId: persistedOccurrence.occurrenceId,
+        endAt: null,
+      });
+
+      expect(EventOccurrenceDAO.updateException).toHaveBeenCalledWith(
+        persistedOccurrence.occurrenceId,
+        expect.objectContaining({
+          startAt: persistedOccurrence.startAt,
+          endAt: undefined,
+          timezone: persistedOccurrence.timezone,
+        }),
+      );
+      expect(result.endAt).toBeUndefined();
+    });
+  });
+
+  describe('cancelOccurrence', () => {
+    it('cancels the occurrence, cancels participant rows, and clears reserved slots', async () => {
+      const persistedOccurrence = {
+        occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-1',
+        occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+        startAt: new Date('2026-05-06T16:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(persistedOccurrence);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(buildSeries());
+      (EventOccurrenceDAO.cancelOccurrence as jest.Mock).mockResolvedValue({
+        ...persistedOccurrence,
+        status: EventOccurrenceStatus.Cancelled,
+        isException: true,
+      });
+
+      const result = await EventOccurrenceService.cancelOccurrence(persistedOccurrence.occurrenceId);
+
+      expect(EventOccurrenceParticipantDAO.cancelAllByOccurrence).toHaveBeenCalledWith(
+        persistedOccurrence.occurrenceId,
+      );
+      expect(EventOccurrenceDAO.clearReservedSlotCount).toHaveBeenCalledWith(persistedOccurrence.occurrenceId);
+      expect(result.status).toBe(EventOccurrenceStatus.Cancelled);
+    });
+  });
+
+  describe('deleteFutureExceptionOccurrences', () => {
+    it('deletes future exception rows and their participants', async () => {
+      (EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart as jest.Mock).mockResolvedValue([
+        {
+          occurrenceId: 'series-1#2026-05-13T16:00:00.000Z',
+          isException: true,
+        },
+        {
+          occurrenceId: 'series-1#2026-05-20T16:00:00.000Z',
+          isException: false,
+        },
+      ]);
+
+      await EventOccurrenceService.deleteFutureExceptionOccurrences('series-1', new Date('2026-05-13T16:00:00.000Z'));
+
+      expect(EventOccurrenceParticipantDAO.deleteByOccurrenceIds).toHaveBeenCalledWith([
+        'series-1#2026-05-13T16:00:00.000Z',
+      ]);
+      expect(EventOccurrenceDAO.deleteByOccurrenceIds).toHaveBeenCalledWith(['series-1#2026-05-13T16:00:00.000Z']);
+    });
+  });
+
+  describe('moveFutureOccurrencesToSeries', () => {
+    it('reassigns future occurrence rows and participant references to the successor series', async () => {
+      (EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart as jest.Mock).mockResolvedValue([
+        {
+          occurrenceId: 'series-1#2026-05-13T16:00:00.000Z',
+          originalStartAt: new Date('2026-05-13T16:00:00.000Z'),
+        },
+      ]);
+
+      await EventOccurrenceService.moveFutureOccurrencesToSeries(
+        'series-1',
+        'series-2',
+        new Date('2026-05-13T16:00:00.000Z'),
+        1,
+      );
+
+      expect(EventOccurrenceParticipantDAO.reassignOccurrenceIds).toHaveBeenCalledWith([
+        {
+          oldOccurrenceId: 'series-1#2026-05-13T16:00:00.000Z',
+          newOccurrenceId: 'series-2#2026-05-13T16:00:00.000Z',
+        },
+      ]);
+      expect(EventOccurrenceDAO.reassignOccurrencesToSeries).toHaveBeenCalledWith([
+        {
+          oldOccurrenceId: 'series-1#2026-05-13T16:00:00.000Z',
+          occurrenceId: 'series-2#2026-05-13T16:00:00.000Z',
+          eventSeriesId: 'series-2',
+          occurrenceKey: 'series-2#2026-05-13T16:00:00.000Z',
+          seriesScheduleVersion: 1,
+        },
+      ]);
     });
   });
 

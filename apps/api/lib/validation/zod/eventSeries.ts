@@ -8,6 +8,7 @@ import {
 } from '@gatherle/commons/types/eventSeries';
 import { ERROR_MESSAGES } from '@/validation';
 import mongoose from 'mongoose';
+import { OccurrenceIdSchema } from './shared';
 
 const CoordinatesSchema = z.object({
   latitude: z
@@ -178,3 +179,17 @@ export const UpdateEventInputSchema = EventSchema.partial()
       }),
   })
   .omit({ slug: true });
+
+export const SplitEventSeriesInputSchema = EventSchema.partial()
+  .omit({
+    eventId: true,
+    slug: true,
+    primarySchedule: true,
+    orgId: true,
+    lifecycleStatus: true,
+  })
+  .extend({
+    occurrenceId: OccurrenceIdSchema.describe(
+      'The occurrence boundary where the recurring event series should split into past and future series.',
+    ),
+  });

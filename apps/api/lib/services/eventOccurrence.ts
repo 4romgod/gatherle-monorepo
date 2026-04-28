@@ -1,6 +1,6 @@
 import { RRule } from 'rrule';
 import { GraphQLError } from 'graphql';
-import { EventOccurrenceDAO, EventSeriesDAO } from '@/mongodb/dao';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
   CustomError,
   ErrorTypes,
@@ -8,12 +8,14 @@ import {
   getOccurrencesInRange,
   getOccurrencesInRangeOrThrow,
   parseOccurrenceId,
+  splitRecurringRuleAtOccurrence,
 } from '@/utils';
 import type {
   EventOccurrence,
   EventSchedule,
   EventSeries,
   EventsQueryOptionsInput,
+  UpdateEventOccurrenceInput,
   SortInput,
 } from '@gatherle/commons/types';
 import { SortOrderInput } from '@gatherle/commons/types';
@@ -303,6 +305,25 @@ class EventOccurrenceService {
     await EventOccurrenceDAO.deleteByEventSeriesId(eventSeriesId);
   }
 
+  static async readRecurringOccurrenceContext(
+    occurrenceId: string,
+  ): Promise<{ occurrence: EventOccurrence; eventSeries: EventSeries }> {
+    const occurrence = await EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
+    if (!occurrence) {
+      throw CustomError(`Occurrence not found for id ${occurrenceId}`, ErrorTypes.NOT_FOUND);
+    }
+
+    const eventSeries = await EventSeriesDAO.readEventById(occurrence.eventSeriesId);
+    if (!this.isRecurringSeries(eventSeries)) {
+      throw CustomError(
+        'Occurrence exceptions are only supported for recurring event series in this phase.',
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+
+    return { occurrence, eventSeries };
+  }
+
   static isRecurringSeries(eventSeries: Pick<EventSeries, 'primarySchedule'>): boolean {
     const schedule = eventSeries.primarySchedule;
 
@@ -447,8 +468,15 @@ class EventOccurrenceService {
     }
 
     const occurrences = this.buildOccurrencesForSeries(eventSeries);
-    if (occurrences.length > 0) {
-      await EventOccurrenceDAO.bulkUpsert(occurrences);
+    const exceptionOccurrenceKeys = new Set(
+      await EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId(eventSeries.eventId),
+    );
+    const generatedOccurrencesWithoutExceptions = occurrences.filter(
+      (occurrence) => !exceptionOccurrenceKeys.has(occurrence.occurrenceKey),
+    );
+
+    if (generatedOccurrencesWithoutExceptions.length > 0) {
+      await EventOccurrenceDAO.bulkUpsert(generatedOccurrencesWithoutExceptions);
     }
     // An empty generated set means this recurring series currently has no dates
     // inside the rolling materialization window, so stale generated rows should
@@ -457,6 +485,124 @@ class EventOccurrenceService {
       eventSeries.eventId,
       occurrences.map((occurrence) => occurrence.occurrenceKey),
     );
+  }
+
+  static async updateOccurrenceException(input: UpdateEventOccurrenceInput): Promise<EventOccurrence> {
+    const { occurrence, eventSeries } = await this.readRecurringOccurrenceContext(input.occurrenceId);
+
+    if (
+      eventSeries.status === EventStatus.Cancelled ||
+      occurrence.status === EventOccurrenceStatus.Cancelled ||
+      occurrence.status === EventOccurrenceStatus.Completed
+    ) {
+      throw CustomError('This occurrence cannot be edited in its current state.', ErrorTypes.BAD_REQUEST);
+    }
+
+    const nextStartAt = input.startAt != null ? new Date(input.startAt) : new Date(occurrence.startAt);
+    const nextEndAt =
+      input.endAt !== undefined
+        ? input.endAt === null
+          ? undefined
+          : new Date(input.endAt)
+        : occurrence.endAt
+          ? new Date(occurrence.endAt)
+          : undefined;
+    const nextTimezone = input.timezone ?? occurrence.timezone;
+
+    if (nextEndAt && nextEndAt.getTime() < nextStartAt.getTime()) {
+      throw CustomError('Occurrence endAt must be later than or equal to startAt.', ErrorTypes.BAD_REQUEST);
+    }
+
+    const updatedOccurrence = await EventOccurrenceDAO.updateException(occurrence.occurrenceId, {
+      ...occurrence,
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+      timezone: nextTimezone,
+    });
+
+    if (!updatedOccurrence) {
+      throw CustomError(`Occurrence not found for id ${occurrence.occurrenceId}`, ErrorTypes.NOT_FOUND);
+    }
+
+    return updatedOccurrence;
+  }
+
+  static async cancelOccurrence(occurrenceId: string): Promise<EventOccurrence> {
+    const { occurrence, eventSeries } = await this.readRecurringOccurrenceContext(occurrenceId);
+
+    if (eventSeries.status === EventStatus.Cancelled || occurrence.status === EventOccurrenceStatus.Completed) {
+      throw CustomError('This occurrence cannot be cancelled in its current state.', ErrorTypes.BAD_REQUEST);
+    }
+
+    const cancelledOccurrence = await EventOccurrenceDAO.cancelOccurrence(occurrenceId);
+    if (!cancelledOccurrence) {
+      throw CustomError(`Occurrence not found for id ${occurrenceId}`, ErrorTypes.NOT_FOUND);
+    }
+
+    await Promise.all([
+      EventOccurrenceParticipantDAO.cancelAllByOccurrence(occurrenceId),
+      EventOccurrenceDAO.clearReservedSlotCount(occurrenceId),
+    ]);
+
+    return cancelledOccurrence;
+  }
+
+  static async deleteFutureExceptionOccurrences(eventSeriesId: string, fromOriginalStartAt: Date): Promise<void> {
+    const futureOccurrences = await EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart(
+      eventSeriesId,
+      fromOriginalStartAt,
+    );
+    const futureExceptionOccurrences = futureOccurrences.filter((occurrence) => occurrence.isException);
+
+    if (futureExceptionOccurrences.length === 0) {
+      return;
+    }
+
+    const occurrenceIds = futureExceptionOccurrences.map((occurrence) => occurrence.occurrenceId);
+    await Promise.all([
+      EventOccurrenceParticipantDAO.deleteByOccurrenceIds(occurrenceIds),
+      EventOccurrenceDAO.deleteByOccurrenceIds(occurrenceIds),
+    ]);
+  }
+
+  static async moveFutureOccurrencesToSeries(
+    sourceEventSeriesId: string,
+    successorEventSeriesId: string,
+    fromOriginalStartAt: Date,
+    successorScheduleVersion: number,
+  ): Promise<void> {
+    const futureOccurrences = await EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart(
+      sourceEventSeriesId,
+      fromOriginalStartAt,
+    );
+
+    if (futureOccurrences.length === 0) {
+      return;
+    }
+
+    await EventOccurrenceParticipantDAO.reassignOccurrenceIds(
+      futureOccurrences.map((occurrence) => ({
+        oldOccurrenceId: occurrence.occurrenceId,
+        newOccurrenceId: this.buildOccurrenceKey(successorEventSeriesId, occurrence.originalStartAt),
+      })),
+    );
+
+    await EventOccurrenceDAO.reassignOccurrencesToSeries(
+      futureOccurrences.map((occurrence) => ({
+        oldOccurrenceId: occurrence.occurrenceId,
+        occurrenceId: this.buildOccurrenceKey(successorEventSeriesId, occurrence.originalStartAt),
+        eventSeriesId: successorEventSeriesId,
+        occurrenceKey: this.buildOccurrenceKey(successorEventSeriesId, occurrence.originalStartAt),
+        seriesScheduleVersion: successorScheduleVersion,
+      })),
+    );
+  }
+
+  static splitRecurringRuleAtOccurrence(
+    rruleString: string,
+    pivotStartAt: Date,
+  ): { predecessorRule: string; successorRule: string } {
+    return splitRecurringRuleAtOccurrence(rruleString, pivotStartAt);
   }
 }
 

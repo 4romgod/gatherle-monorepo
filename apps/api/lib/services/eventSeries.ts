@@ -1,6 +1,13 @@
-import type { CreateEventInput, EventSchedule, EventSeries, UpdateEventInput } from '@gatherle/commons/types';
+import type {
+  CreateEventInput,
+  EventSchedule,
+  EventSeries,
+  EventOrganizer,
+  SplitEventSeriesInput,
+  UpdateEventInput,
+} from '@gatherle/commons/types';
 import { EventSeriesDAO } from '@/mongodb/dao';
-import { KnownCommonError, areEventSchedulesEqual } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual } from '@/utils';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 
@@ -12,6 +19,45 @@ import EventOccurrenceService from './eventOccurrence';
  * not in the DAO.
  */
 class EventSeriesService {
+  private static shouldDeleteFutureExceptionsOnScheduleChange(
+    previousSchedule: EventSchedule,
+    nextSchedule: EventSchedule,
+  ): boolean {
+    return (
+      previousSchedule.startAt.getTime() !== nextSchedule.startAt.getTime() ||
+      (previousSchedule.recurrenceRule ?? null) !== (nextSchedule.recurrenceRule ?? null)
+    );
+  }
+
+  private static normalizeEventCategoryIds(eventSeries: EventSeries): string[] {
+    return (eventSeries.eventCategories ?? []).map((category) =>
+      typeof category === 'string' ? category : category?._id?.toString() || category.toString(),
+    );
+  }
+
+  private static normalizeOrganizerUserId(organizer: EventOrganizer): string {
+    if (typeof organizer.user === 'string') {
+      return organizer.user;
+    }
+
+    if ('_id' in organizer.user && organizer.user._id) {
+      return organizer.user._id.toString();
+    }
+
+    if ('userId' in organizer.user && typeof organizer.user.userId === 'string') {
+      return organizer.user.userId;
+    }
+
+    throw new Error('Unable to normalize event organizer user reference.');
+  }
+
+  private static normalizeOrganizers(eventSeries: EventSeries): Array<{ user: string; role: string }> {
+    return (eventSeries.organizers ?? []).map((organizer: EventOrganizer) => ({
+      user: this.normalizeOrganizerUserId(organizer),
+      role: organizer.role,
+    }));
+  }
+
   private static async syncOccurrencesForSeries(
     eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
   ): Promise<void> {
@@ -53,9 +99,18 @@ class EventSeriesService {
       input.primarySchedule !== undefined &&
       !areEventSchedulesEqual(currentEvent.primarySchedule, input.primarySchedule as EventSchedule);
     const didStatusChange = input.status !== undefined && input.status !== currentEvent.status;
+    const shouldDeleteFutureExceptions =
+      didScheduleChange &&
+      this.shouldDeleteFutureExceptionsOnScheduleChange(
+        currentEvent.primarySchedule,
+        input.primarySchedule as EventSchedule,
+      );
     const updatedEvent = await EventSeriesDAO.updateEvent(input);
 
     if (didScheduleChange || didStatusChange) {
+      if (shouldDeleteFutureExceptions) {
+        await EventOccurrenceService.deleteFutureExceptionOccurrences(updatedEvent.eventId, new Date());
+      }
       await this.syncOccurrencesForSeries(updatedEvent);
     }
 
@@ -72,6 +127,83 @@ class EventSeriesService {
     const deletedEvent = await EventSeriesDAO.deleteEventBySlug(slug);
     await this.deleteOccurrencesForSeries(deletedEvent.eventId);
     return deletedEvent;
+  }
+
+  static async splitAtOccurrence(input: SplitEventSeriesInput): Promise<EventSeries> {
+    const { occurrence, eventSeries } = await EventOccurrenceService.readRecurringOccurrenceContext(input.occurrenceId);
+    if (occurrence.isException) {
+      throw CustomError(
+        'Splitting from an already-exception occurrence is not supported in this phase.',
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+
+    const { predecessorRule, successorRule } = EventOccurrenceService.splitRecurringRuleAtOccurrence(
+      eventSeries.primarySchedule.recurrenceRule,
+      occurrence.originalStartAt,
+    );
+
+    const successorInput: CreateEventInput = {
+      title: input.title ?? eventSeries.title,
+      description: input.description ?? eventSeries.description,
+      summary: input.summary ?? eventSeries.summary,
+      primarySchedule: {
+        ...eventSeries.primarySchedule,
+        startAt: new Date(occurrence.startAt),
+        endAt: occurrence.endAt ? new Date(occurrence.endAt) : undefined,
+        timezone: occurrence.timezone,
+        recurrenceRule: successorRule,
+      },
+      location: input.location ?? eventSeries.location,
+      locationSnapshot: input.locationSnapshot ?? eventSeries.locationSnapshot,
+      venueId: input.venueId ?? eventSeries.venueId,
+      status: input.status ?? eventSeries.status,
+      visibility: input.visibility ?? eventSeries.visibility,
+      capacity: input.capacity ?? eventSeries.capacity,
+      rsvpLimit: input.rsvpLimit ?? eventSeries.rsvpLimit,
+      waitlistEnabled: input.waitlistEnabled ?? eventSeries.waitlistEnabled,
+      allowGuestPlusOnes: input.allowGuestPlusOnes ?? eventSeries.allowGuestPlusOnes,
+      remindersEnabled: input.remindersEnabled ?? eventSeries.remindersEnabled,
+      showAttendees: input.showAttendees ?? eventSeries.showAttendees,
+      eventCategories: input.eventCategories ?? this.normalizeEventCategoryIds(eventSeries),
+      organizers: input.organizers ?? this.normalizeOrganizers(eventSeries),
+      tags: input.tags ?? eventSeries.tags,
+      media: input.media ?? eventSeries.media,
+      additionalDetails: input.additionalDetails ?? eventSeries.additionalDetails,
+      comments: input.comments ?? eventSeries.comments,
+      privacySetting: input.privacySetting ?? eventSeries.privacySetting,
+      eventLink: input.eventLink ?? eventSeries.eventLink,
+      lifecycleStatus: eventSeries.lifecycleStatus,
+      orgId: eventSeries.orgId,
+    };
+
+    const preferredSuccessorSlugBase = `${eventSeries.slug}-from-${occurrence.originalStartAt.toISOString().slice(0, 10)}`;
+
+    const successorEvent = await EventSeriesDAO.createSplitSuccessor(
+      successorInput,
+      preferredSuccessorSlugBase,
+      eventSeries.eventId,
+    );
+
+    const updatedSourceEvent = await EventSeriesDAO.applySeriesSplit(
+      eventSeries.eventId,
+      predecessorRule,
+      successorEvent.eventId,
+    );
+
+    await EventOccurrenceService.moveFutureOccurrencesToSeries(
+      eventSeries.eventId,
+      successorEvent.eventId,
+      occurrence.originalStartAt,
+      successorEvent.scheduleVersion ?? 1,
+    );
+
+    await Promise.all([
+      this.syncOccurrencesForSeries(updatedSourceEvent),
+      this.syncOccurrencesForSeries(successorEvent),
+    ]);
+
+    return successorEvent;
   }
 
   /**

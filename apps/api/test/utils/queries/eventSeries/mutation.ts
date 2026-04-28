@@ -72,3 +72,66 @@ export const getDeleteEventByIdMutation = (eventId: string) => {
     },
   };
 };
+
+export const getUpdateEventOccurrenceMutation = (input: any) => {
+  return {
+    query: `mutation UpdateEventOccurrence($input: UpdateEventOccurrenceInput!) {
+      updateEventOccurrence(input: $input) {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        startAt
+        endAt
+        timezone
+        status
+        isException
+      }
+    }`,
+    variables: {
+      input,
+    },
+  };
+};
+
+export const getCancelEventOccurrenceMutation = (input: any) => {
+  return {
+    query: `mutation CancelEventOccurrence($input: CancelEventOccurrenceInput!) {
+      cancelEventOccurrence(input: $input) {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        startAt
+        endAt
+        timezone
+        status
+        isException
+      }
+    }`,
+    variables: {
+      input,
+    },
+  };
+};
+
+export const getSplitEventSeriesAtOccurrenceMutation = (input: any) => {
+  return {
+    query: `mutation SplitEventSeriesAtOccurrence($input: SplitEventSeriesInput!) {
+      splitEventSeriesAtOccurrence(input: $input) {
+        eventId
+        slug
+        title
+        splitFromEventSeriesId
+        splitIntoEventSeriesId
+        primarySchedule {
+          startAt
+          endAt
+          timezone
+          recurrenceRule
+        }
+      }
+    }`,
+    variables: {
+      input,
+    },
+  };
+};

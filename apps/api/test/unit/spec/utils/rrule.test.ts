@@ -1,4 +1,10 @@
-import { getDateRangeForFilter, getOccurrencesInRange, hasOccurrenceInRange, getNextOccurrence } from '@/utils/rrule';
+import {
+  getDateRangeForFilter,
+  getOccurrencesInRange,
+  hasOccurrenceInRange,
+  getNextOccurrence,
+  splitRecurringRuleAtOccurrence,
+} from '@/utils/rrule';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 
 describe('RRule Utilities', () => {
@@ -128,6 +134,76 @@ describe('RRule Utilities', () => {
       expect(startDate.getMonth()).toBe(5); // June (0-indexed)
       expect(startDate.getHours()).toBe(0);
       expect(endDate.getHours()).toBe(23);
+    });
+  });
+
+  describe('splitRecurringRuleAtOccurrence', () => {
+    it('splits a finite weekly rule into predecessor and successor rules', () => {
+      const originalRule = 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE';
+
+      const { predecessorRule, successorRule } = splitRecurringRuleAtOccurrence(
+        originalRule,
+        new Date('2026-05-20T16:00:00.000Z'),
+      );
+
+      expect(
+        getOccurrencesInRange(
+          originalRule,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-06-30T23:59:59.999Z'),
+          10,
+        ).map((date) => date.toISOString()),
+      ).toEqual([
+        '2026-05-06T16:00:00.000Z',
+        '2026-05-13T16:00:00.000Z',
+        '2026-05-20T16:00:00.000Z',
+        '2026-05-27T16:00:00.000Z',
+      ]);
+
+      expect(
+        getOccurrencesInRange(
+          predecessorRule,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-06-30T23:59:59.999Z'),
+          10,
+        ).map((date) => date.toISOString()),
+      ).toEqual(['2026-05-06T16:00:00.000Z', '2026-05-13T16:00:00.000Z']);
+
+      expect(
+        getOccurrencesInRange(
+          successorRule,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-06-30T23:59:59.999Z'),
+          10,
+        ).map((date) => date.toISOString()),
+      ).toEqual(['2026-05-20T16:00:00.000Z', '2026-05-27T16:00:00.000Z']);
+    });
+
+    it('splits an UNTIL-bounded weekly rule into predecessor and successor rules', () => {
+      const originalRule = 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260527T160000Z;BYDAY=WE';
+
+      const { predecessorRule, successorRule } = splitRecurringRuleAtOccurrence(
+        originalRule,
+        new Date('2026-05-20T16:00:00.000Z'),
+      );
+
+      expect(
+        getOccurrencesInRange(
+          predecessorRule,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-06-30T23:59:59.999Z'),
+          10,
+        ).map((date) => date.toISOString()),
+      ).toEqual(['2026-05-06T16:00:00.000Z', '2026-05-13T16:00:00.000Z']);
+
+      expect(
+        getOccurrencesInRange(
+          successorRule,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-06-30T23:59:59.999Z'),
+          10,
+        ).map((date) => date.toISOString()),
+      ).toEqual(['2026-05-20T16:00:00.000Z', '2026-05-27T16:00:00.000Z']);
     });
   });
 });

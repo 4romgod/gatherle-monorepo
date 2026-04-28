@@ -1,10 +1,25 @@
-import type { RRuleSet } from 'rrule';
+import { RRule, type Options, type RRuleSet } from 'rrule';
 import { rrulestr } from 'rrule';
 import { logger } from './logger';
 import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@gatherle/commons';
 
 function parseRRuleSet(rruleString: string): RRuleSet {
   return rrulestr(rruleString, { forceset: true }) as RRuleSet;
+}
+
+function getPrimaryRule(rruleString: string) {
+  const ruleSet = parseRRuleSet(rruleString);
+  const rules = ruleSet.rrules();
+
+  if (rules.length !== 1) {
+    throw new Error('Only single-rule recurring schedules are supported.');
+  }
+
+  return rules[0];
+}
+
+function buildRuleString(options: Partial<Options>): string {
+  return RRule.optionsToString(options as Options);
 }
 
 function collectOccurrencesInRange(
@@ -77,6 +92,51 @@ export function getNextOccurrence(rruleString: string, fromDate: Date = new Date
     logger.error('Error getting next occurrence:', { rruleString, error });
     return null;
   }
+}
+
+export function splitRecurringRuleAtOccurrence(
+  rruleString: string,
+  pivotStartAt: Date,
+): { predecessorRule: string; successorRule: string } {
+  const primaryRule = getPrimaryRule(rruleString);
+  const originalOptions = { ...primaryRule.origOptions };
+  const originalStartAt = originalOptions.dtstart;
+
+  if (!(originalStartAt instanceof Date) || Number.isNaN(originalStartAt.getTime())) {
+    throw new Error('Recurring rule must contain a valid DTSTART.');
+  }
+
+  const predecessorOptions: Partial<Options> = {
+    ...originalOptions,
+    until: new Date(pivotStartAt.getTime() - 1),
+  };
+  delete predecessorOptions.count;
+
+  const successorOptions: Partial<Options> = {
+    ...originalOptions,
+    dtstart: new Date(pivotStartAt),
+  };
+
+  if (typeof originalOptions.count === 'number') {
+    const occurrencesBeforeAndIncludingPivot = getOccurrencesInRangeOrThrow(
+      rruleString,
+      originalStartAt,
+      pivotStartAt,
+      originalOptions.count,
+    ).length;
+    const remainingCount = originalOptions.count - occurrencesBeforeAndIncludingPivot + 1;
+
+    if (remainingCount < 1) {
+      throw new Error('Split pivot must fall on or before the last occurrence in the recurring rule.');
+    }
+
+    successorOptions.count = remainingCount;
+  }
+
+  return {
+    predecessorRule: buildRuleString(predecessorOptions),
+    successorRule: buildRuleString(successorOptions),
+  };
 }
 
 /**
