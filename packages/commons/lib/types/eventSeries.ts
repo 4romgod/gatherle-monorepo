@@ -227,6 +227,14 @@ export class EventSeries {
   @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION_ID })
   orgId?: string;
 
+  @prop({ type: () => String })
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SPLIT_FROM_EVENT_SERIES_ID })
+  splitFromEventSeriesId?: string;
+
+  @prop({ type: () => String })
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SPLIT_INTO_EVENT_SERIES_ID })
+  splitIntoEventSeriesId?: string;
+
   @Field(() => Organization, {
     nullable: true,
     description: EVENT_DESCRIPTIONS.EVENT.ORGANIZATION,
@@ -415,6 +423,78 @@ export class UpdateEventInput {
 
   @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SUMMARY })
   summary?: string;
+}
+
+@InputType('SplitEventSeriesInput', { description: EVENT_DESCRIPTIONS.EVENT.SPLIT_INPUT })
+export class SplitEventSeriesInput {
+  @Field(() => ID, { description: EVENT_DESCRIPTIONS.EVENT.SPLIT_OCCURRENCE_ID })
+  occurrenceId: string;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TITLE })
+  title?: string;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.DESCRIPTION })
+  description?: string;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SUMMARY })
+  summary?: string;
+
+  @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION })
+  location?: Record<string, any>;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.LOCATION_SNAPSHOT })
+  locationSnapshot?: string;
+
+  @Field(() => ID, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VENUE_ID })
+  venueId?: string;
+
+  @Field(() => EventStatus, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.STATUS })
+  status?: EventStatus;
+
+  @Field(() => EventVisibility, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.VISIBILITY })
+  visibility?: EventVisibility;
+
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.CAPACITY })
+  capacity?: number;
+
+  @Field(() => Int, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.RSVP_LIMIT })
+  rsvpLimit?: number;
+
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.WAITLIST_ENABLED })
+  waitlistEnabled?: boolean;
+
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ALLOW_GUEST_PLUS_ONES })
+  allowGuestPlusOnes?: boolean;
+
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.REMINDERS_ENABLED })
+  remindersEnabled?: boolean;
+
+  @Field(() => Boolean, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.SHOW_ATTENDEES })
+  showAttendees?: boolean;
+
+  @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
+  eventCategories?: string[];
+
+  @Field(() => [GraphQLJSON], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ORGANIZER_LIST })
+  organizers?: Array<{ user: string; role: string }>;
+
+  @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.TAGS })
+  tags?: Record<string, any>;
+
+  @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.MEDIA })
+  media?: Record<string, any>;
+
+  @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.ADDITIONAL_DETAILS })
+  additionalDetails?: Record<string, any>;
+
+  @Field(() => GraphQLJSON, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.COMMENTS })
+  comments?: Record<string, any>;
+
+  @Field(() => EventPrivacySetting, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.PRIVACY_SETTING })
+  privacySetting?: EventPrivacySetting;
+
+  @Field(() => String, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_LINK })
+  eventLink?: string;
 }
 
 @InputType('RsvpInput', { description: EVENT_DESCRIPTIONS.EVENT.RSVP_INPUT_TYPE })

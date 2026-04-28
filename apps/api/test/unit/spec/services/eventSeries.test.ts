@@ -1,12 +1,14 @@
 import EventSeriesService from '@/services/eventSeries';
-import type { CreateEventInput, EventSeries, UpdateEventInput } from '@gatherle/commons/types';
-import { EventStatus } from '@gatherle/commons/types';
+import type { CreateEventInput, EventSeries, SplitEventSeriesInput, UpdateEventInput } from '@gatherle/commons/types';
+import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
     create: jest.fn(),
+    createSplitSuccessor: jest.fn(),
     readEventById: jest.fn(),
     updateEvent: jest.fn(),
+    applySeriesSplit: jest.fn(),
     deleteEventById: jest.fn(),
     deleteEventBySlug: jest.fn(),
     readTrending: jest.fn(),
@@ -18,6 +20,10 @@ jest.mock('@/services/eventOccurrence', () => ({
   default: {
     syncRecurringSeriesOccurrences: jest.fn(),
     deleteOccurrencesForSeries: jest.fn(),
+    deleteFutureExceptionOccurrences: jest.fn(),
+    moveFutureOccurrencesToSeries: jest.fn(),
+    readRecurringOccurrenceContext: jest.fn(),
+    splitRecurringRuleAtOccurrence: jest.fn(),
   },
 }));
 
@@ -67,6 +73,8 @@ describe('EventSeriesService', () => {
     jest.clearAllMocks();
     (EventOccurrenceService.syncRecurringSeriesOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteOccurrencesForSeries as jest.Mock).mockResolvedValue(undefined);
+    (EventOccurrenceService.deleteFutureExceptionOccurrences as jest.Mock).mockResolvedValue(undefined);
+    (EventOccurrenceService.moveFutureOccurrencesToSeries as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('create', () => {
@@ -188,6 +196,58 @@ describe('EventSeriesService', () => {
         },
       );
     });
+
+    it('clears future exception rows before re-syncing after a schedule update', async () => {
+      const existingEvent = makeEvent({
+        eventId: 'event-1',
+        primarySchedule: {
+          startAt: new Date('2026-05-01T18:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        } as any,
+      });
+      const input = makeUpdateInput({
+        primarySchedule: {
+          startAt: new Date('2026-05-08T18:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        },
+      });
+      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: input.primarySchedule });
+      (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
+
+      await EventSeriesService.update(input, existingEvent);
+
+      expect(EventOccurrenceService.deleteFutureExceptionOccurrences).toHaveBeenCalledWith('event-1', expect.any(Date));
+      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+    });
+
+    it('preserves future exception rows when only non-anchor schedule fields change', async () => {
+      const existingEvent = makeEvent({
+        eventId: 'event-1',
+        primarySchedule: {
+          startAt: new Date('2026-05-01T18:00:00.000Z'),
+          endAt: new Date('2026-05-01T20:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        } as any,
+      });
+      const input = makeUpdateInput({
+        primarySchedule: {
+          startAt: new Date('2026-05-01T18:00:00.000Z'),
+          endAt: new Date('2026-05-01T21:00:00.000Z'),
+          timezone: 'UTC',
+          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+        },
+      });
+      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: input.primarySchedule });
+      (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
+
+      await EventSeriesService.update(input, existingEvent);
+
+      expect(EventOccurrenceService.deleteFutureExceptionOccurrences).not.toHaveBeenCalled();
+      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+    });
   });
 
   describe('delete', () => {
@@ -255,6 +315,148 @@ describe('EventSeriesService', () => {
       (EventSeriesDAO.readTrending as jest.Mock).mockRejectedValue(error);
 
       await expect(EventSeriesService.readTrending(10)).rejects.toThrow('DB failure');
+    });
+  });
+
+  describe('splitAtOccurrence', () => {
+    it('creates a successor series, relinks future occurrences, and syncs both series', async () => {
+      const sourceEvent = {
+        ...makeEvent({
+          eventId: 'event-1',
+          slug: 'weekly-yoga',
+          title: 'Weekly Yoga',
+          description: 'Original series',
+          primarySchedule: {
+            startAt: new Date('2026-05-06T16:00:00.000Z'),
+            endAt: new Date('2026-05-06T18:00:00.000Z'),
+            timezone: 'Africa/Johannesburg',
+            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          },
+          eventCategories: ['cat-1'] as any,
+          organizers: [{ user: 'user-1', role: 'Host' }] as any,
+          location: { locationType: 'tba' } as any,
+        }),
+      } as EventSeries;
+      const pivotOccurrence = {
+        occurrenceId: 'event-1#2026-05-20T16:00:00.000Z',
+        eventSeriesId: 'event-1',
+        occurrenceKey: 'event-1#2026-05-20T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-20T16:00:00.000Z'),
+        startAt: new Date('2026-05-20T16:00:00.000Z'),
+        endAt: new Date('2026-05-20T18:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      const successorEvent = {
+        ...sourceEvent,
+        eventId: 'event-2',
+        slug: 'weekly-yoga-from-2026-05-20',
+        primarySchedule: {
+          ...sourceEvent.primarySchedule,
+          startAt: new Date('2026-05-20T16:00:00.000Z'),
+          endAt: new Date('2026-05-20T18:00:00.000Z'),
+          recurrenceRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+        },
+        splitFromEventSeriesId: 'event-1',
+      };
+      const updatedSourceEvent = {
+        ...sourceEvent,
+        splitIntoEventSeriesId: 'event-2',
+        scheduleVersion: 2,
+        primarySchedule: {
+          ...sourceEvent.primarySchedule,
+          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260520T155959Z;BYDAY=WE',
+        },
+      };
+      (EventOccurrenceService.readRecurringOccurrenceContext as jest.Mock).mockResolvedValue({
+        occurrence: pivotOccurrence,
+        eventSeries: sourceEvent,
+      });
+      (EventOccurrenceService.splitRecurringRuleAtOccurrence as jest.Mock).mockReturnValue({
+        predecessorRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260520T155959Z;BYDAY=WE',
+        successorRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+      });
+      (EventSeriesDAO.createSplitSuccessor as jest.Mock).mockResolvedValue(successorEvent);
+      (EventSeriesDAO.applySeriesSplit as jest.Mock).mockResolvedValue(updatedSourceEvent);
+
+      const result = await EventSeriesService.splitAtOccurrence({
+        occurrenceId: pivotOccurrence.occurrenceId,
+        title: 'Weekly Yoga South',
+      } as SplitEventSeriesInput);
+
+      expect(EventSeriesDAO.createSplitSuccessor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Weekly Yoga South',
+          primarySchedule: expect.objectContaining({
+            recurrenceRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+          }),
+        }),
+        'weekly-yoga-from-2026-05-20',
+        'event-1',
+      );
+      expect(EventSeriesDAO.applySeriesSplit).toHaveBeenCalledWith(
+        'event-1',
+        'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260520T155959Z;BYDAY=WE',
+        'event-2',
+      );
+      expect(EventOccurrenceService.moveFutureOccurrencesToSeries).toHaveBeenCalledWith(
+        'event-1',
+        'event-2',
+        new Date('2026-05-20T16:00:00.000Z'),
+        1,
+      );
+      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedSourceEvent);
+      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(successorEvent);
+      expect(result).toEqual(successorEvent);
+    });
+
+    it('fails loudly when an organizer cannot be normalized for the successor series', async () => {
+      const sourceEvent = {
+        ...makeEvent({
+          eventId: 'event-1',
+          slug: 'weekly-yoga',
+          title: 'Weekly Yoga',
+          description: 'Original series',
+          primarySchedule: {
+            startAt: new Date('2026-05-06T16:00:00.000Z'),
+            endAt: new Date('2026-05-06T18:00:00.000Z'),
+            timezone: 'Africa/Johannesburg',
+            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          },
+          eventCategories: ['cat-1'] as any,
+          organizers: [{ user: { username: 'broken-shape' }, role: 'Host' }] as any,
+          location: { locationType: 'tba' } as any,
+        }),
+      } as EventSeries;
+      const pivotOccurrence = {
+        occurrenceId: 'event-1#2026-05-20T16:00:00.000Z',
+        eventSeriesId: 'event-1',
+        occurrenceKey: 'event-1#2026-05-20T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-20T16:00:00.000Z'),
+        startAt: new Date('2026-05-20T16:00:00.000Z'),
+        endAt: new Date('2026-05-20T18:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceService.readRecurringOccurrenceContext as jest.Mock).mockResolvedValue({
+        occurrence: pivotOccurrence,
+        eventSeries: sourceEvent,
+      });
+      (EventOccurrenceService.splitRecurringRuleAtOccurrence as jest.Mock).mockReturnValue({
+        predecessorRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260520T155959Z;BYDAY=WE',
+        successorRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+      });
+
+      await expect(
+        EventSeriesService.splitAtOccurrence({
+          occurrenceId: pivotOccurrence.occurrenceId,
+        } as SplitEventSeriesInput),
+      ).rejects.toThrow('Unable to normalize event organizer user reference.');
+      expect(EventSeriesDAO.createSplitSuccessor).not.toHaveBeenCalled();
     });
   });
 });

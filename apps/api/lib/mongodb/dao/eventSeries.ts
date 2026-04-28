@@ -28,6 +28,27 @@ import { logger } from '@/utils/logger';
 import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
 
 class EventSeriesDAO {
+  private static async createWithSlug(
+    input: CreateEventInput,
+    slug: string,
+    extraFields: Record<string, unknown> = {},
+  ): Promise<EventEntity> {
+    const event = await EventSeriesModel.create({ ...input, slug, ...extraFields });
+    return event.toObject();
+  }
+
+  private static async buildUniqueSlug(baseSlug: string): Promise<string> {
+    let candidateSlug = baseSlug;
+    let suffix = 2;
+
+    while (await EventSeriesModel.findOne({ slug: candidateSlug }).select('_id').lean().exec()) {
+      candidateSlug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+
+    return candidateSlug;
+  }
+
   static async create(input: CreateEventInput): Promise<EventEntity> {
     try {
       // Geocode address to coordinates if location has address but no coordinates
@@ -42,8 +63,7 @@ class EventSeriesDAO {
         throw CustomError(`Slug ${slug} already exists`, ErrorTypes.CONFLICT);
       }
 
-      const event = await EventSeriesModel.create({ ...input, slug });
-      return event.toObject();
+      return await this.createWithSlug(input, slug);
     } catch (error) {
       logDaoError('Error creating event', { error });
       const validationMessage = extractValidationErrorMessage(error, 'EventSeries validation failed');
@@ -194,6 +214,61 @@ class EventSeriesDAO {
       return event.toObject();
     } catch (error) {
       logDaoError('Error updating event', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async createSplitSuccessor(
+    input: CreateEventInput,
+    preferredSlugBase: string,
+    splitFromEventSeriesId: string,
+  ): Promise<EventEntity> {
+    try {
+      if (input.location) {
+        await enrichLocationWithCoordinates(input.location);
+      }
+
+      const uniqueSlug = await this.buildUniqueSlug(preferredSlugBase);
+      return await this.createWithSlug(input, uniqueSlug, { splitFromEventSeriesId });
+    } catch (error) {
+      logDaoError('Error creating split successor event series', { error, preferredSlugBase, splitFromEventSeriesId });
+      const validationMessage = extractValidationErrorMessage(error, 'EventSeries validation failed');
+
+      if (validationMessage !== 'EventSeries validation failed') {
+        throw CustomError(validationMessage, ErrorTypes.BAD_USER_INPUT);
+      }
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async applySeriesSplit(
+    eventId: string,
+    predecessorRecurrenceRule: string,
+    splitIntoEventSeriesId: string,
+  ): Promise<EventEntity> {
+    let event;
+    try {
+      event = await EventSeriesModel.findById(eventId).exec();
+    } catch (error) {
+      logDaoError('Error finding event for split update', { error, eventId });
+      throw KnownCommonError(error);
+    }
+
+    if (!event) {
+      throw CustomError(`EventSeries with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+    }
+
+    try {
+      event.primarySchedule = {
+        ...event.primarySchedule,
+        recurrenceRule: predecessorRecurrenceRule,
+      };
+      event.scheduleVersion = (event.scheduleVersion ?? 1) + 1;
+      event.splitIntoEventSeriesId = splitIntoEventSeriesId;
+      await event.save();
+      return event.toObject();
+    } catch (error) {
+      logDaoError('Error applying event series split', { error, eventId, splitIntoEventSeriesId });
       throw KnownCommonError(error);
     }
   }

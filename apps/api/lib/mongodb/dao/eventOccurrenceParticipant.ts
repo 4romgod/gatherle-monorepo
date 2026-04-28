@@ -79,6 +79,26 @@ class EventOccurrenceParticipantDAO {
     }
   }
 
+  static async cancelAllByOccurrence(occurrenceId: string): Promise<void> {
+    try {
+      await EventOccurrenceParticipantModel.updateMany(
+        {
+          occurrenceId,
+          status: { $ne: ParticipantStatus.Cancelled },
+        },
+        {
+          $set: {
+            status: ParticipantStatus.Cancelled,
+            cancelledAt: new Date(),
+          },
+        },
+      ).exec();
+    } catch (error) {
+      logDaoError('Error cancelling all occurrence participants', { error, occurrenceId });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readByOccurrence(occurrenceId: string): Promise<EventOccurrenceParticipant[]> {
     try {
       const participants = await EventOccurrenceParticipantModel.find({ occurrenceId }).sort({ rsvpAt: 1 }).exec();
@@ -179,6 +199,44 @@ class EventOccurrenceParticipantDAO {
       return participant ? participant.toObject() : null;
     } catch (error) {
       logDaoError('Error promoting waitlisted occurrence participant', { error, occurrenceId, userId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async reassignOccurrenceIds(
+    mappings: Array<{ oldOccurrenceId: string; newOccurrenceId: string }>,
+  ): Promise<void> {
+    if (mappings.length === 0) {
+      return;
+    }
+
+    try {
+      await EventOccurrenceParticipantModel.bulkWrite(
+        mappings.map((mapping) => ({
+          updateMany: {
+            filter: { occurrenceId: mapping.oldOccurrenceId },
+            update: {
+              $set: { occurrenceId: mapping.newOccurrenceId },
+            },
+          },
+        })),
+        { ordered: true },
+      );
+    } catch (error) {
+      logDaoError('Error reassigning occurrence participant IDs', { error, count: mappings.length });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByOccurrenceIds(occurrenceIds: string[]): Promise<void> {
+    if (occurrenceIds.length === 0) {
+      return;
+    }
+
+    try {
+      await EventOccurrenceParticipantModel.deleteMany({ occurrenceId: { $in: occurrenceIds } }).exec();
+    } catch (error) {
+      logDaoError('Error deleting occurrence participants by occurrenceIds', { error, occurrenceIds });
       throw KnownCommonError(error);
     }
   }

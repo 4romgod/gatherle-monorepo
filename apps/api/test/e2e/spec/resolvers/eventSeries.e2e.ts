@@ -4,6 +4,7 @@ import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
 import {
   getCreateEventMutation,
+  getSplitEventSeriesAtOccurrenceMutation,
   getDeleteEventByIdMutation,
   getDeleteEventBySlugMutation,
   getReadEventByIdQuery,
@@ -24,6 +25,7 @@ import {
   createEventOnServer,
   createMembershipOnServer,
   createOrganizationOnServer,
+  trackCreatedId,
   untrackCreatedId,
   updateMembershipRoleOnServer,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
@@ -64,6 +66,33 @@ describe('EventSeries Resolver', () => {
 
   const updateMembershipRole = (membershipId: string, role: OrganizationRole) =>
     updateMembershipRoleOnServer(url, adminUser.token, membershipId, role);
+
+  const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
+    const response = await request(url)
+      .post('')
+      .send({
+        query: `query ReadEventById($eventId: String!) {
+          readEventById(eventId: $eventId) {
+            eventId
+            splitFromEventSeriesId
+            splitIntoEventSeriesId
+            upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+              occurrenceId
+              occurrenceKey
+              eventSeriesId
+              startAt
+            }
+          }
+        }`,
+        variables: {
+          eventId,
+        },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.errors).toBeUndefined();
+    return response.body.data.readEventById;
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -158,6 +187,71 @@ describe('EventSeries Resolver', () => {
           .send(getUpdateEventMutation({ eventId: createdEvent.eventId, title: updatedTitle }));
         expect(response.status).toBe(200);
         expect(response.body.data.updateEvent.title).toBe(updatedTitle);
+      });
+
+      it('splits a recurring series at an occurrence and relinks future occurrences to the successor series', async () => {
+        const createdEvent = await createEvent({
+          ...buildEventInput(),
+          title: `Split Source Series ${Date.now()}`,
+          primarySchedule: {
+            startAt: new Date('2026-05-06T16:00:00.000Z'),
+            endAt: new Date('2026-05-06T19:00:00.000Z'),
+            timezone: 'Africa/Johannesburg',
+            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          },
+        });
+
+        const sourceBeforeSplit = await readUpcomingOccurrences(createdEvent.eventId, 10);
+        const pivotOccurrence = sourceBeforeSplit.upcomingOccurrences[2];
+
+        const splitResponse = await request(url)
+          .post('')
+          .set('Authorization', 'Bearer ' + testUser.token)
+          .send(
+            getSplitEventSeriesAtOccurrenceMutation({
+              occurrenceId: pivotOccurrence.occurrenceId,
+              title: 'Split Successor Series',
+            }),
+          );
+
+        expect(splitResponse.status).toBe(200);
+        expect(splitResponse.body.errors).toBeUndefined();
+
+        const successorEvent = splitResponse.body.data.splitEventSeriesAtOccurrence;
+        trackCreatedId(createdEventIds, successorEvent.eventId);
+
+        expect(successorEvent).toEqual(
+          expect.objectContaining({
+            title: 'Split Successor Series',
+            splitFromEventSeriesId: createdEvent.eventId,
+          }),
+        );
+
+        const sourceAfterSplit = await readUpcomingOccurrences(createdEvent.eventId, 10);
+        expect(sourceAfterSplit.splitIntoEventSeriesId).toBe(successorEvent.eventId);
+        expect(sourceAfterSplit.upcomingOccurrences).toEqual([
+          expect.objectContaining({
+            eventSeriesId: createdEvent.eventId,
+            startAt: '2026-05-06T16:00:00.000Z',
+          }),
+          expect.objectContaining({
+            eventSeriesId: createdEvent.eventId,
+            startAt: '2026-05-13T16:00:00.000Z',
+          }),
+        ]);
+
+        const successorAfterSplit = await readUpcomingOccurrences(successorEvent.eventId, 10);
+        expect(successorAfterSplit.splitFromEventSeriesId).toBe(createdEvent.eventId);
+        expect(successorAfterSplit.upcomingOccurrences).toEqual([
+          expect.objectContaining({
+            eventSeriesId: successorEvent.eventId,
+            startAt: '2026-05-20T16:00:00.000Z',
+          }),
+          expect.objectContaining({
+            eventSeriesId: successorEvent.eventId,
+            startAt: '2026-05-27T16:00:00.000Z',
+          }),
+        ]);
       });
     });
 

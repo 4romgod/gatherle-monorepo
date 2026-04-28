@@ -886,6 +886,115 @@ describe('EventSeriesDAO', () => {
     });
   });
 
+  describe('createSplitSuccessor', () => {
+    it('creates a successor series with a unique slug and splitFromEventSeriesId', async () => {
+      const createdSuccessor = {
+        ...expectedEvent,
+        eventId: 'successor-id',
+        slug: 'sample-event-series-from-2026-05-20-3',
+        splitFromEventSeriesId: 'source-id',
+      };
+      (EventSeriesModel.findOne as jest.Mock)
+        .mockReturnValueOnce(createMockSuccessMongooseQuery({ _id: 'existing-1' }))
+        .mockReturnValueOnce(createMockSuccessMongooseQuery({ _id: 'existing-2' }))
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(null));
+      (EventSeriesModel.create as jest.Mock).mockResolvedValue({
+        toObject: jest.fn().mockReturnValue(createdSuccessor),
+      });
+
+      const result = await EventSeriesDAO.createSplitSuccessor(
+        mockEventInput,
+        'sample-event-series-from-2026-05-20',
+        'source-id',
+      );
+
+      expect(result).toEqual(createdSuccessor);
+      expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(1, { slug: 'sample-event-series-from-2026-05-20' });
+      expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(2, { slug: 'sample-event-series-from-2026-05-20-2' });
+      expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(3, { slug: 'sample-event-series-from-2026-05-20-3' });
+      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...mockEventInput,
+          slug: 'sample-event-series-from-2026-05-20-3',
+          splitFromEventSeriesId: 'source-id',
+        }),
+      );
+    });
+
+    it('surfaces validation errors when successor creation fails validation', async () => {
+      const validationError = {
+        name: 'ValidationError',
+        errors: {
+          title: { message: 'Title is required' },
+        },
+      };
+      (EventSeriesModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+      (EventSeriesModel.create as jest.Mock).mockRejectedValue(validationError);
+
+      await expect(
+        EventSeriesDAO.createSplitSuccessor(mockEventInput, 'sample-event-series-from-2026-05-20', 'source-id'),
+      ).rejects.toThrow(CustomError('Title is required', ErrorTypes.BAD_USER_INPUT));
+    });
+  });
+
+  describe('applySeriesSplit', () => {
+    it('updates the predecessor recurrence rule and links the successor series', async () => {
+      const mockEvent = {
+        ...expectedEvent,
+        primarySchedule: expectedEvent.primarySchedule,
+        scheduleVersion: 1,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          ...expectedEvent,
+          primarySchedule: {
+            ...expectedEvent.primarySchedule,
+            recurrenceRule: 'RRULE:FREQ=WEEKLY;UNTIL=20260513T155959Z',
+          },
+          scheduleVersion: 2,
+          splitIntoEventSeriesId: 'successor-id',
+        }),
+      };
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvent));
+
+      const result = await EventSeriesDAO.applySeriesSplit(
+        'mockEventId',
+        'RRULE:FREQ=WEEKLY;UNTIL=20260513T155959Z',
+        'successor-id',
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          scheduleVersion: 2,
+          splitIntoEventSeriesId: 'successor-id',
+        }),
+      );
+      expect(mockEvent.primarySchedule.recurrenceRule).toBe('RRULE:FREQ=WEEKLY;UNTIL=20260513T155959Z');
+      expect(mockEvent.save).toHaveBeenCalled();
+    });
+
+    it('throws NOT_FOUND when the predecessor series does not exist', async () => {
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(
+        EventSeriesDAO.applySeriesSplit('missing-id', 'RRULE:FREQ=WEEKLY;UNTIL=20260513T155959Z', 'successor-id'),
+      ).rejects.toThrow(CustomError('EventSeries with eventId missing-id not found', ErrorTypes.NOT_FOUND));
+    });
+
+    it('wraps save failures while applying a series split', async () => {
+      const mockEvent = {
+        ...expectedEvent,
+        primarySchedule: expectedEvent.primarySchedule,
+        scheduleVersion: 1,
+        save: jest.fn().mockRejectedValue(new Error('save failed')),
+      };
+      (EventSeriesModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvent));
+
+      await expect(
+        EventSeriesDAO.applySeriesSplit('mockEventId', 'RRULE:FREQ=WEEKLY;UNTIL=20260513T155959Z', 'successor-id'),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
   describe('RSVP', () => {
     beforeEach(() => {
       jest.clearAllMocks();

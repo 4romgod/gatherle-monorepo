@@ -10,6 +10,9 @@ jest.mock('@/mongodb/models', () => ({
     find: jest.fn(),
     create: jest.fn(),
     findOneAndUpdate: jest.fn(),
+    updateMany: jest.fn(),
+    bulkWrite: jest.fn(),
+    deleteMany: jest.fn(),
   },
 }));
 
@@ -209,6 +212,39 @@ describe('EventOccurrenceParticipantDAO', () => {
     });
   });
 
+  describe('cancelAllByOccurrence', () => {
+    it('marks all non-cancelled participants for the occurrence as cancelled', async () => {
+      (EventOccurrenceParticipantModel.updateMany as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ acknowledged: true }),
+      );
+
+      await EventOccurrenceParticipantDAO.cancelAllByOccurrence(participant.occurrenceId);
+
+      expect(EventOccurrenceParticipantModel.updateMany).toHaveBeenCalledWith(
+        {
+          occurrenceId: participant.occurrenceId,
+          status: { $ne: ParticipantStatus.Cancelled },
+        },
+        {
+          $set: {
+            status: ParticipantStatus.Cancelled,
+            cancelledAt: expect.any(Date),
+          },
+        },
+      );
+    });
+
+    it('wraps bulk cancellation failures', async () => {
+      (EventOccurrenceParticipantModel.updateMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('cancel failed')),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.cancelAllByOccurrence(participant.occurrenceId)).rejects.toThrow(
+        GraphQLError,
+      );
+    });
+  });
+
   describe('readByOccurrence', () => {
     it('reads participants for one occurrence', async () => {
       (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
@@ -389,6 +425,92 @@ describe('EventOccurrenceParticipantDAO', () => {
       );
 
       expect(result).toBeNull();
+    });
+
+    it('wraps promotion failures', async () => {
+      (EventOccurrenceParticipantModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('promote failed')),
+      );
+
+      await expect(
+        EventOccurrenceParticipantDAO.promoteWaitlisted(participant.occurrenceId, participant.userId),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('reassignOccurrenceIds', () => {
+    it('returns early when there are no mappings', async () => {
+      await EventOccurrenceParticipantDAO.reassignOccurrenceIds([]);
+
+      expect(EventOccurrenceParticipantModel.bulkWrite).not.toHaveBeenCalled();
+    });
+
+    it('bulk updates participant occurrence references', async () => {
+      (EventOccurrenceParticipantModel.bulkWrite as jest.Mock).mockResolvedValue(undefined);
+
+      await EventOccurrenceParticipantDAO.reassignOccurrenceIds([
+        {
+          oldOccurrenceId: participant.occurrenceId,
+          newOccurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
+        },
+      ]);
+
+      expect(EventOccurrenceParticipantModel.bulkWrite).toHaveBeenCalledWith(
+        [
+          {
+            updateMany: {
+              filter: { occurrenceId: participant.occurrenceId },
+              update: {
+                $set: { occurrenceId: 'series-2#2026-05-06T16:00:00.000Z' },
+              },
+            },
+          },
+        ],
+        { ordered: true },
+      );
+    });
+
+    it('wraps bulk update failures when reassigning participant occurrence references', async () => {
+      (EventOccurrenceParticipantModel.bulkWrite as jest.Mock).mockRejectedValue(new Error('bulk write failed'));
+
+      await expect(
+        EventOccurrenceParticipantDAO.reassignOccurrenceIds([
+          {
+            oldOccurrenceId: participant.occurrenceId,
+            newOccurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
+          },
+        ]),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('deleteByOccurrenceIds', () => {
+    it('returns early when there are no occurrence IDs', async () => {
+      await EventOccurrenceParticipantDAO.deleteByOccurrenceIds([]);
+
+      expect(EventOccurrenceParticipantModel.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('deletes participant rows for a set of occurrence IDs', async () => {
+      (EventOccurrenceParticipantModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ deletedCount: 1 }),
+      );
+
+      await EventOccurrenceParticipantDAO.deleteByOccurrenceIds([participant.occurrenceId]);
+
+      expect(EventOccurrenceParticipantModel.deleteMany).toHaveBeenCalledWith({
+        occurrenceId: { $in: [participant.occurrenceId] },
+      });
+    });
+
+    it('wraps delete failures when removing participant rows by occurrence IDs', async () => {
+      (EventOccurrenceParticipantModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('delete failed')),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.deleteByOccurrenceIds([participant.occurrenceId])).rejects.toThrow(
+        GraphQLError,
+      );
     });
   });
 });

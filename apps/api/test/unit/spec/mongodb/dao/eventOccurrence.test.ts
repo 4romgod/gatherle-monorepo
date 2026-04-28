@@ -15,7 +15,7 @@ jest.mock('@/mongodb/models', () => ({
   },
 }));
 
-const FIND_CHAIN_METHODS: MockQueryOptions = { chainMethods: ['sort', 'limit', 'lean'] };
+const FIND_CHAIN_METHODS: MockQueryOptions = { chainMethods: ['sort', 'limit', 'select', 'lean'] };
 
 describe('EventOccurrenceDAO', () => {
   const occurrence: EventOccurrence = {
@@ -200,6 +200,32 @@ describe('EventOccurrenceDAO', () => {
     });
   });
 
+  describe('readExceptionOccurrenceKeysByEventSeriesId', () => {
+    it('reads only exception occurrence keys for the series', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ occurrenceKey: occurrence.occurrenceKey }], {
+          chainMethods: ['select', 'lean'],
+        }),
+      );
+
+      const result = await EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId('series-1');
+
+      expect(result).toEqual([occurrence.occurrenceKey]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        eventSeriesId: 'series-1',
+        isException: true,
+      });
+    });
+
+    it('wraps read failures when loading exception occurrence keys', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('read failed')));
+
+      await expect(EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId('series-1')).rejects.toThrow(
+        GraphQLError,
+      );
+    });
+  });
+
   describe('deleteByEventSeriesId', () => {
     it('deletes all occurrences for the series', async () => {
       (EventOccurrenceModel.deleteMany as jest.Mock).mockReturnValue(
@@ -217,6 +243,34 @@ describe('EventOccurrenceDAO', () => {
       );
 
       await expect(EventOccurrenceDAO.deleteByEventSeriesId('series-1')).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('deleteByOccurrenceIds', () => {
+    it('returns early when no occurrence IDs are provided', async () => {
+      await EventOccurrenceDAO.deleteByOccurrenceIds([]);
+
+      expect(EventOccurrenceModel.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('deletes event occurrences by occurrence IDs', async () => {
+      (EventOccurrenceModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ deletedCount: 2 }),
+      );
+
+      await EventOccurrenceDAO.deleteByOccurrenceIds([occurrence.occurrenceId]);
+
+      expect(EventOccurrenceModel.deleteMany).toHaveBeenCalledWith({
+        occurrenceId: { $in: [occurrence.occurrenceId] },
+      });
+    });
+
+    it('wraps delete failures when removing occurrence IDs', async () => {
+      (EventOccurrenceModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('delete failed')),
+      );
+
+      await expect(EventOccurrenceDAO.deleteByOccurrenceIds([occurrence.occurrenceId])).rejects.toThrow(GraphQLError);
     });
   });
 
@@ -291,6 +345,207 @@ describe('EventOccurrenceDAO', () => {
 
       await expect(
         EventOccurrenceDAO.readUpcomingByEventSeriesId('series-1', new Date('2026-05-01T00:00:00.000Z'), 5),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByEventSeriesIdFromOriginalStart', () => {
+    it('reads future occurrences from an original start boundary', async () => {
+      const fromOriginalStart = new Date('2026-05-13T16:00:00.000Z');
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([occurrence], { chainMethods: ['sort', 'lean'] }),
+      );
+
+      const result = await EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart('series-1', fromOriginalStart);
+
+      expect(result).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        eventSeriesId: 'series-1',
+        originalStartAt: { $gte: fromOriginalStart },
+      });
+    });
+
+    it('wraps read failures when loading future occurrences from an original start', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), { chainMethods: ['sort', 'lean'] }),
+      );
+
+      await expect(
+        EventOccurrenceDAO.readByEventSeriesIdFromOriginalStart('series-1', new Date('2026-05-13T16:00:00.000Z')),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('updateException', () => {
+    it('marks an occurrence as an exception and updates schedule fields', async () => {
+      const updatedOccurrence = {
+        ...occurrence,
+        isException: true,
+        startAt: new Date('2026-05-06T17:00:00.000Z'),
+        timezone: 'UTC',
+      };
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(updatedOccurrence, { chainMethods: ['lean'] }),
+      );
+
+      const result = await EventOccurrenceDAO.updateException(occurrence.occurrenceId, {
+        ...occurrence,
+        startAt: updatedOccurrence.startAt,
+        endAt: updatedOccurrence.endAt,
+        timezone: updatedOccurrence.timezone,
+      });
+
+      expect(result).toEqual(updatedOccurrence);
+      expect(EventOccurrenceModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { occurrenceId: occurrence.occurrenceId },
+        {
+          $set: {
+            startAt: updatedOccurrence.startAt,
+            endAt: updatedOccurrence.endAt,
+            timezone: updatedOccurrence.timezone,
+            isException: true,
+          },
+        },
+        { new: true },
+      );
+    });
+
+    it('unsets endAt when clearing the exception end time', async () => {
+      const updatedOccurrence = {
+        ...occurrence,
+        endAt: undefined,
+        isException: true,
+      };
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(updatedOccurrence, { chainMethods: ['lean'] }),
+      );
+
+      const result = await EventOccurrenceDAO.updateException(occurrence.occurrenceId, {
+        startAt: occurrence.startAt,
+        endAt: undefined,
+        timezone: occurrence.timezone,
+      });
+
+      expect(result).toEqual(updatedOccurrence);
+      expect(EventOccurrenceModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { occurrenceId: occurrence.occurrenceId },
+        {
+          $set: {
+            startAt: occurrence.startAt,
+            timezone: occurrence.timezone,
+            isException: true,
+          },
+          $unset: {
+            endAt: 1,
+          },
+        },
+        { new: true },
+      );
+    });
+
+    it('wraps update failures when persisting an occurrence exception', async () => {
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('update failed'), { chainMethods: ['lean'] }),
+      );
+
+      await expect(
+        EventOccurrenceDAO.updateException(occurrence.occurrenceId, {
+          startAt: occurrence.startAt,
+          endAt: occurrence.endAt,
+          timezone: occurrence.timezone,
+        }),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('cancelOccurrence', () => {
+    it('marks the occurrence as cancelled and exceptional', async () => {
+      const cancelledOccurrence = {
+        ...occurrence,
+        status: EventOccurrenceStatus.Cancelled,
+        isException: true,
+      };
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(cancelledOccurrence, { chainMethods: ['lean'] }),
+      );
+
+      const result = await EventOccurrenceDAO.cancelOccurrence(occurrence.occurrenceId);
+
+      expect(result).toEqual(cancelledOccurrence);
+      expect(EventOccurrenceModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { occurrenceId: occurrence.occurrenceId },
+        {
+          $set: {
+            status: EventOccurrenceStatus.Cancelled,
+            isException: true,
+          },
+        },
+        { new: true },
+      );
+    });
+
+    it('wraps update failures when cancelling an occurrence', async () => {
+      (EventOccurrenceModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('cancel failed'), { chainMethods: ['lean'] }),
+      );
+
+      await expect(EventOccurrenceDAO.cancelOccurrence(occurrence.occurrenceId)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('reassignOccurrencesToSeries', () => {
+    it('returns early when no occurrences are provided for reassignment', async () => {
+      await EventOccurrenceDAO.reassignOccurrencesToSeries([]);
+
+      expect(EventOccurrenceModel.bulkWrite).not.toHaveBeenCalled();
+    });
+
+    it('updates occurrence ownership and ids in bulk', async () => {
+      (EventOccurrenceModel.bulkWrite as jest.Mock).mockResolvedValue(undefined);
+
+      await EventOccurrenceDAO.reassignOccurrencesToSeries([
+        {
+          oldOccurrenceId: occurrence.occurrenceId,
+          occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
+          eventSeriesId: 'series-2',
+          occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
+          seriesScheduleVersion: 1,
+        },
+      ]);
+
+      expect(EventOccurrenceModel.bulkWrite).toHaveBeenCalledWith(
+        [
+          {
+            updateOne: {
+              filter: { occurrenceId: occurrence.occurrenceId },
+              update: {
+                $set: {
+                  occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
+                  eventSeriesId: 'series-2',
+                  occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
+                  seriesScheduleVersion: 1,
+                },
+              },
+            },
+          },
+        ],
+        { ordered: true },
+      );
+    });
+
+    it('wraps bulk write failures when reassigning occurrences', async () => {
+      (EventOccurrenceModel.bulkWrite as jest.Mock).mockRejectedValue(new Error('bulk write failed'));
+
+      await expect(
+        EventOccurrenceDAO.reassignOccurrencesToSeries([
+          {
+            oldOccurrenceId: occurrence.occurrenceId,
+            occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
+            eventSeriesId: 'series-2',
+            occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
+            seriesScheduleVersion: 1,
+          },
+        ]),
       ).rejects.toThrow(GraphQLError);
     });
   });
@@ -373,6 +628,31 @@ describe('EventOccurrenceDAO', () => {
       );
 
       await expect(EventOccurrenceDAO.releaseReservedSlots(occurrence.occurrenceId, 2)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('clearReservedSlotCount', () => {
+    it('resets the reserved slot counter to zero', async () => {
+      (EventOccurrenceModel.updateOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ acknowledged: true }),
+      );
+
+      await EventOccurrenceDAO.clearReservedSlotCount(occurrence.occurrenceId);
+
+      expect(EventOccurrenceModel.updateOne).toHaveBeenCalledWith(
+        { occurrenceId: occurrence.occurrenceId },
+        {
+          $set: { reservedSlotCount: 0 },
+        },
+      );
+    });
+
+    it('wraps update failures when clearing the reserved slot count', async () => {
+      (EventOccurrenceModel.updateOne as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('clear failed')),
+      );
+
+      await expect(EventOccurrenceDAO.clearReservedSlotCount(occurrence.occurrenceId)).rejects.toThrow(GraphQLError);
     });
   });
 });

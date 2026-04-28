@@ -38,6 +38,8 @@ export const EVENT_DESCRIPTIONS = {
       'Input type for creating a new event, including details such as title, description, dates, location, and additional metadata.',
     UPDATE_INPUT:
       'Input type for updating an existing event, allowing modification of details such as title, description, dates, location, and additional metadata.',
+    SPLIT_INPUT:
+      'Input type for splitting a recurring event series at one occurrence boundary and creating a successor series for that occurrence and all following ones.',
     ID: "Unique identifier for the event (e.g., 'event123')",
     SLUG: "Slug for the event URL (e.g., 'annual-meetup-2023')",
     TITLE: "Title of the event (e.g., 'Annual Meetup 2023')",
@@ -78,6 +80,12 @@ export const EVENT_DESCRIPTIONS = {
     EVENT_LINK: 'Link or URL associated with the event',
     ORGANIZATION_ID: 'Organization that owns the event.',
     ORGANIZATION: 'Organization that owns this event (resolved via field resolver).',
+    SPLIT_FROM_EVENT_SERIES_ID:
+      'Identifier of the predecessor event series when this series was created by splitting a recurring series.',
+    SPLIT_INTO_EVENT_SERIES_ID:
+      'Identifier of the successor event series created from this series by a split at one occurrence boundary.',
+    SPLIT_OCCURRENCE_ID:
+      'Identifier of the occurrence boundary where the recurring series should be split into past and future series.',
     PARTICIPANTS:
       'Resolved participants populated via aggregation or field resolvers; not persisted directly on the event series document.',
     UPCOMING_OCCURRENCES:
@@ -88,6 +96,8 @@ export const EVENT_DESCRIPTIONS = {
   OCCURRENCE: {
     TYPE: 'Represents a concrete scheduled occurrence generated from an EventSeries.',
     STATUS_ENUM: 'Lifecycle status of a concrete event occurrence.',
+    UPDATE_INPUT: 'Input for editing one concrete recurring occurrence without changing the rest of the series.',
+    CANCEL_INPUT: 'Input for cancelling one concrete recurring occurrence without changing the rest of the series.',
     ID: 'Unique identifier for the occurrence.',
     EVENT_SERIES_ID: 'Identifier of the parent event series that owns this occurrence.',
     OCCURRENCE_KEY: 'Stable regeneration key used to idempotently identify this occurrence slot.',
@@ -308,6 +318,8 @@ export const RESOLVER_DESCRIPTIONS = {
   EVENT: {
     createEvent: 'Create a new event. Requires input data for creating a new event and returns the created event.',
     updateEvent: 'Update an existing event. Requires input data for updating the event and returns the updated event.',
+    splitEventSeriesAtOccurrence:
+      'Split a recurring event series at one occurrence boundary, leaving past occurrences on the original series and creating a successor series for that occurrence and all following ones.',
     deleteEventById:
       'Delete an event by its ID. Requires the event ID and returns the deleted event or a 404 Error if not found.',
     deleteEventBySlug:
@@ -318,6 +330,10 @@ export const RESOLVER_DESCRIPTIONS = {
       'Read a list of events. Accepts optional query options for pagination, sorting, and filtering and returns a list of events.',
     readEventOccurrences:
       'Read occurrence-oriented event results within a required date window. Recurring series are served from EventOccurrence rows inside the current materialization window, while one-time series are temporarily projected as synthetic occurrences.',
+    updateEventOccurrence:
+      'Edit one recurring event occurrence as an exception without changing the rest of the series.',
+    cancelEventOccurrence:
+      'Cancel one recurring event occurrence as an exception without changing the rest of the series.',
   },
   EVENT_OCCURRENCE_PARTICIPANT: {
     upsertEventOccurrenceParticipant:
