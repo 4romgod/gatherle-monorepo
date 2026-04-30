@@ -1,25 +1,23 @@
 import { EventSeriesResolver } from '@/graphql/resolvers/eventSeries';
-import { FollowDAO, EventSeriesParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { FollowDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import EventSeriesService from '@/services/eventSeries';
 import type {
   EventSeries,
   EventCategory,
   User,
-  EventSeriesParticipant,
+  EventOccurrence,
+  EventOccurrenceParticipant,
   OrganizationMembership,
 } from '@gatherle/commons/types';
 import { ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
+import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
   FollowDAO: {
     countSavesForEvent: jest.fn(),
     isEventSavedByUser: jest.fn(),
-  },
-  EventSeriesParticipantDAO: {
-    countByEvent: jest.fn(),
-    readByEventAndUser: jest.fn(),
   },
   OrganizationMembershipDAO: {
     readMembershipByOrgIdAndUser: jest.fn(),
@@ -38,6 +36,24 @@ describe('EventSeriesResolver Field Resolvers', () => {
   let mockContext: ServerContext;
   let mockEventCategoryLoader: DataLoader<string, EventCategory | null>;
   let mockUserLoader: DataLoader<string, User | null>;
+  let mockOccurrenceByEventSeriesLoader: DataLoader<string, EventOccurrence | null>;
+  let mockOccurrenceParticipantCountLoader: DataLoader<string, number>;
+  let mockMyOccurrenceParticipantLoader: DataLoader<string, EventOccurrenceParticipant | null>;
+
+  const singleOccurrence: EventOccurrence = {
+    occurrenceId: 'event1#2026-05-07T10:00:00.000Z',
+    eventSeriesId: 'event1',
+    occurrenceKey: 'event1#2026-05-07T10:00:00.000Z',
+    originalStartAt: new Date('2026-05-07T10:00:00.000Z'),
+    startAt: new Date('2026-05-07T10:00:00.000Z'),
+    endAt: new Date('2026-05-07T12:00:00.000Z'),
+    timezone: 'Africa/Johannesburg',
+    status: 'Scheduled' as any,
+    isException: false,
+    seriesScheduleVersion: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   beforeEach(() => {
     resolver = new EventSeriesResolver();
@@ -60,10 +76,35 @@ describe('EventSeriesResolver Field Resolvers', () => {
       });
     });
 
+    mockOccurrenceByEventSeriesLoader = new DataLoader(async (ids) =>
+      ids.map((id) => (id === 'event1' ? singleOccurrence : null)),
+    );
+
+    mockOccurrenceParticipantCountLoader = new DataLoader(async (ids) => ids.map(() => 25));
+
+    mockMyOccurrenceParticipantLoader = new DataLoader(async (keys) => {
+      const expectedKey = buildMyEventOccurrenceParticipantLoadKey(singleOccurrence.occurrenceId, 'user1');
+      return keys.map((key) =>
+        key === expectedKey
+          ? ({
+              participantId: 'occ-participant-1',
+              occurrenceId: singleOccurrence.occurrenceId,
+              userId: 'user1',
+              status: ParticipantStatus.Going,
+              quantity: 1,
+              rsvpAt: new Date(),
+            } as EventOccurrenceParticipant)
+          : null,
+      );
+    });
+
     mockContext = {
       loaders: {
         eventCategory: mockEventCategoryLoader,
         user: mockUserLoader,
+        eventOccurrenceByEventSeries: mockOccurrenceByEventSeriesLoader,
+        eventOccurrenceParticipantCountByOccurrence: mockOccurrenceParticipantCountLoader,
+        myEventOccurrenceParticipant: mockMyOccurrenceParticipantLoader,
       },
     } as ServerContext;
   });
@@ -283,38 +324,43 @@ describe('EventSeriesResolver Field Resolvers', () => {
       jest.clearAllMocks();
     });
 
-    it('should return the count of RSVPs for the event', async () => {
-      const event = { eventId: 'event1' } as EventSeries;
-      (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(25);
+    it('should return the occurrence-backed RSVP count for a recurring event series', async () => {
+      const event = {
+        eventId: 'event1',
+        primarySchedule: {
+          startAt: new Date('2026-05-07T10:00:00.000Z'),
+          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+        },
+      } as EventSeries;
+      const result = await resolver.rsvpCount(event, mockContext);
 
-      const result = await resolver.rsvpCount(event);
-
-      expect(EventSeriesParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
-        ParticipantStatus.Going,
-        ParticipantStatus.Interested,
-      ]);
       expect(result).toBe(25);
     });
 
-    it('should return 0 when no RSVPs exist', async () => {
+    it('should return the occurrence-backed RSVP count for a single-date event series', async () => {
       const event = { eventId: 'event1' } as EventSeries;
-      (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(0);
 
-      const result = await resolver.rsvpCount(event);
+      const result = await resolver.rsvpCount(event, mockContext);
 
-      expect(EventSeriesParticipantDAO.countByEvent).toHaveBeenCalledWith('event1', [
-        ParticipantStatus.Going,
-        ParticipantStatus.Interested,
-      ]);
-      expect(result).toBe(0);
+      expect(result).toBe(25);
     });
 
-    it('uses precomputed rsvpCount when the pipeline already provided one', async () => {
-      const event = { eventId: 'event1', rsvpCount: 18 } as EventSeries;
+    it('uses precomputed rsvpCount when the pipeline already provided one for a recurring series', async () => {
+      const event = {
+        eventId: 'event1',
+        rsvpCount: 18,
+        primarySchedule: {
+          startAt: new Date('2026-05-07T10:00:00.000Z'),
+          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+        },
+      } as EventSeries;
 
-      const result = await resolver.rsvpCount(event);
+      const result = await resolver.rsvpCount(event, mockContext);
 
-      expect(EventSeriesParticipantDAO.countByEvent).not.toHaveBeenCalled();
       expect(result).toBe(18);
     });
   });
@@ -324,34 +370,54 @@ describe('EventSeriesResolver Field Resolvers', () => {
       jest.clearAllMocks();
     });
 
-    const mockRsvp: EventSeriesParticipant = {
-      participantId: 'participant1',
-      eventId: 'event1',
-      userId: 'user1',
-      status: ParticipantStatus.Going,
-      quantity: 1,
-      rsvpAt: new Date(),
-    };
-
-    it('should return the user RSVP when it exists', async () => {
+    it('should return the occurrence-backed RSVP for a single-date event series', async () => {
       const event = { eventId: 'event1' } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockRsvp);
 
       const result = await resolver.myRsvp(event, contextWithUser);
 
-      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
-      expect(result).toEqual(mockRsvp);
+      expect(result).toEqual(
+        expect.objectContaining({
+          participantId: 'occ-participant-1',
+          eventId: 'event1',
+          userId: 'user1',
+          status: ParticipantStatus.Going,
+        }),
+      );
     });
 
-    it('should return null when user has not RSVPd', async () => {
-      const event = { eventId: 'event1' } as EventSeries;
+    it('should return the occurrence-backed RSVP for a recurring event series', async () => {
+      const event = {
+        eventId: 'event1',
+        primarySchedule: {
+          startAt: new Date('2026-05-07T10:00:00.000Z'),
+          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+        },
+      } as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
 
       const result = await resolver.myRsvp(event, contextWithUser);
 
-      expect(EventSeriesParticipantDAO.readByEventAndUser).toHaveBeenCalledWith('event1', 'user1');
+      expect(result).toEqual(
+        expect.objectContaining({
+          participantId: 'occ-participant-1',
+          eventId: 'event1',
+          userId: 'user1',
+          status: ParticipantStatus.Going,
+        }),
+      );
+    });
+
+    it('should return null when the single-date event has no occurrence RSVP', async () => {
+      const event = { eventId: 'event1' } as EventSeries;
+      const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
+      mockMyOccurrenceParticipantLoader = new DataLoader(async () => [null]);
+      contextWithUser.loaders.myEventOccurrenceParticipant = mockMyOccurrenceParticipantLoader as any;
+
+      const result = await resolver.myRsvp(event, contextWithUser);
+
       expect(result).toBeNull();
     });
 
@@ -361,7 +427,6 @@ describe('EventSeriesResolver Field Resolvers', () => {
 
       const result = await resolver.myRsvp(event, contextWithoutUser);
 
-      expect(EventSeriesParticipantDAO.readByEventAndUser).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });

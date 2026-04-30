@@ -8,7 +8,13 @@ import { UserRole, OrganizationRole } from '@gatherle/commons/types';
 import { verify, sign } from 'jsonwebtoken';
 import type { JwtPayload, Secret, SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
-import { EventSeriesDAO, EventSeriesParticipantDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import {
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  EventSeriesParticipantDAO,
+  OrganizationDAO,
+  OrganizationMembershipDAO,
+} from '@/mongodb/dao';
 import { getConfigValue } from '@/clients';
 import { Types } from 'mongoose';
 import { logger } from '@/utils/logger';
@@ -470,13 +476,20 @@ const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, 
   if (!eventId) {
     return false;
   }
-  const [event, participants] = await Promise.all([
-    EventSeriesDAO.readEventById(eventId),
-    EventSeriesParticipantDAO.readByEvent(eventId),
-  ]);
+  const event = await EventSeriesDAO.readEventById(eventId);
   if (isUserOrganizer(event, user)) {
     return true;
   }
+
+  const [hasOccurrenceParticipant, participants] = await Promise.all([
+    EventOccurrenceParticipantDAO.hasParticipantForEventSeries(eventId, user.userId),
+    EventSeriesParticipantDAO.readByEvent(eventId),
+  ]);
+
+  if (hasOccurrenceParticipant) {
+    return true;
+  }
+
   return participants.some((participant) => participant.userId === user.userId);
 };
 

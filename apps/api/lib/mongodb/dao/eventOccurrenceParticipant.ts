@@ -164,6 +164,78 @@ class EventOccurrenceParticipantDAO {
     }
   }
 
+  static async hasParticipantForEventSeries(eventSeriesId: string, userId: string): Promise<boolean> {
+    try {
+      const participants = await EventOccurrenceParticipantModel.aggregate([
+        {
+          $match: {
+            userId,
+          },
+        },
+        {
+          $lookup: {
+            from: 'eventoccurrences',
+            localField: 'occurrenceId',
+            foreignField: 'occurrenceId',
+            as: 'occurrence',
+          },
+        },
+        {
+          $match: {
+            'occurrence.eventSeriesId': eventSeriesId,
+          },
+        },
+        { $limit: 1 },
+        { $project: { _id: 1 } },
+      ]).exec();
+
+      return participants.length > 0;
+    } catch (error) {
+      logDaoError('Error checking occurrence participant membership by event series', {
+        error,
+        eventSeriesId,
+        userId,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByUser(userId: string, activeOnly = true): Promise<EventOccurrenceParticipant[]> {
+    try {
+      const query: Record<string, unknown> = { userId };
+      if (activeOnly) {
+        query.status = { $ne: ParticipantStatus.Cancelled };
+      }
+
+      const participants = await EventOccurrenceParticipantModel.find(query).sort({ rsvpAt: -1, createdAt: -1 }).exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading occurrence participants by user', { error, userId, activeOnly });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByUserIds(userIds: string[], activeOnly = true): Promise<EventOccurrenceParticipant[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const query: Record<string, unknown> = { userId: { $in: userIds } };
+      if (activeOnly) {
+        query.status = { $ne: ParticipantStatus.Cancelled };
+      }
+
+      const participants = await EventOccurrenceParticipantModel.find(query)
+        .sort({ userId: 1, occurrenceId: 1, rsvpAt: 1 })
+        .exec();
+      return participants.map((participant) => participant.toObject());
+    } catch (error) {
+      logDaoError('Error reading occurrence participants by userIds', { error, userIds, activeOnly });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readWaitlistedByOccurrence(occurrenceId: string): Promise<EventOccurrenceParticipant[]> {
     try {
       const participants = await EventOccurrenceParticipantModel.find({

@@ -16,7 +16,6 @@ import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, User
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
 import { CustomError, ErrorTypes, sumActiveOccurrenceRsvpCount } from '@/utils';
-import EventOccurrenceService from './eventOccurrence';
 import NotificationService from './notification';
 
 type OrganizerUserReference =
@@ -93,7 +92,7 @@ function isNotifiableRsvpStatus(status: ParticipantStatus): boolean {
 }
 
 class EventOccurrenceParticipantService {
-  private static async loadRecurringOccurrenceContext(
+  private static async loadOccurrenceContext(
     occurrenceId: string,
   ): Promise<{ occurrence: EventOccurrence; eventSeries: EventSeries }> {
     const occurrence = await EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
@@ -102,13 +101,6 @@ class EventOccurrenceParticipantService {
     }
 
     const eventSeries = await EventSeriesDAO.readEventById(occurrence.eventSeriesId);
-    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
-      throw CustomError(
-        'Occurrence-level RSVP is only supported for recurring event series in this phase.',
-        ErrorTypes.BAD_REQUEST,
-      );
-    }
-
     if (occurrence.status !== EventOccurrenceStatus.Scheduled || eventSeries.status === EventStatus.Cancelled) {
       throw CustomError('This occurrence is not accepting RSVP updates.', ErrorTypes.BAD_REQUEST);
     }
@@ -268,7 +260,7 @@ class EventOccurrenceParticipantService {
   }
 
   static async rsvp(input: UpsertEventOccurrenceParticipantInput, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadRecurringOccurrenceContext(input.occurrenceId);
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(input.occurrenceId);
     const requestedStatus: ParticipantStatus = input.status ?? ParticipantStatus.Going;
 
     if (requestedStatus !== ParticipantStatus.Going && requestedStatus !== ParticipantStatus.Interested) {
@@ -363,7 +355,7 @@ class EventOccurrenceParticipantService {
   }
 
   static async cancel(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadRecurringOccurrenceContext(occurrenceId);
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId);
     const existingParticipant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
     const participant = await EventOccurrenceParticipantDAO.cancel(occurrenceId, userId);
 
@@ -386,7 +378,7 @@ class EventOccurrenceParticipantService {
   }
 
   static async checkIn(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadRecurringOccurrenceContext(occurrenceId);
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId);
     const existingParticipant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
 
     if (!existingParticipant || !isReservedStatus(existingParticipant.status)) {

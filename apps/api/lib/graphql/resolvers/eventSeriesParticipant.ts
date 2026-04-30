@@ -8,13 +8,14 @@ import {
   UserRole,
   EventSeries,
 } from '@gatherle/commons/types';
-import { EventSeriesParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
+import { UserFeedDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { EventSeriesParticipantService } from '@/services';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import { logger } from '@/utils/logger';
+import { getAuthenticatedUser } from '@/utils/auth';
 
 @Resolver(() => EventSeriesParticipant)
 export class EventSeriesParticipantResolver {
@@ -22,9 +23,14 @@ export class EventSeriesParticipantResolver {
   @Mutation(() => EventSeriesParticipant)
   async upsertEventParticipant(
     @Arg('input', () => UpsertEventParticipantInput) input: UpsertEventParticipantInput,
+    @Ctx() context: ServerContext,
   ): Promise<EventSeriesParticipant> {
     validateMongodbId(input.eventId);
-    validateMongodbId(input.userId);
+    const user = getAuthenticatedUser(context);
+    if (input.userId !== user.userId) {
+      throw CustomError('You can only RSVP on your own behalf.', ErrorTypes.UNAUTHORIZED);
+    }
+
     const participant = await EventSeriesParticipantService.rsvp(input);
 
     UserFeedDAO.removeEventFromFeed(input.userId, input.eventId).catch((err) => {
@@ -43,9 +49,14 @@ export class EventSeriesParticipantResolver {
   @Mutation(() => EventSeriesParticipant)
   async cancelEventParticipant(
     @Arg('input', () => CancelEventParticipantInput) input: CancelEventParticipantInput,
+    @Ctx() context: ServerContext,
   ): Promise<EventSeriesParticipant> {
     validateMongodbId(input.eventId);
-    validateMongodbId(input.userId);
+    const user = getAuthenticatedUser(context);
+    if (input.userId !== user.userId) {
+      throw CustomError('You can only cancel your own RSVP.', ErrorTypes.UNAUTHORIZED);
+    }
+
     const participant = await EventSeriesParticipantService.cancel(input);
 
     RecommendationService.computeFeedForUser(input.userId).catch((err) => {
@@ -70,12 +81,9 @@ export class EventSeriesParticipantResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Query(() => [EventSeriesParticipant])
-  async readEventParticipants(
-    @Arg('eventId', () => String) eventId: string,
-    @Ctx() context: ServerContext,
-  ): Promise<EventSeriesParticipant[]> {
+  async readEventParticipants(@Arg('eventId', () => String) eventId: string): Promise<EventSeriesParticipant[]> {
     validateMongodbId(eventId);
-    return context.loaders.eventSeriesParticipantsByEvent.load(eventId);
+    return EventSeriesParticipantService.readByEvent(eventId);
   }
 
   /**
@@ -95,9 +103,7 @@ export class EventSeriesParticipantResolver {
     if (!context.user?.userId) {
       return null;
     }
-    // TODO Use the DataLoader if you have the participantId, otherwise fallback to DAO
-    // Here, we still need to query by eventId+userId, so use DAO
-    return EventSeriesParticipantDAO.readByEventAndUser(eventId, context.user.userId);
+    return EventSeriesParticipantService.readByEventAndUser(eventId, context.user.userId);
   }
 
   /**
@@ -113,12 +119,15 @@ export class EventSeriesParticipantResolver {
     if (!context.user?.userId) {
       return [];
     }
-    // TODO Still need to query by userId, so use DAO for now
-    return EventSeriesParticipantDAO.readByUser(context.user.userId, !includeCancelled);
+    return EventSeriesParticipantService.readByUser(context.user.userId, !includeCancelled);
   }
 
   @FieldResolver(() => User, { nullable: true })
   async user(@Root() participant: EventSeriesParticipant, @Ctx() context: ServerContext): Promise<User | null> {
+    if (participant.user) {
+      return participant.user;
+    }
+
     if (!participant.userId) return null;
     try {
       return await context.loaders.user.load(participant.userId);
@@ -129,6 +138,10 @@ export class EventSeriesParticipantResolver {
 
   @FieldResolver(() => EventSeries, { nullable: true })
   async event(@Root() participant: EventSeriesParticipant, @Ctx() context: ServerContext): Promise<EventSeries | null> {
+    if (participant.event) {
+      return participant.event;
+    }
+
     if (!participant.eventId) return null;
     try {
       return await context.loaders.eventSeries.load(participant.eventId);

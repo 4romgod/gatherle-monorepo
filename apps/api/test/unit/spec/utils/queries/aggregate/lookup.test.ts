@@ -10,12 +10,7 @@ describe('createEventLookupStages', () => {
 
   it('should return the correct number of pipeline stages', () => {
     const lookupStages = createEventLookupStages();
-    // Includes:
-    // - eventCategories: $lookup
-    // - organizers: $lookup users, $addFields (create map), $addFields (reconstruct organizers), $project
-    // - participants: $lookup participants, $lookup users, $addFields (create map), $addFields (enrich participants), $project
-    // - savedBy counts: $lookup follows, $addFields (rsvpCount + savedByCount), $project
-    expect(lookupStages.length).toBe(12);
+    expect(lookupStages.length).toBe(8);
   });
 
   it('should contain the correct fields in the eventCategories lookup stage', () => {
@@ -46,63 +41,52 @@ describe('createEventLookupStages', () => {
     expect(pipeline[0]).toHaveProperty('$match');
   });
 
-  it('should contain the participants lookup stage', () => {
+  it('should contain the follows lookup stage used for savedByCount', () => {
     const lookupStages = createEventLookupStages();
-    const participantsStage = lookupStages[5] as PipelineStage.Lookup;
+    const savedByLookupStage = lookupStages[5] as PipelineStage.Lookup;
 
-    expect(participantsStage).toHaveProperty('$lookup');
-    expect(participantsStage.$lookup).toHaveProperty('from', 'eventseriesparticipants');
-    expect(participantsStage.$lookup).toHaveProperty('localField', 'eventId');
-    expect(participantsStage.$lookup).toHaveProperty('foreignField', 'eventId');
-    expect(participantsStage.$lookup).toHaveProperty('as', 'participants');
+    expect(savedByLookupStage).toHaveProperty('$lookup');
+    expect(savedByLookupStage.$lookup).toHaveProperty('from', 'follows');
+    expect(savedByLookupStage.$lookup).toHaveProperty('let');
+    expect(savedByLookupStage.$lookup).toHaveProperty('pipeline');
+    expect(savedByLookupStage.$lookup).toHaveProperty('as', 'savedByCountAggregation');
   });
 
-  it('should contain the participants users lookup stage with pipeline optimization', () => {
+  it('should add savedByCount from the follows aggregation', () => {
     const lookupStages = createEventLookupStages();
-    const participantsUsersStage = lookupStages[6] as PipelineStage.Lookup;
+    const addFieldsStage = lookupStages[6] as PipelineStage.AddFields;
 
-    expect(participantsUsersStage).toHaveProperty('$lookup');
-    expect(participantsUsersStage.$lookup).toHaveProperty('from', 'users');
-    expect(participantsUsersStage.$lookup).toHaveProperty('let');
-    expect(participantsUsersStage.$lookup).toHaveProperty('pipeline');
-    expect(participantsUsersStage.$lookup).toHaveProperty('as', 'participantsUsersMap');
-
-    // Verify the pipeline uses $in for efficient filtering
-    const pipeline = participantsUsersStage.$lookup.pipeline as any[];
-    expect(pipeline).toBeDefined();
-    expect(pipeline.length).toBeGreaterThan(0);
-    expect(pipeline[0]).toHaveProperty('$match');
+    expect(addFieldsStage.$addFields).toHaveProperty('savedByCount');
   });
 
   it('should compute savedByCount via follows lookup stage', () => {
     const lookupStages = createEventLookupStages();
-    const savedByLookupStage = lookupStages[9] as PipelineStage.Lookup;
+    const savedByLookupStage = lookupStages[5] as PipelineStage.Lookup;
 
     expect(savedByLookupStage.$lookup.from).toBe('follows');
     expect(savedByLookupStage.$lookup.let).toBeDefined();
     expect(savedByLookupStage.$lookup.pipeline).toBeDefined();
   });
 
-  it('adds rsvpCount and savedByCount fields', () => {
+  it('projects away the temporary savedBy aggregation array', () => {
     const lookupStages = createEventLookupStages();
-    const addFieldsStage = lookupStages[10] as PipelineStage.AddFields;
+    const projectStage = lookupStages[7] as PipelineStage.Project;
 
-    expect(addFieldsStage.$addFields).toHaveProperty('rsvpCount');
-    expect(addFieldsStage.$addFields).toHaveProperty('savedByCount');
+    expect(projectStage.$project).toHaveProperty('savedByCountAggregation', 0);
   });
 
   describe('skipCounts option', () => {
-    it('returns 10 stages when skipCounts is true (omits follows lookup and count addFields)', () => {
+    it('returns 6 stages when skipCounts is true (omits follows lookup and count addFields)', () => {
       const stages = createEventLookupStages({ skipCounts: true });
-      expect(stages.length).toBe(10);
+      expect(stages.length).toBe(6);
     });
 
-    it('still includes the eventcategories and participants lookup stages', () => {
+    it('still includes the eventcategories and organizers lookup stages', () => {
       const stages = createEventLookupStages({ skipCounts: true });
       const categoriesStage = stages[0] as PipelineStage.Lookup;
-      const participantsStage = stages[5] as PipelineStage.Lookup;
+      const organizersStage = stages[1] as PipelineStage.Lookup;
       expect(categoriesStage.$lookup.from).toBe('eventcategories');
-      expect(participantsStage.$lookup.from).toBe('eventseriesparticipants');
+      expect(organizersStage.$lookup.from).toBe('users');
     });
 
     it('does not include a follows savedByCount lookup stage', () => {
@@ -113,12 +97,12 @@ describe('createEventLookupStages', () => {
       expect(hasFollowsLookup).toBe(false);
     });
 
-    it('returns 12 stages by default (skipCounts absent)', () => {
-      expect(createEventLookupStages().length).toBe(12);
+    it('returns 8 stages by default (skipCounts absent)', () => {
+      expect(createEventLookupStages().length).toBe(8);
     });
 
-    it('returns 12 stages when skipCounts is false', () => {
-      expect(createEventLookupStages({ skipCounts: false }).length).toBe(12);
+    it('returns 8 stages when skipCounts is false', () => {
+      expect(createEventLookupStages({ skipCounts: false }).length).toBe(8);
     });
   });
 });

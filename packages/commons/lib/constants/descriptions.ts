@@ -87,11 +87,12 @@ export const EVENT_DESCRIPTIONS = {
     SPLIT_OCCURRENCE_ID:
       'Identifier of the occurrence boundary where the recurring series should be split into past and future series.',
     PARTICIPANTS:
-      'Resolved participants populated via aggregation or field resolvers; not persisted directly on the event series document.',
+      'Resolved participants for this event series. For one-time series these are derived from the single backing occurrence; recurring series may still resolve legacy series-level participants until the platform fully deprecates that compatibility path.',
     UPCOMING_OCCURRENCES:
-      'Upcoming concrete occurrences for this event series, sourced from generated occurrence rows or a temporary single-event projection.',
+      'Upcoming concrete occurrences for this event series, sourced from persisted occurrence rows.',
     SAVED_BY_COUNT: 'Number of users who have saved the event, computed from follows.',
-    RSVP_COUNT: 'Number of active RSVPs (Going or Interested), computed during aggregation.',
+    RSVP_COUNT:
+      'Total active RSVP/check-in quantity for this event, including guest spots represented by participant quantity.',
   },
   OCCURRENCE: {
     TYPE: 'Represents a concrete scheduled occurrence generated from an EventSeries.',
@@ -109,8 +110,7 @@ export const EVENT_DESCRIPTIONS = {
     IS_EXCEPTION: 'Whether this occurrence diverges from the generated default for the series.',
     SERIES_SCHEDULE_VERSION: 'Schedule version from the parent event series that produced this occurrence.',
     EVENT_SERIES: 'Parent event series that owns this occurrence.',
-    PARTICIPANTS:
-      'Participants attached to this occurrence. For recurring series these come from EventOccurrenceParticipant rows; for one-time series they are projected from the legacy series participant rows during the transition period.',
+    PARTICIPANTS: 'Participants attached to this concrete occurrence.',
     RSVP_COUNT:
       'Total active RSVP/check-in quantity for this occurrence, including guest spots represented by participant quantity.',
     MY_RSVP: "Current authenticated user's RSVP for this occurrence, if one exists.",
@@ -329,19 +329,18 @@ export const RESOLVER_DESCRIPTIONS = {
     readEvents:
       'Read a list of events. Accepts optional query options for pagination, sorting, and filtering and returns a list of events.',
     readEventOccurrences:
-      'Read occurrence-oriented event results within a required date window. Recurring series are served from EventOccurrence rows inside the current materialization window, while one-time series are temporarily projected as synthetic occurrences.',
+      'Read occurrence-oriented event results within a required date window. Results are served from persisted EventOccurrence rows inside the current materialization window.',
     updateEventOccurrence:
       'Edit one recurring event occurrence as an exception without changing the rest of the series.',
     cancelEventOccurrence:
       'Cancel one recurring event occurrence as an exception without changing the rest of the series.',
   },
   EVENT_OCCURRENCE_PARTICIPANT: {
-    upsertEventOccurrenceParticipant:
-      'Create or update an RSVP for the authenticated user on a recurring event occurrence.',
-    cancelEventOccurrenceParticipant: 'Cancel the authenticated user’s RSVP for a recurring event occurrence.',
-    checkInEventOccurrenceParticipant: 'Check the authenticated user in to a recurring event occurrence.',
-    readEventOccurrenceParticipants: 'Read the participant list for a recurring event occurrence.',
-    myEventOccurrenceRsvpStatus: "Get the current authenticated user's RSVP for a recurring event occurrence.",
+    upsertEventOccurrenceParticipant: 'Create or update an RSVP for the authenticated user on an event occurrence.',
+    cancelEventOccurrenceParticipant: 'Cancel the authenticated user’s RSVP for an event occurrence.',
+    checkInEventOccurrenceParticipant: 'Check the authenticated user in to an event occurrence.',
+    readEventOccurrenceParticipants: 'Read the participant list for an event occurrence.',
+    myEventOccurrenceRsvpStatus: "Get the current authenticated user's RSVP for an event occurrence.",
   },
   EVENT_CATEGORY: {
     createEventCategory:

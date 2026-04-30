@@ -36,6 +36,7 @@ export interface ServerContext {
     eventCategoryInterestCount: DataLoader<string, number>;
     eventSeries: DataLoader<string, EventSeries | null>;
     eventOccurrence: DataLoader<string, EventOccurrence | null>;
+    eventOccurrenceByEventSeries: DataLoader<string, EventOccurrence | null>;
     organization: DataLoader<string, Organization | null>;
     eventSeriesParticipant: DataLoader<string, EventSeriesParticipant | null>;
     eventSeriesParticipantsByEvent: DataLoader<string, EventSeriesParticipant[]>;

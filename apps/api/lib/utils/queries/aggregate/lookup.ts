@@ -1,9 +1,8 @@
 import type { PipelineStage } from 'mongoose';
-import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
 
 export const createEventLookupStages = (options?: { skipCounts?: boolean }): PipelineStage[] => {
   const skipCounts = options?.skipCounts ?? false;
-  const rsvpStatusesForCount = [ParticipantStatus.Going, ParticipantStatus.Interested];
 
   return [
     {
@@ -73,75 +72,6 @@ export const createEventLookupStages = (options?: { skipCounts?: boolean }): Pip
         organizersUserMap: 0,
       },
     },
-    // Lookup participants from EventSeriesParticipant collection
-    {
-      $lookup: {
-        from: 'eventseriesparticipants',
-        localField: 'eventId',
-        foreignField: 'eventId',
-        as: 'participants',
-      },
-    },
-    // Lookup users for participants
-    {
-      $lookup: {
-        from: 'users',
-        let: { participantUserIds: '$participants.userId' },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $in: ['$userId', '$$participantUserIds'] },
-            },
-          },
-        ],
-        as: 'participantsUsersMap',
-      },
-    },
-    {
-      $addFields: {
-        // Create a map for O(1) lookup of user data
-        participantsUserMap: {
-          $arrayToObject: {
-            $map: {
-              input: '$participantsUsersMap',
-              as: 'user',
-              in: { k: '$$user.userId', v: '$$user' },
-            },
-          },
-        },
-      },
-    },
-    {
-      $addFields: {
-        // Enrich each participant with their user data
-        participants: {
-          $map: {
-            input: '$participants',
-            as: 'participant',
-            in: {
-              participantId: '$$participant.participantId',
-              eventId: '$$participant.eventId',
-              userId: '$$participant.userId',
-              status: '$$participant.status',
-              quantity: '$$participant.quantity',
-              invitedBy: '$$participant.invitedBy',
-              sharedVisibility: '$$participant.sharedVisibility',
-              rsvpAt: '$$participant.rsvpAt',
-              cancelledAt: '$$participant.cancelledAt',
-              checkedInAt: '$$participant.checkedInAt',
-              createdAt: '$$participant.createdAt',
-              updatedAt: '$$participant.updatedAt',
-              user: {
-                $getField: {
-                  field: '$$participant.userId',
-                  input: '$participantsUserMap',
-                },
-              },
-            },
-          },
-        },
-      },
-    },
     ...(skipCounts
       ? []
       : [
@@ -168,15 +98,6 @@ export const createEventLookupStages = (options?: { skipCounts?: boolean }): Pip
           } as PipelineStage,
           {
             $addFields: {
-              rsvpCount: {
-                $size: {
-                  $filter: {
-                    input: { $ifNull: ['$participants', []] },
-                    as: 'participant',
-                    cond: { $in: ['$$participant.status', rsvpStatusesForCount] },
-                  },
-                },
-              },
               savedByCount: {
                 $ifNull: [{ $arrayElemAt: ['$savedByCountAggregation.count', 0] }, 0],
               },
@@ -185,8 +106,6 @@ export const createEventLookupStages = (options?: { skipCounts?: boolean }): Pip
         ]),
     {
       $project: {
-        participantsUsersMap: 0,
-        participantsUserMap: 0,
         savedByCountAggregation: 0,
       },
     },

@@ -1,33 +1,3 @@
-// Must mock before any imports that use these modules
-jest.mock('@/constants', () => ({
-  AWS_REGION: 'eu-west-1',
-  STAGE: 'Dev',
-  MONGO_DB_URL: 'mock-url',
-  JWT_SECRET: 'test-secret',
-  SECRET_ARN: undefined,
-  LOG_LEVEL: 1,
-  GRAPHQL_API_PATH: '/v1/graphql',
-  HttpStatusCode: {
-    OK: 200,
-    CREATED: 201,
-    BAD_REQUEST: 400,
-    UNAUTHENTICATED: 401,
-    UNAUTHORIZED: 403,
-    NOT_FOUND: 404,
-    CONFLICT: 409,
-    INTERNAL_SERVER_ERROR: 500,
-  },
-  REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
-  OPERATION_NAMES: {
-    UPDATE_USER: 'updateUser',
-    DELETE_USER_BY_ID: 'deleteUserById',
-    DELETE_USER_BY_EMAIL: 'deleteUserByEmail',
-    DELETE_USER_BY_USERNAME: 'deleteUserByUsername',
-    UPDATE_EVENT: 'updateEvent',
-    DELETE_EVENT: 'deleteEventById',
-  },
-}));
-
 jest.mock('@/utils', () => ({
   CustomError: jest.fn((message: string, errorType: any) => {
     const error = new Error(message) as any;
@@ -35,430 +5,300 @@ jest.mock('@/utils', () => ({
     return error;
   }),
   ErrorTypes: {
-    BAD_USER_INPUT: { errorCode: 'BAD_USER_INPUT', errorStatus: 400 },
     BAD_REQUEST: { errorCode: 'BAD_REQUEST', errorStatus: 400 },
-    CONFLICT: { errorCode: 'CONFLICT', errorStatus: 409 },
     NOT_FOUND: { errorCode: 'NOT_FOUND', errorStatus: 404 },
-    UNAUTHENTICATED: { errorCode: 'UNAUTHENTICATED', errorStatus: 401 },
-    UNAUTHORIZED: { errorCode: 'UNAUTHORIZED', errorStatus: 403 },
   },
+  projectOccurrenceParticipantToSeriesParticipant: jest.fn((eventId: string, participant: any, event?: any) => ({
+    participantId: participant.participantId,
+    eventId,
+    userId: participant.userId,
+    status: participant.status,
+    quantity: participant.quantity,
+    invitedBy: participant.invitedBy,
+    sharedVisibility: participant.sharedVisibility,
+    rsvpAt: participant.rsvpAt,
+    cancelledAt: participant.cancelledAt,
+    checkedInAt: participant.checkedInAt,
+    ...(event ? { event } : {}),
+  })),
+  isOccurrenceUpcoming: jest.fn((occurrence: any, fromDate: Date = new Date()) => {
+    const effectiveEndAt = occurrence.endAt ?? occurrence.startAt;
+    return new Date(effectiveEndAt).getTime() >= fromDate.getTime();
+  }),
+  sumActiveOccurrenceRsvpCount: jest.fn((participants: any[]) =>
+    participants.reduce(
+      (total, participant) =>
+        participant.status === 'Going' || participant.status === 'Interested' || participant.status === 'CheckedIn'
+          ? total + Math.max(1, participant.quantity ?? 1)
+          : total,
+      0,
+    ),
+  ),
 }));
 
 jest.mock('@/mongodb/dao', () => ({
-  EventSeriesParticipantDAO: {
-    upsert: jest.fn(),
-    cancel: jest.fn(),
-    readByEventAndUser: jest.fn(),
-    readByEvent: jest.fn(),
-    countByEvent: jest.fn(),
-  },
   EventSeriesDAO: {
     readEventById: jest.fn(),
   },
-  UserDAO: {
-    readUserById: jest.fn(),
+  EventOccurrenceDAO: {
+    readByOccurrenceIds: jest.fn(),
+  },
+  EventOccurrenceParticipantDAO: {
+    readByOccurrence: jest.fn(),
+    readByOccurrences: jest.fn(),
+    readByOccurrenceAndUser: jest.fn(),
+    readByUser: jest.fn(),
   },
 }));
 
-jest.mock('@/services/notification', () => ({
-  notify: jest.fn().mockResolvedValue({}),
-  notifyMany: jest.fn().mockResolvedValue([]),
-}));
-
-jest.mock('@/utils/logger', () => ({
-  logger: {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+jest.mock('@/services/eventOccurrence', () => ({
+  __esModule: true,
+  default: {
+    readRepresentativeOccurrenceForSeries: jest.fn(),
   },
 }));
 
-jest.mock('@/websocket/publisher', () => ({
-  publishEventRsvpUpdated: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/services/eventOccurrenceParticipant', () => ({
+  __esModule: true,
+  default: {
+    rsvp: jest.fn(),
+    cancel: jest.fn(),
+    checkIn: jest.fn(),
+  },
 }));
 
 import { EventSeriesParticipantService } from '@/services';
-import { EventSeriesParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
-import NotificationService from '@/services/notification';
-import { publishEventRsvpUpdated } from '@/websocket/publisher';
-import type { EventSeriesParticipant, EventSeries } from '@gatherle/commons/types';
-import {
-  ParticipantStatus,
-  EventOrganizerRole,
-  NotificationType,
-  NotificationTargetType,
-} from '@gatherle/commons/types';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
+import EventOccurrenceService from '@/services/eventOccurrence';
+import EventOccurrenceParticipantService from '@/services/eventOccurrenceParticipant';
+import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/types';
+import { ParticipantStatus } from '@gatherle/commons/types';
 
 describe('EventSeriesParticipantService', () => {
-  const mockParticipant: EventSeriesParticipant = {
-    participantId: 'participant-1',
+  const singleEventSeries: EventSeries = {
     eventId: 'event-1',
+    slug: 'one-time-meetup',
+    title: 'One Time Meetup',
+    description: 'Single event',
+    primarySchedule: {
+      startAt: new Date('2026-05-10T10:00:00.000Z'),
+      endAt: new Date('2026-05-10T12:00:00.000Z'),
+      timezone: 'Africa/Johannesburg',
+      recurrenceRule: 'DTSTART:20260510T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
+    },
+    status: 'Upcoming' as any,
+    location: { type: 'Online', coordinates: [0, 0] } as any,
+    eventCategories: [],
+    organizers: [],
+  };
+
+  const recurringEventSeries: EventSeries = {
+    ...singleEventSeries,
+    eventId: 'event-2',
+    slug: 'weekly-yoga',
+    primarySchedule: {
+      ...singleEventSeries.primarySchedule!,
+      recurrenceRule: 'DTSTART:20260510T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=SU',
+    },
+  };
+
+  const singleOccurrence: EventOccurrence = {
+    occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
+    eventSeriesId: 'event-1',
+    occurrenceKey: 'event-1#2026-05-10T10:00:00.000Z',
+    originalStartAt: new Date('2026-05-10T10:00:00.000Z'),
+    startAt: new Date('2026-05-10T10:00:00.000Z'),
+    endAt: new Date('2026-05-10T12:00:00.000Z'),
+    timezone: 'Africa/Johannesburg',
+    status: 'Scheduled' as any,
+    isException: false,
+    seriesScheduleVersion: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const occurrenceParticipant: EventOccurrenceParticipant = {
+    participantId: 'occ-participant-1',
+    occurrenceId: singleOccurrence.occurrenceId,
     userId: 'user-1',
     status: ParticipantStatus.Going,
-    quantity: 1,
-    rsvpAt: new Date('2024-01-01T00:00:00Z'),
+    quantity: 2,
+    rsvpAt: new Date('2026-05-01T10:00:00.000Z'),
   };
 
-  const mockEvent: Partial<EventSeries> = {
-    eventId: 'event-1',
-    slug: 'test-event',
-    title: 'Test EventSeries',
-    organizers: [
-      {
-        user: 'host-user-id' as any, // String reference
-        role: EventOrganizerRole.Host,
-      },
-      {
-        user: 'cohost-user-id' as any, // CoHost
-        role: EventOrganizerRole.CoHost,
-      },
-    ],
+  const recurringOccurrence: EventOccurrence = {
+    ...singleOccurrence,
+    occurrenceId: 'event-2#2026-05-17T10:00:00.000Z',
+    eventSeriesId: recurringEventSeries.eventId,
+    occurrenceKey: 'event-2#2026-05-17T10:00:00.000Z',
+    originalStartAt: new Date('2026-05-17T10:00:00.000Z'),
+    startAt: new Date('2026-05-17T10:00:00.000Z'),
   };
 
-  const mockEventWithPopulatedOrganizers: Partial<EventSeries> = {
-    eventId: 'event-1',
-    slug: 'test-event',
-    title: 'Test EventSeries',
-    organizers: [
-      {
-        user: { userId: 'host-user-id' } as any, // Populated User object
-        role: EventOrganizerRole.Host,
-      },
-      {
-        user: { userId: 'cohost-user-id' } as any, // Populated CoHost
-        role: EventOrganizerRole.CoHost,
-      },
-    ],
+  const recurringOccurrenceParticipant: EventOccurrenceParticipant = {
+    ...occurrenceParticipant,
+    participantId: 'occ-participant-2',
+    occurrenceId: recurringOccurrence.occurrenceId,
   };
-
-  const mockActorUser = {
-    userId: 'user-1',
-    username: 'actor-user',
-    given_name: 'Actor',
-    family_name: 'User',
-    profile_picture: null,
-  };
-
-  const mockEventParticipants = [mockParticipant];
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
 
   beforeEach(() => {
-    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockActorUser);
-    (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue(mockEventParticipants);
-    (EventSeriesParticipantDAO.countByEvent as jest.Mock).mockResolvedValue(1);
+    jest.clearAllMocks();
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(singleEventSeries);
+    (EventOccurrenceService.readRepresentativeOccurrenceForSeries as jest.Mock).mockResolvedValue(singleOccurrence);
+    (EventOccurrenceParticipantService.rsvp as jest.Mock).mockResolvedValue(occurrenceParticipant);
+    (EventOccurrenceParticipantService.cancel as jest.Mock).mockResolvedValue({
+      ...occurrenceParticipant,
+      status: ParticipantStatus.Cancelled,
+      cancelledAt: new Date('2026-05-02T10:00:00.000Z'),
+    });
+    (EventOccurrenceParticipantService.checkIn as jest.Mock).mockResolvedValue({
+      ...occurrenceParticipant,
+      status: ParticipantStatus.CheckedIn,
+      checkedInAt: new Date('2026-05-10T10:05:00.000Z'),
+    });
+    (EventOccurrenceParticipantDAO.readByOccurrence as jest.Mock).mockResolvedValue([occurrenceParticipant]);
+    (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(occurrenceParticipant);
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([occurrenceParticipant]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([singleOccurrence]);
   });
 
-  describe('rsvp', () => {
-    describe('new RSVP', () => {
-      it('creates RSVP and sends notification to all organizers', async () => {
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-
-        const result = await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-        expect(result).toEqual(mockParticipant);
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        // Should notify ALL organizers (host + cohost) with rsvpStatus
-        expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-          ['host-user-id', 'cohost-user-id'],
-          expect.objectContaining({
-            type: NotificationType.EVENT_RSVP,
-            actorUserId: 'user-1',
-            targetType: NotificationTargetType.EventSeries,
-            targetSlug: 'test-event',
-            rsvpStatus: ParticipantStatus.Going,
-          }),
-        );
-
-        expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
-          expect.arrayContaining(['host-user-id', 'cohost-user-id', 'user-1']),
-          expect.objectContaining({
-            participant: expect.objectContaining({
-              participantId: 'participant-1',
-              eventId: 'event-1',
-              userId: 'user-1',
-              status: ParticipantStatus.Going,
-            }),
-            previousStatus: null,
-            rsvpCount: 1,
-          }),
-        );
-      });
-
-      it('handles populated organizer user objects', async () => {
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEventWithPopulatedOrganizers);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        // Should extract userIds from populated User objects
-        expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-          ['host-user-id', 'cohost-user-id'],
-          expect.any(Object),
-        );
-      });
-
-      it('sends notification for Interested status', async () => {
-        const interestedParticipant = { ...mockParticipant, status: ParticipantStatus.Interested };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(interestedParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Interested,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-          expect.any(Array),
-          expect.objectContaining({
-            type: NotificationType.EVENT_RSVP,
-          }),
-        );
-      });
-
-      it('does not send notification when user RSVPs to their own event', async () => {
-        // When the only organizer is the user themselves, notifyMany filters them out
-        const selfEvent = {
-          ...mockEvent,
-          organizers: [{ user: 'user-1', role: EventOrganizerRole.Host }],
-        };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        // notifyMany is called but will filter out the actor internally
-        expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-          ['user-1'], // The actor will be filtered out by notifyMany
-          expect.any(Object),
-        );
-      });
-
-      it('does not send notification when event has no organizers', async () => {
-        const noOrganizersEvent = { ...mockEvent, organizers: [] };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(noOrganizersEvent);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notifyMany).not.toHaveBeenCalled();
-      });
+  it('delegates RSVP for a single-date event series to occurrence participation', async () => {
+    const result = await EventSeriesParticipantService.rsvp({
+      eventId: singleEventSeries.eventId,
+      userId: 'user-1',
+      status: ParticipantStatus.Going,
+      quantity: 2,
     });
 
-    describe('updating existing RSVP', () => {
-      it('sends notification when changing from non-Going to Going', async () => {
-        const cancelledParticipant = { ...mockParticipant, status: ParticipantStatus.Cancelled };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(cancelledParticipant);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(mockParticipant);
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notifyMany).toHaveBeenCalled();
-      });
-
-      it('does not send notification when already Going', async () => {
-        const goingParticipant = { ...mockParticipant, status: ParticipantStatus.Going };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(goingParticipant);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(goingParticipant);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notify).not.toHaveBeenCalled();
-      });
-
-      it('does not send notification when already CheckedIn', async () => {
-        const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(checkedInParticipant);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notify).not.toHaveBeenCalled();
-      });
-
-      it('does not send notification when changing to Waitlisted', async () => {
-        (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
-        (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue({
-          ...mockParticipant,
-          status: ParticipantStatus.Waitlisted,
-        });
-
-        await EventSeriesParticipantService.rsvp({
-          eventId: 'event-1',
-          userId: 'user-1',
-          status: ParticipantStatus.Waitlisted,
-        });
-
-        // Wait for async notification
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        expect(NotificationService.notify).not.toHaveBeenCalled();
-      });
-    });
+    expect(EventOccurrenceParticipantService.rsvp).toHaveBeenCalledWith(
+      {
+        occurrenceId: singleOccurrence.occurrenceId,
+        status: ParticipantStatus.Going,
+        quantity: 2,
+        invitedBy: undefined,
+        sharedVisibility: undefined,
+      },
+      'user-1',
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        participantId: occurrenceParticipant.participantId,
+        eventId: singleEventSeries.eventId,
+        userId: occurrenceParticipant.userId,
+        status: ParticipantStatus.Going,
+      }),
+    );
   });
 
-  describe('cancel', () => {
-    it('cancels RSVP and does NOT send notification', async () => {
-      const cancelledParticipant = { ...mockParticipant, status: ParticipantStatus.Cancelled };
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
-      (EventSeriesParticipantDAO.cancel as jest.Mock).mockResolvedValue(cancelledParticipant);
+  it('delegates recurring series-level RSVP operations to the representative occurrence', async () => {
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(recurringEventSeries);
+    (EventOccurrenceService.readRepresentativeOccurrenceForSeries as jest.Mock).mockResolvedValue(recurringOccurrence);
+    (EventOccurrenceParticipantService.rsvp as jest.Mock).mockResolvedValue(recurringOccurrenceParticipant);
 
-      const result = await EventSeriesParticipantService.cancel({
-        eventId: 'event-1',
-        userId: 'user-1',
-      });
-
-      expect(EventSeriesParticipantDAO.cancel).toHaveBeenCalledWith({
-        eventId: 'event-1',
-        userId: 'user-1',
-      });
-      expect(result).toEqual(cancelledParticipant);
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(NotificationService.notify).not.toHaveBeenCalled();
-      expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
-        expect.arrayContaining(['user-1']),
-        expect.objectContaining({
-          participant: expect.objectContaining({
-            participantId: 'participant-1',
-            status: ParticipantStatus.Cancelled,
-          }),
-          previousStatus: ParticipantStatus.Going,
-        }),
-      );
+    const result = await EventSeriesParticipantService.rsvp({
+      eventId: recurringEventSeries.eventId,
+      userId: 'user-1',
+      status: ParticipantStatus.Going,
     });
+
+    expect(EventOccurrenceParticipantService.rsvp).toHaveBeenCalledWith(
+      expect.objectContaining({ occurrenceId: recurringOccurrence.occurrenceId }),
+      'user-1',
+    );
+    expect(result.eventId).toBe(recurringEventSeries.eventId);
   });
 
-  describe('checkIn', () => {
-    it('checks in and sends notification to all organizers', async () => {
-      const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
-      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
-
-      const result = await EventSeriesParticipantService.checkIn('event-1', 'user-1');
-
-      expect(EventSeriesParticipantDAO.upsert).toHaveBeenCalledWith({
-        eventId: 'event-1',
-        userId: 'user-1',
-        status: ParticipantStatus.CheckedIn,
-      });
-      expect(result).toEqual(checkedInParticipant);
-
-      // Wait for async notification
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Should notify ALL organizers
-      expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-        ['host-user-id', 'cohost-user-id'],
-        expect.objectContaining({
-          type: NotificationType.EVENT_CHECKIN,
-          actorUserId: 'user-1',
-          targetType: NotificationTargetType.EventSeries,
-          targetSlug: 'test-event',
-        }),
-      );
-      expect(publishEventRsvpUpdated).toHaveBeenCalledWith(
-        expect.arrayContaining(['host-user-id', 'cohost-user-id', 'user-1']),
-        expect.objectContaining({
-          participant: expect.objectContaining({
-            participantId: 'participant-1',
-            status: ParticipantStatus.CheckedIn,
-          }),
-          previousStatus: ParticipantStatus.Going,
-        }),
-      );
+  it('delegates cancellation to the single occurrence', async () => {
+    const result = await EventSeriesParticipantService.cancel({
+      eventId: singleEventSeries.eventId,
+      userId: 'user-1',
     });
 
-    it('filters out actor when checking in to own event', async () => {
-      // When user is one of the organizers, notifyMany filters them out
-      const selfEvent = {
-        ...mockEvent,
-        organizers: [{ user: 'user-1', role: EventOrganizerRole.Host }],
-      };
-      const checkedInParticipant = { ...mockParticipant, status: ParticipantStatus.CheckedIn };
-      (EventSeriesParticipantDAO.upsert as jest.Mock).mockResolvedValue(checkedInParticipant);
-      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(selfEvent);
+    expect(EventOccurrenceParticipantService.cancel).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
+    expect(result.status).toBe(ParticipantStatus.Cancelled);
+  });
 
-      await EventSeriesParticipantService.checkIn('event-1', 'user-1');
+  it('delegates check-in to the single occurrence', async () => {
+    const result = await EventSeriesParticipantService.checkIn(singleEventSeries.eventId, 'user-1');
 
-      // Wait for async notification
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(EventOccurrenceParticipantService.checkIn).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
+    expect(result.status).toBe(ParticipantStatus.CheckedIn);
+  });
 
-      // notifyMany is called but will filter out the actor internally
-      expect(NotificationService.notifyMany).toHaveBeenCalledWith(
-        ['user-1'], // The actor will be filtered out by notifyMany
-        expect.any(Object),
-      );
-    });
+  it('reads participants for a single-date event series from occurrence participants', async () => {
+    const result = await EventSeriesParticipantService.readByEvent(singleEventSeries.eventId);
+
+    expect(EventOccurrenceParticipantDAO.readByOccurrence).toHaveBeenCalledWith(singleOccurrence.occurrenceId);
+    expect(result).toEqual([
+      expect.objectContaining({
+        participantId: occurrenceParticipant.participantId,
+        eventId: singleEventSeries.eventId,
+        status: ParticipantStatus.Going,
+      }),
+    ]);
+  });
+
+  it('reads the current user participant for a single-date event series from the occurrence participant store', async () => {
+    const result = await EventSeriesParticipantService.readByEventAndUser(singleEventSeries.eventId, 'user-1');
+
+    expect(EventOccurrenceParticipantDAO.readByOccurrenceAndUser).toHaveBeenCalledWith(
+      singleOccurrence.occurrenceId,
+      'user-1',
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        participantId: occurrenceParticipant.participantId,
+        eventId: singleEventSeries.eventId,
+      }),
+    );
+  });
+
+  it('returns null when no occurrence participant exists for the user', async () => {
+    (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(null);
+
+    const result = await EventSeriesParticipantService.readByEventAndUser(singleEventSeries.eventId, 'user-1');
+
+    expect(result).toBeNull();
+  });
+
+  it('maps readByUser results back to representative event series participants for single and recurring series', async () => {
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([
+      occurrenceParticipant,
+      recurringOccurrenceParticipant,
+    ]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([singleOccurrence, recurringOccurrence]);
+    (EventOccurrenceParticipantDAO.readByOccurrence as jest.Mock).mockResolvedValue([occurrenceParticipant]);
+    (EventOccurrenceParticipantDAO.readByOccurrences as jest.Mock).mockResolvedValue([
+      occurrenceParticipant,
+      recurringOccurrenceParticipant,
+    ]);
+    (EventSeriesDAO.readEventById as jest.Mock)
+      .mockResolvedValueOnce(singleEventSeries)
+      .mockResolvedValueOnce(recurringEventSeries);
+
+    const result = await EventSeriesParticipantService.readByUser('user-1');
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        participantId: occurrenceParticipant.participantId,
+        eventId: singleEventSeries.eventId,
+      }),
+    );
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        participantId: recurringOccurrenceParticipant.participantId,
+        eventId: recurringEventSeries.eventId,
+      }),
+    );
+  });
+
+  it('returns an empty array when the user has no occurrence participants', async () => {
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([]);
+
+    const result = await EventSeriesParticipantService.readByUser('user-1');
+
+    expect(result).toEqual([]);
+    expect(EventOccurrenceDAO.readByOccurrenceIds).not.toHaveBeenCalled();
   });
 });

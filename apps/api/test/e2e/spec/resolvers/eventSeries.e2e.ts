@@ -41,6 +41,7 @@ describe('EventSeries Resolver', () => {
   const createdOrgIds: string[] = [];
   const createdMembershipIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
+  const uniqueSuffix = () => `${Date.now()}-${randomId()}`;
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
@@ -49,8 +50,9 @@ describe('EventSeries Resolver', () => {
 
   const buildEventInput = (): CreateEventInput => ({
     ...baseEventData,
-    title: `Test EventSeries Title ${Date.now()}`,
+    title: `Test EventSeries Title ${uniqueSuffix()}`,
     description: testEventDescription,
+    location: { locationType: 'tba' },
     eventCategories: [testEventCategory.eventCategoryId],
     organizers: [{ user: testUser.userId, role: 'Host' }],
   });
@@ -162,7 +164,7 @@ describe('EventSeries Resolver', () => {
     it('creates a new event with valid input', async () => {
       const createdEvent = await createEvent();
       expect(createdEvent).toHaveProperty('eventId');
-      expect(createdEvent.title).toMatch(/^Test EventSeries Title \d+$/);
+      expect(createdEvent.title).toMatch(/^Test EventSeries Title \d+-[a-z0-9]+$/);
     });
 
     it('reads the event by id and slug after creation', async () => {
@@ -192,7 +194,7 @@ describe('EventSeries Resolver', () => {
       it('splits a recurring series at an occurrence and relinks future occurrences to the successor series', async () => {
         const createdEvent = await createEvent({
           ...buildEventInput(),
-          title: `Split Source Series ${Date.now()}`,
+          title: `Split Source Series ${uniqueSuffix()}`,
           primarySchedule: {
             startAt: new Date('2026-05-06T16:00:00.000Z'),
             endAt: new Date('2026-05-06T19:00:00.000Z'),
@@ -286,7 +288,7 @@ describe('EventSeries Resolver', () => {
     it('reads multiple events with no filters', async () => {
       const event1 = await createEvent();
       const input2 = buildEventInput();
-      input2.title = `Test EventSeries Two ${Date.now()}`;
+      input2.title = `Test EventSeries Two ${uniqueSuffix()}`;
       const event2 = await createEvent(input2);
 
       const readResponse = await request(url)

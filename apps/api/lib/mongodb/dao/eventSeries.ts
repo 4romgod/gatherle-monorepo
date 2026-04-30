@@ -23,11 +23,96 @@ import {
 } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { EventSeriesParticipantDAO } from '@/mongodb/dao';
-import { ParticipantStatus, DATE_FILTER_OPTIONS } from '@gatherle/commons';
+import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
 
 class EventSeriesDAO {
+  private static buildSavedByLookupStages() {
+    return [
+      {
+        $lookup: {
+          from: 'follows',
+          let: { eid: '$eventId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$targetId', '$$eid'] },
+                    { $eq: ['$targetType', 'EventSeries'] },
+                    { $eq: ['$approvalStatus', 'Accepted'] },
+                  ],
+                },
+              },
+            },
+            { $count: 'n' },
+          ],
+          as: '_savedAgg',
+        },
+      },
+      {
+        $addFields: {
+          savedByCount: { $ifNull: [{ $arrayElemAt: ['$_savedAgg.n', 0] }, 0] },
+        },
+      },
+    ];
+  }
+
+  private static buildOccurrenceRsvpLookupStages(now: Date) {
+    return [
+      {
+        $lookup: {
+          from: 'eventoccurrences',
+          let: { eid: '$eventId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$eventSeriesId', '$$eid'] },
+                status: { $ne: EventOccurrenceStatus.Cancelled },
+                $or: [{ endAt: { $gte: now } }, { endAt: { $exists: false }, startAt: { $gte: now } }],
+              },
+            },
+            { $project: { _id: 0, occurrenceId: 1 } },
+          ],
+          as: '_activeOccurrences',
+        },
+      },
+      {
+        $lookup: {
+          from: 'eventoccurrenceparticipants',
+          let: { occurrenceIds: '$_activeOccurrences.occurrenceId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ['$occurrenceId', '$$occurrenceIds'] },
+                status: {
+                  $in: [ParticipantStatus.Going, ParticipantStatus.Interested, ParticipantStatus.CheckedIn],
+                },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total: {
+                  $sum: {
+                    $cond: [{ $gt: [{ $ifNull: ['$quantity', 1] }, 1] }, '$quantity', 1],
+                  },
+                },
+              },
+            },
+          ],
+          as: '_rsvpAgg',
+        },
+      },
+      {
+        $addFields: {
+          rsvpCount: { $ifNull: [{ $arrayElemAt: ['$_rsvpAgg.total', 0] }, 0] },
+        },
+      },
+    ];
+  }
+
   private static async createWithSlug(
     input: CreateEventInput,
     slug: string,
@@ -51,16 +136,16 @@ class EventSeriesDAO {
 
   static async create(input: CreateEventInput): Promise<EventEntity> {
     try {
-      // Geocode address to coordinates if location has address but no coordinates
-      if (input.location) {
-        await enrichLocationWithCoordinates(input.location);
-      }
-
       const slug = kebabCase(input.title);
       const existingEvent = await EventSeriesModel.findOne({ slug }).select('_id').lean().exec();
 
       if (existingEvent) {
         throw CustomError(`Slug ${slug} already exists`, ErrorTypes.CONFLICT);
+      }
+
+      // Geocode address to coordinates if location has address but no coordinates
+      if (input.location) {
+        await enrichLocationWithCoordinates(input.location);
       }
 
       return await this.createWithSlug(input, slug);
@@ -388,61 +473,18 @@ class EventSeriesDAO {
             ],
           },
         },
-        // Count RSVPs (Going + Interested) per event
-        {
-          $lookup: {
-            from: 'eventseriesparticipants',
-            let: { eid: '$eventId' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [{ $eq: ['$eventId', '$$eid'] }, { $in: ['$status', ['Going', 'Interested']] }],
-                  },
-                },
-              },
-              { $count: 'n' },
-            ],
-            as: '_rsvpAgg',
-          },
-        },
-        // Count saves (Follow where targetType = EventSeries) per event
-        {
-          $lookup: {
-            from: 'follows',
-            let: { eid: '$eventId' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$targetId', '$$eid'] },
-                      { $eq: ['$targetType', 'EventSeries'] },
-                      { $eq: ['$approvalStatus', 'Accepted'] },
-                    ],
-                  },
-                },
-              },
-              { $count: 'n' },
-            ],
-            as: '_savedAgg',
-          },
-        },
+        ...this.buildOccurrenceRsvpLookupStages(now),
+        ...this.buildSavedByLookupStages(),
         {
           $addFields: {
-            rsvpCount: { $ifNull: [{ $arrayElemAt: ['$_rsvpAgg.n', 0] }, 0] },
-            savedByCount: { $ifNull: [{ $arrayElemAt: ['$_savedAgg.n', 0] }, 0] },
             _trendingScore: {
-              $add: [
-                { $ifNull: [{ $arrayElemAt: ['$_rsvpAgg.n', 0] }, 0] },
-                { $ifNull: [{ $arrayElemAt: ['$_savedAgg.n', 0] }, 0] },
-              ],
+              $add: ['$rsvpCount', '$savedByCount'],
             },
           },
         },
         { $sort: { _trendingScore: -1 as const, 'primarySchedule.startAt': 1 as const } },
         { $limit: limit },
-        { $unset: ['_rsvpAgg', '_savedAgg', '_trendingScore'] },
+        { $unset: ['_activeOccurrences', '_rsvpAgg', '_savedAgg', '_trendingScore'] },
         ...createEventLookupStages({ skipCounts: true }),
       ];
 
@@ -460,15 +502,24 @@ class EventSeriesDAO {
    */
   static async readUpcomingPublished(limit: number): Promise<EventEntity[]> {
     try {
-      const events = await EventSeriesModel.find({
-        lifecycleStatus: 'Published',
-        status: { $in: ['Upcoming', 'Ongoing'] },
-        visibility: { $in: ['Public', 'Unlisted'] },
-      })
-        .sort({ 'primarySchedule.startAt': 1 })
-        .limit(limit)
-        .exec();
-      return events.map((e) => e.toObject()) as unknown as EventEntity[];
+      const now = new Date();
+      const pipeline = [
+        {
+          $match: {
+            lifecycleStatus: 'Published',
+            status: { $in: ['Upcoming', 'Ongoing'] },
+            visibility: { $in: ['Public', 'Unlisted'] },
+          },
+        },
+        ...this.buildOccurrenceRsvpLookupStages(now),
+        ...this.buildSavedByLookupStages(),
+        { $sort: { 'primarySchedule.startAt': 1 as const } },
+        { $limit: limit },
+        { $unset: ['_activeOccurrences', '_rsvpAgg', '_savedAgg'] },
+        ...createEventLookupStages({ skipCounts: true }),
+      ];
+
+      return await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logDaoError('Error reading upcoming published events', { error });
       throw KnownCommonError(error);

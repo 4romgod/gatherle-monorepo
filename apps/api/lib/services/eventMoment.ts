@@ -6,13 +6,14 @@ import {
   FollowTargetType,
   ParticipantStatus,
 } from '@gatherle/commons/types';
-import { EventMomentDAO, EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import { EventMomentDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import { logger } from '@/utils/logger';
+import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
 
@@ -73,8 +74,18 @@ class EventMomentService {
       throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
     }
 
+    if (EventOccurrenceService.isRecurringSeries(event)) {
+      throw CustomError(
+        'Posting event moments for recurring event series requires occurrence targeting and is not supported in this phase.',
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+
     // 2. RSVP gate — caller must be Going or CheckedIn.
-    const participant = await EventSeriesParticipantDAO.readByEventAndUser(input.eventId, callerId);
+    const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(input.eventId);
+    const participant = occurrence
+      ? await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, callerId)
+      : null;
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to post a moment', ErrorTypes.BAD_USER_INPUT);
     }
