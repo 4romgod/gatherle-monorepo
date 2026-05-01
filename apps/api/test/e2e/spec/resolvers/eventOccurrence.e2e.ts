@@ -27,6 +27,7 @@ describe('EventOccurrence Resolver', () => {
   let testUser: UserWithToken;
   let testEventCategory: EventCategoryRef;
   const createdEventIds: string[] = [];
+  const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
@@ -35,8 +36,9 @@ describe('EventOccurrence Resolver', () => {
 
   const buildEventInput = (overrides: Partial<CreateEventInput> = {}): CreateEventInput => ({
     ...baseEventData,
-    title: `Occurrence Query Event ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title: `Occurrence Query Event ${uniqueSuffix()}`,
     description: 'Occurrence query test event',
+    location: { locationType: 'tba' },
     eventCategories: [testEventCategory.eventCategoryId],
     organizers: [{ user: testUser.userId, role: 'Host' }],
     ...overrides,
@@ -100,11 +102,14 @@ describe('EventOccurrence Resolver', () => {
   });
 
   it('reads recurring occurrences and projected single-event occurrences inside one date window', async () => {
+    const recurringSeriesTitle = `Occurrence Query Recurring Series ${uniqueSuffix()}`;
+    const singleSeriesTitle = `Occurrence Query Single Series ${uniqueSuffix()}`;
+
     await createEventOnServer(
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Query Recurring Series',
+        title: recurringSeriesTitle,
         primarySchedule: {
           startAt: new Date('2026-05-06T16:00:00.000Z'),
           endAt: new Date('2026-05-06T19:00:00.000Z'),
@@ -119,7 +124,7 @@ describe('EventOccurrence Resolver', () => {
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Query Single Series',
+        title: singleSeriesTitle,
         primarySchedule: {
           startAt: new Date('2026-05-07T10:00:00.000Z'),
           endAt: new Date('2026-05-07T12:00:00.000Z'),
@@ -165,10 +170,10 @@ describe('EventOccurrence Resolver', () => {
     const occurrences = response.body.data.readEventOccurrences;
     expect(occurrences).toHaveLength(4);
     expect(occurrences.map((occurrence: any) => occurrence.eventSeries.title)).toEqual([
-      'Occurrence Query Recurring Series',
-      'Occurrence Query Single Series',
-      'Occurrence Query Recurring Series',
-      'Occurrence Query Recurring Series',
+      recurringSeriesTitle,
+      singleSeriesTitle,
+      recurringSeriesTitle,
+      recurringSeriesTitle,
     ]);
     expect(occurrences.map((occurrence: any) => occurrence.startAt)).toEqual([
       '2026-05-06T16:00:00.000Z',
@@ -183,7 +188,7 @@ describe('EventOccurrence Resolver', () => {
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Detail Recurring Series',
+        title: `Occurrence Detail Recurring Series ${uniqueSuffix()}`,
         primarySchedule: {
           startAt: new Date('2026-05-06T16:00:00.000Z'),
           endAt: new Date('2026-05-06T19:00:00.000Z'),
@@ -230,7 +235,7 @@ describe('EventOccurrence Resolver', () => {
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Detail Single Series',
+        title: `Occurrence Detail Single Series ${uniqueSuffix()}`,
         primarySchedule: {
           startAt: new Date('2026-05-07T10:00:00.000Z'),
           endAt: new Date('2026-05-07T12:00:00.000Z'),
@@ -275,7 +280,7 @@ describe('EventOccurrence Resolver', () => {
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Exception Update Series',
+        title: `Occurrence Exception Update Series ${uniqueSuffix()}`,
         primarySchedule: {
           startAt: new Date('2026-05-06T16:00:00.000Z'),
           endAt: new Date('2026-05-06T19:00:00.000Z'),
@@ -339,7 +344,7 @@ describe('EventOccurrence Resolver', () => {
       url,
       testUser.token,
       buildEventInput({
-        title: 'Occurrence Cancellation Series',
+        title: `Occurrence Cancellation Series ${uniqueSuffix()}`,
         primarySchedule: {
           startAt: new Date('2026-05-06T16:00:00.000Z'),
           endAt: new Date('2026-05-06T19:00:00.000Z'),

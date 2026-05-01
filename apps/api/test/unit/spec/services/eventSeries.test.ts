@@ -18,7 +18,7 @@ jest.mock('@/mongodb/dao', () => ({
 jest.mock('@/services/eventOccurrence', () => ({
   __esModule: true,
   default: {
-    syncRecurringSeriesOccurrences: jest.fn(),
+    syncEventSeriesOccurrences: jest.fn(),
     deleteOccurrencesForSeries: jest.fn(),
     deleteFutureExceptionOccurrences: jest.fn(),
     moveFutureOccurrencesToSeries: jest.fn(),
@@ -71,7 +71,7 @@ const makeUpdateInput = (overrides: Partial<UpdateEventInput> = {}): UpdateEvent
 describe('EventSeriesService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (EventOccurrenceService.syncRecurringSeriesOccurrences as jest.Mock).mockResolvedValue(undefined);
+    (EventOccurrenceService.syncEventSeriesOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteOccurrencesForSeries as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteFutureExceptionOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.moveFutureOccurrencesToSeries as jest.Mock).mockResolvedValue(undefined);
@@ -86,7 +86,7 @@ describe('EventSeriesService', () => {
       const result = await EventSeriesService.create(input);
 
       expect(EventSeriesDAO.create).toHaveBeenCalledWith(input);
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(createdEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(createdEvent);
       expect(result).toEqual(createdEvent);
     });
 
@@ -95,13 +95,13 @@ describe('EventSeriesService', () => {
       (EventSeriesDAO.create as jest.Mock).mockRejectedValue(error);
 
       await expect(EventSeriesService.create(makeCreateInput())).rejects.toThrow('create failed');
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).not.toHaveBeenCalled();
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).not.toHaveBeenCalled();
     });
 
     it('fails the operation if occurrence sync fails after create', async () => {
       const createdEvent = makeEvent();
       (EventSeriesDAO.create as jest.Mock).mockResolvedValue(createdEvent);
-      (EventOccurrenceService.syncRecurringSeriesOccurrences as jest.Mock).mockRejectedValue(new Error('sync failed'));
+      (EventOccurrenceService.syncEventSeriesOccurrences as jest.Mock).mockRejectedValue(new Error('sync failed'));
 
       await expect(EventSeriesService.create(makeCreateInput())).rejects.toMatchObject({
         extensions: { code: 'INTERNAL_SERVER_ERROR' },
@@ -142,7 +142,7 @@ describe('EventSeriesService', () => {
       const result = await EventSeriesService.update(input, existingEvent);
 
       expect(EventSeriesDAO.updateEvent).toHaveBeenCalledWith(input);
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
       expect(result).toEqual(updatedEvent);
     });
 
@@ -153,7 +153,7 @@ describe('EventSeriesService', () => {
 
       await EventSeriesService.update(input, makeEvent({ status: EventStatus.Upcoming }));
 
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
     });
 
     it('does not sync occurrences for unrelated updates', async () => {
@@ -163,7 +163,7 @@ describe('EventSeriesService', () => {
 
       const result = await EventSeriesService.update(input, makeEvent());
 
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).not.toHaveBeenCalled();
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).not.toHaveBeenCalled();
       expect(result).toEqual(updatedEvent);
     });
 
@@ -181,14 +181,14 @@ describe('EventSeriesService', () => {
 
       const result = await EventSeriesService.update(input, existingEvent);
 
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).not.toHaveBeenCalled();
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).not.toHaveBeenCalled();
       expect(result).toEqual(updatedEvent);
     });
 
     it('fails the operation if occurrence sync fails after update', async () => {
       const input = makeUpdateInput({ status: EventStatus.Cancelled });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(makeEvent({ status: input.status }));
-      (EventOccurrenceService.syncRecurringSeriesOccurrences as jest.Mock).mockRejectedValue(new Error('sync failed'));
+      (EventOccurrenceService.syncEventSeriesOccurrences as jest.Mock).mockRejectedValue(new Error('sync failed'));
 
       await expect(EventSeriesService.update(input, makeEvent({ status: EventStatus.Upcoming }))).rejects.toMatchObject(
         {
@@ -219,7 +219,7 @@ describe('EventSeriesService', () => {
       await EventSeriesService.update(input, existingEvent);
 
       expect(EventOccurrenceService.deleteFutureExceptionOccurrences).toHaveBeenCalledWith('event-1', expect.any(Date));
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
     });
 
     it('preserves future exception rows when only non-anchor schedule fields change', async () => {
@@ -246,7 +246,7 @@ describe('EventSeriesService', () => {
       await EventSeriesService.update(input, existingEvent);
 
       expect(EventOccurrenceService.deleteFutureExceptionOccurrences).not.toHaveBeenCalled();
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(updatedEvent);
     });
   });
 
@@ -407,8 +407,8 @@ describe('EventSeriesService', () => {
         new Date('2026-05-20T16:00:00.000Z'),
         1,
       );
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(updatedSourceEvent);
-      expect(EventOccurrenceService.syncRecurringSeriesOccurrences).toHaveBeenCalledWith(successorEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(updatedSourceEvent);
+      expect(EventOccurrenceService.syncEventSeriesOccurrences).toHaveBeenCalledWith(successorEvent);
       expect(result).toEqual(successorEvent);
     });
 
@@ -456,6 +456,53 @@ describe('EventSeriesService', () => {
           occurrenceId: pivotOccurrence.occurrenceId,
         } as SplitEventSeriesInput),
       ).rejects.toThrow('Unable to normalize event organizer user reference.');
+      expect(EventSeriesDAO.createSplitSuccessor).not.toHaveBeenCalled();
+    });
+
+    it('fails loudly when an event category cannot be normalized for the successor series', async () => {
+      const sourceEvent = {
+        ...makeEvent({
+          eventId: 'event-1',
+          slug: 'weekly-yoga',
+          title: 'Weekly Yoga',
+          description: 'Original series',
+          primarySchedule: {
+            startAt: new Date('2026-05-06T16:00:00.000Z'),
+            endAt: new Date('2026-05-06T18:00:00.000Z'),
+            timezone: 'Africa/Johannesburg',
+            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          },
+          eventCategories: [{ slug: 'broken-shape' }] as any,
+          organizers: [{ user: 'user-1', role: 'Host' }] as any,
+          location: { locationType: 'tba' } as any,
+        }),
+      } as EventSeries;
+      const pivotOccurrence = {
+        occurrenceId: 'event-1#2026-05-20T16:00:00.000Z',
+        eventSeriesId: 'event-1',
+        occurrenceKey: 'event-1#2026-05-20T16:00:00.000Z',
+        originalStartAt: new Date('2026-05-20T16:00:00.000Z'),
+        startAt: new Date('2026-05-20T16:00:00.000Z'),
+        endAt: new Date('2026-05-20T18:00:00.000Z'),
+        timezone: 'Africa/Johannesburg',
+        status: EventOccurrenceStatus.Scheduled,
+        isException: false,
+        seriesScheduleVersion: 1,
+      };
+      (EventOccurrenceService.readRecurringOccurrenceContext as jest.Mock).mockResolvedValue({
+        occurrence: pivotOccurrence,
+        eventSeries: sourceEvent,
+      });
+      (EventOccurrenceService.splitRecurringRuleAtOccurrence as jest.Mock).mockReturnValue({
+        predecessorRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20260520T155959Z;BYDAY=WE',
+        successorRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+      });
+
+      await expect(
+        EventSeriesService.splitAtOccurrence({
+          occurrenceId: pivotOccurrence.occurrenceId,
+        } as SplitEventSeriesInput),
+      ).rejects.toThrow('Unable to normalize event category reference.');
       expect(EventSeriesDAO.createSplitSuccessor).not.toHaveBeenCalled();
     });
   });

@@ -57,7 +57,8 @@ jest.mock('@/constants', () => ({
 
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: { readEventById: jest.fn() },
-  EventSeriesParticipantDAO: { readByEventAndUser: jest.fn() },
+  EventOccurrenceDAO: { readFirstByEventSeriesId: jest.fn() },
+  EventOccurrenceParticipantDAO: { readByOccurrenceAndUser: jest.fn() },
   EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
 }));
 
@@ -81,6 +82,10 @@ const mockEvent = {
 };
 
 const mockParticipant = { status: ParticipantStatus.Going };
+const mockOccurrence = {
+  occurrenceId: 'event-id-123#2099-01-01T00:00:00.000Z',
+  eventSeriesId: 'event-id-123',
+};
 
 const baseMediaParams = {
   entityType: MediaEntityType.EventSeries,
@@ -102,7 +107,8 @@ describe('MediaService', () => {
     jest.clearAllMocks();
     (s3Client.getPresignedUploadUrl as jest.Mock).mockResolvedValue('https://upload.example.com/signed');
     (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockParticipant);
+    (DaoModule.EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(mockOccurrence);
+    (DaoModule.EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(mockParticipant);
     (DaoModule.EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (DaoModule.EventMomentDAO.createVideoUpload as jest.Mock).mockResolvedValue({ momentId: 'moment-reserved-1' });
   });
@@ -300,7 +306,8 @@ describe('MediaService', () => {
         }));
         jest.doMock('@/mongodb/dao', () => ({
           EventSeriesDAO: { readEventById: jest.fn() },
-          EventSeriesParticipantDAO: { readByEventAndUser: jest.fn() },
+          EventOccurrenceDAO: { readFirstByEventSeriesId: jest.fn() },
+          EventOccurrenceParticipantDAO: { readByOccurrenceAndUser: jest.fn() },
           EventMomentDAO: { countRecentByAuthor: jest.fn(), createVideoUpload: jest.fn() },
         }));
         jest.doMock('@/mongodb/dao/eventMoment', () => ({
@@ -342,12 +349,12 @@ describe('MediaService', () => {
     });
 
     it('throws UNAUTHORIZED when the caller has no RSVP', async () => {
-      (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (DaoModule.EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(null);
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('RSVP');
     });
 
     it('throws UNAUTHORIZED when the caller RSVP status is Interested (not Going/CheckedIn)', async () => {
-      (DaoModule.EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (DaoModule.EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue({
         status: ParticipantStatus.Interested,
       });
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('RSVP');
@@ -362,6 +369,22 @@ describe('MediaService', () => {
       (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({ ...mockEvent, primarySchedule: null });
       const result = await MediaService.getEventMomentUploadUrl(baseMomentParams);
       expect(result.key).toMatch(/^test\/event-moments\/summer-bbq\/testuser\/[A-Za-z0-9_-]+\.mp4$/);
+    });
+
+    it('rejects recurring event series until occurrence-targeted uploads are supported', async () => {
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        primarySchedule: {
+          startAt: new Date('2099-01-01T00:00:00Z'),
+          endAt: new Date('2099-01-01T02:00:00Z'),
+          recurrenceRule: 'DTSTART:20990101T000000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+          timezone: 'Africa/Johannesburg',
+        },
+      });
+
+      await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow(
+        'require occurrence targeting',
+      );
     });
 
     it('returns uploadUrl, key, and CDN-backed readUrl', async () => {

@@ -1180,29 +1180,14 @@ describe('EventSeriesDAO', () => {
   });
 
   describe('readUpcomingPublished', () => {
-    // readUpcomingPublished uses find(...).sort(...).limit(...).exec()
-    const createSortLimitQuery = <T>(result: T) => ({
-      sort: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue(result),
-    });
-
-    const createFailSortLimitQuery = <T>(error: T) => ({
-      sort: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockRejectedValue(error),
-    });
-
-    const mockRawEvent = {
-      toObject: () => ({ eventId: 'event-1', title: 'Upcoming EventSeries', lifecycleStatus: 'Published' }),
-    };
-
-    it('queries for upcoming published events and returns mapped objects', async () => {
-      (EventSeriesModel.find as jest.Mock).mockReturnValue(createSortLimitQuery([mockRawEvent]));
+    it('queries for upcoming published events through the aggregation pipeline', async () => {
+      const mockEvents = [{ ...expectedEvent, eventId: 'event-1', title: 'Upcoming EventSeries' }];
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvents));
 
       const result = await EventSeriesDAO.readUpcomingPublished(100);
 
-      expect(EventSeriesModel.find).toHaveBeenCalledWith(
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
+      expect(pipeline[0].$match).toEqual(
         expect.objectContaining({
           lifecycleStatus: 'Published',
           status: { $in: ['Upcoming', 'Ongoing'] },
@@ -1214,16 +1199,37 @@ describe('EventSeriesDAO', () => {
     });
 
     it('applies the limit argument', async () => {
-      const mockQuery = createSortLimitQuery([]);
-      (EventSeriesModel.find as jest.Mock).mockReturnValue(mockQuery);
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
       await EventSeriesDAO.readUpcomingPublished(42);
 
-      expect(mockQuery.limit).toHaveBeenCalledWith(42);
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
+      const limitStage = pipeline.find((stage: Record<string, unknown>) => stage.$limit !== undefined);
+      expect(limitStage).toBeDefined();
+      expect(limitStage.$limit).toBe(42);
+    });
+
+    it('computes upcoming published RSVP counts from persisted occurrences', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventSeriesDAO.readUpcomingPublished(10);
+
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
+      const occurrenceLookup = pipeline.find(
+        (stage: Record<string, unknown>) =>
+          '$lookup' in stage && (stage as { $lookup: { as: string } }).$lookup.as === '_activeOccurrences',
+      ) as { $lookup: { from: string } };
+      const rsvpLookup = pipeline.find(
+        (stage: Record<string, unknown>) =>
+          '$lookup' in stage && (stage as { $lookup: { as: string } }).$lookup.as === '_rsvpAgg',
+      ) as { $lookup: { from: string } };
+
+      expect(occurrenceLookup.$lookup.from).toBe('eventoccurrences');
+      expect(rsvpLookup.$lookup.from).toBe('eventoccurrenceparticipants');
     });
 
     it('returns empty array when no events found', async () => {
-      (EventSeriesModel.find as jest.Mock).mockReturnValue(createSortLimitQuery([]));
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
       const result = await EventSeriesDAO.readUpcomingPublished(100);
 
@@ -1231,7 +1237,7 @@ describe('EventSeriesDAO', () => {
     });
 
     it('wraps errors', async () => {
-      (EventSeriesModel.find as jest.Mock).mockReturnValue(createFailSortLimitQuery(new MockMongoError(0)));
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(EventSeriesDAO.readUpcomingPublished(100)).rejects.toThrow(GraphQLError);
     });
@@ -1287,6 +1293,28 @@ describe('EventSeriesDAO', () => {
       const andConds = savedLookup.$lookup.pipeline[0].$match.$expr.$and;
       expect(andConds.some((c) => JSON.stringify(c) === JSON.stringify({ $eq: ['$approvalStatus', 'Accepted'] }))).toBe(
         true,
+      );
+    });
+
+    it('computes trending RSVP counts from persisted occurrence participants', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventSeriesDAO.readTrending(10);
+
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
+      const occurrenceLookup = pipeline.find(
+        (stage: Record<string, unknown>) =>
+          '$lookup' in stage && (stage as { $lookup: { as: string } }).$lookup.as === '_activeOccurrences',
+      ) as { $lookup: { from: string } };
+      const rsvpLookup = pipeline.find(
+        (stage: Record<string, unknown>) =>
+          '$lookup' in stage && (stage as { $lookup: { as: string } }).$lookup.as === '_rsvpAgg',
+      ) as { $lookup: { from: string; pipeline: Array<{ $match: { status: { $in: string[] } } }> } };
+
+      expect(occurrenceLookup.$lookup.from).toBe('eventoccurrences');
+      expect(rsvpLookup.$lookup.from).toBe('eventoccurrenceparticipants');
+      expect(rsvpLookup.$lookup.pipeline[0].$match.status.$in).toEqual(
+        expect.arrayContaining(['Going', 'Interested', 'CheckedIn']),
       );
     });
 

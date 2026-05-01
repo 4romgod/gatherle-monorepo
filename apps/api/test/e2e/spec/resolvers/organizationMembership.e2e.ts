@@ -19,6 +19,7 @@ describe('OrganizationMembership Resolver', () => {
   let testUser2: UserWithToken;
   const createdMembershipIds: string[] = [];
   const createdOrgIds: string[] = [];
+  const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const createOrganization = (name: string) =>
     createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
@@ -61,7 +62,7 @@ describe('OrganizationMembership Resolver', () => {
 
   describe('Positive', () => {
     it('creates a membership successfully', async () => {
-      const organization = await createOrganization('Membership Org');
+      const organization = await createOrganization(`Membership Org ${uniqueSuffix()}`);
       const membership = await createMembership(organization.orgId, testUser2.userId);
 
       expect(membership).toHaveProperty('membershipId');
@@ -69,7 +70,7 @@ describe('OrganizationMembership Resolver', () => {
     });
 
     it('updates a membership role', async () => {
-      const organization = await createOrganization('Membership Update Org');
+      const organization = await createOrganization(`Membership Update Org ${uniqueSuffix()}`);
       const membership = await createMembership(organization.orgId, testUser2.userId);
 
       const updateResponse = await request(url)
@@ -87,7 +88,7 @@ describe('OrganizationMembership Resolver', () => {
     });
 
     it('reads membership by id and org id', async () => {
-      const organization = await createOrganization('Membership Read Org');
+      const organization = await createOrganization(`Membership Read Org ${uniqueSuffix()}`);
       const membership = await createMembership(organization.orgId, testUser2.userId);
 
       const byIdResponse = await request(url)
@@ -108,7 +109,7 @@ describe('OrganizationMembership Resolver', () => {
     });
 
     it('deletes membership via mutation', async () => {
-      const organization = await createOrganization('Membership Delete Org');
+      const organization = await createOrganization(`Membership Delete Org ${uniqueSuffix()}`);
       const membership = await createMembership(organization.orgId, testUser2.userId);
 
       const response = await request(url)
@@ -124,7 +125,7 @@ describe('OrganizationMembership Resolver', () => {
 
   describe('Negative', () => {
     it('requires admin token to create membership', async () => {
-      const organization = await createOrganization('Membership Unauthorized Org');
+      const organization = await createOrganization(`Membership Unauthorized Org ${uniqueSuffix()}`);
 
       const response = await request(url)
         .post('')

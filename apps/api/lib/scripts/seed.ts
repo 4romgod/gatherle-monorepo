@@ -3,12 +3,13 @@ import {
   ActivityDAO,
   EventCategoryDAO,
   EventCategoryGroupDAO,
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
   EventSeriesDAO,
   FollowDAO,
   OrganizationDAO,
   OrganizationMembershipDAO,
   UserDAO,
-  EventSeriesParticipantDAO,
   VenueDAO,
 } from '@/mongodb/dao';
 import {
@@ -635,7 +636,21 @@ async function main() {
         await Promise.all(
           batch.map(async (input) => {
             try {
-              await EventSeriesParticipantDAO.upsert(input);
+              const occurrence = await EventOccurrenceDAO.readFirstByEventSeriesId(input.eventId);
+              if (!occurrence) {
+                logger.warn('Skipping seeded RSVP because no occurrence exists for event series', {
+                  eventId: input.eventId,
+                  userId: input.userId,
+                });
+                return;
+              }
+
+              await EventOccurrenceParticipantDAO.upsert({
+                occurrenceId: occurrence.occurrenceId,
+                userId: input.userId,
+                status: input.status,
+                sharedVisibility: input.sharedVisibility,
+              });
             } catch (error) {
               logger.warn('Failed to upsert event participant during seed', {
                 eventId: input.eventId,

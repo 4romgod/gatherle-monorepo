@@ -28,6 +28,46 @@ class EventOccurrenceDAO {
     }
   }
 
+  static async readByEventSeriesId(eventSeriesId: string): Promise<EventOccurrence[]> {
+    try {
+      return await EventOccurrenceModel.find({ eventSeriesId })
+        .sort({ originalStartAt: 1, occurrenceKey: 1 })
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading event occurrences by eventSeriesId', { error, eventSeriesId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readByEventSeriesIds(eventSeriesIds: string[]): Promise<EventOccurrence[]> {
+    if (eventSeriesIds.length === 0) {
+      return [];
+    }
+
+    try {
+      return await EventOccurrenceModel.find({ eventSeriesId: { $in: eventSeriesIds } })
+        .sort({ eventSeriesId: 1, originalStartAt: 1, occurrenceKey: 1 })
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading event occurrences by eventSeriesIds', { error, eventSeriesIds });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readFirstByEventSeriesId(eventSeriesId: string): Promise<EventOccurrence | null> {
+    try {
+      return await EventOccurrenceModel.findOne({ eventSeriesId })
+        .sort({ originalStartAt: 1, occurrenceKey: 1 })
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading first event occurrence by eventSeriesId', { error, eventSeriesId });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async bulkUpsert(occurrences: EventOccurrence[]): Promise<void> {
     if (occurrences.length === 0) {
       return;

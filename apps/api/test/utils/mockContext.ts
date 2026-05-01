@@ -9,7 +9,7 @@ import type {
   EventOccurrenceParticipant,
 } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
-import { getActiveOccurrenceRsvpCountContribution } from '@/utils';
+import { getActiveOccurrenceRsvpCountContribution, pickRepresentativeOccurrence } from '@/utils';
 
 /**
  * Creates a mock ServerContext with loaders for testing.
@@ -53,6 +53,16 @@ export const createMockContext = (
 
   const eventOccurrenceLoader = new DataLoader<string, EventOccurrence | null>(async (keys) => {
     return keys.map((key) => mockData?.occurrences?.get(key) ?? null);
+  });
+
+  const eventOccurrenceByEventSeriesLoader = new DataLoader<string, EventOccurrence | null>(async (eventSeriesIds) => {
+    return eventSeriesIds.map((eventSeriesId) => {
+      const occurrences = [...(mockData?.occurrences?.values() ?? [])].filter(
+        (occurrence) => occurrence.eventSeriesId === eventSeriesId,
+      );
+
+      return pickRepresentativeOccurrence(occurrences);
+    });
   });
 
   const eventSeriesParticipantLoader = new DataLoader<string, any>(async (keys) => {
@@ -118,6 +128,7 @@ export const createMockContext = (
       eventCategoryInterestCount: eventCategoryInterestCountLoader,
       eventSeries: eventSeriesLoader,
       eventOccurrence: eventOccurrenceLoader,
+      eventOccurrenceByEventSeries: eventOccurrenceByEventSeriesLoader,
       organization: organizationLoader,
       eventSeriesParticipant: eventSeriesParticipantLoader,
       eventSeriesParticipantsByEvent: eventParticipantsByEventLoader,

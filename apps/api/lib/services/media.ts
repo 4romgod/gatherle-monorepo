@@ -15,8 +15,9 @@ import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import type { EventSeries, MediaUploadUrl } from '@gatherle/commons/types';
 import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
-import { EventSeriesDAO, EventSeriesParticipantDAO, EventMomentDAO } from '@/mongodb/dao';
+import { EventMomentDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
+import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
 
@@ -114,8 +115,18 @@ class MediaService {
       throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
     }
 
+    if (EventOccurrenceService.isRecurringSeries(event)) {
+      throw CustomError(
+        'Event moment uploads for recurring event series require occurrence targeting and are not supported in this phase.',
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+
     // 2. Caller must have an active Going or CheckedIn RSVP.
-    const participant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
+    const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(eventId);
+    const participant = occurrence
+      ? await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId)
+      : null;
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to upload a moment', ErrorTypes.UNAUTHORIZED);
     }

@@ -1,238 +1,219 @@
 import type {
+  CancelEventParticipantInput,
+  EventOccurrence,
+  EventOccurrenceParticipant,
+  EventSeries,
   EventSeriesParticipant,
   UpsertEventParticipantInput,
-  CancelEventParticipantInput,
-  EventSeries,
-  User,
 } from '@gatherle/commons/types';
-import { ParticipantStatus, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
-import { EventSeriesParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
-import { logger } from '@/utils/logger';
-import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
-import NotificationService from './notification';
+import { ParticipantStatus } from '@gatherle/commons/types';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
+import {
+  CustomError,
+  ErrorTypes,
+  isOccurrenceUpcoming,
+  projectOccurrenceParticipantToSeriesParticipant,
+  sumActiveOccurrenceRsvpCount,
+} from '@/utils';
+import EventOccurrenceParticipantService from './eventOccurrenceParticipant';
+import EventOccurrenceService from './eventOccurrence';
 
-/**
- * Extract user ID from an organizer entry (handles both populated User and string reference)
- */
-function extractUserId(user: unknown): string | null {
-  if (!user) return null;
-  if (typeof user === 'string') return user;
-  return (user as any).userId || (user as any)._id?.toString() || null;
-}
-
-/**
- * Get all organizer user IDs from an event (Host, CoHost, and any other organizer roles)
- * All organizers receive notifications about event activity (RSVPs, check-ins, etc.)
- */
-function getEventOrganizerIds(event: EventSeries): string[] {
-  if (!event.organizers || event.organizers.length === 0) {
-    return [];
-  }
-
-  return event.organizers.map((org) => extractUserId(org.user)).filter((id): id is string => id !== null);
-}
-
-function toIsoDateString(value?: Date | string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  return new Date(value).toISOString();
-}
-
-/**
- * Service for managing event participation with notification integration
- */
 class EventSeriesParticipantService {
-  private static toEventRsvpRealtimeSnapshot(
-    participant: EventSeriesParticipant,
-    user: Pick<User, 'userId' | 'username' | 'given_name' | 'family_name' | 'profile_picture'>,
-  ): EventRsvpRealtimeSnapshot {
-    return {
-      participantId: participant.participantId,
-      eventId: participant.eventId,
-      userId: participant.userId,
-      status: participant.status,
-      quantity: participant.quantity ?? null,
-      sharedVisibility: participant.sharedVisibility ?? null,
-      rsvpAt: toIsoDateString(participant.rsvpAt),
-      cancelledAt: toIsoDateString(participant.cancelledAt),
-      checkedInAt: toIsoDateString(participant.checkedInAt),
-      user: {
-        userId: user.userId,
-        username: user.username,
-        given_name: user.given_name,
-        family_name: user.family_name,
-        profile_picture: user.profile_picture ?? null,
-      },
-    };
-  }
-
-  private static async publishRsvpUpdatedRealtime(
-    participant: EventSeriesParticipant,
-    previousStatus: ParticipantStatus | null,
-  ): Promise<void> {
-    const [event, actor, participants, rsvpCount] = await Promise.all([
-      EventSeriesDAO.readEventById(participant.eventId),
-      UserDAO.readUserById(participant.userId),
-      EventSeriesParticipantDAO.readByEvent(participant.eventId),
-      EventSeriesParticipantDAO.countByEvent(participant.eventId, [
-        ParticipantStatus.Going,
-        ParticipantStatus.Interested,
-      ]),
-    ]);
-
-    const organizerIds = getEventOrganizerIds(event);
-    const participantUserIds = participants.map((eventParticipant) => eventParticipant.userId);
-    const recipientUserIds = [...new Set([...organizerIds, ...participantUserIds, participant.userId])];
-
-    if (recipientUserIds.length === 0) {
-      return;
-    }
-
-    await publishEventRsvpUpdated(recipientUserIds, {
-      participant: this.toEventRsvpRealtimeSnapshot(participant, actor),
-      previousStatus,
-      rsvpCount,
-    });
-  }
-
-  /**
-   * RSVP to an event (create or update participation)
-   * Sends EVENT_RSVP notification to event owner when user RSVPs as Going
-   */
-  static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant> {
-    const { eventId, userId, status = ParticipantStatus.Going } = input;
-
-    // Check if this is a new RSVP or an update
-    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
-    const isNewRsvp = !existingParticipant;
-    const wasNotGoing =
-      existingParticipant &&
-      existingParticipant.status !== ParticipantStatus.Going &&
-      existingParticipant.status !== ParticipantStatus.CheckedIn;
-
-    const participant = await EventSeriesParticipantDAO.upsert(input);
-
-    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
-      logger.warn('Failed to publish RSVP realtime update', {
-        error,
-        eventId,
-        userId,
-        status: participant.status,
-      });
-    });
-
-    // Send notification if this is a new RSVP or user changed to Going status
-    if ((isNewRsvp || wasNotGoing) && (status === ParticipantStatus.Going || status === ParticipantStatus.Interested)) {
-      this.sendRsvpNotification(eventId, userId, status).catch((err) => {
-        logger.error('Failed to send RSVP notification', err);
-      });
-    }
-
-    return participant;
-  }
-
-  /**
-   * Cancel RSVP for an event
-   * No notification sent for cancellations (by design - avoid negative notifications)
-   */
-  static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant> {
-    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(input.eventId, input.userId);
-    const participant = await EventSeriesParticipantDAO.cancel(input);
-
-    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
-      logger.warn('Failed to publish RSVP cancellation realtime update', {
-        error,
-        eventId: input.eventId,
-        userId: input.userId,
-      });
-    });
-
-    return participant;
-  }
-
-  /**
-   * Check in to an event
-   * Sends EVENT_CHECKIN notification to event owner
-   */
-  static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant> {
-    const existingParticipant = await EventSeriesParticipantDAO.readByEventAndUser(eventId, userId);
-    const participant = await EventSeriesParticipantDAO.upsert({
-      eventId,
-      userId,
-      status: ParticipantStatus.CheckedIn,
-    });
-
-    this.publishRsvpUpdatedRealtime(participant, existingParticipant?.status ?? null).catch((error) => {
-      logger.warn('Failed to publish RSVP check-in realtime update', {
-        error,
-        eventId,
-        userId,
-      });
-    });
-
-    // Send check-in notification to event owner
-    this.sendCheckInNotification(eventId, userId).catch((err) => {
-      logger.error('Failed to send check-in notification', err);
-    });
-
-    return participant;
-  }
-
-  /**
-   * Send RSVP notification to all event organizers (Host, CoHosts, etc.)
-   */
-  private static async sendRsvpNotification(
+  private static async loadRepresentativeOccurrenceContext(
     eventId: string,
-    actorUserId: string,
-    status: ParticipantStatus,
-  ): Promise<void> {
-    try {
-      const event = await EventSeriesDAO.readEventById(eventId);
-      const organizerIds = getEventOrganizerIds(event);
-
-      // Don't notify if no organizers found
-      if (organizerIds.length === 0) {
-        return;
-      }
-
-      // notifyMany automatically filters out the actor from recipients
-      await NotificationService.notifyMany(organizerIds, {
-        type: NotificationType.EVENT_RSVP,
-        actorUserId,
-        targetType: NotificationTargetType.EventSeries,
-        targetSlug: event.slug,
-        rsvpStatus: status,
-      });
-    } catch (error) {
-      logger.error('Error sending RSVP notification', { error });
+  ): Promise<{ eventSeries: EventSeries; occurrence: EventOccurrence }> {
+    const eventSeries = await EventSeriesDAO.readEventById(eventId);
+    const occurrence = await EventOccurrenceService.readRepresentativeOccurrenceForSeries(eventId);
+    if (!occurrence) {
+      throw CustomError(`Representative occurrence not found for event series ${eventId}`, ErrorTypes.NOT_FOUND);
     }
+
+    return { eventSeries, occurrence };
   }
 
-  /**
-   * Send check-in notification to all event organizers (Host, CoHosts, etc.)
-   */
-  private static async sendCheckInNotification(eventId: string, actorUserId: string): Promise<void> {
-    try {
-      const event = await EventSeriesDAO.readEventById(eventId);
-      const organizerIds = getEventOrganizerIds(event);
+  private static chooseRepresentativeParticipant<
+    T extends {
+      participantId: string;
+      occurrenceId: string;
+      status: string;
+    },
+  >(participants: T[], occurrencesById: Map<string, EventOccurrence>, now: Date): T | null {
+    if (participants.length === 0) {
+      return null;
+    }
 
-      // Don't notify if no organizers found
-      if (organizerIds.length === 0) {
-        return;
+    const participantPriority = (participant: T) => {
+      const occurrence = occurrencesById.get(participant.occurrenceId);
+      if (!occurrence) {
+        return [4, Number.MAX_SAFE_INTEGER] as const;
       }
 
-      // notifyMany automatically filters out the actor from recipients
-      await NotificationService.notifyMany(organizerIds, {
-        type: NotificationType.EVENT_CHECKIN,
-        actorUserId,
-        targetType: NotificationTargetType.EventSeries,
-        targetSlug: event.slug,
-      });
-    } catch (error) {
-      logger.error('Error sending check-in notification', { error });
+      const upcoming = isOccurrenceUpcoming(occurrence, now);
+      const cancelled = participant.status === ParticipantStatus.Cancelled;
+      if (!cancelled && upcoming) {
+        return [0, occurrence.startAt.getTime()] as const;
+      }
+
+      if (!cancelled) {
+        return [1, -occurrence.startAt.getTime()] as const;
+      }
+
+      return upcoming ? ([2, occurrence.startAt.getTime()] as const) : ([3, -occurrence.startAt.getTime()] as const);
+    };
+
+    return [...participants].sort((left, right) => {
+      const [leftBucket, leftValue] = participantPriority(left);
+      const [rightBucket, rightValue] = participantPriority(right);
+      if (leftBucket !== rightBucket) {
+        return leftBucket - rightBucket;
+      }
+      if (leftValue !== rightValue) {
+        return leftValue - rightValue;
+      }
+      return left.participantId.localeCompare(right.participantId);
+    })[0];
+  }
+
+  private static toSeriesParticipant(
+    eventId: string,
+    participant: Parameters<typeof projectOccurrenceParticipantToSeriesParticipant>[1],
+    eventSeries?: EventSeries,
+  ): EventSeriesParticipant {
+    return projectOccurrenceParticipantToSeriesParticipant(eventId, participant, eventSeries);
+  }
+
+  static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant> {
+    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(input.eventId);
+    const participant = await EventOccurrenceParticipantService.rsvp(
+      {
+        occurrenceId: occurrence.occurrenceId,
+        status: input.status,
+        quantity: input.quantity,
+        invitedBy: input.invitedBy,
+        sharedVisibility: input.sharedVisibility,
+      },
+      input.userId,
+    );
+
+    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+  }
+
+  static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant> {
+    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(input.eventId);
+    const participant = await EventOccurrenceParticipantService.cancel(occurrence.occurrenceId, input.userId);
+    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+  }
+
+  static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant> {
+    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const participant = await EventOccurrenceParticipantService.checkIn(occurrence.occurrenceId, userId);
+    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+  }
+
+  static async readByEvent(eventId: string): Promise<EventSeriesParticipant[]> {
+    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const participants = await EventOccurrenceParticipantDAO.readByOccurrence(occurrence.occurrenceId);
+    return participants.map((participant) => this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries));
+  }
+
+  static async readByEventAndUser(eventId: string, userId: string): Promise<EventSeriesParticipant | null> {
+    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId);
+    return participant ? this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries) : null;
+  }
+
+  static async readByUser(userId: string, activeOnly = true): Promise<EventSeriesParticipant[]> {
+    const now = new Date();
+    const occurrenceParticipants = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
+    if (occurrenceParticipants.length === 0) {
+      return [];
     }
+
+    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds(
+      occurrenceParticipants.map((participant) => participant.occurrenceId),
+    );
+    if (occurrences.length === 0) {
+      return [];
+    }
+
+    const occurrencesById = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    const uniqueEventSeriesIds = [...new Set(occurrences.map((occurrence) => occurrence.eventSeriesId))];
+    const eventSeriesList = await Promise.all(
+      uniqueEventSeriesIds.map(async (eventSeriesId) => EventSeriesDAO.readEventById(eventSeriesId)),
+    );
+    const eventSeriesById = new Map(eventSeriesList.map((eventSeries) => [eventSeries.eventId, eventSeries]));
+    const participantsByEventSeriesId = new Map<string, EventOccurrenceParticipant[]>();
+
+    for (const participant of occurrenceParticipants) {
+      const occurrence = occurrencesById.get(participant.occurrenceId);
+      if (!occurrence) {
+        continue;
+      }
+
+      const seriesParticipants = participantsByEventSeriesId.get(occurrence.eventSeriesId) ?? [];
+      seriesParticipants.push(participant);
+      participantsByEventSeriesId.set(occurrence.eventSeriesId, seriesParticipants);
+    }
+
+    const representativeParticipants = [...participantsByEventSeriesId.entries()]
+      .map(([eventSeriesId, participants]) => {
+        const eventSeries = eventSeriesById.get(eventSeriesId);
+        if (!eventSeries) {
+          return null;
+        }
+
+        const participant = this.chooseRepresentativeParticipant(participants, occurrencesById, now);
+        if (!participant) {
+          return null;
+        }
+
+        const occurrence = occurrencesById.get(participant.occurrenceId);
+        if (!occurrence) {
+          return null;
+        }
+
+        return { eventSeries, occurrence, participant };
+      })
+      .filter(
+        (
+          value,
+        ): value is {
+          eventSeries: EventSeries;
+          occurrence: EventOccurrence;
+          participant: EventOccurrenceParticipant;
+        } => Boolean(value),
+      );
+
+    if (representativeParticipants.length === 0) {
+      return [];
+    }
+
+    const occurrenceParticipantsByOccurrenceId = new Map<string, EventOccurrenceParticipant[]>();
+    const representativeOccurrenceParticipants = await EventOccurrenceParticipantDAO.readByOccurrences(
+      representativeParticipants.map(({ occurrence }) => occurrence.occurrenceId),
+    );
+
+    for (const occurrenceParticipant of representativeOccurrenceParticipants) {
+      const occurrenceEntries = occurrenceParticipantsByOccurrenceId.get(occurrenceParticipant.occurrenceId) ?? [];
+      occurrenceEntries.push(occurrenceParticipant);
+      occurrenceParticipantsByOccurrenceId.set(occurrenceParticipant.occurrenceId, occurrenceEntries);
+    }
+
+    return representativeParticipants.map(({ eventSeries, occurrence, participant }) => {
+      const occurrenceParticipants = occurrenceParticipantsByOccurrenceId.get(occurrence.occurrenceId) ?? [];
+      const eventWithOccurrenceSnapshot = {
+        ...eventSeries,
+        participants: occurrenceParticipants.map((occurrenceParticipant) =>
+          this.toSeriesParticipant(eventSeries.eventId, occurrenceParticipant),
+        ),
+        rsvpCount: sumActiveOccurrenceRsvpCount(occurrenceParticipants),
+      } as EventSeries & { myRsvp?: EventSeriesParticipant | null };
+
+      const seriesParticipant = this.toSeriesParticipant(eventSeries.eventId, participant, eventWithOccurrenceSnapshot);
+      eventWithOccurrenceSnapshot.myRsvp = this.toSeriesParticipant(eventSeries.eventId, participant);
+
+      return seriesParticipant;
+    });
   }
 }
 

@@ -51,8 +51,11 @@ jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
     readEventById: jest.fn(),
   },
-  EventSeriesParticipantDAO: {
-    readByEventAndUser: jest.fn(),
+  EventOccurrenceDAO: {
+    readFirstByEventSeriesId: jest.fn(),
+  },
+  EventOccurrenceParticipantDAO: {
+    readByOccurrenceAndUser: jest.fn(),
   },
   FollowDAO: {
     readFollowingForUser: jest.fn(),
@@ -83,7 +86,14 @@ jest.mock('@/clients/AWS/s3Client', () => ({
 }));
 
 import EventMomentService from '@/services/eventMoment';
-import { EventMomentDAO, EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import {
+  EventMomentDAO,
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  FollowDAO,
+  UserDAO,
+} from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
@@ -139,9 +149,14 @@ describe('EventMomentService', () => {
 
   const mockGoingParticipant = {
     participantId: 'p-1',
-    eventId: 'event-1',
+    occurrenceId: 'event-1#2099-01-01T00:00:00.000Z',
     userId: 'user-1',
     status: ParticipantStatus.Going,
+  };
+
+  const mockOccurrence = {
+    occurrenceId: 'event-1#2099-01-01T00:00:00.000Z',
+    eventSeriesId: 'event-1',
   };
 
   afterEach(() => {
@@ -150,7 +165,8 @@ describe('EventMomentService', () => {
 
   beforeEach(() => {
     (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
+    (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(mockOccurrence);
+    (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
     (EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (EventMomentDAO.create as jest.Mock).mockResolvedValue(mockMoment);
     (EventMomentDAO.readById as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
@@ -390,7 +406,7 @@ describe('EventMomentService', () => {
     });
 
     it('allows a CheckedIn participant to post', async () => {
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue({
         ...mockGoingParticipant,
         status: ParticipantStatus.CheckedIn,
       });
@@ -420,7 +436,7 @@ describe('EventMomentService', () => {
     });
 
     it('throws BAD_USER_INPUT when caller has no RSVP', async () => {
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue(null);
+      (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(null);
 
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
         message: 'You must RSVP as Going or CheckedIn to post a moment',
@@ -428,7 +444,7 @@ describe('EventMomentService', () => {
     });
 
     it('throws BAD_USER_INPUT when RSVP status is Interested', async () => {
-      (EventSeriesParticipantDAO.readByEventAndUser as jest.Mock).mockResolvedValue({
+      (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue({
         ...mockGoingParticipant,
         status: ParticipantStatus.Interested,
       });
@@ -443,6 +459,22 @@ describe('EventMomentService', () => {
 
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
         message: expect.stringContaining('5 moments per event'),
+      });
+    });
+
+    it('rejects recurring event series until occurrence-targeted posting is supported', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        primarySchedule: {
+          startAt: futureEndDate,
+          endAt: futureEndDate,
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20990101T000000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+        },
+      });
+
+      await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
+        message: expect.stringContaining('requires occurrence targeting'),
       });
     });
   });

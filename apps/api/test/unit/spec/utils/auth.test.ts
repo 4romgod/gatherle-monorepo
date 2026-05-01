@@ -5,7 +5,7 @@ import type { User } from '@gatherle/commons/types';
 import { UserRole } from '@gatherle/commons/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
-import { EventSeriesDAO } from '@/mongodb/dao';
+import { EventOccurrenceParticipantDAO, EventSeriesDAO, EventSeriesParticipantDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import type { ArgsDictionary } from 'type-graphql';
 import type { GraphQLResolveInfo } from 'graphql';
@@ -207,6 +207,54 @@ describe('Auth Utilities', () => {
         ],
       });
       const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
+      expect(result).toBe(true);
+    });
+
+    it('authorizes event participant reads for event organizers', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'user-id', role: 'Host' }],
+      });
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
+        { eventId: 'event-id' },
+        mockUser,
+      );
+
+      expect(result).toBe(true);
+      expect(EventOccurrenceParticipantDAO.hasParticipantForEventSeries).not.toHaveBeenCalled();
+    });
+
+    it('authorizes event participant reads for occurrence participants linked to the series', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'another-id', role: 'Host' }],
+      });
+      (EventOccurrenceParticipantDAO.hasParticipantForEventSeries as jest.Mock).mockResolvedValue(true);
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
+        { eventId: 'event-id' },
+        mockUser,
+      );
+
+      expect(EventOccurrenceParticipantDAO.hasParticipantForEventSeries).toHaveBeenCalledWith('event-id', 'user-id');
+      expect(result).toBe(true);
+    });
+
+    it('falls back to legacy series participants when no occurrence participant exists', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        organizers: [{ user: 'another-id', role: 'Host' }],
+      });
+      (EventOccurrenceParticipantDAO.hasParticipantForEventSeries as jest.Mock).mockResolvedValue(false);
+      (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue([{ userId: 'user-id' }]);
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
+        { eventId: 'event-id' },
+        mockUser,
+      );
+
+      expect(EventSeriesParticipantDAO.readByEvent).toHaveBeenCalledWith('event-id');
       expect(result).toBe(true);
     });
   });

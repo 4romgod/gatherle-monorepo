@@ -30,9 +30,17 @@ class EventSeriesService {
   }
 
   private static normalizeEventCategoryIds(eventSeries: EventSeries): string[] {
-    return (eventSeries.eventCategories ?? []).map((category) =>
-      typeof category === 'string' ? category : category?._id?.toString() || category.toString(),
-    );
+    return (eventSeries.eventCategories ?? []).map((category) => {
+      if (typeof category === 'string') {
+        return category;
+      }
+
+      if (category && typeof category === 'object' && '_id' in category && category._id) {
+        return category._id.toString();
+      }
+
+      throw new Error('Unable to normalize event category reference.');
+    });
   }
 
   private static normalizeOrganizerUserId(organizer: EventOrganizer): string {
@@ -62,9 +70,9 @@ class EventSeriesService {
     eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
   ): Promise<void> {
     try {
-      await EventOccurrenceService.syncRecurringSeriesOccurrences(eventSeries);
+      await EventOccurrenceService.syncEventSeriesOccurrences(eventSeries);
     } catch (error) {
-      logger.error('[EventSeriesService] Failed to sync recurring event occurrences', {
+      logger.error('[EventSeriesService] Failed to sync event occurrences', {
         eventSeriesId: eventSeries.eventId,
         error,
       });

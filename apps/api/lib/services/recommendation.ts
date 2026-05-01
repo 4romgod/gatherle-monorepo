@@ -1,5 +1,12 @@
 import { FeedReason, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
-import { EventSeriesDAO, EventSeriesParticipantDAO, FollowDAO, UserDAO, UserFeedDAO } from '@/mongodb/dao';
+import {
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  FollowDAO,
+  UserDAO,
+  UserFeedDAO,
+} from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 
 const SCORE_WEIGHTS = {
@@ -36,18 +43,29 @@ class RecommendationService {
       logger.debug('[RecommendationService] Computing feed', { userId });
 
       // Parallelise all four independent queries to reduce round-trip latency.
-      const [user, activeParticipations, following, candidateEvents] = await Promise.all([
+      const [user, activeOccurrenceParticipations, following, candidateEvents] = await Promise.all([
         UserDAO.readUserById(userId),
-        EventSeriesParticipantDAO.readByUser(userId),
+        EventOccurrenceParticipantDAO.readByUser(userId),
         FollowDAO.readFollowingForUser(userId),
         EventSeriesDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS),
       ]);
+
+      const activeOccurrences = await EventOccurrenceDAO.readByOccurrenceIds(
+        activeOccurrenceParticipations.map((participation) => participation.occurrenceId),
+      );
+      const activeOccurrenceEventSeriesById = new Map(
+        activeOccurrences.map((occurrence) => [occurrence.occurrenceId, occurrence.eventSeriesId]),
+      );
 
       // user.interests stores Ref<EventCategory>[] which at runtime are string IDs
       const userInterests = new Set<string>((user.interests as unknown as string[]) ?? []);
       const mutedOrgIds = new Set(user.mutedOrgIds ?? []);
       const mutedUserIds = new Set(user.mutedUserIds ?? []);
-      const rsvpdEventIds = new Set(activeParticipations.map((p) => p.eventId));
+      const rsvpdEventIds = new Set(
+        activeOccurrenceParticipations
+          .map((participation) => activeOccurrenceEventSeriesById.get(participation.occurrenceId))
+          .filter((eventSeriesId): eventSeriesId is string => Boolean(eventSeriesId)),
+      );
 
       const followedUserIds = following
         .filter(
@@ -78,16 +96,32 @@ class RecommendationService {
       const friendSaveCountByEventId = new Map<string, number>();
 
       if (followedUserIds.length > 0) {
-        const [friendParticipations, friendSaves] = await Promise.all([
-          EventSeriesParticipantDAO.readByUserIds(followedUserIds),
+        const [friendOccurrenceParticipations, friendSaves] = await Promise.all([
+          EventOccurrenceParticipantDAO.readByUserIds(followedUserIds),
           FollowDAO.readSavedEventsByUserIds(followedUserIds),
         ]);
 
-        for (const participation of friendParticipations) {
-          friendRsvpCountByEventId.set(
-            participation.eventId,
-            (friendRsvpCountByEventId.get(participation.eventId) ?? 0) + 1,
-          );
+        const friendOccurrences = await EventOccurrenceDAO.readByOccurrenceIds(
+          friendOccurrenceParticipations.map((participation) => participation.occurrenceId),
+        );
+        const occurrenceEventSeriesById = new Map(
+          friendOccurrences.map((occurrence) => [occurrence.occurrenceId, occurrence.eventSeriesId]),
+        );
+        const seenFriendSeriesPairs = new Set<string>();
+
+        for (const participation of friendOccurrenceParticipations) {
+          const eventSeriesId = occurrenceEventSeriesById.get(participation.occurrenceId);
+          if (!eventSeriesId) {
+            continue;
+          }
+
+          const pairKey = `${participation.userId}#${eventSeriesId}`;
+          if (seenFriendSeriesPairs.has(pairKey)) {
+            continue;
+          }
+
+          seenFriendSeriesPairs.add(pairKey);
+          friendRsvpCountByEventId.set(eventSeriesId, (friendRsvpCountByEventId.get(eventSeriesId) ?? 0) + 1);
         }
 
         for (const save of friendSaves) {

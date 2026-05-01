@@ -1,4 +1,5 @@
 import DataLoader from 'dataloader';
+import EventOccurrenceService from '@/services/eventOccurrence';
 import { EventOccurrenceDAO } from '@/mongodb/dao';
 import type { EventOccurrence } from '@gatherle/commons/types';
 
@@ -10,4 +11,12 @@ export const createEventOccurrenceLoader = () =>
     );
 
     return occurrenceIds.map((occurrenceId) => occurrenceMap.get(occurrenceId) ?? null);
+  });
+
+export const createEventOccurrenceByEventSeriesLoader = () =>
+  new DataLoader<string, EventOccurrence | null>(async (eventSeriesIds) => {
+    const representativeOccurrences = await EventOccurrenceService.readRepresentativeOccurrencesForSeriesIds([
+      ...eventSeriesIds,
+    ]);
+    return eventSeriesIds.map((eventSeriesId) => representativeOccurrences.get(eventSeriesId) ?? null);
   });

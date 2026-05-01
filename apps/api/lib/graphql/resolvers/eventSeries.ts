@@ -14,7 +14,6 @@ import {
   EventOccurrence,
   EventOrganizer,
   EventSeriesParticipant,
-  ParticipantStatus,
   Organization,
   OrganizationRole,
   EventLifecycleStatus,
@@ -28,7 +27,7 @@ import {
   UpdateEventOccurrenceInputSchema,
 } from '@/validation/zod';
 import { EVENT_DESCRIPTIONS, HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
-import { EventSeriesDAO, FollowDAO, EventSeriesParticipantDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { EventSeriesDAO, FollowDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
 import { getAuthenticatedUser } from '@/utils/auth';
@@ -36,9 +35,16 @@ import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import EventSeriesService from '@/services/eventSeries';
 import EventOccurrenceService from '@/services/eventOccurrence';
-import { sanitizeQueryLimit } from '@/utils';
+import {
+  buildMyEventOccurrenceParticipantLoadKey,
+  projectOccurrenceParticipantToSeriesParticipant,
+  sanitizeQueryLimit,
+} from '@/utils';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
+type EventSeriesWithPreloadedMyRsvp = EventSeries & { myRsvp?: EventSeriesParticipant | null };
+
+const hasPreloadedMyRsvp = (event: EventSeries): event is EventSeriesWithPreloadedMyRsvp => 'myRsvp' in event;
 
 @Resolver(() => EventSeries)
 export class EventSeriesResolver {
@@ -247,15 +253,15 @@ export class EventSeriesResolver {
 
   /**
    * Field resolver to get participants for this event.
-   * If already populated via aggregation pipeline, returns as-is.
-   * Otherwise fetches from EventSeriesParticipant collection (fallback for mutations).
+   * If already populated on the root object, returns as-is.
+   * Otherwise resolves the representative occurrence for the series and projects
+   * occurrence participants back into the legacy EventSeriesParticipant shape.
    */
   @FieldResolver(() => [EventSeriesParticipant], {
     nullable: true,
     description: "Participants who have RSVP'd to this event",
   })
   async participants(@Root() event: EventSeries, @Ctx() context: ServerContext): Promise<EventSeriesParticipant[]> {
-    // If already populated (from aggregation pipeline), return as-is
     if (event.participants && Array.isArray(event.participants) && event.participants.length > 0) {
       const first = event.participants[0];
       if (typeof first === 'object' && first !== null && 'participantId' in first) {
@@ -263,16 +269,24 @@ export class EventSeriesResolver {
       }
     }
 
-    // Use DataLoader to batch all event participant loads for this request
-    const participants = await context.loaders.eventSeriesParticipantsByEvent.load(event.eventId);
+    const occurrence = await context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+    if (!occurrence) {
+      return [];
+    }
 
-    // Enrich with user data via DataLoader (batched per participant)
-    const userIds = participants.map((p) => p.userId);
-    const users = await Promise.all(userIds.map((id) => context.loaders.user.load(id)));
-    return participants.map((participant, i) => ({
-      ...participant,
-      user: users[i] || undefined,
-    })) as EventSeriesParticipant[];
+    const participants = await context.loaders.eventOccurrenceParticipantsByOccurrence.load(occurrence.occurrenceId);
+    const users = await Promise.all(participants.map((participant) => context.loaders.user.load(participant.userId)));
+
+    return participants.map((participant, index) =>
+      projectOccurrenceParticipantToSeriesParticipant(
+        event.eventId,
+        {
+          ...participant,
+          user: users[index] ?? undefined,
+        },
+        event,
+      ),
+    );
   }
 
   /**
@@ -301,30 +315,49 @@ export class EventSeriesResolver {
 
   /**
    * Field resolver to get the count of RSVPs for this event.
-   * By default counts Going and Interested statuses (excludes Cancelled).
+   * Uses a pipeline-supplied count when present; otherwise counts RSVPs on the
+   * representative occurrence for the series.
    */
   @FieldResolver(() => Int, { description: "Number of people who have RSVP'd to this event" })
-  async rsvpCount(@Root() event: EventSeries): Promise<number> {
+  async rsvpCount(@Root() event: EventSeries, @Ctx() context: ServerContext): Promise<number> {
     if (typeof event.rsvpCount === 'number') {
       return event.rsvpCount;
     }
 
-    return EventSeriesParticipantDAO.countByEvent(event.eventId, [
-      ParticipantStatus.Going,
-      ParticipantStatus.Interested,
-    ]);
+    const occurrence = await context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+    if (!occurrence) {
+      return 0;
+    }
+
+    return context.loaders.eventOccurrenceParticipantCountByOccurrence.load(occurrence.occurrenceId);
   }
 
   /**
    * Field resolver to get the current user's RSVP status for this event.
-   * Returns null if user is not authenticated or has not RSVP'd.
+   * Returns null if user is not authenticated or has not RSVP'd to the
+   * representative occurrence for this series.
    */
   @FieldResolver(() => EventSeriesParticipant, { nullable: true, description: "Current user's RSVP for this event" })
   async myRsvp(@Root() event: EventSeries, @Ctx() context: ServerContext): Promise<EventSeriesParticipant | null> {
     if (!context.user?.userId) {
       return null;
     }
-    return EventSeriesParticipantDAO.readByEventAndUser(event.eventId, context.user.userId);
+
+    const preloadedMyRsvp = hasPreloadedMyRsvp(event) ? event.myRsvp : undefined;
+    if (preloadedMyRsvp && typeof preloadedMyRsvp === 'object' && 'participantId' in preloadedMyRsvp) {
+      return preloadedMyRsvp;
+    }
+
+    const occurrence = await context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+    if (!occurrence) {
+      return null;
+    }
+
+    const participant = await context.loaders.myEventOccurrenceParticipant.load(
+      buildMyEventOccurrenceParticipantLoadKey(occurrence.occurrenceId, context.user.userId),
+    );
+
+    return participant ? projectOccurrenceParticipantToSeriesParticipant(event.eventId, participant, event) : null;
   }
 
   @FieldResolver(() => [EventOccurrence], {

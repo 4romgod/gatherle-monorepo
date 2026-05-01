@@ -8,6 +8,7 @@ jest.mock('@/mongodb/models', () => ({
   EventOccurrenceParticipant: {
     findOne: jest.fn(),
     find: jest.fn(),
+    aggregate: jest.fn(),
     create: jest.fn(),
     findOneAndUpdate: jest.fn(),
     updateMany: jest.fn(),
@@ -356,6 +357,137 @@ describe('EventOccurrenceParticipantDAO', () => {
       await expect(
         EventOccurrenceParticipantDAO.readByOccurrencesAndUser([participant.occurrenceId], participant.userId),
       ).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('hasParticipantForEventSeries', () => {
+    it('returns true when one participant row is linked to the series', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ _id: 'participant-1' }]),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.hasParticipantForEventSeries('series-1', 'user-1');
+
+      expect(EventOccurrenceParticipantModel.aggregate).toHaveBeenCalledWith([
+        {
+          $match: {
+            userId: 'user-1',
+          },
+        },
+        {
+          $lookup: {
+            from: 'eventoccurrences',
+            localField: 'occurrenceId',
+            foreignField: 'occurrenceId',
+            as: 'occurrence',
+          },
+        },
+        {
+          $match: {
+            'occurrence.eventSeriesId': 'series-1',
+          },
+        },
+        { $limit: 1 },
+        { $project: { _id: 1 } },
+      ]);
+      expect(result).toBe(true);
+    });
+
+    it('returns false when no linked participant exists for the series', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      const result = await EventOccurrenceParticipantDAO.hasParticipantForEventSeries('series-1', 'user-1');
+
+      expect(result).toBe(false);
+    });
+
+    it('wraps lookup failures', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.hasParticipantForEventSeries('series-1', 'user-1')).rejects.toThrow(
+        GraphQLError,
+      );
+    });
+  });
+
+  describe('readByUser', () => {
+    it('reads active occurrence participants for a user by default', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => participant }], FIND_CHAIN_METHODS),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.readByUser(participant.userId);
+
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
+        userId: participant.userId,
+        status: { $ne: ParticipantStatus.Cancelled },
+      });
+      expect(result).toEqual([participant]);
+    });
+
+    it('includes cancelled participants when activeOnly is false', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => participant }], FIND_CHAIN_METHODS),
+      );
+
+      await EventOccurrenceParticipantDAO.readByUser(participant.userId, false);
+
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
+        userId: participant.userId,
+      });
+    });
+
+    it('wraps readByUser failures', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), FIND_CHAIN_METHODS),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.readByUser(participant.userId)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByUserIds', () => {
+    it('returns early when no user IDs are provided', async () => {
+      const result = await EventOccurrenceParticipantDAO.readByUserIds([]);
+
+      expect(result).toEqual([]);
+      expect(EventOccurrenceParticipantModel.find).not.toHaveBeenCalled();
+    });
+
+    it('reads active occurrence participants for multiple users by default', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => participant }], FIND_CHAIN_METHODS),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.readByUserIds([participant.userId, 'user-2']);
+
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
+        userId: { $in: [participant.userId, 'user-2'] },
+        status: { $ne: ParticipantStatus.Cancelled },
+      });
+      expect(result).toEqual([participant]);
+    });
+
+    it('includes cancelled rows when activeOnly is false', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ toObject: () => participant }], FIND_CHAIN_METHODS),
+      );
+
+      await EventOccurrenceParticipantDAO.readByUserIds([participant.userId], false);
+
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
+        userId: { $in: [participant.userId] },
+      });
+    });
+
+    it('wraps readByUserIds failures', async () => {
+      (EventOccurrenceParticipantModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), FIND_CHAIN_METHODS),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.readByUserIds([participant.userId])).rejects.toThrow(GraphQLError);
     });
   });
 

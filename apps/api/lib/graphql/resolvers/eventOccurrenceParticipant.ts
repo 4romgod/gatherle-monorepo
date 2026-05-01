@@ -9,16 +9,11 @@ import {
   UpsertEventOccurrenceParticipantInput,
 } from '@gatherle/commons/types';
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
-import { EventOccurrenceDAO, EventSeriesParticipantDAO, UserFeedDAO } from '@/mongodb/dao';
+import { EventOccurrenceDAO, UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
-import { EventOccurrenceParticipantService, EventOccurrenceService, RecommendationService } from '@/services';
+import { EventOccurrenceParticipantService, RecommendationService } from '@/services';
 import { getAuthenticatedUser } from '@/utils/auth';
-import {
-  buildMyEventOccurrenceParticipantLoadKey,
-  CustomError,
-  ErrorTypes,
-  projectSeriesParticipantToOccurrenceParticipant,
-} from '@/utils';
+import { buildMyEventOccurrenceParticipantLoadKey, CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 
 function validateOccurrenceId(occurrenceId: string): void {
@@ -103,34 +98,6 @@ export class EventOccurrenceParticipantResolver {
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrenceParticipant[]> {
     validateOccurrenceId(occurrenceId);
-    const occurrence = await EventOccurrenceService.readOccurrenceById(occurrenceId);
-    if (!occurrence) {
-      return [];
-    }
-
-    const eventSeries = await context.loaders.eventSeries.load(occurrence.eventSeriesId);
-    if (!eventSeries) {
-      return [];
-    }
-
-    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
-      const seriesParticipants = await context.loaders.eventSeriesParticipantsByEvent.load(eventSeries.eventId);
-      const users = await Promise.all(
-        seriesParticipants.map((participant) => context.loaders.user.load(participant.userId)),
-      );
-
-      return seriesParticipants.map((participant, index) =>
-        projectSeriesParticipantToOccurrenceParticipant(
-          occurrence.occurrenceId,
-          {
-            ...participant,
-            user: users[index] ?? undefined,
-          },
-          occurrence,
-        ),
-      );
-    }
-
     const participants = await context.loaders.eventOccurrenceParticipantsByOccurrence.load(occurrenceId);
     const users = await Promise.all(participants.map((participant) => context.loaders.user.load(participant.userId)));
 
@@ -151,27 +118,9 @@ export class EventOccurrenceParticipantResolver {
   ): Promise<EventOccurrenceParticipant | null> {
     validateOccurrenceId(occurrenceId);
     const user = getAuthenticatedUser(context);
-    const occurrence = await EventOccurrenceService.readOccurrenceById(occurrenceId);
-    if (!occurrence) {
-      return null;
-    }
-
-    const eventSeries = await context.loaders.eventSeries.load(occurrence.eventSeriesId);
-    if (!eventSeries) {
-      return null;
-    }
-
-    if (!EventOccurrenceService.isRecurringSeries(eventSeries)) {
-      const participant = await EventSeriesParticipantDAO.readByEventAndUser(eventSeries.eventId, user.userId);
-      return participant
-        ? projectSeriesParticipantToOccurrenceParticipant(occurrence.occurrenceId, participant, occurrence)
-        : null;
-    }
-
-    const participant = await context.loaders.myEventOccurrenceParticipant.load(
+    return context.loaders.myEventOccurrenceParticipant.load(
       buildMyEventOccurrenceParticipantLoadKey(occurrenceId, user.userId),
     );
-    return participant;
   }
 
   @FieldResolver(() => User, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.USER })
@@ -195,11 +144,6 @@ export class EventOccurrenceParticipantResolver {
       return participant.occurrence;
     }
 
-    const persistedOccurrence = await context.loaders.eventOccurrence.load(participant.occurrenceId);
-    if (persistedOccurrence) {
-      return persistedOccurrence;
-    }
-
-    return EventOccurrenceService.readOccurrenceById(participant.occurrenceId);
+    return context.loaders.eventOccurrence.load(participant.occurrenceId);
   }
 }

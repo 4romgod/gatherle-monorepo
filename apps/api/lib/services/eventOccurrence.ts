@@ -1,5 +1,4 @@
 import { RRule } from 'rrule';
-import { GraphQLError } from 'graphql';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
   CustomError,
@@ -8,6 +7,7 @@ import {
   getOccurrencesInRange,
   getOccurrencesInRangeOrThrow,
   parseOccurrenceId,
+  pickRepresentativeOccurrence,
   splitRecurringRuleAtOccurrence,
 } from '@/utils';
 import type {
@@ -220,14 +220,7 @@ function paginateOccurrences(occurrences: EventOccurrence[], options?: EventsQue
   return occurrences.slice(skip ?? 0, (skip ?? 0) + limit);
 }
 
-function doesScheduleOverlapWindow(schedule: EventSchedule, startDate: Date, endDate: Date): boolean {
-  const scheduleStart = new Date(schedule.startAt);
-  const scheduleEnd = schedule.endAt ? new Date(schedule.endAt) : scheduleStart;
-
-  return scheduleStart.getTime() <= endDate.getTime() && scheduleEnd.getTime() >= startDate.getTime();
-}
-
-function projectSingleSeriesOccurrence(eventSeries: OccurrenceQuerySeries): EventOccurrence {
+function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): EventOccurrence {
   const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(
     eventSeries.eventId,
     eventSeries.primarySchedule.startAt,
@@ -267,6 +260,92 @@ function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean
 }
 
 class EventOccurrenceService {
+  private static groupOccurrencesBySeriesId(occurrences: EventOccurrence[]): Map<string, EventOccurrence[]> {
+    const occurrencesBySeriesId = new Map<string, EventOccurrence[]>();
+
+    for (const occurrence of occurrences) {
+      const seriesOccurrences = occurrencesBySeriesId.get(occurrence.eventSeriesId) ?? [];
+      seriesOccurrences.push(occurrence);
+      occurrencesBySeriesId.set(occurrence.eventSeriesId, seriesOccurrences);
+    }
+
+    return occurrencesBySeriesId;
+  }
+
+  private static async loadSeriesForOccurrenceBackfill(eventSeriesId: string): Promise<OccurrenceQuerySeries | null> {
+    try {
+      return (await EventSeriesDAO.readEventById(eventSeriesId)) as OccurrenceQuerySeries;
+    } catch (error) {
+      if (error instanceof Error && 'extensions' in error) {
+        const code = (error as Error & { extensions?: { code?: string } }).extensions?.code;
+        if (code === ErrorTypes.NOT_FOUND.errorCode) {
+          return null;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private static async ensureOccurrencesExistForSeries(
+    eventSeriesIds: string[],
+    preloadedSeriesById?: Map<string, OccurrenceQuerySeries>,
+  ): Promise<Map<string, EventOccurrence[]>> {
+    if (eventSeriesIds.length === 0) {
+      return new Map();
+    }
+
+    const uniqueSeriesIds = [...new Set(eventSeriesIds)];
+    const occurrencesBySeriesId = this.groupOccurrencesBySeriesId(
+      await EventOccurrenceDAO.readByEventSeriesIds(uniqueSeriesIds),
+    );
+    const missingSeriesIds = uniqueSeriesIds.filter((eventSeriesId) => !occurrencesBySeriesId.has(eventSeriesId));
+
+    if (missingSeriesIds.length === 0) {
+      return occurrencesBySeriesId;
+    }
+
+    const missingSeries = (
+      await Promise.all(
+        missingSeriesIds.map(async (eventSeriesId) => {
+          const preloadedSeries = preloadedSeriesById?.get(eventSeriesId);
+          return preloadedSeries ?? (await this.loadSeriesForOccurrenceBackfill(eventSeriesId));
+        }),
+      )
+    ).filter((eventSeries): eventSeries is OccurrenceQuerySeries => Boolean(eventSeries));
+
+    if (missingSeries.length === 0) {
+      return occurrencesBySeriesId;
+    }
+
+    await Promise.all(missingSeries.map((eventSeries) => this.syncEventSeriesOccurrences(eventSeries)));
+
+    const backfilledOccurrences = await EventOccurrenceDAO.readByEventSeriesIds(
+      missingSeries.map((eventSeries) => eventSeries.eventId),
+    );
+    for (const occurrence of backfilledOccurrences) {
+      const seriesOccurrences = occurrencesBySeriesId.get(occurrence.eventSeriesId) ?? [];
+      seriesOccurrences.push(occurrence);
+      occurrencesBySeriesId.set(occurrence.eventSeriesId, seriesOccurrences);
+    }
+
+    return occurrencesBySeriesId;
+  }
+
+  static async readRepresentativeOccurrencesForSeriesIds(
+    eventSeriesIds: string[],
+    fromDate: Date = new Date(),
+  ): Promise<Map<string, EventOccurrence | null>> {
+    const occurrencesBySeriesId = await this.ensureOccurrencesExistForSeries(eventSeriesIds);
+
+    return new Map(
+      eventSeriesIds.map((eventSeriesId) => [
+        eventSeriesId,
+        pickRepresentativeOccurrence(occurrencesBySeriesId.get(eventSeriesId) ?? [], fromDate),
+      ]),
+    );
+  }
+
   static buildOccurrenceKey(eventSeriesId: string, originalStartAt: Date): string {
     return `${eventSeriesId}#${originalStartAt.toISOString()}`;
   }
@@ -282,23 +361,36 @@ class EventOccurrenceService {
       return null;
     }
 
-    try {
-      const eventSeries = (await EventSeriesDAO.readEventById(
-        parsedOccurrenceId.eventSeriesId,
-      )) as OccurrenceQuerySeries;
-      if (this.isRecurringSeries(eventSeries)) {
-        return null;
-      }
+    await this.ensureOccurrencesExistForSeries([parsedOccurrenceId.eventSeriesId]);
+    return EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
+  }
 
-      const projectedOccurrence = projectSingleSeriesOccurrence(eventSeries);
-      return projectedOccurrence.occurrenceId === occurrenceId ? projectedOccurrence : null;
-    } catch (error) {
-      if (error instanceof GraphQLError && error.extensions?.code === ErrorTypes.NOT_FOUND.errorCode) {
-        return null;
-      }
-
-      throw error;
+  static async readSingleOccurrenceForSeries(eventSeriesId: string): Promise<EventOccurrence | null> {
+    const firstOccurrence = await EventOccurrenceDAO.readFirstByEventSeriesId(eventSeriesId);
+    if (firstOccurrence) {
+      return firstOccurrence;
     }
+
+    const occurrencesBySeriesId = await this.ensureOccurrencesExistForSeries([eventSeriesId]);
+    const occurrences = occurrencesBySeriesId.get(eventSeriesId) ?? [];
+    if (occurrences.length === 0) {
+      return null;
+    }
+
+    return [...occurrences].sort(
+      (left, right) =>
+        left.startAt.getTime() - right.startAt.getTime() ||
+        left.originalStartAt.getTime() - right.originalStartAt.getTime() ||
+        left.occurrenceKey.localeCompare(right.occurrenceKey),
+    )[0];
+  }
+
+  static async readRepresentativeOccurrenceForSeries(
+    eventSeriesId: string,
+    fromDate: Date = new Date(),
+  ): Promise<EventOccurrence | null> {
+    const occurrencesBySeriesId = await this.ensureOccurrencesExistForSeries([eventSeriesId]);
+    return pickRepresentativeOccurrence(occurrencesBySeriesId.get(eventSeriesId) ?? [], fromDate);
   }
 
   static async deleteOccurrencesForSeries(eventSeriesId: string): Promise<void> {
@@ -368,7 +460,11 @@ class EventOccurrenceService {
     now: Date = new Date(),
   ): EventOccurrence[] {
     if (!this.isRecurringSeries(eventSeries)) {
-      return [];
+      return [
+        buildSingleOccurrenceForSeries({
+          ...eventSeries,
+        }),
+      ];
     }
 
     const schedule = eventSeries.primarySchedule;
@@ -412,32 +508,22 @@ class EventOccurrenceService {
     const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
       options,
     )) as OccurrenceQuerySeries[];
-
-    const recurringEventSeriesIds: string[] = [];
-    const syntheticSingleOccurrences: EventOccurrence[] = [];
-
-    for (const eventSeries of candidateEventSeries) {
-      if (this.isRecurringSeries(eventSeries)) {
-        recurringEventSeriesIds.push(eventSeries.eventId);
-        continue;
-      }
-
-      if (doesScheduleOverlapWindow(eventSeries.primarySchedule, startDate, endDate)) {
-        syntheticSingleOccurrences.push(projectSingleSeriesOccurrence(eventSeries));
-      }
-    }
-
-    const recurringOccurrences =
-      recurringEventSeriesIds.length > 0
-        ? await EventOccurrenceDAO.readByEventSeriesIdsInRange(recurringEventSeriesIds, startDate, endDate)
+    const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
+    await this.ensureOccurrencesExistForSeries(
+      eventSeriesIds,
+      new Map(candidateEventSeries.map((eventSeries) => [eventSeries.eventId, eventSeries])),
+    );
+    const occurrences =
+      eventSeriesIds.length > 0
+        ? await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate)
         : [];
 
-    warnIfQueryExceedsMaterializationWindow(recurringEventSeriesIds.length > 0, endDate);
-
-    return paginateOccurrences(
-      sortOccurrences([...recurringOccurrences, ...syntheticSingleOccurrences], options.sort),
-      options,
+    warnIfQueryExceedsMaterializationWindow(
+      candidateEventSeries.some((eventSeries) => this.isRecurringSeries(eventSeries)),
+      endDate,
     );
+
+    return paginateOccurrences(sortOccurrences(occurrences, options.sort), options);
   }
 
   static async readUpcomingOccurrencesForSeries(
@@ -446,27 +532,18 @@ class EventOccurrenceService {
     fromDate: Date = new Date(),
   ): Promise<EventOccurrence[]> {
     const safeLimit = sanitizeQueryLimit(limit, 5);
-
-    if (this.isRecurringSeries(eventSeries)) {
-      return EventOccurrenceDAO.readUpcomingByEventSeriesId(eventSeries.eventId, fromDate, safeLimit);
+    const occurrences = await EventOccurrenceDAO.readUpcomingByEventSeriesId(eventSeries.eventId, fromDate, safeLimit);
+    if (occurrences.length > 0) {
+      return occurrences;
     }
 
-    const singleOccurrenceEnd = eventSeries.primarySchedule.endAt ?? eventSeries.primarySchedule.startAt;
-    if (singleOccurrenceEnd.getTime() < fromDate.getTime()) {
-      return [];
-    }
-
-    return [projectSingleSeriesOccurrence(eventSeries)];
+    await this.ensureOccurrencesExistForSeries([eventSeries.eventId], new Map([[eventSeries.eventId, eventSeries]]));
+    return EventOccurrenceDAO.readUpcomingByEventSeriesId(eventSeries.eventId, fromDate, safeLimit);
   }
 
-  static async syncRecurringSeriesOccurrences(
+  static async syncEventSeriesOccurrences(
     eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
   ): Promise<void> {
-    if (!this.isRecurringSeries(eventSeries)) {
-      await this.deleteOccurrencesForSeries(eventSeries.eventId);
-      return;
-    }
-
     const occurrences = this.buildOccurrencesForSeries(eventSeries);
     const exceptionOccurrenceKeys = new Set(
       await EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId(eventSeries.eventId),
