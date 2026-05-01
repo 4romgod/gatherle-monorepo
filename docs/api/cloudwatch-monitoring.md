@@ -28,6 +28,7 @@ The dashboard includes the following widgets:
 - **Invocations**: Total number of Lambda invocations over time
 - **Errors**: Lambda-level errors (5xx responses, timeouts, etc.)
 - **Duration**: P50, P95, and P99 percentiles for performance analysis
+- **Occurrence Maintenance Lambda**: scheduled maintenance invocations, errors, and duration
 
 #### **Application Errors & Warnings**
 
@@ -49,6 +50,14 @@ The dashboard includes the following widgets:
 - **Response Status Codes**: Distribution of HTTP status codes (200, 404, 500, etc.)
 - **Response Size Distribution**: Average, max, and min response payload sizes over time
 - **Concurrent Executions**: Lambda invocations per minute to identify traffic spikes
+
+#### **Occurrence Maintenance Health**
+
+- **Remaining Missing Series**: series that still have no persisted occurrence window after maintenance
+- **Remaining Low-Horizon Series**: recurring series still too close to the maintenance horizon after maintenance
+- **Remaining Metadata Repair Series**: series whose occurrences still lack denormalized metadata snapshots
+- **Remaining Drifted Occurrences**: occurrences whose reserved-slot counter still disagrees with participant state
+- **Occurrence Maintenance Alerts**: alarm widget for maintenance failures and remaining health issues
 
 ## Log Structure
 
@@ -132,33 +141,18 @@ fields @timestamp, context.durationMs, context.operation
 
 Log retention is managed by CDK and configured in the `GraphQLStack`.
 
-## Alerting (Future Enhancement)
+## Alerting
 
-Consider adding CloudWatch Alarms for:
+CloudWatch alarms are now created for:
 
-1. **High Error Rate**: Alert when error count exceeds threshold (e.g., >10 errors in 5 minutes)
-2. **Lambda Throttling**: Alert when Lambda concurrent execution limits are reached
-3. **Slow Requests**: Alert when average duration exceeds threshold (e.g., >5 seconds)
-4. **Database Errors**: Alert on specific database connection errors
+1. **Occurrence maintenance Lambda failures**
+2. **Missing occurrence series remaining after maintenance**
+3. **Low-horizon recurring series remaining after maintenance**
+4. **Occurrence/participant drift remaining after maintenance**
+5. **No successful maintenance run in the last 24 hours**
 
-Example alarm configuration (add to `MonitoringDashboardStack`):
-
-```typescript
-import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
-
-// Create alarm for high error rate
-const errorAlarm = new Alarm(this, 'HighErrorRateAlarm', {
-  metric: this.lambdaFunction.metricErrors({
-    statistic: 'Sum',
-    period: Duration.minutes(5),
-  }),
-  threshold: 10,
-  evaluationPeriods: 1,
-  comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-  treatMissingData: TreatMissingData.NOT_BREACHING,
-  alarmDescription: 'Alert when Lambda error count exceeds 10 in 5 minutes',
-});
-```
+The GraphQL/WebSocket request-path alarms still remain a future expansion if you want threshold-based alerting on API
+latency, throttles, or error rates.
 
 ## Monitoring Best Practices
 
@@ -167,6 +161,7 @@ const errorAlarm = new Alarm(this, 'HighErrorRateAlarm', {
 3. **Use requestId** to trace issues across multiple log entries
 4. **Export logs to S3** for long-term storage and analysis (if needed beyond retention period)
 5. **Create custom metric filters** for business-specific metrics (e.g., user signups, event creations)
+6. **Review occurrence maintenance health metrics** after deploys and schema changes
 
 ## Cost Optimization
 

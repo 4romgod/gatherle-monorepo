@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
+import { usersMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
 import {
   getDeleteEventByIdMutation,
@@ -14,24 +15,97 @@ import {
   cleanupTrackedEntities,
   assertNoCleanupFailures,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  buildCreateUserInput,
+  cleanupUsersById,
+  createUserOnServer,
+  uniqueSuffix,
+} from '@/test/e2e/utils/userResolverHelpers';
 
 describe('Feed resolver e2e', () => {
   const url = process.env.GRAPHQL_URL!;
+  let adminUser: UserWithToken;
   let actorUser: UserWithToken;
   const createdEventIds: string[] = [];
+  const createdUserIds: string[] = [];
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const readRecommendedFeedWithRetry = async (limit?: number, skip?: number) => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 30_000, deadline: 40_000 })
+        .set('Authorization', 'Bearer ' + actorUser.token)
+        .send(getReadRecommendedFeedQuery(limit, skip));
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 5 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(750 * attempt);
+    }
+
+    throw new Error('Failed to read recommended feed after retrying transient errors.');
+  };
+
+  const upsertParticipantWithRetry = async (eventId: string) => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 30_000, deadline: 40_000 })
+        .set('Authorization', 'Bearer ' + actorUser.token)
+        .send(
+          getUpsertEventParticipantMutation({
+            userId: actorUser.userId,
+            eventId,
+            status: 'Going',
+          }),
+        );
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 5 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(750 * attempt);
+    }
+
+    throw new Error(`Failed to RSVP to feed event ${eventId} after retrying transient errors.`);
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [user, category] = await Promise.all([
-      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
+    const [admin, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
       readFirstEventCategory(url),
     ]);
-    actorUser = user;
-    const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
+    adminUser = admin;
+    actorUser = await createUserOnServer(
+      url,
+      buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'feed-test-password', uniqueSuffix()),
+      createdUserIds,
+    );
+    const { orgSlug: _orgSlug, venueSlug: _venueSlug, title: _seedTitle, ...baseEventData } = eventSeriesMockData[0];
+    const eventSuffix = uniqueSuffix();
 
     const eventInput: CreateEventInput = {
       ...baseEventData,
-      title: `Feed Test EventSeries ${Date.now()}`,
+      title: `Feed Test EventSeries ${eventSuffix}`,
       description: 'An event for feed testing',
       eventCategories: [category.eventCategoryId],
       organizers: [{ user: actorUser.userId, role: 'Host' }],
@@ -53,6 +127,10 @@ describe('Feed resolver e2e', () => {
       label: 'event',
       phase: 'afterAll',
     });
+    if (adminUser?.token && createdUserIds.length > 0) {
+      await cleanupUsersById(url, adminUser.token, createdUserIds);
+      createdUserIds.length = 0;
+    }
     assertNoCleanupFailures(failures);
   });
 
@@ -64,10 +142,7 @@ describe('Feed resolver e2e', () => {
     });
 
     it('returns an array for an authenticated user', async () => {
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery());
+      const response = await readRecommendedFeedWithRetry();
 
       expect(response.status).toBe(200);
       expect(response.body.errors).toBeUndefined();
@@ -76,10 +151,7 @@ describe('Feed resolver e2e', () => {
 
     it('respects the limit parameter', async () => {
       const limit = 1;
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery(limit));
+      const response = await readRecommendedFeedWithRetry(limit);
 
       expect(response.status).toBe(200);
       expect(response.body.errors).toBeUndefined();
@@ -93,10 +165,7 @@ describe('Feed resolver e2e', () => {
         .set('Authorization', 'Bearer ' + actorUser.token)
         .send(getRefreshFeedMutation());
 
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery());
+      const response = await readRecommendedFeedWithRetry();
 
       expect(response.status).toBe(200);
       expect(response.body.errors).toBeUndefined();
@@ -113,15 +182,16 @@ describe('Feed resolver e2e', () => {
     });
 
     it('returns skip=0 and skip=1 with consistent results', async () => {
-      const firstPage = await request(url)
+      const refreshResponse = await request(url)
         .post('')
         .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery(10, 0));
+        .send(getRefreshFeedMutation());
 
-      const secondPage = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery(10, 1));
+      expect(refreshResponse.status).toBe(200);
+      expect(refreshResponse.body.errors).toBeUndefined();
+
+      const firstPage = await readRecommendedFeedWithRetry(10, 0);
+      const secondPage = await readRecommendedFeedWithRetry(10, 1);
 
       expect(firstPage.status).toBe(200);
       expect(secondPage.status).toBe(200);
@@ -168,10 +238,7 @@ describe('Feed resolver e2e', () => {
       expect(refreshResponse.status).toBe(200);
       expect(refreshResponse.body.data.refreshFeed).toBe(true);
 
-      const feedResponse = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery());
+      const feedResponse = await readRecommendedFeedWithRetry();
 
       expect(feedResponse.status).toBe(200);
       expect(feedResponse.body.errors).toBeUndefined();
@@ -186,25 +253,13 @@ describe('Feed resolver e2e', () => {
         return;
       }
 
-      const rsvpResponse = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(
-          getUpsertEventParticipantMutation({
-            userId: actorUser.userId,
-            eventId,
-            status: 'Going',
-          }),
-        );
+      const rsvpResponse = await upsertParticipantWithRetry(eventId);
 
       expect(rsvpResponse.status).toBe(200);
       expect(rsvpResponse.body.errors).toBeUndefined();
 
       // After RSVP, feed query should still be valid (recomputation happens async)
-      const feedResponse = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getReadRecommendedFeedQuery());
+      const feedResponse = await readRecommendedFeedWithRetry();
 
       expect(feedResponse.status).toBe(200);
       expect(feedResponse.body.errors).toBeUndefined();

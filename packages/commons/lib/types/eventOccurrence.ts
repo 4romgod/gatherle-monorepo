@@ -21,6 +21,8 @@ registerEnumType(EventOccurrenceStatus, {
 @index({ occurrenceKey: 1 }, { unique: true })
 @index({ eventSeriesId: 1, startAt: 1 })
 @index({ eventSeriesId: 1, originalStartAt: 1 })
+@index({ eventSeriesId: 1, isException: 1, originalStartAt: -1 })
+@index({ eventSeriesId: 1, eventSeriesSlug: 1 })
 @index({ startAt: 1, status: 1 })
 export class EventOccurrence {
   @prop({ required: true, unique: true, index: true, type: () => String })
@@ -30,6 +32,10 @@ export class EventOccurrence {
   @prop({ required: true, type: () => String })
   @Field(() => ID, { description: EVENT_DESCRIPTIONS.OCCURRENCE.EVENT_SERIES_ID })
   eventSeriesId: string;
+
+  // Denormalized for operator readability in Mongo/admin tooling.
+  @prop({ type: () => String })
+  eventSeriesSlug?: string;
 
   @prop({ required: true, type: () => String })
   @Field(() => String, { description: EVENT_DESCRIPTIONS.OCCURRENCE.OCCURRENCE_KEY })

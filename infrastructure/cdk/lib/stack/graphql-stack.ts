@@ -32,6 +32,7 @@ configDotenv();
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');
 const pathHandlerFile = join(pathApi, 'lib', 'lambdaHandlers', 'graphqlHandler.ts');
+const pathOccurrenceMaintenanceHandlerFile = join(pathApi, 'lib', 'lambdaHandlers', 'maintainEventOccurrences.ts');
 
 export interface GraphQLStackProps extends StackProps {
   applicationStage: string;
@@ -43,10 +44,12 @@ export interface GraphQLStackProps extends StackProps {
 
 export class GraphQLStack extends Stack {
   readonly graphqlLambda: NodejsFunction;
+  readonly occurrenceMaintenanceLambda: NodejsFunction;
   readonly graphqlApi: RestApi;
   readonly graphql: ResourceBase;
   readonly graphqlApiPathOutput: CfnOutput;
   readonly graphqlLambdaLogGroup: LogGroup;
+  readonly occurrenceMaintenanceLambdaLogGroup: LogGroup;
   readonly graphqlApiAccessLogGroup: LogGroup;
   readonly stageRegionDomainName: string;
   readonly graphqlApiDomainOutput?: CfnOutput;
@@ -59,6 +62,11 @@ export class GraphQLStack extends Stack {
     this.stageRegionDomainName = `${stageSegment}.${props.awsRegion.toLowerCase()}.${DNS_STACK_CONFIG.rootDomainName}`;
     const graphqlCustomDomainName = `api.${this.stageRegionDomainName}`;
     const graphqlLambdaName = buildResourceName('GraphqlLambdaFunction', props.applicationStage, props.awsRegion);
+    const occurrenceMaintenanceLambdaName = buildResourceName(
+      'OccurrenceMaintenanceLambdaFunction',
+      props.applicationStage,
+      props.awsRegion,
+    );
 
     const gatherleSecret = Secret.fromSecretNameV2(
       this,
@@ -109,12 +117,59 @@ export class GraphQLStack extends Stack {
 
     gatherleSecret.grantRead(this.graphqlLambda);
 
+    this.occurrenceMaintenanceLambdaLogGroup = new LogGroup(this, 'OccurrenceMaintenanceLambdaLogGroup', {
+      logGroupName: `/aws/lambda/${occurrenceMaintenanceLambdaName}`,
+      retention: RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    this.occurrenceMaintenanceLambda = new NodejsFunction(this, 'OccurrenceMaintenanceLambdaFunction', {
+      functionName: occurrenceMaintenanceLambdaName,
+      description: 'Scheduled maintenance worker that tops up and repairs persisted event occurrence windows.',
+      runtime: Runtime.NODEJS_24_X,
+      timeout: Duration.minutes(15),
+      memorySize: 512,
+      handler: 'maintainEventOccurrencesHandler',
+      entry: pathOccurrenceMaintenanceHandlerFile,
+      projectRoot: pathRoot,
+      depsLockFilePath: join(pathRoot, 'package-lock.json'),
+      bundling: {
+        tsconfig: join(pathApi, 'tsconfig.json'),
+        sourceMap: true,
+        minify: false,
+        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
+      },
+      environment: {
+        STAGE: props.applicationStage,
+        SECRET_ARN: gatherleSecret.secretArn,
+        EMAIL_FROM: process.env.EMAIL_FROM ?? 'noreply@gatherle.com',
+        WEBAPP_URL:
+          process.env.WEBAPP_URL ||
+          DEFAULT_STAGE_WEBAPP_ORIGINS[props.applicationStage]?.[0] ||
+          'http://localhost:3000',
+        OCCURRENCE_MAINTENANCE_BATCH_LIMIT: process.env.OCCURRENCE_MAINTENANCE_BATCH_LIMIT ?? '200',
+        OCCURRENCE_MAINTENANCE_THRESHOLD_DAYS: process.env.OCCURRENCE_MAINTENANCE_THRESHOLD_DAYS ?? '30',
+        NODE_OPTIONS: '--enable-source-maps',
+      },
+      logGroup: this.occurrenceMaintenanceLambdaLogGroup,
+    });
+
+    gatherleSecret.grantRead(this.occurrenceMaintenanceLambda);
+
     const warmUpIntervalMinutes = props.applicationStage === APPLICATION_STAGES.PROD ? 5 : 14;
     new Schedule(this, 'GraphqlLambdaWarmUpSchedule', {
       scheduleName: buildResourceName('graphql-lambda-warmup', props.applicationStage, props.awsRegion),
       description: `Keeps the GraphQL Lambda warm by invoking it every ${warmUpIntervalMinutes} minutes`,
       schedule: ScheduleExpression.rate(Duration.minutes(warmUpIntervalMinutes)),
       target: new LambdaInvoke(this.graphqlLambda, { retryAttempts: 0 }),
+    });
+
+    const occurrenceMaintenanceIntervalHours = props.applicationStage === APPLICATION_STAGES.PROD ? 6 : 12;
+    new Schedule(this, 'OccurrenceMaintenanceSchedule', {
+      scheduleName: buildResourceName('event-occurrence-maintenance', props.applicationStage, props.awsRegion),
+      description: `Runs event occurrence maintenance every ${occurrenceMaintenanceIntervalHours} hours`,
+      schedule: ScheduleExpression.rate(Duration.hours(occurrenceMaintenanceIntervalHours)),
+      target: new LambdaInvoke(this.occurrenceMaintenanceLambda, { retryAttempts: 0 }),
     });
 
     this.graphqlApiAccessLogGroup = new LogGroup(this, 'GraphqlRestApiAccessLogs', {

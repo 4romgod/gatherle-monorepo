@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 import { z } from 'zod';
 import { initLogger, LOG_LEVEL_MAP, LogLevel } from '@/utils/logger';
 
-config({ override: true });
+config();
 
 type Stage = (typeof APPLICATION_STAGES)[keyof typeof APPLICATION_STAGES];
 

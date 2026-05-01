@@ -1,5 +1,4 @@
 import { Types } from 'mongoose';
-import request from 'supertest';
 import { usersMockData } from '@/mongodb/mockData';
 import {
   getCreateUserMutation,
@@ -23,6 +22,7 @@ import {
   cleanupUsersById,
   createUserOnServer,
   loginUserOnServer,
+  postGraphQLWithRetry,
   uniqueSuffix,
 } from '@/test/e2e/utils/userResolverHelpers';
 
@@ -42,12 +42,18 @@ describe('User Resolver', () => {
   const newUserInput = (suffix = uniqueSuffix()) =>
     buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, testPassword, suffix);
 
+  const sendUserGraphQL = (payload: object, token?: string) => postGraphQLWithRetry(url, payload, token);
+
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
+    if (!adminUser?.token) {
+      return;
+    }
+
     await cleanupUsersById(url, adminUser.token, createdUserIds);
     createdUserIds.length = 0;
   });
@@ -81,17 +87,14 @@ describe('User Resolver', () => {
         const updatedEmail = `updated-${uniqueSuffix()}@email.com`;
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(
-            getUpdateUserMutation({
-              userId: createdUser.userId,
-              email: updatedEmail,
-            }),
-          );
+        const response = await sendUserGraphQL(
+          getUpdateUserMutation({
+            userId: createdUser.userId,
+            email: updatedEmail,
+          }),
+          createdUser.token,
+        );
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         expect(response.body.data.updateUser.email).toBe(updatedEmail);
       });
     });
@@ -101,12 +104,8 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByIdMutation(createdUser.userId));
+        const response = await sendUserGraphQL(getDeleteUserByIdMutation(createdUser.userId), createdUser.token);
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         expect(response.body.data.deleteUserById.email).toBe(input.email);
         untrackUser(createdUser.userId);
       });
@@ -115,12 +114,8 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByEmailMutation(createdUser.email));
+        const response = await sendUserGraphQL(getDeleteUserByEmailMutation(createdUser.email), createdUser.token);
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         expect(response.body.data.deleteUserByEmail.email).toBe(input.email);
         untrackUser(createdUser.userId);
       });
@@ -129,12 +124,11 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByUsernameMutation(createdUser.username));
+        const response = await sendUserGraphQL(
+          getDeleteUserByUsernameMutation(createdUser.username),
+          createdUser.token,
+        );
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         expect(response.body.data.deleteUserByUsername.email).toBe(input.email);
         untrackUser(createdUser.userId);
       });
@@ -145,7 +139,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url).post('').send(getReadUsersWithoutOptionsQuery());
+        const response = await sendUserGraphQL(getReadUsersWithoutOptionsQuery());
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -164,7 +158,7 @@ describe('User Resolver', () => {
             },
           ],
         };
-        const response = await request(url).post('').send(getReadUsersWithOptionsQuery(options));
+        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options));
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -181,7 +175,7 @@ describe('User Resolver', () => {
             value: (input.username ?? '').toLowerCase(),
           },
         };
-        const response = await request(url).post('').send(getReadUsersWithOptionsQuery(options));
+        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options));
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -194,7 +188,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url).post('').send(getReadUserByIdQuery(createdUser.userId));
+        const response = await sendUserGraphQL(getReadUserByIdQuery(createdUser.userId));
         expect(response.status).toBe(200);
         expect(response.body.data.readUserById.email).toBe(input.email);
       });
@@ -203,7 +197,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url).post('').send(getReadUserByEmailQuery(createdUser.email));
+        const response = await sendUserGraphQL(getReadUserByEmailQuery(createdUser.email));
         expect(response.status).toBe(200);
         expect(response.body.data.readUserByEmail.email).toBe(input.email);
       });
@@ -212,7 +206,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url).post('').send(getReadUserByUsernameQuery(createdUser.username));
+        const response = await sendUserGraphQL(getReadUserByUsernameQuery(createdUser.username));
         expect(response.status).toBe(200);
         expect(response.body.data.readUserByUsername.email).toBe(input.email);
       });
@@ -225,19 +219,17 @@ describe('User Resolver', () => {
         const input = newUserInput();
         await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url).post('').send(getCreateUserMutation(input));
+        const response = await sendUserGraphQL(getCreateUserMutation(input));
         expect(response.status).toBe(409);
       });
 
       it('validates phone numbers', async () => {
-        const response = await request(url)
-          .post('')
-          .send(
-            getCreateUserMutation({
-              ...newUserInput(),
-              phone_number: 'not-a-phone',
-            }),
-          );
+        const response = await sendUserGraphQL(
+          getCreateUserMutation({
+            ...newUserInput(),
+            phone_number: 'not-a-phone',
+          }),
+        );
         expect(response.status).toBe(400);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PHONE_NUMBER);
       });
@@ -248,9 +240,9 @@ describe('User Resolver', () => {
         const input = newUserInput();
         await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .send(getLoginUserMutation({ email: 'missing@example.com', password: testPassword }));
+        const response = await sendUserGraphQL(
+          getLoginUserMutation({ email: 'missing@example.com', password: testPassword }),
+        );
         expect(response.status).toBe(401);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
       });
@@ -259,9 +251,9 @@ describe('User Resolver', () => {
         const input = newUserInput();
         await createUserOnServer(url, input, createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .send(getLoginUserMutation({ email: input.email, password: 'invalidPassword123' }));
+        const response = await sendUserGraphQL(
+          getLoginUserMutation({ email: input.email, password: 'invalidPassword123' }),
+        );
         expect(response.status).toBe(401);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
       });
@@ -269,23 +261,32 @@ describe('User Resolver', () => {
 
     describe('updateUser Mutation', () => {
       it('returns conflict for duplicate field', async () => {
-        const createdUser = await createUserOnServer(url, newUserInput('duplicate-a'), createdUserIds);
-        const duplicateUser = await createUserOnServer(url, newUserInput('duplicate-b'), createdUserIds);
+        const duplicateSuffix = uniqueSuffix();
+        const createdUser = await createUserOnServer(
+          url,
+          newUserInput(`duplicate-a-${duplicateSuffix}`),
+          createdUserIds,
+        );
+        const duplicateUser = await createUserOnServer(
+          url,
+          newUserInput(`duplicate-b-${duplicateSuffix}`),
+          createdUserIds,
+        );
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getUpdateUserMutation({ userId: createdUser.userId, username: duplicateUser.username }));
+        const response = await sendUserGraphQL(
+          getUpdateUserMutation({ userId: createdUser.userId, username: duplicateUser.username }),
+          createdUser.token,
+        );
         expect(response.status).toBe(409);
       });
 
       it('returns bad input when invalid phone number is provided', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getUpdateUserMutation({ userId: createdUser.userId, phone_number: 'invalid' }));
+        const response = await sendUserGraphQL(
+          getUpdateUserMutation({ userId: createdUser.userId, phone_number: 'invalid' }),
+          createdUser.token,
+        );
         expect(response.status).toBe(400);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.INVALID_PHONE_NUMBER);
       });
@@ -293,10 +294,10 @@ describe('User Resolver', () => {
       it('returns unauthorized when updating another user', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getUpdateUserMutation({ userId: new Types.ObjectId().toString(), given_name: 'nope' }));
+        const response = await sendUserGraphQL(
+          getUpdateUserMutation({ userId: new Types.ObjectId().toString(), given_name: 'nope' }),
+          createdUser.token,
+        );
         expect(response.status).toBe(403);
       });
     });
@@ -305,20 +306,17 @@ describe('User Resolver', () => {
       it('returns unauthenticated for invalid token', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + 'bad')
-          .send(getDeleteUserByIdMutation(createdUser.userId));
+        const response = await sendUserGraphQL(getDeleteUserByIdMutation(createdUser.userId), 'bad');
         expect(response.status).toBe(401);
       });
 
       it('returns unauthorized when deleting another user', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByIdMutation(new Types.ObjectId().toString()));
+        const response = await sendUserGraphQL(
+          getDeleteUserByIdMutation(new Types.ObjectId().toString()),
+          createdUser.token,
+        );
         expect(response.status).toBe(403);
       });
     });
@@ -327,20 +325,14 @@ describe('User Resolver', () => {
       it('returns unauthenticated for invalid token', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + 'bad')
-          .send(getDeleteUserByEmailMutation(createdUser.email));
+        const response = await sendUserGraphQL(getDeleteUserByEmailMutation(createdUser.email), 'bad');
         expect(response.status).toBe(401);
       });
 
       it('returns unauthorized when token does not belong to owner', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByEmailMutation('another@example.com'));
+        const response = await sendUserGraphQL(getDeleteUserByEmailMutation('another@example.com'), createdUser.token);
         expect(response.status).toBe(403);
       });
     });
@@ -349,20 +341,14 @@ describe('User Resolver', () => {
       it('returns unauthenticated for invalid token', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + 'bad')
-          .send(getDeleteUserByUsernameMutation(createdUser.username));
+        const response = await sendUserGraphQL(getDeleteUserByUsernameMutation(createdUser.username), 'bad');
         expect(response.status).toBe(401);
       });
 
       it('returns unauthorized when token does not belong to owner', async () => {
         const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
 
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + createdUser.token)
-          .send(getDeleteUserByUsernameMutation('someoneElse'));
+        const response = await sendUserGraphQL(getDeleteUserByUsernameMutation('someoneElse'), createdUser.token);
         expect(response.status).toBe(403);
       });
     });

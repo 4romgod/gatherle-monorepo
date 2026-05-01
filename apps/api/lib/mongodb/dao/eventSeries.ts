@@ -6,8 +6,6 @@ import type {
   UpdateEventInput,
   CreateEventInput,
   EventsQueryOptionsInput,
-  RsvpInput,
-  CancelRsvpInput,
 } from '@gatherle/commons/types';
 import {
   CustomError,
@@ -15,17 +13,22 @@ import {
   KnownCommonError,
   extractValidationErrorMessage,
   transformEventOptionsToPipeline,
-  validateUserIdentifiers,
   enrichLocationWithCoordinates,
   createEventLookupStages,
   logDaoError,
   areEventSchedulesEqual,
 } from '@/utils';
-import { ERROR_MESSAGES } from '@/validation';
-import { EventSeriesParticipantDAO } from '@/mongodb/dao';
 import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
+
+type EventOccurrenceMaintenanceSnapshot = Pick<
+  EventEntity,
+  'eventId' | 'slug' | 'primarySchedule' | 'status' | 'scheduleVersion'
+> & {
+  createdAt?: Date;
+  updatedAt?: Date;
+};
 
 class EventSeriesDAO {
   private static buildSavedByLookupStages() {
@@ -263,6 +266,53 @@ class EventSeriesDAO {
     }
   }
 
+  static async readOccurrenceMaintenanceBatch(
+    limit: number,
+    afterEventId?: string,
+  ): Promise<EventOccurrenceMaintenanceSnapshot[]> {
+    try {
+      const query: Record<string, unknown> = {
+        primarySchedule: { $exists: true, $ne: null },
+      };
+
+      if (afterEventId) {
+        query.eventId = { $gt: afterEventId };
+      }
+
+      return await EventSeriesModel.find(query)
+        .select('eventId slug primarySchedule status scheduleVersion createdAt updatedAt')
+        .sort({ eventId: 1 })
+        .limit(limit)
+        .lean()
+        .exec();
+    } catch (error) {
+      logDaoError('Error reading event series batch for occurrence maintenance', { error, limit, afterEventId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readOccurrenceMaintenanceSnapshotById(eventId: string): Promise<EventOccurrenceMaintenanceSnapshot> {
+    try {
+      const eventSeries = await EventSeriesModel.findOne({ eventId })
+        .select('eventId slug primarySchedule status scheduleVersion createdAt updatedAt')
+        .lean()
+        .exec();
+
+      if (!eventSeries) {
+        throw CustomError(`EventSeries with eventId ${eventId} not found`, ErrorTypes.NOT_FOUND);
+      }
+
+      return eventSeries;
+    } catch (error) {
+      if (error instanceof Error && 'extensions' in error) {
+        throw error;
+      }
+
+      logDaoError('Error reading event series maintenance snapshot by eventId', { error, eventId });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async updateEvent(input: UpdateEventInput): Promise<EventEntity> {
     const { eventId, ...restInput } = input;
     let event;
@@ -384,62 +434,6 @@ class EventSeriesDAO {
       throw CustomError(`EventSeries with slug ${slug} not found`, ErrorTypes.NOT_FOUND);
     }
     return deletedEvent.toObject();
-  }
-
-  static async RSVP(input: RsvpInput) {
-    const { eventId } = input;
-
-    let validUserIds;
-    let event;
-    try {
-      validUserIds = await validateUserIdentifiers(input);
-      event = await EventSeriesModel.findById(eventId).exec();
-    } catch (error) {
-      logDaoError(`Error reading event for RSVP with eventId ${eventId}`, { error });
-      throw KnownCommonError(error);
-    }
-
-    if (!event) {
-      throw CustomError(ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId), ErrorTypes.NOT_FOUND);
-    }
-
-    try {
-      for (const userId of validUserIds) {
-        await EventSeriesParticipantDAO.upsert({ eventId, userId, status: ParticipantStatus.Going });
-      }
-      return event.toObject();
-    } catch (error) {
-      logDaoError(`Error updating event RSVP's with eventId ${eventId}`, { error });
-      throw KnownCommonError(error);
-    }
-  }
-
-  static async cancelRSVP(input: CancelRsvpInput) {
-    const { eventId } = input;
-
-    let validUserIds;
-    let event;
-    try {
-      validUserIds = await validateUserIdentifiers(input);
-      event = await EventSeriesModel.findById(eventId).exec();
-    } catch (error) {
-      logDaoError(`Error reading event for cancel RSVP with eventId ${eventId}`, { error });
-      throw KnownCommonError(error);
-    }
-
-    if (!event) {
-      throw CustomError(ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId), ErrorTypes.NOT_FOUND);
-    }
-
-    try {
-      for (const userId of validUserIds) {
-        await EventSeriesParticipantDAO.cancel({ eventId, userId });
-      }
-      return event.toObject();
-    } catch (error) {
-      logDaoError(`Error cancelling event RSVP's with eventId ${eventId}`, { error });
-      throw KnownCommonError(error);
-    }
   }
 
   static async count(filter: Record<string, unknown> = {}): Promise<number> {

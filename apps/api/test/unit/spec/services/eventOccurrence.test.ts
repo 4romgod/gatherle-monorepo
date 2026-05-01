@@ -61,6 +61,7 @@ describe('EventOccurrenceService', () => {
     ({
       occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
       eventSeriesId: 'series-1',
+      eventSeriesSlug: 'weekly-coffee-code',
       occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
       originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
       startAt: new Date('2026-05-06T16:00:00.000Z'),
@@ -99,41 +100,14 @@ describe('EventOccurrenceService', () => {
       expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     });
 
-    it('materializes missing persisted rows for a legacy series occurrence and retries the lookup', async () => {
-      const eventSeries = buildSeries({
-        eventId: 'legacy-single-series',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
-      });
-      const persistedOccurrence = buildOccurrence({
-        occurrenceId: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        eventSeriesId: 'legacy-single-series',
-        occurrenceKey: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        startAt: new Date('2026-05-07T10:00:00.000Z'),
-        originalStartAt: new Date('2026-05-07T10:00:00.000Z'),
-      });
-      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(persistedOccurrence);
-      (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([persistedOccurrence]);
-      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(eventSeries);
+    it('returns null when the occurrence does not exist and no read-time repair is attempted', async () => {
+      (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(null);
 
-      const result = await EventOccurrenceService.readOccurrenceById(persistedOccurrence.occurrenceId);
+      const result = await EventOccurrenceService.readOccurrenceById('legacy-single-series#2026-05-07T10:00:00.000Z');
 
-      expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith('legacy-single-series');
-      expect(EventOccurrenceDAO.bulkUpsert).toHaveBeenCalledWith([
-        expect.objectContaining({
-          occurrenceId: persistedOccurrence.occurrenceId,
-          eventSeriesId: 'legacy-single-series',
-        }),
-      ]);
-      expect(result).toEqual(persistedOccurrence);
+      expect(result).toBeNull();
+      expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+      expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
     });
   });
 
@@ -148,33 +122,13 @@ describe('EventOccurrenceService', () => {
       expect(result).toBe(occurrence);
     });
 
-    it('materializes a first occurrence when a legacy series has none persisted yet', async () => {
-      const eventSeries = buildSeries({
-        eventId: 'legacy-single-series',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
-      });
-      const occurrence = buildOccurrence({
-        occurrenceId: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        eventSeriesId: 'legacy-single-series',
-        occurrenceKey: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        startAt: new Date('2026-05-07T10:00:00.000Z'),
-        originalStartAt: new Date('2026-05-07T10:00:00.000Z'),
-      });
-      (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValueOnce(null);
-      (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([occurrence]);
-      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(eventSeries);
+    it('returns null when a series has no persisted occurrences', async () => {
+      (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(null);
 
       const result = await EventOccurrenceService.readSingleOccurrenceForSeries('legacy-single-series');
 
-      expect(result).toEqual(occurrence);
-      expect(EventOccurrenceDAO.bulkUpsert).toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
     });
   });
 
@@ -240,32 +194,13 @@ describe('EventOccurrenceService', () => {
       expect(result).toEqual(latestPast);
     });
 
-    it('materializes missing occurrences before selecting a representative occurrence', async () => {
-      const eventSeries = buildSeries({
-        eventId: 'legacy-single-series',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
-      });
-      const occurrence = buildOccurrence({
-        occurrenceId: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        eventSeriesId: 'legacy-single-series',
-        occurrenceKey: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        startAt: new Date('2026-05-07T10:00:00.000Z'),
-        originalStartAt: new Date('2026-05-07T10:00:00.000Z'),
-      });
-      (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([occurrence]);
-      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(eventSeries);
+    it('returns null when a series has no persisted representative occurrence', async () => {
+      (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock).mockResolvedValue([]);
 
       const result = await EventOccurrenceService.readRepresentativeOccurrenceForSeries('legacy-single-series');
 
-      expect(result).toEqual(occurrence);
-      expect(EventOccurrenceDAO.bulkUpsert).toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
     });
   });
 
@@ -575,6 +510,7 @@ describe('EventOccurrenceService', () => {
       await EventOccurrenceService.moveFutureOccurrencesToSeries(
         'series-1',
         'series-2',
+        'series-2-slug',
         new Date('2026-05-13T16:00:00.000Z'),
         1,
       );
@@ -590,6 +526,7 @@ describe('EventOccurrenceService', () => {
           oldOccurrenceId: 'series-1#2026-05-13T16:00:00.000Z',
           occurrenceId: 'series-2#2026-05-13T16:00:00.000Z',
           eventSeriesId: 'series-2',
+          eventSeriesSlug: 'series-2-slug',
           occurrenceKey: 'series-2#2026-05-13T16:00:00.000Z',
           seriesScheduleVersion: 1,
         },
@@ -756,29 +693,11 @@ describe('EventOccurrenceService', () => {
       );
     });
 
-    it('materializes upcoming occurrences for a legacy series when none are persisted yet', async () => {
+    it('returns an empty array when no upcoming persisted occurrences exist', async () => {
       const singleSeries = buildSeries({
         eventId: 'legacy-single-series',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
       });
-      const occurrence = buildOccurrence({
-        occurrenceId: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        eventSeriesId: 'legacy-single-series',
-        occurrenceKey: 'legacy-single-series#2026-05-07T10:00:00.000Z',
-        startAt: new Date('2026-05-07T10:00:00.000Z'),
-        originalStartAt: new Date('2026-05-07T10:00:00.000Z'),
-      });
-      (EventOccurrenceDAO.readUpcomingByEventSeriesId as jest.Mock)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([occurrence]);
-      (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock)
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([occurrence]);
+      (EventOccurrenceDAO.readUpcomingByEventSeriesId as jest.Mock).mockResolvedValue([]);
 
       const occurrences = await EventOccurrenceService.readUpcomingOccurrencesForSeries(
         singleSeries,
@@ -786,8 +705,8 @@ describe('EventOccurrenceService', () => {
         new Date('2026-05-01T00:00:00.000Z'),
       );
 
-      expect(occurrences).toEqual([occurrence]);
-      expect(EventOccurrenceDAO.bulkUpsert).toHaveBeenCalled();
+      expect(occurrences).toEqual([]);
+      expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
     });
   });
 });

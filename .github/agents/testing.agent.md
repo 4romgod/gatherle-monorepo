@@ -134,7 +134,7 @@ apps/api/test/
   e2e/
     spec/           ← Jest + supertest tests (.e2e.ts)
     utils/          ← Shared helpers (auth helpers, user/resolver helpers)
-    setup.ts        ← Jest globalSetup: validates GRAPHQL_URL, warms Lambda
+    setup.ts        ← Jest globalSetup: validates GRAPHQL_URL and checks API readiness
     jest.config.ts
   utils/            ← Shared across unit + e2e
     mockData/       ← Seeded test data

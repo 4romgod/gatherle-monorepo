@@ -5,7 +5,7 @@ import type { User } from '@gatherle/commons/types';
 import { UserRole } from '@gatherle/commons/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
-import { EventOccurrenceParticipantDAO, EventSeriesDAO, EventSeriesParticipantDAO } from '@/mongodb/dao';
+import { EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import type { ArgsDictionary } from 'type-graphql';
 import type { GraphQLResolveInfo } from 'graphql';
@@ -241,12 +241,11 @@ describe('Auth Utilities', () => {
       expect(result).toBe(true);
     });
 
-    it('falls back to legacy series participants when no occurrence participant exists', async () => {
+    it('denies event participant reads when the user is neither an organizer nor an occurrence participant', async () => {
       (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: 'another-id', role: 'Host' }],
       });
       (EventOccurrenceParticipantDAO.hasParticipantForEventSeries as jest.Mock).mockResolvedValue(false);
-      (EventSeriesParticipantDAO.readByEvent as jest.Mock).mockResolvedValue([{ userId: 'user-id' }]);
 
       const result = await isAuthorizedByOperation(
         OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
@@ -254,8 +253,7 @@ describe('Auth Utilities', () => {
         mockUser,
       );
 
-      expect(EventSeriesParticipantDAO.readByEvent).toHaveBeenCalledWith('event-id');
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 

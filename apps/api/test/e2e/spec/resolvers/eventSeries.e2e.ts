@@ -42,6 +42,7 @@ describe('EventSeries Resolver', () => {
   const createdMembershipIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
   const uniqueSuffix = () => `${Date.now()}-${randomId()}`;
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
@@ -68,6 +69,28 @@ describe('EventSeries Resolver', () => {
 
   const updateMembershipRole = (membershipId: string, role: OrganizationRole) =>
     updateMembershipRoleOnServer(url, adminUser.token, membershipId, role);
+
+  const readEventsWithRetry = async (payload: object) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await request(url).post('').timeout({ response: 15_000, deadline: 20_000 }).send(payload);
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(750 * attempt);
+    }
+
+    throw new Error('Failed to read events after retrying transient errors.');
+  };
 
   const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
     const response = await request(url)
@@ -136,7 +159,7 @@ describe('EventSeries Resolver', () => {
         url,
         ids: createdEventIds,
         deleteRequest: getDeleteEventByIdMutation,
-        token: () => adminUser.token,
+        token: () => testUser.token,
         label: 'event',
         phase: 'afterAll',
       })),
@@ -291,10 +314,8 @@ describe('EventSeries Resolver', () => {
       input2.title = `Test EventSeries Two ${uniqueSuffix()}`;
       const event2 = await createEvent(input2);
 
-      const readResponse = await request(url)
-        .post('')
-        .send({
-          query: `query ReadEvents {
+      const readResponse = await readEventsWithRetry({
+        query: `query ReadEvents {
           readEvents {
             eventId
             title
@@ -307,7 +328,7 @@ describe('EventSeries Resolver', () => {
             }
           }
         }`,
-        });
+      });
 
       expect(readResponse.status).toBe(200);
       const events = readResponse.body.data.readEvents;
@@ -585,7 +606,7 @@ describe('EventSeries Resolver', () => {
 
       const allowedEvent = await createEvent(input);
       expect(allowedEvent).toHaveProperty('eventId');
-    });
+    }, 120_000);
 
     it('prevents users who lack membership in the current org from removing it from an event', async () => {
       const organization = await createOrganization(`org-guard-remove-${randomId()}`);

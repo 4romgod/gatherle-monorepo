@@ -142,7 +142,7 @@ In this repository, Mongoose is the runtime engine behind the models. For exampl
 
 - [eventSeries.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventSeries.ts)
 - [user.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/user.ts)
-- [eventSeriesParticipant.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventSeriesParticipant.ts)
+- [eventOccurrenceParticipant.ts](/home/bigfish/code/projects/gatherle-monorepo/apps/api/lib/mongodb/models/eventOccurrenceParticipant.ts)
 
 ### Important Distinction
 

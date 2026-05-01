@@ -11,7 +11,6 @@ import type { StringValue } from 'ms';
 import {
   EventOccurrenceParticipantDAO,
   EventSeriesDAO,
-  EventSeriesParticipantDAO,
   OrganizationDAO,
   OrganizationMembershipDAO,
 } from '@/mongodb/dao';
@@ -481,16 +480,7 @@ const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, 
     return true;
   }
 
-  const [hasOccurrenceParticipant, participants] = await Promise.all([
-    EventOccurrenceParticipantDAO.hasParticipantForEventSeries(eventId, user.userId),
-    EventSeriesParticipantDAO.readByEvent(eventId),
-  ]);
-
-  if (hasOccurrenceParticipant) {
-    return true;
-  }
-
-  return participants.some((participant) => participant.userId === user.userId);
+  return EventOccurrenceParticipantDAO.hasParticipantForEventSeries(eventId, user.userId);
 };
 
 /**

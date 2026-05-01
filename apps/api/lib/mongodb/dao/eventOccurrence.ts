@@ -1,8 +1,122 @@
 import { EventOccurrence as EventOccurrenceModel } from '@/mongodb/models';
-import { EventOccurrenceStatus, type EventOccurrence } from '@gatherle/commons/types';
+import { EventOccurrenceStatus, ParticipantStatus, type EventOccurrence } from '@gatherle/commons/types';
 import { KnownCommonError, logDaoError } from '@/utils';
 
 class EventOccurrenceDAO {
+  static async readReservedSlotDriftBySeriesIds(eventSeriesIds: string[]): Promise<
+    Array<{
+      occurrenceId: string;
+      eventSeriesId: string;
+      expectedReservedSlotCount: number;
+      actualReservedSlotCount: number;
+    }>
+  > {
+    if (eventSeriesIds.length === 0) {
+      return [];
+    }
+
+    try {
+      return await EventOccurrenceModel.aggregate<{
+        occurrenceId: string;
+        eventSeriesId: string;
+        expectedReservedSlotCount: number;
+        actualReservedSlotCount: number;
+      }>([
+        {
+          $match: {
+            eventSeriesId: { $in: eventSeriesIds },
+          },
+        },
+        {
+          $lookup: {
+            from: 'eventoccurrenceparticipants',
+            let: { occurrenceId: '$occurrenceId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$occurrenceId', '$$occurrenceId'] },
+                  status: { $in: [ParticipantStatus.Going, ParticipantStatus.CheckedIn] },
+                },
+              },
+              {
+                $project: {
+                  reservedSlots: {
+                    $cond: [
+                      {
+                        $and: [{ $ne: ['$quantity', null] }, { $gt: ['$quantity', 1] }],
+                      },
+                      '$quantity',
+                      1,
+                    ],
+                  },
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  expectedReservedSlotCount: { $sum: '$reservedSlots' },
+                },
+              },
+            ],
+            as: 'participantReservationState',
+          },
+        },
+        {
+          $addFields: {
+            expectedReservedSlotCount: {
+              $ifNull: [{ $first: '$participantReservationState.expectedReservedSlotCount' }, 0],
+            },
+            actualReservedSlotCount: { $ifNull: ['$reservedSlotCount', 0] },
+          },
+        },
+        {
+          $match: {
+            $expr: {
+              $ne: ['$expectedReservedSlotCount', '$actualReservedSlotCount'],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            occurrenceId: 1,
+            eventSeriesId: 1,
+            expectedReservedSlotCount: 1,
+            actualReservedSlotCount: 1,
+          },
+        },
+      ]).exec();
+    } catch (error) {
+      logDaoError('Error reading occurrence reserved slot drift by eventSeriesIds', { error, eventSeriesIds });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async reconcileReservedSlotCounts(
+    reconciliations: Array<{ occurrenceId: string; reservedSlotCount: number }>,
+  ): Promise<void> {
+    if (reconciliations.length === 0) {
+      return;
+    }
+
+    try {
+      await EventOccurrenceModel.bulkWrite(
+        reconciliations.map((reconciliation) => ({
+          updateOne: {
+            filter: { occurrenceId: reconciliation.occurrenceId },
+            update: {
+              $set: { reservedSlotCount: reconciliation.reservedSlotCount },
+            },
+          },
+        })),
+        { ordered: false },
+      );
+    } catch (error) {
+      logDaoError('Error reconciling occurrence reserved slot counts', { error, count: reconciliations.length });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readByOccurrenceId(occurrenceId: string): Promise<EventOccurrence | null> {
     try {
       const occurrence = await EventOccurrenceModel.findOne({ occurrenceId }).lean().exec();
@@ -56,6 +170,61 @@ class EventOccurrenceDAO {
     }
   }
 
+  static async readLatestOriginalStartsBySeriesIds(eventSeriesIds: string[]): Promise<Map<string, Date>> {
+    if (eventSeriesIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const rows = await EventOccurrenceModel.aggregate<{ _id: string; latestOriginalStartAt: Date }>([
+        {
+          $match: {
+            eventSeriesId: { $in: eventSeriesIds },
+            isException: false,
+          },
+        },
+        {
+          $group: {
+            _id: '$eventSeriesId',
+            latestOriginalStartAt: { $max: '$originalStartAt' },
+          },
+        },
+      ]).exec();
+
+      return new Map(rows.map((row) => [row._id, row.latestOriginalStartAt]));
+    } catch (error) {
+      logDaoError('Error reading latest generated occurrence starts by eventSeriesIds', { error, eventSeriesIds });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readSeriesIdsMissingSlug(eventSeriesIds: string[]): Promise<Set<string>> {
+    if (eventSeriesIds.length === 0) {
+      return new Set();
+    }
+
+    try {
+      const rows = await EventOccurrenceModel.aggregate<{ _id: string }>([
+        {
+          $match: {
+            eventSeriesId: { $in: eventSeriesIds },
+            $or: [{ eventSeriesSlug: { $exists: false } }, { eventSeriesSlug: null }, { eventSeriesSlug: '' }],
+          },
+        },
+        {
+          $group: {
+            _id: '$eventSeriesId',
+          },
+        },
+      ]).exec();
+
+      return new Set(rows.map((row) => row._id));
+    } catch (error) {
+      logDaoError('Error reading event series ids with missing occurrence slug snapshots', { error, eventSeriesIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readFirstByEventSeriesId(eventSeriesId: string): Promise<EventOccurrence | null> {
     try {
       return await EventOccurrenceModel.findOne({ eventSeriesId })
@@ -86,6 +255,10 @@ class EventOccurrenceDAO {
             isException: occurrence.isException,
             seriesScheduleVersion: occurrence.seriesScheduleVersion,
           };
+
+          if (occurrence.eventSeriesSlug !== undefined) {
+            setPayload.eventSeriesSlug = occurrence.eventSeriesSlug;
+          }
 
           if (occurrence.endAt !== undefined) {
             setPayload.endAt = occurrence.endAt;
@@ -308,6 +481,7 @@ class EventOccurrenceDAO {
       oldOccurrenceId: string;
       occurrenceId: string;
       eventSeriesId: string;
+      eventSeriesSlug?: string;
       occurrenceKey: string;
       seriesScheduleVersion: number;
     }>,
@@ -325,6 +499,7 @@ class EventOccurrenceDAO {
               $set: {
                 occurrenceId: occurrence.occurrenceId,
                 eventSeriesId: occurrence.eventSeriesId,
+                eventSeriesSlug: occurrence.eventSeriesSlug,
                 occurrenceKey: occurrence.occurrenceKey,
                 seriesScheduleVersion: occurrence.seriesScheduleVersion,
               },

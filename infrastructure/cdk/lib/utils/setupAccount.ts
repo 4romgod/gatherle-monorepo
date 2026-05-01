@@ -112,6 +112,8 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     graphqlLambdaFunction: graphqlStack.graphqlLambda,
     graphqlLambdaLogGroup: graphqlStack.graphqlLambdaLogGroup,
     graphqlApiAccessLogGroup: graphqlStack.graphqlApiAccessLogGroup,
+    occurrenceMaintenanceLambdaFunction: graphqlStack.occurrenceMaintenanceLambda,
+    occurrenceMaintenanceLambdaLogGroup: graphqlStack.occurrenceMaintenanceLambdaLogGroup,
     websocketLambdaFunction: webSocketApiStack.websocketLambda,
     websocketLambdaLogGroup: webSocketApiStack.websocketLambdaLogGroup,
     websocketApi: webSocketApiStack.websocketApi,

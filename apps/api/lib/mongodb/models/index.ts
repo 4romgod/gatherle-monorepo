@@ -2,7 +2,6 @@ export { default as EventSeries } from './eventSeries';
 export { default as User } from './user';
 export { default as EventCategory } from './eventCategory';
 export { default as EventCategoryGroup } from './eventCategoryGroup';
-export { default as EventSeriesParticipant } from './eventSeriesParticipant';
 export { default as EventOccurrence } from './eventOccurrence';
 export { default as EventOccurrenceParticipant } from './eventOccurrenceParticipant';
 export { default as EventMoment } from './eventMoment';

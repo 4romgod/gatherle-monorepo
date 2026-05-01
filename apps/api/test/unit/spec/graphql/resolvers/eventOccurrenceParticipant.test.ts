@@ -162,8 +162,6 @@ describe('EventOccurrenceParticipantResolver', () => {
       eventOccurrence: new DataLoader(async (keys: readonly string[]) => keys.map(() => occurrence)),
       eventOccurrenceByEventSeries: new DataLoader(async (keys: readonly string[]) => keys.map(() => occurrence)),
       organization: new DataLoader(async (keys: readonly string[]) => keys.map(() => null)),
-      eventSeriesParticipant: new DataLoader(async (keys: readonly string[]) => keys.map(() => null)),
-      eventSeriesParticipantsByEvent: new DataLoader(async (keys: readonly string[]) => keys.map(() => [])),
       eventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => keys.map(() => participant)),
       eventOccurrenceParticipantsByOccurrence: new DataLoader(async (keys: readonly string[]) =>
         keys.map(() => [participant]),

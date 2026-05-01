@@ -2,7 +2,6 @@ export { default as EventSeriesDAO } from '@/mongodb/dao/eventSeries';
 export { default as UserDAO } from '@/mongodb/dao/user';
 export { default as EventCategoryDAO } from '@/mongodb/dao/eventCategory';
 export { default as EventCategoryGroupDAO } from '@/mongodb/dao/eventCategoryGroup';
-export { default as EventSeriesParticipantDAO } from '@/mongodb/dao/eventSeriesParticipant';
 export { default as EventOccurrenceDAO } from '@/mongodb/dao/eventOccurrence';
 export { default as EventOccurrenceParticipantDAO } from '@/mongodb/dao/eventOccurrenceParticipant';
 export { default as EventMomentDAO } from '@/mongodb/dao/eventMoment';

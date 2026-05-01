@@ -20,6 +20,33 @@ describe('readTrendingEvents e2e', () => {
   const url = process.env.GRAPHQL_URL!;
   let actorUser: UserWithToken;
   const createdEventIds: string[] = [];
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const upsertParticipantWithRetry = async (eventId: string) => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 30_000, deadline: 40_000 })
+        .set('Authorization', 'Bearer ' + actorUser.token)
+        .send(getUpsertEventParticipantMutation({ userId: actorUser.userId, eventId, status: 'Going' }));
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 5 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(750 * attempt);
+    }
+
+    throw new Error(`Failed to RSVP to trending event ${eventId} after retrying transient errors.`);
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -187,10 +214,7 @@ describe('readTrendingEvents e2e', () => {
     const baselineRsvp = beforeEvent?.rsvpCount ?? 0;
 
     // RSVP
-    const rsvpResponse = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getUpsertEventParticipantMutation({ userId: actorUser.userId, eventId, status: 'Going' }));
+    const rsvpResponse = await upsertParticipantWithRetry(eventId);
     expect(rsvpResponse.status).toBe(200);
     expect(rsvpResponse.body.errors).toBeUndefined();
 

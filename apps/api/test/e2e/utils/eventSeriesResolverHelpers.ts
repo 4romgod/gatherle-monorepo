@@ -5,6 +5,8 @@ import {
   getCreateEventMutation,
   getCreateOrganizationMutation,
   getCreateOrganizationMembershipMutation,
+  getReadEventBySlugQuery,
+  getReadOrganizationBySlugQuery,
   getUpdateOrganizationMembershipMutation,
 } from '@/test/utils';
 
@@ -69,6 +71,111 @@ const readCleanupToken = (token: CleanupToken): string => (typeof token === 'fun
 
 const readGraphQLErrors = (body: { errors?: GraphQLResponseError[] } | undefined): GraphQLResponseError[] =>
   Array.isArray(body?.errors) ? body.errors : [];
+
+const readErrorCode = (errors: GraphQLResponseError[]): string | undefined =>
+  errors.find((error) => error.extensions?.code)?.extensions?.code;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const hasRetryableMessage = (value: unknown): boolean =>
+  typeof value === 'string' && /(endpoint request timed out|timed out|timeout|temporarily unavailable)/i.test(value);
+
+const isRetryableGraphQLFailure = (status: number, body: unknown): boolean => {
+  if (status === 429 || status >= 500) {
+    return true;
+  }
+
+  if (!body || typeof body !== 'object') {
+    return false;
+  }
+
+  const graphQLBody = body as {
+    message?: unknown;
+    errors?: Array<{ message?: unknown }>;
+  };
+
+  if (hasRetryableMessage(graphQLBody.message)) {
+    return true;
+  }
+
+  return Array.isArray(graphQLBody.errors) && graphQLBody.errors.some((error) => hasRetryableMessage(error.message));
+};
+
+const isRetryableRequestError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout)/i.test(error.message);
+};
+
+const readConflictSlug = (errors: GraphQLResponseError[], input: CreateEventInput): string | null => {
+  const message = errors.find((error) => typeof error.message === 'string')?.message ?? '';
+  const slugFromMessage = message.match(/Slug ([^ ]+) already exists/i)?.[1];
+  if (slugFromMessage) {
+    return slugFromMessage;
+  }
+
+  if (readErrorCode(errors) === 'CONFLICT' && input.title) {
+    return input.title
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  return null;
+};
+
+const tryReadEventBySlug = async (
+  url: string,
+  slug: string,
+  userToken: string,
+  createdEventIds: string[],
+): Promise<CreatedEventRef | null> => {
+  try {
+    const response = await request(url)
+      .post('')
+      .timeout({ response: 15_000, deadline: 20_000 })
+      .set('Authorization', 'Bearer ' + userToken)
+      .send(getReadEventBySlugQuery(slug));
+
+    const createdEvent = response.body.data?.readEventBySlug as CreatedEventRef | undefined;
+    if (response.status === 200 && !response.body.errors && createdEvent?.eventId) {
+      trackCreatedId(createdEventIds, createdEvent.eventId);
+      return createdEvent;
+    }
+  } catch {
+    // Ignore recovery failures and let the original create error surface.
+  }
+
+  return null;
+};
+
+const tryReadOrganizationBySlug = async (
+  url: string,
+  slug: string,
+  adminToken: string,
+  createdOrgIds: string[],
+): Promise<OrganizationRef | null> => {
+  try {
+    const response = await request(url)
+      .post('')
+      .timeout({ response: 15_000, deadline: 20_000 })
+      .set('Authorization', 'Bearer ' + adminToken)
+      .send(getReadOrganizationBySlugQuery(slug));
+
+    const organization = response.body.data?.readOrganizationBySlug as OrganizationRef | undefined;
+    if (response.status === 200 && !response.body.errors && organization?.orgId) {
+      trackCreatedId(createdOrgIds, organization.orgId);
+      return organization;
+    }
+  } catch {
+    // Ignore recovery failures and let the original create error surface.
+  }
+
+  return null;
+};
 
 const isNotFoundResponse = (status: number, errors: GraphQLResponseError[]): boolean =>
   status === 404 || errors.some((error) => error.extensions?.code === 'NOT_FOUND');
@@ -140,18 +247,55 @@ export const createEventOnServer = async (
   input: CreateEventInput,
   createdEventIds: string[],
 ): Promise<CreatedEventRef> => {
-  const response = await request(url)
-    .post('')
-    .set('Authorization', 'Bearer ' + userToken)
-    .send(getCreateEventMutation(input));
+  const maxAttempts = 5;
 
-  if (response.status !== 200 || response.body.errors || !response.body.data?.createEvent?.eventId) {
-    throw new Error(`Failed to create event: ${JSON.stringify(response.body.errors ?? response.body)}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 20_000, deadline: 30_000 })
+        .set('Authorization', 'Bearer ' + userToken)
+        .send(getCreateEventMutation(input));
+
+      if (response.status === 200 && !response.body.errors && response.body.data?.createEvent?.eventId) {
+        const createdEvent = response.body.data.createEvent as CreatedEventRef;
+        trackCreatedId(createdEventIds, createdEvent.eventId);
+        return createdEvent;
+      }
+
+      const errors = readGraphQLErrors(response.body);
+      const conflictSlug = readConflictSlug(errors, input);
+      if (conflictSlug) {
+        const recoveredEvent = await tryReadEventBySlug(url, conflictSlug, userToken, createdEventIds);
+        if (recoveredEvent) {
+          return recoveredEvent;
+        }
+      }
+
+      const failureMessage = `Failed to create event: ${JSON.stringify(response.body.errors ?? response.body)}`;
+      const shouldRetry = attempt < maxAttempts && isRetryableGraphQLFailure(response.status, response.body);
+
+      if (shouldRetry) {
+        console.warn(`[createEventOnServer] transient failure on attempt ${attempt}/${maxAttempts}: ${failureMessage}`);
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw new Error(failureMessage);
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts && isRetryableRequestError(error);
+      if (shouldRetry) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`[createEventOnServer] transient request error on attempt ${attempt}/${maxAttempts}: ${message}`);
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const createdEvent = response.body.data.createEvent as CreatedEventRef;
-  trackCreatedId(createdEventIds, createdEvent.eventId);
-  return createdEvent;
+  throw new Error('Failed to create event after retrying transient errors.');
 };
 
 export const createOrganizationOnServer = async (
@@ -161,23 +305,66 @@ export const createOrganizationOnServer = async (
   name: string,
   createdOrgIds: string[],
 ): Promise<OrganizationRef> => {
-  const response = await request(url)
-    .post('')
-    .set('Authorization', 'Bearer ' + adminToken)
-    .send(
-      getCreateOrganizationMutation({
-        name,
-        ownerId,
-      }),
-    );
+  const maxAttempts = 5;
 
-  if (response.status !== 200 || response.body.errors || !response.body.data?.createOrganization?.orgId) {
-    throw new Error(`Failed to create organization: ${JSON.stringify(response.body.errors ?? response.body)}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 20_000, deadline: 30_000 })
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send(
+          getCreateOrganizationMutation({
+            name,
+            ownerId,
+          }),
+        );
+
+      if (response.status === 200 && !response.body.errors && response.body.data?.createOrganization?.orgId) {
+        const organization = response.body.data.createOrganization as OrganizationRef;
+        trackCreatedId(createdOrgIds, organization.orgId);
+        return organization;
+      }
+
+      const errors = readGraphQLErrors(response.body);
+      const failureMessage = `Failed to create organization: ${JSON.stringify(response.body.errors ?? response.body)}`;
+      const slugFromMessage = errors
+        .find((error) => typeof error.message === 'string')
+        ?.message?.match(/Slug ([^ ]+) already exists/i)?.[1];
+      const organizationSlug =
+        slugFromMessage ??
+        name
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+      if ((response.status === 409 || readErrorCode(errors) === 'CONFLICT') && organizationSlug) {
+        const recoveredOrganization = await tryReadOrganizationBySlug(url, organizationSlug, adminToken, createdOrgIds);
+        if (recoveredOrganization) {
+          return recoveredOrganization;
+        }
+      }
+
+      const shouldRetry = attempt < maxAttempts && isRetryableGraphQLFailure(response.status, response.body);
+      if (shouldRetry) {
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw new Error(failureMessage);
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts && isRetryableRequestError(error);
+      if (shouldRetry) {
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const organization = response.body.data.createOrganization as OrganizationRef;
-  trackCreatedId(createdOrgIds, organization.orgId);
-  return organization;
+  throw new Error('Failed to create organization after retrying transient errors.');
 };
 
 export const createMembershipOnServer = async (
@@ -188,28 +375,52 @@ export const createMembershipOnServer = async (
   role: OrganizationRole,
   createdMembershipIds: string[],
 ): Promise<OrganizationMembershipRef> => {
-  const response = await request(url)
-    .post('')
-    .set('Authorization', 'Bearer ' + adminToken)
-    .send(
-      getCreateOrganizationMembershipMutation({
-        orgId,
-        userId,
-        role,
-      }),
-    );
+  const maxAttempts = 5;
 
-  if (
-    response.status !== 200 ||
-    response.body.errors ||
-    !response.body.data?.createOrganizationMembership?.membershipId
-  ) {
-    throw new Error(`Failed to create membership: ${JSON.stringify(response.body.errors ?? response.body)}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 20_000, deadline: 30_000 })
+        .set('Authorization', 'Bearer ' + adminToken)
+        .send(
+          getCreateOrganizationMembershipMutation({
+            orgId,
+            userId,
+            role,
+          }),
+        );
+
+      if (
+        response.status === 200 &&
+        !response.body.errors &&
+        response.body.data?.createOrganizationMembership?.membershipId
+      ) {
+        const membership = response.body.data.createOrganizationMembership as OrganizationMembershipRef;
+        trackCreatedId(createdMembershipIds, membership.membershipId);
+        return membership;
+      }
+
+      const failureMessage = `Failed to create membership: ${JSON.stringify(response.body.errors ?? response.body)}`;
+      const shouldRetry = attempt < maxAttempts && isRetryableGraphQLFailure(response.status, response.body);
+      if (shouldRetry) {
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw new Error(failureMessage);
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts && isRetryableRequestError(error);
+      if (shouldRetry) {
+        await sleep(750 * attempt);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const membership = response.body.data.createOrganizationMembership as OrganizationMembershipRef;
-  trackCreatedId(createdMembershipIds, membership.membershipId);
-  return membership;
+  throw new Error('Failed to create membership after retrying transient errors.');
 };
 
 export const updateMembershipRoleOnServer = async (

@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { EventOccurrenceParticipantDAO, EventSeriesParticipantDAO } from '@/mongodb/dao';
+import { EventOccurrenceParticipantDAO } from '@/mongodb/dao';
 import type {
   User,
   EventCategory,
@@ -65,22 +65,6 @@ export const createMockContext = (
     });
   });
 
-  const eventSeriesParticipantLoader = new DataLoader<string, any>(async (keys) => {
-    return keys.map(() => null);
-  });
-
-  const eventParticipantsByEventLoader = new DataLoader<string, any[]>(async (eventIds) => {
-    const allParticipants = await EventSeriesParticipantDAO.readByEvents([...eventIds]);
-    const map = new Map<string, any[]>();
-    for (const id of eventIds) map.set(id, []);
-    for (const participant of allParticipants) {
-      if (participant && map.has(participant.eventId)) {
-        map.get(participant.eventId)!.push(participant);
-      }
-    }
-    return eventIds.map((id) => map.get(id) ?? []);
-  });
-
   const eventOccurrenceParticipantLoader = new DataLoader<string, EventOccurrenceParticipant | null>(async (keys) => {
     return keys.map((key) => mockData?.occurrenceParticipants?.get(key) ?? null);
   });
@@ -130,8 +114,6 @@ export const createMockContext = (
       eventOccurrence: eventOccurrenceLoader,
       eventOccurrenceByEventSeries: eventOccurrenceByEventSeriesLoader,
       organization: organizationLoader,
-      eventSeriesParticipant: eventSeriesParticipantLoader,
-      eventSeriesParticipantsByEvent: eventParticipantsByEventLoader,
       eventOccurrenceParticipant: eventOccurrenceParticipantLoader,
       eventOccurrenceParticipantsByOccurrence: eventOccurrenceParticipantsByOccurrenceLoader,
       eventOccurrenceParticipantCountByOccurrence: eventOccurrenceParticipantCountByOccurrenceLoader,
