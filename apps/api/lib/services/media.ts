@@ -124,9 +124,11 @@ class MediaService {
 
     // 2. Caller must have an active Going or CheckedIn RSVP.
     const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(eventId);
-    const participant = occurrence
-      ? await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId)
-      : null;
+    if (!occurrence) {
+      throw CustomError('Event occurrence not found for this event.', ErrorTypes.NOT_FOUND);
+    }
+
+    const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId);
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to upload a moment', ErrorTypes.UNAUTHORIZED);
     }
@@ -169,6 +171,7 @@ class MediaService {
     if (isVideoUpload) {
       const moment = await EventMomentDAO.createVideoUpload({
         eventId,
+        occurrenceId: occurrence.occurrenceId,
         authorId: userId,
         rawS3Key: key,
         mediaUrl: readUrl,

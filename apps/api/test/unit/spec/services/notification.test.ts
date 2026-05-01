@@ -213,6 +213,26 @@ describe('NotificationService', () => {
       );
     });
 
+    it('persists occurrenceId and generates an occurrence-aware event actionUrl', async () => {
+      (NotificationDAO.create as jest.Mock).mockResolvedValue(mockNotification);
+
+      await NotificationService.notify({
+        type: NotificationType.EVENT_RECOMMENDATION,
+        recipientUserId: 'user-1',
+        targetType: NotificationTargetType.EventSeries,
+        targetSlug: 'my-event-slug',
+        occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
+      });
+
+      expect(NotificationDAO.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetId: 'my-event-slug',
+          occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
+          actionUrl: '/events/my-event-slug?occurrence=event-1%232026-05-10T10%3A00%3A00.000Z',
+        }),
+      );
+    });
+
     it('uses username when given_name is not available', async () => {
       (UserDAO.readUserById as jest.Mock).mockResolvedValue({
         userId: 'user-2',
@@ -272,6 +292,30 @@ describe('NotificationService', () => {
         expect.objectContaining({ recipientUserId: 'user-3' }),
         // user-2 should not be in the array
       ]);
+    });
+
+    it('creates occurrence-aware event notifications for multiple recipients', async () => {
+      (NotificationDAO.createMany as jest.Mock).mockResolvedValue([
+        { ...mockNotification, recipientUserId: 'user-3' },
+        { ...mockNotification, recipientUserId: 'user-4' },
+      ]);
+
+      await NotificationService.notifyMany(['user-3', 'user-4'], {
+        type: NotificationType.EVENT_RSVP,
+        actorUserId: 'user-2',
+        targetType: NotificationTargetType.EventSeries,
+        targetSlug: 'weekly-yoga',
+        occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
+      });
+
+      expect(NotificationDAO.createMany).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
+            actionUrl: '/events/weekly-yoga?occurrence=event-1%232026-05-10T10%3A00%3A00.000Z',
+          }),
+        ]),
+      );
     });
 
     it('returns empty array when all recipients filtered out', async () => {

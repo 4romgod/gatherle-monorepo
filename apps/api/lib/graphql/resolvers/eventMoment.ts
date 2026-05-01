@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root } from 'type-graphql';
 import {
   CreateEventMomentInput,
+  EventOccurrence,
   EventSeries,
   EventMoment,
   EventMomentPage,
@@ -31,6 +32,16 @@ export class EventMomentResolver {
     if (!moment.eventId) return null;
     try {
       return await context.loaders.eventSeries.load(moment.eventId);
+    } catch {
+      return null;
+    }
+  }
+
+  @FieldResolver(() => EventOccurrence, { nullable: true })
+  async occurrence(@Root() moment: EventMoment, @Ctx() context: ServerContext): Promise<EventOccurrence | null> {
+    if (!moment.occurrenceId) return null;
+    try {
+      return await context.loaders.eventOccurrence.load(moment.occurrenceId);
     } catch {
       return null;
     }

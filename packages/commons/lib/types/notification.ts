@@ -112,6 +112,10 @@ export class Notification {
   @Field(() => ID, { nullable: true, description: NOTIFICATION_DESCRIPTIONS.TARGET_ID })
   targetId?: string;
 
+  @prop({ type: () => String })
+  @Field(() => ID, { nullable: true, description: NOTIFICATION_DESCRIPTIONS.OCCURRENCE_ID })
+  occurrenceId?: string;
+
   // Computed fields - resolved via @FieldResolver (no @prop)
   @Field(() => User, {
     nullable: true,
@@ -184,6 +188,9 @@ export class CreateNotificationInput {
 
   @Field(() => ID, { nullable: true, description: NOTIFICATION_DESCRIPTIONS.TARGET_ID })
   targetId?: string;
+
+  @Field(() => ID, { nullable: true, description: NOTIFICATION_DESCRIPTIONS.OCCURRENCE_ID })
+  occurrenceId?: string;
 
   @Field(() => String, { nullable: true, description: NOTIFICATION_DESCRIPTIONS.ACTION_URL })
   actionUrl?: string;

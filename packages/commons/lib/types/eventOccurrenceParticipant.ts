@@ -10,6 +10,8 @@ import { User } from './user';
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
 @index({ occurrenceId: 1, userId: 1 }, { unique: true })
 @index({ occurrenceId: 1, status: 1, rsvpAt: 1 })
+@index({ userId: 1, rsvpAt: -1, createdAt: -1 })
+@index({ userId: 1, occurrenceId: 1, rsvpAt: 1 })
 export class EventOccurrenceParticipant {
   @prop({ required: true, unique: true, index: true, type: () => String })
   @Field(() => ID, { description: EVENT_DESCRIPTIONS.PARTICIPANT.ID })

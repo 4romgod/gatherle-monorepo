@@ -1,4 +1,5 @@
 import { FeedReason, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
+import type { EventOccurrence } from '@gatherle/commons/types';
 import {
   EventOccurrenceDAO,
   EventOccurrenceParticipantDAO,
@@ -8,6 +9,7 @@ import {
   UserFeedDAO,
 } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
+import EventOccurrenceService from './eventOccurrence';
 
 const SCORE_WEIGHTS = {
   CATEGORY_MATCH: 30,
@@ -130,6 +132,13 @@ class RecommendationService {
       }
 
       const now = new Date();
+      const representativeOccurrencesByEventId: Map<string, EventOccurrence | null> =
+        candidateEvents.length > 0
+          ? await EventOccurrenceService.readRepresentativeOccurrencesForSeriesIds(
+              candidateEvents.map((event) => event.eventId),
+              now,
+            )
+          : new Map<string, EventOccurrence | null>();
       const scoredItems: Array<{ eventId: string; score: number; reasons: FeedReason[] }> = [];
 
       for (const event of candidateEvents) {
@@ -164,7 +173,8 @@ class RecommendationService {
           reasons.push(FeedReason.NetworkSaved);
         }
 
-        const startAt = event.primarySchedule?.startAt;
+        const startAt =
+          representativeOccurrencesByEventId.get(event.eventId)?.startAt ?? event.primarySchedule?.startAt;
         if (startAt) {
           const daysUntil = daysBetween(now, new Date(startAt));
           if (daysUntil >= 0 && daysUntil <= 7) {

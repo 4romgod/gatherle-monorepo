@@ -82,9 +82,9 @@ function getOccurrenceRsvpLimit(eventSeries: Pick<EventSeries, 'rsvpLimit' | 'ca
 
 function buildOccurrenceActionUrl(
   eventSeries: Pick<EventSeries, 'slug'>,
-  occurrence: Pick<EventOccurrence, 'occurrenceKey'>,
+  occurrence: Pick<EventOccurrence, 'occurrenceId'>,
 ) {
-  return `/events/${eventSeries.slug}?occurrence=${encodeURIComponent(occurrence.occurrenceKey)}`;
+  return `/events/${eventSeries.slug}?occurrence=${encodeURIComponent(occurrence.occurrenceId)}`;
 }
 
 function isNotifiableRsvpStatus(status: ParticipantStatus): boolean {
@@ -179,6 +179,7 @@ class EventOccurrenceParticipantService {
         actorUserId,
         targetType: NotificationTargetType.EventSeries,
         targetSlug: eventSeries.slug,
+        occurrenceId: occurrence.occurrenceId,
         actionUrl: buildOccurrenceActionUrl(eventSeries, occurrence),
         rsvpStatus: status,
       });
@@ -203,6 +204,7 @@ class EventOccurrenceParticipantService {
         actorUserId,
         targetType: NotificationTargetType.EventSeries,
         targetSlug: eventSeries.slug,
+        occurrenceId: occurrence.occurrenceId,
         actionUrl: buildOccurrenceActionUrl(eventSeries, occurrence),
       });
     } catch (error) {

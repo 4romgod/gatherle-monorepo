@@ -18,17 +18,16 @@ import {
 import EventOccurrenceParticipantService from './eventOccurrenceParticipant';
 import EventOccurrenceService from './eventOccurrence';
 
+type EventSeriesWithMyRsvp = EventSeries & { myRsvp?: EventSeriesParticipant | null };
+
 class EventSeriesParticipantService {
-  private static async loadRepresentativeOccurrenceContext(
-    eventId: string,
-  ): Promise<{ eventSeries: EventSeries; occurrence: EventOccurrence }> {
-    const eventSeries = await EventSeriesDAO.readEventById(eventId);
+  private static async loadRepresentativeOccurrence(eventId: string): Promise<EventOccurrence> {
     const occurrence = await EventOccurrenceService.readRepresentativeOccurrenceForSeries(eventId);
     if (!occurrence) {
       throw CustomError(`Representative occurrence not found for event series ${eventId}`, ErrorTypes.NOT_FOUND);
     }
 
-    return { eventSeries, occurrence };
+    return occurrence;
   }
 
   private static chooseRepresentativeParticipant<
@@ -82,8 +81,25 @@ class EventSeriesParticipantService {
     return projectOccurrenceParticipantToSeriesParticipant(eventId, participant, eventSeries);
   }
 
+  private static buildEventSeriesSnapshot(
+    eventSeries: EventSeries,
+    occurrenceParticipants: EventOccurrenceParticipant[],
+    representativeParticipant: EventOccurrenceParticipant,
+  ): EventSeriesWithMyRsvp {
+    const eventSnapshot: EventSeriesWithMyRsvp = {
+      ...eventSeries,
+      participants: occurrenceParticipants.map((occurrenceParticipant) =>
+        this.toSeriesParticipant(eventSeries.eventId, occurrenceParticipant),
+      ),
+      rsvpCount: sumActiveOccurrenceRsvpCount(occurrenceParticipants),
+    };
+
+    eventSnapshot.myRsvp = this.toSeriesParticipant(eventSeries.eventId, representativeParticipant);
+    return eventSnapshot;
+  }
+
   static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant> {
-    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(input.eventId);
+    const occurrence = await this.loadRepresentativeOccurrence(input.eventId);
     const participant = await EventOccurrenceParticipantService.rsvp(
       {
         occurrenceId: occurrence.occurrenceId,
@@ -95,31 +111,31 @@ class EventSeriesParticipantService {
       input.userId,
     );
 
-    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+    return this.toSeriesParticipant(input.eventId, participant);
   }
 
   static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant> {
-    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(input.eventId);
+    const occurrence = await this.loadRepresentativeOccurrence(input.eventId);
     const participant = await EventOccurrenceParticipantService.cancel(occurrence.occurrenceId, input.userId);
-    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+    return this.toSeriesParticipant(input.eventId, participant);
   }
 
   static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant> {
-    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const occurrence = await this.loadRepresentativeOccurrence(eventId);
     const participant = await EventOccurrenceParticipantService.checkIn(occurrence.occurrenceId, userId);
-    return this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries);
+    return this.toSeriesParticipant(eventId, participant);
   }
 
   static async readByEvent(eventId: string): Promise<EventSeriesParticipant[]> {
-    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const occurrence = await this.loadRepresentativeOccurrence(eventId);
     const participants = await EventOccurrenceParticipantDAO.readByOccurrence(occurrence.occurrenceId);
-    return participants.map((participant) => this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries));
+    return participants.map((participant) => this.toSeriesParticipant(eventId, participant));
   }
 
   static async readByEventAndUser(eventId: string, userId: string): Promise<EventSeriesParticipant | null> {
-    const { eventSeries, occurrence } = await this.loadRepresentativeOccurrenceContext(eventId);
+    const occurrence = await this.loadRepresentativeOccurrence(eventId);
     const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId);
-    return participant ? this.toSeriesParticipant(eventSeries.eventId, participant, eventSeries) : null;
+    return participant ? this.toSeriesParticipant(eventId, participant) : null;
   }
 
   static async readByUser(userId: string, activeOnly = true): Promise<EventSeriesParticipant[]> {
@@ -201,16 +217,12 @@ class EventSeriesParticipantService {
 
     return representativeParticipants.map(({ eventSeries, occurrence, participant }) => {
       const occurrenceParticipants = occurrenceParticipantsByOccurrenceId.get(occurrence.occurrenceId) ?? [];
-      const eventWithOccurrenceSnapshot = {
-        ...eventSeries,
-        participants: occurrenceParticipants.map((occurrenceParticipant) =>
-          this.toSeriesParticipant(eventSeries.eventId, occurrenceParticipant),
-        ),
-        rsvpCount: sumActiveOccurrenceRsvpCount(occurrenceParticipants),
-      } as EventSeries & { myRsvp?: EventSeriesParticipant | null };
-
+      const eventWithOccurrenceSnapshot = this.buildEventSeriesSnapshot(
+        eventSeries,
+        occurrenceParticipants,
+        participant,
+      );
       const seriesParticipant = this.toSeriesParticipant(eventSeries.eventId, participant, eventWithOccurrenceSnapshot);
-      eventWithOccurrenceSnapshot.myRsvp = this.toSeriesParticipant(eventSeries.eventId, participant);
 
       return seriesParticipant;
     });

@@ -20,6 +20,8 @@ export interface NotifyParams {
   targetType?: NotificationTargetType;
   /** The slug (or identifier) used to build the actionUrl. For events/orgs, this should be the slug. */
   targetSlug?: string;
+  /** Optional occurrence identifier used for deep-linking to a specific event session. */
+  occurrenceId?: string;
   actionUrl?: string;
   // Optional overrides for title/message (otherwise generated from type)
   title?: string;
@@ -37,7 +39,19 @@ export interface NotifyParams {
 interface NotificationTemplate {
   title: string;
   message: (actorName?: string, rsvpStatus?: ParticipantStatus) => string;
-  actionUrlTemplate?: (targetSlug?: string, actorUsername?: string) => string | undefined;
+  actionUrlTemplate?: (targetSlug?: string, actorUsername?: string, occurrenceId?: string) => string | undefined;
+}
+
+function buildEventActionUrl(targetSlug?: string, occurrenceId?: string): string | undefined {
+  if (!targetSlug) {
+    return undefined;
+  }
+
+  if (!occurrenceId) {
+    return `/events/${targetSlug}`;
+  }
+
+  return `/events/${targetSlug}?occurrence=${encodeURIComponent(occurrenceId)}`;
 }
 
 const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTemplate> = {
@@ -78,42 +92,42 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTemplate> = {
           return `${name} RSVP'd to your event`;
       }
     },
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_SAVED]: {
     title: 'Event Saved',
     message: (actorName) => `${actorName || 'Someone'} saved your event`,
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_CHECKIN]: {
     title: 'Event Check-in',
     message: (actorName) => `${actorName || 'Someone'} checked in to your event`,
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_REMINDER_24H]: {
     title: 'Event Tomorrow',
     message: () => 'Your event is happening tomorrow',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_REMINDER_1H]: {
     title: 'Event Starting Soon',
     message: () => 'Your event starts in 1 hour',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_UPDATED]: {
     title: 'Event Updated',
     message: () => 'An event you saved has been updated',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_CANCELLED]: {
     title: 'Event Cancelled',
     message: () => 'An event you saved has been cancelled',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.EVENT_RECOMMENDATION]: {
     title: 'Event Recommendation',
     message: () => 'Check out this event that matches your interests',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
 
   // Organizations - targetSlug should be the org slug
@@ -130,14 +144,14 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTemplate> = {
   [NotificationType.ORG_EVENT_PUBLISHED]: {
     title: 'New Event',
     message: () => 'An organization you follow published a new event',
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
 
   // Friend Activity - targetSlug should be the event slug
   [NotificationType.FRIEND_RSVP]: {
     title: 'Friend Activity',
     message: (actorName) => `${actorName || 'A friend'} is going to an event`,
-    actionUrlTemplate: (targetSlug) => (targetSlug ? `/events/${targetSlug}` : undefined),
+    actionUrlTemplate: (targetSlug, _actorUsername, occurrenceId) => buildEventActionUrl(targetSlug, occurrenceId),
   },
   [NotificationType.FRIEND_CHECKIN]: {
     title: 'Friend Activity',
@@ -191,6 +205,7 @@ class NotificationService {
       actorUserId,
       targetType,
       targetSlug,
+      occurrenceId,
       actionUrl,
       title: customTitle,
       message: customMessage,
@@ -226,7 +241,7 @@ class NotificationService {
     // Generate action URL
     let generatedActionUrl = actionUrl;
     if (!generatedActionUrl && template.actionUrlTemplate) {
-      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername) || undefined;
+      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, occurrenceId) || undefined;
     }
 
     const input: CreateNotificationInput = {
@@ -237,6 +252,7 @@ class NotificationService {
       actorUserId,
       targetType,
       targetId: targetSlug, // Store slug in targetId field for reference
+      occurrenceId,
       actionUrl: generatedActionUrl,
     };
 
@@ -264,6 +280,7 @@ class NotificationService {
       actorUserId,
       targetType,
       targetSlug,
+      occurrenceId,
       actionUrl,
       title: customTitle,
       message: customMessage,
@@ -299,7 +316,7 @@ class NotificationService {
     // Generate action URL
     let generatedActionUrl = actionUrl;
     if (!generatedActionUrl && template.actionUrlTemplate) {
-      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername) || undefined;
+      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, occurrenceId) || undefined;
     }
 
     // Create inputs for all recipients
@@ -311,6 +328,7 @@ class NotificationService {
       actorUserId,
       targetType,
       targetId: targetSlug, // Store slug in targetId field for reference
+      occurrenceId,
       actionUrl: generatedActionUrl,
     }));
 
