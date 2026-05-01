@@ -67,7 +67,7 @@ class EventSeriesService {
   }
 
   private static async syncOccurrencesForSeries(
-    eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
+    eventSeries: Pick<EventSeries, 'eventId' | 'slug' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
   ): Promise<void> {
     try {
       await EventOccurrenceService.syncEventSeriesOccurrences(eventSeries);
@@ -202,6 +202,7 @@ class EventSeriesService {
     await EventOccurrenceService.moveFutureOccurrencesToSeries(
       eventSeries.eventId,
       successorEvent.eventId,
+      successorEvent.slug,
       occurrence.originalStartAt,
       successorEvent.scheduleVersion ?? 1,
     );

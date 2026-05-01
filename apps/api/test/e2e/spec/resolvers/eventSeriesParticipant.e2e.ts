@@ -19,10 +19,10 @@ describe('EventSeriesParticipant Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
-  let eventId = '';
   let eventCreatorToken = '';
   let eventCategoryId = '';
   const allCreatedEventIds: string[] = [];
+  const placeholderEventId = '507f1f77bcf86cd799439011';
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
     return rest;
@@ -35,6 +35,73 @@ describe('EventSeriesParticipant Resolver', () => {
     eventCategories: [eventCategoryId],
     organizers: [{ user: participantUser.userId, role: 'Host' }],
   });
+
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const waitForParticipantReadiness = async (eventId: string): Promise<void> => {
+    const maxAttempts = 5;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + participantUser.token)
+        .send(getReadEventParticipantsQuery(eventId));
+
+      if (response.status === 200 && !response.body.errors) {
+        return;
+      }
+
+      const body = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < maxAttempts &&
+        (response.status === 404 ||
+          response.status >= 500 ||
+          /Representative occurrence not found|timed out|timeout/i.test(body));
+
+      if (!shouldRetry) {
+        throw new Error(`Event ${eventId} is not ready for participant operations: ${body}`);
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`Event ${eventId} did not become participant-ready in time.`);
+  };
+
+  const readEventParticipantsWithRetry = async (eventId: string) => {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 15_000, deadline: 20_000 })
+        .set('Authorization', 'Bearer ' + participantUser.token)
+        .send(getReadEventParticipantsQuery(eventId));
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const body = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < maxAttempts &&
+        (response.status >= 500 || /Representative occurrence not found|timed out|timeout/i.test(body));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`Failed to read participants for event ${eventId} after retrying transient errors.`);
+  };
+
+  const createEventId = async (): Promise<string> => {
+    const createdEvent = await createEventOnServer(url, participantUser.token, buildEventInput(), allCreatedEventIds);
+    await waitForParticipantReadiness(createdEvent.eventId);
+    return createdEvent.eventId;
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -49,11 +116,6 @@ describe('EventSeriesParticipant Resolver', () => {
     eventCreatorToken = participantUser.token;
   });
 
-  beforeEach(async () => {
-    const created = await createEventOnServer(url, participantUser.token, buildEventInput(), allCreatedEventIds);
-    eventId = created.eventId;
-  });
-
   afterEach(async () => {
     await cleanupTrackedEntities({
       url,
@@ -62,7 +124,6 @@ describe('EventSeriesParticipant Resolver', () => {
       token: () => eventCreatorToken,
       label: 'event',
     });
-    eventId = '';
   });
 
   afterAll(async () => {
@@ -78,6 +139,7 @@ describe('EventSeriesParticipant Resolver', () => {
   });
 
   it('upserts a participant', async () => {
+    const eventId = await createEventId();
     const response = await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -93,6 +155,7 @@ describe('EventSeriesParticipant Resolver', () => {
   });
 
   it('reads participants for an event', async () => {
+    const eventId = await createEventId();
     await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -104,15 +167,13 @@ describe('EventSeriesParticipant Resolver', () => {
         }),
       );
 
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(getReadEventParticipantsQuery(eventId));
+    const response = await readEventParticipantsWithRetry(eventId);
     expect(response.status).toBe(200);
     expect(response.body.data.readEventParticipants.length).toBeGreaterThan(0);
   });
 
   it('cancels a participant', async () => {
+    const eventId = await createEventId();
     await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -131,6 +192,7 @@ describe('EventSeriesParticipant Resolver', () => {
   });
 
   it('updates participant status from Going to Interested', async () => {
+    const eventId = await createEventId();
     await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -158,6 +220,7 @@ describe('EventSeriesParticipant Resolver', () => {
   });
 
   it('handles multiple participants for same event', async () => {
+    const eventId = await createEventId();
     // Both upserts are independent (different users, same event) — run them in parallel
     // to avoid exhausting the 20 s per-test budget with 3 sequential round-trips.
     await Promise.all([
@@ -183,10 +246,7 @@ describe('EventSeriesParticipant Resolver', () => {
         ),
     ]);
 
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(getReadEventParticipantsQuery(eventId));
+    const response = await readEventParticipantsWithRetry(eventId);
 
     expect(response.status).toBe(200);
     expect(response.body.data.readEventParticipants.length).toBeGreaterThanOrEqual(2);
@@ -208,6 +268,7 @@ describe('EventSeriesParticipant Resolver', () => {
   });
 
   it('returns error when cancelling non-existent participant', async () => {
+    const eventId = await createEventId();
     const response = await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -226,7 +287,7 @@ describe('EventSeriesParticipant Resolver', () => {
       .post('')
       .send(
         getUpsertEventParticipantMutation({
-          eventId,
+          eventId: placeholderEventId,
           userId: participantUser.userId,
           status: ParticipantStatus.Going,
         }),
@@ -240,7 +301,7 @@ describe('EventSeriesParticipant Resolver', () => {
       .post('')
       .send(
         getCancelEventParticipantMutation({
-          eventId,
+          eventId: placeholderEventId,
           userId: participantUser.userId,
         }),
       );

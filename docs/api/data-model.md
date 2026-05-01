@@ -337,8 +337,13 @@ async participants(@Root() event: EventSeries, @Ctx() context: ServerContext) {
     return event.participants;
   }
 
-  // Fallback: fetch and enrich via DataLoader
-  const participants = await EventSeriesParticipantDAO.readByEvent(event.eventId);
+  // Fallback: resolve the representative occurrence for the series
+  const occurrence = await context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+  if (!occurrence) {
+    return [];
+  }
+
+  const participants = await context.loaders.eventOccurrenceParticipantsByOccurrence.load(occurrence.occurrenceId);
   return Promise.all(participants.map(async (p) => ({
     ...p,
     user: await context.loaders.user.load(p.userId),

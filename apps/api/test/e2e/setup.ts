@@ -1,105 +1,233 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
+import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
+import { getSeededTestUsers } from './utils/helpers';
+import { writeRuntimeContext } from './runtimeContext';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
 
-/**
- * Recursively count e2e test files so warm-up concurrency always matches
- * the number of parallel Jest workers (one worker per file).
- */
-function countE2eFiles(dir: string): number {
-  let count = 0;
-  try {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        count += countE2eFiles(join(dir, entry.name));
-      } else if (/\.e2e\.[jt]sx?$/.test(entry.name)) {
-        count++;
-      }
-    }
-  } catch {
-    // ignore unreadable directories
-  }
-  return count;
-}
-
-/**
- * Lightweight GraphQL query used to trigger Lambda cold starts before tests run.
- * Uses `__typename` so it doesn't require authentication or real data.
- */
 const WARMUP_QUERY = JSON.stringify({ query: '{ __typename }' });
 
-const assertLocalServerReady = async (graphqlUrl: string): Promise<void> => {
-  const healthUrl = new URL(graphqlUrl);
-  healthUrl.pathname = '/health';
-  healthUrl.search = '';
-  healthUrl.hash = '';
-
+const assertUrlResponds = async (
+  input: URL | string,
+  init: RequestInit,
+  failureLabel: string,
+  timeoutMs: number,
+): Promise<void> => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(healthUrl, {
-      method: 'GET',
+    const response = await fetch(input, {
+      ...init,
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      throw new Error(`health check returned HTTP ${response.status}`);
+      throw new Error(`${failureLabel} returned HTTP ${response.status}`);
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Local API is not reachable at ${healthUrl.toString()}. ` +
-        'Start it with `STAGE=Dev npm run dev:api` before running e2e tests. ' +
-        `Original error: ${message}`,
-    );
   } finally {
     clearTimeout(timeout);
   }
 };
 
-/**
- * Fire `count` concurrent POST requests to the GraphQL endpoint.
- * Each concurrent request provisions a separate Lambda execution environment,
- * so the test workers that start right after will hit warm containers.
- */
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const hasRetryableMessage = (value: unknown): boolean =>
+  typeof value === 'string' && /(internal server error|timed out|timeout|temporarily unavailable)/i.test(value);
+
+const isRetryableFailure = (status: number, body: unknown): boolean => {
+  if (status === 429 || status >= 500) {
+    return true;
+  }
+
+  if (!body || typeof body !== 'object') {
+    return false;
+  }
+
+  const payload = body as {
+    message?: unknown;
+    errors?: Array<{ message?: unknown }>;
+  };
+
+  if (hasRetryableMessage(payload.message)) {
+    return true;
+  }
+
+  return Array.isArray(payload.errors) && payload.errors.some((error) => hasRetryableMessage(error.message));
+};
+
+const postGraphQL = async (
+  url: string,
+  payload: object,
+  timeoutMs: number = 20_000,
+): Promise<{ status: number; body: any }> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json()) as any;
+    return { status: response.status, body };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 const warmUpLambda = async (url: string, count: number): Promise<void> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
-  const warmUpOne = async (i: number): Promise<void> => {
+  const warmUpOne = async (index: number): Promise<void> => {
     try {
-      const res = await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: WARMUP_QUERY,
         signal: controller.signal,
       });
 
-      // Always consume the body so the underlying connection is released back
-      // to the pool. Leaving it unread holds the socket open and can cause
-      // open-handle warnings or flaky Jest shutdowns.
-      await res.arrayBuffer();
+      await response.arrayBuffer();
 
-      if (res.ok) {
-        console.log(`  ✓ warm-up ${i + 1}/${count} → ${res.status}`);
-      } else {
-        console.warn(`  ✗ warm-up ${i + 1}/${count} → unexpected status ${res.status}`);
+      if (!response.ok) {
+        console.warn(`  [warm-up ${index + 1}/${count}] unexpected status ${response.status}`);
       }
-    } catch (err) {
-      console.warn(`  ✗ warm-up ${i + 1}/${count} failed: ${(err as Error).message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`  [warm-up ${index + 1}/${count}] failed: ${message}`);
     }
   };
 
   try {
-    await Promise.all(Array.from({ length: count }, (_, i) => warmUpOne(i)));
+    await Promise.all(Array.from({ length: count }, (_, index) => warmUpOne(index)));
   } finally {
     clearTimeout(timeout);
   }
+};
+
+const assertServerReady = async (graphqlUrl: string): Promise<void> => {
+  const graphQlEndpoint = new URL(graphqlUrl);
+  const healthUrl = new URL(graphQlEndpoint);
+  healthUrl.pathname = '/health';
+  healthUrl.search = '';
+  healthUrl.hash = '';
+
+  const isLocal = graphQlEndpoint.hostname.includes('localhost');
+
+  try {
+    if (isLocal) {
+      await assertUrlResponds(healthUrl, { method: 'GET' }, 'health check', 5_000);
+      return;
+    }
+
+    const remoteAttempts = 3;
+
+    for (let attempt = 1; attempt <= remoteAttempts; attempt++) {
+      try {
+        await assertUrlResponds(
+          graphQlEndpoint,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: '{ __typename }' }),
+          },
+          'GraphQL readiness check',
+          15_000,
+        );
+        return;
+      } catch (error) {
+        if (attempt === remoteAttempts) {
+          throw error;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`[setup] readiness probe attempt ${attempt}/${remoteAttempts} failed: ${message}`);
+        await sleep(1_000 * attempt);
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const hint = isLocal
+      ? 'Start it with `STAGE=Dev npm run dev:api` before running e2e tests.'
+      : 'Ensure the deployed API is healthy and reachable before running e2e tests.';
+
+    throw new Error(`API is not reachable at ${graphqlUrl}. ${hint} Original error: ${message}`);
+  }
+};
+
+const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
+  const seededUsers = getSeededTestUsers();
+  const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
+  const seededUsersByEmail: Record<string, { userId: string; email: string; token: string }> = {};
+
+  for (const user of usersByEmail) {
+    let lastFailure = '';
+
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await postGraphQL(graphqlUrl, getLoginUserMutation(user), 20_000);
+
+      if (response.status === 200 && !response.body.errors && response.body.data?.loginUser?.token) {
+        seededUsersByEmail[user.email] = response.body.data.loginUser;
+        lastFailure = '';
+        break;
+      }
+
+      lastFailure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry = attempt < 5 && isRetryableFailure(response.status, response.body);
+      if (!shouldRetry) {
+        throw new Error(`Failed to prime seeded user ${user.email}: ${lastFailure}`);
+      }
+
+      console.warn(`[setup] seeded login retry for ${user.email} attempt ${attempt}/5: ${lastFailure}`);
+      await sleep(750 * attempt);
+    }
+  }
+
+  let firstEventCategory:
+    | {
+        eventCategoryId: string;
+        slug: string;
+      }
+    | undefined;
+
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const response = await postGraphQL(graphqlUrl, getReadEventCategoriesQuery(), 20_000);
+    const [category] = response.body.data?.readEventCategories ?? [];
+
+    if (response.status === 200 && !response.body.errors && category?.eventCategoryId) {
+      firstEventCategory = {
+        eventCategoryId: category.eventCategoryId,
+        slug: category.slug,
+      };
+      break;
+    }
+
+    const failure = JSON.stringify(response.body.errors ?? response.body);
+    const shouldRetry = attempt < 5 && isRetryableFailure(response.status, response.body);
+    if (!shouldRetry) {
+      throw new Error(`Failed to prime seeded event categories: ${failure}`);
+    }
+
+    console.warn(`[setup] seeded category retry attempt ${attempt}/5: ${failure}`);
+    await sleep(750 * attempt);
+  }
+
+  if (!firstEventCategory) {
+    throw new Error('Failed to prime seeded event categories.');
+  }
+
+  writeRuntimeContext({
+    seededUsersByEmail,
+    firstEventCategory,
+  });
 };
 
 const setup = async () => {
@@ -114,19 +242,14 @@ const setup = async () => {
     );
   }
 
-  const isRemote = !new URL(graphqlUrl).hostname.includes('localhost');
+  await assertServerReady(graphqlUrl);
 
-  if (isRemote) {
-    // Warm up one Lambda container per test file so every parallel worker
-    // starts with a warm execution environment. Previously 5 was hardcoded,
-    // which left the remaining workers hitting cold starts.
-    const concurrency = Math.max(5, countE2eFiles(__dirname));
-    console.log(`Warming up ${concurrency} Lambda containers at ${graphqlUrl}`);
-    await warmUpLambda(graphqlUrl, concurrency);
-    console.log('Lambda warm-up complete.');
-  } else {
-    await assertLocalServerReady(graphqlUrl);
+  if (!new URL(graphqlUrl).hostname.includes('localhost')) {
+    console.log(`Warming up ${API_E2E_REMOTE_WARMUP_REQUESTS} Lambda containers at ${graphqlUrl}`);
+    await warmUpLambda(graphqlUrl, API_E2E_REMOTE_WARMUP_REQUESTS);
   }
+
+  await primeRuntimeContext(graphqlUrl);
 
   console.log('Done setting up e2e tests...');
 };

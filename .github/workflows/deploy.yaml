@@ -4,17 +4,17 @@ on:
   workflow_call:
     inputs:
       stage:
-        description: "Application stage (example: Beta, Prod)"
+        description: 'Application stage (example: Beta, Prod)'
         required: true
         type: string
       region:
-        description: "AWS region (example: eu-west-1)"
+        description: 'AWS region (example: eu-west-1)'
         required: true
         type: string
       web_domain_alias:
-        description: "Optional webapp custom domain alias (example: beta.gatherle.com)"
+        description: 'Optional webapp custom domain alias (example: beta.gatherle.com)'
         required: false
-        default: ""
+        default: ''
         type: string
 
 permissions:
@@ -166,13 +166,15 @@ jobs:
           fi
           echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
 
-  e2e-api:
+  e2e-api-core:
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
+      WEBAPP_URL: ${{ vars.WEBAPP_URL }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -195,13 +197,88 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run API E2E Tests
+      - name: Run Core API E2E Tests
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-        run: npm run test:e2e:api
+        run: |
+          npm run test:e2e:api -- \
+            --testPathIgnorePatterns=test/e2e/spec/resolvers/feed.e2e.ts \
+            --testPathIgnorePatterns=test/e2e/spec/resolvers/user.e2e.ts
+
+  e2e-api-feed:
+    needs: [deploy-api]
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
+      WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run Feed API E2E Tests
+        env:
+          GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
+        run: npm run test:e2e:api -- --runTestsByPath test/e2e/spec/resolvers/feed.e2e.ts --maxWorkers=1
+
+  e2e-api-user:
+    needs: [deploy-api]
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
+      WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run User API E2E Tests
+        env:
+          GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
+        run: npm run test:e2e:api -- --runTestsByPath test/e2e/spec/resolvers/user.e2e.ts --maxWorkers=1
 
   deploy-webapp:
-    needs: [deploy-api, e2e-api]
+    needs: [deploy-api, e2e-api-core, e2e-api-feed, e2e-api-user]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:

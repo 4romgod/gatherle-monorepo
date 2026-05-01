@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { testAdminSeedUser } from '../../lib/mongodb/mockData/index';
+import { clearRuntimeContext } from './runtimeContext';
 
 // Load the API .env so GRAPHQL_URL is available in the globalTeardown process
 config({ path: resolve(__dirname, '../../.env') });
@@ -33,6 +34,8 @@ const graphqlPost = async (url: string, body: JsonBody, token?: string): Promise
 };
 
 const teardown = async (): Promise<void> => {
+  clearRuntimeContext();
+
   const graphqlUrl = process.env.GRAPHQL_URL;
   if (!graphqlUrl) {
     console.warn('[teardown] GRAPHQL_URL not set — skipping orphaned event cleanup');

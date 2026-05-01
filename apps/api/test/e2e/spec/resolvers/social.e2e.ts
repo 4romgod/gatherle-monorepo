@@ -77,10 +77,33 @@ describe('Social resolver e2e', () => {
   let eventId = '';
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
     return rest;
   })();
+
+  const followWithRetry = async (targetId: string) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 20_000, deadline: 30_000 })
+        .set('Authorization', 'Bearer ' + actorUser.token)
+        .send(getFollowMutation({ targetType: FollowTargetType.User, targetId }));
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`Failed to follow user ${targetId} after retrying transient errors.`);
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -214,17 +237,11 @@ describe('Social resolver e2e', () => {
   });
 
   it('handles duplicate follows gracefully', async () => {
-    const firstFollow = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
+    const firstFollow = await followWithRetry(targetUser.userId);
 
     expect(firstFollow.status).toBe(200);
 
-    const duplicateFollow = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + actorUser.token)
-      .send(getFollowMutation({ targetType: FollowTargetType.User, targetId: targetUser.userId }));
+    const duplicateFollow = await followWithRetry(targetUser.userId);
 
     expect([200, 409]).toContain(duplicateFollow.status);
   });

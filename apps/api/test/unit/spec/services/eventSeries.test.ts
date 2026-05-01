@@ -404,6 +404,7 @@ describe('EventSeriesService', () => {
       expect(EventOccurrenceService.moveFutureOccurrencesToSeries).toHaveBeenCalledWith(
         'event-1',
         'event-2',
+        'weekly-yoga-from-2026-05-20',
         new Date('2026-05-20T16:00:00.000Z'),
         1,
       );

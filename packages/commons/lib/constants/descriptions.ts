@@ -87,7 +87,7 @@ export const EVENT_DESCRIPTIONS = {
     SPLIT_OCCURRENCE_ID:
       'Identifier of the occurrence boundary where the recurring series should be split into past and future series.',
     PARTICIPANTS:
-      'Resolved participants for this event series. For one-time series these are derived from the single backing occurrence; recurring series may still resolve legacy series-level participants until the platform fully deprecates that compatibility path.',
+      'Resolved participants for this event series, projected from the representative persisted occurrence.',
     UPCOMING_OCCURRENCES:
       'Upcoming concrete occurrences for this event series, sourced from persisted occurrence rows.',
     SAVED_BY_COUNT: 'Number of users who have saved the event, computed from follows.',

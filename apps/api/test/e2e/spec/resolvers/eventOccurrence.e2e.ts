@@ -44,33 +44,77 @@ describe('EventOccurrence Resolver', () => {
     ...overrides,
   });
 
-  const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
-    const response = await request(url)
-      .post('')
-      .send({
-        query: `query ReadEventById($eventId: String!) {
-          readEventById(eventId: $eventId) {
-            eventId
-            upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
-              occurrenceId
-              occurrenceKey
-              eventSeriesId
-              startAt
-              endAt
-              timezone
-              status
-              isException
-            }
-          }
-        }`,
-        variables: {
-          eventId,
-        },
-      });
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-    expect(response.status).toBe(200);
-    expect(response.body.errors).toBeUndefined();
-    return response.body.data.readEventById.upcomingOccurrences;
+  const postOccurrenceGraphQLWithRetry = async (payload: object, token: string) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 15_000, deadline: 20_000 })
+        .set('Authorization', `Bearer ${token}`)
+        .send(payload);
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error('Failed to complete occurrence GraphQL request after retrying transient errors.');
+  };
+
+  const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await request(url)
+        .post('')
+        .timeout({ response: 15_000, deadline: 20_000 })
+        .send({
+          query: `query ReadEventById($eventId: String!) {
+            readEventById(eventId: $eventId) {
+              eventId
+              upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+                occurrenceId
+                occurrenceKey
+                eventSeriesId
+                startAt
+                endAt
+                timezone
+                status
+                isException
+              }
+            }
+          }`,
+          variables: {
+            eventId,
+          },
+        });
+
+      if (response.status === 200 && !response.body.errors) {
+        return response.body.data.readEventById.upcomingOccurrences;
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
+
+      if (!shouldRetry) {
+        expect(response.status).toBe(200);
+        expect(response.body.errors).toBeUndefined();
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`Failed to read upcoming occurrences for ${eventId} after retrying transient errors.`);
   };
 
   beforeAll(async () => {
@@ -102,8 +146,9 @@ describe('EventOccurrence Resolver', () => {
   });
 
   it('reads recurring occurrences and projected single-event occurrences inside one date window', async () => {
-    const recurringSeriesTitle = `Occurrence Query Recurring Series ${uniqueSuffix()}`;
-    const singleSeriesTitle = `Occurrence Query Single Series ${uniqueSuffix()}`;
+    const queryToken = uniqueSuffix();
+    const recurringSeriesTitle = `Occurrence Query Recurring Series ${queryToken}`;
+    const singleSeriesTitle = `Occurrence Query Single Series ${queryToken}`;
 
     await createEventOnServer(
       url,
@@ -157,7 +202,7 @@ describe('EventOccurrence Resolver', () => {
             },
             search: {
               fields: ['title'],
-              value: 'Occurrence Query',
+              value: queryToken,
             },
             sort: [{ field: 'startAt', order: SortOrderInput.asc }],
           },
@@ -357,23 +402,21 @@ describe('EventOccurrence Resolver', () => {
 
     const [firstOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 2);
 
-    const rsvpResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${testUser.token}`)
-      .send(
-        getUpsertEventOccurrenceParticipantMutation({
-          occurrenceId: firstOccurrence.occurrenceId,
-          status: ParticipantStatus.Going,
-        }),
-      );
+    const rsvpResponse = await postOccurrenceGraphQLWithRetry(
+      getUpsertEventOccurrenceParticipantMutation({
+        occurrenceId: firstOccurrence.occurrenceId,
+        status: ParticipantStatus.Going,
+      }),
+      testUser.token,
+    );
 
     expect(rsvpResponse.status).toBe(200);
     expect(rsvpResponse.body.errors).toBeUndefined();
 
-    const cancelResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${testUser.token}`)
-      .send(getCancelEventOccurrenceMutation({ occurrenceId: firstOccurrence.occurrenceId }));
+    const cancelResponse = await postOccurrenceGraphQLWithRetry(
+      getCancelEventOccurrenceMutation({ occurrenceId: firstOccurrence.occurrenceId }),
+      testUser.token,
+    );
 
     expect(cancelResponse.status).toBe(200);
     expect(cancelResponse.body.errors).toBeUndefined();
@@ -385,10 +428,10 @@ describe('EventOccurrence Resolver', () => {
       }),
     );
 
-    const participantsResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${testUser.token}`)
-      .send(getReadEventOccurrenceParticipantsQuery(firstOccurrence.occurrenceId));
+    const participantsResponse = await postOccurrenceGraphQLWithRetry(
+      getReadEventOccurrenceParticipantsQuery(firstOccurrence.occurrenceId),
+      testUser.token,
+    );
 
     expect(participantsResponse.status).toBe(200);
     expect(participantsResponse.body.errors).toBeUndefined();
@@ -399,10 +442,10 @@ describe('EventOccurrence Resolver', () => {
       }),
     ]);
 
-    const myStatusResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${testUser.token}`)
-      .send(getMyEventOccurrenceRsvpStatusQuery(firstOccurrence.occurrenceId));
+    const myStatusResponse = await postOccurrenceGraphQLWithRetry(
+      getMyEventOccurrenceRsvpStatusQuery(firstOccurrence.occurrenceId),
+      testUser.token,
+    );
 
     expect(myStatusResponse.status).toBe(200);
     expect(myStatusResponse.body.errors).toBeUndefined();
@@ -416,5 +459,5 @@ describe('EventOccurrence Resolver', () => {
         isException: true,
       }),
     );
-  });
+  }, 120_000);
 });

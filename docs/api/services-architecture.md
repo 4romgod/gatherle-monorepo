@@ -120,9 +120,10 @@ async upsertEventParticipant(input) {
   return EventSeriesParticipantService.rsvp(input);
 }
 
-// ✅ Queries → DAO directly (pure data retrieval)
+// ✅ Queries → Service (projects representative occurrence participation
+// into the EventSeriesParticipant API shape)
 async readEventParticipants(eventId) {
-  return EventSeriesParticipantDAO.readByEvent(eventId);
+  return EventSeriesParticipantService.readByEvent(eventId);
 }
 ```
 

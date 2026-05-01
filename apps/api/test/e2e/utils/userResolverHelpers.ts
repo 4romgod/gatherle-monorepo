@@ -5,6 +5,96 @@ import { trackCreatedId } from './eventSeriesResolverHelpers';
 
 export const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+const MAX_USER_HELPER_ATTEMPTS = 5;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const hasRetryableMessage = (value: unknown): boolean =>
+  typeof value === 'string' && /(internal server error|timed out|timeout|temporarily unavailable)/i.test(value);
+
+const isRetryableFailure = (status: number, body: unknown): boolean => {
+  if (status === 429 || status >= 500) {
+    return true;
+  }
+
+  if (!body || typeof body !== 'object') {
+    return false;
+  }
+
+  const payload = body as {
+    message?: unknown;
+    errors?: Array<{ message?: unknown }>;
+  };
+
+  if (hasRetryableMessage(payload.message)) {
+    return true;
+  }
+
+  return Array.isArray(payload.errors) && payload.errors.some((error) => hasRetryableMessage(error.message));
+};
+
+const isRetryableRequestError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(error.message);
+};
+
+export type GraphQLTestResponse = {
+  status: number;
+  body: any;
+};
+
+export const postGraphQLWithRetry = async (
+  url: string,
+  payload: object,
+  authToken?: string,
+  maxAttempts: number = MAX_USER_HELPER_ATTEMPTS,
+): Promise<GraphQLTestResponse> => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      const body = (await response.json()) as any;
+      const shouldRetry = attempt < maxAttempts && isRetryableFailure(response.status, body);
+
+      if (shouldRetry) {
+        await sleep(500 * attempt);
+        continue;
+      }
+
+      return {
+        status: response.status,
+        body,
+      };
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts && isRetryableRequestError(error);
+      if (shouldRetry) {
+        await sleep(500 * attempt);
+        continue;
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error('Failed to complete GraphQL request after retrying transient request errors.');
+};
+
 export const buildCreateUserInput = (
   template: CreateUserInput,
   password: string,
@@ -16,28 +106,112 @@ export const buildCreateUserInput = (
   password,
 });
 
+const tryLoginExistingUser = async (
+  url: string,
+  input: CreateUserInput,
+  createdUserIds: string[],
+): Promise<UserWithToken | null> => {
+  if (!input.email || !input.password) {
+    return null;
+  }
+
+  try {
+    const response = await postGraphQLWithRetry(
+      url,
+      getLoginUserMutation({ email: input.email, password: input.password }),
+      undefined,
+      1,
+    );
+    if (response.status === 200 && !response.body.errors && response.body.data?.loginUser?.userId) {
+      const existingUser = response.body.data.loginUser as UserWithToken;
+      trackCreatedId(createdUserIds, existingUser.userId);
+      return existingUser;
+    }
+  } catch {
+    // Ignore recovery failures and let the original create error surface.
+  }
+
+  return null;
+};
+
 export const createUserOnServer = async (
   url: string,
   input: CreateUserInput,
   createdUserIds: string[],
 ): Promise<UserWithToken> => {
-  const response = await request(url).post('').send(getCreateUserMutation(input));
+  for (let attempt = 1; attempt <= MAX_USER_HELPER_ATTEMPTS; attempt++) {
+    let response;
+    try {
+      response = await postGraphQLWithRetry(url, getCreateUserMutation(input), undefined, 1);
+    } catch (error) {
+      const shouldRetry = attempt < MAX_USER_HELPER_ATTEMPTS && isRetryableRequestError(error);
+      if (shouldRetry) {
+        await sleep(500 * attempt);
+        continue;
+      }
 
-  if (response.status !== 200 || response.body.errors || !response.body.data?.createUser?.userId) {
-    throw new Error(`Failed to create user: ${JSON.stringify(response.body.errors ?? response.body)}`);
+      throw error;
+    }
+
+    if (response.status === 200 && !response.body.errors && response.body.data?.createUser?.userId) {
+      const createdUser = response.body.data.createUser as UserWithToken;
+      trackCreatedId(createdUserIds, createdUser.userId);
+      return createdUser;
+    }
+
+    const failure = JSON.stringify(response.body.errors ?? response.body);
+    const isConflict = response.status === 409 || /already exists/i.test(failure);
+    if (isConflict) {
+      const existingUser = await tryLoginExistingUser(url, input, createdUserIds);
+      if (existingUser) {
+        return existingUser;
+      }
+    }
+
+    const shouldRetry = attempt < MAX_USER_HELPER_ATTEMPTS && isRetryableFailure(response.status, response.body);
+
+    if (shouldRetry) {
+      await sleep(500 * attempt);
+      continue;
+    }
+
+    throw new Error(`Failed to create user: ${failure}`);
   }
 
-  const createdUser = response.body.data.createUser as UserWithToken;
-  trackCreatedId(createdUserIds, createdUser.userId);
-  return createdUser;
+  throw new Error('Failed to create user after retrying transient errors.');
 };
 
 export const loginUserOnServer = async (url: string, email: string, password: string): Promise<UserWithToken> => {
-  const response = await request(url).post('').send(getLoginUserMutation({ email, password }));
-  if (response.status !== 200 || response.body.errors || !response.body.data?.loginUser?.token) {
-    throw new Error(`Failed to login user: ${JSON.stringify(response.body.errors ?? response.body)}`);
+  for (let attempt = 1; attempt <= MAX_USER_HELPER_ATTEMPTS; attempt++) {
+    let response;
+    try {
+      response = await postGraphQLWithRetry(url, getLoginUserMutation({ email, password }), undefined, 1);
+    } catch (error) {
+      const shouldRetry = attempt < MAX_USER_HELPER_ATTEMPTS && isRetryableRequestError(error);
+      if (shouldRetry) {
+        await sleep(500 * attempt);
+        continue;
+      }
+
+      throw error;
+    }
+
+    if (response.status === 200 && !response.body.errors && response.body.data?.loginUser?.token) {
+      return response.body.data.loginUser as UserWithToken;
+    }
+
+    const failure = JSON.stringify(response.body.errors ?? response.body);
+    const shouldRetry = attempt < MAX_USER_HELPER_ATTEMPTS && isRetryableFailure(response.status, response.body);
+
+    if (shouldRetry) {
+      await sleep(500 * attempt);
+      continue;
+    }
+
+    throw new Error(`Failed to login user: ${failure}`);
   }
-  return response.body.data.loginUser as UserWithToken;
+
+  throw new Error(`Failed to login user ${email} after retrying transient errors.`);
 };
 
 export const cleanupUsersById = async (url: string, adminToken: string, userIds: string[]) => {

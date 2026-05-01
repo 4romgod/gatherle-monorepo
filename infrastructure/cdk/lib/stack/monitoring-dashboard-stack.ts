@@ -13,6 +13,8 @@ export interface MonitoringDashboardStackProps extends StackProps {
   graphqlLambdaFunction: IFunction;
   graphqlLambdaLogGroup: ILogGroup;
   graphqlApiAccessLogGroup: ILogGroup;
+  occurrenceMaintenanceLambdaFunction: IFunction;
+  occurrenceMaintenanceLambdaLogGroup: ILogGroup;
   websocketLambdaFunction: IFunction;
   websocketLambdaLogGroup: ILogGroup;
   websocketApi: WebSocketApi;
@@ -34,10 +36,13 @@ export class MonitoringDashboardStack extends Stack {
       'GraphqlMonitoringDashboardConstruct',
       {
         stageName,
+        awsRegion: props.awsRegion,
         targetSuffix,
         graphqlLambdaFunction: props.graphqlLambdaFunction,
         graphqlLambdaLogGroup: props.graphqlLambdaLogGroup,
         graphqlApiAccessLogGroup: props.graphqlApiAccessLogGroup,
+        occurrenceMaintenanceLambdaFunction: props.occurrenceMaintenanceLambdaFunction,
+        occurrenceMaintenanceLambdaLogGroup: props.occurrenceMaintenanceLambdaLogGroup,
       },
     );
 

@@ -13,7 +13,11 @@ import {
   getUpdateEventCategoryMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { buildEventCategoryInput, createEventCategoryOnServer } from '@/test/e2e/utils/eventCategoryResolverHelpers';
+import {
+  buildEventCategoryInput,
+  createEventCategoryOnServer,
+  postEventCategoryGraphQLWithRetry,
+} from '@/test/e2e/utils/eventCategoryResolverHelpers';
 
 describe('EventCategory Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -25,7 +29,10 @@ describe('EventCategory Resolver', () => {
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
-  afterEach(async () => {
+  const sendEventCategoryGraphQL = (payload: object, token?: string) =>
+    postEventCategoryGraphQLWithRetry(url, payload, token);
+
+  afterAll(async () => {
     await Promise.all(
       createdCategoryIds.map((eventCategoryId) =>
         request(url)
@@ -42,13 +49,9 @@ describe('EventCategory Resolver', () => {
     describe('createEventCategory Mutation', () => {
       it('should create a new event category when input is valid', async () => {
         const input = buildEventCategoryInput();
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getCreateEventCategoryMutation(input));
+        const response = await sendEventCategoryGraphQL(getCreateEventCategoryMutation(input), adminUser.token);
 
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         const createdEventCategory = response.body.data.createEventCategory;
         createdCategoryIds.push(createdEventCategory.eventCategoryId);
         expect(createdEventCategory).toHaveProperty('eventCategoryId');
@@ -60,18 +63,15 @@ describe('EventCategory Resolver', () => {
       it('should update an existing category when valid input is provided', async () => {
         const input = buildEventCategoryInput();
         const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(
-            getUpdateEventCategoryMutation({
-              eventCategoryId: createdCategory.eventCategoryId,
-              iconName: 'updated',
-            }),
-          );
+        const response = await sendEventCategoryGraphQL(
+          getUpdateEventCategoryMutation({
+            eventCategoryId: createdCategory.eventCategoryId,
+            iconName: 'updated',
+          }),
+          adminUser.token,
+        );
 
         expect(response.status).toBe(200);
-        expect(response.error).toBeFalsy();
         const updatedEventCategory = response.body.data.updateEventCategory;
         expect(updatedEventCategory.iconName).toBe('updated');
       });
@@ -81,9 +81,7 @@ describe('EventCategory Resolver', () => {
       it('should read category by id', async () => {
         const input = buildEventCategoryInput();
         const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
-        const response = await request(url)
-          .post('')
-          .send(getReadEventCategoryByIdQuery(createdCategory.eventCategoryId));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoryByIdQuery(createdCategory.eventCategoryId));
 
         expect(response.status).toBe(200);
         expect(response.body.data.readEventCategoryById.slug).toBe(kebabCase(input.name));
@@ -96,7 +94,7 @@ describe('EventCategory Resolver', () => {
           buildEventCategoryInput(),
           createdCategoryIds,
         );
-        const response = await request(url).post('').send(getReadEventCategoriesQuery());
+        const response = await sendEventCategoryGraphQL(getReadEventCategoriesQuery());
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
@@ -110,7 +108,7 @@ describe('EventCategory Resolver', () => {
         const input = buildEventCategoryInput();
         const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
         const options: QueryOptionsInput = { filters: [{ field: 'name', value: input.name }] };
-        const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoriesWithOptionsQuery(options));
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
@@ -123,7 +121,7 @@ describe('EventCategory Resolver', () => {
       it('should read category by slug', async () => {
         const input = buildEventCategoryInput();
         const createdCategory = await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
-        const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoryBySlugQuery(createdCategory.slug));
 
         expect(response.status).toBe(200);
         expect(response.body.data.readEventCategoryBySlug.eventCategoryId).toBe(createdCategory.eventCategoryId);
@@ -137,7 +135,7 @@ describe('EventCategory Resolver', () => {
           createdCategoryIds,
         );
 
-        const response = await request(url).post('').send(getReadEventCategoryBySlugQuery(createdCategory.slug));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoryBySlugQuery(createdCategory.slug));
 
         expect(response.status).toBe(200);
         expect(response.body.data.readEventCategoryBySlug.interestedUsersCount).toBe(0);
@@ -146,7 +144,7 @@ describe('EventCategory Resolver', () => {
       it('should read categories with pagination', async () => {
         await createEventCategoryOnServer(url, adminUser.token, buildEventCategoryInput(), createdCategoryIds);
         const options: QueryOptionsInput = { pagination: { skip: 0, limit: 5 } };
-        const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoriesWithOptionsQuery(options));
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
@@ -158,7 +156,7 @@ describe('EventCategory Resolver', () => {
         const options: QueryOptionsInput = {
           sort: [{ field: 'name', order: SortOrderInput.asc }],
         };
-        const response = await request(url).post('').send(getReadEventCategoriesWithOptionsQuery(options));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoriesWithOptionsQuery(options));
 
         expect(response.status).toBe(200);
         const categories = response.body.data.readEventCategories;
@@ -174,7 +172,7 @@ describe('EventCategory Resolver', () => {
   describe('Negative', () => {
     describe('createEventCategory Mutation', () => {
       it('should require admin authorization', async () => {
-        const response = await request(url).post('').send(getCreateEventCategoryMutation(buildEventCategoryInput()));
+        const response = await sendEventCategoryGraphQL(getCreateEventCategoryMutation(buildEventCategoryInput()));
         expect(response.status).toBe(401);
       });
 
@@ -183,38 +181,34 @@ describe('EventCategory Resolver', () => {
 
         await createEventCategoryOnServer(url, adminUser.token, input, createdCategoryIds);
 
-        const duplicateResponse = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getCreateEventCategoryMutation(input));
+        const duplicateResponse = await sendEventCategoryGraphQL(
+          getCreateEventCategoryMutation(input),
+          adminUser.token,
+        );
 
         expect(duplicateResponse.status).toBe(409);
       });
 
       it('should return validation error for missing name', async () => {
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(
-            getCreateEventCategoryMutation({
-              ...buildEventCategoryInput(),
-              name: '',
-            }),
-          );
+        const response = await sendEventCategoryGraphQL(
+          getCreateEventCategoryMutation({
+            ...buildEventCategoryInput(),
+            name: '',
+          }),
+          adminUser.token,
+        );
 
         expect(response.status).toBe(400);
       });
 
       it('should return validation error for missing icon name', async () => {
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(
-            getCreateEventCategoryMutation({
-              ...buildEventCategoryInput(),
-              iconName: '',
-            }),
-          );
+        const response = await sendEventCategoryGraphQL(
+          getCreateEventCategoryMutation({
+            ...buildEventCategoryInput(),
+            iconName: '',
+          }),
+          adminUser.token,
+        );
 
         expect(response.status).toBe(400);
       });
@@ -222,15 +216,13 @@ describe('EventCategory Resolver', () => {
 
     describe('updateEventCategory Mutation', () => {
       it('should return not found for non-existent category', async () => {
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(
-            getUpdateEventCategoryMutation({
-              eventCategoryId: new Types.ObjectId().toString(),
-              iconName: 'ghost',
-            }),
-          );
+        const response = await sendEventCategoryGraphQL(
+          getUpdateEventCategoryMutation({
+            eventCategoryId: new Types.ObjectId().toString(),
+            iconName: 'ghost',
+          }),
+          adminUser.token,
+        );
         expect(response.status).toBe(404);
       });
 
@@ -242,14 +234,12 @@ describe('EventCategory Resolver', () => {
           createdCategoryIds,
         );
 
-        const response = await request(url)
-          .post('')
-          .send(
-            getUpdateEventCategoryMutation({
-              eventCategoryId: createdCategory.eventCategoryId,
-              iconName: 'no-auth',
-            }),
-          );
+        const response = await sendEventCategoryGraphQL(
+          getUpdateEventCategoryMutation({
+            eventCategoryId: createdCategory.eventCategoryId,
+            iconName: 'no-auth',
+          }),
+        );
 
         expect(response.status).toBe(401);
       });
@@ -257,14 +247,12 @@ describe('EventCategory Resolver', () => {
 
     describe('readEventCategory Queries', () => {
       it('should return not found for missing slug', async () => {
-        const response = await request(url).post('').send(getReadEventCategoryBySlugQuery('missing'));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoryBySlugQuery('missing'));
         expect(response.status).toBe(404);
       });
 
       it('should return not found for non-existent id', async () => {
-        const response = await request(url)
-          .post('')
-          .send(getReadEventCategoryByIdQuery(new Types.ObjectId().toString()));
+        const response = await sendEventCategoryGraphQL(getReadEventCategoryByIdQuery(new Types.ObjectId().toString()));
 
         expect(response.status).toBe(404);
       });

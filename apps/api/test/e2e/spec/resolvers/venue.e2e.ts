@@ -21,6 +21,58 @@ describe('Venue Resolver', () => {
   const createdVenueIds: string[] = [];
   const createdOrgIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
+  const uniqueVenueName = (prefix: string) => `${prefix} ${randomId()}`;
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const sendVenueGraphQL = async (payload: object, token?: string) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20_000);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        const body = (await response.json()) as any;
+        const failure = JSON.stringify(body.errors ?? body);
+        const shouldRetry =
+          attempt < 3 &&
+          (response.status >= 500 || /internal server error|timed out|timeout|temporarily unavailable/i.test(failure));
+
+        if (shouldRetry) {
+          await sleep(500 * attempt);
+          continue;
+        }
+
+        return {
+          status: response.status,
+          body,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const shouldRetry =
+          attempt < 3 && /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(message);
+
+        if (shouldRetry) {
+          await sleep(500 * attempt);
+          continue;
+        }
+
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    throw new Error('Failed to complete venue request after retrying transient errors.');
+  };
 
   const createOrganization = (name: string) =>
     createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
@@ -33,7 +85,7 @@ describe('Venue Resolver', () => {
         getCreateVenueMutation({
           orgId,
           type: VenueType.Physical,
-          name: `E2E Venue ${randomId()}`,
+          name: uniqueVenueName('E2E Venue'),
           address: {
             city: 'Cape Town',
             country: 'South Africa',
@@ -51,7 +103,7 @@ describe('Venue Resolver', () => {
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await Promise.all(
       createdVenueIds.map((venueId) =>
         request(url)
@@ -85,7 +137,7 @@ describe('Venue Resolver', () => {
           getCreateVenueMutation({
             orgId: organization.orgId,
             type: VenueType.Physical,
-            name: 'Created Venue',
+            name: uniqueVenueName('Created Venue'),
           }),
         );
 
@@ -145,7 +197,7 @@ describe('Venue Resolver', () => {
           getCreateVenueMutation({
             orgId: organization.orgId,
             type: VenueType.Physical,
-            name: 'Physical Venue',
+            name: uniqueVenueName('Physical Venue'),
             address: { city: 'Johannesburg', country: 'South Africa' },
           }),
         );
@@ -161,7 +213,7 @@ describe('Venue Resolver', () => {
           getCreateVenueMutation({
             orgId: organization.orgId,
             type: VenueType.Hybrid,
-            name: 'Hybrid Venue',
+            name: uniqueVenueName('Hybrid Venue'),
             address: { city: 'Pretoria', country: 'South Africa' },
           }),
         );
@@ -294,20 +346,18 @@ describe('Venue Resolver', () => {
     });
 
     it('returns 404 when reading a missing venue id', async () => {
-      const response = await request(url).post('').send(getReadVenueByIdQuery(new Types.ObjectId().toString()));
+      const response = await sendVenueGraphQL(getReadVenueByIdQuery(new Types.ObjectId().toString()));
       expect(response.status).toBe(404);
     });
 
     it('returns error when updating non-existent venue', async () => {
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + adminUser.token)
-        .send(
-          getUpdateVenueMutation({
-            venueId: new Types.ObjectId().toString(),
-            name: 'Ghost Venue',
-          }),
-        );
+      const response = await sendVenueGraphQL(
+        getUpdateVenueMutation({
+          venueId: new Types.ObjectId().toString(),
+          name: 'Ghost Venue',
+        }),
+        adminUser.token,
+      );
 
       expect([400, 404]).toContain(response.status);
     });

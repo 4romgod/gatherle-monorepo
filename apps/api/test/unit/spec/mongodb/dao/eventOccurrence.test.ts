@@ -6,6 +6,7 @@ import { createMockSuccessMongooseQuery, createMockFailedMongooseQuery, type Moc
 
 jest.mock('@/mongodb/models', () => ({
   EventOccurrence: {
+    aggregate: jest.fn(),
     bulkWrite: jest.fn(),
     deleteMany: jest.fn(),
     find: jest.fn(),
@@ -21,6 +22,7 @@ describe('EventOccurrenceDAO', () => {
   const occurrence: EventOccurrence = {
     occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
     eventSeriesId: 'series-1',
+    eventSeriesSlug: 'weekly-coffee-code',
     occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
     originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
     startAt: new Date('2026-05-06T16:00:00.000Z'),
@@ -86,6 +88,168 @@ describe('EventOccurrenceDAO', () => {
     });
   });
 
+  describe('readLatestOriginalStartsBySeriesIds', () => {
+    it('returns the latest generated original start per series', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([
+          { _id: 'series-1', latestOriginalStartAt: new Date('2026-05-20T16:00:00.000Z') },
+          { _id: 'series-2', latestOriginalStartAt: new Date('2026-05-21T16:00:00.000Z') },
+        ]),
+      );
+
+      const result = await EventOccurrenceDAO.readLatestOriginalStartsBySeriesIds(['series-1', 'series-2']);
+
+      expect(result).toEqual(
+        new Map([
+          ['series-1', new Date('2026-05-20T16:00:00.000Z')],
+          ['series-2', new Date('2026-05-21T16:00:00.000Z')],
+        ]),
+      );
+    });
+
+    it('returns an empty map when no series ids are provided', async () => {
+      const result = await EventOccurrenceDAO.readLatestOriginalStartsBySeriesIds([]);
+
+      expect(result).toEqual(new Map());
+      expect(EventOccurrenceModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('wraps aggregate failures when reading latest generated starts', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceDAO.readLatestOriginalStartsBySeriesIds(['series-1'])).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readSeriesIdsMissingSlug', () => {
+    it('returns the set of series ids whose occurrences are missing the readable slug snapshot', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ _id: 'series-1' }, { _id: 'series-3' }]),
+      );
+
+      const result = await EventOccurrenceDAO.readSeriesIdsMissingSlug(['series-1', 'series-2', 'series-3']);
+
+      expect(result).toEqual(new Set(['series-1', 'series-3']));
+      expect(EventOccurrenceModel.aggregate).toHaveBeenCalledWith([
+        {
+          $match: {
+            eventSeriesId: { $in: ['series-1', 'series-2', 'series-3'] },
+            $or: [{ eventSeriesSlug: { $exists: false } }, { eventSeriesSlug: null }, { eventSeriesSlug: '' }],
+          },
+        },
+        {
+          $group: {
+            _id: '$eventSeriesId',
+          },
+        },
+      ]);
+    });
+
+    it('returns an empty set when no series ids are provided', async () => {
+      const result = await EventOccurrenceDAO.readSeriesIdsMissingSlug([]);
+
+      expect(result).toEqual(new Set());
+      expect(EventOccurrenceModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('wraps aggregate failures when reading series ids missing slug snapshots', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceDAO.readSeriesIdsMissingSlug(['series-1'])).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readReservedSlotDriftBySeriesIds', () => {
+    it('returns occurrence rows whose reserved slot counters do not match participant reservations', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([
+          {
+            occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+            eventSeriesId: 'series-1',
+            expectedReservedSlotCount: 2,
+            actualReservedSlotCount: 1,
+          },
+        ]),
+      );
+
+      const result = await EventOccurrenceDAO.readReservedSlotDriftBySeriesIds(['series-1']);
+
+      expect(result).toEqual([
+        {
+          occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+          eventSeriesId: 'series-1',
+          expectedReservedSlotCount: 2,
+          actualReservedSlotCount: 1,
+        },
+      ]);
+    });
+
+    it('returns early when no series ids are provided', async () => {
+      const result = await EventOccurrenceDAO.readReservedSlotDriftBySeriesIds([]);
+
+      expect(result).toEqual([]);
+      expect(EventOccurrenceModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('wraps aggregate failures when reading occurrence reservation drift', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceDAO.readReservedSlotDriftBySeriesIds(['series-1'])).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('reconcileReservedSlotCounts', () => {
+    it('returns early when no reconciliations are provided', async () => {
+      await EventOccurrenceDAO.reconcileReservedSlotCounts([]);
+
+      expect(EventOccurrenceModel.bulkWrite).not.toHaveBeenCalled();
+    });
+
+    it('bulk updates reserved slot counters by occurrenceId', async () => {
+      (EventOccurrenceModel.bulkWrite as jest.Mock).mockResolvedValue(undefined);
+
+      await EventOccurrenceDAO.reconcileReservedSlotCounts([
+        {
+          occurrenceId: occurrence.occurrenceId,
+          reservedSlotCount: 3,
+        },
+      ]);
+
+      expect(EventOccurrenceModel.bulkWrite).toHaveBeenCalledWith(
+        [
+          {
+            updateOne: {
+              filter: { occurrenceId: occurrence.occurrenceId },
+              update: {
+                $set: { reservedSlotCount: 3 },
+              },
+            },
+          },
+        ],
+        { ordered: false },
+      );
+    });
+
+    it('wraps bulk write failures when reconciling reserved slot counters', async () => {
+      (EventOccurrenceModel.bulkWrite as jest.Mock).mockRejectedValue(new Error('bulk write failed'));
+
+      await expect(
+        EventOccurrenceDAO.reconcileReservedSlotCounts([
+          {
+            occurrenceId: occurrence.occurrenceId,
+            reservedSlotCount: 3,
+          },
+        ]),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
   describe('bulkUpsert', () => {
     it('returns early when no occurrences are provided', async () => {
       await EventOccurrenceDAO.bulkUpsert([]);
@@ -106,6 +270,7 @@ describe('EventOccurrenceDAO', () => {
               update: {
                 $set: {
                   eventSeriesId: occurrence.eventSeriesId,
+                  eventSeriesSlug: occurrence.eventSeriesSlug,
                   occurrenceKey: occurrence.occurrenceKey,
                   originalStartAt: occurrence.originalStartAt,
                   startAt: occurrence.startAt,
@@ -146,6 +311,7 @@ describe('EventOccurrenceDAO', () => {
               update: {
                 $set: {
                   eventSeriesId: occurrence.eventSeriesId,
+                  eventSeriesSlug: occurrence.eventSeriesSlug,
                   occurrenceKey: occurrence.occurrenceKey,
                   originalStartAt: occurrence.originalStartAt,
                   startAt: occurrence.startAt,
@@ -508,6 +674,7 @@ describe('EventOccurrenceDAO', () => {
           oldOccurrenceId: occurrence.occurrenceId,
           occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
           eventSeriesId: 'series-2',
+          eventSeriesSlug: 'series-2-slug',
           occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
           seriesScheduleVersion: 1,
         },
@@ -522,6 +689,7 @@ describe('EventOccurrenceDAO', () => {
                 $set: {
                   occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
                   eventSeriesId: 'series-2',
+                  eventSeriesSlug: 'series-2-slug',
                   occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
                   seriesScheduleVersion: 1,
                 },
@@ -542,6 +710,7 @@ describe('EventOccurrenceDAO', () => {
             oldOccurrenceId: occurrence.occurrenceId,
             occurrenceId: 'series-2#2026-05-06T16:00:00.000Z',
             eventSeriesId: 'series-2',
+            eventSeriesSlug: 'series-2-slug',
             occurrenceKey: 'series-2#2026-05-06T16:00:00.000Z',
             seriesScheduleVersion: 1,
           },

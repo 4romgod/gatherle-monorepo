@@ -35,7 +35,7 @@ describe('OrganizationMembership Resolver', () => {
     ]);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await Promise.all(
       createdMembershipIds.map((membershipId) =>
         request(url)

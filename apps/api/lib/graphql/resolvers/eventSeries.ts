@@ -255,7 +255,7 @@ export class EventSeriesResolver {
    * Field resolver to get participants for this event.
    * If already populated on the root object, returns as-is.
    * Otherwise resolves the representative occurrence for the series and projects
-   * occurrence participants back into the legacy EventSeriesParticipant shape.
+   * occurrence participants into the EventSeriesParticipant response shape.
    */
   @FieldResolver(() => [EventSeriesParticipant], {
     nullable: true,

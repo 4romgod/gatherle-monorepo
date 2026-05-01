@@ -19,7 +19,6 @@ import type {
   EventCategory,
   Organization,
   EventSeries,
-  EventSeriesParticipant,
   EventOccurrence,
   EventOccurrenceParticipant,
 } from '@gatherle/commons/types';
@@ -38,8 +37,6 @@ export interface ServerContext {
     eventOccurrence: DataLoader<string, EventOccurrence | null>;
     eventOccurrenceByEventSeries: DataLoader<string, EventOccurrence | null>;
     organization: DataLoader<string, Organization | null>;
-    eventSeriesParticipant: DataLoader<string, EventSeriesParticipant | null>;
-    eventSeriesParticipantsByEvent: DataLoader<string, EventSeriesParticipant[]>;
     eventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
     eventOccurrenceParticipantsByOccurrence: DataLoader<string, EventOccurrenceParticipant[]>;
     eventOccurrenceParticipantCountByOccurrence: DataLoader<string, number>;

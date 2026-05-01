@@ -16,6 +16,7 @@
     "start:js": "node -r ts-node/register -r tsconfig-paths/register dist/lib/scripts/startServer.js",
     "seed": "ts-node lib/scripts/seed.ts",
     "geocode-events": "ts-node lib/scripts/geocode-events.ts",
+    "maintain-event-occurrences": "ts-node lib/scripts/maintain-event-occurrences.ts",
     "lint:check": "eslint \"lib/**/*.{ts,tsx}\" \"test/**/*.ts\"",
     "lint:fix": "eslint \"lib/**/*.{ts,tsx}\" \"test/**/*.ts\" --fix",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty",

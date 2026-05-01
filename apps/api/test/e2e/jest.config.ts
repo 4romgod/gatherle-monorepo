@@ -1,37 +1,17 @@
 import type { Config } from 'jest';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { API_E2E_MAX_WORKERS } from './config';
 
-/**
- * Recursively count files whose names match `pattern` under `dir`.
- * Used to derive `maxWorkers` so the config stays accurate as test files
- * are added or removed without any manual update.
- */
-function countFiles(dir: string, pattern: RegExp): number {
-  let count = 0;
-  try {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        count += countFiles(join(dir, entry.name), pattern);
-      } else if (pattern.test(entry.name)) {
-        count++;
-      }
-    }
-  } catch {
-    // Directory may not exist in some environments (e.g. fresh checkout before
-    // test files are generated). Fall through so count stays 0.
-  }
-  return count;
+function readBooleanEnv(name: string): boolean {
+  const value = process.env[name];
+  return value === '1' || value === 'true';
 }
 
-// __dirname is the directory of this config file (apps/api/test/e2e/).
-// Count every *.e2e.[jt]s(x) file beneath it so maxWorkers always equals the
-// number of test files. Tests are I/O-bound (network calls to Lambda) so more
-// workers than CPU cores is safe. On GitHub Actions 2-core runners the default
-// '100%' resolves to 2 workers, serialising 9 files into ~13 min batches; one
-// worker-per-file cuts wall-clock time to the slowest single file (~3-4 min).
-const e2eTestFileCount = countFiles(__dirname, /\.e2e\.[jt]sx?$/);
-const maxE2eWorkers = Math.max(1, e2eTestFileCount);
+const maxE2eWorkers = API_E2E_MAX_WORKERS;
+
+// Jest documents that detectOpenHandles implies runInBand. Keep it opt-in for
+// debugging so CI can actually use the configured worker pool by default.
+const detectOpenHandles = readBooleanEnv('JEST_DETECT_OPEN_HANDLES');
+const forceExit = readBooleanEnv('JEST_FORCE_EXIT');
 
 const config: Config = {
   verbose: true,
@@ -59,8 +39,8 @@ const config: Config = {
   },
   globalSetup: '<rootDir>/test/e2e/setup.ts',
   globalTeardown: '<rootDir>/test/e2e/teardown.ts',
-  detectOpenHandles: true,
-  forceExit: true,
+  detectOpenHandles,
+  forceExit,
   // Enhanced reporting for clear test results
   reporters: [
     'default',
