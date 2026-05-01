@@ -344,6 +344,12 @@ describe('EventOccurrenceService', () => {
         }),
       ]);
     });
+
+    it('returns an empty list when the series has no primary schedule', () => {
+      const eventSeries = buildSeries({ primarySchedule: undefined });
+
+      expect(EventOccurrenceService.buildOccurrencesForSeries(eventSeries)).toEqual([]);
+    });
   });
 
   describe('syncEventSeriesOccurrences', () => {

@@ -33,6 +33,7 @@ describe('EventMomentDAO', () => {
   const mockMoment: EventMoment = {
     momentId: 'moment-1',
     eventId: 'event-1',
+    occurrenceId: 'event-1#2024-06-01T12:00:00.000Z',
     authorId: 'user-1',
     type: EventMomentType.Text,
     state: EventMomentState.Ready,
@@ -79,10 +80,13 @@ describe('EventMomentDAO', () => {
         { eventId: 'event-1', type: EventMomentType.Image },
         'user-1',
         'https://cdn.example.com/img.jpg',
+        undefined,
+        'event-1#2024-06-01T12:00:00.000Z',
       );
 
       expect(EventMomentModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          occurrenceId: 'event-1#2024-06-01T12:00:00.000Z',
           state: EventMomentState.Ready,
           mediaUrl: 'https://cdn.example.com/img.jpg',
           isPublished: true,
@@ -132,6 +136,7 @@ describe('EventMomentDAO', () => {
 
       const result = await EventMomentDAO.createVideoUpload({
         eventId: 'event-1',
+        occurrenceId: 'event-1#2024-06-01T12:00:00.000Z',
         authorId: 'user-1',
         rawS3Key: 'raw/video.mp4',
         mediaUrl: 'https://cdn.example.com/raw/video.mp4',
@@ -140,6 +145,7 @@ describe('EventMomentDAO', () => {
       expect(EventMomentModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
           eventId: 'event-1',
+          occurrenceId: 'event-1#2024-06-01T12:00:00.000Z',
           authorId: 'user-1',
           type: EventMomentType.Video,
           state: EventMomentState.UploadPending,

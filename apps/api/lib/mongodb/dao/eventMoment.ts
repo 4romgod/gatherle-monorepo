@@ -12,6 +12,7 @@ const publishedMomentFilter = { isPublished: true };
 
 interface CreateVideoUploadParams {
   eventId: string;
+  occurrenceId?: string;
   authorId: string;
   rawS3Key: string;
   mediaUrl: string;
@@ -35,6 +36,7 @@ class EventMomentDAO {
     authorId: string,
     mediaUrl?: string,
     thumbnailUrl?: string,
+    occurrenceId?: string,
   ): Promise<EventMomentEntity> {
     try {
       const now = new Date();
@@ -42,6 +44,7 @@ class EventMomentDAO {
 
       const doc = await EventMoment.create({
         eventId: input.eventId,
+        occurrenceId,
         authorId,
         type: input.type,
         caption: input.caption,
@@ -71,6 +74,7 @@ class EventMomentDAO {
 
       const doc = await EventMoment.create({
         eventId: params.eventId,
+        occurrenceId: params.occurrenceId,
         authorId: params.authorId,
         type: EventMomentType.Video,
         state: EventMomentState.UploadPending,

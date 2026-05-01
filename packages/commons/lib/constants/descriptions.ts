@@ -119,6 +119,37 @@ export const EVENT_DESCRIPTIONS = {
   },
 };
 
+export const EVENT_MOMENT_DESCRIPTIONS = {
+  TYPE: 'Represents an ephemeral moment post linked to an event occurrence and automatically expires after 24 hours.',
+  PAGE_TYPE: 'Paginated list of event moments.',
+  CREATE_INPUT: 'Input for creating an event moment or publishing a reserved video upload.',
+  TYPE_ENUM: 'The media type of an event moment post.',
+  STATE_ENUM: 'Lifecycle state of an event moment, especially for video uploads and transcoding.',
+  ID: 'Unique identifier for the event moment.',
+  EVENT_ID: 'Identifier of the parent event series associated with this moment.',
+  OCCURRENCE_ID: 'Identifier of the concrete occurrence this moment belongs to.',
+  AUTHOR_ID: 'Identifier of the user that created this moment.',
+  MOMENT_TYPE: 'Media type for this moment entry.',
+  CAPTION: 'Text body for text moments, or an optional caption for image and video moments.',
+  MEDIA_URL: 'CloudFront URL for the uploaded media or HLS playback URL for video moments.',
+  THUMBNAIL_URL: 'CloudFront URL for the video poster frame when available.',
+  BACKGROUND: 'Background colour token for text moments.',
+  STATE: 'Current lifecycle state of this moment.',
+  IS_PUBLISHED: 'Whether this moment is visible to readers.',
+  DURATION_SECONDS: 'Duration in seconds for video moments when available.',
+  EXPIRES_AT: 'Timestamp when this moment expires and is automatically deleted.',
+  CREATED_AT: 'Timestamp when this moment was created.',
+  AUTHOR: 'Author of this event moment.',
+  EVENT: 'Parent event series associated with this moment.',
+  OCCURRENCE: 'Concrete event occurrence associated with this moment.',
+  ITEMS: 'Page of event moments returned for the query.',
+  NEXT_CURSOR: 'Cursor for fetching the next page of event moments.',
+  HAS_MORE: 'Whether more event moments are available after this page.',
+  RESERVED_MOMENT_ID: 'Reserved event moment identifier returned by getEventMomentUploadUrl for video uploads.',
+  MEDIA_KEY: 'S3 object key returned by getEventMomentUploadUrl for image and video uploads.',
+  THUMBNAIL_KEY: 'S3 object key for the uploaded video poster frame.',
+};
+
 export const LOCATION_DESCRIPTIONS = {
   LOCATION_TYPE: 'Type of location (e.g., venue, online, tba)',
   COORDINATES: 'Geographical coordinates of the venue',
@@ -221,6 +252,8 @@ export const SOCIAL_DESCRIPTIONS = {
     ACTOR_USER_ID: 'ID of the user who triggered the notification (if applicable).',
     TARGET_TYPE: 'Type of the entity the notification references (User, EventSeries, Organization, Comment).',
     TARGET_ID: 'ID of the target entity the notification references.',
+    OCCURRENCE_ID:
+      'Optional concrete occurrence identifier associated with the notification when it targets one event session.',
     IS_READ: 'Whether the notification has been read by the recipient.',
     READ_AT: 'Timestamp when the notification was marked as read.',
     EMAIL_SENT: 'Whether an email notification was sent.',

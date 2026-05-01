@@ -53,6 +53,10 @@ jest.mock('@/mongodb/dao', () => ({
   },
   EventOccurrenceDAO: {
     readFirstByEventSeriesId: jest.fn(),
+    readByEventSeriesIds: jest.fn(),
+    readExceptionOccurrenceKeysByEventSeriesId: jest.fn(),
+    bulkUpsert: jest.fn(),
+    deleteMissingGeneratedOccurrences: jest.fn(),
   },
   EventOccurrenceParticipantDAO: {
     readByOccurrenceAndUser: jest.fn(),
@@ -121,6 +125,7 @@ describe('EventMomentService', () => {
   const mockMoment: EventMoment = {
     momentId: 'moment-1',
     eventId: 'event-1',
+    occurrenceId: 'event-1#2099-01-01T00:00:00.000Z',
     authorId: 'user-1',
     type: EventMomentType.Text,
     state: EventMomentState.Ready,
@@ -166,6 +171,10 @@ describe('EventMomentService', () => {
   beforeEach(() => {
     (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
     (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(mockOccurrence);
+    (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock).mockResolvedValue([]);
+    (EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([]);
+    (EventOccurrenceDAO.bulkUpsert as jest.Mock).mockResolvedValue(undefined);
+    (EventOccurrenceDAO.deleteMissingGeneratedOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceParticipantDAO.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(mockGoingParticipant);
     (EventMomentDAO.countRecentByAuthor as jest.Mock).mockResolvedValue(0);
     (EventMomentDAO.create as jest.Mock).mockResolvedValue(mockMoment);
@@ -181,7 +190,13 @@ describe('EventMomentService', () => {
     it('creates a text moment successfully', async () => {
       const result = await EventMomentService.create(textInput, 'user-1');
 
-      expect(EventMomentDAO.create).toHaveBeenCalledWith(textInput, 'user-1', undefined, undefined);
+      expect(EventMomentDAO.create).toHaveBeenCalledWith(
+        textInput,
+        'user-1',
+        undefined,
+        undefined,
+        mockOccurrence.occurrenceId,
+      );
       expect(result).toEqual(mockMoment);
     });
 
@@ -199,6 +214,7 @@ describe('EventMomentService', () => {
         'user-1',
         'https://cdn.example.com/uploads/img.jpg',
         undefined,
+        mockOccurrence.occurrenceId,
       );
       expect(getS3ObjectSize).not.toHaveBeenCalled();
     });
@@ -384,6 +400,7 @@ describe('EventMomentService', () => {
         'user-1',
         'https://cdn.example.com/uploads/img.jpg',
         'https://cdn.example.com/uploads/thumb.jpg',
+        mockOccurrence.occurrenceId,
       );
     });
 
@@ -402,6 +419,7 @@ describe('EventMomentService', () => {
         'user-1',
         undefined,
         'https://cdn.example.com/uploads/thumb.jpg',
+        mockOccurrence.occurrenceId,
       );
     });
 
@@ -441,6 +459,16 @@ describe('EventMomentService', () => {
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
         message: 'You must RSVP as Going or CheckedIn to post a moment',
       });
+    });
+
+    it('throws NOT_FOUND when the backing event occurrence cannot be resolved', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({ ...mockEvent, primarySchedule: null });
+      (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(null);
+
+      await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
+        message: 'Event occurrence not found for this event.',
+      });
+      expect(EventOccurrenceParticipantDAO.readByOccurrenceAndUser).not.toHaveBeenCalled();
     });
 
     it('throws BAD_USER_INPUT when RSVP status is Interested', async () => {

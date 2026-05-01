@@ -7,6 +7,7 @@ import type {
   UpsertEventParticipantInput,
   CancelEventParticipantInput,
   EventSeriesParticipant,
+  EventSeries,
   User,
 } from '@gatherle/commons/types';
 import { ParticipantStatus } from '@gatherle/commons/types';
@@ -71,6 +72,21 @@ describe('EventSeriesParticipantResolver', () => {
     (validation.validateMongodbId as jest.Mock).mockImplementation(() => {});
     (UserFeedDAO.removeEventFromFeed as jest.Mock).mockResolvedValue(undefined);
     (RecommendationService.computeFeedForUser as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  describe('field resolvers', () => {
+    it('loads the event through the DataLoader when the participant projection has no embedded event snapshot', async () => {
+      const context = createMockContext(
+        { user: { userId } as User },
+        {
+          events: new Map([[eventId, { eventId, title: 'Weekly Yoga' } as EventSeries]]),
+        },
+      );
+
+      const result = await resolver.event(mockParticipant, context);
+
+      expect(result).toEqual(expect.objectContaining({ eventId, title: 'Weekly Yoga' }));
+    });
   });
 
   describe('upsertEventParticipant', () => {

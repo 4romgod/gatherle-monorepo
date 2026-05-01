@@ -459,6 +459,10 @@ class EventOccurrenceService {
     eventSeries: Pick<EventSeries, 'eventId' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
     now: Date = new Date(),
   ): EventOccurrence[] {
+    if (!eventSeries.primarySchedule) {
+      return [];
+    }
+
     if (!this.isRecurringSeries(eventSeries)) {
       return [
         buildSingleOccurrenceForSeries({

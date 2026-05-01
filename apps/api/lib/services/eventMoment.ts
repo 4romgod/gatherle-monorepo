@@ -83,9 +83,11 @@ class EventMomentService {
 
     // 2. RSVP gate — caller must be Going or CheckedIn.
     const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(input.eventId);
-    const participant = occurrence
-      ? await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, callerId)
-      : null;
+    if (!occurrence) {
+      throw CustomError('Event occurrence not found for this event.', ErrorTypes.NOT_FOUND);
+    }
+
+    const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, callerId);
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to post a moment', ErrorTypes.BAD_USER_INPUT);
     }
@@ -119,7 +121,7 @@ class EventMomentService {
       thumbnailUrl = buildMediaCdnUrl(MEDIA_CDN_DOMAIN, input.thumbnailKey);
     }
 
-    const moment = await EventMomentDAO.create(input, callerId, mediaUrl, thumbnailUrl);
+    const moment = await EventMomentDAO.create(input, callerId, mediaUrl, thumbnailUrl, occurrence.occurrenceId);
 
     logger.info('[EventMomentService] Created event moment', {
       momentId: moment.momentId,

@@ -46,6 +46,12 @@ const mockContext = {
     user: {
       load: jest.fn(async (id: string) => ({ userId: id }) as any),
     },
+    eventSeries: {
+      load: jest.fn(async (id: string) => ({ eventId: id }) as any),
+    },
+    eventOccurrence: {
+      load: jest.fn(async (id: string) => ({ occurrenceId: id }) as any),
+    },
   },
 } as any;
 
@@ -78,6 +84,25 @@ describe('EventMomentResolver', () => {
 
       const result = await resolver.author(mockMoment as any, mockContext);
 
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('occurrence field resolver', () => {
+    it('loads the occurrence via the occurrence DataLoader', async () => {
+      const result = await resolver.occurrence(
+        { ...mockMoment, occurrenceId: 'event-1#2026-05-10T10:00:00.000Z' } as any,
+        mockContext,
+      );
+
+      expect(mockContext.loaders.eventOccurrence.load).toHaveBeenCalledWith('event-1#2026-05-10T10:00:00.000Z');
+      expect(result).toEqual({ occurrenceId: 'event-1#2026-05-10T10:00:00.000Z' });
+    });
+
+    it('returns null when occurrenceId is missing', async () => {
+      const result = await resolver.occurrence(mockMoment as any, mockContext);
+
+      expect(mockContext.loaders.eventOccurrence.load).not.toHaveBeenCalled();
       expect(result).toBeNull();
     });
   });

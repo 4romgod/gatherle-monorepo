@@ -180,6 +180,7 @@ describe('EventSeriesParticipantService', () => {
       },
       'user-1',
     );
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -205,6 +206,7 @@ describe('EventSeriesParticipantService', () => {
       expect.objectContaining({ occurrenceId: recurringOccurrence.occurrenceId }),
       'user-1',
     );
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result.eventId).toBe(recurringEventSeries.eventId);
   });
 
@@ -215,6 +217,7 @@ describe('EventSeriesParticipantService', () => {
     });
 
     expect(EventOccurrenceParticipantService.cancel).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result.status).toBe(ParticipantStatus.Cancelled);
   });
 
@@ -222,6 +225,7 @@ describe('EventSeriesParticipantService', () => {
     const result = await EventSeriesParticipantService.checkIn(singleEventSeries.eventId, 'user-1');
 
     expect(EventOccurrenceParticipantService.checkIn).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result.status).toBe(ParticipantStatus.CheckedIn);
   });
 
@@ -229,6 +233,7 @@ describe('EventSeriesParticipantService', () => {
     const result = await EventSeriesParticipantService.readByEvent(singleEventSeries.eventId);
 
     expect(EventOccurrenceParticipantDAO.readByOccurrence).toHaveBeenCalledWith(singleOccurrence.occurrenceId);
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result).toEqual([
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -245,6 +250,7 @@ describe('EventSeriesParticipantService', () => {
       singleOccurrence.occurrenceId,
       'user-1',
     );
+    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -300,5 +306,49 @@ describe('EventSeriesParticipantService', () => {
 
     expect(result).toEqual([]);
     expect(EventOccurrenceDAO.readByOccurrenceIds).not.toHaveBeenCalled();
+  });
+
+  it('prefers the nearest upcoming active participant when multiple occurrences exist for one series', async () => {
+    const laterOccurrence: EventOccurrence = {
+      ...recurringOccurrence,
+      occurrenceId: 'event-2#2026-05-24T10:00:00.000Z',
+      occurrenceKey: 'event-2#2026-05-24T10:00:00.000Z',
+      originalStartAt: new Date('2026-05-24T10:00:00.000Z'),
+      startAt: new Date('2026-05-24T10:00:00.000Z'),
+    };
+    const cancelledSoonerParticipant: EventOccurrenceParticipant = {
+      ...recurringOccurrenceParticipant,
+      participantId: 'occ-participant-cancelled',
+      status: ParticipantStatus.Cancelled,
+      cancelledAt: new Date('2026-05-05T10:00:00.000Z'),
+    };
+    const activeLaterParticipant: EventOccurrenceParticipant = {
+      ...recurringOccurrenceParticipant,
+      participantId: 'occ-participant-later',
+      occurrenceId: laterOccurrence.occurrenceId,
+      rsvpAt: new Date('2026-05-06T10:00:00.000Z'),
+    };
+
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([
+      cancelledSoonerParticipant,
+      activeLaterParticipant,
+    ]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([recurringOccurrence, laterOccurrence]);
+    (EventOccurrenceParticipantDAO.readByOccurrences as jest.Mock).mockResolvedValue([
+      cancelledSoonerParticipant,
+      activeLaterParticipant,
+    ]);
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(recurringEventSeries);
+
+    const result = await EventSeriesParticipantService.readByUser('user-1');
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        participantId: activeLaterParticipant.participantId,
+        eventId: recurringEventSeries.eventId,
+        status: ParticipantStatus.Going,
+      }),
+    );
   });
 });

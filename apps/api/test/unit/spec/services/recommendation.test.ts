@@ -1,6 +1,13 @@
 import RecommendationService from '@/services/recommendation';
 import { FeedReason, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 
+jest.mock('@/services/eventOccurrence', () => ({
+  __esModule: true,
+  default: {
+    readRepresentativeOccurrencesForSeriesIds: jest.fn(),
+  },
+}));
+
 jest.mock('@/mongodb/dao', () => ({
   UserDAO: {
     readUserById: jest.fn(),
@@ -37,6 +44,7 @@ import {
   FollowDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
+import EventOccurrenceService from '@/services/eventOccurrence';
 
 const makeUser = (overrides: Record<string, unknown> = {}) => ({
   userId: 'user-1',
@@ -90,6 +98,7 @@ const DEFAULT_STUBS = () => {
   (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([]);
   (EventOccurrenceParticipantDAO.readByUserIds as jest.Mock).mockResolvedValue([]);
   (FollowDAO.readSavedEventsByUserIds as jest.Mock).mockResolvedValue([]);
+  (EventOccurrenceService.readRepresentativeOccurrencesForSeriesIds as jest.Mock).mockResolvedValue(new Map());
   (UserFeedDAO.clearFeedForUser as jest.Mock).mockResolvedValue(undefined);
   (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mockResolvedValue(undefined);
 };
@@ -265,6 +274,34 @@ describe('RecommendationService', () => {
       await RecommendationService.computeFeedForUser('user-1');
 
       const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items[0].reasons).toContain(FeedReason.TimeUrgency);
+    });
+
+    it('uses the representative occurrence startAt for recurring event time urgency', async () => {
+      const event = makeEvent({
+        eventId: 'event-recurring',
+        eventCategories: ['cat-a'],
+        orgId: null,
+        primarySchedule: { startAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1_000) },
+      });
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([event]);
+      (EventOccurrenceService.readRepresentativeOccurrencesForSeriesIds as jest.Mock).mockResolvedValue(
+        new Map([
+          [
+            'event-recurring',
+            {
+              occurrenceId: 'event-recurring#2026-05-03T10:00:00.000Z',
+              eventSeriesId: 'event-recurring',
+              startAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1_000),
+            },
+          ],
+        ]),
+      );
+
+      await RecommendationService.computeFeedForUser('user-1');
+
+      const items = (UserFeedDAO.bulkUpsertFeedItems as jest.Mock).mock.calls[0][0];
+      expect(items[0].eventId).toBe('event-recurring');
       expect(items[0].reasons).toContain(FeedReason.TimeUrgency);
     });
 
