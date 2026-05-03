@@ -38,6 +38,30 @@ describe('EventSeriesParticipant Resolver', () => {
 
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+  const postGraphQl = async (token: string | undefined, payload: object, withTimeout: boolean = false) => {
+    try {
+      let req = request(url).post('');
+      if (withTimeout) {
+        req = req.timeout({ response: 15_000, deadline: 20_000 });
+      }
+      if (token) {
+        req = req.set('Authorization', 'Bearer ' + token);
+      }
+      const response = await req.send(payload);
+      return {
+        status: response.status,
+        body: response.body,
+      };
+    } catch (error) {
+      return {
+        status: 503,
+        body: {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  };
+
   const waitForParticipantReadiness = async (eventId: string): Promise<void> => {
     const maxAttempts = 5;
 
@@ -72,11 +96,7 @@ describe('EventSeriesParticipant Resolver', () => {
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const response = await request(url)
-        .post('')
-        .timeout({ response: 15_000, deadline: 20_000 })
-        .set('Authorization', 'Bearer ' + participantUser.token)
-        .send(getReadEventParticipantsQuery(eventId));
+      const response = await postGraphQl(participantUser.token, getReadEventParticipantsQuery(eventId), true);
 
       if (response.status === 200 && !response.body.errors) {
         return response;
@@ -95,6 +115,51 @@ describe('EventSeriesParticipant Resolver', () => {
     }
 
     throw new Error(`Failed to read participants for event ${eventId} after retrying transient errors.`);
+  };
+
+  const upsertEventParticipantWithRetry = async (
+    eventId: string,
+    userToken: string,
+    input: {
+      userId: string;
+      status?: ParticipantStatus;
+      quantity?: number;
+      invitedBy?: string;
+      sharedVisibility?: boolean;
+    },
+  ) => {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await postGraphQl(
+        userToken,
+        getUpsertEventParticipantMutation({
+          eventId,
+          userId: input.userId,
+          status: input.status,
+          quantity: input.quantity,
+          invitedBy: input.invitedBy,
+          sharedVisibility: input.sharedVisibility,
+        }),
+        true,
+      );
+
+      if (response.status === 200 && !response.body.errors) {
+        return response;
+      }
+
+      const body = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < maxAttempts && (response.status >= 500 || /timed out|timeout|temporarily unavailable/i.test(body));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`Failed to upsert participant for event ${eventId} after retrying transient errors.`);
   };
 
   const createEventId = async (): Promise<string> => {
@@ -140,32 +205,20 @@ describe('EventSeriesParticipant Resolver', () => {
 
   it('upserts a participant', async () => {
     const eventId = await createEventId();
-    const response = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-          status: ParticipantStatus.Going,
-        }),
-      );
+    const response = await upsertEventParticipantWithRetry(eventId, participantUser.token, {
+      userId: participantUser.userId,
+      status: ParticipantStatus.Going,
+    });
     expect(response.status).toBe(200);
     expect(response.body.data.upsertEventParticipant.eventId).toBe(eventId);
   });
 
   it('reads participants for an event', async () => {
     const eventId = await createEventId();
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-          status: ParticipantStatus.Going,
-        }),
-      );
+    await upsertEventParticipantWithRetry(eventId, participantUser.token, {
+      userId: participantUser.userId,
+      status: ParticipantStatus.Going,
+    });
 
     const response = await readEventParticipantsWithRetry(eventId);
     expect(response.status).toBe(200);
@@ -174,15 +227,9 @@ describe('EventSeriesParticipant Resolver', () => {
 
   it('cancels a participant', async () => {
     const eventId = await createEventId();
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-        }),
-      );
+    await upsertEventParticipantWithRetry(eventId, participantUser.token, {
+      userId: participantUser.userId,
+    });
     const response = await request(url)
       .post('')
       .set('Authorization', 'Bearer ' + participantUser.token)
@@ -193,27 +240,15 @@ describe('EventSeriesParticipant Resolver', () => {
 
   it('updates participant status from Going to Interested', async () => {
     const eventId = await createEventId();
-    await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-          status: ParticipantStatus.Going,
-        }),
-      );
+    await upsertEventParticipantWithRetry(eventId, participantUser.token, {
+      userId: participantUser.userId,
+      status: ParticipantStatus.Going,
+    });
 
-    const updateResponse = await request(url)
-      .post('')
-      .set('Authorization', 'Bearer ' + participantUser.token)
-      .send(
-        getUpsertEventParticipantMutation({
-          eventId,
-          userId: participantUser.userId,
-          status: ParticipantStatus.Interested,
-        }),
-      );
+    const updateResponse = await upsertEventParticipantWithRetry(eventId, participantUser.token, {
+      userId: participantUser.userId,
+      status: ParticipantStatus.Interested,
+    });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.data.upsertEventParticipant.status).toBe(ParticipantStatus.Interested);
@@ -221,29 +256,15 @@ describe('EventSeriesParticipant Resolver', () => {
 
   it('handles multiple participants for same event', async () => {
     const eventId = await createEventId();
-    // Both upserts are independent (different users, same event) — run them in parallel
-    // to avoid exhausting the 20 s per-test budget with 3 sequential round-trips.
     await Promise.all([
-      request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + participantUser.token)
-        .send(
-          getUpsertEventParticipantMutation({
-            eventId,
-            userId: participantUser.userId,
-            status: ParticipantStatus.Going,
-          }),
-        ),
-      request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + participantUser2.token)
-        .send(
-          getUpsertEventParticipantMutation({
-            eventId,
-            userId: participantUser2.userId,
-            status: ParticipantStatus.Going,
-          }),
-        ),
+      upsertEventParticipantWithRetry(eventId, participantUser.token, {
+        userId: participantUser.userId,
+        status: ParticipantStatus.Going,
+      }),
+      upsertEventParticipantWithRetry(eventId, participantUser2.token, {
+        userId: participantUser2.userId,
+        status: ParticipantStatus.Going,
+      }),
     ]);
 
     const response = await readEventParticipantsWithRetry(eventId);

@@ -1,4 +1,11 @@
-const DEFAULT_API_E2E_MAX_WORKERS = 4;
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config({ path: resolve(__dirname, '../../.env') });
+
+const graphQlUrl = process.env.GRAPHQL_URL ?? '';
+const isRemoteGraphQlTarget = Boolean(graphQlUrl) && !/localhost|127\.0\.0\.1/i.test(graphQlUrl);
+const DEFAULT_API_E2E_MAX_WORKERS = isRemoteGraphQlTarget ? 1 : 4;
 
 const parseCliWorkerOverride = (): number | null => {
   const args = process.argv;

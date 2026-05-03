@@ -44,25 +44,64 @@ describe('EventOccurrenceParticipant Resolver', () => {
     },
   });
 
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const postGraphQl = async (payload: object) => {
+    try {
+      const response = await request(url).post('').timeout({ response: 15_000, deadline: 20_000 }).send(payload);
+
+      return {
+        status: response.status,
+        body: response.body,
+      };
+    } catch (error) {
+      return {
+        status: 503,
+        body: {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
+  };
+
   const readFirstOccurrenceId = async (eventId: string) => {
-    const response = await request(url)
-      .post('')
-      .send({
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await postGraphQl({
         query: `query ReadEventById($eventId: String!) {
-          readEventById(eventId: $eventId) {
-            eventId
-            upcomingOccurrences(limit: 1, fromDate: "2026-05-01T00:00:00.000Z") {
-              occurrenceId
-              occurrenceKey
+            readEventById(eventId: $eventId) {
+              eventId
+              upcomingOccurrences(limit: 1, fromDate: "2026-05-01T00:00:00.000Z") {
+                occurrenceId
+                occurrenceKey
+              }
             }
-          }
-        }`,
+          }`,
         variables: { eventId },
       });
 
-    expect(response.status).toBe(200);
-    expect(response.body.errors).toBeUndefined();
-    return response.body.data.readEventById.upcomingOccurrences[0];
+      if (response.status === 200 && !response.body.errors) {
+        const firstOccurrence = response.body.data.readEventById.upcomingOccurrences[0];
+        if (firstOccurrence) {
+          return firstOccurrence;
+        }
+      }
+
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < 5 &&
+        (response.status >= 500 ||
+          /timed out|timeout|temporarily unavailable|aborted/i.test(failure) ||
+          (response.status === 200 && !response.body.errors));
+
+      if (!shouldRetry) {
+        expect(response.status).toBe(200);
+        expect(response.body.errors).toBeUndefined();
+      }
+
+      await sleep(500 * attempt);
+    }
+
+    throw new Error(`No persisted occurrence became available for event ${eventId}.`);
   };
 
   beforeAll(async () => {

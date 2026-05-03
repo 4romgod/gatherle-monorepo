@@ -259,6 +259,20 @@ describe('Organization Resolver', () => {
       expect(response.status).toBe(400);
     });
 
+    it('returns validation error for whitespace-only organization name', async () => {
+      const response = await request(url)
+        .post('')
+        .set('Authorization', 'Bearer ' + adminUser.token)
+        .send(
+          getCreateOrganizationMutation({
+            name: '   ',
+            ownerId: adminUser.userId,
+          }),
+        );
+
+      expect(response.status).toBe(400);
+    });
+
     it('overrides provided ownerId with the authenticated user', async () => {
       const response = await request(url)
         .post('')

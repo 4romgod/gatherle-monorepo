@@ -166,7 +166,7 @@ jobs:
           fi
           echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
 
-  e2e-api-core:
+  e2e-api-events:
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -175,6 +175,7 @@ jobs:
       AWS_REGION: ${{ inputs.region }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+      SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -197,15 +198,12 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run Core API E2E Tests
+      - name: Run API E2E Tests (Shard 1/3)
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-        run: |
-          npm run test:e2e:api -- \
-            --testPathIgnorePatterns=test/e2e/spec/resolvers/feed.e2e.ts \
-            --testPathIgnorePatterns=test/e2e/spec/resolvers/user.e2e.ts
+        run: npm run test:e2e:api -- --shard=1/3 --maxWorkers=1
 
-  e2e-api-feed:
+  e2e-api-discovery:
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -214,6 +212,7 @@ jobs:
       AWS_REGION: ${{ inputs.region }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+      SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -236,12 +235,12 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run Feed API E2E Tests
+      - name: Run API E2E Tests (Shard 2/3)
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-        run: npm run test:e2e:api -- --runTestsByPath test/e2e/spec/resolvers/feed.e2e.ts --maxWorkers=1
+        run: npm run test:e2e:api -- --shard=2/3 --maxWorkers=1
 
-  e2e-api-user:
+  e2e-api-user-org:
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -250,6 +249,7 @@ jobs:
       AWS_REGION: ${{ inputs.region }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+      SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -272,13 +272,13 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run User API E2E Tests
+      - name: Run API E2E Tests (Shard 3/3)
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-        run: npm run test:e2e:api -- --runTestsByPath test/e2e/spec/resolvers/user.e2e.ts --maxWorkers=1
+        run: npm run test:e2e:api -- --shard=3/3 --maxWorkers=1
 
   deploy-webapp:
-    needs: [deploy-api, e2e-api-core, e2e-api-feed, e2e-api-user]
+    needs: [deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
