@@ -30,6 +30,7 @@ export const CreateEventMomentInputSchema = z
   .object({
     momentId: z.string().min(1).optional(),
     eventId: objectIdSchema,
+    occurrenceId: z.string().min(1).optional(),
     type: z.nativeEnum(EventMomentType),
     caption: z.string().max(280, 'Caption must be 280 characters or fewer').optional(),
     mediaKey: z.string().optional(),

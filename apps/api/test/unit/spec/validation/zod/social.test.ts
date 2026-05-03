@@ -167,6 +167,16 @@ describe('CreateEventMomentInputSchema', () => {
   });
 
   describe('common fields', () => {
+    it('accepts an occurrenceId in the persisted occurrence key format', () => {
+      const result = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        occurrenceId: `${validId}#2026-05-03T18:00:00.000Z`,
+        type: EventMomentType.Text,
+        caption: 'Hello',
+      });
+      expect(result.success).toBe(true);
+    });
+
     it('rejects an invalid eventId (not a MongoDB ObjectId)', () => {
       const result = CreateEventMomentInputSchema.safeParse({
         eventId: 'not-an-object-id',

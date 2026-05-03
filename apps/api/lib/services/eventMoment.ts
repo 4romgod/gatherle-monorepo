@@ -1,4 +1,10 @@
-import type { EventSeries, EventMoment, EventMomentPage, CreateEventMomentInput } from '@gatherle/commons/types';
+import type {
+  EventOccurrence,
+  EventSeries,
+  EventMoment,
+  EventMomentPage,
+  CreateEventMomentInput,
+} from '@gatherle/commons/types';
 import {
   EventMomentState,
   EventMomentType,
@@ -16,6 +22,10 @@ import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
+
+function getPostingWindowCloseMs(occurrence: Pick<EventOccurrence, 'startAt' | 'endAt'>): number {
+  return (occurrence.endAt ?? occurrence.startAt).getTime() + POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000;
+}
 
 function isMissingS3ObjectError(error: unknown): boolean {
   const maybeAwsError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
@@ -64,27 +74,23 @@ class EventMomentService {
       throw CustomError('EventSeries not found', ErrorTypes.NOT_FOUND);
     }
 
-    const windowCloseMs =
-      (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt)
-        ? (event.primarySchedule.endAt ?? event.primarySchedule.startAt!).getTime() +
-          POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000
-        : null;
-
-    if (windowCloseMs !== null && Date.now() > windowCloseMs) {
-      throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
-    }
-
     if (EventOccurrenceService.isRecurringSeries(event)) {
-      throw CustomError(
-        'Posting event moments for recurring event series requires occurrence targeting and is not supported in this phase.',
-        ErrorTypes.BAD_REQUEST,
-      );
+      if (!input.occurrenceId) {
+        throw CustomError(
+          'Posting event moments for recurring event series requires occurrence targeting.',
+          ErrorTypes.BAD_REQUEST,
+        );
+      }
     }
 
-    // 2. RSVP gate — caller must be Going or CheckedIn.
-    const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(input.eventId);
+    // 2. Resolve the targeted occurrence, enforce posting window, and apply RSVP gate.
+    const occurrence = await EventOccurrenceService.readOccurrenceForSeries(input.eventId, input.occurrenceId);
     if (!occurrence) {
       throw CustomError('Event occurrence not found for this event.', ErrorTypes.NOT_FOUND);
+    }
+
+    if (Date.now() > getPostingWindowCloseMs(occurrence)) {
+      throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
     }
 
     const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, callerId);
@@ -95,7 +101,7 @@ class EventMomentService {
     // Video moments are reserved when getEventMomentUploadUrl is issued. This call
     // only publishes that reserved row with user-supplied metadata.
     if (input.type === EventMomentType.Video) {
-      return EventMomentService.publishReservedVideoMoment(input, callerId);
+      return EventMomentService.publishReservedVideoMoment(input, callerId, occurrence.occurrenceId);
     }
 
     // 3. Rate limit.
@@ -137,6 +143,7 @@ class EventMomentService {
   private static async publishReservedVideoMoment(
     input: CreateEventMomentInput,
     callerId: string,
+    occurrenceId: string,
   ): Promise<EventMoment> {
     if (!input.momentId) {
       throw CustomError('Use getEventMomentUploadUrl before creating a video moment.', ErrorTypes.BAD_USER_INPUT);
@@ -162,6 +169,10 @@ class EventMomentService {
       reservedMoment.type !== EventMomentType.Video
     ) {
       throw CustomError('Video upload reservation does not match this moment.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    if (reservedMoment.occurrenceId !== occurrenceId) {
+      throw CustomError('Video upload reservation does not match the targeted occurrence.', ErrorTypes.BAD_USER_INPUT);
     }
 
     if (!reservedMoment.rawS3Key) {

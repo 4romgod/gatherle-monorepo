@@ -11,11 +11,13 @@ import FollowStatsCard from '@/components/organization/FollowStatsCard';
 import OrganizationPageSkeleton from '@/components/organization/organizationDetailPageClient/OrganizationDetailPageSkeleton';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
-import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
+import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
 import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
-import { GetAllEventsQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
+import { GetAllEventOccurrencesQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
+import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 
 interface OrganizationPageClientProps {
   slug: string;
@@ -44,12 +46,13 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
-  } = useQuery<GetAllEventsQuery>(GetAllEventsDocument, {
+  } = useQuery<GetAllEventOccurrencesQuery>(GetAllEventOccurrencesDocument, {
     variables: {
       options: {
         filters: [{ field: 'orgId', value: orgId }],
-        sort: [{ field: 'title', order: SortOrderInput.Asc }],
-        pagination: { limit: EVENT_LIMIT },
+        dateRange: buildDefaultOccurrenceDateRange(),
+        sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
+        pagination: { limit: EVENT_LIMIT * 3 },
       },
     },
     skip: !orgId,
@@ -57,7 +60,10 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
     context: authContext,
   });
 
-  const events = eventsData?.readEvents ?? [];
+  const events = dedupeOccurrencesBySeries(
+    (eventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[],
+    EVENT_LIMIT,
+  );
   const isLoading = orgLoading || (orgId ? eventsLoading : false);
   const hasError = orgError || eventsError;
   const notFoundError = isNotFoundGraphQLError(orgError);

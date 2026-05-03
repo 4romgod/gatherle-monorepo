@@ -20,11 +20,10 @@ import {
 import { alpha } from '@mui/material/styles';
 import { Search, Event as EventIcon, LocationOn } from '@mui/icons-material';
 import Link from 'next/link';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
-import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
+import { GetAllEventsDocument } from '@/data/graphql/query';
+import type { EventPreview } from '@/data/graphql/query/Event/types';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
-import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 import { getEventPreviewHref, getEventPreviewTitle } from '@/components/events/event-preview-utils';
 
 interface EventSearchBarProps {
@@ -68,11 +67,11 @@ export default function EventSearchBar({
 }: EventSearchBarProps) {
   const inputId = 'event-search-input';
   const [searchInput, setSearchInput] = useState('');
-  const [eventOptions, setEventOptions] = useState<EventOccurrencePreview[]>([]);
+  const [eventOptions, setEventOptions] = useState<EventPreview[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetAllEventOccurrencesDocument, {
+  const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetAllEventsDocument, {
     fetchPolicy: 'network-only',
   });
 
@@ -92,7 +91,6 @@ export default function EventSearchBar({
         const { data } = await searchEvents({
           variables: {
             options: {
-              dateRange: buildDefaultOccurrenceDateRange(),
               search: {
                 value: searchTerm,
                 fields: [
@@ -104,16 +102,18 @@ export default function EventSearchBar({
                   'eventCategories.name',
                 ],
               },
-              sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
-              pagination: { limit: 60 },
+              sort: [{ field: 'title', order: SortOrderInput.Asc }],
+              pagination: { limit: 20 },
             },
           },
         });
 
-        if (data?.readEventOccurrences) {
-          const filtered = dedupeOccurrencesBySeries(data.readEventOccurrences, 20);
-          setEventOptions(filtered);
-          setIsOpen(filtered.length > 0);
+        if (data?.readEvents) {
+          setEventOptions(data.readEvents as EventPreview[]);
+          setIsOpen(data.readEvents.length > 0);
+        } else {
+          setEventOptions([]);
+          setIsOpen(false);
         }
       } catch (err) {
         logger.error('Error searching events:', err);
@@ -238,7 +238,7 @@ export default function EventSearchBar({
               )}
 
               {eventOptions.map((event) => (
-                <ListItem key={event.occurrenceId} disablePadding>
+                <ListItem key={event.eventId} disablePadding>
                   <ListItemButton
                     component={Link}
                     href={getEventPreviewHref(event)}
@@ -256,9 +256,9 @@ export default function EventSearchBar({
                     }}
                   >
                     {/* Event Image/Icon */}
-                    {event.eventSeries?.media?.featuredImageUrl ? (
+                    {event.media?.featuredImageUrl ? (
                       <Avatar
-                        src={event.eventSeries.media.featuredImageUrl}
+                        src={event.media.featuredImageUrl}
                         alt={getEventPreviewTitle(event)}
                         variant="rounded"
                         sx={{ width: 60, height: 60 }}
@@ -275,7 +275,7 @@ export default function EventSearchBar({
                         {getEventPreviewTitle(event)}
                       </Typography>
 
-                      {event.eventSeries?.summary && (
+                      {event.summary && (
                         <Typography
                           variant="body2"
                           color="text.secondary"
@@ -287,16 +287,16 @@ export default function EventSearchBar({
                             WebkitBoxOrient: 'vertical',
                           }}
                         >
-                          {event.eventSeries.summary}
+                          {event.summary}
                         </Typography>
                       )}
 
                       <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap" gap={0.5}>
                         {/* Location */}
-                        {event.eventSeries?.location?.address?.city && (
+                        {event.location?.address?.city && (
                           <Chip
                             icon={<LocationOn sx={{ fontSize: 14 }} />}
-                            label={`${event.eventSeries.location.address.city}, ${event.eventSeries.location.address.state || ''}`}
+                            label={`${event.location.address.city}, ${event.location.address.state || ''}`}
                             size="small"
                             variant="outlined"
                             sx={{ height: 22, fontSize: '0.75rem' }}
@@ -304,14 +304,14 @@ export default function EventSearchBar({
                         )}
 
                         {/* First Category */}
-                        {event.eventSeries?.eventCategories?.[0] && (
+                        {event.eventCategories?.[0] && (
                           <Chip
-                            label={event.eventSeries.eventCategories[0].name}
+                            label={event.eventCategories[0].name}
                             size="small"
                             sx={{
                               height: 22,
                               fontSize: '0.75rem',
-                              bgcolor: event.eventSeries.eventCategories[0].color || 'primary.main',
+                              bgcolor: event.eventCategories[0].color || 'primary.main',
                               color: 'common.white',
                             }}
                           />

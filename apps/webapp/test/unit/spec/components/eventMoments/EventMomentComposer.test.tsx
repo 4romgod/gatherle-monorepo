@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import EventMomentComposer from '@/components/eventMoments/EventMomentComposer';
 
 const mockUseSession = jest.fn();
@@ -183,5 +183,46 @@ describe('EventMomentComposer — file validation', () => {
     // No size error or type error should appear
     expect(screen.queryByText(/too large/i)).toBeNull();
     expect(screen.queryByText(/unsupported file type/i)).toBeNull();
+  });
+
+  it('includes occurrenceId when creating a text moment for a selected occurrence', async () => {
+    const mockCreateMoment = jest.fn().mockResolvedValue({
+      data: { createEventMoment: { momentId: 'moment-1' } },
+    });
+    let mutationHookCalls = 0;
+
+    mockUseMutation.mockImplementation(() => {
+      const result = mutationHookCalls % 2 === 0 ? [mockCreateMoment, { loading: false }] : [jest.fn(), {}];
+      mutationHookCalls += 1;
+      return result;
+    });
+
+    render(<EventMomentComposer {...defaultProps} occurrenceId="event-1#2026-05-03T18:00:00.000Z" />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText("What's happening at this event?"), {
+        target: { value: 'Session recap' },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Share moment' }));
+    });
+
+    await waitFor(() => {
+      expect(mockCreateMoment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: {
+            input: {
+              eventId: 'event-1',
+              occurrenceId: 'event-1#2026-05-03T18:00:00.000Z',
+              type: 'Text',
+              caption: 'Session recap',
+              background: 'bg-purple-600',
+            },
+          },
+        }),
+      );
+    });
   });
 });

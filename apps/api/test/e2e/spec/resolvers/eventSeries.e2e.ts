@@ -215,6 +215,7 @@ describe('EventSeries Resolver', () => {
       });
 
       it('splits a recurring series at an occurrence and relinks future occurrences to the successor series', async () => {
+        const successorTitle = `Split Successor Series ${uniqueSuffix()}`;
         const createdEvent = await createEvent({
           ...buildEventInput(),
           title: `Split Source Series ${uniqueSuffix()}`,
@@ -235,7 +236,7 @@ describe('EventSeries Resolver', () => {
           .send(
             getSplitEventSeriesAtOccurrenceMutation({
               occurrenceId: pivotOccurrence.occurrenceId,
-              title: 'Split Successor Series',
+              title: successorTitle,
             }),
           );
 
@@ -247,7 +248,7 @@ describe('EventSeries Resolver', () => {
 
         expect(successorEvent).toEqual(
           expect.objectContaining({
-            title: 'Split Successor Series',
+            title: successorTitle,
             splitFromEventSeriesId: createdEvent.eventId,
           }),
         );

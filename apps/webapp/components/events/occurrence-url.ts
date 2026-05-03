@@ -1,5 +1,3 @@
-import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/utils/eventOccurrence';
-
 type OccurrenceUrlLike = {
   originalStartAt?: Date | string | null;
   startAt?: Date | string | null;
@@ -7,6 +5,21 @@ type OccurrenceUrlLike = {
 
 type SearchParamsLike = {
   get(name: string): string | null;
+};
+
+export const PUBLIC_OCCURRENCE_QUERY_PARAM = 'occurs';
+
+const getOccurrencePublicAnchor = (value?: Date | string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
 };
 
 export function buildEventOccurrenceHref(basePath: string, occurrence?: OccurrenceUrlLike | null): string {
