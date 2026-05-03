@@ -21,6 +21,7 @@ import { OrganizationMembershipService } from '@/services';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
 import { deleteFromS3, getKeyFromPublicUrl } from '@/clients/AWS/s3Client';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 @Resolver(() => Organization)
 export class OrganizationResolver {
@@ -47,6 +48,12 @@ export class OrganizationResolver {
     @Ctx() context: ServerContext,
   ): Promise<Organization> {
     const user = getAuthenticatedUser(context);
+
+    if (!input.name?.trim()) {
+      throw CustomError(`Name ${ERROR_MESSAGES.REQUIRED}`, ErrorTypes.BAD_USER_INPUT, { argumentName: 'name' });
+    }
+
+    input.name = input.name.trim();
 
     // Override ownerId to ensure creator becomes owner (security measure)
     input.ownerId = user.userId;

@@ -150,6 +150,23 @@ describe('OrganizationResolver', () => {
       );
       expect(result).toEqual(mockOrganization);
     });
+
+    it('rejects blank organization names before reaching the DAO', async () => {
+      await expect(
+        resolver.createOrganization(
+          {
+            name: '   ',
+            ownerId: 'user-001',
+          },
+          mockContext,
+        ),
+      ).rejects.toMatchObject({
+        message: 'Name is required',
+      });
+
+      expect(validation.validateInput).not.toHaveBeenCalled();
+      expect(OrganizationDAO.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateOrganization', () => {
