@@ -1,4 +1,5 @@
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
+import EventOccurrenceDAO from '@/mongodb/dao/eventOccurrence';
 import { kebabCase } from 'lodash';
 import type {
   EventSeries as EventEntity,
@@ -20,7 +21,7 @@ import {
 } from '@/utils';
 import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
-import { hasOccurrenceInRange, getDateRangeForFilter } from '@/utils/rrule';
+import { getDateRangeForFilter } from '@/utils/rrule';
 
 type EventOccurrenceMaintenanceSnapshot = Pick<
   EventEntity,
@@ -31,6 +32,27 @@ type EventOccurrenceMaintenanceSnapshot = Pick<
 };
 
 class EventSeriesDAO {
+  private static resolveReadEventsDateRange(
+    options?: EventsQueryOptionsInput,
+  ): { startDate: Date; endDate: Date } | null {
+    if (options?.customDate) {
+      return getDateRangeForFilter(DATE_FILTER_OPTIONS.CUSTOM, new Date(options.customDate));
+    }
+
+    if (options?.dateFilterOption) {
+      return getDateRangeForFilter(options.dateFilterOption, undefined);
+    }
+
+    if (options?.dateRange?.startDate && options?.dateRange?.endDate) {
+      return {
+        startDate: new Date(options.dateRange.startDate),
+        endDate: new Date(options.dateRange.endDate),
+      };
+    }
+
+    return null;
+  }
+
   private static buildSavedByLookupStages() {
     return [
       {
@@ -198,49 +220,28 @@ class EventSeriesDAO {
     try {
       logger.debug('Reading events with options:', options);
 
-      // Transform options to aggregation pipeline (handles filters, location, sort, pagination)
-      const pipeline = transformEventOptionsToPipeline(options);
+      let effectiveOptions = options;
+      const dateRange = this.resolveReadEventsDateRange(options);
 
-      let events = await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
+      if (dateRange) {
+        logger.debug('Applying persisted occurrence date range filter to event series query:', dateRange);
+        const matchingEventSeriesIds = await EventOccurrenceDAO.readEventSeriesIdsInRange(
+          dateRange.startDate,
+          dateRange.endDate,
+        );
 
-      // Apply date range filtering if provided (filter in application layer since RRULEs are strings)
-      // Handle customDate (takes precedence), dateFilterOption, and direct dateRange (for backwards compatibility)
-      let dateRangeToUse = options?.dateRange;
+        if (matchingEventSeriesIds.length === 0) {
+          return [];
+        }
 
-      if (options?.customDate) {
-        // Custom date takes precedence - use it directly
-        logger.debug('Using custom date:', options.customDate);
-        const calculatedRange = getDateRangeForFilter(DATE_FILTER_OPTIONS.CUSTOM, new Date(options.customDate));
-        dateRangeToUse = {
-          startDate: calculatedRange.startDate,
-          endDate: calculatedRange.endDate,
-        };
-      } else if (options?.dateFilterOption) {
-        // Use predefined filter option
-        logger.debug('Calculating date range from filter option:', { dateFilterOption: options.dateFilterOption });
-        const calculatedRange = getDateRangeForFilter(options.dateFilterOption, undefined);
-        dateRangeToUse = {
-          startDate: calculatedRange.startDate,
-          endDate: calculatedRange.endDate,
+        effectiveOptions = {
+          ...options,
+          filters: [...(options?.filters ?? []), { field: 'eventId', value: matchingEventSeriesIds }],
         };
       }
 
-      if (dateRangeToUse?.startDate && dateRangeToUse?.endDate) {
-        const { startDate, endDate } = dateRangeToUse;
-        logger.debug('Applying date range filter:', { startDate, endDate });
-
-        // TODO: Consider moving RRULE date filtering into the aggregation pipeline so pagination/sorting
-        // respect the date constraints before skip/limit stages execute.
-        events = events.filter((event) => {
-          if (!event.primarySchedule?.recurrenceRule) {
-            return false;
-          }
-
-          return hasOccurrenceInRange(event.primarySchedule.recurrenceRule, new Date(startDate), new Date(endDate));
-        });
-      }
-
-      return events;
+      const pipeline = transformEventOptionsToPipeline(effectiveOptions);
+      return await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
     } catch (error) {
       logDaoError('Error reading events', { error });
       throw KnownCommonError(error);

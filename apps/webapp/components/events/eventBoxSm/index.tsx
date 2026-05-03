@@ -3,59 +3,68 @@
 import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { alpha, Avatar, AvatarGroup, Box, CardContent, Typography, Tooltip, Stack } from '@mui/material';
-import { EventSeriesParticipantPreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
-import { RRule } from 'rrule';
 import Link from 'next/link';
 import { SaveEventButton, EventShareButton, RsvpButton } from '@/components/events';
 import { useState, useEffect, type MouseEvent } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
+import {
+  AnyEventPreview,
+  getEventPreviewCityLabel,
+  getEventPreviewEventId,
+  getEventPreviewHref,
+  getEventPreviewImageUrl,
+  getEventPreviewIsSavedByMe,
+  getEventPreviewLocationText,
+  getEventPreviewMyRsvpStatus,
+  getEventPreviewOccurrenceId,
+  getEventPreviewParticipantCount,
+  getEventPreviewParticipants,
+  getEventPreviewScheduleText,
+  getEventPreviewSlug,
+  getEventPreviewTitle,
+} from '@/components/events/event-preview-utils';
+import type { EventParticipantRecord } from '@/components/events/participant-utils';
 
-export default function EventBoxSm({ event, href }: { event: EventPreview; href?: string }) {
-  const { participants, location, media } = event;
-  const recurrenceRule = event.primarySchedule.recurrenceRule;
+export default function EventBoxSm({ event, href }: { event: AnyEventPreview; href?: string }) {
+  const title = getEventPreviewTitle(event);
+  const resolvedHref = href || getEventPreviewHref(event);
+  const eventId = getEventPreviewEventId(event);
+  const occurrenceId = getEventPreviewOccurrenceId(event);
+  const eventSlug = getEventPreviewSlug(event);
+  const imageUrl = getEventPreviewImageUrl(event);
+  const cityLabel = getEventPreviewCityLabel(event);
+  const locationLabel = getEventPreviewLocationText(event);
+  const scheduleText = getEventPreviewScheduleText(event);
+  const nextSavedState = getEventPreviewIsSavedByMe(event);
+  const nextRsvpStatus = getEventPreviewMyRsvpStatus(event);
+  const participantList = getEventPreviewParticipants(event);
+  const participantCount = getEventPreviewParticipantCount(event);
 
   // Local state for optimistic UI updates
-  const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);
-  const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(event.myRsvp?.status ?? null);
+  const [isSaved, setIsSaved] = useState(nextSavedState);
+  const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(nextRsvpStatus);
 
   // Sync state when props change (e.g., after refetch)
   useEffect(() => {
-    setIsSaved(event.isSavedByMe ?? false);
-  }, [event.isSavedByMe]);
+    setIsSaved(nextSavedState);
+  }, [nextSavedState]);
 
   useEffect(() => {
-    setRsvpStatus(event.myRsvp?.status ?? null);
-  }, [event.myRsvp?.status]);
+    setRsvpStatus(nextRsvpStatus);
+  }, [nextRsvpStatus]);
 
-  const recurrenceText = (() => {
-    if (!recurrenceRule) {
-      return 'Single occurrence';
-    }
-    try {
-      return RRule.fromString(recurrenceRule).toText();
-    } catch {
-      return 'Custom recurrence';
-    }
-  })();
-
-  const imageUrl = media?.featuredImageUrl ?? null;
-
-  const cityLabel = location?.address?.city || 'Featured';
-  const locationLabel = location?.address ? `${location.address.country}, ${location.address.city}` : 'Location TBA';
-  const participantList = (participants ?? []) as EventSeriesParticipantPreview[];
   const activeParticipants = participantList.filter(
     (participant) => participant.status !== ParticipantStatus.Cancelled,
   );
-  const participantCount = activeParticipants.length;
   const visibleParticipants = activeParticipants.slice(0, 3);
-  const getParticipantLabel = (participant: EventSeriesParticipantPreview) => {
+  const getParticipantLabel = (participant: EventParticipantRecord) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
     const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
     return nameParts.length ? nameParts.join(' ') : fallbackName;
   };
-  const getParticipantAvatarLetter = (participant: EventSeriesParticipantPreview) =>
+  const getParticipantAvatarLetter = (participant: EventParticipantRecord) =>
     participant.user?.given_name?.charAt(0) ??
     participant.user?.username?.charAt(0) ??
     participant.userId?.charAt(0) ??
@@ -72,7 +81,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
   };
 
   return (
-    <Link href={href || `/events/${event.slug}`} onClick={handleLinkClick}>
+    <Link href={resolvedHref} onClick={handleLinkClick}>
       <Box
         sx={(theme) => ({
           height: '100%',
@@ -95,7 +104,7 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
             <CardMedia
               component="img"
               image={imageUrl}
-              alt={event.title}
+              alt={title}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -151,13 +160,13 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
         </Box>
         <CardContent sx={{ flexGrow: 1, p: 1.25 }}>
           <Typography gutterBottom variant="subtitle2" component="h2" fontWeight="bold" sx={{ mb: 0.4 }}>
-            {event.title}
+            {title}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.4 }}>
             <CalendarToday fontSize="inherit" sx={{ color: 'text.secondary', mr: 0.75, fontSize: '0.78rem' }} />
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.78rem' }}>
-              {recurrenceText}
+              {scheduleText}
             </Typography>
           </Box>
 
@@ -199,17 +208,18 @@ export default function EventBoxSm({ event, href }: { event: EventPreview; href?
 
           {/* Action buttons */}
           <Stack direction="row" spacing={0.5} sx={{ mt: 'auto' }}>
-            <RsvpButton eventId={event.eventId} currentStatus={rsvpStatus} size="small" onRsvpChange={setRsvpStatus} />
-            <SaveEventButton
-              eventId={event.eventId}
-              isSaved={isSaved}
+            <RsvpButton
+              eventId={eventId}
+              occurrenceId={occurrenceId}
+              currentStatus={rsvpStatus}
               size="small"
-              showTooltip
-              onSaveChange={setIsSaved}
+              onRsvpChange={setRsvpStatus}
             />
+            <SaveEventButton eventId={eventId} isSaved={isSaved} size="small" showTooltip onSaveChange={setIsSaved} />
             <EventShareButton
-              eventTitle={event.title}
-              eventSlug={event.slug}
+              eventTitle={title}
+              eventSlug={eventSlug}
+              eventUrl={resolvedHref}
               stopPropagation
               size="small"
               sx={{

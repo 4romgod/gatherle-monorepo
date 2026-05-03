@@ -4,20 +4,24 @@ import { canViewUserDetails, getVisibilityLabel as getUserVisibilityLabel } from
 export type EventSeriesParticipantRecord = NonNullable<
   NonNullable<GetEventBySlugQuery['readEventBySlug']>['participants']
 >[number];
+export type EventOccurrenceParticipantRecord = NonNullable<
+  NonNullable<NonNullable<GetEventBySlugQuery['readEventBySlug']>['upcomingOccurrences']>[number]['participants']
+>[number];
+export type EventParticipantRecord = EventSeriesParticipantRecord | EventOccurrenceParticipantRecord;
 
-export const getParticipantDisplayName = (participant: EventSeriesParticipantRecord) => {
+export const getParticipantDisplayName = (participant: EventParticipantRecord) => {
   const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
   const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
   return nameParts.length ? nameParts.join(' ') : fallbackName;
 };
 
-export const getParticipantInitial = (participant: EventSeriesParticipantRecord) =>
+export const getParticipantInitial = (participant: EventParticipantRecord) =>
   participant.user?.given_name?.charAt(0) ??
   participant.user?.username?.charAt(0) ??
   participant.userId?.charAt(0) ??
   '?';
 
-export const getParticipantStatusLabel = (participant: EventSeriesParticipantRecord) =>
+export const getParticipantStatusLabel = (participant: EventParticipantRecord) =>
   participant.status ?? ParticipantStatus.Going;
 
 export const getParticipantChipColor = (status?: ParticipantStatus | null) => {
@@ -34,7 +38,7 @@ export const getParticipantChipColor = (status?: ParticipantStatus | null) => {
 };
 
 export const canViewerSeeParticipant = (
-  user: EventSeriesParticipantRecord['user'] | undefined,
+  user: EventParticipantRecord['user'] | undefined,
   viewerId?: string,
   followingIds?: Set<string>,
 ): boolean =>

@@ -9,13 +9,14 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetAllEventsDocument,
+  GetMyEventOccurrenceRsvpsDocument,
   GetMyRsvpsDocument,
   GetSavedEventsDocument,
   GetUserByUsernameDocument,
   ParticipantStatus,
   SocialVisibility,
 } from '@/data/graphql/types/graphql';
-import { EventPreview } from '@/data/graphql/query/Event/types';
+import { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/Event/types';
 import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
@@ -23,12 +24,17 @@ import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton'
 import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
 import { ROUTES, BUTTON_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { isEventUpcoming, logger } from '@/lib/utils';
+import { logger } from '@/lib/utils';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { useFollowing } from '@/hooks/useFollow';
 import ErrorPage from '@/components/errors/ErrorPage';
+import {
+  AnyEventPreview,
+  isEventPreviewUpcoming,
+  projectOccurrenceRsvpToEventPreview,
+} from '@/components/events/event-preview-utils';
 
 interface UserProfilePageClientProps {
   username: string;
@@ -86,6 +92,16 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     fetchPolicy: 'cache-and-network',
   });
 
+  const { data: myOccurrenceRsvpsData, loading: myOccurrenceRsvpsLoading } = useQuery(
+    GetMyEventOccurrenceRsvpsDocument,
+    {
+      variables: { includeCancelled: false },
+      skip: !isOwnProfile || !token,
+      context: { headers: getAuthHeader(token) },
+      fetchPolicy: 'cache-and-network',
+    },
+  );
+
   const user = userData?.readUserByUsername ?? null;
   const events = (eventsData?.readEvents ?? []) as EventPreview[];
   const savedEvents = (savedData?.readSavedEvents ?? [])
@@ -113,34 +129,49 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     (followingUserIds.has(user.userId) || user.defaultVisibility === SocialVisibility.Public),
   );
 
-  // For own profile use the dedicated myRsvps query; for others filter all events
-  const allRsvpdEvents = useMemo(() => {
-    if (isOwnProfile && myRsvpsData?.myRsvps) {
-      // Exclude cancelled for tabs (Going, Attended, etc.) — moments are handled separately
-      const rsvpdEvents = myRsvpsData.myRsvps
-        .filter((r) => r.status !== ParticipantStatus.Cancelled)
-        .map((r) => {
-          if (!r.event) {
-            logger.warn('UserProfilePageClient: myRsvps entry without associated event encountered');
-            return null;
+  const allRsvpdEventPreviews = useMemo<AnyEventPreview[]>(() => {
+    if (isOwnProfile && myOccurrenceRsvpsData?.myEventOccurrenceRsvps) {
+      return myOccurrenceRsvpsData.myEventOccurrenceRsvps
+        .map((rsvp) => {
+          const preview = projectOccurrenceRsvpToEventPreview(rsvp);
+          if (!preview) {
+            logger.warn(
+              'UserProfilePageClient: myEventOccurrenceRsvps entry without associated occurrence encountered',
+            );
           }
-          return r.event;
+          return preview;
         })
-        .filter((e): e is EventPreview => e != null);
-      return rsvpdEvents;
+        .filter((preview): preview is EventOccurrencePreview => preview != null);
     }
+
     return events.filter((event) =>
       event.participants?.some((p) => p.userId === user?.userId && p.status !== ParticipantStatus.Cancelled),
-    );
-  }, [isOwnProfile, myRsvpsData, events, user?.userId]);
+    ) as AnyEventPreview[];
+  }, [isOwnProfile, myOccurrenceRsvpsData, events, user?.userId]);
 
-  const upcomingRsvpdEvents = useMemo(
-    () => allRsvpdEvents.filter((e) => isEventUpcoming(e.primarySchedule.recurrenceRule)),
-    [allRsvpdEvents],
+  const upcomingRsvpdEvents = useMemo<AnyEventPreview[]>(
+    () =>
+      allRsvpdEventPreviews
+        .filter((event) => isEventPreviewUpcoming(event))
+        .sort((left, right) => {
+          if ('occurrenceId' in left && 'occurrenceId' in right) {
+            return new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
+          }
+          return 0;
+        }),
+    [allRsvpdEventPreviews],
   );
-  const pastRsvpdEvents = useMemo(
-    () => allRsvpdEvents.filter((e) => !isEventUpcoming(e.primarySchedule.recurrenceRule)),
-    [allRsvpdEvents],
+  const pastRsvpdEvents = useMemo<AnyEventPreview[]>(
+    () =>
+      allRsvpdEventPreviews
+        .filter((event) => !isEventPreviewUpcoming(event))
+        .sort((left, right) => {
+          if ('occurrenceId' in left && 'occurrenceId' in right) {
+            return new Date(right.startAt).getTime() - new Date(left.startAt).getTime();
+          }
+          return 0;
+        }),
+    [allRsvpdEventPreviews],
   );
   const organizedEvents = useMemo(
     () => events.filter((event) => event.organizers.some((organizer) => organizer.user.userId === user?.userId)),
@@ -169,7 +200,8 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
 
   const interests = user?.interests ?? [];
 
-  const isLoading = userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading));
+  const isLoading =
+    userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading || myOccurrenceRsvpsLoading));
   const hasError = userError || eventsError;
   const notFoundError = isNotFoundGraphQLError(userError);
 
@@ -243,7 +275,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                   initialFollowersCount={user.followersCount ?? 0}
                   initialFollowingCount={0}
                   organizedEventsCount={organizedEvents.length}
-                  rsvpdEventsCount={allRsvpdEvents.length}
+                  rsvpdEventsCount={allRsvpdEventPreviews.length}
                   savedEventsCount={savedEvents.length}
                   interestsCount={interests.length}
                   isOwnProfile={false}

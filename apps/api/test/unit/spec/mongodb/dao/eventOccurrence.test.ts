@@ -9,6 +9,7 @@ jest.mock('@/mongodb/models', () => ({
     aggregate: jest.fn(),
     bulkWrite: jest.fn(),
     deleteMany: jest.fn(),
+    distinct: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
     findOneAndUpdate: jest.fn(),
@@ -85,6 +86,88 @@ describe('EventOccurrenceDAO', () => {
       (EventOccurrenceModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('read failed')));
 
       await expect(EventOccurrenceDAO.readByOccurrenceIds([occurrence.occurrenceId])).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByEventSeriesId', () => {
+    it('reads occurrences for a single event series in original start order', async () => {
+      const query = createMockSuccessMongooseQuery([occurrence], { chainMethods: ['sort', 'lean'] });
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(query);
+
+      const results = await EventOccurrenceDAO.readByEventSeriesId('series-1');
+
+      expect(results).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({ eventSeriesId: 'series-1' });
+      expect(query.sort).toHaveBeenCalledWith({ originalStartAt: 1, occurrenceKey: 1 });
+    });
+
+    it('wraps read failures when querying one event series', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), { chainMethods: ['sort', 'lean'] }),
+      );
+
+      await expect(EventOccurrenceDAO.readByEventSeriesId('series-1')).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readByEventSeriesIds', () => {
+    it('returns early when no event series ids are provided', async () => {
+      const results = await EventOccurrenceDAO.readByEventSeriesIds([]);
+
+      expect(results).toEqual([]);
+      expect(EventOccurrenceModel.find).not.toHaveBeenCalled();
+    });
+
+    it('reads occurrences for multiple event series in stable order', async () => {
+      const query = createMockSuccessMongooseQuery([occurrence], { chainMethods: ['sort', 'lean'] });
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(query);
+
+      const results = await EventOccurrenceDAO.readByEventSeriesIds(['series-1', 'series-2']);
+
+      expect(results).toEqual([occurrence]);
+      expect(EventOccurrenceModel.find).toHaveBeenCalledWith({
+        eventSeriesId: { $in: ['series-1', 'series-2'] },
+      });
+      expect(query.sort).toHaveBeenCalledWith({ eventSeriesId: 1, originalStartAt: 1, occurrenceKey: 1 });
+    });
+
+    it('wraps read failures when querying multiple event series', async () => {
+      (EventOccurrenceModel.find as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('read failed'), { chainMethods: ['sort', 'lean'] }),
+      );
+
+      await expect(EventOccurrenceDAO.readByEventSeriesIds(['series-1'])).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readEventSeriesIdsInRange', () => {
+    it('reads distinct event series ids whose persisted occurrences overlap the date range', async () => {
+      const startDate = new Date('2026-05-01T00:00:00.000Z');
+      const endDate = new Date('2026-05-07T23:59:59.999Z');
+      (EventOccurrenceModel.distinct as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(['series-1', 'series-2']),
+      );
+
+      const result = await EventOccurrenceDAO.readEventSeriesIdsInRange(startDate, endDate);
+
+      expect(result).toEqual(['series-1', 'series-2']);
+      expect(EventOccurrenceModel.distinct).toHaveBeenCalledWith('eventSeriesId', {
+        startAt: { $lte: endDate },
+        $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
+      });
+    });
+
+    it('wraps distinct-query failures when reading event series ids in range', async () => {
+      (EventOccurrenceModel.distinct as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('distinct failed')),
+      );
+
+      await expect(
+        EventOccurrenceDAO.readEventSeriesIdsInRange(
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-05-07T23:59:59.999Z'),
+        ),
+      ).rejects.toThrow(GraphQLError);
     });
   });
 

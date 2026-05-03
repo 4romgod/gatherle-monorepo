@@ -15,6 +15,7 @@ import { ParticipantStatus, ParticipantVisibility } from '@/data/graphql/types/g
 const mockUserId = 'user-123';
 const mockToken = 'mock-jwt-token';
 const mockEventId = 'event-456';
+const mockOccurrenceId = 'event-456#2026-06-12T08:00:00.000Z';
 
 const mockSession = {
   user: {
@@ -42,6 +43,16 @@ const mockCancelResponse = {
   userId: mockUserId,
   status: ParticipantStatus.Cancelled,
   cancelledAt: '2026-01-18T11:00:00Z',
+};
+
+const mockOccurrenceRsvpResponse = {
+  participantId: 'participant-occ-789',
+  occurrenceId: mockOccurrenceId,
+  userId: mockUserId,
+  status: ParticipantStatus.Going,
+  quantity: 1,
+  sharedVisibility: ParticipantVisibility.Public,
+  rsvpAt: '2026-01-18T10:00:00Z',
 };
 
 // Mock functions
@@ -175,6 +186,29 @@ describe('useRsvp Hook', () => {
       expect(response).toEqual({ data: { upsertEventParticipant: mockRsvpResponse } });
     });
 
+    it('should use the occurrence RSVP mutation when an occurrenceId is provided', async () => {
+      mockRsvpMutate.mockResolvedValueOnce({
+        data: { upsertEventOccurrenceParticipant: mockOccurrenceRsvpResponse },
+      });
+
+      const { result } = renderHook(() => useRsvp());
+
+      await act(async () => {
+        await result.current.rsvpToEvent(mockEventId, { status: ParticipantStatus.Going }, mockOccurrenceId);
+      });
+
+      expect(mockRsvpMutate).toHaveBeenCalledWith({
+        variables: {
+          input: {
+            occurrenceId: mockOccurrenceId,
+            status: ParticipantStatus.Going,
+            quantity: 1,
+            sharedVisibility: undefined,
+          },
+        },
+      });
+    });
+
     it('should propagate mutation errors', async () => {
       const mockError = new Error('Network error');
       mockRsvpMutate.mockRejectedValueOnce(mockError);
@@ -296,6 +330,22 @@ describe('useRsvp Hook', () => {
 
       await expect(result.current.cancelRsvp(mockEventId)).rejects.toThrow('Cancel failed');
     });
+
+    it('should use the occurrence cancel mutation when an occurrenceId is provided', async () => {
+      const { result } = renderHook(() => useRsvp());
+
+      await act(async () => {
+        await result.current.cancelRsvp(mockEventId, mockOccurrenceId);
+      });
+
+      expect(mockCancelMutate).toHaveBeenCalledWith({
+        variables: {
+          input: {
+            occurrenceId: mockOccurrenceId,
+          },
+        },
+      });
+    });
   });
 
   describe('loading states', () => {
@@ -311,7 +361,9 @@ describe('useRsvp Hook', () => {
       (useMutation as jest.Mock)
         .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
         // Second call for Cancel mutation
-        .mockReturnValueOnce([mockCancelMutate, { loading: true, error: null }]);
+        .mockReturnValueOnce([mockCancelMutate, { loading: true, error: null }])
+        .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
+        .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }]);
 
       const { result } = renderHook(() => useRsvp());
       expect(result.current.cancelLoading).toBe(true);
@@ -320,6 +372,8 @@ describe('useRsvp Hook', () => {
     it('should compute isLoading as OR of rsvpLoading and cancelLoading', () => {
       (useMutation as jest.Mock)
         .mockReturnValueOnce([mockRsvpMutate, { loading: true, error: null }])
+        .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }])
+        .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
         .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }]);
 
       const { result } = renderHook(() => useRsvp());
@@ -328,6 +382,8 @@ describe('useRsvp Hook', () => {
 
     it('should return isLoading as false when both mutations are idle', () => {
       (useMutation as jest.Mock)
+        .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
+        .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }])
         .mockReturnValueOnce([mockRsvpMutate, { loading: false, error: null }])
         .mockReturnValueOnce([mockCancelMutate, { loading: false, error: null }]);
 
@@ -480,6 +536,32 @@ describe('useMyRsvpStatus Hook', () => {
     const { result } = renderHook(() => useMyRsvpStatus(mockEventId));
 
     expect(result.current.refetch).toBe(mockRefetch);
+  });
+
+  it('should query occurrence RSVP status when an occurrenceId is provided', () => {
+    (useQuery as jest.Mock)
+      .mockReturnValueOnce({
+        data: null,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      })
+      .mockReturnValueOnce({
+        data: {
+          myEventOccurrenceRsvpStatus: {
+            participantId: 'participant-occ-789',
+            occurrenceId: mockOccurrenceId,
+            status: ParticipantStatus.Going,
+          },
+        },
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+    const { result } = renderHook(() => useMyRsvpStatus(mockEventId, mockOccurrenceId));
+
+    expect(result.current.status).toBe(ParticipantStatus.Going);
   });
 });
 
@@ -753,5 +835,35 @@ describe('useEventParticipants Hook', () => {
       }),
     );
     expect(result.current.participants).toEqual(mockParticipants);
+  });
+
+  it('should query occurrence participants when an occurrenceId is provided', () => {
+    (useQuery as jest.Mock)
+      .mockReturnValueOnce({
+        data: null,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      })
+      .mockReturnValueOnce({
+        data: {
+          readEventOccurrenceParticipants: [
+            {
+              participantId: 'participant-occ-789',
+              occurrenceId: mockOccurrenceId,
+              userId: mockUserId,
+              status: ParticipantStatus.Going,
+            },
+          ],
+        },
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+    const { result } = renderHook(() => useEventParticipants(mockEventId, mockOccurrenceId));
+
+    expect(result.current.participants).toHaveLength(1);
+    expect(result.current.participants[0].occurrenceId).toBe(mockOccurrenceId);
   });
 });

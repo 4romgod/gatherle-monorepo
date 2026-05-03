@@ -1,3 +1,4 @@
+import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/utils';
 import type { Notification, NotificationTargetType, CreateNotificationInput } from '@gatherle/commons/types';
 import { NotificationType, ParticipantStatus } from '@gatherle/commons/types';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
@@ -10,6 +11,7 @@ import { publishNotificationCreated, publishNotificationsCreated } from '@/webso
  * For actionUrl generation:
  * - User notifications (FOLLOW_*): uses actorUserId to fetch username
  * - EventSeries notifications: targetSlug should be the event slug
+ *   and occurrenceAnchor should be the public occurrence slot anchor when available
  * - Organization notifications: targetSlug should be the org slug
  * - Security notifications: no targetSlug needed
  */
@@ -20,8 +22,10 @@ export interface NotifyParams {
   targetType?: NotificationTargetType;
   /** The slug (or identifier) used to build the actionUrl. For events/orgs, this should be the slug. */
   targetSlug?: string;
-  /** Optional occurrence identifier used for deep-linking to a specific event session. */
+  /** Optional persisted occurrence identifier stored on the notification record. */
   occurrenceId?: string;
+  /** Optional public occurrence anchor used for deep-linking to a specific event session. */
+  occurrenceAnchor?: string;
   actionUrl?: string;
   // Optional overrides for title/message (otherwise generated from type)
   title?: string;
@@ -35,23 +39,49 @@ export interface NotifyParams {
  * actionUrlTemplate receives:
  * - targetSlug: the event/org slug for navigation
  * - actorUsername: the actor's username (for social notifications)
+ * - occurrenceAnchor: a public occurrence slot anchor for event deep links
  */
 interface NotificationTemplate {
   title: string;
   message: (actorName?: string, rsvpStatus?: ParticipantStatus) => string;
-  actionUrlTemplate?: (targetSlug?: string, actorUsername?: string, occurrenceId?: string) => string | undefined;
+  actionUrlTemplate?: (targetSlug?: string, actorUsername?: string, occurrenceAnchor?: string) => string | undefined;
 }
 
-function buildEventActionUrl(targetSlug?: string, occurrenceId?: string): string | undefined {
+function buildEventActionUrl(targetSlug?: string, occurrenceAnchor?: string): string | undefined {
   if (!targetSlug) {
     return undefined;
   }
 
-  if (!occurrenceId) {
+  if (!occurrenceAnchor) {
     return `/events/${targetSlug}`;
   }
 
-  return `/events/${targetSlug}?occurrence=${encodeURIComponent(occurrenceId)}`;
+  return `/events/${targetSlug}?${PUBLIC_OCCURRENCE_QUERY_PARAM}=${encodeURIComponent(occurrenceAnchor)}`;
+}
+
+function resolveOccurrenceAnchor(occurrenceAnchor?: string, occurrenceId?: string): string | undefined {
+  const normalizedAnchor = getOccurrencePublicAnchor(occurrenceAnchor);
+  if (normalizedAnchor) {
+    return normalizedAnchor;
+  }
+
+  const parsedOccurrence = occurrenceId ? parseOccurrenceIdValue(occurrenceId) : null;
+  return parsedOccurrence ? (getOccurrencePublicAnchor(parsedOccurrence.originalStartAt) ?? undefined) : undefined;
+}
+
+function parseOccurrenceIdValue(occurrenceId: string): { eventSeriesId: string; originalStartAt: Date } | null {
+  const separatorIndex = occurrenceId.indexOf('#');
+  if (separatorIndex <= 0) {
+    return null;
+  }
+
+  const eventSeriesId = occurrenceId.slice(0, separatorIndex);
+  const originalStartAt = new Date(occurrenceId.slice(separatorIndex + 1));
+  if (!eventSeriesId || Number.isNaN(originalStartAt.getTime())) {
+    return null;
+  }
+
+  return { eventSeriesId, originalStartAt };
 }
 
 const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTemplate> = {
@@ -206,6 +236,7 @@ class NotificationService {
       targetType,
       targetSlug,
       occurrenceId,
+      occurrenceAnchor,
       actionUrl,
       title: customTitle,
       message: customMessage,
@@ -237,11 +268,12 @@ class NotificationService {
     // Generate title and message
     const title = customTitle || template.title;
     const message = customMessage || template.message(actorName, rsvpStatus);
+    const resolvedOccurrenceAnchor = resolveOccurrenceAnchor(occurrenceAnchor, occurrenceId);
 
     // Generate action URL
     let generatedActionUrl = actionUrl;
     if (!generatedActionUrl && template.actionUrlTemplate) {
-      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, occurrenceId) || undefined;
+      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, resolvedOccurrenceAnchor) || undefined;
     }
 
     const input: CreateNotificationInput = {
@@ -281,6 +313,7 @@ class NotificationService {
       targetType,
       targetSlug,
       occurrenceId,
+      occurrenceAnchor,
       actionUrl,
       title: customTitle,
       message: customMessage,
@@ -312,11 +345,12 @@ class NotificationService {
     const template = NOTIFICATION_TEMPLATES[type];
     const title = customTitle || template.title;
     const message = customMessage || template.message(actorName, rsvpStatus);
+    const resolvedOccurrenceAnchor = resolveOccurrenceAnchor(occurrenceAnchor, occurrenceId);
 
     // Generate action URL
     let generatedActionUrl = actionUrl;
     if (!generatedActionUrl && template.actionUrlTemplate) {
-      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, occurrenceId) || undefined;
+      generatedActionUrl = template.actionUrlTemplate(targetSlug, actorUsername, resolvedOccurrenceAnchor) || undefined;
     }
 
     // Create inputs for all recipients

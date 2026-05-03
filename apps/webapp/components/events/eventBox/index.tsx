@@ -2,59 +2,78 @@
 
 import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
-import { EventSeriesParticipantPreview } from '@/data/graphql/query/Event/types';
-import type { AnyEventPreview } from '@/components/events/EventTileGrid';
 import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { PeopleOutline } from '@mui/icons-material';
-import { RRule } from 'rrule';
 import { SaveEventButton, RsvpButton } from '@/components/events';
 import { useState, useEffect } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
 import EventShareButton from '@/components/events/share/EventShareButton';
+import {
+  AnyEventPreview,
+  getEventPreviewEventId,
+  getEventPreviewHref,
+  getEventPreviewImageUrl,
+  getEventPreviewIsSavedByMe,
+  getEventPreviewLocationText,
+  getEventPreviewMyRsvpStatus,
+  getEventPreviewOccurrenceId,
+  getEventPreviewParticipantCount,
+  getEventPreviewParticipants,
+  getEventPreviewScheduleText,
+  getEventPreviewSlug,
+  getEventPreviewStatusLabel,
+  getEventPreviewTitle,
+} from '@/components/events/event-preview-utils';
+import type { EventParticipantRecord } from '@/components/events/participant-utils';
 
 export default function EventBox({ event }: { event: AnyEventPreview }) {
   const theme = useTheme();
-  const { title, participants, media, location, status } = event;
-  const recurrenceRule = event.primarySchedule.recurrenceRule;
+  const title = getEventPreviewTitle(event);
+  const eventId = getEventPreviewEventId(event);
+  const occurrenceId = getEventPreviewOccurrenceId(event);
+  const imageUrl = getEventPreviewImageUrl(event);
+  const locationText = getEventPreviewLocationText(event);
+  const scheduleText = getEventPreviewScheduleText(event);
+  const statusLabel = getEventPreviewStatusLabel(event);
+  const shareUrl = getEventPreviewHref(event);
+  const eventSlug = getEventPreviewSlug(event);
+  const nextSavedState = getEventPreviewIsSavedByMe(event);
+  const nextRsvpStatus = getEventPreviewMyRsvpStatus(event);
+  const participantList = getEventPreviewParticipants(event);
+  const participantCount = getEventPreviewParticipantCount(event);
 
   // Local state for optimistic UI updates
-  const [isSaved, setIsSaved] = useState(event.isSavedByMe ?? false);
-  const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(event.myRsvp?.status ?? null);
+  const [isSaved, setIsSaved] = useState(nextSavedState);
+  const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(nextRsvpStatus);
 
   // Sync state when props change (e.g., after refetch)
   useEffect(() => {
-    setIsSaved(event.isSavedByMe ?? false);
-  }, [event.isSavedByMe]);
+    setIsSaved(nextSavedState);
+  }, [nextSavedState]);
 
   useEffect(() => {
-    setRsvpStatus(event.myRsvp?.status ?? null);
-  }, [event.myRsvp?.status]);
+    setRsvpStatus(nextRsvpStatus);
+  }, [nextRsvpStatus]);
 
-  const recurrenceText = RRule.fromString(recurrenceRule).toText();
-  const imageUrl = media?.featuredImageUrl ?? null;
-  const participantList = (participants ?? []) as EventSeriesParticipantPreview[];
   const activeParticipants = participantList.filter(
     (participant) => participant.status !== ParticipantStatus.Cancelled,
   );
-  const participantCount = activeParticipants.length;
   const visibleParticipants = activeParticipants.slice(0, 3);
 
-  const getParticipantLabel = (participant: EventSeriesParticipantPreview) => {
+  const getParticipantLabel = (participant: EventParticipantRecord) => {
     const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
 
     const displayName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
     return nameParts.length ? nameParts.join(' ') : displayName;
   };
 
-  const getParticipantAvatarLetter = (participant: EventSeriesParticipantPreview) =>
+  const getParticipantAvatarLetter = (participant: EventParticipantRecord) =>
     participant.user?.given_name?.charAt(0) ??
     participant.user?.username?.charAt(0) ??
     participant.userId?.charAt(0) ??
     '?';
-
-  const locationText = location?.address?.city || location?.details || 'Location TBA';
 
   return (
     <Surface
@@ -136,9 +155,9 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
             transition: 'background-color 0.3s ease',
           }}
         />
-        {status && (
+        {statusLabel && (
           <Chip
-            label={status}
+            label={statusLabel}
             size="small"
             color="success"
             sx={{
@@ -201,7 +220,7 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
                 color="text.secondary"
                 sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
-                {recurrenceText}
+                {scheduleText}
               </Typography>
             </Box>
 
@@ -248,17 +267,18 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
           )}
 
           <Stack direction="row" spacing={0.5} sx={{ ml: 'auto' }}>
-            <RsvpButton eventId={event.eventId} currentStatus={rsvpStatus} size="small" onRsvpChange={setRsvpStatus} />
-            <SaveEventButton
-              eventId={event.eventId}
-              isSaved={isSaved}
+            <RsvpButton
+              eventId={eventId}
+              occurrenceId={occurrenceId}
+              currentStatus={rsvpStatus}
               size="small"
-              showTooltip
-              onSaveChange={setIsSaved}
+              onRsvpChange={setRsvpStatus}
             />
+            <SaveEventButton eventId={eventId} isSaved={isSaved} size="small" showTooltip onSaveChange={setIsSaved} />
             <EventShareButton
               eventTitle={title}
-              eventSlug={event.slug}
+              eventSlug={eventSlug}
+              eventUrl={shareUrl}
               stopPropagation
               size="small"
               sx={{

@@ -13,6 +13,50 @@ type UpsertOccurrenceParticipantPayload = UpsertEventOccurrenceParticipantInput 
 };
 
 class EventOccurrenceParticipantDAO {
+  static async readActiveCountsByOccurrences(occurrenceIds: string[]): Promise<Map<string, number>> {
+    if (occurrenceIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const rows = await EventOccurrenceParticipantModel.aggregate<{ _id: string; rsvpCount: number }>([
+        {
+          $match: {
+            occurrenceId: { $in: occurrenceIds },
+            status: {
+              $in: [ParticipantStatus.Going, ParticipantStatus.Interested, ParticipantStatus.CheckedIn],
+            },
+          },
+        },
+        {
+          $project: {
+            occurrenceId: 1,
+            rsvpContribution: {
+              $cond: [
+                {
+                  $and: [{ $ne: ['$quantity', null] }, { $gt: ['$quantity', 1] }],
+                },
+                '$quantity',
+                1,
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: '$occurrenceId',
+            rsvpCount: { $sum: '$rsvpContribution' },
+          },
+        },
+      ]).exec();
+
+      return new Map(rows.map((row) => [row._id, row.rsvpCount]));
+    } catch (error) {
+      logDaoError('Error reading active RSVP counts by occurrence IDs', { error, occurrenceIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async upsert(input: UpsertOccurrenceParticipantPayload): Promise<EventOccurrenceParticipant> {
     try {
       const { occurrenceId, userId, status, quantity, invitedBy, sharedVisibility } = input;

@@ -3,17 +3,19 @@ import { useLazyQuery } from '@apollo/client';
 import {
   FilterInput,
   FilterOperatorInput,
-  GetAllEventsDocument,
-  GetAllEventsQuery,
-  GetAllEventsQueryVariables,
+  GetAllEventOccurrencesQuery,
+  GetAllEventOccurrencesQueryVariables,
   LocationFilterInput,
   SortInput,
+  EventsQueryOptionsInput,
 } from '@/data/graphql/types/graphql';
-import { EventPreview } from '@/data/graphql/query/Event/types';
+import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import { EventFilters, LocationFilter } from '@/components/events/filters/EventFilterContext';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from '@/lib/utils';
+import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -85,36 +87,55 @@ export const buildLocationFilter = (location: LocationFilter): LocationFilterInp
   };
 };
 
+export const buildOccurrenceDateInput = (
+  filters: EventFilters,
+): Pick<EventsQueryOptionsInput, 'dateFilterOption' | 'customDate' | 'dateRange'> => {
+  const input: Pick<EventsQueryOptionsInput, 'dateFilterOption' | 'customDate' | 'dateRange'> = {};
+  const dateFilterParams = buildDateFilterParams(filters);
+
+  if (dateFilterParams.dateFilterOption || dateFilterParams.customDate) {
+    input.dateFilterOption = dateFilterParams.dateFilterOption as EventsQueryOptionsInput['dateFilterOption'];
+    input.customDate = dateFilterParams.customDate;
+    return input;
+  }
+
+  input.dateRange = buildDefaultOccurrenceDateRange();
+  return input;
+};
+
 export const useFilteredEvents = (
   filters: EventFilters,
-  initialEvents: EventPreview[],
+  initialEvents: EventOccurrencePreview[],
   token?: string | null,
   sort?: SortInput[],
 ) => {
-  const [events, setEvents] = useState<EventPreview[]>(initialEvents);
+  const [events, setEvents] = useState<EventOccurrencePreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(initialEvents.length >= DEFAULT_PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
   const pageRef = useRef(0);
 
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
-  const dateFilterParams = useMemo(() => buildDateFilterParams(filters), [filters.dateRange]);
+  const occurrenceDateInput = useMemo(() => buildOccurrenceDateInput(filters), [filters]);
   const locationFilter = useMemo(() => buildLocationFilter(filters.location), [filters.location]);
-  const [loadEvents, { loading }] = useLazyQuery<GetAllEventsQuery, GetAllEventsQueryVariables>(GetAllEventsDocument);
+  const [loadEvents, { loading }] = useLazyQuery<GetAllEventOccurrencesQuery, GetAllEventOccurrencesQueryVariables>(
+    GetAllEventOccurrencesDocument,
+  );
 
   const hasActiveBackendFilters =
-    filterInputs.length > 0 || !!dateFilterParams.dateFilterOption || !!dateFilterParams.customDate || !!locationFilter;
+    filterInputs.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!locationFilter;
 
   const buildQueryOptions = useCallback(
     (skip: number) => ({
       filters: filterInputs.length > 0 ? filterInputs : undefined,
-      dateFilterOption: dateFilterParams.dateFilterOption as any,
-      customDate: dateFilterParams.customDate,
+      dateFilterOption: occurrenceDateInput.dateFilterOption,
+      customDate: occurrenceDateInput.customDate,
+      dateRange: occurrenceDateInput.dateRange,
       location: locationFilter,
       sort,
       pagination: { limit: DEFAULT_PAGE_SIZE, skip },
     }),
-    [filterInputs, dateFilterParams, locationFilter, sort],
+    [filterInputs, locationFilter, occurrenceDateInput, sort],
   );
 
   // When initialEvents change (fresh SSR/cache data), reset only if user hasn't paginated
@@ -145,8 +166,8 @@ export const useFilteredEvents = (
     })
       .then((response) => {
         if (!isCurrent) return;
-        if (response.data?.readEvents) {
-          const fetched = response.data.readEvents as EventPreview[];
+        if (response.data?.readEventOccurrences) {
+          const fetched = response.data.readEventOccurrences as EventOccurrencePreview[];
           setEvents(fetched);
           setHasMore(fetched.length >= DEFAULT_PAGE_SIZE);
           setError(null);
@@ -166,7 +187,7 @@ export const useFilteredEvents = (
     };
   }, [
     filterInputs,
-    dateFilterParams,
+    occurrenceDateInput,
     locationFilter,
     initialEvents,
     loadEvents,
@@ -187,11 +208,11 @@ export const useFilteredEvents = (
         context: { headers: getAuthHeader(token) },
       });
 
-      if (response.data?.readEvents) {
-        const fetched = response.data.readEvents as EventPreview[];
+      if (response.data?.readEventOccurrences) {
+        const fetched = response.data.readEventOccurrences as EventOccurrencePreview[];
         setEvents((prev) => {
-          const existingIds = new Set(prev.map((e) => e.eventId));
-          const unique = fetched.filter((e) => !existingIds.has(e.eventId));
+          const existingIds = new Set(prev.map((e) => e.occurrenceId));
+          const unique = fetched.filter((e) => !existingIds.has(e.occurrenceId));
           return [...prev, ...unique];
         });
         setHasMore(fetched.length >= DEFAULT_PAGE_SIZE);

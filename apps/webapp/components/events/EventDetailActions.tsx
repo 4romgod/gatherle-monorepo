@@ -10,6 +10,7 @@ import EventShareButton from '@/components/events/share/EventShareButton';
 
 interface EventDetailActionsProps {
   eventId: string;
+  occurrenceId?: string;
   eventTitle: string;
   eventSlug: string;
   eventUrl: string;
@@ -31,6 +32,7 @@ interface EventDetailActionsProps {
  */
 export default function EventDetailActions({
   eventId,
+  occurrenceId,
   eventTitle,
   eventSlug,
   eventUrl,
@@ -56,6 +58,7 @@ export default function EventDetailActions({
     <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
       <RsvpButton
         eventId={eventId}
+        occurrenceId={occurrenceId}
         currentStatus={rsvpStatus}
         size={compact ? 'medium' : 'large'}
         showTooltip={false}

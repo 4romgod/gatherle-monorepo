@@ -3,6 +3,8 @@ import { Field, Float, ID, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop } from '@typegoose/typegoose';
 
 import { EventSeries } from './eventSeries';
+import { EventOccurrence } from './eventOccurrence';
+import { USER_FEED_DESCRIPTIONS } from '../constants/descriptions';
 
 export enum FeedReason {
   CategoryMatch = 'CategoryMatch',
@@ -20,7 +22,7 @@ registerEnumType(FeedReason, {
 });
 
 @ObjectType('FeedItem', {
-  description: 'A recommended event in the user feed, scored by the rule-based recommendation engine',
+  description: USER_FEED_DESCRIPTIONS.TYPE,
 })
 @modelOptions({ schemaOptions: { timestamps: false } })
 @index({ userId: 1, score: -1 })
@@ -28,7 +30,7 @@ registerEnumType(FeedReason, {
 @index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 export class UserFeedItem {
   @prop({ required: true, unique: true, index: true, type: () => String })
-  @Field(() => ID)
+  @Field(() => ID, { description: USER_FEED_DESCRIPTIONS.FEED_ITEM_ID })
   feedItemId: string;
 
   /**
@@ -39,23 +41,19 @@ export class UserFeedItem {
   userId: string;
 
   @prop({ required: true, type: () => String })
-  @Field(() => ID, { description: 'The ID of the recommended event' })
+  @Field(() => ID, { description: USER_FEED_DESCRIPTIONS.EVENT_ID })
   eventId: string;
 
   @prop({ required: true, type: () => Number })
-  @Field(() => Float, {
-    description: 'Relevance score computed by the recommendation engine (higher = more relevant)',
-  })
+  @Field(() => Float, { description: USER_FEED_DESCRIPTIONS.SCORE })
   score: number;
 
   @prop({ required: true, type: () => [String], enum: FeedReason })
-  @Field(() => [FeedReason], {
-    description: 'The signals that contributed to this event being recommended',
-  })
+  @Field(() => [FeedReason], { description: USER_FEED_DESCRIPTIONS.REASONS })
   reasons: FeedReason[];
 
   @prop({ required: true, type: () => Date })
-  @Field(() => Date, { description: 'Timestamp of when this score was last computed' })
+  @Field(() => Date, { description: USER_FEED_DESCRIPTIONS.COMPUTED_AT })
   computedAt: Date;
 
   /**
@@ -68,9 +66,15 @@ export class UserFeedItem {
   /**
    * Computed field — resolved via @FieldResolver, not stored in MongoDB.
    */
-  @Field(() => EventSeries, {
-    nullable: true,
-    description: 'The full event object, populated via FieldResolver',
-  })
+  @Field(() => EventSeries, { nullable: true, description: USER_FEED_DESCRIPTIONS.EVENT })
   event?: EventSeries;
+
+  /**
+   * Computed field — resolved via @FieldResolver, not stored in MongoDB.
+   */
+  @Field(() => EventOccurrence, {
+    nullable: true,
+    description: USER_FEED_DESCRIPTIONS.REPRESENTATIVE_OCCURRENCE,
+  })
+  representativeOccurrence?: EventOccurrence;
 }

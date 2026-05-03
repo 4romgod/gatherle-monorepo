@@ -5,9 +5,8 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQuery } from '@apollo/client';
 import {
   DateFilterOption,
-  GetAllEventsDocument,
-  GetAllEventsQuery,
-  GetAllEventsQueryVariables,
+  GetAllEventOccurrencesQuery,
+  GetAllEventOccurrencesQueryVariables,
   LocationFilterInput,
 } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
@@ -18,6 +17,8 @@ import EventBoxSm from '@/components/events/eventBoxSm';
 import EventBoxSmSkeleton from '@/components/events/eventBoxSm/EventBoxSmSkeleton';
 import { ROUTES } from '@/lib/constants';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
+import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 
 const LOCATION_RADIUS_KM = 50;
 
@@ -124,21 +125,25 @@ export default function NearbyEventsSection() {
 
   const shouldShowActionButton = permissionState === 'denied';
 
-  const { data, loading, error } = useQuery<GetAllEventsQuery, GetAllEventsQueryVariables>(GetAllEventsDocument, {
-    skip: !locationFilter,
-    variables: {
-      options: {
-        location: locationFilter,
-        dateFilterOption: DateFilterOption.ThisWeekend,
+  const { data, loading, error } = useQuery<GetAllEventOccurrencesQuery, GetAllEventOccurrencesQueryVariables>(
+    GetAllEventOccurrencesDocument,
+    {
+      skip: !locationFilter,
+      variables: {
+        options: {
+          location: locationFilter,
+          dateFilterOption: DateFilterOption.ThisWeekend,
+          pagination: { limit: 36 },
+        },
+      },
+      fetchPolicy: 'cache-and-network',
+      context: {
+        headers: getAuthHeader(token),
       },
     },
-    fetchPolicy: 'cache-and-network',
-    context: {
-      headers: getAuthHeader(token),
-    },
-  });
+  );
 
-  const events = data?.readEvents ?? [];
+  const events = useMemo(() => dedupeOccurrencesBySeries(data?.readEventOccurrences ?? [], 6), [data]);
   const isLoadingContent = Boolean(locationFilter) && loading;
   const locationLabel = useMemo(() => {
     if (events.length === 0) {
@@ -150,7 +155,7 @@ export default function NearbyEventsSection() {
     let topCount = 0;
 
     events.forEach((event) => {
-      const address = event.location?.address;
+      const address = event.eventSeries?.location?.address;
       const label = [address?.city, address?.state].filter(Boolean).join(', ');
       if (!label) {
         return;

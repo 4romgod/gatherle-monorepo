@@ -1,8 +1,32 @@
 import { EventOccurrence as EventOccurrenceModel } from '@/mongodb/models';
-import { EventOccurrenceStatus, ParticipantStatus, type EventOccurrence } from '@gatherle/commons/types';
+import {
+  SortOrderInput,
+  EventOccurrenceStatus,
+  ParticipantStatus,
+  type EventOccurrence,
+  type SortInput,
+} from '@gatherle/commons/types';
 import { KnownCommonError, logDaoError } from '@/utils';
 
+type OccurrenceReadOptions = {
+  sort?: SortInput[];
+  skip?: number;
+  limit?: number;
+};
+
 class EventOccurrenceDAO {
+  static async readEventSeriesIdsInRange(startDate: Date, endDate: Date): Promise<string[]> {
+    try {
+      return await EventOccurrenceModel.distinct('eventSeriesId', {
+        startAt: { $lte: endDate },
+        $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error reading event series ids in occurrence date range', { error, startDate, endDate });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readReservedSlotDriftBySeriesIds(eventSeriesIds: string[]): Promise<
     Array<{
       occurrenceId: string;
@@ -342,26 +366,50 @@ class EventOccurrenceDAO {
     eventSeriesIds: string[],
     startDate: Date,
     endDate: Date,
+    options?: OccurrenceReadOptions,
   ): Promise<EventOccurrence[]> {
     if (eventSeriesIds.length === 0) {
       return [];
     }
 
     try {
-      return await EventOccurrenceModel.find({
+      const query = EventOccurrenceModel.find({
         eventSeriesId: { $in: eventSeriesIds },
         startAt: { $lte: endDate },
         $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
-      })
-        .sort({ startAt: 1, occurrenceKey: 1 })
-        .lean()
-        .exec();
+      });
+
+      const sortEntries = options?.sort?.length ? options.sort : [{ field: 'startAt', order: SortOrderInput.asc }];
+      const mongoSort: Record<string, 1 | -1> = {};
+      for (const entry of sortEntries) {
+        if (entry.field === 'rsvpCount') {
+          continue;
+        }
+
+        mongoSort[entry.field] = entry.order === SortOrderInput.desc ? -1 : 1;
+      }
+      if (!('occurrenceKey' in mongoSort)) {
+        mongoSort.occurrenceKey = 1;
+      }
+
+      query.sort(mongoSort);
+
+      if (typeof options?.skip === 'number') {
+        query.skip(options.skip);
+      }
+
+      if (typeof options?.limit === 'number') {
+        query.limit(options.limit);
+      }
+
+      return await query.lean().exec();
     } catch (error) {
       logDaoError('Error reading event occurrences in date range', {
         error,
         eventSeriesIds,
         startDate,
         endDate,
+        options,
       });
       throw KnownCommonError(error);
     }

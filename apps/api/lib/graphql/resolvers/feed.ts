@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Int, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { EventSeries, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/types';
+import { EventOccurrence, EventSeries, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/types';
 import { UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
@@ -16,6 +16,18 @@ export class FeedResolver {
   async event(@Root() feedItem: UserFeedItem, @Ctx() context: ServerContext): Promise<EventSeries | null> {
     try {
       return await context.loaders.eventSeries.load(feedItem.eventId);
+    } catch {
+      return null;
+    }
+  }
+
+  @FieldResolver(() => EventOccurrence, { nullable: true })
+  async representativeOccurrence(
+    @Root() feedItem: UserFeedItem,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrence | null> {
+    try {
+      return await context.loaders.eventOccurrenceByEventSeries.load(feedItem.eventId);
     } catch {
       return null;
     }

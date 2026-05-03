@@ -65,6 +65,7 @@ jest.mock('@/constants', () => ({
       cancelEventOccurrenceParticipant: '',
       checkInEventOccurrenceParticipant: '',
       readEventOccurrenceParticipants: '',
+      myEventOccurrenceRsvps: '',
       myEventOccurrenceRsvpStatus: '',
     },
   },
@@ -100,6 +101,7 @@ jest.mock('@/services', () => ({
     rsvp: jest.fn(),
     cancel: jest.fn(),
     checkIn: jest.fn(),
+    readByUser: jest.fn(),
   },
   RecommendationService: {
     computeFeedForUser: jest.fn().mockResolvedValue(undefined),
@@ -212,6 +214,15 @@ describe('EventOccurrenceParticipantResolver', () => {
     const result = await resolver.myEventOccurrenceRsvpStatus(occurrence.occurrenceId, context);
 
     expect(result).toEqual(participant);
+  });
+
+  it('reads the current user occurrence RSVPs through the service layer', async () => {
+    (EventOccurrenceParticipantService.readByUser as jest.Mock).mockResolvedValue([participant]);
+
+    const result = await resolver.myEventOccurrenceRsvps(false, context);
+
+    expect(EventOccurrenceParticipantService.readByUser).toHaveBeenCalledWith(user.userId, true);
+    expect(result).toEqual([participant]);
   });
 
   it('returns null when the current user has not RSVPd to the occurrence', async () => {

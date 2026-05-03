@@ -5,18 +5,27 @@ import { Explore } from '@mui/icons-material';
 import { alpha, Box, Button, Card, Chip, Grid, Typography, Skeleton } from '@mui/material';
 import CustomContainer from '@/components/core/layout/CustomContainer';
 import { ROUTES, BUTTON_STYLES, BUTTON_PRIMARY_STYLES, APP_NAME } from '@/lib/constants';
-import { RRule } from 'rrule';
-import { EventPreview } from '@/data/graphql/query/Event/types';
+import type { AnyEventPreview } from '@/components/events/event-preview-utils';
+import {
+  getEventPreviewHref,
+  getEventPreviewImageUrl,
+  getEventPreviewParticipantCount,
+  getEventPreviewScheduleText,
+  getEventPreviewTitle,
+} from '@/components/events/event-preview-utils';
 
 interface HeroSectionProps {
-  heroEvent: EventPreview | null;
+  heroEvent: AnyEventPreview | null;
   isLoading?: boolean;
 }
 
 export default function HeroSection({ heroEvent, isLoading = false }: HeroSectionProps) {
-  const heroEventRsvps = heroEvent?.participants?.length ?? 0;
+  const heroEventRsvps = heroEvent ? getEventPreviewParticipantCount(heroEvent) : 0;
   const showSkeleton = isLoading && !heroEvent;
-  const heroImageUrl = heroEvent?.media?.featuredImageUrl ?? null;
+  const heroImageUrl = heroEvent ? getEventPreviewImageUrl(heroEvent) : null;
+  const heroHref = heroEvent ? getEventPreviewHref(heroEvent) : ROUTES.EVENTS.ROOT;
+  const heroTitle = heroEvent ? getEventPreviewTitle(heroEvent) : '';
+  const heroScheduleText = heroEvent ? getEventPreviewScheduleText(heroEvent) : '';
 
   const renderSkeletonCard = () => (
     <Card
@@ -55,14 +64,36 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
   return (
     <Box
       id="hero-section"
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         overflow: 'hidden',
         py: { xs: 7, md: 10 },
         px: { xs: 2, md: 3 },
-        backgroundColor: 'hero.background',
+        background: `linear-gradient(180deg, ${theme.palette.hero.background} 0%, ${theme.palette.background.default} 100%)`,
         color: 'hero.textSecondary',
-      }}
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: -140,
+          left: '10%',
+          width: { xs: 220, md: 320 },
+          height: { xs: 220, md: 320 },
+          borderRadius: '50%',
+          backgroundColor: alpha(theme.palette.primary.main, 0.16),
+          filter: 'blur(120px)',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          right: '6%',
+          bottom: -180,
+          width: { xs: 240, md: 360 },
+          height: { xs: 240, md: 360 },
+          borderRadius: '50%',
+          backgroundColor: alpha(theme.palette.secondary.main, 0.14),
+          filter: 'blur(140px)',
+        },
+      })}
     >
       <CustomContainer>
         <Grid container spacing={4} alignItems="center" sx={{ position: 'relative', zIndex: 2 }}>
@@ -166,11 +197,10 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                       Featured gathering
                     </Typography>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'hero.text', mt: 1 }}>
-                      {heroEvent.title}
+                      {heroTitle}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'hero.textSecondary', opacity: 0.75, mt: 1.5 }}>
-                      {heroEvent.primarySchedule.recurrenceRule &&
-                        RRule.fromString(heroEvent.primarySchedule.recurrenceRule).toText()}
+                      {heroScheduleText}
                     </Typography>
                     <Box
                       sx={{
@@ -219,7 +249,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                         color="secondary"
                         size="small"
                         component={Link}
-                        href={ROUTES.EVENTS.EVENT(heroEvent.slug)}
+                        href={heroHref}
                         sx={BUTTON_STYLES}
                       >
                         View details

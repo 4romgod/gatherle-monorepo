@@ -77,6 +77,10 @@ const postGraphQL = async (
 
     const body = (await response.json()) as any;
     return { status: response.status, body };
+  } catch (error) {
+    // Network/abort/timeout errors — return a retryable status so the caller's retry loop handles it
+    const message = error instanceof Error ? error.message : String(error);
+    return { status: 503, body: { message } };
   } finally {
     clearTimeout(timeout);
   }

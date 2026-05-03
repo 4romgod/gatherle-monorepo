@@ -4,13 +4,8 @@ import React from 'react';
 import { Box } from '@mui/material';
 import EventBox from '@/components/events/eventBox';
 import Link from 'next/link';
-import { ROUTES } from '@/lib/constants';
-import { EventPreview } from '@/data/graphql/query/Event/types';
-import type { RecommendedFeedEventPreview } from '@/data/graphql/query/Feed/types';
 import EventTileSkeletonGrid from './EventTileSkeleton';
-
-/** Union of all event shapes that EventTileGrid can render. */
-export type AnyEventPreview = EventPreview | RecommendedFeedEventPreview;
+import { AnyEventPreview, getEventPreviewHref, getEventPreviewKey } from '@/components/events/event-preview-utils';
 
 export type EventTileGridProps = {
   events: AnyEventPreview[];
@@ -36,8 +31,8 @@ export default function EventTileGrid({ events, loading = false, skeletonCount =
   return (
     <Box component="div" display="flex" flexDirection="column" gap={2}>
       {events.map((event) => (
-        <Box component="div" key={`EventTileGrid.${event.eventId}`}>
-          <Link href={ROUTES.EVENTS.EVENT(event.slug)} onClick={handleLinkClick}>
+        <Box component="div" key={`EventTileGrid.${getEventPreviewKey(event)}`}>
+          <Link href={getEventPreviewHref(event)} onClick={handleLinkClick}>
             <EventBox event={event} />
           </Link>
         </Box>

@@ -14,6 +14,7 @@ import { useState, useRef } from 'react';
 
 interface RsvpButtonProps {
   eventId: string;
+  occurrenceId?: string;
   currentStatus: ParticipantStatus | null;
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
@@ -26,6 +27,7 @@ interface RsvpButtonProps {
  */
 export default function RsvpButton({
   eventId,
+  occurrenceId,
   currentStatus,
   size = 'medium',
   showTooltip = true,
@@ -70,7 +72,7 @@ export default function RsvpButton({
 
     try {
       if (status === 'cancel') {
-        await cancelRsvp(eventId);
+        await cancelRsvp(eventId, occurrenceId);
         onRsvpChange?.(null);
         setToastProps({
           open: true,
@@ -80,7 +82,7 @@ export default function RsvpButton({
           autoHideDuration: 2000,
         });
       } else if (status === ParticipantStatus.Going) {
-        await goingToEvent(eventId);
+        await goingToEvent(eventId, 1, occurrenceId);
         onRsvpChange?.(ParticipantStatus.Going);
         setToastProps({
           open: true,
@@ -90,7 +92,7 @@ export default function RsvpButton({
           autoHideDuration: 2000,
         });
       } else if (status === ParticipantStatus.Interested) {
-        await interestedInEvent(eventId);
+        await interestedInEvent(eventId, occurrenceId);
         onRsvpChange?.(ParticipantStatus.Interested);
         setToastProps({
           open: true,

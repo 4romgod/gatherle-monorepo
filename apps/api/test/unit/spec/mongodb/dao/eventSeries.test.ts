@@ -1,6 +1,7 @@
 import type { UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@gatherle/commons/types';
 import type { PipelineStage } from 'mongoose';
 import { EventSeriesDAO } from '@/mongodb/dao';
+import EventOccurrenceDAO from '@/mongodb/dao/eventOccurrence';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import { SortOrderInput } from '@gatherle/commons/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons/constants';
@@ -21,6 +22,13 @@ jest.mock('@/mongodb/models', () => ({
     findByIdAndDelete: jest.fn(),
     findOneAndDelete: jest.fn(),
     aggregate: jest.fn(),
+  },
+}));
+
+jest.mock('@/mongodb/dao/eventOccurrence', () => ({
+  __esModule: true,
+  default: {
+    readEventSeriesIdsInRange: jest.fn(),
   },
 }));
 
@@ -48,6 +56,7 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
 describe('EventSeriesDAO', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue([]);
   });
 
   const mockEventInput: CreateEventInput = {
@@ -308,6 +317,7 @@ describe('EventSeriesDAO', () => {
       const events = await EventSeriesDAO.readEvents(mockOptions);
       expect(events).toEqual(mockMongooseEvents);
       expect(EventSeriesModel.aggregate).toHaveBeenCalledWith(pipeline);
+      expect(EventOccurrenceDAO.readEventSeriesIdsInRange).not.toHaveBeenCalled();
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventSeriesModel.aggregate throws an UNKNOWN error', async () => {
@@ -318,6 +328,7 @@ describe('EventSeriesDAO', () => {
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
       expect(EventSeriesModel.aggregate).toHaveBeenCalledWith(pipeline);
+      expect(EventOccurrenceDAO.readEventSeriesIdsInRange).not.toHaveBeenCalled();
     });
 
     it('should return an empty array if no events are found', async () => {
@@ -327,183 +338,27 @@ describe('EventSeriesDAO', () => {
       const events = await EventSeriesDAO.readEvents(mockOptions);
       expect(events).toEqual([]);
       expect(EventSeriesModel.aggregate).toHaveBeenCalledWith(pipeline);
+      expect(EventOccurrenceDAO.readEventSeriesIdsInRange).not.toHaveBeenCalled();
     });
 
     describe('with dateRange filtering', () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-      it('should filter events by date range for single occurrence events', async () => {
+      it('should filter events by date range using persisted occurrence-backed series ids', async () => {
         const startOfToday = new Date(today);
         startOfToday.setHours(0, 0, 0, 0);
         const endOfToday = new Date(today);
         endOfToday.setHours(23, 59, 59, 999);
 
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event3',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
-
-        const events = await EventSeriesDAO.readEvents({
-          dateRange: {
-            startDate: startOfToday,
-            endDate: endOfToday,
-          },
-        });
-
-        // Should only return the event happening today
-        expect(events).toHaveLength(1);
-        expect(events[0].eventId).toBe('event1');
-      });
-
-      it('should filter recurring events with multiple occurrences', async () => {
-        const startOfWeek = new Date(today);
-        const dayOfWeek = startOfWeek.getDay();
-        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
-
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(endOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-
-        const startOfWeekStr = startOfWeek.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-        // EventSeries from a month ago that should be excluded
-        const lastMonth = new Date(today);
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
-        const lastMonthStr = lastMonth.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-        const eventsWithRRules = [
-          // Daily event for 7 days starting from start of week (should be included)
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${startOfWeekStr}\nRRULE:FREQ=DAILY;COUNT=7`,
-            },
-          },
-          // EventSeries from last month (should be excluded)
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${lastMonthStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
-
-        const events = await EventSeriesDAO.readEvents({
-          dateRange: {
-            startDate: startOfWeek,
-            endDate: endOfWeek,
-          },
-        });
-
-        expect(events).toHaveLength(1);
-        expect(events[0].eventId).toBe('event1');
-      });
-
-      it('should exclude events with no occurrences in date range', async () => {
-        const nextWeek = new Date(today);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        const nextWeekEnd = new Date(nextWeek);
-        nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
-
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
-
-        const events = await EventSeriesDAO.readEvents({
-          dateRange: {
-            startDate: nextWeek,
-            endDate: nextWeekEnd,
-          },
-        });
-
-        expect(events).toHaveLength(0);
-      });
-
-      it('should exclude events with no recurrenceRule in primarySchedule', async () => {
-        const startOfToday = new Date(today);
-        const endOfToday = new Date(today);
-        endOfToday.setHours(23, 59, 59, 999);
-
-        const eventsWithAndWithoutRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: { ...expectedEvent.primarySchedule, recurrenceRule: undefined },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event3',
-            primarySchedule: { ...expectedEvent.primarySchedule, recurrenceRule: null },
-          },
-        ];
-
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event1']);
         (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
-          createMockSuccessMongooseQuery(eventsWithAndWithoutRRules),
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event1' }]),
         );
 
         const events = await EventSeriesDAO.readEvents({
@@ -513,104 +368,90 @@ describe('EventSeriesDAO', () => {
           },
         });
 
-        // Should only return events with valid recurrenceRule
         expect(events).toHaveLength(1);
         expect(events[0].eventId).toBe('event1');
+        expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(startOfToday, endOfToday);
+        expect(EventSeriesModel.aggregate).toHaveBeenCalledWith(
+          transformEventOptionsToPipeline({
+            dateRange: {
+              startDate: startOfToday,
+              endDate: endOfToday,
+            },
+            filters: [{ field: 'eventId', value: ['event1'] }],
+          }),
+        );
       });
 
-      it('should work without dateRange (backwards compatibility)', async () => {
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockMongooseEvents));
+      it('should return an empty array when no persisted occurrences match the date range', async () => {
+        const startOfWeek = new Date(today);
+        const dayOfWeek = startOfWeek.getDay();
+        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
 
-        const events = await EventSeriesDAO.readEvents(mockOptions);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
 
-        expect(events).toEqual(mockMongooseEvents);
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue([]);
+
+        const events = await EventSeriesDAO.readEvents({
+          dateRange: {
+            startDate: startOfWeek,
+            endDate: endOfWeek,
+          },
+        });
+
+        expect(events).toEqual([]);
+        expect(EventSeriesModel.aggregate).not.toHaveBeenCalled();
       });
 
-      it('should combine dateRange with other filters', async () => {
-        const startOfToday = new Date(today);
-        const endOfToday = new Date(today);
-        endOfToday.setHours(23, 59, 59, 999);
+      it('should combine dateRange with other filters before pagination and sorting execute', async () => {
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        const nextWeekEnd = new Date(nextWeek);
+        nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
 
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            title: 'Match',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            title: 'NoMatch',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event1', 'event3']);
+        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event1', title: 'Match' }]),
+        );
 
         const events = await EventSeriesDAO.readEvents({
           filters: [{ field: 'title', value: 'Match' }],
           dateRange: {
-            startDate: startOfToday,
-            endDate: endOfToday,
+            startDate: nextWeek,
+            endDate: nextWeekEnd,
           },
         });
 
-        // Both filters should apply, but since aggregate handles the title filter,
-        // and date range filters after, we'd get both. In real scenario with proper
-        // aggregate filtering, this would be just event1
-        expect(events.length).toBeGreaterThan(0);
+        expect(events).toHaveLength(1);
+        expect(EventSeriesModel.aggregate).toHaveBeenCalledWith(
+          transformEventOptionsToPipeline({
+            filters: [
+              { field: 'title', value: 'Match' },
+              { field: 'eventId', value: ['event1', 'event3'] },
+            ],
+            dateRange: {
+              startDate: nextWeek,
+              endDate: nextWeekEnd,
+            },
+          }),
+        );
       });
     });
 
     describe('with dateFilterOption', () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
       it('should filter events using TODAY option', async () => {
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${yesterdayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event3',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event1']);
+        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event1' }]),
+        );
 
         const events = await EventSeriesDAO.readEvents({
           dateFilterOption: DATE_FILTER_OPTIONS.TODAY,
@@ -618,29 +459,16 @@ describe('EventSeriesDAO', () => {
 
         expect(events).toHaveLength(1);
         expect(events[0].eventId).toBe('event1');
+        expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(today, endOfToday);
       });
 
       it('should filter events using TOMORROW option', async () => {
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
+        const endOfTomorrow = new Date(tomorrow);
+        endOfTomorrow.setHours(23, 59, 59, 999);
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event2']);
+        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event2' }]),
+        );
 
         const events = await EventSeriesDAO.readEvents({
           dateFilterOption: DATE_FILTER_OPTIONS.TOMORROW,
@@ -648,30 +476,17 @@ describe('EventSeriesDAO', () => {
 
         expect(events).toHaveLength(1);
         expect(events[0].eventId).toBe('event2');
+        expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(tomorrow, endOfTomorrow);
       });
 
       it('should filter events using CUSTOM option with customDate', async () => {
         const customDate = tomorrow;
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
-
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
+        const endOfCustomDate = new Date(customDate);
+        endOfCustomDate.setHours(23, 59, 59, 999);
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event2']);
+        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event2' }]),
+        );
 
         const events = await EventSeriesDAO.readEvents({
           customDate,
@@ -679,31 +494,17 @@ describe('EventSeriesDAO', () => {
 
         expect(events).toHaveLength(1);
         expect(events[0].eventId).toBe('event2');
+        expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(customDate, endOfCustomDate);
       });
 
       it('should prioritize dateFilterOption over dateRange', async () => {
-        const eventsWithRRules = [
-          {
-            ...expectedEvent,
-            eventId: 'event1',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${todayStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-          {
-            ...expectedEvent,
-            eventId: 'event2',
-            primarySchedule: {
-              ...expectedEvent.primarySchedule,
-              recurrenceRule: `DTSTART:${tomorrowStr}\nRRULE:FREQ=DAILY;COUNT=1`,
-            },
-          },
-        ];
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event1']);
+        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(
+          createMockSuccessMongooseQuery([{ ...expectedEvent, eventId: 'event1' }]),
+        );
 
-        (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(eventsWithRRules));
-
-        // Pass both dateFilterOption and dateRange - dateFilterOption should win
         const events = await EventSeriesDAO.readEvents({
           dateFilterOption: DATE_FILTER_OPTIONS.TODAY,
           dateRange: {
@@ -713,7 +514,8 @@ describe('EventSeriesDAO', () => {
         });
 
         expect(events).toHaveLength(1);
-        expect(events[0].eventId).toBe('event1'); // Today's event, not tomorrow's
+        expect(events[0].eventId).toBe('event1');
+        expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(today, endOfToday);
       });
     });
   });

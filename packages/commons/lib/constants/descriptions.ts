@@ -150,6 +150,18 @@ export const EVENT_MOMENT_DESCRIPTIONS = {
   THUMBNAIL_KEY: 'S3 object key for the uploaded video poster frame.',
 };
 
+export const USER_FEED_DESCRIPTIONS = {
+  TYPE: 'A recommended event in the user feed, scored by the rule-based recommendation engine.',
+  FEED_ITEM_ID: 'Unique identifier for this feed item.',
+  EVENT_ID: 'Identifier of the recommended event series.',
+  SCORE: 'Relevance score computed by the recommendation engine (higher means more relevant).',
+  REASONS: 'Signals that contributed to this event being recommended.',
+  COMPUTED_AT: 'Timestamp when the recommendation score was last computed.',
+  EVENT: 'Resolved event series associated with this feed item.',
+  REPRESENTATIVE_OCCURRENCE:
+    'Resolved representative occurrence for the recommended event series, used for occurrence-aware discovery surfaces.',
+};
+
 export const LOCATION_DESCRIPTIONS = {
   LOCATION_TYPE: 'Type of location (e.g., venue, online, tba)',
   COORDINATES: 'Geographical coordinates of the venue',
@@ -373,6 +385,7 @@ export const RESOLVER_DESCRIPTIONS = {
     cancelEventOccurrenceParticipant: 'Cancel the authenticated user’s RSVP for an event occurrence.',
     checkInEventOccurrenceParticipant: 'Check the authenticated user in to an event occurrence.',
     readEventOccurrenceParticipants: 'Read the participant list for an event occurrence.',
+    myEventOccurrenceRsvps: "Read the current authenticated user's occurrence RSVPs.",
     myEventOccurrenceRsvpStatus: "Get the current authenticated user's RSVP for an event occurrence.",
   },
   EVENT_CATEGORY: {
