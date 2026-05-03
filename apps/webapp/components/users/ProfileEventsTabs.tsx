@@ -10,7 +10,6 @@ import {
   Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import EventBoxSm from '@/components/events/eventBoxSm';
-import { EventPreview } from '@/data/graphql/query/Event/types';
 import {
   ROUTES,
   BUTTON_STYLES,
@@ -18,12 +17,13 @@ import {
   EMPTY_STATE_STYLES,
   EMPTY_STATE_ICON_STYLES,
 } from '@/lib/constants';
+import { AnyEventPreview, getEventPreviewKey } from '@/components/events/event-preview-utils';
 
 interface ProfileEventsTabsProps {
-  upcomingRsvpdEvents: EventPreview[];
-  pastRsvpdEvents: EventPreview[];
-  organizedEvents: EventPreview[];
-  savedEvents?: EventPreview[];
+  upcomingRsvpdEvents: AnyEventPreview[];
+  pastRsvpdEvents: AnyEventPreview[];
+  organizedEvents: AnyEventPreview[];
+  savedEvents?: AnyEventPreview[];
   isOwnProfile: boolean;
   emptyCreatedCta?: React.ReactNode;
 }
@@ -188,7 +188,7 @@ function EventTabPanel({
   emptyDescription,
   emptyCta,
 }: {
-  events: EventPreview[];
+  events: AnyEventPreview[];
   emptyIcon: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
@@ -212,7 +212,7 @@ function EventTabPanel({
   return (
     <Grid container spacing={3}>
       {events.map((event) => (
-        <Grid key={event.eventId} size={{ xs: 12, sm: 4 }}>
+        <Grid key={getEventPreviewKey(event)} size={{ xs: 12, sm: 4 }}>
           <EventBoxSm event={event} />
         </Grid>
       ))}

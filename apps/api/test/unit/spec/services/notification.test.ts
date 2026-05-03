@@ -228,7 +228,7 @@ describe('NotificationService', () => {
         expect.objectContaining({
           targetId: 'my-event-slug',
           occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
-          actionUrl: '/events/my-event-slug?occurrence=event-1%232026-05-10T10%3A00%3A00.000Z',
+          actionUrl: '/events/my-event-slug?occurs=2026-05-10T10%3A00%3A00.000Z',
         }),
       );
     });
@@ -312,7 +312,7 @@ describe('NotificationService', () => {
         expect.arrayContaining([
           expect.objectContaining({
             occurrenceId: 'event-1#2026-05-10T10:00:00.000Z',
-            actionUrl: '/events/weekly-yoga?occurrence=event-1%232026-05-10T10%3A00%3A00.000Z',
+            actionUrl: '/events/weekly-yoga?occurs=2026-05-10T10%3A00%3A00.000Z',
           }),
         ]),
       );

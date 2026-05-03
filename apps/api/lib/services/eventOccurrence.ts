@@ -45,6 +45,7 @@ const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
   'occurrenceId',
   'occurrenceKey',
   'originalStartAt',
+  'rsvpCount',
   'seriesScheduleVersion',
   'startAt',
   'status',
@@ -186,16 +187,7 @@ function compareOccurrenceValues(
 }
 
 function sortOccurrences(occurrences: EventOccurrence[], sort?: SortInput[]): EventOccurrence[] {
-  const sortInput = sort && sort.length > 0 ? sort : DEFAULT_OCCURRENCE_SORT;
-
-  for (const sortEntry of sortInput) {
-    if (!SUPPORTED_OCCURRENCE_SORT_FIELDS.has(sortEntry.field)) {
-      throw CustomError(
-        `Occurrence sorting only supports: ${Array.from(SUPPORTED_OCCURRENCE_SORT_FIELDS).sort().join(', ')}.`,
-        ErrorTypes.BAD_REQUEST,
-      );
-    }
-  }
+  const sortInput = getOccurrenceSortInput(sort);
 
   return [...occurrences].sort((left, right) => {
     for (const sortEntry of sortInput) {
@@ -211,6 +203,26 @@ function sortOccurrences(occurrences: EventOccurrence[], sort?: SortInput[]): Ev
 
     return left.occurrenceKey.localeCompare(right.occurrenceKey);
   });
+}
+
+function occurrenceSortRequiresRsvpCount(sort?: SortInput[]): boolean {
+  const sortInput = getOccurrenceSortInput(sort);
+  return sortInput.some((sortEntry) => sortEntry.field === 'rsvpCount');
+}
+
+function getOccurrenceSortInput(sort?: SortInput[]): SortInput[] {
+  const sortInput = sort && sort.length > 0 ? sort : DEFAULT_OCCURRENCE_SORT;
+
+  for (const sortEntry of sortInput) {
+    if (!SUPPORTED_OCCURRENCE_SORT_FIELDS.has(sortEntry.field)) {
+      throw CustomError(
+        `Occurrence sorting only supports: ${Array.from(SUPPORTED_OCCURRENCE_SORT_FIELDS).sort().join(', ')}.`,
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+  }
+
+  return sortInput;
 }
 
 function paginateOccurrences(occurrences: EventOccurrence[], options?: EventsQueryOptionsInput): EventOccurrence[] {
@@ -430,21 +442,36 @@ class EventOccurrenceService {
 
   static async readEventOccurrences(options: EventsQueryOptionsInput): Promise<EventOccurrence[]> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
+    const sortInput = getOccurrenceSortInput(options.sort);
     const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
       options,
     )) as OccurrenceQuerySeries[];
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
-    const occurrences =
-      eventSeriesIds.length > 0
-        ? await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate)
-        : [];
 
     warnIfQueryExceedsMaterializationWindow(
       candidateEventSeries.some((eventSeries) => this.isRecurringSeries(eventSeries)),
       endDate,
     );
 
-    return paginateOccurrences(sortOccurrences(occurrences, options.sort), options);
+    if (eventSeriesIds.length === 0) {
+      return [];
+    }
+
+    if (!occurrenceSortRequiresRsvpCount(sortInput)) {
+      const pagination = options.pagination ? validatePaginationInput(options.pagination) : undefined;
+
+      return EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate, {
+        sort: sortInput,
+        skip: pagination?.skip,
+        limit: pagination?.limit,
+      });
+    }
+
+    const occurrences = await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate);
+    const occurrencesWithSortFields =
+      occurrences.length > 0 ? await this.attachOccurrenceRsvpCounts(occurrences) : occurrences;
+
+    return paginateOccurrences(sortOccurrences(occurrencesWithSortFields, sortInput), options);
   }
 
   static async readUpcomingOccurrencesForSeries(
@@ -477,6 +504,17 @@ class EventOccurrenceService {
       eventSeries.eventId,
       occurrences.map((occurrence) => occurrence.occurrenceKey),
     );
+  }
+
+  private static async attachOccurrenceRsvpCounts(occurrences: EventOccurrence[]): Promise<EventOccurrence[]> {
+    const rsvpCountsByOccurrenceId = await EventOccurrenceParticipantDAO.readActiveCountsByOccurrences(
+      occurrences.map((occurrence) => occurrence.occurrenceId),
+    );
+
+    return occurrences.map((occurrence) => ({
+      ...occurrence,
+      rsvpCount: rsvpCountsByOccurrenceId.get(occurrence.occurrenceId) ?? 0,
+    }));
   }
 
   static async updateOccurrenceException(input: UpdateEventOccurrenceInput): Promise<EventOccurrence> {

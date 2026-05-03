@@ -4,7 +4,21 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { alpha, Box, Button, Chip, Container, Divider, Grid, Paper, Stack, Theme, Typography } from '@mui/material';
+import { useSearchParams } from 'next/navigation';
+import {
+  Alert,
+  alpha,
+  Box,
+  Button,
+  Chip,
+  Container,
+  Divider,
+  Grid,
+  Paper,
+  Stack,
+  Theme,
+  Typography,
+} from '@mui/material';
 import {
   CalendarMonth,
   LocationOn,
@@ -18,6 +32,7 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetEventBySlugDocument,
+  GetAllEventOccurrencesDocument,
   ParticipantStatus,
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
@@ -29,14 +44,25 @@ import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
 import EventLocationMap from '@/components/events/EventLocationMap';
 import { formatLocationText } from '@/components/events/location-utils';
 import {
+  EventParticipantRecord,
   EventSeriesParticipantRecord,
+  EventOccurrenceParticipantRecord,
+  canViewerSeeParticipant,
   getParticipantChipColor,
   getParticipantDisplayName,
   getParticipantStatusLabel,
-  canViewerSeeParticipant,
   getVisibilityLabel,
 } from '@/components/events/participant-utils';
-import { formatRecurrenceRule } from '@/components/events/date-utils';
+import {
+  formatOccurrenceChipLabel,
+  formatOccurrenceDateTime,
+  formatRecurrenceRule,
+} from '@/components/events/date-utils';
+import {
+  buildEventOccurrenceHref,
+  getOccurrenceAnchor,
+  getRequestedOccurrenceAnchor,
+} from '@/components/events/occurrence-url';
 import UserPreviewItem from '@/components/users/UserPreviewItem';
 import { useFollowing } from '@/hooks/useFollow';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -54,17 +80,71 @@ interface EventDetailPageClientProps {
 
 export default function EventDetailPageClient({ slug }: EventDetailPageClientProps) {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const token = session?.user?.token;
+  const occurrencesFromDate = useMemo(() => new Date().toISOString(), []);
+  const requestedOccurrenceAnchor = getRequestedOccurrenceAnchor(searchParams);
+  const legacyRequestedOccurrenceId = searchParams.get('occurrence');
   const { data, loading, error } = useQuery(GetEventBySlugDocument, {
-    variables: { slug },
+    variables: { slug, occurrencesFromDate },
     context: {
       headers: getAuthHeader(token),
     },
     fetchPolicy: 'cache-and-network',
   });
-
   const event = data?.readEventBySlug;
-  const participantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
+  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(
+    GetAllEventOccurrencesDocument,
+    {
+      skip: !event?.eventId || !requestedOccurrenceAnchor,
+      variables: {
+        options: {
+          filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
+          dateRange: {
+            startDate: requestedOccurrenceAnchor ?? '',
+            endDate: requestedOccurrenceAnchor ?? '',
+          },
+          pagination: { limit: 1, skip: 0 },
+        },
+      },
+      context: {
+        headers: getAuthHeader(token),
+      },
+      fetchPolicy: 'cache-and-network',
+    },
+  );
+  const upcomingOccurrences = event?.upcomingOccurrences ?? [];
+  const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
+  const selectedOccurrence = useMemo(() => {
+    if (!upcomingOccurrences.length && !requestedOccurrence) {
+      return null;
+    }
+
+    if (requestedOccurrenceAnchor) {
+      return (
+        upcomingOccurrences.find((occurrence) => getOccurrenceAnchor(occurrence) === requestedOccurrenceAnchor) ??
+        requestedOccurrence ??
+        null
+      );
+    }
+
+    if (legacyRequestedOccurrenceId) {
+      return (
+        upcomingOccurrences.find((occurrence) => occurrence.occurrenceId === legacyRequestedOccurrenceId) ??
+        requestedOccurrence ??
+        null
+      );
+    }
+
+    return upcomingOccurrences[0] ?? requestedOccurrence ?? null;
+  }, [legacyRequestedOccurrenceId, requestedOccurrence, requestedOccurrenceAnchor, upcomingOccurrences]);
+  const fallbackParticipantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
+  const occurrenceParticipantList = (selectedOccurrence?.participants ?? []) as EventOccurrenceParticipantRecord[];
+  const participantList: EventParticipantRecord[] = selectedOccurrence
+    ? occurrenceParticipantList
+    : fallbackParticipantList;
+  const activeOccurrenceId = selectedOccurrence?.occurrenceId ?? null;
+  const attendeeRoute = buildEventOccurrenceHref(ROUTES.EVENTS.ATTENDEES(slug), selectedOccurrence);
 
   const goingCount = participantList.filter(
     (p) => p.status === ParticipantStatus.Going || p.status === ParticipantStatus.CheckedIn,
@@ -74,13 +154,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
   const eventUrl = useMemo(() => {
     if (typeof window === 'undefined') {
-      return `/events/${slug}`;
+      return buildEventOccurrenceHref(`/events/${slug}`, selectedOccurrence);
     }
-    return `${window.location.origin}/events/${slug}`;
-  }, [slug]);
+    const baseUrl = `${window.location.origin}/events/${slug}`;
+    return buildEventOccurrenceHref(baseUrl, selectedOccurrence);
+  }, [selectedOccurrence, slug]);
 
   const attendeePreview = participantList.slice(0, 3);
-  const attendeeRoute = ROUTES.EVENTS.ATTENDEES(slug);
   const previewPaperSx = (theme: Theme) => ({
     p: 2.5,
     border: '1px solid',
@@ -120,7 +200,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     });
     return set;
   }, [following]);
-  const canViewAttendee = (user?: EventSeriesParticipantRecord['user']) =>
+  const canViewAttendee = (user?: EventParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
   const notFoundError = isNotFoundGraphQLError(error);
@@ -175,6 +255,15 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     myRsvp,
   } = event;
   const recurrenceRule = event.primarySchedule.recurrenceRule;
+  const currentRsvpStatus = selectedOccurrence ? (selectedOccurrence.myRsvp?.status ?? null) : (myRsvp?.status ?? null);
+  const selectedOccurrenceDateLabel = formatOccurrenceDateTime(
+    selectedOccurrence?.startAt,
+    selectedOccurrence?.endAt,
+    selectedOccurrence?.timezone,
+  );
+  const requestedOccurrenceMissing = Boolean(
+    (requestedOccurrenceAnchor || legacyRequestedOccurrenceId) && !requestedOccurrenceLoading && !selectedOccurrence,
+  );
 
   const organizerIds = (event?.organizers ?? []).filter((o) => o.user?.userId).map((o) => o.user!.userId);
 
@@ -324,6 +413,14 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </Typography>
               </Stack>
             )}
+            {selectedOccurrence && (
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <ConfirmationNumber sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {selectedOccurrenceDateLabel}
+                </Typography>
+              </Stack>
+            )}
             {goingCount > 0 && (
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <Groups sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
@@ -350,17 +447,26 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         <Grid container spacing={4}>
           {/* Left Column */}
           <Grid size={{ xs: 12, md: 8 }}>
+            {requestedOccurrenceMissing && (
+              <Box sx={{ mb: 2, px: { xs: 1, md: 0 } }}>
+                <Alert severity="warning">
+                  That session is no longer available. Showing the next active occurrence for this series instead.
+                </Alert>
+              </Box>
+            )}
+
             {/* Actions */}
             <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
               {/* Desktop actions */}
               <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                 <EventDetailActions
                   eventId={eventId}
+                  occurrenceId={activeOccurrenceId ?? undefined}
                   eventTitle={title}
                   eventSlug={slug}
                   eventUrl={eventUrl}
                   isSavedByMe={isSavedByMe ?? false}
-                  myRsvpStatus={myRsvp?.status ?? null}
+                  myRsvpStatus={currentRsvpStatus}
                   trailing={
                     canEditEvent ? (
                       <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
@@ -390,11 +496,12 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               <Stack spacing={1.5}>
                 <EventDetailActions
                   eventId={eventId}
+                  occurrenceId={activeOccurrenceId ?? undefined}
                   eventTitle={title}
                   eventSlug={slug}
                   eventUrl={eventUrl}
                   isSavedByMe={isSavedByMe ?? false}
-                  myRsvpStatus={myRsvp?.status ?? null}
+                  myRsvpStatus={currentRsvpStatus}
                   compact
                   trailing={
                     canEditEvent ? (
@@ -412,8 +519,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               </Typography>
               <EventMomentsRing
                 eventId={eventId}
-                myRsvpStatus={myRsvp?.status ?? null}
-                eventEndAt={event.primarySchedule?.endAt ?? null}
+                myRsvpStatus={currentRsvpStatus}
+                eventEndAt={selectedOccurrence?.endAt ?? event.primarySchedule?.endAt ?? null}
                 onAddClick={() => setComposerOpen(true)}
                 onMomentClick={openViewer}
               />
@@ -490,8 +597,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                       .filter(
                         (
                           participant,
-                        ): participant is EventSeriesParticipantRecord & {
-                          user: NonNullable<EventSeriesParticipantRecord['user']>;
+                        ): participant is EventParticipantRecord & {
+                          user: NonNullable<EventParticipantRecord['user']>;
                         } => Boolean(participant.user),
                       )
                       .map((participant) => {
@@ -539,6 +646,9 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                           Date &amp; Time
                         </Typography>
                         <Typography variant="body1" fontWeight={600} sx={{ mt: 0.5 }}>
+                          {selectedOccurrenceDateLabel}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
                           {formatRecurrenceRule(recurrenceRule)}
                         </Typography>
                       </Box>
@@ -546,6 +656,39 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   </Box>
 
                   <Divider />
+
+                  {upcomingOccurrences.length > 0 && (
+                    <>
+                      <Box>
+                        <Typography
+                          variant="overline"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ letterSpacing: 1, display: 'block', mb: 1 }}
+                        >
+                          Upcoming Sessions
+                        </Typography>
+                        <Stack direction="row" flexWrap="wrap" gap={1}>
+                          {upcomingOccurrences.slice(0, 6).map((occurrence) => {
+                            const isSelected = occurrence.occurrenceId === activeOccurrenceId;
+                            return (
+                              <Chip
+                                key={occurrence.occurrenceId}
+                                component={Link}
+                                clickable
+                                href={buildEventOccurrenceHref(ROUTES.EVENTS.EVENT(slug), occurrence)}
+                                label={formatOccurrenceChipLabel(occurrence.startAt, occurrence.timezone)}
+                                color={isSelected ? 'primary' : 'default'}
+                                variant={isSelected ? 'filled' : 'outlined'}
+                              />
+                            );
+                          })}
+                        </Stack>
+                      </Box>
+
+                      <Divider />
+                    </>
+                  )}
 
                   <Box>
                     <Stack direction="row" spacing={1.5} alignItems="flex-start">

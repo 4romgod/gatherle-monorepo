@@ -72,6 +72,7 @@ jest.mock('@/mongodb/dao', () => ({
     cancel: jest.fn(),
     readByOccurrence: jest.fn(),
     readByOccurrenceAndUser: jest.fn(),
+    readByUser: jest.fn(),
     promoteWaitlisted: jest.fn(),
   },
   EventSeriesDAO: {
@@ -194,7 +195,7 @@ describe('EventOccurrenceParticipantService', () => {
         actorUserId: actor.userId,
         targetType: NotificationTargetType.EventSeries,
         targetSlug: 'weekly-yoga',
-        actionUrl: `/events/weekly-yoga?occurrence=${encodeURIComponent(occurrence.occurrenceKey)}`,
+        actionUrl: '/events/weekly-yoga?occurs=2026-05-06T16%3A00%3A00.000Z',
         rsvpStatus: ParticipantStatus.Going,
       }),
     );
@@ -368,5 +369,14 @@ describe('EventOccurrenceParticipantService', () => {
     await expect(EventOccurrenceParticipantService.checkIn(occurrence.occurrenceId, actor.userId)).rejects.toThrow(
       'You must have a Going RSVP before checking in to this occurrence.',
     );
+  });
+
+  it('reads occurrence RSVPs for a user through the DAO', async () => {
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([goingParticipant]);
+
+    const result = await EventOccurrenceParticipantService.readByUser(actor.userId, false);
+
+    expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenCalledWith(actor.userId, false);
+    expect(result).toEqual([goingParticipant]);
   });
 });

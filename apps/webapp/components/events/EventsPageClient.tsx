@@ -5,13 +5,13 @@ import { Box, Button, Grid, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { useQuery } from '@apollo/client';
 import { EventCategory, EventStatus, Organization, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
-import { EventPreview } from '@/data/graphql/query/Event/types';
+import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import {
   GetAllEventCategoriesDocument,
-  GetAllEventsDocument,
   GetEventsCountDocument,
   GetPopularOrganizationsDocument,
 } from '@/data/graphql/query';
+import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
 import { DATE_FILTER_LABELS, DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { getAuthHeader } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -26,11 +26,9 @@ import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import EventSearchBar from '@/components/search/EventSearchBar';
+import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 
-const DEFAULT_EVENTS_SORT: SortInput[] = [
-  { field: 'rsvpCount', order: SortOrderInput.Desc },
-  { field: '_id', order: SortOrderInput.Asc },
-];
+const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.Asc }];
 const DEFAULT_PAGE_SIZE = 10;
 
 export default function EventsPageClient() {
@@ -43,11 +41,12 @@ export default function EventsPageClient() {
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
-  } = useQuery(GetAllEventsDocument, {
+  } = useQuery(GetAllEventOccurrencesDocument, {
     context: authContext,
     fetchPolicy: 'cache-and-network',
     variables: {
       options: {
+        dateRange: buildDefaultOccurrenceDateRange(),
         sort: DEFAULT_EVENTS_SORT,
         pagination: { limit: DEFAULT_PAGE_SIZE, skip: 0 },
       },
@@ -74,7 +73,7 @@ export default function EventsPageClient() {
     fetchPolicy: 'cache-and-network',
   });
 
-  const eventsList = (eventsData?.readEvents ?? []) as EventPreview[];
+  const eventsList = (eventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[];
   const categories = (categoriesData?.readEventCategories ?? []) as EventCategory[];
   const orgs = organizationsData?.readOrganizations ?? [];
 
@@ -122,7 +121,6 @@ export default function EventsPageClient() {
             popularOrganization={popularOrganization}
             stats={stats}
             userId={userId}
-            totalEventsCount={totalEventsCount}
           />
         </EventFilterProvider>
       )}
@@ -132,21 +130,13 @@ export default function EventsPageClient() {
 
 interface EventsContentProps {
   categories: EventCategory[];
-  initialEvents: EventPreview[];
+  initialEvents: EventOccurrencePreview[];
   popularOrganization: Organization | null;
   stats: PlatformStats;
   userId?: string;
-  totalEventsCount: number;
 }
 
-function EventsContent({
-  categories,
-  initialEvents,
-  popularOrganization,
-  stats,
-  userId,
-  totalEventsCount,
-}: EventsContentProps) {
+function EventsContent({ categories, initialEvents, popularOrganization, stats, userId }: EventsContentProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
   const {
@@ -225,9 +215,12 @@ function EventsContent({
     }
     return serverEvents.filter(
       (event) =>
-        event.title?.toLowerCase().includes(query) ||
-        event.summary?.toLowerCase().includes(query) ||
-        event.description?.toLowerCase().includes(query),
+        event.eventSeries?.title?.toLowerCase().includes(query) ||
+        event.eventSeries?.summary?.toLowerCase().includes(query) ||
+        event.eventSeries?.description?.toLowerCase().includes(query) ||
+        event.eventSeries?.location?.address?.city?.toLowerCase().includes(query) ||
+        event.eventSeries?.location?.address?.state?.toLowerCase().includes(query) ||
+        event.eventSeries?.eventCategories?.some((category) => category.name?.toLowerCase().includes(query)),
     );
   }, [serverEvents, filters.searchQuery]);
 
@@ -461,7 +454,7 @@ function EventsContent({
             hasMore={hasMore}
             onLoadMore={loadMore}
             loadingMore={loadingMore}
-            totalCount={hasActiveFilters ? undefined : totalEventsCount}
+            totalCount={undefined}
           />
         </Grid>
 

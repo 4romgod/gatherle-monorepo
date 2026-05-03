@@ -19,11 +19,11 @@ export default function EventShareButton({
   const isLarge = size === 'large';
 
   const resolvedEventUrl = useMemo(() => {
-    if (eventUrl) {
-      return eventUrl;
-    }
-    const path = eventSlug ? `/events/${eventSlug}` : '/events';
+    const path = eventUrl || (eventSlug ? `/events/${eventSlug}` : '/events');
     if (typeof window === 'undefined') {
+      return path;
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
     return `${window.location.origin}${path}`;

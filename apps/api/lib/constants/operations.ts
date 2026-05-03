@@ -57,6 +57,7 @@ export const OPERATIONS = {
     CANCEL_EVENT_OCCURRENCE_PARTICIPANT: 'cancelEventOccurrenceParticipant',
     CHECKIN_EVENT_OCCURRENCE_PARTICIPANT: 'checkInEventOccurrenceParticipant',
     READ_EVENT_OCCURRENCE_PARTICIPANTS: 'readEventOccurrenceParticipants',
+    MY_EVENT_OCCURRENCE_RSVPS: 'myEventOccurrenceRsvps',
     MY_EVENT_OCCURRENCE_RSVP_STATUS: 'myEventOccurrenceRsvpStatus',
   },
   ORGANIZATION: {

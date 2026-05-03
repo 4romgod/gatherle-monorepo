@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import {
+  Alert,
   alpha,
   Box,
   Button,
@@ -23,13 +25,25 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetEventBySlugDocument,
+  GetAllEventOccurrencesDocument,
   ParticipantStatus,
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { formatLocationText } from '@/components/events/location-utils';
-import { formatRecurrenceRule } from '@/components/events/date-utils';
 import {
+  formatOccurrenceChipLabel,
+  formatOccurrenceDateTime,
+  formatRecurrenceRule,
+} from '@/components/events/date-utils';
+import {
+  buildEventOccurrenceHref,
+  getOccurrenceAnchor,
+  getRequestedOccurrenceAnchor,
+} from '@/components/events/occurrence-url';
+import {
+  EventParticipantRecord,
+  EventOccurrenceParticipantRecord,
   EventSeriesParticipantRecord,
   getParticipantChipColor,
   getParticipantDisplayName,
@@ -48,17 +62,70 @@ interface EventAttendeesPageClientProps {
 
 export default function EventAttendeesPageClient({ slug }: EventAttendeesPageClientProps) {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const token = session?.user?.token;
+  const occurrencesFromDate = useMemo(() => new Date().toISOString(), []);
+  const requestedOccurrenceAnchor = getRequestedOccurrenceAnchor(searchParams);
+  const legacyRequestedOccurrenceId = searchParams.get('occurrence');
   const { data, loading, error } = useQuery(GetEventBySlugDocument, {
-    variables: { slug },
+    variables: { slug, occurrencesFromDate },
     context: {
       headers: getAuthHeader(token),
     },
     fetchPolicy: 'cache-and-network',
   });
-
   const event = data?.readEventBySlug;
-  const participantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
+  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(
+    GetAllEventOccurrencesDocument,
+    {
+      skip: !event?.eventId || !requestedOccurrenceAnchor,
+      variables: {
+        options: {
+          filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
+          dateRange: {
+            startDate: requestedOccurrenceAnchor ?? '',
+            endDate: requestedOccurrenceAnchor ?? '',
+          },
+          pagination: { limit: 1, skip: 0 },
+        },
+      },
+      context: {
+        headers: getAuthHeader(token),
+      },
+      fetchPolicy: 'cache-and-network',
+    },
+  );
+  const upcomingOccurrences = event?.upcomingOccurrences ?? [];
+  const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
+  const selectedOccurrence = useMemo(() => {
+    if (!upcomingOccurrences.length && !requestedOccurrence) {
+      return null;
+    }
+
+    if (requestedOccurrenceAnchor) {
+      return (
+        upcomingOccurrences.find((occurrence) => getOccurrenceAnchor(occurrence) === requestedOccurrenceAnchor) ??
+        requestedOccurrence ??
+        null
+      );
+    }
+
+    if (legacyRequestedOccurrenceId) {
+      return (
+        upcomingOccurrences.find((occurrence) => occurrence.occurrenceId === legacyRequestedOccurrenceId) ??
+        requestedOccurrence ??
+        null
+      );
+    }
+
+    return upcomingOccurrences[0] ?? requestedOccurrence ?? null;
+  }, [legacyRequestedOccurrenceId, requestedOccurrence, requestedOccurrenceAnchor, upcomingOccurrences]);
+  const fallbackParticipantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
+  const occurrenceParticipantList = (selectedOccurrence?.participants ?? []) as EventOccurrenceParticipantRecord[];
+  const participantList: EventParticipantRecord[] = selectedOccurrence
+    ? occurrenceParticipantList
+    : fallbackParticipantList;
+  const activeOccurrenceId = selectedOccurrence?.occurrenceId ?? null;
   const heroImage = event?.media?.featuredImageUrl;
 
   const { following } = useFollowing();
@@ -76,7 +143,7 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
     });
     return set;
   }, [following]);
-  const canViewParticipant = (user?: EventSeriesParticipantRecord['user']) =>
+  const canViewParticipant = (user?: EventParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
   const goingCount = participantList.filter(
@@ -123,6 +190,15 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   const { title, location, description, summary } = event;
   const recurrenceRule = event.primarySchedule.recurrenceRule;
   const locationText = location.locationType === 'online' ? 'Online event' : formatLocationText(location);
+  const selectedOccurrenceDateLabel = formatOccurrenceDateTime(
+    selectedOccurrence?.startAt,
+    selectedOccurrence?.endAt,
+    selectedOccurrence?.timezone,
+  );
+  const requestedOccurrenceMissing = Boolean(
+    (requestedOccurrenceAnchor || legacyRequestedOccurrenceId) && !requestedOccurrenceLoading && !selectedOccurrence,
+  );
+  const eventHref = buildEventOccurrenceHref(ROUTES.EVENTS.EVENT(slug), selectedOccurrence);
 
   const statusSummary = [
     { label: 'Going', count: goingCount, color: 'primary' as const },
@@ -152,8 +228,8 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   const participantsWithUser = participantList.filter(
     (
       participant,
-    ): participant is EventSeriesParticipantRecord & {
-      user: NonNullable<EventSeriesParticipantRecord['user']>;
+    ): participant is EventParticipantRecord & {
+      user: NonNullable<EventParticipantRecord['user']>;
     } => Boolean(participant.user),
   );
 
@@ -161,6 +237,12 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Container maxWidth="lg" sx={{ py: { xs: 3, md: 4 } }}>
         <Stack spacing={3}>
+          {requestedOccurrenceMissing && (
+            <Alert severity="warning">
+              That session is no longer available. Showing the next active occurrence for this series instead.
+            </Alert>
+          )}
+
           <Box
             sx={(theme) => ({
               position: 'relative',
@@ -209,7 +291,7 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
                 <Chip label="RSVP List" color="secondary" variant="filled" size="small" />
                 <Button
                   component={Link}
-                  href={`/events/${slug}`}
+                  href={eventHref}
                   startIcon={<ArrowBack />}
                   variant="outlined"
                   sx={{ borderColor: 'common.white', color: 'common.white' }}
@@ -226,13 +308,16 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Typography variant="body2" color="grey.200">
                   <CalendarMonth sx={{ fontSize: 18, verticalAlign: 'middle', mr: 0.5 }} />
-                  {formatRecurrenceRule(recurrenceRule)}
+                  {selectedOccurrenceDateLabel}
                 </Typography>
                 <Typography variant="body2" color="grey.200">
                   <LocationOn sx={{ fontSize: 18, verticalAlign: 'middle', mr: 0.5 }} />
                   {locationText}
                 </Typography>
               </Stack>
+              <Typography variant="body2" color="grey.300">
+                {formatRecurrenceRule(recurrenceRule)}
+              </Typography>
             </Stack>
           </Box>
 
@@ -257,6 +342,25 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
                         />
                       ))}
                     </Stack>
+
+                    {upcomingOccurrences.length > 0 && (
+                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                        {upcomingOccurrences.slice(0, 6).map((occurrence) => {
+                          const isSelected = occurrence.occurrenceId === activeOccurrenceId;
+                          return (
+                            <Chip
+                              key={occurrence.occurrenceId}
+                              component={Link}
+                              clickable
+                              href={buildEventOccurrenceHref(ROUTES.EVENTS.ATTENDEES(slug), occurrence)}
+                              label={formatOccurrenceChipLabel(occurrence.startAt, occurrence.timezone)}
+                              color={isSelected ? 'primary' : 'default'}
+                              variant={isSelected ? 'filled' : 'outlined'}
+                            />
+                          );
+                        })}
+                      </Stack>
+                    )}
 
                     <Divider />
 

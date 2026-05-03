@@ -12,6 +12,7 @@ import {
   NotificationType,
   ParticipantStatus,
 } from '@gatherle/commons/types';
+import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/utils';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
@@ -82,9 +83,12 @@ function getOccurrenceRsvpLimit(eventSeries: Pick<EventSeries, 'rsvpLimit' | 'ca
 
 function buildOccurrenceActionUrl(
   eventSeries: Pick<EventSeries, 'slug'>,
-  occurrence: Pick<EventOccurrence, 'occurrenceId'>,
+  occurrence: Pick<EventOccurrence, 'originalStartAt' | 'startAt'>,
 ) {
-  return `/events/${eventSeries.slug}?occurrence=${encodeURIComponent(occurrence.occurrenceId)}`;
+  const occurrenceAnchor = getOccurrencePublicAnchor(occurrence.originalStartAt ?? occurrence.startAt);
+  return occurrenceAnchor
+    ? `/events/${eventSeries.slug}?${PUBLIC_OCCURRENCE_QUERY_PARAM}=${encodeURIComponent(occurrenceAnchor)}`
+    : `/events/${eventSeries.slug}`;
 }
 
 function isNotifiableRsvpStatus(status: ParticipantStatus): boolean {
@@ -180,6 +184,7 @@ class EventOccurrenceParticipantService {
         targetType: NotificationTargetType.EventSeries,
         targetSlug: eventSeries.slug,
         occurrenceId: occurrence.occurrenceId,
+        occurrenceAnchor: occurrence.originalStartAt.toISOString(),
         actionUrl: buildOccurrenceActionUrl(eventSeries, occurrence),
         rsvpStatus: status,
       });
@@ -205,6 +210,7 @@ class EventOccurrenceParticipantService {
         targetType: NotificationTargetType.EventSeries,
         targetSlug: eventSeries.slug,
         occurrenceId: occurrence.occurrenceId,
+        occurrenceAnchor: occurrence.originalStartAt.toISOString(),
         actionUrl: buildOccurrenceActionUrl(eventSeries, occurrence),
       });
     } catch (error) {
@@ -409,6 +415,10 @@ class EventOccurrenceParticipantService {
     });
 
     return participant;
+  }
+
+  static async readByUser(userId: string, activeOnly = true): Promise<EventOccurrenceParticipant[]> {
+    return EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
   }
 }
 

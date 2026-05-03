@@ -184,7 +184,7 @@ export const GetAllEventsDocument = graphql(`
 `);
 
 export const GetEventBySlugDocument = graphql(`
-  query GetEventBySlug($slug: String!) {
+  query GetEventBySlug($slug: String!, $occurrencesFromDate: DateTimeISO) {
     readEventBySlug(slug: $slug) {
       venueId
       eventId
@@ -273,6 +273,37 @@ export const GetEventBySlugDocument = graphql(`
         participantId
         status
         quantity
+      }
+      upcomingOccurrences(limit: 12, fromDate: $occurrencesFromDate) {
+        occurrenceId
+        originalStartAt
+        startAt
+        endAt
+        timezone
+        status
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
       }
     }
   }

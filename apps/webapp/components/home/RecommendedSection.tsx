@@ -6,9 +6,10 @@ import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
 import { GetRecommendedFeedDocument } from '@/data/graphql/query/Feed/query';
-import type { RecommendedFeedEventPreview } from '@/data/graphql/query/Feed/types';
+import type { RecommendedFeedEventPreview, RecommendedFeedOccurrencePreview } from '@/data/graphql/query/Feed/types';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import EventBoxSkeleton from '@/components/events/eventBox/EventBoxSkeleton';
+import type { AnyEventPreview } from '@/components/events/event-preview-utils';
 
 export default function RecommendedSection() {
   const { data: session } = useSession();
@@ -22,8 +23,9 @@ export default function RecommendedSection() {
   });
 
   const events = (data?.readRecommendedFeed ?? [])
-    .map((item) => item.event)
-    .filter((e): e is RecommendedFeedEventPreview => e != null);
+    .map((item) => item.representativeOccurrence ?? item.event)
+    .filter((event): event is RecommendedFeedOccurrencePreview | RecommendedFeedEventPreview => event != null)
+    .filter((event): event is AnyEventPreview => event != null);
 
   const isLoading = !token || loading;
 

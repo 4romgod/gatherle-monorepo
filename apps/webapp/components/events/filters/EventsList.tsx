@@ -3,11 +3,11 @@
 import { Box, Stack, Typography, Alert, Button, CircularProgress } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { EventPreview } from '@/data/graphql/query/Event/types';
 import EventTileGrid from '@/components/events/EventTileGrid';
+import type { AnyEventPreview } from '@/components/events/event-preview-utils';
 
 interface EventsListProps {
-  events: EventPreview[];
+  events: AnyEventPreview[];
   loading: boolean;
   error: string | null;
   hasActiveFilters: boolean;
@@ -90,7 +90,7 @@ export default function EventsList({
           }}
         >
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Showing {events.length} of {totalCount ?? events.length}
+            {typeof totalCount === 'number' ? `Showing ${events.length} of ${totalCount}` : `Showing ${events.length}`}
           </Typography>
           <Button
             variant="outlined"

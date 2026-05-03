@@ -196,4 +196,26 @@ describe('FeedResolver', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('representativeOccurrence', () => {
+    it('loads representative occurrence via DataLoader', async () => {
+      const mockOccurrence = { occurrenceId: 'event-1#2026-05-02T18:00:00.000Z' } as any;
+      const loaderSpy = jest.spyOn(ctx.loaders.eventOccurrenceByEventSeries, 'load').mockResolvedValue(mockOccurrence);
+
+      const item = makeFeedItem({ eventId: 'event-1' });
+      const result = await resolver.representativeOccurrence(item, ctx);
+
+      expect(loaderSpy).toHaveBeenCalledWith('event-1');
+      expect(result).toEqual(mockOccurrence);
+    });
+
+    it('returns null when representative occurrence loading fails', async () => {
+      jest.spyOn(ctx.loaders.eventOccurrenceByEventSeries, 'load').mockRejectedValue(new Error('loader error'));
+
+      const item = makeFeedItem({ eventId: 'event-1' });
+      const result = await resolver.representativeOccurrence(item, ctx);
+
+      expect(result).toBeNull();
+    });
+  });
 });

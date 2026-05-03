@@ -7,6 +7,64 @@ export const GetRecommendedFeedDocument = graphql(`
       score
       reasons
       computedAt
+      representativeOccurrence {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        originalStartAt
+        startAt
+        endAt
+        timezone
+        status
+        isException
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
+        eventSeries {
+          eventId
+          slug
+          title
+          status
+          location {
+            locationType
+            coordinates {
+              latitude
+              longitude
+            }
+            address {
+              street
+              city
+              state
+              zipCode
+              country
+            }
+            details
+          }
+          media {
+            featuredImageUrl
+          }
+          isSavedByMe
+        }
+      }
       event {
         venueId
         eventId

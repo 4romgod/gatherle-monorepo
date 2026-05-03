@@ -8,6 +8,7 @@ import { ParticipantStatus, type EventOccurrenceParticipant } from '@gatherle/co
 
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceParticipantDAO: {
+    readActiveCountsByOccurrences: jest.fn(),
     readByOccurrences: jest.fn(),
     readByOccurrencesAndUser: jest.fn(),
   },
@@ -79,33 +80,16 @@ describe('EventOccurrenceParticipantLoader', () => {
 
   describe('createEventOccurrenceParticipantCountByOccurrenceLoader', () => {
     it('includes CheckedIn participants and sums quantity for active RSVP count', async () => {
-      (EventOccurrenceParticipantDAO.readByOccurrences as jest.Mock).mockResolvedValue([
-        {
-          participantId: 'participant-1',
-          occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
-          userId: 'user-1',
-          status: ParticipantStatus.Going,
-          quantity: 2,
-        },
-        {
-          participantId: 'participant-2',
-          occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
-          userId: 'user-2',
-          status: ParticipantStatus.CheckedIn,
-          quantity: 1,
-        },
-        {
-          participantId: 'participant-3',
-          occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
-          userId: 'user-3',
-          status: ParticipantStatus.Cancelled,
-          quantity: 5,
-        },
-      ] as EventOccurrenceParticipant[]);
+      (EventOccurrenceParticipantDAO.readActiveCountsByOccurrences as jest.Mock).mockResolvedValue(
+        new Map([['series-1#2026-05-06T16:00:00.000Z', 3]]),
+      );
 
       const loader = createEventOccurrenceParticipantCountByOccurrenceLoader();
       const result = await loader.load('series-1#2026-05-06T16:00:00.000Z');
 
+      expect(EventOccurrenceParticipantDAO.readActiveCountsByOccurrences).toHaveBeenCalledWith([
+        'series-1#2026-05-06T16:00:00.000Z',
+      ]);
       expect(result).toBe(3);
     });
   });

@@ -2,10 +2,7 @@ import DataLoader from 'dataloader';
 import { EventOccurrenceParticipantDAO } from '@/mongodb/dao';
 import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
 import type { EventOccurrenceParticipant } from '@gatherle/commons/types';
-import {
-  buildMyEventOccurrenceParticipantLoadKey as buildOccurrenceParticipantLoadKey,
-  getActiveOccurrenceRsvpCountContribution,
-} from '@/utils';
+import { buildMyEventOccurrenceParticipantLoadKey as buildOccurrenceParticipantLoadKey } from '@/utils';
 
 export { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 
@@ -40,18 +37,12 @@ export const createEventOccurrenceParticipantsByOccurrenceLoader = () =>
 
 export const createEventOccurrenceParticipantCountByOccurrenceLoader = () =>
   new DataLoader<string, number>(async (occurrenceIds) => {
-    const participants = await EventOccurrenceParticipantDAO.readByOccurrences([...occurrenceIds]);
-    const countMap = new Map<string, number>();
+    const countMap = await EventOccurrenceParticipantDAO.readActiveCountsByOccurrences([...occurrenceIds]);
 
     for (const occurrenceId of occurrenceIds) {
-      countMap.set(occurrenceId, 0);
-    }
-
-    for (const participant of participants) {
-      countMap.set(
-        participant.occurrenceId,
-        (countMap.get(participant.occurrenceId) ?? 0) + getActiveOccurrenceRsvpCountContribution(participant),
-      );
+      if (!countMap.has(occurrenceId)) {
+        countMap.set(occurrenceId, 0);
+      }
     }
 
     return occurrenceIds.map((occurrenceId) => countMap.get(occurrenceId) ?? 0);

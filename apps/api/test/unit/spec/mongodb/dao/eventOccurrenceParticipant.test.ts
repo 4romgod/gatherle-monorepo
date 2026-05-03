@@ -360,6 +360,78 @@ describe('EventOccurrenceParticipantDAO', () => {
     });
   });
 
+  describe('readActiveCountsByOccurrences', () => {
+    it('returns summed active RSVP counts keyed by occurrenceId', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([
+          { _id: 'series-1#2026-05-06T16:00:00.000Z', rsvpCount: 4 },
+          { _id: 'series-2#2026-05-07T16:00:00.000Z', rsvpCount: 1 },
+        ]),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.readActiveCountsByOccurrences([
+        'series-1#2026-05-06T16:00:00.000Z',
+        'series-2#2026-05-07T16:00:00.000Z',
+      ]);
+
+      expect(result).toEqual(
+        new Map([
+          ['series-1#2026-05-06T16:00:00.000Z', 4],
+          ['series-2#2026-05-07T16:00:00.000Z', 1],
+        ]),
+      );
+      expect(EventOccurrenceParticipantModel.aggregate).toHaveBeenCalledWith([
+        {
+          $match: {
+            occurrenceId: {
+              $in: ['series-1#2026-05-06T16:00:00.000Z', 'series-2#2026-05-07T16:00:00.000Z'],
+            },
+            status: {
+              $in: [ParticipantStatus.Going, ParticipantStatus.Interested, ParticipantStatus.CheckedIn],
+            },
+          },
+        },
+        {
+          $project: {
+            occurrenceId: 1,
+            rsvpContribution: {
+              $cond: [
+                {
+                  $and: [{ $ne: ['$quantity', null] }, { $gt: ['$quantity', 1] }],
+                },
+                '$quantity',
+                1,
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: '$occurrenceId',
+            rsvpCount: { $sum: '$rsvpContribution' },
+          },
+        },
+      ]);
+    });
+
+    it('returns an empty map when no occurrence IDs are provided', async () => {
+      const result = await EventOccurrenceParticipantDAO.readActiveCountsByOccurrences([]);
+
+      expect(result).toEqual(new Map());
+      expect(EventOccurrenceParticipantModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('wraps aggregate failures when reading active RSVP counts by occurrence', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(
+        EventOccurrenceParticipantDAO.readActiveCountsByOccurrences(['series-1#2026-05-06T16:00:00.000Z']),
+      ).rejects.toThrow(GraphQLError);
+    });
+  });
+
   describe('hasParticipantForEventSeries', () => {
     it('returns true when one participant row is linked to the series', async () => {
       (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(

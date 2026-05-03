@@ -12,6 +12,12 @@ jest.mock('@apollo/client', () => ({
 }));
 
 describe('useFilteredEvents', () => {
+  const makeOccurrence = (id: string) =>
+    ({
+      occurrenceId: id,
+      eventSeriesId: `series-${id}`,
+    }) as any;
+
   const baseFilters: EventFilters = {
     categories: [],
     dateRange: { start: null, end: null },
@@ -20,14 +26,14 @@ describe('useFilteredEvents', () => {
     location: {},
   };
 
-  const initialEvents = [{ eventId: 'event-1' }] as any[];
+  const initialEvents = [makeOccurrence('occ-1')] as any[];
 
   beforeEach(() => {
     mockUseLazyQuery.mockReset();
   });
 
   it('returns initial events when no filters are active', async () => {
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEvents: [] } });
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: [] } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const { result } = renderHook(() => useFilteredEvents(baseFilters, initialEvents));
@@ -43,8 +49,8 @@ describe('useFilteredEvents', () => {
   });
 
   it('loads events when filters are applied and stores results', async () => {
-    const nextEvents = [{ eventId: 'event-2' }] as any[];
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEvents: nextEvents } });
+    const nextEvents = [makeOccurrence('occ-2')] as any[];
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: nextEvents } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = {
@@ -101,7 +107,7 @@ describe('useFilteredEvents', () => {
   });
 
   it('uses custom date when filter option is custom', async () => {
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEvents: initialEvents } });
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: initialEvents } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = {
@@ -176,8 +182,8 @@ describe('useFilteredEvents', () => {
   });
 
   it('indicates hasMore is true when page returns >= 10 events', async () => {
-    const tenEvents = Array.from({ length: 10 }, (_, i) => ({ eventId: `event-${i}` })) as any[];
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEvents: tenEvents } });
+    const tenEvents = Array.from({ length: 10 }, (_, i) => makeOccurrence(`occ-${i}`)) as any[];
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: tenEvents } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
@@ -192,8 +198,8 @@ describe('useFilteredEvents', () => {
   });
 
   it('indicates hasMore is false when page returns < 10 events', async () => {
-    const fewEvents = [{ eventId: 'event-1' }] as any[];
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEvents: fewEvents } });
+    const fewEvents = [makeOccurrence('occ-1')] as any[];
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: fewEvents } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
@@ -208,12 +214,12 @@ describe('useFilteredEvents', () => {
   });
 
   it('loadMore appends the next page of events', async () => {
-    const firstPage = Array.from({ length: 10 }, (_, i) => ({ eventId: `event-${i}` })) as any[];
-    const secondPage = [{ eventId: 'event-10' }, { eventId: 'event-11' }] as any[];
+    const firstPage = Array.from({ length: 10 }, (_, i) => makeOccurrence(`occ-${i}`)) as any[];
+    const secondPage = [makeOccurrence('occ-10'), makeOccurrence('occ-11')] as any[];
     const loadEvents = jest
       .fn()
-      .mockResolvedValueOnce({ data: { readEvents: firstPage } })
-      .mockResolvedValueOnce({ data: { readEvents: secondPage } });
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };

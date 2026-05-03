@@ -20,10 +20,12 @@ import {
 import { alpha } from '@mui/material/styles';
 import { Search, Event as EventIcon, LocationOn } from '@mui/icons-material';
 import Link from 'next/link';
-import { GetAllEventsDocument } from '@/data/graphql/query';
-import { ROUTES } from '@/lib/constants';
-import type { EventSeries } from '@/data/graphql/types/graphql';
+import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
+import { SortOrderInput } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
+import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
+import { getEventPreviewHref, getEventPreviewTitle } from '@/components/events/event-preview-utils';
 
 interface EventSearchBarProps {
   placeholder?: string;
@@ -66,11 +68,11 @@ export default function EventSearchBar({
 }: EventSearchBarProps) {
   const inputId = 'event-search-input';
   const [searchInput, setSearchInput] = useState('');
-  const [eventOptions, setEventOptions] = useState<EventSeries[]>([]);
+  const [eventOptions, setEventOptions] = useState<EventOccurrencePreview[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [searchEvents, { loading: searchLoading }] = useLazyQuery<{ readEvents: EventSeries[] }>(GetAllEventsDocument, {
+  const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetAllEventOccurrencesDocument, {
     fetchPolicy: 'network-only',
   });
 
@@ -90,24 +92,26 @@ export default function EventSearchBar({
         const { data } = await searchEvents({
           variables: {
             options: {
-              pagination: { limit: 20 },
-              // TODO: Implement backend text search for production. Current: Fetching limited set and filtering client-side
+              dateRange: buildDefaultOccurrenceDateRange(),
+              search: {
+                value: searchTerm,
+                fields: [
+                  'title',
+                  'summary',
+                  'description',
+                  'location.address.city',
+                  'location.address.state',
+                  'eventCategories.name',
+                ],
+              },
+              sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
+              pagination: { limit: 60 },
             },
           },
         });
 
-        if (data?.readEvents) {
-          // TODO: Temporary client-side filtering. Move this logic to backend with MongoDB text indexes
-          const searchLower = searchTerm.toLowerCase();
-          const filtered = data.readEvents.filter(
-            (event) =>
-              event.title?.toLowerCase().includes(searchLower) ||
-              event.summary?.toLowerCase().includes(searchLower) ||
-              event.description?.toLowerCase().includes(searchLower) ||
-              event.location?.address?.city?.toLowerCase().includes(searchLower) ||
-              event.location?.address?.state?.toLowerCase().includes(searchLower) ||
-              event.eventCategories?.some((cat) => cat.name?.toLowerCase().includes(searchLower)),
-          );
+        if (data?.readEventOccurrences) {
+          const filtered = dedupeOccurrencesBySeries(data.readEventOccurrences, 20);
           setEventOptions(filtered);
           setIsOpen(filtered.length > 0);
         }
@@ -234,10 +238,10 @@ export default function EventSearchBar({
               )}
 
               {eventOptions.map((event) => (
-                <ListItem key={event.eventId} disablePadding>
+                <ListItem key={event.occurrenceId} disablePadding>
                   <ListItemButton
                     component={Link}
-                    href={ROUTES.EVENTS.EVENT(event.slug)}
+                    href={getEventPreviewHref(event)}
                     onClick={() => {
                       setSearchInput('');
                       setIsOpen(false);
@@ -252,10 +256,10 @@ export default function EventSearchBar({
                     }}
                   >
                     {/* Event Image/Icon */}
-                    {event.media?.featuredImageUrl ? (
+                    {event.eventSeries?.media?.featuredImageUrl ? (
                       <Avatar
-                        src={event.media.featuredImageUrl}
-                        alt={event.title || ''}
+                        src={event.eventSeries.media.featuredImageUrl}
+                        alt={getEventPreviewTitle(event)}
                         variant="rounded"
                         sx={{ width: 60, height: 60 }}
                       />
@@ -268,10 +272,10 @@ export default function EventSearchBar({
                     {/* Event Details */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="body1" fontWeight={600} noWrap>
-                        {event.title}
+                        {getEventPreviewTitle(event)}
                       </Typography>
 
-                      {event.summary && (
+                      {event.eventSeries?.summary && (
                         <Typography
                           variant="body2"
                           color="text.secondary"
@@ -283,16 +287,16 @@ export default function EventSearchBar({
                             WebkitBoxOrient: 'vertical',
                           }}
                         >
-                          {event.summary}
+                          {event.eventSeries.summary}
                         </Typography>
                       )}
 
                       <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap" gap={0.5}>
                         {/* Location */}
-                        {event.location?.address?.city && (
+                        {event.eventSeries?.location?.address?.city && (
                           <Chip
                             icon={<LocationOn sx={{ fontSize: 14 }} />}
-                            label={`${event.location.address.city}, ${event.location.address.state || ''}`}
+                            label={`${event.eventSeries.location.address.city}, ${event.eventSeries.location.address.state || ''}`}
                             size="small"
                             variant="outlined"
                             sx={{ height: 22, fontSize: '0.75rem' }}
@@ -300,14 +304,14 @@ export default function EventSearchBar({
                         )}
 
                         {/* First Category */}
-                        {event.eventCategories?.[0] && (
+                        {event.eventSeries?.eventCategories?.[0] && (
                           <Chip
-                            label={event.eventCategories[0].name}
+                            label={event.eventSeries.eventCategories[0].name}
                             size="small"
                             sx={{
                               height: 22,
                               fontSize: '0.75rem',
-                              bgcolor: event.eventCategories[0].color || 'primary.main',
+                              bgcolor: event.eventSeries.eventCategories[0].color || 'primary.main',
                               color: 'common.white',
                             }}
                           />

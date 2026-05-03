@@ -123,6 +123,18 @@ export class EventOccurrenceParticipantResolver {
     );
   }
 
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Query(() => [EventOccurrenceParticipant], {
+    description: RESOLVER_DESCRIPTIONS.EVENT_OCCURRENCE_PARTICIPANT.myEventOccurrenceRsvps,
+  })
+  async myEventOccurrenceRsvps(
+    @Arg('includeCancelled', () => Boolean, { defaultValue: false }) includeCancelled: boolean,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrenceParticipant[]> {
+    const user = getAuthenticatedUser(context);
+    return EventOccurrenceParticipantService.readByUser(user.userId, !includeCancelled);
+  }
+
   @FieldResolver(() => User, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.USER })
   async user(@Root() participant: EventOccurrenceParticipant, @Ctx() context: ServerContext): Promise<User | null> {
     if (participant.user) {
