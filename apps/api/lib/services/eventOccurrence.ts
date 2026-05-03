@@ -315,6 +315,19 @@ class EventOccurrenceService {
     return EventOccurrenceDAO.readFirstByEventSeriesId(eventSeriesId);
   }
 
+  static async readOccurrenceForSeries(eventSeriesId: string, occurrenceId?: string): Promise<EventOccurrence | null> {
+    if (!occurrenceId) {
+      return this.readSingleOccurrenceForSeries(eventSeriesId);
+    }
+
+    const occurrence = await EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
+    if (!occurrence || occurrence.eventSeriesId !== eventSeriesId) {
+      return null;
+    }
+
+    return occurrence;
+  }
+
   static async readRepresentativeOccurrenceForSeries(
     eventSeriesId: string,
     fromDate: Date = new Date(),

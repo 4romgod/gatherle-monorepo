@@ -115,6 +115,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   );
   const upcomingOccurrences = event?.upcomingOccurrences ?? [];
   const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
+  const hasExplicitOccurrenceSelection = Boolean(requestedOccurrenceAnchor || legacyRequestedOccurrenceId);
   const selectedOccurrence = useMemo(() => {
     if (!upcomingOccurrences.length && !requestedOccurrence) {
       return null;
@@ -140,11 +141,18 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   }, [legacyRequestedOccurrenceId, requestedOccurrence, requestedOccurrenceAnchor, upcomingOccurrences]);
   const fallbackParticipantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
   const occurrenceParticipantList = (selectedOccurrence?.participants ?? []) as EventOccurrenceParticipantRecord[];
-  const participantList: EventParticipantRecord[] = selectedOccurrence
+  const useOccurrenceParticipantList = Boolean(
+    selectedOccurrence &&
+    (hasExplicitOccurrenceSelection || occurrenceParticipantList.length > 0 || fallbackParticipantList.length === 0),
+  );
+  const participantList: EventParticipantRecord[] = useOccurrenceParticipantList
     ? occurrenceParticipantList
     : fallbackParticipantList;
   const activeOccurrenceId = selectedOccurrence?.occurrenceId ?? null;
-  const attendeeRoute = buildEventOccurrenceHref(ROUTES.EVENTS.ATTENDEES(slug), selectedOccurrence);
+  const attendeeRoute = buildEventOccurrenceHref(
+    ROUTES.EVENTS.ATTENDEES(slug),
+    useOccurrenceParticipantList ? selectedOccurrence : null,
+  );
 
   const goingCount = participantList.filter(
     (p) => p.status === ParticipantStatus.Going || p.status === ParticipantStatus.CheckedIn,
@@ -255,7 +263,10 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     myRsvp,
   } = event;
   const recurrenceRule = event.primarySchedule.recurrenceRule;
-  const currentRsvpStatus = selectedOccurrence ? (selectedOccurrence.myRsvp?.status ?? null) : (myRsvp?.status ?? null);
+  const currentRsvpStatus =
+    selectedOccurrence && (hasExplicitOccurrenceSelection || selectedOccurrence.myRsvp?.status != null || !myRsvp)
+      ? (selectedOccurrence.myRsvp?.status ?? null)
+      : (myRsvp?.status ?? null);
   const selectedOccurrenceDateLabel = formatOccurrenceDateTime(
     selectedOccurrence?.startAt,
     selectedOccurrence?.endAt,
@@ -834,6 +845,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       {/* Event Moments Composer */}
       <EventMomentComposer
         eventId={eventId}
+        occurrenceId={activeOccurrenceId ?? undefined}
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         onCreated={() => setComposerOpen(false)}

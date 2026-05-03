@@ -16,8 +16,8 @@ export const GetMediaUploadUrlDocument = graphql(`
 `);
 
 export const GetEventMomentUploadUrlDocument = graphql(`
-  mutation GetEventMomentUploadUrl($eventId: String!, $extension: String!) {
-    getEventMomentUploadUrl(eventId: $eventId, extension: $extension) {
+  mutation GetEventMomentUploadUrl($eventId: String!, $occurrenceId: String, $extension: String!) {
+    getEventMomentUploadUrl(eventId: $eventId, occurrenceId: $occurrenceId, extension: $extension) {
       uploadUrl
       key
       readUrl

@@ -5,11 +5,12 @@ import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import {
   GetAllEventCategoryGroupsDocument,
-  GetAllEventsDocument,
+  GetAllEventOccurrencesDocument,
   GetEventCategoryBySlugDocument,
+  GetAllEventOccurrencesQuery,
   GetEventCategoryBySlugQuery,
-  GetAllEventsQuery,
   GetAllEventCategoryGroupsQuery,
+  SortOrderInput,
 } from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import { APP_NAME, ROUTES } from '@/lib/constants';
@@ -20,6 +21,7 @@ import { CategoryExplorer } from '@/components/home';
 import CategoryInterestToggleButton from '@/components/categories/CategoryInterestToggleButton';
 import { isGraphQLErrorNotFound } from '@/lib/utils/error-utils';
 import { buildPageMetadata } from '@/lib/metadata';
+import { dedupeOccurrencesBySeries, buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 
 export const revalidate = 60;
 
@@ -68,7 +70,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   const authHeaders = getAuthHeader(session?.user?.token);
 
   let categoryData: GetEventCategoryBySlugQuery['readEventCategoryBySlug'] | null | undefined;
-  let eventsData: GetAllEventsQuery['readEvents'] | null | undefined;
+  let eventsData: GetAllEventOccurrencesQuery['readEventOccurrences'] | null | undefined;
   let categoryGroupsData: GetAllEventCategoryGroupsQuery['readEventCategoryGroups'] | null | undefined;
 
   try {
@@ -77,12 +79,14 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         query: GetEventCategoryBySlugDocument,
         variables: { slug },
       }),
-      client.query<GetAllEventsQuery>({
-        query: GetAllEventsDocument,
+      client.query<GetAllEventOccurrencesQuery>({
+        query: GetAllEventOccurrencesDocument,
         variables: {
           options: {
             filters: [{ field: 'eventCategories.slug', value: slug }],
-            pagination: { limit: 40 },
+            dateRange: buildDefaultOccurrenceDateRange(),
+            sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
+            pagination: { limit: 80 },
           },
         },
         context: { headers: authHeaders },
@@ -93,7 +97,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     ]);
 
     categoryData = categoryResult.data.readEventCategoryBySlug;
-    eventsData = eventsResult.data.readEvents;
+    eventsData = eventsResult.data.readEventOccurrences;
     categoryGroupsData = categoryGroupsResult.data.readEventCategoryGroups;
   } catch (error: unknown) {
     if (isGraphQLErrorNotFound(error)) {
@@ -107,7 +111,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
     notFound();
   }
 
-  const events = eventsData ?? [];
+  const events = dedupeOccurrencesBySeries(eventsData ?? [], 40);
   const interestedUsersCount = category.interestedUsersCount ?? 0;
   const formattedInterestedUsersCount = interestedUsersCount.toLocaleString();
   const IconComponent = getEventCategoryIcon(category.iconName);

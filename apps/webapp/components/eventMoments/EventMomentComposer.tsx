@@ -39,6 +39,7 @@ type CreatedMoment = CreateEventMomentMutation['createEventMoment'];
 
 interface EventMomentComposerProps {
   eventId: string;
+  occurrenceId?: string;
   open: boolean;
   onClose: () => void;
   onCreated: (moment: CreatedMoment) => void;
@@ -112,7 +113,13 @@ async function generateVideoThumbnail(file: File): Promise<string | null> {
   });
 }
 
-export default function EventMomentComposer({ eventId, open, onClose, onCreated }: EventMomentComposerProps) {
+export default function EventMomentComposer({
+  eventId,
+  occurrenceId,
+  open,
+  onClose,
+  onCreated,
+}: EventMomentComposerProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
@@ -285,6 +292,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
       const { data, errors: queryErr } = await getUploadUrl({
         variables: {
           eventId,
+          occurrenceId,
           extension,
         },
       });
@@ -313,6 +321,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
             const { data: thumbData, errors: thumbErr } = await getUploadUrl({
               variables: {
                 eventId,
+                occurrenceId,
                 extension: 'jpg',
               },
             });
@@ -368,6 +377,7 @@ export default function EventMomentComposer({ eventId, open, onClose, onCreated 
 
       const input = {
         eventId,
+        ...(occurrenceId ? { occurrenceId } : {}),
         type,
         ...(caption.trim() ? { caption: caption.trim() } : {}),
         ...(type === EventMomentType.Text ? { background: selectedBg } : {}),

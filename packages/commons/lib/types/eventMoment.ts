@@ -128,6 +128,9 @@ export class CreateEventMomentInput {
   @Field(() => ID, { description: EVENT_MOMENT_DESCRIPTIONS.EVENT_ID })
   eventId: string;
 
+  @Field(() => ID, { nullable: true, description: EVENT_MOMENT_DESCRIPTIONS.OCCURRENCE_ID })
+  occurrenceId?: string;
+
   @Field(() => EventMomentType, { description: EVENT_MOMENT_DESCRIPTIONS.MOMENT_TYPE })
   type: EventMomentType;
 

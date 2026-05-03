@@ -97,6 +97,7 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   );
   const upcomingOccurrences = event?.upcomingOccurrences ?? [];
   const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
+  const hasExplicitOccurrenceSelection = Boolean(requestedOccurrenceAnchor || legacyRequestedOccurrenceId);
   const selectedOccurrence = useMemo(() => {
     if (!upcomingOccurrences.length && !requestedOccurrence) {
       return null;
@@ -122,7 +123,11 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
   }, [legacyRequestedOccurrenceId, requestedOccurrence, requestedOccurrenceAnchor, upcomingOccurrences]);
   const fallbackParticipantList = (event?.participants ?? []) as EventSeriesParticipantRecord[];
   const occurrenceParticipantList = (selectedOccurrence?.participants ?? []) as EventOccurrenceParticipantRecord[];
-  const participantList: EventParticipantRecord[] = selectedOccurrence
+  const useOccurrenceParticipantList = Boolean(
+    selectedOccurrence &&
+    (hasExplicitOccurrenceSelection || occurrenceParticipantList.length > 0 || fallbackParticipantList.length === 0),
+  );
+  const participantList: EventParticipantRecord[] = useOccurrenceParticipantList
     ? occurrenceParticipantList
     : fallbackParticipantList;
   const activeOccurrenceId = selectedOccurrence?.occurrenceId ?? null;

@@ -58,6 +58,7 @@ jest.mock('@/constants', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: { readEventById: jest.fn() },
   EventOccurrenceDAO: {
+    readByOccurrenceId: jest.fn(),
     readFirstByEventSeriesId: jest.fn(),
     readByEventSeriesIds: jest.fn(),
     readExceptionOccurrenceKeysByEventSeriesId: jest.fn(),
@@ -91,6 +92,8 @@ const mockParticipant = { status: ParticipantStatus.Going };
 const mockOccurrence = {
   occurrenceId: 'event-id-123#2099-01-01T00:00:00.000Z',
   eventSeriesId: 'event-id-123',
+  startAt: new Date('2099-01-01T00:00:00Z'),
+  endAt: new Date('2099-01-01T02:00:00Z'),
 };
 
 const baseMediaParams = {
@@ -113,6 +116,7 @@ describe('MediaService', () => {
     jest.clearAllMocks();
     (s3Client.getPresignedUploadUrl as jest.Mock).mockResolvedValue('https://upload.example.com/signed');
     (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (DaoModule.EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(mockOccurrence);
     (DaoModule.EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(mockOccurrence);
     (DaoModule.EventOccurrenceDAO.readByEventSeriesIds as jest.Mock).mockResolvedValue([]);
     (DaoModule.EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([]);
@@ -348,12 +352,10 @@ describe('MediaService', () => {
     });
 
     it('throws BAD_USER_INPUT when the posting window has closed', async () => {
-      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
-        ...mockEvent,
-        primarySchedule: {
-          startAt: new Date('2000-01-01T00:00:00Z'),
-          endAt: new Date('2000-01-01T02:00:00Z'),
-        },
+      (DaoModule.EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue({
+        ...mockOccurrence,
+        startAt: new Date('2000-01-01T00:00:00Z'),
+        endAt: new Date('2000-01-01T02:00:00Z'),
       });
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow('posting window');
     });
@@ -390,7 +392,7 @@ describe('MediaService', () => {
       expect(result.key).toMatch(/^test\/event-moments\/summer-bbq\/testuser\/[A-Za-z0-9_-]+\.mp4$/);
     });
 
-    it('rejects recurring event series until occurrence-targeted uploads are supported', async () => {
+    it('rejects recurring event series when no occurrence is targeted', async () => {
       (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         primarySchedule: {
@@ -404,6 +406,26 @@ describe('MediaService', () => {
       await expect(MediaService.getEventMomentUploadUrl(baseMomentParams)).rejects.toThrow(
         'require occurrence targeting',
       );
+    });
+
+    it('allows recurring event series uploads when a concrete occurrence is targeted', async () => {
+      (DaoModule.EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        primarySchedule: {
+          startAt: new Date('2099-01-01T00:00:00Z'),
+          endAt: new Date('2099-01-01T02:00:00Z'),
+          recurrenceRule: 'DTSTART:20990101T000000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+          timezone: 'Africa/Johannesburg',
+        },
+      });
+
+      const result = await MediaService.getEventMomentUploadUrl({
+        ...baseMomentParams,
+        occurrenceId: mockOccurrence.occurrenceId,
+      });
+
+      expect(DaoModule.EventOccurrenceDAO.readByOccurrenceId).toHaveBeenCalledWith(mockOccurrence.occurrenceId);
+      expect(result.momentId).toBe('moment-reserved-1');
     });
 
     it('returns uploadUrl, key, and CDN-backed readUrl', async () => {

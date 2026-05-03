@@ -100,6 +100,7 @@ const TEST_VENUE_NAME_PREFIXES = [
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const SAFE_TEST_DATABASE_PATTERNS = [/test/i, /e2e/i, /local/i];
+const LOCAL_HOST_PATTERNS = [/localhost/i, /127\.0\.0\.1/i];
 
 function canRunDestructiveTeardown(databaseName: string): boolean {
   if (SAFE_TEST_DATABASE_PATTERNS.some((pattern) => pattern.test(databaseName))) {
@@ -109,12 +110,28 @@ function canRunDestructiveTeardown(databaseName: string): boolean {
   return process.env.ALLOW_SHARED_E2E_DB_TEARDOWN === 'true';
 }
 
+function isRemoteGraphQlTarget(graphQlUrl: string | undefined): boolean {
+  if (!graphQlUrl) {
+    return false;
+  }
+
+  return !LOCAL_HOST_PATTERNS.some((pattern) => pattern.test(graphQlUrl));
+}
+
 const teardown = async (): Promise<void> => {
   clearRuntimeContext();
 
+  if (isRemoteGraphQlTarget(process.env.GRAPHQL_URL) && process.env.ALLOW_SHARED_E2E_DB_TEARDOWN !== 'true') {
+    console.log(
+      '[teardown] Skipping orphaned data cleanup for remote GraphQL target. ' +
+        'Set ALLOW_SHARED_E2E_DB_TEARDOWN=true to enable shared-environment cleanup.',
+    );
+    return;
+  }
+
   let mongoDbUrl: string;
   try {
-    mongoDbUrl = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
+    mongoDbUrl = process.env.MONGO_DB_URL ?? (await getConfigValue(SECRET_KEYS.MONGO_DB_URL));
   } catch (err) {
     console.warn('[teardown] Could not resolve MONGO_DB_URL — skipping orphaned data cleanup', err);
     return;

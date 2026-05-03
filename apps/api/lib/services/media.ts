@@ -13,13 +13,17 @@ import {
 } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
-import type { EventSeries, MediaUploadUrl } from '@gatherle/commons/types';
+import type { EventOccurrence, EventSeries, MediaUploadUrl } from '@gatherle/commons/types';
 import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
 import { EventMomentDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
+
+function getPostingWindowCloseMs(occurrence: Pick<EventOccurrence, 'startAt' | 'endAt'>): number {
+  return (occurrence.endAt ?? occurrence.startAt).getTime() + POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000;
+}
 
 class MediaService {
   static async getMediaUploadUrl(params: {
@@ -82,11 +86,12 @@ class MediaService {
 
   static async getEventMomentUploadUrl(params: {
     eventId: string;
+    occurrenceId?: string;
     extension: string;
     userId: string;
     username: string;
   }): Promise<MediaUploadUrl> {
-    const { eventId, userId, username } = params;
+    const { eventId, occurrenceId, userId, username } = params;
 
     const cleanExt = params.extension.toLowerCase().replace(/^\./, '');
     if (!EVENT_MOMENT_MEDIA_EXTENSIONS.has(cleanExt)) {
@@ -105,35 +110,33 @@ class MediaService {
       throw CustomError('EventSeries not found', ErrorTypes.NOT_FOUND);
     }
 
-    const windowCloseMs =
-      (event.primarySchedule?.endAt ?? event.primarySchedule?.startAt)
-        ? ((event.primarySchedule.endAt ?? event.primarySchedule.startAt) as Date).getTime() +
-          POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000
-        : null;
-
-    if (windowCloseMs !== null && Date.now() > windowCloseMs) {
-      throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
-    }
-
     if (EventOccurrenceService.isRecurringSeries(event)) {
-      throw CustomError(
-        'Event moment uploads for recurring event series require occurrence targeting and are not supported in this phase.',
-        ErrorTypes.BAD_REQUEST,
-      );
+      if (!occurrenceId) {
+        throw CustomError(
+          'Event moment uploads for recurring event series require occurrence targeting.',
+          ErrorTypes.BAD_REQUEST,
+        );
+      }
     }
 
-    // 2. Caller must have an active Going or CheckedIn RSVP.
-    const occurrence = await EventOccurrenceService.readSingleOccurrenceForSeries(eventId);
+    // 2. Resolve the targeted occurrence and ensure the posting window is still open.
+    const occurrence = await EventOccurrenceService.readOccurrenceForSeries(eventId, occurrenceId);
     if (!occurrence) {
       throw CustomError('Event occurrence not found for this event.', ErrorTypes.NOT_FOUND);
     }
+
+    if (Date.now() > getPostingWindowCloseMs(occurrence)) {
+      throw CustomError('The posting window for this event has closed', ErrorTypes.BAD_USER_INPUT);
+    }
+
+    // 3. Caller must have an active Going or CheckedIn RSVP.
 
     const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId);
     if (!participant || !ALLOWED_RSVP_STATUSES.includes(participant.status)) {
       throw CustomError('You must RSVP as Going or CheckedIn to upload a moment', ErrorTypes.UNAUTHORIZED);
     }
 
-    // 3. Build the S3 key using the authoritative slug from the DB (never trust client-supplied slug).
+    // 4. Build the S3 key using the authoritative slug from the DB (never trust client-supplied slug).
     const sanitizedSlug =
       event.slug
         .toLowerCase()

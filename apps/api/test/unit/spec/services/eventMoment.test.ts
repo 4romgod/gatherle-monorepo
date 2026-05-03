@@ -52,6 +52,7 @@ jest.mock('@/mongodb/dao', () => ({
     readEventById: jest.fn(),
   },
   EventOccurrenceDAO: {
+    readByOccurrenceId: jest.fn(),
     readFirstByEventSeriesId: jest.fn(),
     readByEventSeriesIds: jest.fn(),
     readExceptionOccurrenceKeysByEventSeriesId: jest.fn(),
@@ -162,6 +163,8 @@ describe('EventMomentService', () => {
   const mockOccurrence = {
     occurrenceId: 'event-1#2099-01-01T00:00:00.000Z',
     eventSeriesId: 'event-1',
+    startAt: futureEndDate,
+    endAt: futureEndDate,
   };
 
   afterEach(() => {
@@ -170,6 +173,7 @@ describe('EventMomentService', () => {
 
   beforeEach(() => {
     (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(mockOccurrence);
     (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue(mockOccurrence);
     (EventOccurrenceDAO.readByEventSeriesIds as jest.Mock).mockResolvedValue([]);
     (EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([]);
@@ -443,9 +447,10 @@ describe('EventMomentService', () => {
     });
 
     it('throws BAD_USER_INPUT when the posting window has closed', async () => {
-      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
-        ...mockEvent,
-        primarySchedule: { endAt: closedEndDate },
+      (EventOccurrenceDAO.readFirstByEventSeriesId as jest.Mock).mockResolvedValue({
+        ...mockOccurrence,
+        startAt: closedEndDate,
+        endAt: closedEndDate,
       });
 
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
@@ -490,7 +495,7 @@ describe('EventMomentService', () => {
       });
     });
 
-    it('rejects recurring event series until occurrence-targeted posting is supported', async () => {
+    it('rejects recurring event series when no occurrence is targeted', async () => {
       (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         ...mockEvent,
         primarySchedule: {
@@ -504,6 +509,34 @@ describe('EventMomentService', () => {
       await expect(EventMomentService.create(textInput, 'user-1')).rejects.toMatchObject({
         message: expect.stringContaining('requires occurrence targeting'),
       });
+    });
+
+    it('allows recurring event series posting when a concrete occurrence is targeted', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        primarySchedule: {
+          startAt: futureEndDate,
+          endAt: futureEndDate,
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: 'DTSTART:20990101T000000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
+        },
+      });
+
+      const input = {
+        ...textInput,
+        occurrenceId: mockOccurrence.occurrenceId,
+      };
+
+      await EventMomentService.create(input, 'user-1');
+
+      expect(EventOccurrenceDAO.readByOccurrenceId).toHaveBeenCalledWith(mockOccurrence.occurrenceId);
+      expect(EventMomentDAO.create).toHaveBeenCalledWith(
+        input,
+        'user-1',
+        undefined,
+        undefined,
+        mockOccurrence.occurrenceId,
+      );
     });
   });
 

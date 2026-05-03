@@ -20,9 +20,9 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack, Close, Language, LocationOn, People, PhotoLibrary } from '@mui/icons-material';
-import { GetEventsByVenueDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
-import type { GetVenueBySlugQuery, Location } from '@/data/graphql/types/graphql';
-import type { EventPreview } from '@/data/graphql/query/Event/types';
+import { GetAllEventOccurrencesDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
+import { SortOrderInput, type GetVenueBySlugQuery, type Location } from '@/data/graphql/types/graphql';
+import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import EventLocationMap from '@/components/events/EventLocationMap';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import ErrorPage from '@/components/errors/ErrorPage';
@@ -34,6 +34,7 @@ import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
+import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 
 const DEFAULT_VENUE_IMAGE = '/images/placeholder-venue.svg';
 
@@ -88,19 +89,29 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
   const eventFilterOptions = useMemo(() => {
     if (!venue?.venueId) return undefined;
     return {
-      pagination: { limit: 6 },
+      dateRange: buildDefaultOccurrenceDateRange(),
+      sort: [{ field: 'startAt', order: 'asc' as SortOrderInput }],
+      pagination: { limit: 24 },
       filters: [{ field: 'venueId', value: venue.venueId }],
     };
   }, [venue?.venueId]);
 
-  const { data: venueEventsData, loading: eventsLoading } = useQuery(GetEventsByVenueDocument, {
+  const { data: venueEventsData, loading: eventsLoading } = useQuery(GetAllEventOccurrencesDocument, {
     skip: !eventFilterOptions,
-    variables: { options: eventFilterOptions },
+    variables: {
+      options: eventFilterOptions ?? {
+        dateRange: buildDefaultOccurrenceDateRange(),
+        pagination: { limit: 1 },
+      },
+    },
     fetchPolicy: 'cache-and-network',
     context: authContext,
   });
 
-  const venueEvents = (venueEventsData?.readEvents ?? []) as EventPreview[];
+  const venueEvents = useMemo(
+    () => dedupeOccurrencesBySeries((venueEventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[], 6),
+    [venueEventsData],
+  );
   const hasVenueEvents = venueEvents.length > 0;
   const galleryItems = useMemo(() => {
     const seen = new Set<string>();
@@ -423,10 +434,10 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
                 href: ROUTES.EVENTS.ROOT,
                 label: 'Browse events',
               }}
-              itemKey={(event) => event.eventId}
+              itemKey={(event) => event.occurrenceId}
               renderItem={(event) => (
                 <Box>
-                  <EventBoxSm event={event} href={ROUTES.EVENTS.EVENT(event.slug)} />
+                  <EventBoxSm event={event} />
                 </Box>
               )}
             />

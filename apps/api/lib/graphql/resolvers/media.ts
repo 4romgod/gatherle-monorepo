@@ -33,11 +33,22 @@ export class MediaResolver {
   async getEventMomentUploadUrl(
     @Arg('eventId', () => String, { description: 'ID of the event this moment belongs to' })
     eventId: string,
+    @Arg('occurrenceId', () => String, {
+      nullable: true,
+      description: 'Optional concrete occurrence id for recurring event series moment uploads.',
+    })
+    occurrenceId: string | undefined,
     @Arg('extension', () => String, { description: 'File extension without leading dot (e.g. mp4, jpg, webp)' })
     extension: string,
     @Ctx() context: ServerContext,
   ): Promise<MediaUploadUrl> {
     const user = getAuthenticatedUser(context);
-    return MediaService.getEventMomentUploadUrl({ eventId, extension, userId: user.userId, username: user.username });
+    return MediaService.getEventMomentUploadUrl({
+      eventId,
+      occurrenceId,
+      extension,
+      userId: user.userId,
+      username: user.username,
+    });
   }
 }
