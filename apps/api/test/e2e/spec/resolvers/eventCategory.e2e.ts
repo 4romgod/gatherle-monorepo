@@ -1,4 +1,3 @@
-import request from 'supertest';
 import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
 import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
@@ -13,6 +12,7 @@ import {
   getUpdateEventCategoryMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
+import { assertNoCleanupFailures, cleanupTrackedEntities } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 import {
   buildEventCategoryInput,
   createEventCategoryOnServer,
@@ -32,17 +32,26 @@ describe('EventCategory Resolver', () => {
   const sendEventCategoryGraphQL = (payload: object, token?: string) =>
     postEventCategoryGraphQLWithRetry(url, payload, token);
 
+  afterEach(async () => {
+    await cleanupTrackedEntities({
+      url,
+      ids: createdCategoryIds,
+      deleteRequest: getDeleteEventCategoryByIdMutation,
+      token: () => adminUser.token,
+      label: 'event category',
+    });
+  });
+
   afterAll(async () => {
-    await Promise.all(
-      createdCategoryIds.map((eventCategoryId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteEventCategoryByIdMutation(eventCategoryId))
-          .catch(() => {}),
-      ),
-    );
-    createdCategoryIds.length = 0;
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: createdCategoryIds,
+      deleteRequest: getDeleteEventCategoryByIdMutation,
+      token: () => adminUser.token,
+      label: 'event category',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   describe('Positive', () => {

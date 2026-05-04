@@ -17,6 +17,7 @@ import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherl
 import { Gender } from '@gatherle/commons/types';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
+import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 import {
   buildCreateUserInput,
   cleanupUsersById,
@@ -49,13 +50,21 @@ describe('User Resolver', () => {
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     if (!adminUser?.token) {
       return;
     }
 
     await cleanupUsersById(url, adminUser.token, createdUserIds);
-    createdUserIds.length = 0;
+  });
+
+  afterAll(async () => {
+    if (!adminUser?.token) {
+      return;
+    }
+
+    const failures = await cleanupUsersById(url, adminUser.token, createdUserIds, 'afterAll');
+    assertNoCleanupFailures(failures);
   });
 
   describe('Positive', () => {

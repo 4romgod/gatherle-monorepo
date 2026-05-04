@@ -19,6 +19,12 @@ type GraphQLResponseError = {
 
 type CleanupRequestFactory = (id: string) => object;
 type CleanupToken = string | (() => string);
+type CleanupResponse = {
+  status: number;
+  body?: {
+    errors?: GraphQLResponseError[];
+  };
+};
 
 export type CleanupFailure = {
   label: string;
@@ -31,6 +37,14 @@ export type CleanupTrackedEntitiesOptions = {
   ids: string[];
   deleteRequest: CleanupRequestFactory;
   token: CleanupToken;
+  label: string;
+  phase?: string;
+};
+
+export type CleanupTrackedItemsOptions<T> = {
+  items: T[];
+  itemId: (item: T) => string;
+  deleteItem: (item: T) => Promise<CleanupResponse>;
   label: string;
   phase?: string;
 };
@@ -53,6 +67,12 @@ export type OrganizationMembershipRef = {
   userId?: string;
   role?: OrganizationRole;
 };
+
+const REMOTE_CREATE_RESPONSE_TIMEOUT_MS = 35_000;
+const REMOTE_CREATE_DEADLINE_TIMEOUT_MS = 45_000;
+const CLEANUP_RESPONSE_TIMEOUT_MS = 25_000;
+const CLEANUP_DEADLINE_TIMEOUT_MS = 35_000;
+const CLEANUP_MAX_ATTEMPTS = 4;
 
 export const trackCreatedId = (ids: string[], id: string) => {
   if (!ids.includes(id)) {
@@ -102,11 +122,14 @@ const isRetryableGraphQLFailure = (status: number, body: unknown): boolean => {
 };
 
 const isRetryableRequestError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'object' && error !== null
+        ? `${String((error as { name?: unknown }).name ?? '')}: ${String((error as { message?: unknown }).message ?? '')}`
+        : String(error);
 
-  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout)/i.test(error.message);
+  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(message);
 };
 
 const readConflictSlug = (errors: GraphQLResponseError[], input: CreateEventInput): string | null => {
@@ -191,6 +214,62 @@ const formatCleanupFailure = (status: number, errors: GraphQLResponseError[]): s
   return `status=${status}, errors=${errorSummary}`;
 };
 
+export const cleanupTrackedItems = async <T>({
+  items,
+  itemId,
+  deleteItem,
+  label,
+  phase = 'cleanup',
+}: CleanupTrackedItemsOptions<T>): Promise<CleanupFailure[]> => {
+  const toDelete = [...items];
+  const failures: CleanupFailure[] = [];
+  items.length = 0;
+
+  await Promise.all(
+    toDelete.map(async (item) => {
+      const id = itemId(item);
+
+      for (let attempt = 1; attempt <= CLEANUP_MAX_ATTEMPTS; attempt++) {
+        try {
+          const response = await deleteItem(item);
+          const errors = readGraphQLErrors(response.body);
+
+          if ((response.status === 200 && errors.length === 0) || isNotFoundResponse(response.status, errors)) {
+            return;
+          }
+
+          const shouldRetry =
+            attempt < CLEANUP_MAX_ATTEMPTS && isRetryableGraphQLFailure(response.status, response.body);
+          if (shouldRetry) {
+            await sleep(500 * attempt);
+            continue;
+          }
+
+          const reason = formatCleanupFailure(response.status, errors);
+          console.warn(`[${phase}] Failed to delete ${label} ${id}: ${reason}`);
+          items.push(item);
+          failures.push({ label, id, reason });
+          return;
+        } catch (err) {
+          const shouldRetry = attempt < CLEANUP_MAX_ATTEMPTS && isRetryableRequestError(err);
+          if (shouldRetry) {
+            await sleep(500 * attempt);
+            continue;
+          }
+
+          const reason = err instanceof Error ? err.message : String(err);
+          console.warn(`[${phase}] Error deleting ${label} ${id}:`, err);
+          items.push(item);
+          failures.push({ label, id, reason });
+          return;
+        }
+      }
+    }),
+  );
+
+  return failures;
+};
+
 export const cleanupTrackedEntities = async ({
   url,
   ids,
@@ -198,39 +277,19 @@ export const cleanupTrackedEntities = async ({
   token,
   label,
   phase = 'cleanup',
-}: CleanupTrackedEntitiesOptions): Promise<CleanupFailure[]> => {
-  const toDelete = [...ids];
-  const failures: CleanupFailure[] = [];
-  ids.length = 0;
-
-  await Promise.all(
-    toDelete.map(async (id) => {
-      try {
-        const response = await request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + readCleanupToken(token))
-          .send(deleteRequest(id));
-        const errors = readGraphQLErrors(response.body);
-
-        if ((response.status === 200 && errors.length === 0) || isNotFoundResponse(response.status, errors)) {
-          return;
-        }
-
-        const reason = formatCleanupFailure(response.status, errors);
-        console.warn(`[${phase}] Failed to delete ${label} ${id}: ${reason}`);
-        trackCreatedId(ids, id);
-        failures.push({ label, id, reason });
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err);
-        console.warn(`[${phase}] Error deleting ${label} ${id}:`, err);
-        trackCreatedId(ids, id);
-        failures.push({ label, id, reason });
-      }
-    }),
-  );
-
-  return failures;
-};
+}: CleanupTrackedEntitiesOptions): Promise<CleanupFailure[]> =>
+  cleanupTrackedItems({
+    items: ids,
+    itemId: (id) => id,
+    label,
+    phase,
+    deleteItem: (id) =>
+      request(url)
+        .post('')
+        .timeout({ response: CLEANUP_RESPONSE_TIMEOUT_MS, deadline: CLEANUP_DEADLINE_TIMEOUT_MS })
+        .set('Authorization', 'Bearer ' + readCleanupToken(token))
+        .send(deleteRequest(id)),
+  });
 
 export const assertNoCleanupFailures = (failures: CleanupFailure[]) => {
   if (failures.length === 0) {
@@ -253,7 +312,7 @@ export const createEventOnServer = async (
     try {
       const response = await request(url)
         .post('')
-        .timeout({ response: 20_000, deadline: 30_000 })
+        .timeout({ response: REMOTE_CREATE_RESPONSE_TIMEOUT_MS, deadline: REMOTE_CREATE_DEADLINE_TIMEOUT_MS })
         .set('Authorization', 'Bearer ' + userToken)
         .send(getCreateEventMutation(input));
 
@@ -311,7 +370,7 @@ export const createOrganizationOnServer = async (
     try {
       const response = await request(url)
         .post('')
-        .timeout({ response: 20_000, deadline: 30_000 })
+        .timeout({ response: REMOTE_CREATE_RESPONSE_TIMEOUT_MS, deadline: REMOTE_CREATE_DEADLINE_TIMEOUT_MS })
         .set('Authorization', 'Bearer ' + adminToken)
         .send(
           getCreateOrganizationMutation({
@@ -381,7 +440,7 @@ export const createMembershipOnServer = async (
     try {
       const response = await request(url)
         .post('')
-        .timeout({ response: 20_000, deadline: 30_000 })
+        .timeout({ response: REMOTE_CREATE_RESPONSE_TIMEOUT_MS, deadline: REMOTE_CREATE_DEADLINE_TIMEOUT_MS })
         .set('Authorization', 'Bearer ' + adminToken)
         .send(
           getCreateOrganizationMembershipMutation({

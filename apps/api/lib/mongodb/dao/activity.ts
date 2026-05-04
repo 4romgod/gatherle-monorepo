@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { Types } from 'mongoose';
+import { ActivityObjectType } from '@gatherle/commons/types';
 import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/types';
 import { Activity as ActivityModel } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
@@ -57,6 +58,49 @@ class ActivityDAO {
       return activities.map((activity) => activity.toObject());
     } catch (error) {
       logDaoError('Error reading feed activities', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    try {
+      await ActivityModel.deleteMany({
+        $or: [
+          { actorId: userId },
+          { objectType: ActivityObjectType.User, objectId: userId },
+          { targetType: ActivityObjectType.User, targetId: userId },
+        ],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error deleting activities for user', { error, userId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByOrganizationId(orgId: string): Promise<void> {
+    try {
+      await ActivityModel.deleteMany({
+        $or: [
+          { objectType: ActivityObjectType.Organization, objectId: orgId },
+          { targetType: ActivityObjectType.Organization, targetId: orgId },
+        ],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error deleting activities for organization', { error, orgId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByEventSeriesId(eventId: string): Promise<void> {
+    try {
+      await ActivityModel.deleteMany({
+        $or: [
+          { objectType: ActivityObjectType.EventSeries, objectId: eventId },
+          { targetType: ActivityObjectType.EventSeries, targetId: eventId },
+        ],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error deleting activities for event series', { error, eventId });
       throw KnownCommonError(error);
     }
   }

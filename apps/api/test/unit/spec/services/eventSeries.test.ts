@@ -1,6 +1,6 @@
 import EventSeriesService from '@/services/eventSeries';
 import type { CreateEventInput, EventSeries, SplitEventSeriesInput, UpdateEventInput } from '@gatherle/commons/types';
-import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
+import { EventOccurrenceStatus, EventStatus, FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
@@ -12,6 +12,25 @@ jest.mock('@/mongodb/dao', () => ({
     deleteEventById: jest.fn(),
     deleteEventBySlug: jest.fn(),
     readTrending: jest.fn(),
+  },
+  EventOccurrenceDAO: {
+    readByEventSeriesId: jest.fn(),
+  },
+  EventOccurrenceParticipantDAO: {
+    deleteByOccurrenceIds: jest.fn(),
+  },
+  ActivityDAO: {
+    deleteByEventSeriesId: jest.fn(),
+  },
+  FollowDAO: {
+    deleteByTarget: jest.fn(),
+  },
+  UserFeedDAO: {
+    deleteByEventId: jest.fn(),
+  },
+  NotificationDAO: {
+    deleteByTargetReference: jest.fn(),
+    deleteByOccurrenceIds: jest.fn(),
   },
 }));
 
@@ -34,8 +53,17 @@ jest.mock('@/utils/logger', () => ({
   initLogger: jest.fn(),
 }));
 
-import { EventSeriesDAO } from '@/mongodb/dao';
+import {
+  ActivityDAO,
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  FollowDAO,
+  NotificationDAO,
+  UserFeedDAO,
+} from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
+import { logger } from '@/utils/logger';
 
 const makeEvent = (overrides: Partial<EventSeries> = {}): EventSeries =>
   ({
@@ -71,6 +99,16 @@ const makeUpdateInput = (overrides: Partial<UpdateEventInput> = {}): UpdateEvent
 describe('EventSeriesService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (EventOccurrenceDAO.readByEventSeriesId as jest.Mock).mockResolvedValue([
+      { occurrenceId: 'occ-1' },
+      { occurrenceId: 'occ-2' },
+    ]);
+    (EventOccurrenceParticipantDAO.deleteByOccurrenceIds as jest.Mock).mockResolvedValue(undefined);
+    (ActivityDAO.deleteByEventSeriesId as jest.Mock).mockResolvedValue(undefined);
+    (FollowDAO.deleteByTarget as jest.Mock).mockResolvedValue(undefined);
+    (UserFeedDAO.deleteByEventId as jest.Mock).mockResolvedValue(undefined);
+    (NotificationDAO.deleteByTargetReference as jest.Mock).mockResolvedValue(undefined);
+    (NotificationDAO.deleteByOccurrenceIds as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.syncEventSeriesOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteOccurrencesForSeries as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteFutureExceptionOccurrences as jest.Mock).mockResolvedValue(undefined);
@@ -251,35 +289,63 @@ describe('EventSeriesService', () => {
   });
 
   describe('delete', () => {
-    it('deletes by id via the DAO and then cleans up occurrences', async () => {
-      const deletedEvent = makeEvent();
+    it('deletes by id via the DAO and then cleans up event-side artifacts', async () => {
+      const deletedEvent = makeEvent({ slug: 'test-event-series' });
       (EventSeriesDAO.deleteEventById as jest.Mock).mockResolvedValue(deletedEvent);
 
       const result = await EventSeriesService.deleteById('event-1');
 
       expect(EventSeriesDAO.deleteEventById).toHaveBeenCalledWith('event-1');
+      expect(EventOccurrenceDAO.readByEventSeriesId).toHaveBeenCalledWith('event-1');
       expect(EventOccurrenceService.deleteOccurrencesForSeries).toHaveBeenCalledWith('event-1');
+      expect(EventOccurrenceParticipantDAO.deleteByOccurrenceIds).toHaveBeenCalledWith(['occ-1', 'occ-2']);
+      expect(ActivityDAO.deleteByEventSeriesId).toHaveBeenCalledWith('event-1');
+      expect(FollowDAO.deleteByTarget).toHaveBeenCalledWith(FollowTargetType.EventSeries, 'event-1');
+      expect(UserFeedDAO.deleteByEventId).toHaveBeenCalledWith('event-1');
+      expect(NotificationDAO.deleteByTargetReference).toHaveBeenCalledWith(
+        NotificationTargetType.EventSeries,
+        'test-event-series',
+      );
+      expect(NotificationDAO.deleteByOccurrenceIds).toHaveBeenCalledWith(['occ-1', 'occ-2']);
       expect(result).toEqual(deletedEvent);
     });
 
-    it('deletes by slug via the DAO and then cleans up occurrences', async () => {
+    it('deletes by slug via the DAO and then cleans up event-side artifacts', async () => {
       const deletedEvent = makeEvent({ slug: 'test-event-series' });
       (EventSeriesDAO.deleteEventBySlug as jest.Mock).mockResolvedValue(deletedEvent);
 
       const result = await EventSeriesService.deleteBySlug('test-event-series');
 
       expect(EventSeriesDAO.deleteEventBySlug).toHaveBeenCalledWith('test-event-series');
+      expect(EventOccurrenceDAO.readByEventSeriesId).toHaveBeenCalledWith('event-1');
       expect(EventOccurrenceService.deleteOccurrencesForSeries).toHaveBeenCalledWith('event-1');
+      expect(EventOccurrenceParticipantDAO.deleteByOccurrenceIds).toHaveBeenCalledWith(['occ-1', 'occ-2']);
+      expect(ActivityDAO.deleteByEventSeriesId).toHaveBeenCalledWith('event-1');
+      expect(FollowDAO.deleteByTarget).toHaveBeenCalledWith(FollowTargetType.EventSeries, 'event-1');
+      expect(UserFeedDAO.deleteByEventId).toHaveBeenCalledWith('event-1');
+      expect(NotificationDAO.deleteByTargetReference).toHaveBeenCalledWith(
+        NotificationTargetType.EventSeries,
+        'test-event-series',
+      );
+      expect(NotificationDAO.deleteByOccurrenceIds).toHaveBeenCalledWith(['occ-1', 'occ-2']);
       expect(result).toEqual(deletedEvent);
     });
 
-    it('fails the delete if occurrence cleanup fails', async () => {
+    it('returns the deleted event even when a cleanup step fails', async () => {
       (EventSeriesDAO.deleteEventById as jest.Mock).mockResolvedValue(makeEvent());
       (EventOccurrenceService.deleteOccurrencesForSeries as jest.Mock).mockRejectedValue(new Error('cleanup failed'));
 
-      await expect(EventSeriesService.deleteById('event-1')).rejects.toMatchObject({
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
+      const result = await EventSeriesService.deleteById('event-1');
+
+      expect(result).toEqual(makeEvent());
+      expect(logger.error).toHaveBeenCalledWith(
+        '[EventSeriesService.cleanupDeletedEventSideEffects] Best-effort cleanup step failed',
+        expect.objectContaining({
+          eventSeriesId: 'event-1',
+          cleanupStep: 'occurrences',
+          error: expect.any(Error),
+        }),
+      );
     });
   });
 

@@ -4,7 +4,7 @@ import type {
   CreateNotificationInput,
   NotificationConnection,
 } from '@gatherle/commons/types';
-import { NotificationType } from '@gatherle/commons';
+import { NotificationTargetType, NotificationType } from '@gatherle/commons';
 import { Notification as NotificationModel } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 
@@ -220,6 +220,39 @@ class NotificationDAO {
       await NotificationModel.updateOne({ notificationId }, { pushSent: true }).exec();
     } catch (error) {
       logDaoError('Error marking push as sent', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    try {
+      await NotificationModel.deleteMany({
+        $or: [{ recipientUserId: userId }, { actorUserId: userId }],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error deleting notifications for user', { error, userId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByTargetReference(targetType: NotificationTargetType, targetId: string): Promise<void> {
+    try {
+      await NotificationModel.deleteMany({ targetType, targetId }).exec();
+    } catch (error) {
+      logDaoError('Error deleting notifications by target reference', { error, targetType, targetId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByOccurrenceIds(occurrenceIds: string[]): Promise<void> {
+    if (occurrenceIds.length === 0) {
+      return;
+    }
+
+    try {
+      await NotificationModel.deleteMany({ occurrenceId: { $in: occurrenceIds } }).exec();
+    } catch (error) {
+      logDaoError('Error deleting notifications by occurrence IDs', { error, occurrenceIds });
       throw KnownCommonError(error);
     }
   }

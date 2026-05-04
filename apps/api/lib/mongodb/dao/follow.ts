@@ -302,6 +302,26 @@ class FollowDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    try {
+      await FollowModel.deleteMany({
+        $or: [{ followerUserId: userId }, { targetType: FollowTargetType.User, targetId: userId }],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error deleting follows for user', { error, userId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByTarget(targetType: FollowTargetType, targetId: string): Promise<void> {
+    try {
+      await FollowModel.deleteMany({ targetType, targetId }).exec();
+    } catch (error) {
+      logDaoError('Error deleting follows by target', { error, targetType, targetId });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default FollowDAO;

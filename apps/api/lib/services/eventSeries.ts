@@ -6,8 +6,17 @@ import type {
   SplitEventSeriesInput,
   UpdateEventInput,
 } from '@gatherle/commons/types';
-import { EventSeriesDAO } from '@/mongodb/dao';
+import {
+  ActivityDAO,
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  FollowDAO,
+  NotificationDAO,
+  UserFeedDAO,
+} from '@/mongodb/dao';
 import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual } from '@/utils';
+import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 
@@ -92,6 +101,52 @@ class EventSeriesService {
     }
   }
 
+  private static async cleanupDeletedEventSideEffects(
+    eventSeries: Pick<EventSeries, 'eventId' | 'slug'>,
+  ): Promise<void> {
+    let occurrenceIds: string[] = [];
+
+    try {
+      const occurrences = await EventOccurrenceDAO.readByEventSeriesId(eventSeries.eventId);
+      occurrenceIds = occurrences.map((occurrence) => occurrence.occurrenceId);
+    } catch (error) {
+      logger.error('[EventSeriesService.cleanupDeletedEventSideEffects] Failed to load occurrence ids for cleanup', {
+        eventSeriesId: eventSeries.eventId,
+        error,
+      });
+    }
+
+    const cleanupSteps: Array<[string, () => Promise<unknown>]> = [
+      ['occurrences', () => this.deleteOccurrencesForSeries(eventSeries.eventId)],
+      ['activities', () => ActivityDAO.deleteByEventSeriesId(eventSeries.eventId)],
+      ['follows', () => FollowDAO.deleteByTarget(FollowTargetType.EventSeries, eventSeries.eventId)],
+      ['feed items', () => UserFeedDAO.deleteByEventId(eventSeries.eventId)],
+      [
+        'series notifications',
+        () => NotificationDAO.deleteByTargetReference(NotificationTargetType.EventSeries, eventSeries.slug),
+      ],
+    ];
+
+    if (occurrenceIds.length > 0) {
+      cleanupSteps.push(
+        ['occurrence participants', () => EventOccurrenceParticipantDAO.deleteByOccurrenceIds(occurrenceIds)],
+        ['occurrence notifications', () => NotificationDAO.deleteByOccurrenceIds(occurrenceIds)],
+      );
+    }
+
+    const results = await Promise.allSettled(cleanupSteps.map(([, cleanup]) => cleanup()));
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        logger.error('[EventSeriesService.cleanupDeletedEventSideEffects] Best-effort cleanup step failed', {
+          eventSeriesId: eventSeries.eventId,
+          cleanupStep: cleanupSteps[index][0],
+          error: result.reason,
+        });
+      }
+    });
+  }
+
   static async create(input: CreateEventInput): Promise<EventSeries> {
     const createdEvent = await EventSeriesDAO.create(input);
     await this.syncOccurrencesForSeries(createdEvent);
@@ -127,13 +182,13 @@ class EventSeriesService {
 
   static async deleteById(eventId: string): Promise<EventSeries> {
     const deletedEvent = await EventSeriesDAO.deleteEventById(eventId);
-    await this.deleteOccurrencesForSeries(deletedEvent.eventId);
+    await this.cleanupDeletedEventSideEffects(deletedEvent);
     return deletedEvent;
   }
 
   static async deleteBySlug(slug: string): Promise<EventSeries> {
     const deletedEvent = await EventSeriesDAO.deleteEventBySlug(slug);
-    await this.deleteOccurrencesForSeries(deletedEvent.eventId);
+    await this.cleanupDeletedEventSideEffects(deletedEvent);
     return deletedEvent;
   }
 

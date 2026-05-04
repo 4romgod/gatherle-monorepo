@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
+import { usersMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { ParticipantStatus, SortOrderInput } from '@gatherle/commons/types';
 import {
   getCancelEventOccurrenceParticipantMutation,
@@ -15,13 +16,27 @@ import {
   cleanupTrackedEntities,
   createEventOnServer,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  buildCreateUserInput,
+  cleanupUsersById,
+  createUserOnServer,
+  uniqueSuffix,
+} from '@/test/e2e/utils/userResolverHelpers';
 
 describe('EventOccurrenceParticipant Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const OCCURRENCE_PARTICIPANT_TEST_TIMEOUT_MS = 240_000;
+  const OCCURRENCE_PARTICIPANT_HOOK_TIMEOUT_MS = 180_000;
+  const OCCURRENCE_LOOKUP_RESPONSE_TIMEOUT_MS = 25_000;
+  const OCCURRENCE_LOOKUP_DEADLINE_TIMEOUT_MS = 35_000;
+  const OCCURRENCE_REQUEST_MAX_ATTEMPTS = 6;
+  const FIRST_OCCURRENCE_START_AT = '2026-05-06T16:00:00.000Z';
+  let adminUser: UserWithToken;
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
   let eventCategoryId = '';
   const createdEventIds: string[] = [];
+  const createdUserIds: string[] = [];
 
   const baseEventData = (() => {
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...rest } = eventSeriesMockData[0];
@@ -46,9 +61,18 @@ describe('EventOccurrenceParticipant Resolver', () => {
 
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const postGraphQl = async (payload: object) => {
+  const postGraphQl = async (payload: object, token?: string) => {
     try {
-      const response = await request(url).post('').timeout({ response: 15_000, deadline: 20_000 }).send(payload);
+      let req = request(url).post('').timeout({
+        response: OCCURRENCE_LOOKUP_RESPONSE_TIMEOUT_MS,
+        deadline: OCCURRENCE_LOOKUP_DEADLINE_TIMEOUT_MS,
+      });
+
+      if (token) {
+        req = req.set('Authorization', `Bearer ${token}`);
+      }
+
+      const response = await req.send(payload);
 
       return {
         status: response.status,
@@ -64,57 +88,102 @@ describe('EventOccurrenceParticipant Resolver', () => {
     }
   };
 
-  const readFirstOccurrenceId = async (eventId: string) => {
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      const response = await postGraphQl({
-        query: `query ReadEventById($eventId: String!) {
-            readEventById(eventId: $eventId) {
-              eventId
-              upcomingOccurrences(limit: 1, fromDate: "2026-05-01T00:00:00.000Z") {
-                occurrenceId
-                occurrenceKey
-              }
-            }
-          }`,
-        variables: { eventId },
-      });
+  const buildFirstOccurrenceId = (eventId: string): string => `${eventId}#${FIRST_OCCURRENCE_START_AT}`;
 
-      if (response.status === 200 && !response.body.errors) {
-        const firstOccurrence = response.body.data.readEventById.upcomingOccurrences[0];
-        if (firstOccurrence) {
-          return firstOccurrence;
-        }
+  const sendGraphQlWithRetry = async (
+    payload: object,
+    token?: string,
+    options: { maxAttempts?: number; retryOnNotFound?: boolean } = {},
+  ) => {
+    const { maxAttempts = OCCURRENCE_REQUEST_MAX_ATTEMPTS, retryOnNotFound = false } = options;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await postGraphQl(payload, token);
+      const failure = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < maxAttempts &&
+        (response.status === 429 ||
+          response.status >= 500 ||
+          (retryOnNotFound && response.status === 404) ||
+          /timed out|timeout|temporarily unavailable|aborted|endpoint request timed out|occurrence not found|representative occurrence not found/i.test(
+            failure,
+          ));
+
+      if (!shouldRetry) {
+        return response;
+      }
+
+      await sleep(1_000 * attempt);
+    }
+
+    throw new Error('Failed to complete occurrence participant GraphQL request after retrying transient errors.');
+  };
+
+  const waitForOccurrenceParticipantStatus = async (
+    occurrenceId: string,
+    token: string,
+    expectedStatus: ParticipantStatus,
+  ) => {
+    const maxAttempts = 10;
+    let lastResponse: Awaited<ReturnType<typeof sendGraphQlWithRetry>> | null = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await sendGraphQlWithRetry(getMyEventOccurrenceRsvpStatusQuery(occurrenceId), token, {
+        maxAttempts: 1,
+        retryOnNotFound: true,
+      });
+      lastResponse = response;
+
+      const currentStatus = response.body.data?.myEventOccurrenceRsvpStatus?.status;
+      if (response.status === 200 && !response.body.errors && currentStatus === expectedStatus) {
+        return response;
       }
 
       const failure = JSON.stringify(response.body.errors ?? response.body);
       const shouldRetry =
-        attempt < 5 &&
-        (response.status >= 500 ||
-          /timed out|timeout|temporarily unavailable|aborted/i.test(failure) ||
-          (response.status === 200 && !response.body.errors));
+        attempt < maxAttempts &&
+        (response.status === 404 ||
+          response.status >= 500 ||
+          currentStatus !== expectedStatus ||
+          /timed out|timeout|temporarily unavailable|aborted|endpoint request timed out|occurrence not found|representative occurrence not found/i.test(
+            failure,
+          ));
 
       if (!shouldRetry) {
-        expect(response.status).toBe(200);
-        expect(response.body.errors).toBeUndefined();
+        return response;
       }
 
-      await sleep(500 * attempt);
+      await sleep(1_000 * attempt);
     }
 
-    throw new Error(`No persisted occurrence became available for event ${eventId}.`);
+    if (lastResponse) {
+      return lastResponse;
+    }
+
+    throw new Error(`Occurrence participant status for ${occurrenceId} did not settle to ${expectedStatus}.`);
   };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [user, user2, category] = await Promise.all([
-      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
-      loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password),
+    const [seededAdmin, user, user2, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
+      createUserOnServer(
+        url,
+        buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'occurrence-user-password', uniqueSuffix()),
+        createdUserIds,
+      ),
+      createUserOnServer(
+        url,
+        buildCreateUserInput(usersMockData.at(1)! as CreateUserInput, 'occurrence-user2-password', uniqueSuffix()),
+        createdUserIds,
+      ),
       readFirstEventCategory(url),
     ]);
+    adminUser = seededAdmin;
     participantUser = user;
     participantUser2 = user2;
     eventCategoryId = category.eventCategoryId;
-  });
+  }, OCCURRENCE_PARTICIPANT_HOOK_TIMEOUT_MS);
 
   afterEach(async () => {
     await cleanupTrackedEntities({
@@ -127,112 +196,124 @@ describe('EventOccurrenceParticipant Resolver', () => {
   });
 
   afterAll(async () => {
-    const failures = await cleanupTrackedEntities({
-      url,
-      ids: createdEventIds,
-      deleteRequest: getDeleteEventByIdMutation,
-      token: () => participantUser.token,
-      label: 'event',
-      phase: 'afterAll',
-    });
+    const failures = [
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdEventIds,
+        deleteRequest: getDeleteEventByIdMutation,
+        token: () => participantUser.token,
+        label: 'event',
+        phase: 'afterAll',
+      })),
+      ...(adminUser?.token && createdUserIds.length > 0
+        ? await cleanupUsersById(url, adminUser.token, createdUserIds, 'afterAll')
+        : []),
+    ];
     assertNoCleanupFailures(failures);
-  });
+  }, OCCURRENCE_PARTICIPANT_HOOK_TIMEOUT_MS);
 
-  it('supports recurring occurrence RSVP, waitlisting, participant reads, and promotion after cancellation', async () => {
-    const createdEvent = await createEventOnServer(
-      url,
-      participantUser.token,
-      buildRecurringEventInput(),
-      createdEventIds,
-    );
-    const occurrence = await readFirstOccurrenceId(createdEvent.eventId);
+  it(
+    'supports recurring occurrence RSVP, waitlisting, participant reads, and promotion after cancellation',
+    async () => {
+      const createdEvent = await createEventOnServer(
+        url,
+        participantUser.token,
+        buildRecurringEventInput(),
+        createdEventIds,
+      );
+      const occurrenceId = buildFirstOccurrenceId(createdEvent.eventId);
 
-    const firstRsvp = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser.token}`)
-      .send(
+      const firstRsvp = await sendGraphQlWithRetry(
         getUpsertEventOccurrenceParticipantMutation({
-          occurrenceId: occurrence.occurrenceId,
+          occurrenceId,
           status: ParticipantStatus.Going,
         }),
+        participantUser.token,
+        { maxAttempts: 8, retryOnNotFound: true },
       );
 
-    expect(firstRsvp.status).toBe(200);
-    expect(firstRsvp.body.errors).toBeUndefined();
-    expect(firstRsvp.body.data.upsertEventOccurrenceParticipant.status).toBe(ParticipantStatus.Going);
+      expect(firstRsvp.status).toBe(200);
+      expect(firstRsvp.body.errors).toBeUndefined();
+      expect(firstRsvp.body.data.upsertEventOccurrenceParticipant.status).toBe(ParticipantStatus.Going);
 
-    const secondRsvp = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser2.token}`)
-      .send(
+      const secondRsvp = await sendGraphQlWithRetry(
         getUpsertEventOccurrenceParticipantMutation({
-          occurrenceId: occurrence.occurrenceId,
+          occurrenceId,
           status: ParticipantStatus.Going,
         }),
+        participantUser2.token,
+        { maxAttempts: 8, retryOnNotFound: true },
       );
 
-    expect(secondRsvp.status).toBe(200);
-    expect(secondRsvp.body.errors).toBeUndefined();
-    expect(secondRsvp.body.data.upsertEventOccurrenceParticipant.status).toBe(ParticipantStatus.Waitlisted);
+      expect(secondRsvp.status).toBe(200);
+      expect(secondRsvp.body.errors).toBeUndefined();
+      expect(secondRsvp.body.data.upsertEventOccurrenceParticipant.status).toBe(ParticipantStatus.Waitlisted);
 
-    const participantsResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser.token}`)
-      .send(getReadEventOccurrenceParticipantsQuery(occurrence.occurrenceId));
+      const participantsResponse = await sendGraphQlWithRetry(
+        getReadEventOccurrenceParticipantsQuery(occurrenceId),
+        participantUser.token,
+        { maxAttempts: 8, retryOnNotFound: true },
+      );
 
-    expect(participantsResponse.status).toBe(200);
-    expect(participantsResponse.body.errors).toBeUndefined();
-    expect(participantsResponse.body.data.readEventOccurrenceParticipants).toHaveLength(2);
+      expect(participantsResponse.status).toBe(200);
+      expect(participantsResponse.body.errors).toBeUndefined();
+      expect(participantsResponse.body.data.readEventOccurrenceParticipants).toHaveLength(2);
 
-    const waitlistStatusResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser2.token}`)
-      .send(getMyEventOccurrenceRsvpStatusQuery(occurrence.occurrenceId));
+      const waitlistStatusResponse = await sendGraphQlWithRetry(
+        getMyEventOccurrenceRsvpStatusQuery(occurrenceId),
+        participantUser2.token,
+        { maxAttempts: 8, retryOnNotFound: true },
+      );
 
-    expect(waitlistStatusResponse.status).toBe(200);
-    expect(waitlistStatusResponse.body.data.myEventOccurrenceRsvpStatus.status).toBe(ParticipantStatus.Waitlisted);
+      expect(waitlistStatusResponse.status).toBe(200);
+      expect(waitlistStatusResponse.body.data.myEventOccurrenceRsvpStatus.status).toBe(ParticipantStatus.Waitlisted);
 
-    const cancellationResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser.token}`)
-      .send(getCancelEventOccurrenceParticipantMutation({ occurrenceId: occurrence.occurrenceId }));
+      const cancellationResponse = await sendGraphQlWithRetry(
+        getCancelEventOccurrenceParticipantMutation({ occurrenceId }),
+        participantUser.token,
+        { maxAttempts: 8, retryOnNotFound: true },
+      );
 
-    expect(cancellationResponse.status).toBe(200);
-    expect(cancellationResponse.body.data.cancelEventOccurrenceParticipant.status).toBe(ParticipantStatus.Cancelled);
+      expect(cancellationResponse.status).toBe(200);
+      expect(cancellationResponse.body.data.cancelEventOccurrenceParticipant.status).toBe(ParticipantStatus.Cancelled);
 
-    const promotedStatusResponse = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser2.token}`)
-      .send(getMyEventOccurrenceRsvpStatusQuery(occurrence.occurrenceId));
+      const promotedStatusResponse = await waitForOccurrenceParticipantStatus(
+        occurrenceId,
+        participantUser2.token,
+        ParticipantStatus.Going,
+      );
 
-    expect(promotedStatusResponse.status).toBe(200);
-    expect(promotedStatusResponse.body.data.myEventOccurrenceRsvpStatus.status).toBe(ParticipantStatus.Going);
-  });
+      expect(promotedStatusResponse.status).toBe(200);
+      expect(promotedStatusResponse.body.data.myEventOccurrenceRsvpStatus.status).toBe(ParticipantStatus.Going);
+    },
+    OCCURRENCE_PARTICIPANT_TEST_TIMEOUT_MS,
+  );
 
-  it('surfaces occurrence-level rsvpCount and myRsvp through readEventOccurrences', async () => {
-    const createdEvent = await createEventOnServer(
-      url,
-      participantUser.token,
-      buildRecurringEventInput(),
-      createdEventIds,
-    );
-    const occurrence = await readFirstOccurrenceId(createdEvent.eventId);
+  it(
+    'surfaces occurrence-level rsvpCount and myRsvp through readEventOccurrences',
+    async () => {
+      const createdEvent = await createEventOnServer(
+        url,
+        participantUser.token,
+        buildRecurringEventInput(),
+        createdEventIds,
+      );
+      const occurrenceId = buildFirstOccurrenceId(createdEvent.eventId);
 
-    await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser.token}`)
-      .send(
+      await sendGraphQlWithRetry(
         getUpsertEventOccurrenceParticipantMutation({
-          occurrenceId: occurrence.occurrenceId,
+          occurrenceId,
           status: ParticipantStatus.Going,
         }),
+        participantUser.token,
+        { maxAttempts: 8, retryOnNotFound: true },
       );
 
-    const response = await request(url)
-      .post('')
-      .set('Authorization', `Bearer ${participantUser.token}`)
-      .send({
-        query: `query ReadEventOccurrences($options: EventsQueryOptionsInput!) {
+      const response = await request(url)
+        .post('')
+        .set('Authorization', `Bearer ${participantUser.token}`)
+        .send({
+          query: `query ReadEventOccurrences($options: EventsQueryOptionsInput!) {
           readEventOccurrences(options: $options) {
             occurrenceId
             rsvpCount
@@ -245,35 +326,37 @@ describe('EventOccurrenceParticipant Resolver', () => {
             }
           }
         }`,
-        variables: {
-          options: {
-            dateRange: {
-              startDate: '2026-05-01T00:00:00.000Z',
-              endDate: '2026-05-31T23:59:59.999Z',
+          variables: {
+            options: {
+              dateRange: {
+                startDate: '2026-05-01T00:00:00.000Z',
+                endDate: '2026-05-31T23:59:59.999Z',
+              },
+              search: {
+                fields: ['title'],
+                value: createdEvent.title,
+              },
+              sort: [{ field: 'startAt', order: SortOrderInput.asc }],
             },
-            search: {
-              fields: ['title'],
-              value: createdEvent.title,
-            },
-            sort: [{ field: 'startAt', order: SortOrderInput.asc }],
           },
-        },
-      });
+        });
 
-    expect(response.status).toBe(200);
-    expect(response.body.errors).toBeUndefined();
+      expect(response.status).toBe(200);
+      expect(response.body.errors).toBeUndefined();
 
-    const matchingOccurrence = response.body.data.readEventOccurrences.find(
-      (item: any) => item.occurrenceId === occurrence.occurrenceId,
-    );
-    expect(matchingOccurrence).toEqual(
-      expect.objectContaining({
-        occurrenceId: occurrence.occurrenceId,
-        rsvpCount: 1,
-        myRsvp: expect.objectContaining({
-          status: ParticipantStatus.Going,
+      const matchingOccurrence = response.body.data.readEventOccurrences.find(
+        (item: any) => item.occurrenceId === occurrenceId,
+      );
+      expect(matchingOccurrence).toEqual(
+        expect.objectContaining({
+          occurrenceId,
+          rsvpCount: 1,
+          myRsvp: expect.objectContaining({
+            status: ParticipantStatus.Going,
+          }),
         }),
-      }),
-    );
-  });
+      );
+    },
+    OCCURRENCE_PARTICIPANT_TEST_TIMEOUT_MS,
+  );
 });

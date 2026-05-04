@@ -5,7 +5,26 @@ config({ path: resolve(__dirname, '../../.env') });
 
 const graphQlUrl = process.env.GRAPHQL_URL ?? '';
 const isRemoteGraphQlTarget = Boolean(graphQlUrl) && !/localhost|127\.0\.0\.1/i.test(graphQlUrl);
-const DEFAULT_API_E2E_MAX_WORKERS = isRemoteGraphQlTarget ? 1 : 4;
+const DEFAULT_REMOTE_API_E2E_MAX_WORKERS = 2;
+const DEFAULT_LOCAL_API_E2E_MAX_WORKERS = 4;
+
+const parsePositiveInteger = (value?: string): number | null => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const readWorkerEnvOverride = (): number | null => {
+  return (
+    parsePositiveInteger(process.env.API_E2E_MAX_WORKERS) ??
+    parsePositiveInteger(
+      isRemoteGraphQlTarget ? process.env.API_E2E_REMOTE_MAX_WORKERS : process.env.API_E2E_LOCAL_MAX_WORKERS,
+    )
+  );
+};
+
+const DEFAULT_API_E2E_MAX_WORKERS = isRemoteGraphQlTarget
+  ? DEFAULT_REMOTE_API_E2E_MAX_WORKERS
+  : DEFAULT_LOCAL_API_E2E_MAX_WORKERS;
 
 const parseCliWorkerOverride = (): number | null => {
   const args = process.argv;
@@ -34,5 +53,6 @@ const parseCliWorkerOverride = (): number | null => {
   return null;
 };
 
-export const API_E2E_MAX_WORKERS = parseCliWorkerOverride() ?? DEFAULT_API_E2E_MAX_WORKERS;
-export const API_E2E_REMOTE_WARMUP_REQUESTS = API_E2E_MAX_WORKERS;
+export const API_E2E_MAX_WORKERS = parseCliWorkerOverride() ?? readWorkerEnvOverride() ?? DEFAULT_API_E2E_MAX_WORKERS;
+export const API_E2E_REMOTE_WARMUP_REQUESTS =
+  parsePositiveInteger(process.env.API_E2E_WARMUP_REQUESTS) ?? API_E2E_MAX_WORKERS;

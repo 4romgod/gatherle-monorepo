@@ -356,6 +356,15 @@ class EventOccurrenceParticipantDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    try {
+      await EventOccurrenceParticipantModel.deleteMany({ userId }).exec();
+    } catch (error) {
+      logDaoError('Error deleting occurrence participants by userId', { error, userId });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default EventOccurrenceParticipantDAO;

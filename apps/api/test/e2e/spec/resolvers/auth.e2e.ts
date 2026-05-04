@@ -8,6 +8,7 @@ import {
 } from '@/test/utils';
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
+import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 import {
   buildCreateUserInput,
   cleanupUsersById,
@@ -32,7 +33,11 @@ describe('Auth Resolver', () => {
 
   afterEach(async () => {
     await cleanupUsersById(url, adminToken, createdUserIds);
-    createdUserIds.length = 0;
+  });
+
+  afterAll(async () => {
+    const failures = await cleanupUsersById(url, adminToken, createdUserIds, 'afterAll');
+    assertNoCleanupFailures(failures);
   });
 
   describe('requestEmailVerification', () => {

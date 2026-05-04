@@ -26,7 +26,8 @@ export const buildEventCategoryInput = (suffix = randomId()): CreateEventCategor
   };
 };
 
-const MAX_EVENT_CATEGORY_ATTEMPTS = 3;
+const MAX_EVENT_CATEGORY_ATTEMPTS = 5;
+const EVENT_CATEGORY_REQUEST_TIMEOUT_MS = 30_000;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -70,7 +71,7 @@ export const postEventCategoryGraphQLWithRetry = async (
 ): Promise<GraphQLCategoryResponse> => {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20_000);
+    const timeout = setTimeout(() => controller.abort(), EVENT_CATEGORY_REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {

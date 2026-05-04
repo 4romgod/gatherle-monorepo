@@ -15,6 +15,7 @@ jest.mock('@/mongodb/models', () => ({
     updateOne: jest.fn(),
     updateMany: jest.fn(),
     deleteOne: jest.fn(),
+    deleteMany: jest.fn(),
     countDocuments: jest.fn(),
   },
 }));
@@ -375,6 +376,45 @@ describe('NotificationDAO', () => {
       (NotificationModel.updateOne as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('DB error')));
 
       await expect(NotificationDAO.markPushSent('notif-1')).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('cleanup helpers', () => {
+    it('deletes notifications associated with a user', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ deletedCount: 2 }));
+
+      await NotificationDAO.deleteByUserId('user-1');
+
+      expect(NotificationModel.deleteMany).toHaveBeenCalledWith({
+        $or: [{ recipientUserId: 'user-1' }, { actorUserId: 'user-1' }],
+      });
+    });
+
+    it('deletes notifications by target reference', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ deletedCount: 3 }));
+
+      await NotificationDAO.deleteByTargetReference(NotificationTargetType.Organization, 'org-slug');
+
+      expect(NotificationModel.deleteMany).toHaveBeenCalledWith({
+        targetType: NotificationTargetType.Organization,
+        targetId: 'org-slug',
+      });
+    });
+
+    it('returns early when deleting notifications by occurrence IDs with an empty list', async () => {
+      await NotificationDAO.deleteByOccurrenceIds([]);
+
+      expect(NotificationModel.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('deletes notifications by occurrence IDs when IDs are provided', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ deletedCount: 2 }));
+
+      await NotificationDAO.deleteByOccurrenceIds(['occ-1', 'occ-2']);
+
+      expect(NotificationModel.deleteMany).toHaveBeenCalledWith({
+        occurrenceId: { $in: ['occ-1', 'occ-2'] },
+      });
     });
   });
 });

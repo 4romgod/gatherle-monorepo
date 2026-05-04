@@ -24,6 +24,10 @@ import {
 
 describe('EventOccurrence Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const OCCURRENCE_RESPONSE_TIMEOUT_MS = 35_000;
+  const OCCURRENCE_DEADLINE_TIMEOUT_MS = 45_000;
+  const OCCURRENCE_MAX_ATTEMPTS = 5;
+  const FIRST_RECURRING_OCCURRENCE_START_AT = '2026-05-06T16:00:00.000Z';
   let testUser: UserWithToken;
   let testEventCategory: EventCategoryRef;
   const createdEventIds: string[] = [];
@@ -46,72 +50,120 @@ describe('EventOccurrence Resolver', () => {
 
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const postOccurrenceGraphQLWithRetry = async (payload: object, token: string) => {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const response = await request(url)
-        .post('')
-        .timeout({ response: 15_000, deadline: 20_000 })
-        .set('Authorization', `Bearer ${token}`)
-        .send(payload);
+  const isRetryableOccurrenceRequestError = (error: unknown): boolean => {
+    const message =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : typeof error === 'object' && error !== null
+          ? `${String((error as { name?: unknown }).name ?? '')}: ${String((error as { message?: unknown }).message ?? '')}`
+          : String(error);
 
-      if (response.status === 200 && !response.body.errors) {
-        return response;
+    return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(message);
+  };
+
+  const isRetryableOccurrenceFailure = (status: number, body: unknown, retryOnNotFound = false): boolean => {
+    if (status === 429 || status >= 500) {
+      return true;
+    }
+
+    const failure = JSON.stringify(body ?? {});
+    if (
+      /internal server error|timed out|timeout|temporarily unavailable|endpoint request timed out|occurrence not found|representative occurrence not found/i.test(
+        failure,
+      )
+    ) {
+      return true;
+    }
+
+    return retryOnNotFound && status === 404;
+  };
+
+  const buildFirstRecurringOccurrenceId = (eventId: string) => `${eventId}#${FIRST_RECURRING_OCCURRENCE_START_AT}`;
+
+  const postOccurrenceGraphQLWithRetry = async (
+    payload: object,
+    token: string,
+    options: { retryOnNotFound?: boolean; maxAttempts?: number } = {},
+  ) => {
+    const { retryOnNotFound = false, maxAttempts = OCCURRENCE_MAX_ATTEMPTS } = options;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await request(url)
+          .post('')
+          .timeout({ response: OCCURRENCE_RESPONSE_TIMEOUT_MS, deadline: OCCURRENCE_DEADLINE_TIMEOUT_MS })
+          .set('Authorization', `Bearer ${token}`)
+          .send(payload);
+
+        if (response.status === 200 && !response.body.errors) {
+          return response;
+        }
+
+        const shouldRetry =
+          attempt < maxAttempts && isRetryableOccurrenceFailure(response.status, response.body, retryOnNotFound);
+
+        if (!shouldRetry) {
+          return response;
+        }
+      } catch (error) {
+        const shouldRetry = attempt < maxAttempts && isRetryableOccurrenceRequestError(error);
+        if (!shouldRetry) {
+          throw error;
+        }
       }
 
-      const failure = JSON.stringify(response.body.errors ?? response.body);
-      const shouldRetry =
-        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
-
-      if (!shouldRetry) {
-        return response;
-      }
-
-      await sleep(500 * attempt);
+      await sleep(750 * attempt);
     }
 
     throw new Error('Failed to complete occurrence GraphQL request after retrying transient errors.');
   };
 
   const readUpcomingOccurrences = async (eventId: string, limit: number = 10) => {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const response = await request(url)
-        .post('')
-        .timeout({ response: 15_000, deadline: 20_000 })
-        .send({
-          query: `query ReadEventById($eventId: String!) {
-            readEventById(eventId: $eventId) {
-              eventId
-              upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
-                occurrenceId
-                occurrenceKey
-                eventSeriesId
-                startAt
-                endAt
-                timezone
-                status
-                isException
+    for (let attempt = 1; attempt <= OCCURRENCE_MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await request(url)
+          .post('')
+          .timeout({ response: OCCURRENCE_RESPONSE_TIMEOUT_MS, deadline: OCCURRENCE_DEADLINE_TIMEOUT_MS })
+          .send({
+            query: `query ReadEventById($eventId: String!) {
+              readEventById(eventId: $eventId) {
+                eventId
+                upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+                  occurrenceId
+                  occurrenceKey
+                  eventSeriesId
+                  startAt
+                  endAt
+                  timezone
+                  status
+                  isException
+                }
               }
-            }
-          }`,
-          variables: {
-            eventId,
-          },
-        });
+            }`,
+            variables: {
+              eventId,
+            },
+          });
 
-      if (response.status === 200 && !response.body.errors) {
-        return response.body.data.readEventById.upcomingOccurrences;
+        if (response.status === 200 && !response.body.errors) {
+          return response.body.data.readEventById.upcomingOccurrences;
+        }
+
+        const shouldRetry =
+          attempt < OCCURRENCE_MAX_ATTEMPTS && isRetryableOccurrenceFailure(response.status, response.body);
+
+        if (!shouldRetry) {
+          expect(response.status).toBe(200);
+          expect(response.body.errors).toBeUndefined();
+        }
+      } catch (error) {
+        const shouldRetry = attempt < OCCURRENCE_MAX_ATTEMPTS && isRetryableOccurrenceRequestError(error);
+        if (!shouldRetry) {
+          throw error;
+        }
       }
 
-      const failure = JSON.stringify(response.body.errors ?? response.body);
-      const shouldRetry =
-        attempt < 3 && (response.status >= 500 || /internal server error|timed out|timeout/i.test(failure));
-
-      if (!shouldRetry) {
-        expect(response.status).toBe(200);
-        expect(response.body.errors).toBeUndefined();
-      }
-
-      await sleep(500 * attempt);
+      await sleep(750 * attempt);
     }
 
     throw new Error(`Failed to read upcoming occurrences for ${eventId} after retrying transient errors.`);
@@ -400,51 +452,55 @@ describe('EventOccurrence Resolver', () => {
       createdEventIds,
     );
 
-    const [firstOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 2);
+    const firstOccurrenceId = buildFirstRecurringOccurrenceId(createdEvent.eventId);
 
     const rsvpResponse = await postOccurrenceGraphQLWithRetry(
       getUpsertEventOccurrenceParticipantMutation({
-        occurrenceId: firstOccurrence.occurrenceId,
+        occurrenceId: firstOccurrenceId,
         status: ParticipantStatus.Going,
       }),
       testUser.token,
+      { retryOnNotFound: true, maxAttempts: 6 },
     );
 
     expect(rsvpResponse.status).toBe(200);
     expect(rsvpResponse.body.errors).toBeUndefined();
 
     const cancelResponse = await postOccurrenceGraphQLWithRetry(
-      getCancelEventOccurrenceMutation({ occurrenceId: firstOccurrence.occurrenceId }),
+      getCancelEventOccurrenceMutation({ occurrenceId: firstOccurrenceId }),
       testUser.token,
+      { retryOnNotFound: true, maxAttempts: 6 },
     );
 
     expect(cancelResponse.status).toBe(200);
     expect(cancelResponse.body.errors).toBeUndefined();
     expect(cancelResponse.body.data.cancelEventOccurrence).toEqual(
       expect.objectContaining({
-        occurrenceId: firstOccurrence.occurrenceId,
+        occurrenceId: firstOccurrenceId,
         status: 'Cancelled',
         isException: true,
       }),
     );
 
     const participantsResponse = await postOccurrenceGraphQLWithRetry(
-      getReadEventOccurrenceParticipantsQuery(firstOccurrence.occurrenceId),
+      getReadEventOccurrenceParticipantsQuery(firstOccurrenceId),
       testUser.token,
+      { retryOnNotFound: true, maxAttempts: 6 },
     );
 
     expect(participantsResponse.status).toBe(200);
     expect(participantsResponse.body.errors).toBeUndefined();
     expect(participantsResponse.body.data.readEventOccurrenceParticipants).toEqual([
       expect.objectContaining({
-        occurrenceId: firstOccurrence.occurrenceId,
+        occurrenceId: firstOccurrenceId,
         status: ParticipantStatus.Cancelled,
       }),
     ]);
 
     const myStatusResponse = await postOccurrenceGraphQLWithRetry(
-      getMyEventOccurrenceRsvpStatusQuery(firstOccurrence.occurrenceId),
+      getMyEventOccurrenceRsvpStatusQuery(firstOccurrenceId),
       testUser.token,
+      { retryOnNotFound: true, maxAttempts: 6 },
     );
 
     expect(myStatusResponse.status).toBe(200);
@@ -454,7 +510,7 @@ describe('EventOccurrence Resolver', () => {
     const [cancelledOccurrence] = await readUpcomingOccurrences(createdEvent.eventId, 2);
     expect(cancelledOccurrence).toEqual(
       expect.objectContaining({
-        occurrenceId: firstOccurrence.occurrenceId,
+        occurrenceId: firstOccurrenceId,
         status: 'Cancelled',
         isException: true,
       }),

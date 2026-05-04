@@ -11,7 +11,6 @@ import {
   getReadEventBySlugQuery,
   getUpdateEventMutation,
   getDeleteOrganizationByIdMutation,
-  getDeleteOrganizationMembershipMutation,
 } from '@/test/utils';
 import {
   getSeededTestUsers,
@@ -39,7 +38,6 @@ describe('EventSeries Resolver', () => {
   const testEventDescription = 'Test EventSeries Description';
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
-  const createdMembershipIds: string[] = [];
   const randomId = () => Math.random().toString(36).slice(2, 7);
   const uniqueSuffix = () => `${Date.now()}-${randomId()}`;
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -65,7 +63,7 @@ describe('EventSeries Resolver', () => {
     createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
 
   const createMembership = (orgId: string, userId: string, role: OrganizationRole) =>
-    createMembershipOnServer(url, adminUser.token, orgId, userId, role, createdMembershipIds);
+    createMembershipOnServer(url, adminUser.token, orgId, userId, role, []);
 
   const updateMembershipRole = (membershipId: string, role: OrganizationRole) =>
     updateMembershipRoleOnServer(url, adminUser.token, membershipId, role);
@@ -139,13 +137,6 @@ describe('EventSeries Resolver', () => {
     });
     await cleanupTrackedEntities({
       url,
-      ids: createdMembershipIds,
-      deleteRequest: (id) => getDeleteOrganizationMembershipMutation({ membershipId: id }),
-      token: () => adminUser.token,
-      label: 'membership',
-    });
-    await cleanupTrackedEntities({
-      url,
       ids: createdOrgIds,
       deleteRequest: getDeleteOrganizationByIdMutation,
       token: () => adminUser.token,
@@ -161,14 +152,6 @@ describe('EventSeries Resolver', () => {
         deleteRequest: getDeleteEventByIdMutation,
         token: () => testUser.token,
         label: 'event',
-        phase: 'afterAll',
-      })),
-      ...(await cleanupTrackedEntities({
-        url,
-        ids: createdMembershipIds,
-        deleteRequest: (id) => getDeleteOrganizationMembershipMutation({ membershipId: id }),
-        token: () => adminUser.token,
-        label: 'membership',
         phase: 'afterAll',
       })),
       ...(await cleanupTrackedEntities({
@@ -223,19 +206,18 @@ describe('EventSeries Resolver', () => {
             startAt: new Date('2026-05-06T16:00:00.000Z'),
             endAt: new Date('2026-05-06T19:00:00.000Z'),
             timezone: 'Africa/Johannesburg',
-            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
           },
         });
 
-        const sourceBeforeSplit = await readUpcomingOccurrences(createdEvent.eventId, 10);
-        const pivotOccurrence = sourceBeforeSplit.upcomingOccurrences[2];
+        const pivotOccurrenceId = `${createdEvent.eventId}#2026-05-13T16:00:00.000Z`;
 
         const splitResponse = await request(url)
           .post('')
           .set('Authorization', 'Bearer ' + testUser.token)
           .send(
             getSplitEventSeriesAtOccurrenceMutation({
-              occurrenceId: pivotOccurrence.occurrenceId,
+              occurrenceId: pivotOccurrenceId,
               title: successorTitle,
             }),
           );
@@ -253,32 +235,30 @@ describe('EventSeries Resolver', () => {
           }),
         );
 
-        const sourceAfterSplit = await readUpcomingOccurrences(createdEvent.eventId, 10);
+        const [sourceAfterSplit, successorAfterSplit] = await Promise.all([
+          readUpcomingOccurrences(createdEvent.eventId, 2),
+          readUpcomingOccurrences(successorEvent.eventId, 2),
+        ]);
         expect(sourceAfterSplit.splitIntoEventSeriesId).toBe(successorEvent.eventId);
         expect(sourceAfterSplit.upcomingOccurrences).toEqual([
           expect.objectContaining({
             eventSeriesId: createdEvent.eventId,
             startAt: '2026-05-06T16:00:00.000Z',
           }),
-          expect.objectContaining({
-            eventSeriesId: createdEvent.eventId,
-            startAt: '2026-05-13T16:00:00.000Z',
-          }),
         ]);
 
-        const successorAfterSplit = await readUpcomingOccurrences(successorEvent.eventId, 10);
         expect(successorAfterSplit.splitFromEventSeriesId).toBe(createdEvent.eventId);
         expect(successorAfterSplit.upcomingOccurrences).toEqual([
           expect.objectContaining({
             eventSeriesId: successorEvent.eventId,
-            startAt: '2026-05-20T16:00:00.000Z',
+            startAt: '2026-05-13T16:00:00.000Z',
           }),
           expect.objectContaining({
             eventSeriesId: successorEvent.eventId,
-            startAt: '2026-05-27T16:00:00.000Z',
+            startAt: '2026-05-20T16:00:00.000Z',
           }),
         ]);
-      });
+      }, 90_000);
     });
 
     describe('deleteEvent Mutations', () => {
