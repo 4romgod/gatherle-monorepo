@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/mockData';
-import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
+import { usersMockData } from '@/mongodb/mockData';
+import type { CreateEventInput, CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
 import {
   getDeleteEventByIdMutation,
@@ -15,11 +16,20 @@ import {
   cleanupTrackedEntities,
   assertNoCleanupFailures,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  buildCreateUserInput,
+  cleanupUsersById,
+  createUserOnServer,
+  uniqueSuffix,
+} from '@/test/e2e/utils/userResolverHelpers';
 
 describe('readTrendingEvents e2e', () => {
   const url = process.env.GRAPHQL_URL!;
+  const TRENDING_HOOK_TIMEOUT_MS = 180_000;
+  let adminUser: UserWithToken;
   let actorUser: UserWithToken;
   const createdEventIds: string[] = [];
+  const createdUserIds: string[] = [];
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
   const upsertParticipantWithRetry = async (eventId: string) => {
@@ -50,11 +60,17 @@ describe('readTrendingEvents e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [user, category] = await Promise.all([
-      loginSeededUser(url, seededUsers.user.email, seededUsers.user.password),
+    const [seededAdmin, createdActorUser, category] = await Promise.all([
+      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
+      createUserOnServer(
+        url,
+        buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'trending-actor-password', uniqueSuffix()),
+        createdUserIds,
+      ),
       readFirstEventCategory(url),
     ]);
-    actorUser = user;
+    adminUser = seededAdmin;
+    actorUser = createdActorUser;
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
 
     // Create a Published, Public, Upcoming event to ensure at least one result
@@ -71,19 +87,24 @@ describe('readTrendingEvents e2e', () => {
     };
 
     await createEventOnServer(url, actorUser.token, eventInput, createdEventIds);
-  });
+  }, TRENDING_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
-    const failures = await cleanupTrackedEntities({
-      url,
-      ids: createdEventIds,
-      deleteRequest: getDeleteEventByIdMutation,
-      token: () => actorUser.token,
-      label: 'event',
-      phase: 'afterAll',
-    });
+    const failures = [
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdEventIds,
+        deleteRequest: getDeleteEventByIdMutation,
+        token: () => actorUser.token,
+        label: 'event',
+        phase: 'afterAll',
+      })),
+      ...(adminUser?.token && createdUserIds.length > 0
+        ? await cleanupUsersById(url, adminUser.token, createdUserIds, 'afterAll')
+        : []),
+    ];
     assertNoCleanupFailures(failures);
-  });
+  }, TRENDING_HOOK_TIMEOUT_MS);
 
   it('returns 200 with an array for an unauthenticated request (public query)', async () => {
     const response = await request(url).post('').send(getReadTrendingEventsQuery());
@@ -228,13 +249,19 @@ describe('readTrendingEvents e2e', () => {
 
 describe('cold-start feed fallback e2e', () => {
   const url = process.env.GRAPHQL_URL!;
+  let adminUser: UserWithToken;
   let freshUser: UserWithToken;
   const createdEventIds: string[] = [];
+  const createdUserIds: string[] = [];
 
   beforeAll(async () => {
-    // Use a different seeded user to simulate a fresh account with no social signals
     const seededUsers = getSeededTestUsers();
-    freshUser = await loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password);
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    freshUser = await createUserOnServer(
+      url,
+      buildCreateUserInput(usersMockData.at(1)! as CreateUserInput, 'cold-start-password', uniqueSuffix()),
+      createdUserIds,
+    );
 
     const category = await readFirstEventCategory(url);
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
@@ -256,14 +283,19 @@ describe('cold-start feed fallback e2e', () => {
   });
 
   afterAll(async () => {
-    const failures = await cleanupTrackedEntities({
-      url,
-      ids: createdEventIds,
-      deleteRequest: getDeleteEventByIdMutation,
-      token: () => freshUser.token,
-      label: 'cold-start event',
-      phase: 'afterAll',
-    });
+    const failures = [
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdEventIds,
+        deleteRequest: getDeleteEventByIdMutation,
+        token: () => freshUser.token,
+        label: 'cold-start event',
+        phase: 'afterAll',
+      })),
+      ...(adminUser?.token && createdUserIds.length > 0
+        ? await cleanupUsersById(url, adminUser.token, createdUserIds, 'afterAll')
+        : []),
+    ];
     assertNoCleanupFailures(failures);
   });
 

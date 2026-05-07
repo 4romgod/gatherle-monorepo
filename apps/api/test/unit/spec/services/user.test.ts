@@ -64,6 +64,11 @@ jest.mock('@/constants', () => ({
 
 jest.mock('@/mongodb/dao', () => ({
   UserDAO: {
+    readUserByEmail: jest.fn(),
+    readUserByUsername: jest.fn(),
+    deleteUserById: jest.fn(),
+    deleteUserByEmail: jest.fn(),
+    deleteUserByUsername: jest.fn(),
     blockUser: jest.fn(),
     unblockUser: jest.fn(),
     muteUser: jest.fn(),
@@ -73,6 +78,28 @@ jest.mock('@/mongodb/dao', () => ({
   },
   FollowDAO: {
     remove: jest.fn(),
+    deleteByUserId: jest.fn(),
+  },
+  OrganizationMembershipDAO: {
+    deleteByUserId: jest.fn(),
+  },
+  ActivityDAO: {
+    deleteByUserId: jest.fn(),
+  },
+  NotificationDAO: {
+    deleteByUserId: jest.fn(),
+  },
+  UserFeedDAO: {
+    clearFeedForUser: jest.fn(),
+  },
+  EventOccurrenceParticipantDAO: {
+    deleteByUserId: jest.fn(),
+  },
+  EmailVerificationTokenDAO: {
+    deleteByUserId: jest.fn(),
+  },
+  PasswordResetTokenDAO: {
+    deleteByUserId: jest.fn(),
   },
 }));
 
@@ -86,7 +113,18 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import { UserService } from '@/services';
-import { UserDAO, FollowDAO } from '@/mongodb/dao';
+import {
+  ActivityDAO,
+  EmailVerificationTokenDAO,
+  EventOccurrenceParticipantDAO,
+  FollowDAO,
+  NotificationDAO,
+  OrganizationMembershipDAO,
+  PasswordResetTokenDAO,
+  UserDAO,
+  UserFeedDAO,
+} from '@/mongodb/dao';
+import { logger } from '@/utils/logger';
 import type { User } from '@gatherle/commons/types';
 import { FollowTargetType } from '@gatherle/commons/types';
 
@@ -237,6 +275,64 @@ describe('UserService', () => {
 
       expect(UserDAO.unmuteOrganization).toHaveBeenCalledWith('user-1', 'org-1');
       expect(result.mutedOrgIds).not.toContain('org-1');
+    });
+  });
+
+  describe('delete', () => {
+    it('deletes a user by id and cascades related cleanup', async () => {
+      (UserDAO.deleteUserById as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await UserService.deleteById('user-1');
+
+      expect(UserDAO.deleteUserById).toHaveBeenCalledWith('user-1');
+      expect(FollowDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(OrganizationMembershipDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(ActivityDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(NotificationDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(UserFeedDAO.clearFeedForUser).toHaveBeenCalledWith('user-1');
+      expect(EventOccurrenceParticipantDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(EmailVerificationTokenDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(PasswordResetTokenDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('deletes a user by email through the userId cleanup path', async () => {
+      (UserDAO.deleteUserByEmail as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await UserService.deleteByEmail('test@example.com');
+
+      expect(UserDAO.deleteUserByEmail).toHaveBeenCalledWith('test@example.com');
+      expect(FollowDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('deletes a user by username through the userId cleanup path', async () => {
+      (UserDAO.deleteUserByUsername as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await UserService.deleteByUsername('testuser');
+
+      expect(UserDAO.deleteUserByUsername).toHaveBeenCalledWith('testuser');
+      expect(FollowDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('returns the deleted user even when a cleanup step fails', async () => {
+      (UserDAO.deleteUserById as jest.Mock).mockResolvedValue(mockUser);
+      (FollowDAO.deleteByUserId as jest.Mock).mockRejectedValue(new Error('cleanup failed'));
+
+      const result = await UserService.deleteById('user-1');
+
+      expect(UserDAO.deleteUserById).toHaveBeenCalledWith('user-1');
+      expect(OrganizationMembershipDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(logger.error).toHaveBeenCalledWith(
+        '[UserService.cleanupDeletedUserData] Best-effort cleanup step failed',
+        expect.objectContaining({
+          userId: 'user-1',
+          cleanupStep: 'follow relationships',
+          error: expect.any(Error),
+        }),
+      );
+      expect(result).toEqual(mockUser);
     });
   });
 });

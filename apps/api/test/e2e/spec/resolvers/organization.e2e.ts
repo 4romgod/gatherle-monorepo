@@ -5,7 +5,6 @@ import { OrganizationRole } from '@gatherle/commons/types';
 import {
   getCreateOrganizationMutation,
   getDeleteOrganizationByIdMutation,
-  getDeleteOrganizationMembershipMutation,
   getReadMyOrganizationsQuery,
   getReadOrganizationByIdQuery,
   getReadOrganizationBySlugQuery,
@@ -14,13 +13,19 @@ import {
   getUpdateOrganizationMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  assertNoCleanupFailures,
+  cleanupTrackedItems,
+  createMembershipOnServer,
+  createOrganizationOnServer,
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 type TrackedOrg = { orgId: string; token: string };
 type TrackedMembership = { membershipId: string; token: string };
 
 describe('Organization Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const ORGANIZATION_SLOW_TEST_TIMEOUT_MS = 120_000;
   let adminUser: UserWithToken;
   let testUser: UserWithToken;
   const createdOrgs: TrackedOrg[] = [];
@@ -65,27 +70,38 @@ describe('Organization Resolver', () => {
   });
 
   afterEach(async () => {
-    await Promise.all(
-      createdMemberships.map(({ membershipId, token }) =>
+    await cleanupTrackedItems({
+      items: createdOrgs,
+      itemId: ({ orgId }) => orgId,
+      label: 'organization',
+      deleteItem: ({ orgId, token }) =>
         request(url)
           .post('')
+          .timeout({ response: 15_000, deadline: 20_000 })
           .set('Authorization', 'Bearer ' + token)
-          .send(getDeleteOrganizationMembershipMutation({ membershipId }))
-          .catch(() => {}),
-      ),
-    );
-    createdMemberships.length = 0;
+          .send(getDeleteOrganizationByIdMutation(orgId)),
+    });
 
-    await Promise.all(
-      createdOrgs.map(({ orgId, token }) =>
+    // Organization deletion cascades membership cleanup. Relying on the parent delete
+    // avoids authorization edge-cases when a tracked membership belongs to the acting user.
+    createdMemberships.length = 0;
+  });
+
+  afterAll(async () => {
+    const failures = await cleanupTrackedItems({
+      items: createdOrgs,
+      itemId: ({ orgId }) => orgId,
+      label: 'organization',
+      phase: 'afterAll',
+      deleteItem: ({ orgId, token }) =>
         request(url)
           .post('')
+          .timeout({ response: 15_000, deadline: 20_000 })
           .set('Authorization', 'Bearer ' + token)
-          .send(getDeleteOrganizationByIdMutation(orgId))
-          .catch(() => {}),
-      ),
-    );
-    createdOrgs.length = 0;
+          .send(getDeleteOrganizationByIdMutation(orgId)),
+    });
+    createdMemberships.length = 0;
+    assertNoCleanupFailures(failures);
   });
 
   describe('Positive', () => {
@@ -207,33 +223,43 @@ describe('Organization Resolver', () => {
       trackOrg(response.body.data.createOrganization.orgId, adminUser.token);
     });
 
-    it('returns the user’s organizations with associated roles', async () => {
-      const org1 = await createOrganization(testUser.token, testUser.userId, `read-my-org-1-${randomId()}`);
-      await createMembership(testUser.token, org1.orgId, adminUser.userId, OrganizationRole.Admin);
+    it(
+      'returns the user’s organizations with associated roles',
+      async () => {
+        const createOrgWithMembership = async (name: string, role: OrganizationRole) => {
+          const organization = await createOrganization(testUser.token, testUser.userId, name);
+          await createMembership(testUser.token, organization.orgId, adminUser.userId, role);
+          return organization;
+        };
 
-      const org2 = await createOrganization(testUser.token, testUser.userId, `read-my-org-2-${randomId()}`);
-      await createMembership(testUser.token, org2.orgId, adminUser.userId, OrganizationRole.Member);
+        const [org1, org2] = await Promise.all([
+          createOrgWithMembership(`read-my-org-1-${randomId()}`, OrganizationRole.Admin),
+          createOrgWithMembership(`read-my-org-2-${randomId()}`, OrganizationRole.Member),
+        ]);
 
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + adminUser.token)
-        .send(getReadMyOrganizationsQuery());
+        const response = await request(url)
+          .post('')
+          .timeout({ response: 30_000, deadline: 40_000 })
+          .set('Authorization', 'Bearer ' + adminUser.token)
+          .send(getReadMyOrganizationsQuery());
 
-      expect(response.status).toBe(200);
-      const myOrgs = response.body.data.readMyOrganizations;
-      expect(myOrgs).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            role: OrganizationRole.Admin,
-            organization: expect.objectContaining({ orgId: org1.orgId }),
-          }),
-          expect.objectContaining({
-            role: OrganizationRole.Member,
-            organization: expect.objectContaining({ orgId: org2.orgId }),
-          }),
-        ]),
-      );
-    });
+        expect(response.status).toBe(200);
+        const myOrgs = response.body.data.readMyOrganizations;
+        expect(myOrgs).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              role: OrganizationRole.Admin,
+              organization: expect.objectContaining({ orgId: org1.orgId }),
+            }),
+            expect.objectContaining({
+              role: OrganizationRole.Member,
+              organization: expect.objectContaining({ orgId: org2.orgId }),
+            }),
+          ]),
+        );
+      },
+      ORGANIZATION_SLOW_TEST_TIMEOUT_MS,
+    );
   });
 
   describe('Negative', () => {

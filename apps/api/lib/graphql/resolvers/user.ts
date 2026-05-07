@@ -70,21 +70,21 @@ export class UserResolver {
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserById })
   async deleteUserById(@Arg('userId', () => String) userId: string): Promise<User> {
     validateMongodbId(userId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId));
-    return UserDAO.deleteUserById(userId);
+    return UserService.deleteById(userId);
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserByEmail })
   async deleteUserByEmail(@Arg('email', () => String) email: string): Promise<User> {
     validateEmail(email);
-    return UserDAO.deleteUserByEmail(email);
+    return UserService.deleteByEmail(email);
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserByUsername })
   async deleteUserByUsername(@Arg('username', () => String) username: string): Promise<User> {
     validateUsername(username);
-    return UserDAO.deleteUserByUsername(username);
+    return UserService.deleteByUsername(username);
   }
 
   @Query(() => User, { description: RESOLVER_DESCRIPTIONS.USER.readUserById })

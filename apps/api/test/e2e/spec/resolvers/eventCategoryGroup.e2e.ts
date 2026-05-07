@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { eventCategoryMockData } from '@/mongodb/mockData';
 import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
@@ -15,9 +16,11 @@ import {
   type EventCategoryRef,
   uniqueGroupName,
 } from '@/test/e2e/utils/eventCategoryGroupResolverHelpers';
+import { assertNoCleanupFailures, cleanupTrackedEntities } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 
 describe('EventCategoryGroup Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const STABLE_CATEGORY_NAMES = eventCategoryMockData.slice(0, 6).map((category) => category.name);
   let adminUser: UserWithToken;
   let categories: EventCategoryRef[] = [];
   const createdGroupSlugs: string[] = [];
@@ -37,20 +40,38 @@ describe('EventCategoryGroup Resolver', () => {
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
 
-    categories = await readSeededEventCategories(url);
+    const categoriesByName = new Map(
+      (await readSeededEventCategories(url)).map((category) => [category.name, category]),
+    );
+    categories = STABLE_CATEGORY_NAMES.map((name) => categoriesByName.get(name)).filter(
+      (category): category is EventCategoryRef => Boolean(category),
+    );
+
+    if (categories.length !== STABLE_CATEGORY_NAMES.length) {
+      throw new Error(`Failed to resolve the stable seeded event categories required for group e2e tests.`);
+    }
   });
 
   afterEach(async () => {
-    await Promise.all(
-      createdGroupSlugs.map((slug) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteEventCategoryGroupBySlugMutation(slug))
-          .catch(() => {}),
-      ),
-    );
-    createdGroupSlugs.length = 0;
+    await cleanupTrackedEntities({
+      url,
+      ids: createdGroupSlugs,
+      deleteRequest: getDeleteEventCategoryGroupBySlugMutation,
+      token: () => adminUser.token,
+      label: 'event category group',
+    });
+  });
+
+  afterAll(async () => {
+    const failures = await cleanupTrackedEntities({
+      url,
+      ids: createdGroupSlugs,
+      deleteRequest: getDeleteEventCategoryGroupBySlugMutation,
+      token: () => adminUser.token,
+      label: 'event category group',
+      phase: 'afterAll',
+    });
+    assertNoCleanupFailures(failures);
   });
 
   describe('Positive', () => {

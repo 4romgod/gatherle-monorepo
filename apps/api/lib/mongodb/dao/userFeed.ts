@@ -79,6 +79,15 @@ class UserFeedDAO {
       throw KnownCommonError(error);
     }
   }
+
+  static async deleteByEventId(eventId: string): Promise<void> {
+    try {
+      await UserFeedModel.deleteMany({ eventId }).exec();
+    } catch (error) {
+      logDaoError('Error deleting user feed items by eventId', { error, eventId });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default UserFeedDAO;

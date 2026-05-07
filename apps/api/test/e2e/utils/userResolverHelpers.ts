@@ -1,11 +1,11 @@
-import request from 'supertest';
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
-import { trackCreatedId } from './eventSeriesResolverHelpers';
+import { cleanupTrackedEntities, trackCreatedId } from './eventSeriesResolverHelpers';
 
 export const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 const MAX_USER_HELPER_ATTEMPTS = 5;
+const GRAPHQL_REQUEST_TIMEOUT_MS = 45_000;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,11 +34,14 @@ const isRetryableFailure = (status: number, body: unknown): boolean => {
 };
 
 const isRetryableRequestError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === 'object' && error !== null
+        ? `${String((error as { name?: unknown }).name ?? '')}: ${String((error as { message?: unknown }).message ?? '')}`
+        : String(error);
 
-  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(error.message);
+  return /(ECONNRESET|ETIMEDOUT|socket hang up|fetch failed|timeout|aborted|AbortError)/i.test(message);
 };
 
 export type GraphQLTestResponse = {
@@ -54,7 +57,7 @@ export const postGraphQLWithRetry = async (
 ): Promise<GraphQLTestResponse> => {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), GRAPHQL_REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
@@ -214,14 +217,12 @@ export const loginUserOnServer = async (url: string, email: string, password: st
   throw new Error(`Failed to login user ${email} after retrying transient errors.`);
 };
 
-export const cleanupUsersById = async (url: string, adminToken: string, userIds: string[]) => {
-  await Promise.all(
-    userIds.map((userId) =>
-      request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + adminToken)
-        .send(getDeleteUserByIdMutation(userId))
-        .catch(() => {}),
-    ),
-  );
-};
+export const cleanupUsersById = async (url: string, adminToken: string, userIds: string[], phase?: string) =>
+  cleanupTrackedEntities({
+    url,
+    ids: userIds,
+    deleteRequest: getDeleteUserByIdMutation,
+    token: adminToken,
+    label: 'user',
+    phase,
+  });

@@ -1,6 +1,7 @@
 import request from 'supertest';
+import { usersMockData } from '@/mongodb/mockData';
 import { Types } from 'mongoose';
-import type { UserWithToken } from '@gatherle/commons/types';
+import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { OrganizationRole } from '@gatherle/commons/types';
 import {
   getCreateOrganizationMembershipMutation,
@@ -11,15 +12,27 @@ import {
   getUpdateOrganizationMembershipMutation,
 } from '@/test/utils';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
-import { createMembershipOnServer, createOrganizationOnServer } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  assertNoCleanupFailures,
+  cleanupTrackedEntities,
+  createMembershipOnServer,
+  createOrganizationOnServer,
+} from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import {
+  buildCreateUserInput,
+  cleanupUsersById,
+  createUserOnServer,
+  uniqueSuffix,
+} from '@/test/e2e/utils/userResolverHelpers';
 
 describe('OrganizationMembership Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const ORGANIZATION_MEMBERSHIP_HOOK_TIMEOUT_MS = 120_000;
   let adminUser: UserWithToken;
-  let testUser2: UserWithToken;
+  let memberUser: UserWithToken;
   const createdMembershipIds: string[] = [];
   const createdOrgIds: string[] = [];
-  const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const createdUserIds: string[] = [];
 
   const createOrganization = (name: string) =>
     createOrganizationOnServer(url, adminUser.token, adminUser.userId, name, createdOrgIds);
@@ -29,41 +42,61 @@ describe('OrganizationMembership Resolver', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    [adminUser, testUser2] = await Promise.all([
-      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
-      loginSeededUser(url, seededUsers.user2.email, seededUsers.user2.password),
-    ]);
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    memberUser = await createUserOnServer(
+      url,
+      buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'membership-test-password', uniqueSuffix()),
+      createdUserIds,
+    );
+  }, ORGANIZATION_MEMBERSHIP_HOOK_TIMEOUT_MS);
+
+  afterEach(async () => {
+    await cleanupTrackedEntities({
+      url,
+      ids: createdMembershipIds,
+      deleteRequest: (membershipId) => getDeleteOrganizationMembershipMutation({ membershipId }),
+      token: () => adminUser.token,
+      label: 'organization membership',
+    });
+
+    await cleanupTrackedEntities({
+      url,
+      ids: createdOrgIds,
+      deleteRequest: getDeleteOrganizationByIdMutation,
+      token: () => adminUser.token,
+      label: 'organization',
+    });
   });
 
   afterAll(async () => {
-    await Promise.all(
-      createdMembershipIds.map((membershipId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteOrganizationMembershipMutation({ membershipId }))
-          .catch(() => {}),
-      ),
-    );
-
-    await Promise.all(
-      createdOrgIds.map((orgId) =>
-        request(url)
-          .post('')
-          .set('Authorization', 'Bearer ' + adminUser.token)
-          .send(getDeleteOrganizationByIdMutation(orgId))
-          .catch(() => {}),
-      ),
-    );
-
-    createdMembershipIds.length = 0;
-    createdOrgIds.length = 0;
-  });
+    const failures = [
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdMembershipIds,
+        deleteRequest: (membershipId) => getDeleteOrganizationMembershipMutation({ membershipId }),
+        token: () => adminUser.token,
+        label: 'organization membership',
+        phase: 'afterAll',
+      })),
+      ...(await cleanupTrackedEntities({
+        url,
+        ids: createdOrgIds,
+        deleteRequest: getDeleteOrganizationByIdMutation,
+        token: () => adminUser.token,
+        label: 'organization',
+        phase: 'afterAll',
+      })),
+      ...(adminUser?.token && createdUserIds.length > 0
+        ? await cleanupUsersById(url, adminUser.token, createdUserIds, 'afterAll')
+        : []),
+    ];
+    assertNoCleanupFailures(failures);
+  }, ORGANIZATION_MEMBERSHIP_HOOK_TIMEOUT_MS);
 
   describe('Positive', () => {
     it('creates a membership successfully', async () => {
       const organization = await createOrganization(`Membership Org ${uniqueSuffix()}`);
-      const membership = await createMembership(organization.orgId, testUser2.userId);
+      const membership = await createMembership(organization.orgId, memberUser.userId);
 
       expect(membership).toHaveProperty('membershipId');
       expect(membership.orgId).toBe(organization.orgId);
@@ -71,7 +104,7 @@ describe('OrganizationMembership Resolver', () => {
 
     it('updates a membership role', async () => {
       const organization = await createOrganization(`Membership Update Org ${uniqueSuffix()}`);
-      const membership = await createMembership(organization.orgId, testUser2.userId);
+      const membership = await createMembership(organization.orgId, memberUser.userId);
 
       const updateResponse = await request(url)
         .post('')
@@ -89,7 +122,7 @@ describe('OrganizationMembership Resolver', () => {
 
     it('reads membership by id and org id', async () => {
       const organization = await createOrganization(`Membership Read Org ${uniqueSuffix()}`);
-      const membership = await createMembership(organization.orgId, testUser2.userId);
+      const membership = await createMembership(organization.orgId, memberUser.userId);
 
       const byIdResponse = await request(url)
         .post('')
@@ -110,7 +143,7 @@ describe('OrganizationMembership Resolver', () => {
 
     it('deletes membership via mutation', async () => {
       const organization = await createOrganization(`Membership Delete Org ${uniqueSuffix()}`);
-      const membership = await createMembership(organization.orgId, testUser2.userId);
+      const membership = await createMembership(organization.orgId, memberUser.userId);
 
       const response = await request(url)
         .post('')
@@ -132,7 +165,7 @@ describe('OrganizationMembership Resolver', () => {
         .send(
           getCreateOrganizationMembershipMutation({
             orgId: organization.orgId,
-            userId: testUser2.userId,
+            userId: memberUser.userId,
             role: OrganizationRole.Member,
           }),
         );

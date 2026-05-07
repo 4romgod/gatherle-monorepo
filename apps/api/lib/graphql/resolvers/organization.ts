@@ -17,7 +17,7 @@ import { validateInput, validateMongodbId } from '@/validation';
 import { CreateOrganizationInputSchema, UpdateOrganizationInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES } from '@/validation';
 import { getAuthenticatedUser } from '@/utils';
-import { OrganizationMembershipService } from '@/services';
+import { OrganizationMembershipService, OrganizationService } from '@/services';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
 import { deleteFromS3, getKeyFromPublicUrl } from '@/clients/AWS/s3Client';
@@ -78,7 +78,7 @@ export class OrganizationResolver {
       // Rollback: delete organization if membership creation fails
       if (organization.orgId) {
         try {
-          await OrganizationDAO.deleteOrganizationById(organization.orgId);
+          await OrganizationService.deleteById(organization.orgId);
         } catch (rollbackError) {
           logger.error('Failed to roll back organization creation after membership creation error', {
             orgId: organization.orgId,
@@ -107,7 +107,7 @@ export class OrganizationResolver {
   @Mutation(() => Organization, { description: RESOLVER_DESCRIPTIONS.ORGANIZATION.deleteOrganizationById })
   async deleteOrganizationById(@Arg('orgId', () => String) orgId: string): Promise<Organization> {
     validateMongodbId(orgId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', orgId));
-    const organization = await OrganizationDAO.deleteOrganizationById(orgId);
+    const organization = await OrganizationService.deleteById(orgId);
     const keysToDelete = new Set<string>();
 
     if (organization.logo) {

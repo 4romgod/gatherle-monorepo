@@ -38,7 +38,6 @@ const config: Config = {
     ],
   },
   globalSetup: '<rootDir>/test/e2e/setup.ts',
-  globalTeardown: '<rootDir>/test/e2e/teardown.ts',
   detectOpenHandles,
   forceExit,
   // Enhanced reporting for clear test results

@@ -1,9 +1,10 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import type { UserWithToken } from '@gatherle/commons/types';
 import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 import { getSeededTestUsers } from './utils/helpers';
-import { writeRuntimeContext } from './runtimeContext';
+import { clearRuntimeContext, writeRuntimeContext } from './runtimeContext';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
@@ -170,7 +171,7 @@ const assertServerReady = async (graphqlUrl: string): Promise<void> => {
 const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
   const seededUsers = getSeededTestUsers();
   const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
-  const seededUsersByEmail: Record<string, { userId: string; email: string; token: string }> = {};
+  const seededUsersByEmail: Record<string, UserWithToken> = {};
 
   for (const user of usersByEmail) {
     let lastFailure = '';
@@ -179,7 +180,7 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
       const response = await postGraphQL(graphqlUrl, getLoginUserMutation(user), 20_000);
 
       if (response.status === 200 && !response.body.errors && response.body.data?.loginUser?.token) {
-        seededUsersByEmail[user.email] = response.body.data.loginUser;
+        seededUsersByEmail[user.email] = response.body.data.loginUser as UserWithToken;
         lastFailure = '';
         break;
       }
@@ -236,6 +237,7 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
 
 const setup = async () => {
   console.log('\nSetting up e2e tests...');
+  clearRuntimeContext();
 
   const graphqlUrl = process.env.GRAPHQL_URL;
 

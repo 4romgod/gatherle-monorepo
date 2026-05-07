@@ -77,8 +77,14 @@ describe('EventOccurrenceService', () => {
     }) as EventOccurrence;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-01T00:00:00.000Z'));
     jest.clearAllMocks();
     (EventOccurrenceDAO.readExceptionOccurrenceKeysByEventSeriesId as jest.Mock).mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('readOccurrenceById', () => {

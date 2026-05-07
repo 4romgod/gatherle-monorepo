@@ -11,7 +11,7 @@ import type {
 import { FollowTargetType, OrganizationRole } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
-import { OrganizationMembershipService } from '@/services';
+import { OrganizationMembershipService, OrganizationService } from '@/services';
 
 jest.mock('@/mongodb/dao', () => ({
   OrganizationDAO: {
@@ -51,6 +51,14 @@ jest.mock('@/services', () => ({
   OrganizationMembershipService: {
     addMember: jest.fn(),
   },
+  OrganizationService: {
+    deleteById: jest.fn(),
+  },
+}));
+
+jest.mock('@/clients/AWS/s3Client', () => ({
+  deleteFromS3: jest.fn(),
+  getKeyFromPublicUrl: jest.fn(),
 }));
 
 describe('OrganizationResolver', () => {
@@ -188,8 +196,8 @@ describe('OrganizationResolver', () => {
   });
 
   describe('deleteOrganizationById', () => {
-    it('validates id and calls DAO', async () => {
-      (OrganizationDAO.deleteOrganizationById as jest.Mock).mockResolvedValue(mockOrganization);
+    it('validates id and calls service', async () => {
+      (OrganizationService.deleteById as jest.Mock).mockResolvedValue(mockOrganization);
 
       const result = await resolver.deleteOrganizationById(mockOrganization.orgId);
 
@@ -197,7 +205,7 @@ describe('OrganizationResolver', () => {
         mockOrganization.orgId,
         expect.stringContaining('Organization'),
       );
-      expect(OrganizationDAO.deleteOrganizationById).toHaveBeenCalledWith(mockOrganization.orgId);
+      expect(OrganizationService.deleteById).toHaveBeenCalledWith(mockOrganization.orgId);
       expect(result).toEqual(mockOrganization);
     });
   });

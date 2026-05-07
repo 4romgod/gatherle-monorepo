@@ -100,6 +100,24 @@ class OrganizationMembershipDAO {
     }
     return deletedMembership.toObject();
   }
+
+  static async deleteByOrgId(orgId: string): Promise<void> {
+    try {
+      await OrganizationMembershipModel.deleteMany({ orgId }).exec();
+    } catch (error) {
+      logDaoError(`Error deleting memberships for org ${orgId}`, { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async deleteByUserId(userId: string): Promise<void> {
+    try {
+      await OrganizationMembershipModel.deleteMany({ userId }).exec();
+    } catch (error) {
+      logDaoError(`Error deleting memberships for user ${userId}`, { error });
+      throw KnownCommonError(error);
+    }
+  }
 }
 
 export default OrganizationMembershipDAO;

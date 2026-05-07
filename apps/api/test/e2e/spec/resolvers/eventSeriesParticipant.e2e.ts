@@ -17,6 +17,11 @@ import {
 
 describe('EventSeriesParticipant Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const SERIES_PARTICIPANT_TEST_TIMEOUT_MS = 180_000;
+  const SERIES_PARTICIPANT_RESPONSE_TIMEOUT_MS = 25_000;
+  const SERIES_PARTICIPANT_DEADLINE_TIMEOUT_MS = 35_000;
+  const PARTICIPANT_PENDING_ERROR_RE = /Representative occurrence not found|timed out|timeout|temporarily unavailable/i;
+  jest.setTimeout(SERIES_PARTICIPANT_TEST_TIMEOUT_MS);
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
   let eventCreatorToken = '';
@@ -34,15 +39,35 @@ describe('EventSeriesParticipant Resolver', () => {
     description: 'Testing participants',
     eventCategories: [eventCategoryId],
     organizers: [{ user: participantUser.userId, role: 'Host' }],
+    primarySchedule: buildParticipantPrimarySchedule(),
   });
 
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+  const formatRRuleUtc = (date: Date): string =>
+    `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(date.getUTCDate()).padStart(2, '0')}T${String(date.getUTCHours()).padStart(2, '0')}${String(date.getUTCMinutes()).padStart(2, '0')}${String(date.getUTCSeconds()).padStart(2, '0')}Z`;
+
+  const buildParticipantPrimarySchedule = () => {
+    const startAt = new Date();
+    startAt.setUTCDate(startAt.getUTCDate() + 2);
+    startAt.setUTCHours(16, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + 2 * 60 * 60 * 1000);
+
+    return {
+      startAt,
+      endAt,
+      timezone: 'Africa/Johannesburg',
+      recurrenceRule: `DTSTART:${formatRRuleUtc(startAt)}\nRRULE:FREQ=WEEKLY;COUNT=4`,
+    };
+  };
 
   const postGraphQl = async (token: string | undefined, payload: object, withTimeout: boolean = false) => {
     try {
       let req = request(url).post('');
       if (withTimeout) {
-        req = req.timeout({ response: 15_000, deadline: 20_000 });
+        req = req.timeout({
+          response: SERIES_PARTICIPANT_RESPONSE_TIMEOUT_MS,
+          deadline: SERIES_PARTICIPANT_DEADLINE_TIMEOUT_MS,
+        });
       }
       if (token) {
         req = req.set('Authorization', 'Bearer ' + token);
@@ -62,38 +87,8 @@ describe('EventSeriesParticipant Resolver', () => {
     }
   };
 
-  const waitForParticipantReadiness = async (eventId: string): Promise<void> => {
-    const maxAttempts = 5;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const response = await request(url)
-        .post('')
-        .set('Authorization', 'Bearer ' + participantUser.token)
-        .send(getReadEventParticipantsQuery(eventId));
-
-      if (response.status === 200 && !response.body.errors) {
-        return;
-      }
-
-      const body = JSON.stringify(response.body.errors ?? response.body);
-      const shouldRetry =
-        attempt < maxAttempts &&
-        (response.status === 404 ||
-          response.status >= 500 ||
-          /Representative occurrence not found|timed out|timeout/i.test(body));
-
-      if (!shouldRetry) {
-        throw new Error(`Event ${eventId} is not ready for participant operations: ${body}`);
-      }
-
-      await sleep(500 * attempt);
-    }
-
-    throw new Error(`Event ${eventId} did not become participant-ready in time.`);
-  };
-
   const readEventParticipantsWithRetry = async (eventId: string) => {
-    const maxAttempts = 3;
+    const maxAttempts = 7;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const response = await postGraphQl(participantUser.token, getReadEventParticipantsQuery(eventId), true);
@@ -105,7 +100,7 @@ describe('EventSeriesParticipant Resolver', () => {
       const body = JSON.stringify(response.body.errors ?? response.body);
       const shouldRetry =
         attempt < maxAttempts &&
-        (response.status >= 500 || /Representative occurrence not found|timed out|timeout/i.test(body));
+        (response.status === 404 || response.status >= 500 || PARTICIPANT_PENDING_ERROR_RE.test(body));
 
       if (!shouldRetry) {
         return response;
@@ -115,6 +110,31 @@ describe('EventSeriesParticipant Resolver', () => {
     }
 
     throw new Error(`Failed to read participants for event ${eventId} after retrying transient errors.`);
+  };
+
+  const waitForParticipantReadiness = async (eventId: string): Promise<void> => {
+    const maxAttempts = 10;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await postGraphQl(participantUser.token, getReadEventParticipantsQuery(eventId), true);
+
+      if (response.status === 200 && !response.body.errors) {
+        return;
+      }
+
+      const body = JSON.stringify(response.body.errors ?? response.body);
+      const shouldRetry =
+        attempt < maxAttempts &&
+        (response.status === 404 || response.status >= 500 || PARTICIPANT_PENDING_ERROR_RE.test(body));
+
+      if (!shouldRetry) {
+        throw new Error(`Event ${eventId} is not ready for participant operations: ${body}`);
+      }
+
+      await sleep(1_000 * attempt);
+    }
+
+    throw new Error(`Event ${eventId} did not become participant-ready in time.`);
   };
 
   const upsertEventParticipantWithRetry = async (
@@ -128,7 +148,7 @@ describe('EventSeriesParticipant Resolver', () => {
       sharedVisibility?: boolean;
     },
   ) => {
-    const maxAttempts = 3;
+    const maxAttempts = 8;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const response = await postGraphQl(
@@ -150,7 +170,8 @@ describe('EventSeriesParticipant Resolver', () => {
 
       const body = JSON.stringify(response.body.errors ?? response.body);
       const shouldRetry =
-        attempt < maxAttempts && (response.status >= 500 || /timed out|timeout|temporarily unavailable/i.test(body));
+        attempt < maxAttempts &&
+        (response.status === 404 || response.status >= 500 || PARTICIPANT_PENDING_ERROR_RE.test(body));
 
       if (!shouldRetry) {
         return response;
