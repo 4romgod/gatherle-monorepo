@@ -289,6 +289,17 @@ export class EventSeriesResolver {
     );
   }
 
+  @FieldResolver(() => EventOccurrence, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.EVENT.REPRESENTATIVE_OCCURRENCE,
+  })
+  async representativeOccurrence(
+    @Root() event: EventSeries,
+    @Ctx() context: ServerContext,
+  ): Promise<EventOccurrence | null> {
+    return context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+  }
+
   /**
    * Field resolver to get the count of users who have saved this event.
    */

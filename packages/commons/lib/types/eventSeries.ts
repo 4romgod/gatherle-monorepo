@@ -10,6 +10,7 @@ import { Location } from './location';
 import { User } from './user';
 import { EventSeriesParticipant } from './eventSeriesParticipant';
 import { Organization } from './organization';
+import { EventOccurrence } from './eventOccurrence';
 
 export enum EventPrivacySetting {
   Public = 'Public',
@@ -246,6 +247,12 @@ export class EventSeries {
     description: EVENT_DESCRIPTIONS.EVENT.PARTICIPANTS,
   })
   participants?: EventSeriesParticipant[];
+
+  @Field(() => EventOccurrence, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.EVENT.REPRESENTATIVE_OCCURRENCE,
+  })
+  representativeOccurrence?: EventOccurrence;
 
   // Computed fields populated via aggregation helpers (not persisted on the document)
   @Field(() => Number, {

@@ -88,6 +88,8 @@ export const EVENT_DESCRIPTIONS = {
       'Identifier of the occurrence boundary where the recurring series should be split into past and future series.',
     PARTICIPANTS:
       'Resolved participants for this event series, projected from the representative persisted occurrence.',
+    REPRESENTATIVE_OCCURRENCE:
+      'Resolved representative occurrence for this event series, used to power occurrence-aware discovery and preview surfaces.',
     UPCOMING_OCCURRENCES:
       'Upcoming concrete occurrences for this event series, sourced from persisted occurrence rows.',
     SAVED_BY_COUNT: 'Number of users who have saved the event, computed from follows.',
