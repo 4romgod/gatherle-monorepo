@@ -1,0 +1,34 @@
+{
+  "name": "@gatherle/mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "codegen": "graphql-codegen",
+    "start": "expo start",
+    "start:tunnel": "env -u ANDROID_HOME -u ANDROID_SDK_ROOT expo start --tunnel --clear",
+    "start:lan": "env -u ANDROID_HOME -u ANDROID_SDK_ROOT expo start --host lan --clear",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --project tsconfig.json --noEmit --pretty"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.14.1",
+    "@expo/metro-runtime": "~55.0.11",
+    "expo": "^55.0.23",
+    "expo-status-bar": "~55.0.6",
+    "graphql": "^16.13.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-web": "^0.21.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^6.2.1",
+    "@graphql-codegen/client-preset": "^5.2.4",
+    "@types/react": "~19.2.10",
+    "dotenv": "^16.6.1",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
