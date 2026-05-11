@@ -6,12 +6,15 @@ import {
   getDateRangeForFilter,
   getOccurrencesInRange,
   getOccurrencesInRangeOrThrow,
+  getScheduleAnchorStartAt,
+  getScheduleDurationMinutes,
+  getScheduleEndAt,
+  normalizeRecurrenceRule,
   pickRepresentativeOccurrence,
   splitRecurringRuleAtOccurrence,
 } from '@/utils';
 import type {
   EventOccurrence,
-  EventSchedule,
   EventSeries,
   EventsQueryOptionsInput,
   UpdateEventOccurrenceInput,
@@ -53,15 +56,9 @@ const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
   'updatedAt',
 ]);
 
-function extractRuleLine(rruleString: string): string {
-  const lines = rruleString.split(/\r?\n/).map((line) => line.trim());
-  const ruleLine = lines.find((line) => line.startsWith('RRULE:'));
-  return ruleLine ? ruleLine.slice('RRULE:'.length) : rruleString.trim();
-}
-
 function parseRule(rruleString: string): RRule | null {
   try {
-    return RRule.fromString(extractRuleLine(rruleString));
+    return RRule.fromString(normalizeRecurrenceRule(rruleString));
   } catch {
     return null;
   }
@@ -79,12 +76,12 @@ function countCalendarDaysInclusive(startAt: Date, endAt?: Date): number {
   return Math.max(1, Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1);
 }
 
-function getScheduleDurationMs(schedule: EventSchedule): number {
-  if (!schedule.endAt) {
-    return 0;
+function buildScheduleEndAt(anchorStartAt: Date, durationMs: number): Date | undefined {
+  if (durationMs <= 0) {
+    return undefined;
   }
 
-  return Math.max(0, schedule.endAt.getTime() - schedule.startAt.getTime());
+  return new Date(anchorStartAt.getTime() + durationMs);
 }
 
 function buildWindowEnd(now: Date): Date {
@@ -235,20 +232,19 @@ function paginateOccurrences(occurrences: EventOccurrence[], options?: EventsQue
 }
 
 function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): EventOccurrence {
-  const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(
-    eventSeries.eventId,
-    eventSeries.primarySchedule.startAt,
-  );
-  const fallbackTimestamp = new Date(eventSeries.primarySchedule.startAt);
+  const anchorStartAt = getScheduleAnchorStartAt(eventSeries.primarySchedule);
+  const durationMs = getScheduleDurationMinutes(eventSeries.primarySchedule) * 60 * 1000;
+  const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(eventSeries.eventId, anchorStartAt);
+  const fallbackTimestamp = new Date(anchorStartAt);
 
   return {
     occurrenceId: occurrenceKey,
     eventSeriesId: eventSeries.eventId,
     eventSeriesSlug: eventSeries.slug,
     occurrenceKey,
-    originalStartAt: new Date(eventSeries.primarySchedule.startAt),
-    startAt: new Date(eventSeries.primarySchedule.startAt),
-    endAt: eventSeries.primarySchedule.endAt ? new Date(eventSeries.primarySchedule.endAt) : undefined,
+    originalStartAt: new Date(anchorStartAt),
+    startAt: new Date(anchorStartAt),
+    endAt: buildScheduleEndAt(anchorStartAt, durationMs),
     timezone: eventSeries.primarySchedule.timezone,
     status: mapOccurrenceStatus(eventSeries.status),
     isException: false,
@@ -363,10 +359,13 @@ class EventOccurrenceService {
 
   static isRecurringSeries(eventSeries: Pick<EventSeries, 'primarySchedule'>): boolean {
     const schedule = eventSeries.primarySchedule;
-
     if (!schedule?.recurrenceRule) {
       return false;
     }
+
+    const anchorStartAt = getScheduleAnchorStartAt(schedule);
+    const scheduleDurationMinutes = getScheduleDurationMinutes(schedule);
+    const scheduleEndAt = getScheduleEndAt(schedule);
 
     const rule = parseRule(schedule.recurrenceRule);
 
@@ -378,21 +377,22 @@ class EventOccurrenceService {
       return true;
     }
 
-    const singleEventSpanDays = countCalendarDaysInclusive(schedule.startAt, schedule.endAt);
+    const singleEventSpanDays = countCalendarDaysInclusive(anchorStartAt, scheduleEndAt);
 
     if (typeof rule.options.count === 'number') {
       return rule.options.count > singleEventSpanDays;
     }
 
-    const singleEventEnd = schedule.endAt ?? schedule.startAt;
+    const singleEventEnd = scheduleEndAt ?? anchorStartAt;
     if (rule.options.until instanceof Date && rule.options.until.getTime() <= singleEventEnd.getTime()) {
       return false;
     }
 
-    const windowEnd = buildWindowEnd(schedule.startAt);
+    const windowEnd = buildWindowEnd(anchorStartAt);
     const occurrenceCount = getOccurrencesInRange(
+      anchorStartAt,
       schedule.recurrenceRule,
-      schedule.startAt,
+      anchorStartAt,
       windowEnd,
       singleEventSpanDays + 1,
     ).length;
@@ -417,11 +417,12 @@ class EventOccurrenceService {
     }
 
     const schedule = eventSeries.primarySchedule;
-    const durationMs = getScheduleDurationMs(schedule);
-    const hasEndAt = Boolean(schedule.endAt);
+    const anchorStartAt = getScheduleAnchorStartAt(schedule);
+    const durationMs = getScheduleDurationMinutes(schedule) * 60 * 1000;
     const windowStart = new Date(now.getTime() - durationMs);
     const windowEnd = buildWindowEnd(now);
     const originalStartTimes = getOccurrencesInRangeOrThrow(
+      anchorStartAt,
       schedule.recurrenceRule,
       windowStart,
       windowEnd,
@@ -433,7 +434,7 @@ class EventOccurrenceService {
     return originalStartTimes.map((originalStartAt) => {
       const occurrenceKey = this.buildOccurrenceKey(eventSeries.eventId, originalStartAt);
       const startAt = new Date(originalStartAt);
-      const endAt = hasEndAt ? new Date(startAt.getTime() + durationMs) : undefined;
+      const endAt = buildScheduleEndAt(startAt, durationMs);
 
       return {
         occurrenceId: occurrenceKey,
@@ -644,10 +645,11 @@ class EventOccurrenceService {
   }
 
   static splitRecurringRuleAtOccurrence(
-    rruleString: string,
+    anchorStartAt: Date,
+    recurrenceRule: string,
     pivotStartAt: Date,
   ): { predecessorRule: string; successorRule: string } {
-    return splitRecurringRuleAtOccurrence(rruleString, pivotStartAt);
+    return splitRecurringRuleAtOccurrence(anchorStartAt, recurrenceRule, pivotStartAt);
   }
 }
 

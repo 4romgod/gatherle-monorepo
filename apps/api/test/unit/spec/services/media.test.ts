@@ -2,58 +2,71 @@ jest.mock('@/clients/AWS/s3Client', () => ({
   getPresignedUploadUrl: jest.fn(),
 }));
 
-jest.mock('@/utils', () => ({
-  CustomError: jest.fn((message: string, type: string) => {
-    const err: any = new Error(message);
-    err.extensions = { code: type };
-    return err;
-  }),
-  ErrorTypes: {
-    BAD_USER_INPUT: 'BAD_USER_INPUT',
-    NOT_FOUND: 'NOT_FOUND',
-    UNAUTHORIZED: 'UNAUTHORIZED',
-  },
-}));
+jest.mock('@/utils', () => {
+  const actual = jest.requireActual('@/utils');
+  return {
+    ...actual,
+    CustomError: jest.fn((message: string, type: string) => {
+      const err: any = new Error(message);
+      err.extensions = { code: type };
+      return err;
+    }),
+    ErrorTypes: {
+      BAD_USER_INPUT: 'BAD_USER_INPUT',
+      NOT_FOUND: 'NOT_FOUND',
+      UNAUTHORIZED: 'UNAUTHORIZED',
+    },
+  };
+});
 
 jest.mock('@/utils/logger', () => ({
-  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+  LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4, debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  initLogger: jest.fn(),
 }));
 
-jest.mock('@/constants', () => ({
-  MEDIA_CDN_DOMAIN: 'd111111abcdef8.cloudfront.net',
-  STAGE: 'test',
-  CONTENT_TYPE_MAP: {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    webp: 'image/webp',
-    gif: 'image/gif',
-    mp4: 'video/mp4',
-    mov: 'video/quicktime',
-    webm: 'video/webm',
-  },
-  EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
-  EVENT_MOMENT_VIDEO_EXTENSIONS: new Set(['mp4', 'mov', 'webm']),
-  EVENT_MOMENTS_S3_PREFIX: 'event-moments',
-  MEDIA_ENTITY_FOLDER: {
-    user: 'users',
-    organization: 'organizations',
-    event: 'events',
-    venue: 'venues',
-  },
-  MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS: 900,
-  HttpStatusCode: {
-    OK: 200,
-    CREATED: 201,
-    BAD_REQUEST: 400,
-    UNAUTHENTICATED: 401,
-    UNAUTHORIZED: 403,
-    NOT_FOUND: 404,
-    CONFLICT: 409,
-    INTERNAL_SERVER_ERROR: 500,
-  },
-  REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
-}));
+jest.mock('@/constants', () => {
+  const actual = jest.requireActual('@/constants');
+  return {
+    ...actual,
+    MEDIA_CDN_DOMAIN: 'd111111abcdef8.cloudfront.net',
+    STAGE: 'test',
+    CONTENT_TYPE_MAP: {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      mp4: 'video/mp4',
+      mov: 'video/quicktime',
+      webm: 'video/webm',
+    },
+    EVENT_MOMENT_MEDIA_EXTENSIONS: new Set(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'webm']),
+    EVENT_MOMENT_VIDEO_EXTENSIONS: new Set(['mp4', 'mov', 'webm']),
+    EVENT_MOMENTS_S3_PREFIX: 'event-moments',
+    MEDIA_ENTITY_FOLDER: {
+      user: 'users',
+      organization: 'organizations',
+      event: 'events',
+      venue: 'venues',
+    },
+    MEDIA_UPLOAD_URL_EXPIRES_IN_SECONDS: 900,
+    LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+    LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4 },
+    HttpStatusCode: {
+      OK: 200,
+      CREATED: 201,
+      BAD_REQUEST: 400,
+      UNAUTHENTICATED: 401,
+      UNAUTHORIZED: 403,
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      INTERNAL_SERVER_ERROR: 500,
+    },
+    REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
+  };
+});
 
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: { readEventById: jest.fn() },

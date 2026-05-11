@@ -39,6 +39,40 @@ export const GetMyRsvpsDocument = graphql(`
         title
         summary
         description
+        representativeOccurrence {
+          occurrenceId
+          occurrenceKey
+          eventSeriesId
+          originalStartAt
+          startAt
+          endAt
+          timezone
+          status
+          isException
+          rsvpCount
+          participants {
+            participantId
+            occurrenceId
+            userId
+            status
+            quantity
+            sharedVisibility
+            user {
+              userId
+              username
+              given_name
+              family_name
+              profile_picture
+              defaultVisibility
+            }
+          }
+          myRsvp {
+            participantId
+            occurrenceId
+            status
+            quantity
+          }
+        }
         visibility
         lifecycleStatus
         eventCategories {
@@ -71,8 +105,8 @@ export const GetMyRsvpsDocument = graphql(`
           details
         }
         primarySchedule {
-          startAt
-          endAt
+          anchorStartAt
+          occurrenceDurationMinutes
           timezone
           recurrenceRule
         }

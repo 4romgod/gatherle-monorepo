@@ -9,6 +9,8 @@ import type { EventParticipantRecord } from './participant-utils';
 
 type SeriesEventPreview = EventPreview | RecommendedFeedEventPreview;
 type OccurrenceEventPreview = EventOccurrencePreview | RecommendedFeedOccurrencePreview;
+type SeriesRepresentativeOccurrence = NonNullable<EventPreview['representativeOccurrence']>;
+type OccurrenceBackedPreview = OccurrenceEventPreview | SeriesRepresentativeOccurrence;
 type SeriesSnapshot =
   | NonNullable<EventOccurrencePreview['eventSeries']>
   | NonNullable<RecommendedFeedOccurrencePreview['eventSeries']>
@@ -31,6 +33,7 @@ type OccurrencePreviewBase = Pick<
   | 'rsvpCount'
 > & {
   participants?: EventOccurrencePreview['participants'];
+  myRsvp?: EventOccurrencePreview['myRsvp'];
   eventSeries?: NonNullable<EventOccurrencePreview['eventSeries']> | null;
 };
 type OccurrenceRsvpPreviewSource = {
@@ -41,8 +44,38 @@ type OccurrenceRsvpPreviewSource = {
   occurrence?: OccurrencePreviewBase | null;
 };
 
+function getRepresentativeOccurrence(event: SeriesEventPreview): SeriesRepresentativeOccurrence | null {
+  if (!('representativeOccurrence' in event)) {
+    return null;
+  }
+
+  return (event.representativeOccurrence as SeriesRepresentativeOccurrence | null | undefined) ?? null;
+}
+
+function getOccurrenceBackedPreview(event: AnyEventPreview): OccurrenceBackedPreview | null {
+  if (isOccurrencePreview(event)) {
+    return event;
+  }
+
+  return getRepresentativeOccurrence(getStandaloneSeriesPreview(event));
+}
+
 function getSeriesPreview(event: AnyEventPreview): SeriesSnapshot {
   return isOccurrencePreview(event) ? event.eventSeries : event;
+}
+
+function buildSeriesScheduleEndAt(event: SeriesEventPreview): string | Date | null {
+  const schedule = event.primarySchedule;
+  if (!schedule?.anchorStartAt) {
+    return null;
+  }
+
+  const durationMinutes = schedule.occurrenceDurationMinutes ?? 0;
+  if (durationMinutes <= 0) {
+    return null;
+  }
+
+  return new Date(new Date(schedule.anchorStartAt).getTime() + durationMinutes * 60 * 1000);
 }
 
 export function isOccurrencePreview(event: AnyEventPreview): event is OccurrenceEventPreview {
@@ -64,7 +97,7 @@ export function getEventPreviewEventId(event: AnyEventPreview): string {
 }
 
 export function getEventPreviewOccurrenceId(event: AnyEventPreview): string | undefined {
-  return isOccurrencePreview(event) ? event.occurrenceId : undefined;
+  return getOccurrenceBackedPreview(event)?.occurrenceId;
 }
 
 export function getEventPreviewSlug(event: AnyEventPreview): string {
@@ -74,12 +107,7 @@ export function getEventPreviewSlug(event: AnyEventPreview): string {
 export function getEventPreviewHref(event: AnyEventPreview): string {
   const slug = getEventPreviewSlug(event);
   const basePath = slug ? ROUTES.EVENTS.EVENT(slug) : ROUTES.EVENTS.ROOT;
-
-  if (!isOccurrencePreview(event)) {
-    return basePath;
-  }
-
-  return buildEventOccurrenceHref(basePath, event);
+  return buildEventOccurrenceHref(basePath, getOccurrenceBackedPreview(event));
 }
 
 export function getEventPreviewTitle(event: AnyEventPreview): string {
@@ -102,8 +130,13 @@ export function getEventPreviewCityLabel(event: AnyEventPreview): string {
 }
 
 export function getEventPreviewScheduleText(event: AnyEventPreview): string {
-  if (isOccurrencePreview(event)) {
-    return formatOccurrenceDateTime(event.startAt, event.endAt, event.timezone);
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview) {
+    return formatOccurrenceDateTime(
+      occurrenceBackedPreview.startAt,
+      occurrenceBackedPreview.endAt,
+      occurrenceBackedPreview.timezone,
+    );
   }
 
   const seriesEvent = getStandaloneSeriesPreview(event);
@@ -113,29 +146,45 @@ export function getEventPreviewScheduleText(event: AnyEventPreview): string {
   }
 
   return formatOccurrenceDateTime(
-    seriesEvent.primarySchedule?.startAt,
-    seriesEvent.primarySchedule?.endAt,
+    seriesEvent.primarySchedule?.anchorStartAt,
+    buildSeriesScheduleEndAt(seriesEvent),
     seriesEvent.primarySchedule?.timezone,
   );
 }
 
+export function getEventPreviewStartAt(event: AnyEventPreview): string | Date | null {
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview?.startAt) {
+    return occurrenceBackedPreview.startAt;
+  }
+
+  return getStandaloneSeriesPreview(event).primarySchedule?.anchorStartAt ?? null;
+}
+
 export function getEventPreviewStatusLabel(event: AnyEventPreview): string | null {
-  if (isOccurrencePreview(event) && event.status !== EventOccurrenceStatus.Scheduled) {
-    return event.status;
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview && occurrenceBackedPreview.status !== EventOccurrenceStatus.Scheduled) {
+    return occurrenceBackedPreview.status;
   }
 
   return getSeriesPreview(event)?.status ?? null;
 }
 
 export function getEventPreviewParticipants(event: AnyEventPreview): EventParticipantRecord[] {
-  if (isOccurrencePreview(event)) {
-    return (event.participants ?? []) as EventParticipantRecord[];
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview?.participants) {
+    return occurrenceBackedPreview.participants as EventParticipantRecord[];
   }
 
   return (getStandaloneSeriesPreview(event).participants ?? []) as EventParticipantRecord[];
 }
 
 export function getEventPreviewParticipantCount(event: AnyEventPreview): number {
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (typeof occurrenceBackedPreview?.rsvpCount === 'number') {
+    return occurrenceBackedPreview.rsvpCount;
+  }
+
   if (typeof event.rsvpCount === 'number') {
     return event.rsvpCount;
   }
@@ -150,7 +199,8 @@ export function getEventPreviewParticipantCount(event: AnyEventPreview): number 
 }
 
 export function getEventPreviewMyRsvpStatus(event: AnyEventPreview): ParticipantStatus | null {
-  return event.myRsvp?.status ?? null;
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  return occurrenceBackedPreview?.myRsvp?.status ?? event.myRsvp?.status ?? null;
 }
 
 export function getEventPreviewIsSavedByMe(event: AnyEventPreview): boolean {
@@ -158,12 +208,14 @@ export function getEventPreviewIsSavedByMe(event: AnyEventPreview): boolean {
 }
 
 export function isEventPreviewUpcoming(event: AnyEventPreview, fromDate = new Date()): boolean {
-  if (isOccurrencePreview(event)) {
-    const comparisonValue = event.endAt ?? event.startAt;
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview) {
+    const comparisonValue = occurrenceBackedPreview.endAt ?? occurrenceBackedPreview.startAt;
     return new Date(comparisonValue).getTime() >= fromDate.getTime();
   }
 
-  return isEventUpcoming(getStandaloneSeriesPreview(event).primarySchedule?.recurrenceRule);
+  const schedule = getStandaloneSeriesPreview(event).primarySchedule;
+  return isEventUpcoming(schedule?.anchorStartAt, schedule?.recurrenceRule);
 }
 
 export function projectOccurrenceRsvpToEventPreview(rsvp: OccurrenceRsvpPreviewSource): EventOccurrencePreview | null {

@@ -18,8 +18,8 @@ export const ReadTrendingEventsDocument = graphql(`
       lifecycleStatus
       visibility
       primarySchedule {
-        startAt
-        endAt
+        anchorStartAt
+        occurrenceDurationMinutes
         timezone
         recurrenceRule
       }
@@ -63,6 +63,40 @@ export const ReadTrendingEventsDocument = graphql(`
       rsvpCount
       savedByCount
       isSavedByMe
+      representativeOccurrence {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        originalStartAt
+        startAt
+        endAt
+        timezone
+        status
+        isException
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
+      }
       participants {
         participantId
         eventId
@@ -129,8 +163,8 @@ export const GetAllEventsDocument = graphql(`
         details
       }
       primarySchedule {
-        startAt
-        endAt
+        anchorStartAt
+        occurrenceDurationMinutes
         timezone
         recurrenceRule
       }
@@ -143,6 +177,40 @@ export const GetAllEventsDocument = graphql(`
       }
       media {
         featuredImageUrl
+      }
+      representativeOccurrence {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        originalStartAt
+        startAt
+        endAt
+        timezone
+        status
+        isException
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
       }
       organizers {
         role
@@ -224,8 +292,8 @@ export const GetEventBySlugDocument = graphql(`
         details
       }
       primarySchedule {
-        startAt
-        endAt
+        anchorStartAt
+        occurrenceDurationMinutes
         timezone
         recurrenceRule
       }
@@ -350,8 +418,8 @@ export const GetEventsByVenueDocument = graphql(`
         details
       }
       primarySchedule {
-        startAt
-        endAt
+        anchorStartAt
+        occurrenceDurationMinutes
         timezone
         recurrenceRule
       }
@@ -364,6 +432,40 @@ export const GetEventsByVenueDocument = graphql(`
       }
       media {
         featuredImageUrl
+      }
+      representativeOccurrence {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        originalStartAt
+        startAt
+        endAt
+        timezone
+        status
+        isException
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
       }
       organizers {
         role

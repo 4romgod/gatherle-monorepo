@@ -30,7 +30,8 @@ export const EVENT_DESCRIPTIONS = {
   },
   EVENT: {
     TYPE: 'Represents an event with details such as title, description, location, and associated metadata.',
-    SCHEDULE_TYPE: 'Defines the first occurrence timing, timezone, and recurrence rule for an event series.',
+    SCHEDULE_TYPE:
+      'Defines the occurrence template for an event series, including the anchor start time, occurrence duration, timezone, and recurrence rule.',
     ORGANIZER_TYPE: 'Represents an organizer entry for an event series, including the linked user and organizer role.',
     MEDIA_TYPE:
       'Represents media associated with an event, including a featured image URL and additional media data in JSON format.',
@@ -47,10 +48,15 @@ export const EVENT_DESCRIPTIONS = {
     DESCRIPTION: "Description of the event (e.g., 'Join us for our annual meetup!')",
     START_DATE_TIME: "Start date and time of the event in ISO 8601 format (e.g., '2023-09-15T09:00:00Z')",
     END_DATE_TIME: 'End date and time of each occurrence in ISO 8601 format (optional).',
+    ANCHOR_START_AT:
+      "Start date and time of the first occurrence anchor in ISO 8601 format (e.g., '2023-09-15T09:00:00Z').",
+    OCCURRENCE_DURATION_MINUTES:
+      'Duration of one generated occurrence in minutes. A value of 0 means the occurrence has no explicit end time.',
     RECURRENCE_RULE:
-      "Recurrence rule for repeating events in iCalendar format (e.g., 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR').",
+      "Recurrence rule for repeating events using RRULE fields only, without DTSTART (e.g., 'FREQ=WEEKLY;BYDAY=MO,WE,FR').",
     TIMEZONE: 'IANA timezone identifier used to interpret the schedule (e.g., Africa/Johannesburg).',
-    PRIMARY_SCHEDULE: 'Primary schedule containing startAt, endAt, timezone, and recurrenceRule.',
+    PRIMARY_SCHEDULE:
+      'Primary schedule containing anchorStartAt, occurrenceDurationMinutes, timezone, and recurrenceRule.',
     LOCATION: "Location of the event (e.g., '123 Main St, Springfield, IL')",
     LOCATION_SNAPSHOT: 'Snapshot of the event location used for history and display consistency.',
     VENUE_ID: 'Reference to the venue associated with the event when available.',
@@ -88,6 +94,8 @@ export const EVENT_DESCRIPTIONS = {
       'Identifier of the occurrence boundary where the recurring series should be split into past and future series.',
     PARTICIPANTS:
       'Resolved participants for this event series, projected from the representative persisted occurrence.',
+    REPRESENTATIVE_OCCURRENCE:
+      'Resolved representative occurrence for this event series, used to power occurrence-aware discovery and preview surfaces.',
     UPCOMING_OCCURRENCES:
       'Upcoming concrete occurrences for this event series, sourced from persisted occurrence rows.',
     SAVED_BY_COUNT: 'Number of users who have saved the event, computed from follows.',

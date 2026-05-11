@@ -28,6 +28,7 @@ import {
   untrackCreatedId,
   updateMembershipRoleOnServer,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import { buildOccurrenceId, buildWeeklyOccurrenceFixture } from '@/test/e2e/utils/occurrenceFixtures';
 
 describe('EventSeries Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
@@ -38,6 +39,7 @@ describe('EventSeries Resolver', () => {
   const testEventDescription = 'Test EventSeries Description';
   const createdEventIds: string[] = [];
   const createdOrgIds: string[] = [];
+  const occurrenceFixture = buildWeeklyOccurrenceFixture();
   const randomId = () => Math.random().toString(36).slice(2, 7);
   const uniqueSuffix = () => `${Date.now()}-${randomId()}`;
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,7 +101,7 @@ describe('EventSeries Resolver', () => {
             eventId
             splitFromEventSeriesId
             splitIntoEventSeriesId
-            upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+            upcomingOccurrences(limit: ${limit}, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
               occurrenceId
               occurrenceKey
               eventSeriesId
@@ -203,14 +205,14 @@ describe('EventSeries Resolver', () => {
           ...buildEventInput(),
           title: `Split Source Series ${uniqueSuffix()}`,
           primarySchedule: {
-            startAt: new Date('2026-05-06T16:00:00.000Z'),
-            endAt: new Date('2026-05-06T19:00:00.000Z'),
+            anchorStartAt: occurrenceFixture.firstStartAt,
+            occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
             timezone: 'Africa/Johannesburg',
-            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+            recurrenceRule: occurrenceFixture.weeklyRuleCount3,
           },
         });
 
-        const pivotOccurrenceId = `${createdEvent.eventId}#2026-05-13T16:00:00.000Z`;
+        const pivotOccurrenceId = buildOccurrenceId(createdEvent.eventId, occurrenceFixture.secondStartAt);
 
         const splitResponse = await request(url)
           .post('')
@@ -243,7 +245,7 @@ describe('EventSeries Resolver', () => {
         expect(sourceAfterSplit.upcomingOccurrences).toEqual([
           expect.objectContaining({
             eventSeriesId: createdEvent.eventId,
-            startAt: '2026-05-06T16:00:00.000Z',
+            startAt: occurrenceFixture.firstStartAt.toISOString(),
           }),
         ]);
 
@@ -251,11 +253,11 @@ describe('EventSeries Resolver', () => {
         expect(successorAfterSplit.upcomingOccurrences).toEqual([
           expect.objectContaining({
             eventSeriesId: successorEvent.eventId,
-            startAt: '2026-05-13T16:00:00.000Z',
+            startAt: occurrenceFixture.secondStartAt.toISOString(),
           }),
           expect.objectContaining({
             eventSeriesId: successorEvent.eventId,
-            startAt: '2026-05-20T16:00:00.000Z',
+            startAt: occurrenceFixture.thirdStartAt.toISOString(),
           }),
         ]);
       }, 90_000);

@@ -50,13 +50,12 @@ describe('EventSeriesParticipant Resolver', () => {
     const startAt = new Date();
     startAt.setUTCDate(startAt.getUTCDate() + 2);
     startAt.setUTCHours(16, 0, 0, 0);
-    const endAt = new Date(startAt.getTime() + 2 * 60 * 60 * 1000);
 
     return {
-      startAt,
-      endAt,
+      anchorStartAt: startAt,
+      occurrenceDurationMinutes: 120,
       timezone: 'Africa/Johannesburg',
-      recurrenceRule: `DTSTART:${formatRRuleUtc(startAt)}\nRRULE:FREQ=WEEKLY;COUNT=4`,
+      recurrenceRule: 'FREQ=WEEKLY;COUNT=4',
     };
   };
 

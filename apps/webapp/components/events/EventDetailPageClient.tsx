@@ -263,6 +263,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     myRsvp,
   } = event;
   const recurrenceRule = event.primarySchedule.recurrenceRule;
+  const scheduleFallbackEndAt =
+    event.primarySchedule.anchorStartAt && (event.primarySchedule.occurrenceDurationMinutes ?? 0) > 0
+      ? new Date(
+          new Date(event.primarySchedule.anchorStartAt).getTime() +
+            event.primarySchedule.occurrenceDurationMinutes * 60 * 1000,
+        ).toISOString()
+      : null;
   const currentRsvpStatus =
     selectedOccurrence && (hasExplicitOccurrenceSelection || selectedOccurrence.myRsvp?.status != null || !myRsvp)
       ? (selectedOccurrence.myRsvp?.status ?? null)
@@ -531,7 +538,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               <EventMomentsRing
                 eventId={eventId}
                 myRsvpStatus={currentRsvpStatus}
-                eventEndAt={selectedOccurrence?.endAt ?? event.primarySchedule?.endAt ?? null}
+                eventEndAt={selectedOccurrence?.endAt ?? scheduleFallbackEndAt}
                 onAddClick={() => setComposerOpen(true)}
                 onMomentClick={openViewer}
               />

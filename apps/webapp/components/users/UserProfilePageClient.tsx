@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { Box, Button, Grid, Stack, Typography } from '@mui/material';
@@ -32,6 +32,8 @@ import { useFollowing } from '@/hooks/useFollow';
 import ErrorPage from '@/components/errors/ErrorPage';
 import {
   AnyEventPreview,
+  getEventPreviewStartAt,
+  getEventPreviewTitle,
   isEventPreviewUpcoming,
   projectOccurrenceRsvpToEventPreview,
 } from '@/components/events/event-preview-utils';
@@ -60,6 +62,20 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     });
     return set;
   }, [following]);
+
+  const compareByPreviewDate = useCallback((left: AnyEventPreview, right: AnyEventPreview) => {
+    const leftStartAt = getEventPreviewStartAt(left);
+    const rightStartAt = getEventPreviewStartAt(right);
+
+    const leftTimestamp = leftStartAt ? new Date(leftStartAt).getTime() : Number.POSITIVE_INFINITY;
+    const rightTimestamp = rightStartAt ? new Date(rightStartAt).getTime() : Number.POSITIVE_INFINITY;
+
+    if (leftTimestamp !== rightTimestamp) {
+      return leftTimestamp - rightTimestamp;
+    }
+
+    return getEventPreviewTitle(left).localeCompare(getEventPreviewTitle(right));
+  }, []);
 
   const {
     data: userData,
@@ -104,9 +120,14 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
 
   const user = userData?.readUserByUsername ?? null;
   const events = (eventsData?.readEvents ?? []) as EventPreview[];
-  const savedEvents = (savedData?.readSavedEvents ?? [])
-    .map((follow) => follow.targetEvent)
-    .filter((event) => Boolean(event)) as EventPreview[];
+  const savedEvents = useMemo(
+    () =>
+      (savedData?.readSavedEvents ?? [])
+        .map((follow) => follow.targetEvent)
+        .filter((event): event is EventPreview => Boolean(event))
+        .sort(compareByPreviewDate) as EventPreview[],
+    [compareByPreviewDate, savedData],
+  );
 
   const viewerCanSeeProfile = Boolean(
     user &&
@@ -174,8 +195,11 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     [allRsvpdEventPreviews],
   );
   const organizedEvents = useMemo(
-    () => events.filter((event) => event.organizers.some((organizer) => organizer.user.userId === user?.userId)),
-    [events, user?.userId],
+    () =>
+      events
+        .filter((event) => event.organizers.some((organizer) => organizer.user.userId === user?.userId))
+        .sort(compareByPreviewDate),
+    [compareByPreviewDate, events, user?.userId],
   );
 
   // Moments ring needs ALL events the user was ever a participant in (including cancelled RSVPs)

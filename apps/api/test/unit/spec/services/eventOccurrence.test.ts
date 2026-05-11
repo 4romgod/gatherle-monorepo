@@ -36,6 +36,23 @@ jest.mock('@/mongodb/dao', () => ({
 }));
 
 describe('EventOccurrenceService', () => {
+  const buildSchedule = ({
+    anchorStartAt,
+    endAt,
+    timezone = 'Africa/Johannesburg',
+    recurrenceRule = 'FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+  }: {
+    anchorStartAt: Date;
+    endAt: Date;
+    timezone?: string;
+    recurrenceRule?: string;
+  }) => ({
+    anchorStartAt,
+    occurrenceDurationMinutes: Math.round((endAt.getTime() - anchorStartAt.getTime()) / (60 * 1000)),
+    timezone,
+    recurrenceRule,
+  });
+
   const buildSeries = (overrides: Partial<EventSeries> = {}): EventSeries =>
     ({
       eventId: 'series-1',
@@ -46,12 +63,10 @@ describe('EventOccurrenceService', () => {
       organizers: [],
       eventCategories: [],
       location: { locationType: 'tba' },
-      primarySchedule: {
-        startAt: new Date('2026-05-06T16:00:00.000Z'),
+      primarySchedule: buildSchedule({
+        anchorStartAt: new Date('2026-05-06T16:00:00.000Z'),
         endAt: new Date('2026-05-06T19:00:00.000Z'),
-        timezone: 'Africa/Johannesburg',
-        recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
-      },
+      }),
       scheduleVersion: 1,
       createdAt: new Date('2026-04-27T00:00:00.000Z'),
       updatedAt: new Date('2026-04-27T00:00:00.000Z'),
@@ -214,12 +229,11 @@ describe('EventOccurrenceService', () => {
   describe('isRecurringSeries', () => {
     it('returns false for a single event encoded as COUNT=1', () => {
       const eventSeries = buildSeries({
-        primarySchedule: {
-          startAt: new Date('2026-05-06T16:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2026-05-06T16:00:00.000Z'),
           endAt: new Date('2026-05-06T19:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        }),
       });
 
       expect(EventOccurrenceService.isRecurringSeries(eventSeries)).toBe(false);
@@ -227,12 +241,11 @@ describe('EventOccurrenceService', () => {
 
     it('returns false for a multi-day single event encoded as contiguous DAILY count', () => {
       const eventSeries = buildSeries({
-        primarySchedule: {
-          startAt: new Date('2026-05-09T10:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2026-05-09T10:00:00.000Z'),
           endAt: new Date('2026-05-10T20:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260509T100000Z\nRRULE:FREQ=DAILY;COUNT=2',
-        },
+          recurrenceRule: 'FREQ=DAILY;COUNT=2',
+        }),
       });
 
       expect(EventOccurrenceService.isRecurringSeries(eventSeries)).toBe(false);
@@ -268,12 +281,11 @@ describe('EventOccurrenceService', () => {
     it('builds a single persisted occurrence for a non-recurring series', () => {
       const eventSeries = buildSeries({
         eventId: 'series-2',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2026-05-07T10:00:00.000Z'),
           endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        }),
       });
 
       expect(EventOccurrenceService.buildOccurrencesForSeries(eventSeries)).toEqual([
@@ -298,12 +310,11 @@ describe('EventOccurrenceService', () => {
     it('upserts a single occurrence for a non-recurring event series', async () => {
       const eventSeries = buildSeries({
         eventId: 'series-2',
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2026-05-07T10:00:00.000Z'),
           endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        }),
       });
 
       await EventOccurrenceService.syncEventSeriesOccurrences(eventSeries);
@@ -359,7 +370,7 @@ describe('EventOccurrenceService', () => {
       const eventSeries = buildSeries({
         primarySchedule: {
           ...buildSeries().primarySchedule,
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE\nINVALID:TRUE',
+          anchorStartAt: new Date(Number.NaN),
         },
       });
 
@@ -370,12 +381,11 @@ describe('EventOccurrenceService', () => {
 
     it('clears stale generated rows when a recurring series has no dates in the current materialization window', async () => {
       const eventSeries = buildSeries({
-        primarySchedule: {
-          startAt: new Date('2020-01-01T16:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2020-01-01T16:00:00.000Z'),
           endAt: new Date('2020-01-01T19:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20200101T160000Z\nRRULE:FREQ=WEEKLY;UNTIL=20200129T160000Z;BYDAY=WE',
-        },
+          recurrenceRule: 'FREQ=WEEKLY;UNTIL=20200129T160000Z;BYDAY=WE',
+        }),
       });
 
       await EventOccurrenceService.syncEventSeriesOccurrences(eventSeries);
@@ -710,12 +720,11 @@ describe('EventOccurrenceService', () => {
   describe('readUpcomingOccurrencesForSeries', () => {
     it('delegates to the DAO for a single-date event series', async () => {
       const singleSeries = buildSeries({
-        primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
+        primarySchedule: buildSchedule({
+          anchorStartAt: new Date('2026-05-07T10:00:00.000Z'),
           endAt: new Date('2026-05-07T12:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
-        },
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+        }),
       });
       (EventOccurrenceDAO.readUpcomingByEventSeriesId as jest.Mock).mockResolvedValue([
         buildOccurrence({

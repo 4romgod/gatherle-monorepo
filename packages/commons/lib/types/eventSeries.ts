@@ -10,6 +10,7 @@ import { Location } from './location';
 import { User } from './user';
 import { EventSeriesParticipant } from './eventSeriesParticipant';
 import { Organization } from './organization';
+import { EventOccurrence } from './eventOccurrence';
 
 export enum EventPrivacySetting {
   Public = 'Public',
@@ -84,12 +85,12 @@ export class Media {
 @ObjectType('EventSchedule', { description: EVENT_DESCRIPTIONS.EVENT.SCHEDULE_TYPE })
 export class EventSchedule {
   @prop({ type: () => Date, required: true })
-  @Field(() => Date, { description: EVENT_DESCRIPTIONS.EVENT.START_DATE_TIME })
-  startAt: Date;
+  @Field(() => Date, { description: EVENT_DESCRIPTIONS.EVENT.ANCHOR_START_AT })
+  anchorStartAt: Date;
 
-  @prop({ type: () => Date })
-  @Field(() => Date, { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.END_DATE_TIME })
-  endAt?: Date;
+  @prop({ type: () => Number, required: true, default: 0 })
+  @Field(() => Int, { description: EVENT_DESCRIPTIONS.EVENT.OCCURRENCE_DURATION_MINUTES })
+  occurrenceDurationMinutes: number;
 
   @prop({ type: () => String, required: true })
   @Field(() => String, { description: EVENT_DESCRIPTIONS.EVENT.TIMEZONE })
@@ -246,6 +247,12 @@ export class EventSeries {
     description: EVENT_DESCRIPTIONS.EVENT.PARTICIPANTS,
   })
   participants?: EventSeriesParticipant[];
+
+  @Field(() => EventOccurrence, {
+    nullable: true,
+    description: EVENT_DESCRIPTIONS.EVENT.REPRESENTATIVE_OCCURRENCE,
+  })
+  representativeOccurrence?: EventOccurrence;
 
   // Computed fields populated via aggregation helpers (not persisted on the document)
   @Field(() => Number, {

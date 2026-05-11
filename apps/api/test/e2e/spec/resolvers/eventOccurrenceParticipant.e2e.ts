@@ -16,6 +16,7 @@ import {
   cleanupTrackedEntities,
   createEventOnServer,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import { buildOccurrenceId, buildWeeklyOccurrenceFixture } from '@/test/e2e/utils/occurrenceFixtures';
 import {
   buildCreateUserInput,
   cleanupUsersById,
@@ -30,7 +31,7 @@ describe('EventOccurrenceParticipant Resolver', () => {
   const OCCURRENCE_LOOKUP_RESPONSE_TIMEOUT_MS = 25_000;
   const OCCURRENCE_LOOKUP_DEADLINE_TIMEOUT_MS = 35_000;
   const OCCURRENCE_REQUEST_MAX_ATTEMPTS = 6;
-  const FIRST_OCCURRENCE_START_AT = '2026-05-06T16:00:00.000Z';
+  const occurrenceFixture = buildWeeklyOccurrenceFixture();
   let adminUser: UserWithToken;
   let participantUser: UserWithToken;
   let participantUser2: UserWithToken;
@@ -45,17 +46,17 @@ describe('EventOccurrenceParticipant Resolver', () => {
 
   const buildRecurringEventInput = (): CreateEventInput => ({
     ...baseEventData,
-    title: `Occurrence RSVP Series ${Date.now()}`,
+    title: `Occurrence RSVP Series ${uniqueSuffix()}`,
     description: 'Testing occurrence-level RSVP flows',
     eventCategories: [eventCategoryId],
     organizers: [{ user: participantUser.userId, role: 'Host' }],
     rsvpLimit: 1,
     waitlistEnabled: true,
     primarySchedule: {
-      startAt: new Date('2026-05-06T16:00:00.000Z'),
-      endAt: new Date('2026-05-06T18:00:00.000Z'),
+      anchorStartAt: occurrenceFixture.firstStartAt,
+      occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
       timezone: 'Africa/Johannesburg',
-      recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+      recurrenceRule: occurrenceFixture.weeklyRuleCount3,
     },
   });
 
@@ -87,8 +88,6 @@ describe('EventOccurrenceParticipant Resolver', () => {
       };
     }
   };
-
-  const buildFirstOccurrenceId = (eventId: string): string => `${eventId}#${FIRST_OCCURRENCE_START_AT}`;
 
   const sendGraphQlWithRetry = async (
     payload: object,
@@ -221,7 +220,7 @@ describe('EventOccurrenceParticipant Resolver', () => {
         buildRecurringEventInput(),
         createdEventIds,
       );
-      const occurrenceId = buildFirstOccurrenceId(createdEvent.eventId);
+      const occurrenceId = buildOccurrenceId(createdEvent.eventId, occurrenceFixture.firstStartAt);
 
       const firstRsvp = await sendGraphQlWithRetry(
         getUpsertEventOccurrenceParticipantMutation({
@@ -298,7 +297,7 @@ describe('EventOccurrenceParticipant Resolver', () => {
         buildRecurringEventInput(),
         createdEventIds,
       );
-      const occurrenceId = buildFirstOccurrenceId(createdEvent.eventId);
+      const occurrenceId = buildOccurrenceId(createdEvent.eventId, occurrenceFixture.firstStartAt);
 
       await sendGraphQlWithRetry(
         getUpsertEventOccurrenceParticipantMutation({
@@ -329,8 +328,8 @@ describe('EventOccurrenceParticipant Resolver', () => {
           variables: {
             options: {
               dateRange: {
-                startDate: '2026-05-01T00:00:00.000Z',
-                endDate: '2026-05-31T23:59:59.999Z',
+                startDate: occurrenceFixture.rangeStartAt.toISOString(),
+                endDate: occurrenceFixture.rangeEndAt.toISOString(),
               },
               search: {
                 fields: ['title'],

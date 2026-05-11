@@ -21,13 +21,14 @@ import {
   cleanupTrackedEntities,
   createEventOnServer,
 } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import { buildOccurrenceId, buildWeeklyOccurrenceFixture } from '@/test/e2e/utils/occurrenceFixtures';
 
 describe('EventOccurrence Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   const OCCURRENCE_RESPONSE_TIMEOUT_MS = 35_000;
   const OCCURRENCE_DEADLINE_TIMEOUT_MS = 45_000;
   const OCCURRENCE_MAX_ATTEMPTS = 5;
-  const FIRST_RECURRING_OCCURRENCE_START_AT = '2026-05-06T16:00:00.000Z';
+  const occurrenceFixture = buildWeeklyOccurrenceFixture();
   let testUser: UserWithToken;
   let testEventCategory: EventCategoryRef;
   const createdEventIds: string[] = [];
@@ -78,8 +79,6 @@ describe('EventOccurrence Resolver', () => {
     return retryOnNotFound && status === 404;
   };
 
-  const buildFirstRecurringOccurrenceId = (eventId: string) => `${eventId}#${FIRST_RECURRING_OCCURRENCE_START_AT}`;
-
   const postOccurrenceGraphQLWithRetry = async (
     payload: object,
     token: string,
@@ -128,7 +127,7 @@ describe('EventOccurrence Resolver', () => {
             query: `query ReadEventById($eventId: String!) {
               readEventById(eventId: $eventId) {
                 eventId
-                upcomingOccurrences(limit: ${limit}, fromDate: "2026-05-01T00:00:00.000Z") {
+                upcomingOccurrences(limit: ${limit}, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
                   occurrenceId
                   occurrenceKey
                   eventSeriesId
@@ -208,10 +207,10 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: recurringSeriesTitle,
         primarySchedule: {
-          startAt: new Date('2026-05-06T16:00:00.000Z'),
-          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.firstStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+          recurrenceRule: occurrenceFixture.weeklyRuleCount3,
         },
       }),
       createdEventIds,
@@ -223,10 +222,10 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: singleSeriesTitle,
         primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.singleStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.singleDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
+          recurrenceRule: occurrenceFixture.singleRuleCount1,
         },
       }),
       createdEventIds,
@@ -249,8 +248,8 @@ describe('EventOccurrence Resolver', () => {
         variables: {
           options: {
             dateRange: {
-              startDate: '2026-05-01T00:00:00.000Z',
-              endDate: '2026-05-31T23:59:59.999Z',
+              startDate: occurrenceFixture.rangeStartAt.toISOString(),
+              endDate: occurrenceFixture.rangeEndAt.toISOString(),
             },
             search: {
               fields: ['title'],
@@ -273,10 +272,10 @@ describe('EventOccurrence Resolver', () => {
       recurringSeriesTitle,
     ]);
     expect(occurrences.map((occurrence: any) => occurrence.startAt)).toEqual([
-      '2026-05-06T16:00:00.000Z',
-      '2026-05-07T10:00:00.000Z',
-      '2026-05-13T16:00:00.000Z',
-      '2026-05-20T16:00:00.000Z',
+      occurrenceFixture.firstStartAt.toISOString(),
+      occurrenceFixture.singleStartAt.toISOString(),
+      occurrenceFixture.secondStartAt.toISOString(),
+      occurrenceFixture.thirdStartAt.toISOString(),
     ]);
   });
 
@@ -287,10 +286,10 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: `Occurrence Detail Recurring Series ${uniqueSuffix()}`,
         primarySchedule: {
-          startAt: new Date('2026-05-06T16:00:00.000Z'),
-          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.firstStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+          recurrenceRule: occurrenceFixture.weeklyRuleCount3,
         },
       }),
       createdEventIds,
@@ -302,7 +301,7 @@ describe('EventOccurrence Resolver', () => {
         query: `query ReadEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
-            upcomingOccurrences(limit: 2, fromDate: "2026-05-01T00:00:00.000Z") {
+            upcomingOccurrences(limit: 2, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
               occurrenceKey
               startAt
             }
@@ -317,12 +316,12 @@ describe('EventOccurrence Resolver', () => {
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data.readEventById.upcomingOccurrences).toEqual([
       {
-        occurrenceKey: `${createdEvent.eventId}#2026-05-06T16:00:00.000Z`,
-        startAt: '2026-05-06T16:00:00.000Z',
+        occurrenceKey: buildOccurrenceId(createdEvent.eventId, occurrenceFixture.firstStartAt),
+        startAt: occurrenceFixture.firstStartAt.toISOString(),
       },
       {
-        occurrenceKey: `${createdEvent.eventId}#2026-05-13T16:00:00.000Z`,
-        startAt: '2026-05-13T16:00:00.000Z',
+        occurrenceKey: buildOccurrenceId(createdEvent.eventId, occurrenceFixture.secondStartAt),
+        startAt: occurrenceFixture.secondStartAt.toISOString(),
       },
     ]);
   });
@@ -334,10 +333,10 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: `Occurrence Detail Single Series ${uniqueSuffix()}`,
         primarySchedule: {
-          startAt: new Date('2026-05-07T10:00:00.000Z'),
-          endAt: new Date('2026-05-07T12:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.singleStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.singleDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
+          recurrenceRule: occurrenceFixture.singleRuleCount1,
         },
       }),
       createdEventIds,
@@ -349,7 +348,7 @@ describe('EventOccurrence Resolver', () => {
         query: `query ReadEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
-            upcomingOccurrences(limit: 2, fromDate: "2026-05-01T00:00:00.000Z") {
+            upcomingOccurrences(limit: 2, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
               occurrenceKey
               startAt
               endAt
@@ -365,9 +364,9 @@ describe('EventOccurrence Resolver', () => {
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data.readEventById.upcomingOccurrences).toEqual([
       {
-        occurrenceKey: `${createdEvent.eventId}#2026-05-07T10:00:00.000Z`,
-        startAt: '2026-05-07T10:00:00.000Z',
-        endAt: '2026-05-07T12:00:00.000Z',
+        occurrenceKey: buildOccurrenceId(createdEvent.eventId, occurrenceFixture.singleStartAt),
+        startAt: occurrenceFixture.singleStartAt.toISOString(),
+        endAt: occurrenceFixture.singleEndAt.toISOString(),
       },
     ]);
   });
@@ -379,10 +378,10 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: `Occurrence Exception Update Series ${uniqueSuffix()}`,
         primarySchedule: {
-          startAt: new Date('2026-05-06T16:00:00.000Z'),
-          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.firstStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=3;BYDAY=WE',
+          recurrenceRule: occurrenceFixture.weeklyRuleCount3,
         },
       }),
       createdEventIds,
@@ -396,8 +395,8 @@ describe('EventOccurrence Resolver', () => {
       .send(
         getUpdateEventOccurrenceMutation({
           occurrenceId: firstOccurrence.occurrenceId,
-          startAt: '2026-05-06T17:30:00.000Z',
-          endAt: '2026-05-06T20:30:00.000Z',
+          startAt: occurrenceFixture.updatedFirstStartAt.toISOString(),
+          endAt: occurrenceFixture.updatedFirstEndAt.toISOString(),
           timezone: 'UTC',
         }),
       );
@@ -407,8 +406,8 @@ describe('EventOccurrence Resolver', () => {
     expect(updateResponse.body.data.updateEventOccurrence).toEqual(
       expect.objectContaining({
         occurrenceId: firstOccurrence.occurrenceId,
-        startAt: '2026-05-06T17:30:00.000Z',
-        endAt: '2026-05-06T20:30:00.000Z',
+        startAt: occurrenceFixture.updatedFirstStartAt.toISOString(),
+        endAt: occurrenceFixture.updatedFirstEndAt.toISOString(),
         timezone: 'UTC',
         isException: true,
       }),
@@ -418,18 +417,18 @@ describe('EventOccurrence Resolver', () => {
     expect(upcomingOccurrences).toEqual([
       expect.objectContaining({
         occurrenceId: firstOccurrence.occurrenceId,
-        startAt: '2026-05-06T17:30:00.000Z',
-        endAt: '2026-05-06T20:30:00.000Z',
+        startAt: occurrenceFixture.updatedFirstStartAt.toISOString(),
+        endAt: occurrenceFixture.updatedFirstEndAt.toISOString(),
         timezone: 'UTC',
         isException: true,
       }),
       expect.objectContaining({
-        startAt: '2026-05-13T16:00:00.000Z',
+        startAt: occurrenceFixture.secondStartAt.toISOString(),
         timezone: 'Africa/Johannesburg',
         isException: false,
       }),
       expect.objectContaining({
-        startAt: '2026-05-20T16:00:00.000Z',
+        startAt: occurrenceFixture.thirdStartAt.toISOString(),
         timezone: 'Africa/Johannesburg',
         isException: false,
       }),
@@ -443,16 +442,16 @@ describe('EventOccurrence Resolver', () => {
       buildEventInput({
         title: `Occurrence Cancellation Series ${uniqueSuffix()}`,
         primarySchedule: {
-          startAt: new Date('2026-05-06T16:00:00.000Z'),
-          endAt: new Date('2026-05-06T19:00:00.000Z'),
+          anchorStartAt: occurrenceFixture.firstStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
           timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
+          recurrenceRule: occurrenceFixture.weeklyRuleCount2,
         },
       }),
       createdEventIds,
     );
 
-    const firstOccurrenceId = buildFirstRecurringOccurrenceId(createdEvent.eventId);
+    const firstOccurrenceId = buildOccurrenceId(createdEvent.eventId, occurrenceFixture.firstStartAt);
 
     const rsvpResponse = await postOccurrenceGraphQLWithRetry(
       getUpsertEventOccurrenceParticipantMutation({

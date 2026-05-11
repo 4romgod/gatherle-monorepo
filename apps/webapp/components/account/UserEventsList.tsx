@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from '@apollo/client';
-import { Add, Delete, Edit, Event as EventIcon } from '@mui/icons-material';
+import { Add, CalendarToday, Delete, Edit, Event as EventIcon } from '@mui/icons-material';
 import { Box, Button, Card, CardContent, Chip, Divider, Skeleton, Stack, Typography } from '@mui/material';
 import { FilterOperatorInput, SortOrderInput } from '@/data/graphql/types/graphql';
 import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
 import { DeleteEventByIdDocument } from '@/data/graphql/query/Event/mutation';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { formatOccurrenceDateTime, formatRecurrenceRule } from '@/components/events/date-utils';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useSession } from 'next-auth/react';
@@ -138,7 +139,7 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
               <Card
                 key={event.eventId}
                 elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
               >
                 <CardContent>
                   <Stack spacing={1}>
@@ -155,6 +156,23 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
                         <Typography variant="caption" color="text.secondary">
                           {event.slug}
                         </Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {event.representativeOccurrence
+                              ? formatOccurrenceDateTime(
+                                  event.representativeOccurrence.startAt,
+                                  event.representativeOccurrence.endAt,
+                                  event.representativeOccurrence.timezone,
+                                )
+                              : formatRecurrenceRule(event.primarySchedule?.recurrenceRule)}
+                          </Typography>
+                        </Stack>
+                        {event.summary && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {event.summary}
+                          </Typography>
+                        )}
                       </Stack>
                       <Stack direction="row" spacing={1}>
                         <Button
@@ -177,10 +195,22 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
                       </Stack>
                     </Stack>
                     <Divider />
-                    <Stack direction="row" flexWrap="wrap" spacing={1}>
+                    <Stack direction="row" flexWrap="wrap" spacing={1} useFlexGap>
                       <Chip label={event.status ?? 'Status unknown'} size="small" />
                       <Chip label={event.lifecycleStatus ?? 'Draft'} size="small" />
                       {event.visibility && <Chip label={event.visibility} size="small" />}
+                      {event.representativeOccurrence && (
+                        <Chip
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                          label={`Next session · ${formatOccurrenceDateTime(
+                            event.representativeOccurrence.startAt,
+                            event.representativeOccurrence.endAt,
+                            event.representativeOccurrence.timezone,
+                          )}`}
+                        />
+                      )}
                     </Stack>
                   </Stack>
                 </CardContent>
