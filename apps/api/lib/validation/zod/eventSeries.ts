@@ -73,8 +73,12 @@ export const EventSchema = z.object({
 
   primarySchedule: z
     .object({
-      startAt: z.coerce.date().describe('Start date/time of the event.'),
-      endAt: z.coerce.date().optional().describe('End date/time of each occurrence (optional).'),
+      anchorStartAt: z.coerce.date().describe('Anchor start date/time for the first occurrence.'),
+      occurrenceDurationMinutes: z
+        .number()
+        .int({ message: 'Occurrence duration must be a whole number of minutes' })
+        .min(0, { message: 'Occurrence duration must be zero or a positive number of minutes' })
+        .describe('Duration of each occurrence in minutes. Use 0 when there is no explicit end time.'),
       timezone: z
         .string()
         .min(1, { message: 'Timezone is required' })
@@ -93,9 +97,12 @@ export const EventSchema = z.object({
       recurrenceRule: z
         .string()
         .min(1, { message: 'RecurrenceRule is required' })
-        .describe('RRULE string — single source of truth for event recurrence and scheduling.'),
+        .refine((value) => !/DTSTART:/i.test(value), {
+          message: 'recurrenceRule must not include DTSTART; use primarySchedule.anchorStartAt instead',
+        })
+        .describe('RRULE-only string — single source of truth for event recurrence cadence.'),
     })
-    .describe('Single source of truth for all event dates and recurrence.'),
+    .describe('Single source of truth for the occurrence template and recurrence cadence.'),
 
   location: LocationSchema.describe('The location where the event will take place.'),
 

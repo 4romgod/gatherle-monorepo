@@ -104,8 +104,8 @@ export const GetRecommendedFeedDocument = graphql(`
           details
         }
         primarySchedule {
-          startAt
-          endAt
+          anchorStartAt
+          occurrenceDurationMinutes
           timezone
           recurrenceRule
         }

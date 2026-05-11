@@ -15,7 +15,7 @@ import {
   NotificationDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
-import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual, getScheduleAnchorStartAt } from '@/utils';
 import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
@@ -33,7 +33,7 @@ class EventSeriesService {
     nextSchedule: EventSchedule,
   ): boolean {
     return (
-      previousSchedule.startAt.getTime() !== nextSchedule.startAt.getTime() ||
+      getScheduleAnchorStartAt(previousSchedule).getTime() !== getScheduleAnchorStartAt(nextSchedule).getTime() ||
       (previousSchedule.recurrenceRule ?? null) !== (nextSchedule.recurrenceRule ?? null)
     );
   }
@@ -202,9 +202,13 @@ class EventSeriesService {
     }
 
     const { predecessorRule, successorRule } = EventOccurrenceService.splitRecurringRuleAtOccurrence(
+      getScheduleAnchorStartAt(eventSeries.primarySchedule),
       eventSeries.primarySchedule.recurrenceRule,
       occurrence.originalStartAt,
     );
+    const successorDurationMinutes = occurrence.endAt
+      ? Math.max(0, Math.round((occurrence.endAt.getTime() - occurrence.startAt.getTime()) / (60 * 1000)))
+      : 0;
 
     const successorInput: CreateEventInput = {
       title: input.title ?? eventSeries.title,
@@ -212,8 +216,8 @@ class EventSeriesService {
       summary: input.summary ?? eventSeries.summary,
       primarySchedule: {
         ...eventSeries.primarySchedule,
-        startAt: new Date(occurrence.startAt),
-        endAt: occurrence.endAt ? new Date(occurrence.endAt) : undefined,
+        anchorStartAt: new Date(occurrence.startAt),
+        occurrenceDurationMinutes: successorDurationMinutes,
         timezone: occurrence.timezone,
         recurrenceRule: successorRule,
       },

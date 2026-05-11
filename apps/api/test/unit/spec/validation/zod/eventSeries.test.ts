@@ -100,7 +100,8 @@ describe('EventSeries', () => {
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
         primarySchedule: {
-          startAt: '2024-06-30T10:00:00Z',
+          anchorStartAt: '2024-06-30T10:00:00Z',
+          occurrenceDurationMinutes: 120,
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },
@@ -135,7 +136,8 @@ describe('EventSeries', () => {
         title: 'EventSeries Title',
         description: 'EventSeries Description',
         primarySchedule: {
-          startAt: '2024-06-30T10:00:00Z',
+          anchorStartAt: '2024-06-30T10:00:00Z',
+          occurrenceDurationMinutes: 120,
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },
@@ -154,7 +156,8 @@ describe('EventSeries', () => {
         title: 'EventSeries Title',
         description: 'EventSeries Description',
         primarySchedule: {
-          startAt: '2024-06-30T10:00:00Z',
+          anchorStartAt: '2024-06-30T10:00:00Z',
+          occurrenceDurationMinutes: 120,
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },
@@ -175,7 +178,8 @@ describe('EventSeries', () => {
         startDateTime: '2024-06-30T10:00:00Z',
         endDateTime: '2024-06-30T12:00:00Z',
         primarySchedule: {
-          startAt: '2024-06-30T10:00:00Z',
+          anchorStartAt: '2024-06-30T10:00:00Z',
+          occurrenceDurationMinutes: 120,
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },

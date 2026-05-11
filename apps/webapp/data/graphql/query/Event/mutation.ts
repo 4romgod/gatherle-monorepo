@@ -21,7 +21,8 @@ export const DeleteEventByIdDocument = graphql(`
       title
       description
       primarySchedule {
-        startAt
+        anchorStartAt
+        occurrenceDurationMinutes
         timezone
         recurrenceRule
       }

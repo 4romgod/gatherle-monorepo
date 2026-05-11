@@ -47,10 +47,23 @@ function loadPersistedState(): PersistedRecurrenceState | null {
   }
 }
 
+function toRuleBody(rule: RRule): string {
+  return (
+    rule
+      .toString()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('RRULE:'))
+      ?.slice('RRULE:'.length)
+      .trim() ?? ''
+  );
+}
+
 export default function EventDateInput({ onChange }: EventDateInputProps) {
   const [eventType, setEvent] = useState<'single' | 'recurring'>('single');
   const [startDateTime, setStartDateTime] = useState<Dayjs | null>(dayjs());
   const [endDateTime, setEndDateTime] = useState<Dayjs | null>(dayjs().add(1, 'hour'));
+  const [repeatUntil, setRepeatUntil] = useState<Dayjs | null>(null);
 
   const [frequency, setFrequency] = useState<Frequency>(Frequency.WEEKLY);
   const [interval, setInterval] = useState<number>(1);
@@ -79,29 +92,34 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
     if (!startDateTime || !endDateTime) return;
 
     let result = '';
+    const occurrenceDurationMinutes = Math.max(0, endDateTime.diff(startDateTime, 'minute'));
 
     if (eventType === 'single') {
-      // Treating a single event as a daily recurring rule with 1 occurrence
       const rule = new RRule({
         freq: Frequency.DAILY,
         interval: 1,
         dtstart: startDateTime.toDate(),
-        until: endDateTime?.toDate(),
+        count: 1,
       });
-      result = rule.toString();
+      result = toRuleBody(rule);
     } else {
       const rule = new RRule({
         freq: frequency,
         interval,
         dtstart: startDateTime.toDate(),
-        until: endDateTime.toDate(),
+        until: repeatUntil?.toDate() ?? undefined,
         byweekday: daysOfWeek.map((d) => Weekday.fromStr(d)),
       });
-      result = rule.toString();
+      result = toRuleBody(rule);
     }
 
-    onChange(result, startDateTime.toDate(), Intl.DateTimeFormat().resolvedOptions().timeZone, endDateTime?.toDate());
-  }, [eventType, startDateTime, endDateTime, frequency, interval, daysOfWeek]);
+    onChange(
+      result,
+      startDateTime.toDate(),
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      occurrenceDurationMinutes,
+    );
+  }, [eventType, startDateTime, endDateTime, repeatUntil, frequency, interval, daysOfWeek, onChange]);
 
   const handleDayChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = event.target;
@@ -133,7 +151,7 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
           <Grid size={{ xs: 12, sm: 6 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DateTimePicker
-                label="End Date and Time"
+                label={eventType === 'recurring' ? 'Session End Date and Time' : 'End Date and Time'}
                 value={endDateTime}
                 onChange={setEndDateTime}
                 sx={{
@@ -173,6 +191,25 @@ export default function EventDateInput({ onChange }: EventDateInputProps) {
                   color="secondary"
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DateTimePicker
+                    label="Repeat Until (Optional)"
+                    value={repeatUntil}
+                    onChange={setRepeatUntil}
+                    slotProps={{
+                      textField: {
+                        helperText: 'Leave blank to keep the series open-ended.',
+                      },
+                    }}
+                    sx={{
+                      width: '100%',
+                      '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                    }}
+                  />
+                </LocalizationProvider>
               </Grid>
 
               {frequency === Frequency.WEEKLY && (

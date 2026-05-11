@@ -76,8 +76,8 @@ export const GetMyEventOccurrenceRsvpsDocument = graphql(`
             details
           }
           primarySchedule {
-            startAt
-            endAt
+            anchorStartAt
+            occurrenceDurationMinutes
             timezone
             recurrenceRule
           }

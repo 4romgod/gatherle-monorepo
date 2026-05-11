@@ -460,12 +460,7 @@ class EventSeriesDAO {
             lifecycleStatus: 'Published',
             status: { $in: ['Upcoming', 'Ongoing'] },
             visibility: { $in: ['Public', 'Unlisted'] },
-            $or: [
-              // Upcoming: only show events that haven't started yet
-              { status: 'Upcoming', 'primarySchedule.startAt': { $gte: now } },
-              // Ongoing events are already in progress — always include
-              { status: 'Ongoing' },
-            ],
+            $or: [{ status: 'Upcoming', 'primarySchedule.anchorStartAt': { $gte: now } }, { status: 'Ongoing' }],
           },
         },
         ...this.buildOccurrenceRsvpLookupStages(now),
@@ -477,7 +472,7 @@ class EventSeriesDAO {
             },
           },
         },
-        { $sort: { _trendingScore: -1 as const, 'primarySchedule.startAt': 1 as const } },
+        { $sort: { _trendingScore: -1 as const, 'primarySchedule.anchorStartAt': 1 as const } },
         { $limit: limit },
         { $unset: ['_activeOccurrences', '_rsvpAgg', '_savedAgg', '_trendingScore'] },
         ...createEventLookupStages({ skipCounts: true }),
@@ -508,7 +503,7 @@ class EventSeriesDAO {
         },
         ...this.buildOccurrenceRsvpLookupStages(now),
         ...this.buildSavedByLookupStages(),
-        { $sort: { 'primarySchedule.startAt': 1 as const } },
+        { $sort: { 'primarySchedule.anchorStartAt': 1 as const } },
         { $limit: limit },
         { $unset: ['_activeOccurrences', '_rsvpAgg', '_savedAgg'] },
         ...createEventLookupStages({ skipCounts: true }),

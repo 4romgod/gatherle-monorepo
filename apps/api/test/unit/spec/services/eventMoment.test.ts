@@ -1,40 +1,50 @@
 // Mocks must come before any imports that trigger the module graph.
-jest.mock('@/constants', () => ({
-  MEDIA_CDN_DOMAIN: 'cdn.example.com',
-  AWS_REGION: 'eu-west-1',
-  STAGE: 'Dev',
-  MONGO_DB_URL: 'mock-url',
-  JWT_SECRET: 'test-secret',
-  SECRET_ARN: undefined,
-  LOG_LEVEL: 1,
-  GRAPHQL_API_PATH: '/v1/graphql',
-  MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES: 75 * 1024 * 1024,
-  HttpStatusCode: {
-    OK: 200,
-    CREATED: 201,
-    BAD_REQUEST: 400,
-    UNAUTHENTICATED: 401,
-    UNAUTHORIZED: 403,
-    NOT_FOUND: 404,
-    CONFLICT: 409,
-    INTERNAL_SERVER_ERROR: 500,
-  },
-  REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
-}));
+jest.mock('@/constants', () => {
+  const actual = jest.requireActual('@/constants');
+  return {
+    ...actual,
+    MEDIA_CDN_DOMAIN: 'cdn.example.com',
+    AWS_REGION: 'eu-west-1',
+    STAGE: 'Dev',
+    MONGO_DB_URL: 'mock-url',
+    JWT_SECRET: 'test-secret',
+    SECRET_ARN: undefined,
+    LOG_LEVEL: 1,
+    LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+    LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4 },
+    GRAPHQL_API_PATH: '/v1/graphql',
+    MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES: 75 * 1024 * 1024,
+    HttpStatusCode: {
+      OK: 200,
+      CREATED: 201,
+      BAD_REQUEST: 400,
+      UNAUTHENTICATED: 401,
+      UNAUTHORIZED: 403,
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      INTERNAL_SERVER_ERROR: 500,
+    },
+    REGEXT_MONGO_DB_ERROR: /\{ (.*?): (.*?) \}/,
+  };
+});
 
-jest.mock('@/utils', () => ({
-  CustomError: jest.fn((message: string, errorType: any) => {
-    const error = new Error(message) as any;
-    error.extensions = { code: errorType?.errorCode, http: { status: errorType?.errorStatus } };
-    return error;
-  }),
-  ErrorTypes: {
-    BAD_USER_INPUT: { errorCode: 'BAD_USER_INPUT', errorStatus: 400 },
-    NOT_FOUND: { errorCode: 'NOT_FOUND', errorStatus: 404 },
-    UNAUTHORIZED: { errorCode: 'UNAUTHORIZED', errorStatus: 403 },
-    INTERNAL_SERVER_ERROR: { errorCode: 'INTERNAL_SERVER_ERROR', errorStatus: 500 },
-  },
-}));
+jest.mock('@/utils', () => {
+  const actual = jest.requireActual('@/utils');
+  return {
+    ...actual,
+    CustomError: jest.fn((message: string, errorType: any) => {
+      const error = new Error(message) as any;
+      error.extensions = { code: errorType?.errorCode, http: { status: errorType?.errorStatus } };
+      return error;
+    }),
+    ErrorTypes: {
+      BAD_USER_INPUT: { errorCode: 'BAD_USER_INPUT', errorStatus: 400 },
+      NOT_FOUND: { errorCode: 'NOT_FOUND', errorStatus: 404 },
+      UNAUTHORIZED: { errorCode: 'UNAUTHORIZED', errorStatus: 403 },
+      INTERNAL_SERVER_ERROR: { errorCode: 'INTERNAL_SERVER_ERROR', errorStatus: 500 },
+    },
+  };
+});
 
 jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
@@ -84,6 +94,9 @@ jest.mock('@/utils/logger', () => ({
     warn: jest.fn(),
     error: jest.fn(),
   },
+  LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4, debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  initLogger: jest.fn(),
 }));
 
 jest.mock('@/clients/AWS/s3Client', () => ({

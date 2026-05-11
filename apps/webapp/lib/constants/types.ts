@@ -35,7 +35,7 @@ export type CategoryFilterProps = {
 };
 
 export type EventDateInputProps = {
-  onChange: (rrule: string, startAt: Date, timezone: string, endAt?: Date) => void;
+  onChange: (recurrenceRule: string, anchorStartAt: Date, timezone: string, occurrenceDurationMinutes: number) => void;
 };
 
 export type EventRadioButtonsProps = {

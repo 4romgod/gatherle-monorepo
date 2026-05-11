@@ -74,14 +74,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       location: event?.location ?? ({ locationType: 'venue' } as Location),
       primarySchedule: event?.primarySchedule
         ? {
-            startAt: event.primarySchedule.startAt,
-            endAt: event.primarySchedule.endAt ?? undefined,
+            anchorStartAt: event.primarySchedule.anchorStartAt,
+            occurrenceDurationMinutes: event.primarySchedule.occurrenceDurationMinutes ?? 0,
             timezone: event.primarySchedule.timezone ?? 'Africa/Johannesburg',
             recurrenceRule: event.primarySchedule.recurrenceRule ?? '',
           }
         : {
-            startAt: undefined as unknown as Date,
-            endAt: undefined,
+            anchorStartAt: undefined as unknown as Date,
+            occurrenceDurationMinutes: 0,
             timezone: 'Africa/Johannesburg',
             recurrenceRule: '',
           },
@@ -207,15 +207,20 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, venueId: venueId ?? undefined }));
   };
 
-  const handleEventDateChange = (rrule: string, startAt: Date, timezone: string, endAt?: Date) => {
+  const handleEventDateChange = (
+    recurrenceRule: string,
+    anchorStartAt: Date,
+    timezone: string,
+    occurrenceDurationMinutes: number,
+  ) => {
     setEventData((prev) => ({
       ...prev,
       primarySchedule: {
         ...(prev.primarySchedule ?? {}),
-        recurrenceRule: rrule,
-        startAt,
+        recurrenceRule,
+        anchorStartAt,
         timezone,
-        endAt,
+        occurrenceDurationMinutes,
       },
     }));
   };

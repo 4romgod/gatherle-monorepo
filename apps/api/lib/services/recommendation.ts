@@ -10,6 +10,7 @@ import {
 } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
+import { getScheduleAnchorStartAt } from '@/utils/eventSchedule';
 
 const SCORE_WEIGHTS = {
   CATEGORY_MATCH: 30,
@@ -174,7 +175,8 @@ class RecommendationService {
         }
 
         const startAt =
-          representativeOccurrencesByEventId.get(event.eventId)?.startAt ?? event.primarySchedule?.startAt;
+          representativeOccurrencesByEventId.get(event.eventId)?.startAt ??
+          (event.primarySchedule ? getScheduleAnchorStartAt(event.primarySchedule) : undefined);
         if (startAt) {
           const daysUntil = daysBetween(now, new Date(startAt));
           if (daysUntil >= 0 && daysUntil <= 7) {

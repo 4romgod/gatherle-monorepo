@@ -281,6 +281,26 @@ describe('EventSeriesResolver Field Resolvers', () => {
     });
   });
 
+  describe('representativeOccurrence field resolver', () => {
+    it('returns the representative occurrence for the event series', async () => {
+      const event = { eventId: 'event1' } as EventSeries;
+      const loadSpy = jest.spyOn(mockOccurrenceByEventSeriesLoader, 'load');
+
+      const result = await resolver.representativeOccurrence(event, mockContext);
+
+      expect(loadSpy).toHaveBeenCalledWith('event1');
+      expect(result).toEqual(singleOccurrence);
+    });
+
+    it('returns null when no representative occurrence exists', async () => {
+      const event = { eventId: 'missing-event' } as EventSeries;
+
+      const result = await resolver.representativeOccurrence(event, mockContext);
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('isSavedByMe field resolver', () => {
     beforeEach(() => {
       jest.clearAllMocks();

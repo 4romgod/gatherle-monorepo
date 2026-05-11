@@ -123,8 +123,8 @@ export const getSplitEventSeriesAtOccurrenceMutation = (input: any) => {
         splitFromEventSeriesId
         splitIntoEventSeriesId
         primarySchedule {
-          startAt
-          endAt
+          anchorStartAt
+          occurrenceDurationMinutes
           timezone
           recurrenceRule
         }

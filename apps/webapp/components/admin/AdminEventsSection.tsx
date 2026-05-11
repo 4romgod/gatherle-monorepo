@@ -16,8 +16,9 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  Chip,
 } from '@mui/material';
-import { Save, Delete } from '@mui/icons-material';
+import { Save, Delete, CalendarToday, PeopleOutline, BookmarkBorder } from '@mui/icons-material';
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { EventStatus, EventLifecycleStatus, EventVisibility } from '@/data/graphql/types/graphql';
@@ -26,6 +27,7 @@ import { UpdateEventDocument, DeleteEventByIdDocument } from '@/data/graphql/que
 import { useAppContext } from '@/hooks/useAppContext';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import { formatOccurrenceDateTime, formatRecurrenceRule } from '@/components/events/date-utils';
 
 type EventFormState = {
   status: EventStatus;
@@ -176,7 +178,7 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
               <Card
                 key={event.eventId}
                 elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
+                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
               >
                 <CardContent sx={{ p: { xs: 3, md: 4 } }}>
                   <Stack spacing={2}>
@@ -193,6 +195,23 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
                         <Typography variant="caption" color="text.secondary">
                           {event.slug}
                         </Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {event.representativeOccurrence
+                              ? formatOccurrenceDateTime(
+                                  event.representativeOccurrence.startAt,
+                                  event.representativeOccurrence.endAt,
+                                  event.representativeOccurrence.timezone,
+                                )
+                              : formatRecurrenceRule(event.primarySchedule?.recurrenceRule)}
+                          </Typography>
+                        </Stack>
+                        {event.summary && (
+                          <Typography variant="body2" color="text.secondary">
+                            {event.summary}
+                          </Typography>
+                        )}
                       </Stack>
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
                         <Button
@@ -219,6 +238,30 @@ export default function AdminEventsSection({ token }: AdminSectionProps) {
                       </Stack>
                     </Stack>
                     <Divider />
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        icon={<PeopleOutline sx={{ fontSize: 14 }} />}
+                        label={`${event.representativeOccurrence?.rsvpCount ?? event.rsvpCount ?? 0} RSVPs`}
+                      />
+                      <Chip
+                        size="small"
+                        icon={<BookmarkBorder sx={{ fontSize: 14 }} />}
+                        label={`${event.savedByCount ?? 0} saves`}
+                      />
+                      {event.representativeOccurrence && (
+                        <Chip
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                          label={`Next session · ${formatOccurrenceDateTime(
+                            event.representativeOccurrence.startAt,
+                            event.representativeOccurrence.endAt,
+                            event.representativeOccurrence.timezone,
+                          )}`}
+                        />
+                      )}
+                    </Stack>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
                       <FormControl fullWidth size="small">
                         <InputLabel>Status</InputLabel>
