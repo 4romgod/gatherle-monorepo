@@ -43,7 +43,9 @@ function getNavLinks(): HTMLAnchorElement[] {
 }
 
 function getSelectedNavLinks(): HTMLAnchorElement[] {
-  return getNavLinks().filter((link) => link.closest('.MuiBottomNavigationAction-root')?.classList.contains('Mui-selected'));
+  return getNavLinks().filter((link) =>
+    link.closest('.MuiBottomNavigationAction-root')?.classList.contains('Mui-selected'),
+  );
 }
 
 describe('MobileBottomNav', () => {

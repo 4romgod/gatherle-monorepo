@@ -22,10 +22,22 @@ import { ApiGatewayDomain } from 'aws-cdk-lib/aws-route53-targets';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
+import { CfnWebACL, CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { join } from 'path';
 import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
-import { DNS_STACK_CONFIG } from '../constants/dns';
-import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
+import {
+  DEFAULT_GRAPHQL_API_THROTTLE_BURST_LIMITS,
+  DEFAULT_GRAPHQL_API_THROTTLE_RATE_LIMITS,
+  DEFAULT_GRAPHQL_API_WAF_RATE_LIMITS,
+  DNS_STACK_CONFIG,
+} from '../constants';
+import {
+  buildBackendSecretName,
+  buildMetricName,
+  buildResourceName,
+  buildTargetSuffix,
+  parsePositiveIntegerEnv,
+} from '../utils';
 
 configDotenv();
 
@@ -59,6 +71,22 @@ export class GraphQLStack extends Stack {
     const stageSegment = props.applicationStage.toLowerCase();
     const targetSuffix = buildTargetSuffix(props.applicationStage, props.awsRegion);
     const enableCustomDomains = props.enableCustomDomains ?? false;
+    const graphqlApiThrottleRateLimit = parsePositiveIntegerEnv(
+      'GRAPHQL_API_THROTTLE_RATE_LIMIT',
+      process.env.GRAPHQL_API_THROTTLE_RATE_LIMIT,
+      DEFAULT_GRAPHQL_API_THROTTLE_RATE_LIMITS[props.applicationStage] ?? 50,
+    );
+    const graphqlApiThrottleBurstLimit = parsePositiveIntegerEnv(
+      'GRAPHQL_API_THROTTLE_BURST_LIMIT',
+      process.env.GRAPHQL_API_THROTTLE_BURST_LIMIT,
+      DEFAULT_GRAPHQL_API_THROTTLE_BURST_LIMITS[props.applicationStage] ?? 100,
+    );
+    const graphqlApiWafRateLimit = parsePositiveIntegerEnv(
+      'GRAPHQL_API_WAF_RATE_LIMIT',
+      process.env.GRAPHQL_API_WAF_RATE_LIMIT,
+      DEFAULT_GRAPHQL_API_WAF_RATE_LIMITS[props.applicationStage] ?? 2000,
+      100,
+    );
     this.stageRegionDomainName = `${stageSegment}.${props.awsRegion.toLowerCase()}.${DNS_STACK_CONFIG.rootDomainName}`;
     const graphqlCustomDomainName = `api.${this.stageRegionDomainName}`;
     const graphqlLambdaName = buildResourceName('GraphqlLambdaFunction', props.applicationStage, props.awsRegion);
@@ -193,11 +221,49 @@ export class GraphQLStack extends Stack {
         accessLogDestination: new LogGroupLogDestination(this.graphqlApiAccessLogGroup),
         accessLogFormat: AccessLogFormat.clf(),
         stageName: stageSegment,
+        throttlingBurstLimit: graphqlApiThrottleBurstLimit,
+        throttlingRateLimit: graphqlApiThrottleRateLimit,
       },
     });
 
     this.graphql = this.graphqlApi.root.addResource('graphql');
     this.graphql.addMethod('ANY');
+
+    const graphqlApiWebAcl = new CfnWebACL(this, 'GraphqlApiWebAcl', {
+      defaultAction: { allow: {} },
+      description: `Baseline abuse protection for the ${props.applicationStage} GraphQL API.`,
+      name: buildResourceName('gatherle-graphql-api-web-acl', props.applicationStage, props.awsRegion),
+      scope: 'REGIONAL',
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: buildMetricName(`GraphqlApiWebAcl${targetSuffix}`),
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        {
+          name: buildResourceName('gatherle-graphql-api-rate-limit', props.applicationStage, props.awsRegion),
+          priority: 0,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              aggregateKeyType: 'IP',
+              evaluationWindowSec: 300,
+              limit: graphqlApiWafRateLimit,
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: buildMetricName(`GraphqlApiRateLimit${targetSuffix}`),
+            sampledRequestsEnabled: true,
+          },
+        },
+      ],
+    });
+
+    new CfnWebACLAssociation(this, 'GraphqlApiWebAclAssociation', {
+      resourceArn: this.graphqlApi.deploymentStage.stageArn,
+      webAclArn: graphqlApiWebAcl.attrArn,
+    });
 
     let graphqlApiEndpoint = this.graphqlApi.urlForPath('/graphql');
 
