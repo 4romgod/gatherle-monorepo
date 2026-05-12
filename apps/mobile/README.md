@@ -25,6 +25,10 @@ against a local API server from Expo Go.
 EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.10:9000/v1/graphql npm run dev:mobile
 ```
 
+When you run the Expo web preview, local/LAN GraphQL URLs such as `http://192.168.x.x:9000/v1/graphql` will usually fail
+on browser CORS unless the API explicitly allows that origin. The mobile app now falls back to the public beta GraphQL
+endpoint on `react-native-web` in that case, while native iOS/Android builds can still use the local API URL.
+
 ## GraphQL Codegen
 
 The mobile app mirrors the webapp's codegen strategy:

@@ -1,15 +1,20 @@
-import { ApolloProvider } from '@apollo/client';
 import { NavigationContainer } from '@react-navigation/native';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { apolloClient } from './data/graphql/apollo-client';
-import { AppDrawer } from './src/components/AppDrawer';
-import { navigationRef } from './src/navigation/navigationRef';
-import { RootNavigator } from './src/navigation/RootNavigator';
-import { AppShellProvider } from './src/shell/AppShellProvider';
-import { AppThemeProvider, useAppTheme } from './src/theme/AppThemeProvider';
+import { AppDrawer } from '@/app/components/AppDrawer';
+import { RootNavigator } from '@/app/navigation/RootNavigator';
+import { navigationRef } from '@/app/navigation/navigationRef';
+import { AppProviders } from '@/app/AppProviders';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 function AppContent() {
   const { isDark, navigationTheme } = useAppTheme();
@@ -26,17 +31,24 @@ function AppContent() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ApolloProvider client={apolloClient}>
-        <SafeAreaProvider>
-          <AppThemeProvider>
-            <AppShellProvider>
-              <AppContent />
-            </AppShellProvider>
-          </AppThemeProvider>
-        </SafeAreaProvider>
-      </ApolloProvider>
+      <AppProviders>
+        <AppContent />
+      </AppProviders>
     </GestureHandlerRootView>
   );
 }

@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import 'dotenv/config';
 import type { CodegenConfig } from '@graphql-codegen/cli';
 import * as fs from 'fs';
@@ -17,7 +19,7 @@ if (!schemaSource) {
 
 const config: CodegenConfig = {
   schema: schemaSource,
-  documents: ['./**/*.{ts,tsx}', '!./data/graphql/types/**/*'],
+  documents: ['./data/**/*.{js,ts,jsx,tsx,mdx}'],
   generates: {
     './data/graphql/types/': {
       preset: 'client',

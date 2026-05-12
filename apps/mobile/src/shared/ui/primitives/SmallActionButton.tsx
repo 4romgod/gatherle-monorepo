@@ -1,0 +1,50 @@
+import { Feather } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { typography } from '@/shared/theme/typography';
+
+type SmallActionButtonProps = {
+  icon: ComponentProps<typeof Feather>['name'];
+  label: string;
+  onPress: () => void;
+  tone?: 'ghost' | 'outline';
+};
+
+export function SmallActionButton({ icon, label, onPress, tone = 'ghost' }: SmallActionButtonProps) {
+  const { theme } = useAppTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.smallActionButton,
+        {
+          backgroundColor: tone === 'ghost' ? 'transparent' : theme.colors.surface,
+          borderColor: tone === 'ghost' ? 'transparent' : theme.colors.primarySoft,
+          opacity: pressed ? 0.8 : 1,
+        },
+      ]}
+    >
+      <Feather color={theme.colors.primary} name={icon} size={18} />
+      <Text style={[styles.smallActionButtonText, { color: theme.colors.primary }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  smallActionButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    minHeight: 54,
+    paddingHorizontal: 18,
+  },
+  smallActionButtonText: {
+    ...typography.bodySemiBold,
+    fontSize: 16,
+  },
+});
