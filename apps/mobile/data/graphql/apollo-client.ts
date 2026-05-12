@@ -1,8 +1,37 @@
-import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloClient, HttpLink, InMemoryCache } from '@apollo/client';
 
-export const graphqlUrl = process.env.EXPO_PUBLIC_GRAPHQL_URL;
+export const DEFAULT_GRAPHQL_URL = 'https://api.beta.af-south-1.gatherle.com/graphql';
+export const GRAPHQL_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL?.trim() || DEFAULT_GRAPHQL_URL;
+export const isUsingDefaultGraphqlUrl = !process.env.EXPO_PUBLIC_GRAPHQL_URL?.trim();
 
 export const apolloClient = new ApolloClient({
-  uri: graphqlUrl,
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          notifications: {
+            merge: false,
+          },
+          readChatConversations: {
+            merge: false,
+          },
+          readEventCategories: {
+            merge: false,
+          },
+          readEventOccurrences: {
+            merge: false,
+          },
+          readOrganizations: {
+            merge: false,
+          },
+          readPendingFollowRequests: {
+            merge: false,
+          },
+        },
+      },
+    },
+  }),
+  link: new HttpLink({
+    uri: DEFAULT_GRAPHQL_URL, // Temporarily hardcoding the URL to avoid issues with cors
+  }),
 });
