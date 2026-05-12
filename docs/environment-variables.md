@@ -182,6 +182,15 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `ENABLE_PROD_DEPLOY` (optional, `true` or `false`, default `false`).
 - `ENABLE_CUSTOM_DOMAINS` (optional rollout flag, `false` by default; set to `true` after stage subdomain NS
   delegation).
+- `GRAPHQL_API_THROTTLE_RATE_LIMIT` (optional; overrides the default API Gateway stage steady-state rate limit in req/s
+  for the GraphQL API; must be a positive integer; defaults per stage are defined in
+  `infrastructure/cdk/lib/constants/graphql-api-security.ts`).
+- `GRAPHQL_API_THROTTLE_BURST_LIMIT` (optional; overrides the default API Gateway stage burst limit for the GraphQL API;
+  must be a positive integer; defaults per stage are defined in
+  `infrastructure/cdk/lib/constants/graphql-api-security.ts`).
+- `GRAPHQL_API_WAF_RATE_LIMIT` (optional; overrides the default WAF rate-based rule limit (requests per 5-minute window
+  per IP) for the GraphQL API; must be an integer ≥ 100; defaults per stage are defined in
+  `infrastructure/cdk/lib/constants/graphql-api-security.ts`).
 - Regions are configured directly in `.github/workflows/deploy-trigger.yaml` matrix entries (for example
   `region: [eu-west-1, us-east-1]`).
 - `SECRET_ARN` is not required as a GitHub variable when using dynamic resolution.
