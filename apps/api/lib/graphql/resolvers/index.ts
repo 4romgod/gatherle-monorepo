@@ -2,6 +2,7 @@ export * from './admin';
 export * from './auth';
 export * from './eventOccurrence';
 export * from './eventOccurrenceParticipant';
+export * from './eventSchedule';
 export * from './eventSeries';
 export * from './feed';
 export * from './eventCategory';
