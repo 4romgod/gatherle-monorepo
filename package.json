@@ -9,9 +9,10 @@
     "infrastructure/cdk"
   ],
   "scripts": {
-    "build": "npm run build:commons && npm run build:api && npm run build:web && npm run build:cdk",
+    "build": "npm run build:commons && npm run build:api && npm run build:web && npm run build:mobile && npm run build:cdk",
     "build:api": "npm run build -w @gatherle/api",
     "build:web": "npm run build -w @gatherle/webapp",
+    "build:mobile": "npm run build -w @gatherle/mobile",
     "build:cdk": "npm run build -w @gatherle/cdk",
     "build:commons": "npm run build -w @gatherle/commons",
     "clean": "npm run clean --workspaces --if-present",

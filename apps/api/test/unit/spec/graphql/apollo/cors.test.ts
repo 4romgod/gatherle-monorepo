@@ -31,7 +31,28 @@ describe('Apollo CORS helpers', () => {
 
     const { getAllowedCorsOrigins } = loadModule();
 
-    expect(getAllowedCorsOrigins()).toEqual(['https://beta.gatherle.com', 'https://www.beta.gatherle.com']);
+    expect(getAllowedCorsOrigins()).toEqual([
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:8081',
+      'http://127.0.0.1:8081',
+      'https://beta.gatherle.com',
+      'https://www.beta.gatherle.com',
+    ]);
+  });
+
+  it('returns local webapp and mobile origins for the Dev stage', () => {
+    process.env.STAGE = 'Dev';
+    process.env.CORS_ALLOWED_ORIGINS = '';
+
+    const { getAllowedCorsOrigins } = loadModule();
+
+    expect(getAllowedCorsOrigins()).toEqual([
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:8081',
+      'http://127.0.0.1:8081',
+    ]);
   });
 
   it('merges configured extra origins into the allowlist', () => {
@@ -79,6 +100,38 @@ describe('Apollo CORS helpers', () => {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
       'Access-Control-Allow-Origin': 'https://beta.gatherle.com',
+    });
+  });
+
+  it('returns explicit CORS headers for localhost:8081 in Beta stage', () => {
+    process.env.STAGE = 'Beta';
+    process.env.CORS_ALLOWED_ORIGINS = '';
+
+    const { createCorsHeaders } = loadModule();
+    const headers = createCorsHeaders('http://localhost:8081');
+
+    expect(headers).toEqual({
+      Vary: 'Origin',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+      'Access-Control-Allow-Origin': 'http://localhost:8081',
+    });
+  });
+
+  it('returns explicit CORS headers for localhost:8081 in Dev stage', () => {
+    process.env.STAGE = 'Dev';
+    process.env.CORS_ALLOWED_ORIGINS = '';
+
+    const { createCorsHeaders } = loadModule();
+    const headers = createCorsHeaders('http://localhost:8081');
+
+    expect(headers).toEqual({
+      Vary: 'Origin',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+      'Access-Control-Allow-Origin': 'http://localhost:8081',
     });
   });
 

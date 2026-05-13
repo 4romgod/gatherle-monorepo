@@ -1,0 +1,91 @@
+import { useMemo } from 'react';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useAppShell } from '@/app/providers/AppShellProvider';
+import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
+import { EventPreviewCarousel } from '@/components/carousel/EventPreviewCarousel';
+import { EventSearchBar } from '@/components/core/EventSearchBar';
+import { LoadingBlock } from '@/components/core/LoadingBlock';
+import { PageContainer } from '@/components/core/PageContainer';
+import { SectionHeading } from '@/components/core/SectionHeading';
+import { StateNotice } from '@/components/core/StateNotice';
+import { EventCard } from '@/components/events/EventCard';
+import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
+import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+
+function buildRecommendedEvents(trendingEvents: MobileEventOccurrence[], upcomingEvents: MobileEventOccurrence[]) {
+  return dedupeOccurrencesBySeries([...trendingEvents, ...upcomingEvents], 5);
+}
+
+export function HomeScreen() {
+  const navigation = useNavigation<MainTabNavigation>();
+  const { isAuthenticated } = useAppShell();
+  const { width } = useWindowDimensions();
+  const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery();
+  const cardWidth = Math.max(width - 40, 280);
+
+  const carouselEvents = useMemo(
+    () => (isAuthenticated ? upcomingEvents : trendingEvents).slice(0, 3),
+    [isAuthenticated, trendingEvents, upcomingEvents],
+  );
+  const recommendedEvents = useMemo(
+    () => buildRecommendedEvents(trendingEvents, upcomingEvents).slice(0, 4),
+    [trendingEvents, upcomingEvents],
+  );
+
+  return (
+    <PageContainer>
+      <EventSearchBar
+        onSelectEvent={(event) =>
+          navigation.navigate('Events', {
+            initialEventId: event.eventId,
+            initialSearch: event.title ?? '',
+          })
+        }
+      />
+
+      <SectionHeading
+        actionLabel="View all"
+        onPressAction={() => navigation.navigate('Events')}
+        title={isAuthenticated ? 'Your Upcoming RSVPs' : 'Featured Events'}
+      />
+
+      {loading && carouselEvents.length === 0 && !heroEvent ? (
+        <LoadingBlock label="Loading your next events..." />
+      ) : error ? (
+        <StateNotice
+          actionLabel="Retry"
+          message="We couldn’t load the discovery feed just now."
+          onPressAction={() => void refetch()}
+        />
+      ) : carouselEvents.length > 0 ? (
+        <EventPreviewCarousel cardWidth={cardWidth} events={carouselEvents} />
+      ) : (
+        <StateNotice message="No upcoming events are available yet." />
+      )}
+
+      <SectionHeading
+        actionLabel="See all events"
+        onPressAction={() => navigation.navigate('Events')}
+        title="Recommended For You"
+      />
+
+      {recommendedEvents.length > 0 ? (
+        <View style={styles.feedList}>
+          {recommendedEvents.map((event) => (
+            <EventCard key={event.occurrenceId} occurrence={event} variant="feed" />
+          ))}
+        </View>
+      ) : (
+        <StateNotice message="Recommendations will appear here once more public events are available." />
+      )}
+    </PageContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  feedList: {
+    gap: 24,
+  },
+});

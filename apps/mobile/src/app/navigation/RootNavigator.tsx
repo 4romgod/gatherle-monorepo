@@ -3,20 +3,20 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ComponentProps } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { HeaderMenuButton } from '@/app/components/HeaderMenuButton';
+import { BrandMark } from '@/components/core/BrandMark';
+import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { HeaderMenuButton } from '@/components/navigation/HeaderMenuButton';
 import { DetailPlaceholderScreen } from '@/app/screens/DetailPlaceholderScreen';
-import { AccountScreen } from '@/features/account/screens/AccountScreen';
-import { EventsScreen } from '@/features/events/screens/EventsScreen';
-import { HomeScreen } from '@/features/home/screens/HomeScreen';
-import { MessagesScreen } from '@/features/messages/screens/MessagesScreen';
-import { NotificationsScreen } from '@/features/notifications/screens/NotificationsScreen';
-import { usePreviewProfile } from '@/features/session/hooks/usePreviewProfile';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { BrandMark } from '@/shared/branding/BrandMark';
+import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
+import { getDisplayName } from '@/lib/events/formatters';
+import { AccountScreen } from '@/screens/account/AccountScreen';
+import { EventsScreen } from '@/screens/events/EventsScreen';
+import { HomeScreen } from '@/screens/home/HomeScreen';
+import { MessagesScreen } from '@/screens/messages/MessagesScreen';
+import { NotificationsScreen } from '@/screens/notifications/NotificationsScreen';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontFamily } from '@/shared/theme/typography';
-import { ProfileAvatar } from '@/shared/user/ProfileAvatar';
-import { getDisplayName } from '@/features/discovery/lib/mobileFormatters';
+import { fontFamily, fontSize } from '@/shared/theme/typography';
 import {
   DetailRouteName,
   MainTabParamList,
@@ -79,7 +79,7 @@ function MainTabs() {
         },
         tabBarLabelStyle: {
           fontFamily: fontFamily.bodySemiBold,
-          fontSize: 12,
+          fontSize: fontSize.xs,
           paddingBottom: 4,
         },
         tabBarStyle: {

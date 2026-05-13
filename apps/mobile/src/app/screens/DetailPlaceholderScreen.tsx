@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { DetailRouteName, MainTabParamList } from '@/app/navigation/routes';
 import { detailScreenContent } from '@/app/navigation/routes';
+import { ActionTile, type ActionTone, ScreenLayout, SectionCard, TonePill } from '@/components/core/ScreenLayout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
-import { ActionTile, type ActionTone, ScreenLayout, SectionCard, TonePill } from '@/shared/ui/ScreenLayout';
 
 type Shortcut = {
   description: string;

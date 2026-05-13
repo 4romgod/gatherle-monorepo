@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { PreviewSessionProvider, usePreviewSession } from '@/features/session/providers/PreviewSessionProvider';
+import { PreviewSessionProvider, usePreviewSession } from './PreviewSessionProvider';
 import { DrawerProvider, useDrawerState } from './DrawerProvider';
 
 export function AppShellProvider({ children }: PropsWithChildren) {

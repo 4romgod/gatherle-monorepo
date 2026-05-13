@@ -32,6 +32,6 @@ export const apolloClient = new ApolloClient({
     },
   }),
   link: new HttpLink({
-    uri: DEFAULT_GRAPHQL_URL, // Temporarily hardcoding the URL to avoid issues with cors
+    uri: GRAPHQL_URL,
   }),
 });

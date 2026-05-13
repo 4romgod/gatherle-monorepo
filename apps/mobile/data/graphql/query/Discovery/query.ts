@@ -282,3 +282,29 @@ export const MobileEventsFeedDocument = graphql(`
     readEventsCount
   }
 `);
+
+export const MobileEventSearchDocument = graphql(`
+  query MobileEventSearch($options: EventsQueryOptionsInput) {
+    readEvents(options: $options) {
+      eventId
+      slug
+      title
+      summary
+      eventCategories {
+        eventCategoryId
+        name
+      }
+      location {
+        locationType
+        address {
+          city
+          state
+          country
+        }
+      }
+      media {
+        featuredImageUrl
+      }
+    }
+  }
+`);
