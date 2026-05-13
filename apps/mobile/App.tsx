@@ -10,7 +10,7 @@ import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AppDrawer } from '@/app/components/AppDrawer';
+import { AppDrawer } from '@/components/navigation/AppDrawer';
 import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
 import { AppProviders } from '@/app/AppProviders';

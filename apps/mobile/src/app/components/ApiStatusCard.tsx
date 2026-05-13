@@ -2,9 +2,9 @@ import { useQuery } from '@apollo/client';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GRAPHQL_URL, isUsingDefaultGraphqlUrl } from '@data/graphql/apollo-client';
 import { MobileHealthCheckDocument } from '@data/graphql/query/Health/query';
+import { SectionCard, TonePill } from '@/components/core/ScreenLayout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
-import { SectionCard, TonePill } from '@/shared/ui/ScreenLayout';
 
 export function ApiStatusCard() {
   const { theme } = useAppTheme();

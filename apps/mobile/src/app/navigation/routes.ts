@@ -2,7 +2,12 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
   Home: undefined;
-  Events: undefined;
+  Events:
+    | {
+        initialEventId?: string;
+        initialSearch?: string;
+      }
+    | undefined;
   Messages: undefined;
   Notifications: undefined;
   Account: undefined;
