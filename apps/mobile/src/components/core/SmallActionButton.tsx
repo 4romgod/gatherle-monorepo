@@ -5,13 +5,14 @@ import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
 
 type SmallActionButtonProps = {
+  compact?: boolean;
   icon: ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
   tone?: 'ghost' | 'outline';
 };
 
-export function SmallActionButton({ icon, label, onPress, tone = 'ghost' }: SmallActionButtonProps) {
+export function SmallActionButton({ compact = false, icon, label, onPress, tone = 'ghost' }: SmallActionButtonProps) {
   const { theme } = useAppTheme();
 
   return (
@@ -19,6 +20,7 @@ export function SmallActionButton({ icon, label, onPress, tone = 'ghost' }: Smal
       onPress={onPress}
       style={({ pressed }) => [
         styles.smallActionButton,
+        compact ? styles.smallActionButtonCompact : null,
         {
           backgroundColor: tone === 'ghost' ? 'transparent' : theme.colors.surface,
           borderColor: tone === 'ghost' ? 'transparent' : theme.colors.primarySoft,
@@ -26,8 +28,16 @@ export function SmallActionButton({ icon, label, onPress, tone = 'ghost' }: Smal
         },
       ]}
     >
-      <Feather color={theme.colors.primary} name={icon} size={18} />
-      <Text style={[styles.smallActionButtonText, { color: theme.colors.primary }]}>{label}</Text>
+      <Feather color={theme.colors.primary} name={icon} size={compact ? 16 : 18} />
+      <Text
+        style={[
+          styles.smallActionButtonText,
+          compact ? styles.smallActionButtonTextCompact : null,
+          { color: theme.colors.primary },
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -43,8 +53,17 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: 18,
   },
+  smallActionButtonCompact: {
+    borderRadius: 12,
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
   smallActionButtonText: {
     ...typography.bodySemiBold,
     fontSize: 16,
+  },
+  smallActionButtonTextCompact: {
+    fontSize: 13,
   },
 });

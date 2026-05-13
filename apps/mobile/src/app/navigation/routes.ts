@@ -1,3 +1,4 @@
+import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
@@ -19,18 +20,53 @@ export type RootStackParamList = {
   Community: undefined;
   Organizations: undefined;
   Venues: undefined;
+  EventDetails: {
+    occurrence: MobileEventOccurrence;
+  };
   Profile: undefined;
   Settings: undefined;
   MyEvents: undefined;
   CreateEvent: undefined;
   MyOrganizations: undefined;
   Admin: undefined;
-  Login: undefined;
-  Register: undefined;
-  ForgotPassword: undefined;
-  ResetPassword: undefined;
-  VerifyEmail: undefined;
-  VerifyPending: undefined;
+  Login:
+    | {
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  EmailLogin:
+    | {
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  Register:
+    | {
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  ForgotPassword:
+    | {
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  ResetPassword:
+    | {
+        token?: string;
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  VerifyEmail:
+    | {
+        token?: string;
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
+  VerifyPending:
+    | {
+        email?: string;
+        redirectTab?: keyof MainTabParamList;
+      }
+    | undefined;
 };
 
 export type TabRouteName = keyof MainTabParamList;
@@ -104,6 +140,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     description: 'Venue discovery, nearby spots, and location-specific event browsing will live on this route.',
     category: 'discover',
   },
+  EventDetails: {
+    sectionLabel: 'Discover',
+    title: 'Event details',
+    description: 'This screen holds the mobile event story, including schedule, host, attendance, and actions.',
+    category: 'discover',
+  },
   Profile: {
     sectionLabel: 'Identity',
     title: 'Profile',
@@ -144,7 +186,13 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
   Login: {
     sectionLabel: 'Auth',
     title: 'Login',
-    description: 'Email/password entry and future social auth affordances will start on this mobile login screen.',
+    description: 'Choose an authentication provider before continuing into the signed-in mobile experience.',
+    category: 'auth',
+  },
+  EmailLogin: {
+    sectionLabel: 'Auth',
+    title: 'Email login',
+    description: 'Email/password entry for users choosing the credentials provider on mobile.',
     category: 'auth',
   },
   Register: {
@@ -185,6 +233,7 @@ export const detailRouteNames = Object.keys(detailScreenContent) as DetailRouteN
 
 export const authRouteNames: DetailRouteName[] = [
   'Login',
+  'EmailLogin',
   'Register',
   'ForgotPassword',
   'ResetPassword',

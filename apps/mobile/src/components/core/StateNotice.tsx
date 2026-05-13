@@ -13,9 +13,7 @@ export function StateNotice({ actionLabel, message, onPressAction }: StateNotice
   const { theme } = useAppTheme();
 
   return (
-    <View
-      style={[styles.stateNotice, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}
-    >
+    <View style={[styles.stateNotice]}>
       <Text style={[styles.stateNoticeText, { color: theme.colors.textSecondary }]}>{message}</Text>
       {actionLabel && onPressAction ? (
         <InlineButton label={actionLabel} onPress={onPressAction} tone="neutral" />
@@ -27,7 +25,6 @@ export function StateNotice({ actionLabel, message, onPressAction }: StateNotice
 const styles = StyleSheet.create({
   stateNotice: {
     borderRadius: 24,
-    borderWidth: 1,
     gap: 16,
     padding: 20,
   },

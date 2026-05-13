@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.displayBold,
     flex: 1,
-    fontSize: fontSize.xl3,
+    fontSize: fontSize.xl2,
     letterSpacing: -0.7,
   },
 });

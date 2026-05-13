@@ -1,5 +1,11 @@
 import { graphql } from '../../types';
 
+export const IsEventSavedDocument = graphql(`
+  query IsEventSaved($eventId: ID!) {
+    isEventSaved(eventId: $eventId)
+  }
+`);
+
 export const GetPendingFollowRequestsDocument = graphql(`
   query GetPendingFollowRequests($targetType: FollowTargetType!) {
     readPendingFollowRequests(targetType: $targetType) {

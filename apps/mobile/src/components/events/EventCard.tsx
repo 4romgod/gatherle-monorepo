@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ComponentProps } from 'react';
 import type { DimensionValue } from 'react-native';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventOccurrence, MobileParticipant } from '@data/graphql/query/Discovery/types';
+import { ParticipantStatus } from '@data/graphql/types/graphql';
+import { useAppShell } from '@/app/providers/AppShellProvider';
+import { navigationRef } from '@/app/navigation/navigationRef';
+import { EventCardActionButton } from '@/components/events/card/EventCardActionButton';
+import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
+import { useEventCardActions } from '@/hooks/events/useEventCardActions';
 import {
   formatCountLabel,
   formatEventScheduleRange,
@@ -14,10 +20,10 @@ import {
   getEventStatusLabel,
   getEventTitle,
   getInitials,
-  getOccurrenceParticipantCount,
   getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
+import { shareEvent } from '@/lib/events/deviceActions';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
@@ -56,18 +62,13 @@ function ParticipantBubble({ participant, index }: { participant: MobileParticip
   );
 }
 
-function ActionIcon({ color, name }: { color: string; name: ComponentProps<typeof Feather>['name'] }) {
-  return (
-    <View style={styles.actionIconWrap}>
-      <Feather color={color} name={name} size={22} />
-    </View>
-  );
-}
-
 export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = 'feed' }: EventCardProps) {
   const { theme } = useAppTheme();
+  const { authToken, isAuthenticated } = useAppShell();
   const imageUrl = getEventImageUrl(occurrence);
-  const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
+  const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, loading, participantCount, rsvpStatus, toggleSave } =
+    useEventCardActions(occurrence, authToken);
+  const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
   const participants = getOccurrenceParticipantPreview(occurrence);
   const isFeatured = variant === 'featured';
   const overlayLabel = isFeatured ? getEventCityLabel(occurrence).toUpperCase() : getEventStatusLabel(occurrence);
@@ -82,123 +83,199 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
         }
       : null;
 
+  const promptLoginIfNeeded = () => {
+    if (isAuthenticated) {
+      return false;
+    }
+
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('Login', { redirectTab: 'Events' });
+    }
+
+    return true;
+  };
+
+  const handleRsvpPress = (event: { stopPropagation?: () => void }) => {
+    event.stopPropagation?.();
+
+    if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    setRsvpSheetVisible(true);
+  };
+
+  const handleToggleSave = (event: { stopPropagation?: () => void }) => {
+    event.stopPropagation?.();
+
+    if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    void toggleSave().catch((error: unknown) => {
+      Alert.alert('Save failed', error instanceof Error ? error.message : 'We could not update the saved state.');
+    });
+  };
+
+  const handleShare = (event: { stopPropagation?: () => void }) => {
+    event.stopPropagation?.();
+
+    void shareEvent(occurrence).catch((error: unknown) => {
+      Alert.alert('Share failed', error instanceof Error ? error.message : 'We could not open the share sheet.');
+    });
+  };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        shadowStyle,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          opacity: pressed ? 0.94 : 1,
-          width: cardWidth,
-        },
-      ]}
-    >
-      <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
-        ) : (
-          <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
-            <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
-              {getEventTitle(occurrence).charAt(0).toUpperCase()}
-            </Text>
-          </LinearGradient>
-        )}
-        <View style={styles.imageOverlay} />
-        <View
-          style={[
-            styles.overlayPill,
-            isFeatured
-              ? { backgroundColor: theme.colors.surface }
-              : { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
-          ]}
-        >
-          <Text
+    <>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.card,
+          shadowStyle,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            opacity: pressed ? 0.94 : 1,
+            width: cardWidth,
+          },
+        ]}
+      >
+        <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.image} />
+          ) : (
+            <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
+              <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
+                {getEventTitle(occurrence).charAt(0).toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
+          <View style={styles.imageOverlay} />
+          <View
             style={[
-              styles.overlayPillText,
-              {
-                color: isFeatured ? theme.colors.primary : theme.colors.primaryContrast,
-              },
+              styles.overlayPill,
+              isFeatured
+                ? { backgroundColor: theme.colors.surface }
+                : { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
             ]}
           >
-            {overlayLabel}
-          </Text>
+            <Text
+              style={[
+                styles.overlayPillText,
+                {
+                  color: isFeatured ? theme.colors.primary : theme.colors.primaryContrast,
+                },
+              ]}
+            >
+              {overlayLabel}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.body}>
-        {!isFeatured ? (
-          <View style={[styles.attendancePill, { borderColor: theme.colors.border }]}>
-            <Feather color={theme.colors.textSecondary} name="users" size={14} />
-            <Text style={[styles.attendancePillText, { color: theme.colors.textPrimary }]}>
-              {formatCountLabel(participantCount, 'going')}
-            </Text>
-          </View>
-        ) : null}
-
-        <Text numberOfLines={2} style={[styles.title, { color: theme.colors.textPrimary }]}>
-          {getEventTitle(occurrence)}
-        </Text>
-
-        <View style={styles.metaList}>
-          <View style={styles.metaRow}>
-            <Feather color={theme.colors.textSecondary} name="calendar" size={17} />
-            <Text numberOfLines={2} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
-              {formatEventScheduleRange(occurrence)}
-            </Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Feather color={theme.colors.textSecondary} name="map-pin" size={17} />
-            <Text numberOfLines={1} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
-              {formatLocationLabel(occurrence)}
-            </Text>
-          </View>
-          {isFeatured ? (
-            <View style={styles.metaRow}>
-              <Feather color={theme.colors.textSecondary} name="check-square" size={17} />
-              <Text numberOfLines={1} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+        <View style={styles.body}>
+          {!isFeatured ? (
+            <View style={[styles.attendancePill, { borderColor: theme.colors.border }]}>
+              <Feather color={theme.colors.textSecondary} name="users" size={14} />
+              <Text style={[styles.attendancePillText, { color: theme.colors.textPrimary }]}>
                 {formatCountLabel(participantCount, 'going')}
               </Text>
             </View>
           ) : null}
-        </View>
 
-        <View style={isFeatured ? styles.featuredFooter : styles.feedFooter}>
-          {isFeatured ? null : (
-            <View style={styles.participantsRow}>
-              <View style={styles.participantsStack}>
-                {participants.map((participant, index) => (
-                  <ParticipantBubble index={index} key={getParticipantKey(participant)} participant={participant} />
-                ))}
-              </View>
+          <Text numberOfLines={2} style={[styles.title, { color: theme.colors.textPrimary }]}>
+            {getEventTitle(occurrence)}
+          </Text>
+
+          <View style={styles.metaList}>
+            <View style={styles.metaRow}>
+              <Feather color={theme.colors.textSecondary} name="calendar" size={17} />
+              <Text numberOfLines={2} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                {formatEventScheduleRange(occurrence)}
+              </Text>
             </View>
-          )}
+            <View style={styles.metaRow}>
+              <Feather color={theme.colors.textSecondary} name="map-pin" size={17} />
+              <Text numberOfLines={1} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                {formatLocationLabel(occurrence)}
+              </Text>
+            </View>
+            {isFeatured ? (
+              <View style={styles.metaRow}>
+                <Feather color={theme.colors.textSecondary} name="check-square" size={17} />
+                <Text numberOfLines={1} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  {formatCountLabel(participantCount, 'going')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
-          <View style={styles.actionsRow}>
-            <ActionIcon color={theme.colors.success} name="check-square" />
-            <ActionIcon color={theme.colors.textSecondary} name="bookmark" />
-            <ActionIcon color={theme.colors.textSecondary} name="share-2" />
+          <View style={isFeatured ? styles.featuredFooter : styles.feedFooter}>
+            {isFeatured ? null : (
+              <View style={styles.participantsRow}>
+                <View style={styles.participantsStack}>
+                  {participants.map((participant, index) => (
+                    <ParticipantBubble index={index} key={getParticipantKey(participant)} participant={participant} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.actionsRow}>
+              <EventCardActionButton
+                active={!!rsvpStatus}
+                disabled={loading}
+                icon={rsvpStatus === ParticipantStatus.Interested ? 'star' : 'check-square'}
+                onPress={handleRsvpPress}
+                tone="success"
+              />
+              <EventCardActionButton
+                active={isSaved}
+                disabled={loading}
+                icon="bookmark"
+                onPress={handleToggleSave}
+                tone="primary"
+              />
+              <EventCardActionButton icon="share-2" onPress={handleShare} tone="neutral" />
+            </View>
           </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+      <EventRsvpSheet
+        currentStatus={rsvpStatus}
+        loading={loading}
+        onCancelRsvp={() => {
+          void cancelRsvp()
+            .then(() => {
+              setRsvpSheetVisible(false);
+            })
+            .catch((error: unknown) => {
+              Alert.alert('RSVP failed', error instanceof Error ? error.message : 'We could not update your RSVP.');
+            });
+        }}
+        onClose={() => setRsvpSheetVisible(false)}
+        onSelectStatus={(status) => {
+          const action = status === ParticipantStatus.Going ? goingToEvent : interestedInEvent;
+
+          void action()
+            .then(() => {
+              setRsvpSheetVisible(false);
+            })
+            .catch((error: unknown) => {
+              Alert.alert('RSVP failed', error instanceof Error ? error.message : 'We could not update your RSVP.');
+            });
+        }}
+        visible={rsvpSheetVisible}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  actionIconWrap: {
-    alignItems: 'center',
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
   actionsRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 14,
+    gap: 10,
   },
   attendancePill: {
     alignItems: 'center',

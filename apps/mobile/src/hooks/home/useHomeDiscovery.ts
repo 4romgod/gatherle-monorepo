@@ -3,6 +3,7 @@ import { useQuery } from '@apollo/client';
 import { MobileEventsFeedDocument, MobileHomeDiscoveryDocument } from '@data/graphql/query/Discovery/query';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { SortOrderInput } from '@data/graphql/types/graphql';
+import { getApolloAuthContext } from '@/lib/auth';
 import {
   buildDefaultOccurrenceDateRange,
   dedupeOccurrencesBySeries,
@@ -10,7 +11,7 @@ import {
   sortOrganizationsByFollowers,
 } from '@/lib/events/formatters';
 
-export function useMobileHomeDiscovery() {
+export function useMobileHomeDiscovery(authToken?: string | null) {
   const { data, loading, error, refetch } = useQuery(MobileHomeDiscoveryDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -25,6 +26,7 @@ export function useMobileHomeDiscovery() {
         pagination: { limit: 18 },
       },
     },
+    ...getApolloAuthContext(authToken),
   });
 
   const upcomingSource = data?.upcoming ?? [];
@@ -52,7 +54,7 @@ export function useMobileHomeDiscovery() {
   };
 }
 
-export function useMobileEventsFeed() {
+export function useMobileEventsFeed(authToken?: string | null) {
   const { data, loading, error, refetch } = useQuery(MobileEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -62,6 +64,7 @@ export function useMobileEventsFeed() {
         pagination: { limit: 40 },
       },
     },
+    ...getApolloAuthContext(authToken),
   });
 
   const categorySource = data?.readEventCategories ?? [];

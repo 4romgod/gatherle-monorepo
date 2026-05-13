@@ -9,6 +9,7 @@ import {
   LocationFilterInput,
   SortOrderInput,
 } from '@data/graphql/types/graphql';
+import { getApolloAuthContext } from '@/lib/auth';
 import { buildDefaultOccurrenceDateRange, sortCategoriesByInterest } from '@/lib/events/formatters';
 import type { EventsFilterState } from './useEventsFilters';
 // Stable default date range — computed once at module load so Apollo cache keys
@@ -56,7 +57,7 @@ function buildQueryOptions(filters: EventsFilterState) {
   };
 }
 
-export function useDraftResultCount(draft: EventsFilterState, skip: boolean): number {
+export function useDraftResultCount(draft: EventsFilterState, skip: boolean, authToken?: string | null): number {
   const draftKey = JSON.stringify(draft);
   const options = useMemo(() => buildQueryOptions(draft), [draftKey]);
 
@@ -64,12 +65,13 @@ export function useDraftResultCount(draft: EventsFilterState, skip: boolean): nu
     fetchPolicy: 'cache-and-network',
     skip,
     variables: { options },
+    ...getApolloAuthContext(authToken),
   });
 
   return (data?.readEventOccurrences ?? []).length;
 }
 
-export function useFilteredMobileEvents(filters: EventsFilterState) {
+export function useFilteredMobileEvents(filters: EventsFilterState, authToken?: string | null) {
   // Serialize filters to a stable string key so useMemo reliably detects
   // any content change regardless of object reference identity.
   const filtersKey = JSON.stringify(filters);
@@ -79,6 +81,7 @@ export function useFilteredMobileEvents(filters: EventsFilterState) {
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
     variables: { options },
+    ...getApolloAuthContext(authToken),
   });
 
   const categorySource = data?.readEventCategories ?? [];

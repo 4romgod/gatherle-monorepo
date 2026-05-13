@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import type { ApolloError } from '@apollo/client';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -9,18 +10,16 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ConversationRow } from '@/components/messages/ConversationRow';
+import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
 import { useMessages } from '@/hooks/messages/useMessages';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 export function MessagesScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { isAuthenticated, previewAuthToken } = useAppShell();
+  const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const { conversations, error, loading, markConversationRead, refetch } = useMessages(
-    previewAuthToken,
-    isAuthenticated,
-  );
+  const { conversations, error, loading, markConversationRead, refetch } = useMessages(authToken, isAuthenticated);
 
   const filteredConversations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -43,6 +42,19 @@ export function MessagesScreen() {
     });
   }, [conversations, searchQuery]);
 
+  useEffect(() => {
+    if (!hasLiveSession || !error) {
+      return;
+    }
+
+    if (getApolloErrorCode(error as ApolloError) !== 'UNAUTHENTICATED') {
+      return;
+    }
+
+    signOut();
+    navigation.navigate('Login', { redirectTab: 'Messages' });
+  }, [error, hasLiveSession, navigation, signOut]);
+
   if (!isAuthenticated) {
     return (
       <PageContainer>
@@ -59,11 +71,11 @@ export function MessagesScreen() {
     );
   }
 
-  if (!previewAuthToken) {
+  if (!authToken) {
     return (
       <PageContainer>
         <PageHeading title="Messages" />
-        <StateNotice message="Set EXPO_PUBLIC_AUTH_TOKEN to load your real conversations from the API." />
+        <StateNotice message="Log in with a real account token to load your conversations from the API." />
       </PageContainer>
     );
   }

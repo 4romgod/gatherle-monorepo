@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     ...typography.displayBold,
-    fontSize: 28,
+    fontSize: 22,
     letterSpacing: -0.9,
   },
 });
