@@ -91,3 +91,46 @@ export const ResetPasswordDocument = graphql(`
     resetPassword(token: $token, newPassword: $newPassword)
   }
 `);
+
+export const UpdateUserDocument = graphql(`
+  mutation UpdateUser($input: UpdateUserInput!) {
+    updateUser(input: $input) {
+      userId
+      email
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      userRole
+      location {
+        city
+        state
+        country
+      }
+      followPolicy
+      followersListVisibility
+      followingListVisibility
+      defaultVisibility
+      shareRSVPByDefault
+      shareCheckinsByDefault
+      preferences {
+        communicationPrefs {
+          emailEnabled
+          pushEnabled
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
