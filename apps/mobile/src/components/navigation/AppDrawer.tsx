@@ -19,8 +19,9 @@ type DrawerItemConfig = {
 
 const MAX_DRAWER_WIDTH = 420;
 const MIN_DRAWER_WIDTH = 280;
+type DrawerRouteName = Exclude<DetailRouteName, 'EventDetails'>;
 
-function navigateTo(routeName: DetailRouteName) {
+function navigateTo(routeName: DrawerRouteName) {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -84,15 +85,25 @@ function DrawerDivider() {
 }
 
 export function AppDrawer() {
-  const { closeDrawer, drawerOpen, isAuthenticated, previewUsername, setAuthenticated, toggleMockAuth } = useAppShell();
+  const {
+    closeDrawer,
+    drawerOpen,
+    email,
+    hasLiveSession,
+    isAuthenticated,
+    previewAuthEnabled,
+    signOut,
+    togglePreviewAuth,
+    username,
+  } = useAppShell();
   const { isDark, theme, toggleMode } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [mounted, setMounted] = useState(drawerOpen);
   const progress = useRef(new Animated.Value(0)).current;
-  const { profile } = usePreviewProfile(previewUsername, isAuthenticated);
+  const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileName = getDisplayName(profile);
-  const profileEmail = profile?.email ?? (previewUsername ? `@${previewUsername}` : 'Preview profile');
+  const profileEmail = profile?.email ?? email ?? (username ? `@${username}` : 'Preview profile');
 
   const drawerWidth = useMemo(() => {
     const proposedWidth = Math.round(width * 0.62);
@@ -115,7 +126,7 @@ export function AppDrawer() {
     });
   }, [drawerOpen, progress]);
 
-  const handleNavigate = (routeName: DetailRouteName) => {
+  const handleNavigate = (routeName: DrawerRouteName) => {
     closeDrawer();
     requestAnimationFrame(() => {
       navigateTo(routeName);
@@ -152,6 +163,14 @@ export function AppDrawer() {
     },
   ];
 
+  const sharedItems: DrawerItemConfig[] = [
+    {
+      icon: 'moon',
+      label: isDark ? 'Light mode' : 'Dark mode',
+      onPress: toggleMode,
+    },
+  ];
+
   const authedItems: DrawerItemConfig[] = [
     {
       icon: 'grid',
@@ -184,11 +203,6 @@ export function AppDrawer() {
       onPress: () => handleNavigate('Settings'),
     },
     {
-      icon: 'moon',
-      label: isDark ? 'Light mode' : 'Dark mode',
-      onPress: toggleMode,
-    },
-    {
       icon: 'shield',
       label: 'Admin Portal',
       onPress: () => handleNavigate('Admin'),
@@ -197,7 +211,7 @@ export function AppDrawer() {
       icon: 'log-out',
       label: 'Logout',
       onPress: () => {
-        setAuthenticated(false);
+        signOut();
         closeDrawer();
         requestAnimationFrame(() => {
           handleNavigateTab('Home');
@@ -303,31 +317,36 @@ export function AppDrawer() {
 
           <DrawerDivider />
 
-          {(isAuthenticated ? authedItems : guestItems).map((item) => (
+          {[...(isAuthenticated ? authedItems : guestItems), ...sharedItems].map((item) => (
             <MenuItem icon={item.icon} key={item.label} label={item.label} onPress={item.onPress} />
           ))}
 
-          <DrawerDivider />
+          {!hasLiveSession ? (
+            <>
+              <DrawerDivider />
 
-          <View style={styles.previewSection}>
-            <View style={styles.previewHeader}>
-              <Text style={[styles.previewLabel, { color: theme.colors.textPrimary }]}>
-                Preview authenticated shell
-              </Text>
-              <Switch
-                onValueChange={toggleMockAuth}
-                thumbColor={theme.colors.primaryContrast}
-                trackColor={{
-                  false: theme.colors.border,
-                  true: theme.colors.primary,
-                }}
-                value={isAuthenticated}
-              />
-            </View>
-            <Text style={[styles.previewCopy, { color: theme.colors.textSecondary }]}>
-              Preview state so both guest and signed-in drawer layouts can be checked before auth is fully wired.
-            </Text>
-          </View>
+              <View style={styles.previewSection}>
+                <View style={styles.previewHeader}>
+                  <Text style={[styles.previewLabel, { color: theme.colors.textPrimary }]}>
+                    Preview authenticated shell
+                  </Text>
+                  <Switch
+                    onValueChange={togglePreviewAuth}
+                    thumbColor={theme.colors.primaryContrast}
+                    trackColor={{
+                      false: theme.colors.border,
+                      true: theme.colors.primary,
+                    }}
+                    value={previewAuthEnabled}
+                  />
+                </View>
+                <Text style={[styles.previewCopy, { color: theme.colors.textSecondary }]}>
+                  Preview state so both guest and signed-in drawer layouts can be checked while testing the mobile
+                  shell.
+                </Text>
+              </View>
+            </>
+          ) : null}
         </ScrollView>
       </Animated.View>
     </View>

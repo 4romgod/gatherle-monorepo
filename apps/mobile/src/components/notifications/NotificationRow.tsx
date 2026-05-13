@@ -54,12 +54,12 @@ export function NotificationRow({ notification, onDelete, onMarkRead, onPress }:
       <View style={styles.actions}>
         {onMarkRead ? (
           <Pressable hitSlop={8} onPress={onMarkRead} style={styles.actionButton}>
-            <Feather color={theme.colors.textSecondary} name="mail" size={20} />
+            <Feather color={theme.colors.textSecondary} name="mail" size={17} />
           </Pressable>
         ) : null}
         {onDelete ? (
           <Pressable hitSlop={8} onPress={onDelete} style={styles.actionButton}>
-            <Feather color={theme.colors.textSecondary} name="trash-2" size={20} />
+            <Feather color={theme.colors.textSecondary} name="trash-2" size={17} />
           </Pressable>
         ) : null}
       </View>
@@ -70,66 +70,66 @@ export function NotificationRow({ notification, onDelete, onMarkRead, onPress }:
 const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
-    height: 28,
+    height: 24,
     justifyContent: 'center',
-    width: 28,
+    width: 24,
   },
   actions: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
-    paddingTop: 2,
+    gap: 8,
+    paddingTop: 1,
   },
   avatar: {
     borderRadius: 999,
-    height: 40,
-    width: 40,
+    height: 34,
+    width: 34,
   },
   avatarFallback: {
     alignItems: 'center',
     borderRadius: 999,
-    height: 40,
+    height: 34,
     justifyContent: 'center',
-    width: 40,
+    width: 34,
   },
   avatarFallbackText: {
     ...typography.displayBold,
-    fontSize: 14,
+    fontSize: 12,
   },
   content: {
     flex: 1,
-    gap: 4,
-    minHeight: 40,
+    gap: 2,
+    minHeight: 34,
   },
   leading: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   message: {
     ...typography.bodyRegular,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 17,
   },
   row: {
     alignItems: 'flex-start',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 4,
-    paddingVertical: 18,
+    paddingVertical: 12,
   },
   time: {
     ...typography.bodyMedium,
-    fontSize: 13,
+    fontSize: 11,
   },
   title: {
     ...typography.bodyBold,
-    fontSize: 16,
+    fontSize: 13,
   },
   unreadDot: {
     borderRadius: 999,
-    height: 10,
-    width: 10,
+    height: 8,
+    width: 8,
   },
 });

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import type { ApolloError } from '@apollo/client';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
@@ -10,6 +11,7 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
 import { SmallActionButton } from '@/components/core/SmallActionButton';
 import { StateNotice } from '@/components/core/StateNotice';
+import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
 import { NotificationRow } from '@/components/notifications/NotificationRow';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { getDisplayName, getInitials } from '@/lib/events/formatters';
@@ -49,8 +51,8 @@ function FollowRequestRow({
         <Text style={[styles.followRequestHeadline, { color: theme.colors.textSecondary }]}>{headline}</Text>
       </View>
       <View style={styles.followRequestActions}>
-        <InlineButton label="Accept" onPress={onAccept} />
-        <InlineButton label="Reject" onPress={onReject} tone="neutral" />
+        <InlineButton compact label="Accept" onPress={onAccept} />
+        <InlineButton compact label="Reject" onPress={onReject} tone="neutral" />
       </View>
     </View>
   );
@@ -58,7 +60,7 @@ function FollowRequestRow({
 
 export function NotificationsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { isAuthenticated, previewAuthToken } = useAppShell();
+  const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
   const [tab, setTab] = useState<NotificationsTabValue>('all');
   const {
@@ -73,7 +75,20 @@ export function NotificationsScreen() {
     refetch,
     rejectFollowRequest,
     unreadCount,
-  } = useNotifications(previewAuthToken, isAuthenticated);
+  } = useNotifications(authToken, isAuthenticated);
+
+  useEffect(() => {
+    if (!hasLiveSession || !error) {
+      return;
+    }
+
+    if (getApolloErrorCode(error as ApolloError) !== 'UNAUTHENTICATED') {
+      return;
+    }
+
+    signOut();
+    navigation.navigate('Login', { redirectTab: 'Notifications' });
+  }, [error, hasLiveSession, navigation, signOut]);
 
   if (!isAuthenticated) {
     return (
@@ -91,11 +106,11 @@ export function NotificationsScreen() {
     );
   }
 
-  if (!previewAuthToken) {
+  if (!authToken) {
     return (
       <PageContainer>
         <PageHeading title="Notifications" />
-        <StateNotice message="Set EXPO_PUBLIC_AUTH_TOKEN to load your real notifications and follow requests." />
+        <StateNotice message="Log in with a real account token to load your notifications and follow requests." />
       </PageContainer>
     );
   }
@@ -105,8 +120,9 @@ export function NotificationsScreen() {
       <PageHeading title="Notifications" />
 
       <View style={styles.notificationsActions}>
-        <SmallActionButton icon="rotate-cw" label="Refresh" onPress={() => void refetch()} />
+        <SmallActionButton compact icon="rotate-cw" label="Refresh" onPress={() => void refetch()} />
         <SmallActionButton
+          compact
           icon="check"
           label="Mark all read"
           onPress={() => void markAllNotificationsRead()}
@@ -196,55 +212,55 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   followAvatar: {
     borderRadius: 999,
-    height: 44,
-    width: 44,
+    height: 36,
+    width: 36,
   },
   followAvatarFallback: {
     alignItems: 'center',
     borderRadius: 999,
-    height: 44,
+    height: 36,
     justifyContent: 'center',
-    width: 44,
+    width: 36,
   },
   followAvatarFallbackText: {
     ...typography.displayBold,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
   },
   followRequestCopy: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   followRequestHeadline: {
     ...typography.bodyRegular,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
+    fontSize: fontSize.xs,
+    lineHeight: 16,
   },
   followRequestRow: {
     alignItems: 'flex-start',
     borderBottomWidth: 1,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 4,
-    paddingVertical: 18,
+    paddingVertical: 12,
   },
   followRequestActions: {
-    gap: 8,
+    gap: 6,
   },
   followRequestTitle: {
     ...typography.bodyBold,
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
   },
   messageList: {
     gap: 0,
   },
   notificationTabButton: {
     flex: 1,
-    gap: 12,
-    paddingTop: 10,
+    gap: 8,
+    paddingTop: 6,
   },
   notificationTabText: {
     ...typography.bodySemiBold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
   },
   notificationTabUnderline: {
     borderRadius: 999,
@@ -254,12 +270,12 @@ const styles = StyleSheet.create({
   notificationTabs: {
     flexDirection: 'row',
     gap: 20,
-    marginTop: 4,
+    marginTop: 0,
   },
   notificationsActions: {
     flexDirection: 'row',
-    gap: 14,
-    marginTop: -4,
+    gap: 10,
+    marginTop: -8,
   },
   pageDivider: {
     height: 1,

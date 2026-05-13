@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { MainTabParamList } from '@/app/navigation/routes';
+import { useAppShell } from '@/app/providers/AppShellProvider';
 import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
 import { FilterActionButton } from '@/components/core/FilterActionButton';
 import { FilterChip } from '@/components/core/FilterChip';
@@ -19,6 +21,8 @@ import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
 export function EventsScreen() {
+  const navigation = useNavigation<MainTabNavigation>();
+  const { authToken } = useAppShell();
   const { theme } = useAppTheme();
   const route = useRoute<RouteProp<MainTabParamList, 'Events'>>();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
@@ -43,7 +47,7 @@ export function EventsScreen() {
     removeAppliedLocation,
   } = useEventsFilters();
 
-  const { categories, error, events, loading, refetch } = useFilteredMobileEvents(appliedFilters);
+  const { categories, error, events, loading, refetch } = useFilteredMobileEvents(appliedFilters, authToken);
 
   // Client-side text search applied on top of server-side filtered results
   useEffect(() => {
@@ -199,7 +203,12 @@ export function EventsScreen() {
         <>
           <View style={styles.feedList}>
             {paginatedEvents.map((event) => (
-              <EventCard key={event.occurrenceId} occurrence={event} variant="feed" />
+              <EventCard
+                key={event.occurrenceId}
+                occurrence={event}
+                onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
+                variant="feed"
+              />
             ))}
           </View>
           {visibleCount < filteredEvents.length ? (

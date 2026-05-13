@@ -18,16 +18,21 @@ function buildRecommendedEvents(trendingEvents: MobileEventOccurrence[], upcomin
   return dedupeOccurrencesBySeries([...trendingEvents, ...upcomingEvents], 5);
 }
 
+function buildUpcomingRsvpEvents(upcomingEvents: MobileEventOccurrence[]) {
+  return upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status && occurrence.myRsvp.status !== 'Cancelled');
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { isAuthenticated } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const { width } = useWindowDimensions();
-  const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery();
+  const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const cardWidth = Math.max(width - 40, 280);
+  const upcomingRsvpEvents = useMemo(() => buildUpcomingRsvpEvents(upcomingEvents), [upcomingEvents]);
 
   const carouselEvents = useMemo(
-    () => (isAuthenticated ? upcomingEvents : trendingEvents).slice(0, 3),
-    [isAuthenticated, trendingEvents, upcomingEvents],
+    () => (isAuthenticated ? upcomingRsvpEvents : trendingEvents).slice(0, 3),
+    [isAuthenticated, trendingEvents, upcomingRsvpEvents],
   );
   const recommendedEvents = useMemo(
     () => buildRecommendedEvents(trendingEvents, upcomingEvents).slice(0, 4),
@@ -60,9 +65,15 @@ export function HomeScreen() {
           onPressAction={() => void refetch()}
         />
       ) : carouselEvents.length > 0 ? (
-        <EventPreviewCarousel cardWidth={cardWidth} events={carouselEvents} />
+        <EventPreviewCarousel
+          cardWidth={cardWidth}
+          events={carouselEvents}
+          onPressEvent={(event) => navigation.navigate('EventDetails', { occurrence: event })}
+        />
       ) : (
-        <StateNotice message="No upcoming events are available yet." />
+        <StateNotice
+          message={isAuthenticated ? 'You have no upcoming RSVPs yet.' : 'No upcoming events are available yet.'}
+        />
       )}
 
       <SectionHeading
@@ -74,7 +85,12 @@ export function HomeScreen() {
       {recommendedEvents.length > 0 ? (
         <View style={styles.feedList}>
           {recommendedEvents.map((event) => (
-            <EventCard key={event.occurrenceId} occurrence={event} variant="feed" />
+            <EventCard
+              key={event.occurrenceId}
+              occurrence={event}
+              onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
+              variant="feed"
+            />
           ))}
         </View>
       ) : (

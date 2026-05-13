@@ -123,6 +123,35 @@ export function formatEventScheduleRange(occurrence?: MobileEventOccurrence | nu
   return `${dateLabel} · ${startTime}${endTime ? ` - ${endTime}` : ''}`;
 }
 
+export function formatEventScheduleTwoLine(occurrence?: MobileEventOccurrence | null) {
+  if (!occurrence?.startAt) {
+    return 'Date to be announced';
+  }
+
+  const start = new Date(occurrence.startAt);
+  const end = occurrence.endAt ? new Date(occurrence.endAt) : null;
+
+  const dateLabel = new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'long',
+  }).format(start);
+
+  const startTime = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(start);
+
+  const endTime = end
+    ? new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(end)
+    : null;
+
+  return `${dateLabel}\n${startTime}${endTime ? ` - ${endTime}` : ''}`;
+}
+
 export function formatShortDate(isoDate?: string | null) {
   if (!isoDate) {
     return 'Date to be announced';

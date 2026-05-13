@@ -1,11 +1,27 @@
-import { PropsWithChildren, createContext, useContext, useState } from 'react';
+import type { AuthenticatedMobileUser } from '@data/graphql/mutation/User/types';
+import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { clearStoredSession, readStoredSession, writeStoredSession } from '@/lib/sessionStorage';
 
 type PreviewSessionContextValue = {
+  authToken: string | null;
+  email: string | null;
+  hasLiveSession: boolean;
   isAuthenticated: boolean;
-  previewAuthToken: string | null;
-  previewUsername: string | null;
-  setAuthenticated: (value: boolean) => void;
-  toggleMockAuth: () => void;
+  isSessionReady: boolean;
+  pendingVerificationEmail: string | null;
+  previewAuthEnabled: boolean;
+  setPendingVerificationEmail: (value: string | null) => void;
+  setPreviewAuthenticated: (value: boolean) => void;
+  signIn: (user: AuthenticatedMobileUser) => void;
+  signOut: () => void;
+  togglePreviewAuth: () => void;
+  username: string | null;
+};
+
+type AuthSession = {
+  email: string;
+  token: string;
+  username: string | null;
 };
 
 function normalizeEnvValue(value?: string) {
@@ -19,23 +35,81 @@ const PREVIEW_USERNAME = normalizeEnvValue(process.env.EXPO_PUBLIC_PREVIEW_USERN
 const PreviewSessionContext = createContext<PreviewSessionContextValue | null>(null);
 
 export function PreviewSessionProvider({ children }: PropsWithChildren) {
-  const [isAuthenticated, setAuthenticated] = useState(true);
+  const [isSessionReady, setSessionReady] = useState(false);
+  const [previewAuthEnabled, setPreviewAuthenticated] = useState(false);
+  const [liveSession, setLiveSession] = useState<AuthSession | null>(null);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
-  const toggleMockAuth = () => setAuthenticated((current) => !current);
+  useEffect(() => {
+    let isMounted = true;
 
-  return (
-    <PreviewSessionContext.Provider
-      value={{
-        isAuthenticated,
-        previewAuthToken: PREVIEW_AUTH_TOKEN,
-        previewUsername: PREVIEW_USERNAME,
-        setAuthenticated,
-        toggleMockAuth,
-      }}
-    >
-      {children}
-    </PreviewSessionContext.Provider>
+    const restoreSession = async () => {
+      const storedSession = await readStoredSession();
+
+      if (!isMounted) {
+        return;
+      }
+
+      setLiveSession(storedSession);
+      setSessionReady(true);
+    };
+
+    void restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const togglePreviewAuth = () => {
+    if (liveSession) {
+      return;
+    }
+
+    setPreviewAuthenticated((current) => !current);
+  };
+
+  const signIn = (user: AuthenticatedMobileUser) => {
+    const nextSession = {
+      email: user.email,
+      token: user.token,
+      username: user.username ?? null,
+    };
+
+    setLiveSession(nextSession);
+    setPendingVerificationEmail(null);
+    setSessionReady(true);
+    void writeStoredSession(nextSession);
+  };
+
+  const signOut = () => {
+    setLiveSession(null);
+    setPendingVerificationEmail(null);
+    setPreviewAuthenticated(false);
+    setSessionReady(true);
+    void clearStoredSession();
+  };
+
+  const value = useMemo<PreviewSessionContextValue>(
+    () => ({
+      authToken: liveSession?.token ?? PREVIEW_AUTH_TOKEN,
+      email: liveSession?.email ?? pendingVerificationEmail,
+      hasLiveSession: Boolean(liveSession),
+      isAuthenticated: Boolean(liveSession) || previewAuthEnabled,
+      isSessionReady,
+      pendingVerificationEmail,
+      previewAuthEnabled,
+      setPendingVerificationEmail,
+      setPreviewAuthenticated,
+      signIn,
+      signOut,
+      togglePreviewAuth,
+      username: liveSession?.username ?? PREVIEW_USERNAME,
+    }),
+    [isSessionReady, liveSession, pendingVerificationEmail, previewAuthEnabled],
   );
+
+  return <PreviewSessionContext.Provider value={value}>{children}</PreviewSessionContext.Provider>;
 }
 
 export function usePreviewSession() {

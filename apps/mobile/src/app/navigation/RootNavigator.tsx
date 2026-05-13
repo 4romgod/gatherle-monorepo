@@ -3,14 +3,23 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ComponentProps } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { navigationRef } from '@/app/navigation/navigationRef';
 import { BrandMark } from '@/components/core/BrandMark';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { HeaderMenuButton } from '@/components/navigation/HeaderMenuButton';
 import { DetailPlaceholderScreen } from '@/app/screens/DetailPlaceholderScreen';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { ForgotPasswordScreen } from '@/features/auth/screens/ForgotPasswordScreen';
+import { LoginProvidersScreen } from '@/features/auth/screens/LoginProvidersScreen';
+import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { RegisterScreen } from '@/features/auth/screens/RegisterScreen';
+import { ResetPasswordScreen } from '@/features/auth/screens/ResetPasswordScreen';
+import { VerifyEmailScreen } from '@/features/auth/screens/VerifyEmailScreen';
+import { VerifyPendingScreen } from '@/features/auth/screens/VerifyPendingScreen';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { getDisplayName } from '@/lib/events/formatters';
 import { AccountScreen } from '@/screens/account/AccountScreen';
+import { EventDetailsScreen } from '@/screens/events/EventDetailsScreen';
 import { EventsScreen } from '@/screens/events/EventsScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { MessagesScreen } from '@/screens/messages/MessagesScreen';
@@ -29,6 +38,7 @@ import {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const TABLET_BREAKPOINT = 768;
+const PROTECTED_TABS: Array<keyof MainTabParamList> = ['Messages', 'Notifications', 'Account'];
 
 const TAB_ICONS: Record<keyof MainTabParamList, ComponentProps<typeof Feather>['name']> = {
   Home: 'home',
@@ -38,12 +48,20 @@ const TAB_ICONS: Record<keyof MainTabParamList, ComponentProps<typeof Feather>['
   Account: 'user',
 };
 
+function openLoginForProtectedTab(routeName: keyof MainTabParamList) {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.navigate('Login', { redirectTab: routeName });
+}
+
 function MainTabs() {
   const { theme } = useAppTheme();
-  const { isAuthenticated, previewUsername } = useAppShell();
+  const { isAuthenticated, username } = useAppShell();
   const { width } = useWindowDimensions();
   const isTabletLayout = width >= TABLET_BREAKPOINT;
-  const { profile } = usePreviewProfile(previewUsername, isAuthenticated);
+  const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileLabel = getDisplayName(profile);
 
   return (
@@ -106,9 +124,51 @@ function MainTabs() {
     >
       <Tab.Screen component={HomeScreen} name="Home" options={{ title: 'Home' }} />
       <Tab.Screen component={EventsScreen} name="Events" options={{ title: 'Events' }} />
-      <Tab.Screen component={MessagesScreen} name="Messages" options={{ title: 'Messages' }} />
-      <Tab.Screen component={NotificationsScreen} name="Notifications" options={{ title: 'Notifications' }} />
-      <Tab.Screen component={AccountScreen} name="Account" options={{ title: 'Account' }} />
+      <Tab.Screen
+        component={MessagesScreen}
+        name="Messages"
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            if (isAuthenticated || !PROTECTED_TABS.includes(route.name)) {
+              return;
+            }
+
+            event.preventDefault();
+            openLoginForProtectedTab(route.name);
+          },
+        })}
+        options={{ title: 'Messages' }}
+      />
+      <Tab.Screen
+        component={NotificationsScreen}
+        name="Notifications"
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            if (isAuthenticated || !PROTECTED_TABS.includes(route.name)) {
+              return;
+            }
+
+            event.preventDefault();
+            openLoginForProtectedTab(route.name);
+          },
+        })}
+        options={{ title: 'Notifications' }}
+      />
+      <Tab.Screen
+        component={AccountScreen}
+        name="Account"
+        listeners={({ navigation, route }) => ({
+          tabPress: (event) => {
+            if (isAuthenticated || !PROTECTED_TABS.includes(route.name)) {
+              return;
+            }
+
+            event.preventDefault();
+            openLoginForProtectedTab(route.name);
+          },
+        })}
+        options={{ title: 'Account' }}
+      />
     </Tab.Navigator>
   );
 }
@@ -144,18 +204,56 @@ export function RootNavigator() {
       }}
     >
       <Stack.Screen component={MainTabs} name="MainTabs" options={{ headerShown: false }} />
-      {detailRouteNames.map((routeName) => (
-        <Stack.Screen
-          key={routeName}
-          name={routeName}
-          options={{
-            presentation: isAuthRoute(routeName) ? 'modal' : 'card',
-            title: detailScreenContent[routeName].title,
-          }}
-        >
-          {() => <DetailPlaceholderScreen screenKey={routeName} />}
-        </Stack.Screen>
-      ))}
+      <Stack.Screen component={LoginProvidersScreen} name="Login" options={{ presentation: 'modal', title: 'Login' }} />
+      <Stack.Screen component={LoginScreen} name="EmailLogin" options={{ presentation: 'modal', title: 'Login' }} />
+      <Stack.Screen component={RegisterScreen} name="Register" options={{ presentation: 'modal', title: 'Register' }} />
+      <Stack.Screen
+        component={ForgotPasswordScreen}
+        name="ForgotPassword"
+        options={{ presentation: 'modal', title: 'Forgot password' }}
+      />
+      <Stack.Screen
+        component={ResetPasswordScreen}
+        name="ResetPassword"
+        options={{ presentation: 'modal', title: 'Reset password' }}
+      />
+      <Stack.Screen
+        component={VerifyEmailScreen}
+        name="VerifyEmail"
+        options={{ presentation: 'modal', title: 'Verify email' }}
+      />
+      <Stack.Screen
+        component={VerifyPendingScreen}
+        name="VerifyPending"
+        options={{ presentation: 'modal', title: 'Verify pending' }}
+      />
+      <Stack.Screen
+        component={EventDetailsScreen}
+        name="EventDetails"
+        options={({ route }) => ({
+          headerTitleStyle: {
+            color: theme.colors.textPrimary,
+            fontFamily: fontFamily.bodyBold,
+            fontSize: 15,
+          },
+          presentation: 'card',
+          title: route.params.occurrence.eventSeries?.title ?? 'Event',
+        })}
+      />
+      {detailRouteNames
+        .filter((routeName) => !isAuthRoute(routeName) && routeName !== 'EventDetails')
+        .map((routeName) => (
+          <Stack.Screen
+            key={routeName}
+            name={routeName}
+            options={{
+              presentation: 'card',
+              title: detailScreenContent[routeName].title,
+            }}
+          >
+            {() => <DetailPlaceholderScreen screenKey={routeName} />}
+          </Stack.Screen>
+        ))}
     </Stack.Navigator>
   );
 }
