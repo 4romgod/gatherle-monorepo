@@ -23,6 +23,12 @@ export type RootStackParamList = {
   EventDetails: {
     occurrence: MobileEventOccurrence;
   };
+  MessageThread: {
+    avatarUrl?: string | null;
+    displayName: string;
+    username?: string | null;
+    withUserId: string;
+  };
   Profile: undefined;
   Settings: undefined;
   MyEvents: undefined;
@@ -146,10 +152,16 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     description: 'This screen holds the mobile event story, including schedule, host, attendance, and actions.',
     category: 'discover',
   },
+  MessageThread: {
+    sectionLabel: 'Social',
+    title: 'Conversation',
+    description: 'Direct message history and the mobile chat composer live on this conversation route.',
+    category: 'social',
+  },
   Profile: {
     sectionLabel: 'Identity',
-    title: 'Profile',
-    description: 'User profile details, social graph, and activity surfaces belong on this mobile profile page.',
+    title: 'Edit profile',
+    description: 'Your public identity, bio, handle, and location controls live on this editing surface.',
     category: 'social',
   },
   Settings: {

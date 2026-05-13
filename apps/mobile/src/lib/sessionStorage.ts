@@ -6,6 +6,7 @@ const SESSION_STORAGE_KEY = 'gatherle.mobile.session';
 export type StoredAuthSession = {
   email: string;
   token: string;
+  userId: string;
   username: string | null;
 };
 
@@ -30,13 +31,14 @@ export async function readStoredSession(): Promise<StoredAuthSession | null> {
   try {
     const parsed = JSON.parse(serializedValue) as StoredAuthSession;
 
-    if (!parsed?.token || !parsed?.email) {
+    if (!parsed?.token || !parsed?.email || !parsed?.userId) {
       return null;
     }
 
     return {
       email: parsed.email,
       token: parsed.token,
+      userId: parsed.userId,
       username: parsed.username ?? null,
     };
   } catch {

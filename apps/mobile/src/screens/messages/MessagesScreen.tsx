@@ -11,7 +11,9 @@ import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ConversationRow } from '@/components/messages/ConversationRow';
 import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
+import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useMessages } from '@/hooks/messages/useMessages';
+import { getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 export function MessagesScreen() {
@@ -19,7 +21,14 @@ export function MessagesScreen() {
   const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const { conversations, error, loading, markConversationRead, refetch } = useMessages(authToken, isAuthenticated);
+  const { conversations, error, loading, refetch } = useMessages(authToken, isAuthenticated);
+
+  useChatRealtime({
+    enabled: isAuthenticated,
+    onChatConversationUpdated: () => {
+      void refetch();
+    },
+  });
 
   const filteredConversations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -100,7 +109,14 @@ export function MessagesScreen() {
             <ConversationRow
               conversation={conversation}
               key={conversation.conversationWithUserId}
-              onPress={() => void markConversationRead(conversation.conversationWithUserId)}
+              onPress={() =>
+                navigation.navigate('MessageThread', {
+                  avatarUrl: conversation.conversationWithUser?.profile_picture,
+                  displayName: getDisplayName(conversation.conversationWithUser),
+                  username: conversation.conversationWithUser?.username,
+                  withUserId: conversation.conversationWithUserId,
+                })
+              }
             />
           ))}
         </View>

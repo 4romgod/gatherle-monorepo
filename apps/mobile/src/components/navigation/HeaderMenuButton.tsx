@@ -15,9 +15,7 @@ export function HeaderMenuButton() {
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: theme.colors.surfaceMuted,
-          borderColor: theme.colors.border,
-          opacity: pressed ? 0.84 : 1,
+          opacity: pressed ? 0.64 : 1,
         },
       ]}
     >
@@ -29,10 +27,8 @@ export function HeaderMenuButton() {
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 40,
     justifyContent: 'center',
-    width: 40,
+    minHeight: 40,
+    minWidth: 40,
   },
 });

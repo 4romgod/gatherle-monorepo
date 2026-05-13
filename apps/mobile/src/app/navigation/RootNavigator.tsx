@@ -16,12 +16,15 @@ import { RegisterScreen } from '@/features/auth/screens/RegisterScreen';
 import { ResetPasswordScreen } from '@/features/auth/screens/ResetPasswordScreen';
 import { VerifyEmailScreen } from '@/features/auth/screens/VerifyEmailScreen';
 import { VerifyPendingScreen } from '@/features/auth/screens/VerifyPendingScreen';
+import { EditProfileScreen } from '@/screens/account/EditProfileScreen';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { getDisplayName } from '@/lib/events/formatters';
 import { AccountScreen } from '@/screens/account/AccountScreen';
+import { SettingsScreen } from '@/screens/account/SettingsScreen';
 import { EventDetailsScreen } from '@/screens/events/EventDetailsScreen';
 import { EventsScreen } from '@/screens/events/EventsScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
+import { MessageThreadScreen } from '@/screens/messages/MessageThreadScreen';
 import { MessagesScreen } from '@/screens/messages/MessagesScreen';
 import { NotificationsScreen } from '@/screens/notifications/NotificationsScreen';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -240,8 +243,25 @@ export function RootNavigator() {
           title: route.params.occurrence.eventSeries?.title ?? 'Event',
         })}
       />
+      <Stack.Screen
+        component={MessageThreadScreen}
+        name="MessageThread"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.displayName,
+        })}
+      />
+      <Stack.Screen
+        component={EditProfileScreen}
+        name="Profile"
+        options={{ presentation: 'card', title: 'Edit profile' }}
+      />
+      <Stack.Screen component={SettingsScreen} name="Settings" options={{ presentation: 'card', title: 'Settings' }} />
       {detailRouteNames
-        .filter((routeName) => !isAuthRoute(routeName) && routeName !== 'EventDetails')
+        .filter(
+          (routeName) =>
+            !isAuthRoute(routeName) && !['EventDetails', 'MessageThread', 'Profile', 'Settings'].includes(routeName),
+        )
         .map((routeName) => (
           <Stack.Screen
             key={routeName}

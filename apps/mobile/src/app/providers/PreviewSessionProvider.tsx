@@ -12,15 +12,18 @@ type PreviewSessionContextValue = {
   previewAuthEnabled: boolean;
   setPendingVerificationEmail: (value: string | null) => void;
   setPreviewAuthenticated: (value: boolean) => void;
+  updateSessionIdentity: (input: { email?: string | null; username?: string | null }) => void;
   signIn: (user: AuthenticatedMobileUser) => void;
   signOut: () => void;
   togglePreviewAuth: () => void;
+  userId: string | null;
   username: string | null;
 };
 
 type AuthSession = {
   email: string;
   token: string;
+  userId: string;
   username: string | null;
 };
 
@@ -73,6 +76,7 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     const nextSession = {
       email: user.email,
       token: user.token,
+      userId: user.userId,
       username: user.username ?? null,
     };
 
@@ -90,6 +94,23 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     void clearStoredSession();
   };
 
+  const updateSessionIdentity = (input: { email?: string | null; username?: string | null }) => {
+    setLiveSession((currentSession) => {
+      if (!currentSession) {
+        return currentSession;
+      }
+
+      const nextSession = {
+        ...currentSession,
+        email: input.email ?? currentSession.email,
+        username: input.username ?? currentSession.username,
+      };
+
+      void writeStoredSession(nextSession);
+      return nextSession;
+    });
+  };
+
   const value = useMemo<PreviewSessionContextValue>(
     () => ({
       authToken: liveSession?.token ?? PREVIEW_AUTH_TOKEN,
@@ -104,6 +125,8 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
       signIn,
       signOut,
       togglePreviewAuth,
+      userId: liveSession?.userId ?? null,
+      updateSessionIdentity,
       username: liveSession?.username ?? PREVIEW_USERNAME,
     }),
     [isSessionReady, liveSession, pendingVerificationEmail, previewAuthEnabled],

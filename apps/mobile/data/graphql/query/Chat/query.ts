@@ -31,3 +31,25 @@ export const GetUnreadChatCountDocument = graphql(`
     unreadChatCount
   }
 `);
+
+export const ReadChatMessagesDocument = graphql(`
+  query ReadChatMessages($withUserId: ID!, $limit: Int, $cursor: String, $markAsRead: Boolean) {
+    readChatMessages(withUserId: $withUserId, limit: $limit, cursor: $cursor, markAsRead: $markAsRead) {
+      messages {
+        chatMessageId
+        senderUserId
+        recipientUserId
+        message
+        isRead
+        readAt
+        createdAt
+        replyToMomentId
+        replyToMomentCaption
+        replyToMomentType
+      }
+      nextCursor
+      hasMore
+      count
+    }
+  }
+`);

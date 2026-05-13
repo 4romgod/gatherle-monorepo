@@ -19,7 +19,7 @@ type DrawerItemConfig = {
 
 const MAX_DRAWER_WIDTH = 420;
 const MIN_DRAWER_WIDTH = 280;
-type DrawerRouteName = Exclude<DetailRouteName, 'EventDetails'>;
+type DrawerRouteName = Exclude<DetailRouteName, 'EventDetails' | 'MessageThread'>;
 
 function navigateTo(routeName: DrawerRouteName) {
   if (!navigationRef.isReady()) {
