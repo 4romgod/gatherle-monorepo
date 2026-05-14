@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { useQuery } from '@apollo/client';
-import { MobileEventsFeedDocument } from '@data/graphql/query/Discovery/query';
+import { GetEventsFeedDocument } from '@data/graphql/query/Discovery/query';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import {
   DateFilterOption,
@@ -61,7 +61,7 @@ export function useDraftResultCount(draft: EventsFilterState, skip: boolean, aut
   const draftKey = JSON.stringify(draft);
   const options = useMemo(() => buildQueryOptions(draft), [draftKey]);
 
-  const { data } = useQuery(MobileEventsFeedDocument, {
+  const { data } = useQuery(GetEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
     skip,
     variables: { options },
@@ -77,7 +77,7 @@ export function useFilteredMobileEvents(filters: EventsFilterState, authToken?: 
   const filtersKey = JSON.stringify(filters);
   const options = useMemo(() => buildQueryOptions(filters), [filtersKey]);
 
-  const { data, loading, error, refetch } = useQuery(MobileEventsFeedDocument, {
+  const { data, loading, error, refetch } = useQuery(GetEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
     variables: { options },

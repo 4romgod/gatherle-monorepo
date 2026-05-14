@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Switch, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { navigationRef } from '@/app/navigation/navigationRef';
@@ -85,17 +85,7 @@ function DrawerDivider() {
 }
 
 export function AppDrawer() {
-  const {
-    closeDrawer,
-    drawerOpen,
-    email,
-    hasLiveSession,
-    isAuthenticated,
-    previewAuthEnabled,
-    signOut,
-    togglePreviewAuth,
-    username,
-  } = useAppShell();
+  const { closeDrawer, drawerOpen, email, isAuthenticated, signOut, username } = useAppShell();
   const { isDark, theme, toggleMode } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -320,33 +310,6 @@ export function AppDrawer() {
           {[...(isAuthenticated ? authedItems : guestItems), ...sharedItems].map((item) => (
             <MenuItem icon={item.icon} key={item.label} label={item.label} onPress={item.onPress} />
           ))}
-
-          {!hasLiveSession ? (
-            <>
-              <DrawerDivider />
-
-              <View style={styles.previewSection}>
-                <View style={styles.previewHeader}>
-                  <Text style={[styles.previewLabel, { color: theme.colors.textPrimary }]}>
-                    Preview authenticated shell
-                  </Text>
-                  <Switch
-                    onValueChange={togglePreviewAuth}
-                    thumbColor={theme.colors.primaryContrast}
-                    trackColor={{
-                      false: theme.colors.border,
-                      true: theme.colors.primary,
-                    }}
-                    value={previewAuthEnabled}
-                  />
-                </View>
-                <Text style={[styles.previewCopy, { color: theme.colors.textSecondary }]}>
-                  Preview state so both guest and signed-in drawer layouts can be checked while testing the mobile
-                  shell.
-                </Text>
-              </View>
-            </>
-          ) : null}
         </ScrollView>
       </Animated.View>
     </View>
@@ -441,26 +404,5 @@ const styles = StyleSheet.create({
   menuLabel: {
     ...typography.bodyMedium,
     fontSize: fontSize.lg,
-  },
-  previewSection: {
-    gap: 10,
-    paddingBottom: 12,
-    paddingTop: 8,
-  },
-  previewHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  previewLabel: {
-    ...typography.bodyBold,
-    flex: 1,
-    fontSize: fontSize.sm,
-    marginRight: 12,
-  },
-  previewCopy: {
-    ...typography.bodyRegular,
-    fontSize: fontSize.xs,
-    lineHeight: 18,
   },
 });

@@ -2,7 +2,7 @@ import type { QueryOptionsInput } from '@gatherle/commons/types';
 
 export const getReadUserByIdQuery = (userId: string) => {
   return {
-    query: `query ReadUserById($userId: String!) {
+    query: `query GetUserById($userId: String!) {
             readUserById(userId: $userId) {
               userId
               email
@@ -17,7 +17,7 @@ export const getReadUserByIdQuery = (userId: string) => {
 
 export const getReadUserByEmailQuery = (email: string) => {
   return {
-    query: `query ReadUserByEmail($email: String!) {
+    query: `query GetUserByEmail($email: String!) {
             readUserByEmail(email: $email) {
               userId
               email
@@ -32,7 +32,7 @@ export const getReadUserByEmailQuery = (email: string) => {
 
 export const getReadUserByUsernameQuery = (username: string) => {
   return {
-    query: `query ReadUserByUsername($username: String!) {
+    query: `query GetUserByUsername($username: String!) {
             readUserByUsername(username: $username) {
               userId
               email
@@ -47,7 +47,7 @@ export const getReadUserByUsernameQuery = (username: string) => {
 
 export const getReadUsersWithoutOptionsQuery = () => {
   return {
-    query: `query ReadUsers {
+    query: `query GetUsers {
             readUsers {
               userId
               email
@@ -59,7 +59,7 @@ export const getReadUsersWithoutOptionsQuery = () => {
 
 export const getReadUsersWithOptionsQuery = (options: QueryOptionsInput) => {
   return {
-    query: `query ReadUsers($options: QueryOptionsInput!) {
+    query: `query GetUsers($options: QueryOptionsInput!) {
             readUsers(options: $options) {
               userId
               email

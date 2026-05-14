@@ -1,6 +1,6 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetAllOrganizationsDocument = graphql(`
+export const GetOrganizationsDocument = graphql(`
   query GetOrganizations {
     readOrganizations {
       orgId

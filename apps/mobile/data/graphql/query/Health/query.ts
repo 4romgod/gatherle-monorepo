@@ -1,7 +1,7 @@
 import { graphql } from '../../types';
 
-export const MobileHealthCheckDocument = graphql(`
-  query MobileHealthCheck {
+export const GetHealthCheckDocument = graphql(`
+  query GetHealthCheck {
     __typename
   }
 `);

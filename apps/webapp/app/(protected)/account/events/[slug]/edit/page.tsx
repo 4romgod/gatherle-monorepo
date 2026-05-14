@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import { ArrowBack, Edit } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoriesDocument, GetEventBySlugDocument } from '@/data/graphql/types/graphql';
+import { GetEventCategoriesDocument, GetEventBySlugDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
 import { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
@@ -32,7 +32,7 @@ export default async function Page(props: Props) {
   }
 
   const { data: eventCategories } = await getClient().query({
-    query: GetAllEventCategoriesDocument,
+    query: GetEventCategoriesDocument,
   });
 
   const { data: eventRetrieved } = await getClient().query({

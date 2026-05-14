@@ -109,7 +109,7 @@ describe('useMarkConversationRead', () => {
 
       expect(mockRefetchQueries).toHaveBeenCalledWith(
         expect.objectContaining({
-          include: expect.arrayContaining(['ReadChatConversations', 'GetUnreadChatCount']),
+          include: expect.arrayContaining(['GetChatConversations', 'GetUnreadChatCount']),
         }),
       );
     });

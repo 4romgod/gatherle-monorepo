@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Box, Container, Grid, Typography, Button, Paper } from '@mui/material';
 import { Add, Groups } from '@mui/icons-material';
 import { useQuery } from '@apollo/client';
-import { GetAllOrganizationsDocument } from '@/data/graphql/query';
+import { GetOrganizationsDocument } from '@/data/graphql/query';
 import OrganizationCard from '@/components/organization/organizationBox';
 import OrganizationBoxSkeleton from '@/components/organization/organizationBox/OrganizationBoxSkeleton';
 import SearchBox from '@/components/search/SearchBox';
@@ -14,7 +14,7 @@ const SKELETON_COUNT = 8;
 
 export default function OrganizationsClient() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { data, loading, error } = useQuery(GetAllOrganizationsDocument, {
+  const { data, loading, error } = useQuery(GetOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
   });
 

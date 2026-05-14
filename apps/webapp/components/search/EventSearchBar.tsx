@@ -20,7 +20,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { Search, Event as EventIcon, LocationOn } from '@mui/icons-material';
 import Link from 'next/link';
-import { GetAllEventsDocument } from '@/data/graphql/query';
+import { GetEventsDocument } from '@/data/graphql/query';
 import type { EventPreview } from '@/data/graphql/query/Event/types';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
@@ -71,7 +71,7 @@ export default function EventSearchBar({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetAllEventsDocument, {
+  const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
   });
 

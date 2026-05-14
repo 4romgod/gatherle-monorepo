@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { Avatar, Box, ButtonBase, Container, Divider, Skeleton, Tooltip, Typography } from '@mui/material';
-import { ReadUserEventMomentsDocument } from '@/data/graphql/query';
+import { GetUserEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentState } from '@/data/graphql/types/graphql';
-import type { ReadUserEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetUserEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import EventMomentViewer from './EventMomentViewer';
 
-type Moment = ReadUserEventMomentsQuery['readUserEventMoments'][number];
+type Moment = GetUserEventMomentsQuery['readUserEventMoments'][number];
 
 interface Props {
   userId: string;
@@ -32,7 +32,7 @@ function EventMomentsBubble({ userId, eventId, eventName, token, isOwnProfile }:
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerMoments, setViewerMoments] = useState<Moment[]>([]);
 
-  const { data, loading } = useQuery(ReadUserEventMomentsDocument, {
+  const { data, loading } = useQuery(GetUserEventMomentsDocument, {
     variables: { userId, eventId },
     context: token ? { headers: getAuthHeader(token) } : undefined,
     skip: !token,

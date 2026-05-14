@@ -32,7 +32,7 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetEventBySlugDocument,
-  GetAllEventOccurrencesDocument,
+  GetEventOccurrencesDocument,
   ParticipantStatus,
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
@@ -72,7 +72,7 @@ import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
 import EventMomentsRing from '@/components/eventMoments/EventMomentsRing';
 import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
 import EventMomentComposer from '@/components/eventMoments/EventMomentComposer';
-import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 
 interface EventDetailPageClientProps {
   slug: string;
@@ -93,26 +93,23 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     fetchPolicy: 'cache-and-network',
   });
   const event = data?.readEventBySlug;
-  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(
-    GetAllEventOccurrencesDocument,
-    {
-      skip: !event?.eventId || !requestedOccurrenceAnchor,
-      variables: {
-        options: {
-          filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
-          dateRange: {
-            startDate: requestedOccurrenceAnchor ?? '',
-            endDate: requestedOccurrenceAnchor ?? '',
-          },
-          pagination: { limit: 1, skip: 0 },
+  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(GetEventOccurrencesDocument, {
+    skip: !event?.eventId || !requestedOccurrenceAnchor,
+    variables: {
+      options: {
+        filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
+        dateRange: {
+          startDate: requestedOccurrenceAnchor ?? '',
+          endDate: requestedOccurrenceAnchor ?? '',
         },
+        pagination: { limit: 1, skip: 0 },
       },
-      context: {
-        headers: getAuthHeader(token),
-      },
-      fetchPolicy: 'cache-and-network',
     },
-  );
+    context: {
+      headers: getAuthHeader(token),
+    },
+    fetchPolicy: 'cache-and-network',
+  });
   const upcomingOccurrences = event?.upcomingOccurrences ?? [];
   const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
   const hasExplicitOccurrenceSelection = Boolean(requestedOccurrenceAnchor || legacyRequestedOccurrenceId);
@@ -215,7 +212,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const isLoading = loading || (!event && !error);
 
   // Event Moments UI state
-  type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number];
+  type Moment = GetEventMomentsQuery['readEventMoments']['items'][number];
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerMoments, setViewerMoments] = useState<Moment[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);

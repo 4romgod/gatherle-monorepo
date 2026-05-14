@@ -6,12 +6,12 @@ import { useSession } from 'next-auth/react';
 import { Box, Avatar, Typography, Skeleton, Tooltip, CircularProgress } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { ReadEventMomentsDocument } from '@/data/graphql/query';
+import { GetEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentState, ParticipantStatus } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
-import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 
-type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number];
+type Moment = GetEventMomentsQuery['readEventMoments']['items'][number];
 
 interface EventMomentsRingProps {
   eventId: string;
@@ -53,7 +53,7 @@ export default function EventMomentsRing({
   const token = session?.user?.token;
   const viewerUserId = session?.user?.userId;
 
-  const { data, loading, startPolling, stopPolling } = useQuery(ReadEventMomentsDocument, {
+  const { data, loading, startPolling, stopPolling } = useQuery(GetEventMomentsDocument, {
     variables: { eventId, limit: 50 },
     context: token ? { headers: getAuthHeader(token) } : undefined,
     fetchPolicy: 'cache-and-network',

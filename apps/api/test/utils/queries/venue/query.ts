@@ -1,6 +1,6 @@
 export const getReadVenueByIdQuery = (venueId: string) => ({
   query: `
-    query ReadVenueById($venueId: String!) {
+    query GetVenueById($venueId: String!) {
       readVenueById(venueId: $venueId) {
         venueId
         name
@@ -17,7 +17,7 @@ export const getReadVenueByIdQuery = (venueId: string) => ({
 
 export const getReadVenuesQuery = () => ({
   query: `
-    query ReadVenues {
+    query GetVenues {
       readVenues {
         venueId
         name
@@ -30,7 +30,7 @@ export const getReadVenuesQuery = () => ({
 
 export const getReadVenuesByOrgIdQuery = (orgId: string) => ({
   query: `
-    query ReadVenuesByOrgId($orgId: String!) {
+    query GetVenuesByOrgId($orgId: String!) {
       readVenuesByOrgId(orgId: $orgId) {
         venueId
         name
@@ -46,7 +46,7 @@ export const getReadVenuesByOrgIdQuery = (orgId: string) => ({
 
 export const getReadVenueBySlugQuery = (slug: string) => ({
   query: `
-    query ReadVenueBySlug($slug: String!) {
+    query GetVenueBySlug($slug: String!) {
       readVenueBySlug(slug: $slug) {
         venueId
         name

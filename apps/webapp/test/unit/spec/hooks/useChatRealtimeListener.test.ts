@@ -81,7 +81,7 @@ describe('useChatRealtimeListener', () => {
 
     expect(mockRefetchQueries).toHaveBeenCalledWith(
       expect.objectContaining({
-        include: expect.arrayContaining(['ReadChatConversations', 'ReadChatMessages']),
+        include: expect.arrayContaining(['GetChatConversations', 'GetChatMessages']),
       }),
     );
   });
@@ -99,7 +99,7 @@ describe('useChatRealtimeListener', () => {
 
     expect(mockRefetchQueries).toHaveBeenCalledWith(
       expect.objectContaining({
-        include: expect.arrayContaining(['ReadChatConversations', 'ReadChatMessages']),
+        include: expect.arrayContaining(['GetChatConversations', 'GetChatMessages']),
       }),
     );
   });

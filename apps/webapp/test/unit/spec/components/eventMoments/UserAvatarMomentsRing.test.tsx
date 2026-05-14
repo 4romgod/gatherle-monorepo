@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
-import type { ReadUserEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetUserEventMomentsQuery } from '@/data/graphql/types/graphql';
 
-type Moment = ReadUserEventMomentsQuery['readUserEventMoments'][number];
+type Moment = GetUserEventMomentsQuery['readUserEventMoments'][number];
 
 const mockUseQuery = jest.fn();
 
@@ -13,7 +13,7 @@ jest.mock('@apollo/client', () => ({
 }));
 
 jest.mock('@/data/graphql/query', () => ({
-  ReadUserEventMomentsDocument: {},
+  GetUserEventMomentsDocument: {},
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({

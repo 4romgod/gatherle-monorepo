@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
-import { MobileEventSearchDocument } from '@data/graphql/query/Discovery/query';
-import type { MobileEventSearchQuery } from '@data/graphql/types/graphql';
+import { SearchEventsDocument } from '@data/graphql/query/Discovery/query';
+import type { SearchEventsQuery } from '@data/graphql/types/graphql';
 import { SortOrderInput } from '@data/graphql/types/graphql';
 
 const MIN_CHARS = 2;
@@ -16,13 +16,13 @@ const SEARCH_FIELDS = [
   'eventCategories.name',
 ];
 
-export type MobileSearchResult = MobileEventSearchQuery['readEvents'][number];
+export type MobileSearchResult = SearchEventsQuery['readEvents'][number];
 
 export function useEventSearch() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [results, setResults] = useState<MobileSearchResult[]>([]);
 
-  const [executeSearch, { loading }] = useLazyQuery(MobileEventSearchDocument, {
+  const [executeSearch, { loading }] = useLazyQuery(SearchEventsDocument, {
     fetchPolicy: 'network-only',
     onCompleted: (data) => {
       setResults(data?.readEvents ?? []);

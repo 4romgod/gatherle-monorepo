@@ -1,7 +1,7 @@
 export const getReadEventOccurrenceParticipantsQuery = (occurrenceId: string) => {
   return {
     query: `
-      query ReadEventOccurrenceParticipants($occurrenceId: String!) {
+      query GetEventOccurrenceParticipants($occurrenceId: String!) {
         readEventOccurrenceParticipants(occurrenceId: $occurrenceId) {
           participantId
           occurrenceId
@@ -19,7 +19,7 @@ export const getReadEventOccurrenceParticipantsQuery = (occurrenceId: string) =>
 export const getMyEventOccurrenceRsvpStatusQuery = (occurrenceId: string) => {
   return {
     query: `
-      query MyEventOccurrenceRsvpStatus($occurrenceId: String!) {
+      query GetMyEventOccurrenceRsvpStatus($occurrenceId: String!) {
         myEventOccurrenceRsvpStatus(occurrenceId: $occurrenceId) {
           participantId
           occurrenceId

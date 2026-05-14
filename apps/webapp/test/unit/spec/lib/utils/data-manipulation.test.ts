@@ -2,7 +2,7 @@ import { groupEventsByCategory } from '@/lib/utils/data-manipulation';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import { EventStatus } from '@/data/graphql/types/graphql';
 
-// Mock event factory - matches the EventPreview type from GetAllEventsQuery
+// Mock event factory - matches the EventPreview type from GetEventsQuery
 const createMockEvent = (overrides: Partial<EventPreview> = {}): EventPreview => ({
   eventId: 'event-1',
   title: 'Test Event',

@@ -22,7 +22,7 @@ import { useAppContext } from '@/hooks';
 import { AdminUsersSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { UserRole } from '@/data/graphql/types/graphql';
-import { GetAllUsersDocument } from '@/data/graphql/query/User/query';
+import { GetUsersDocument } from '@/data/graphql/query/User/query';
 import { UpdateUserDocument, DeleteUserByIdDocument } from '@/data/graphql/query/User/mutation';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
@@ -30,7 +30,7 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setToastProps } = useAppContext();
-  const { data, loading, error, refetch } = useQuery(GetAllUsersDocument, {
+  const { data, loading, error, refetch } = useQuery(GetUsersDocument, {
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });

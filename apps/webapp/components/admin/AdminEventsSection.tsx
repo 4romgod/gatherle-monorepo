@@ -22,7 +22,7 @@ import { Save, Delete, CalendarToday, PeopleOutline, BookmarkBorder } from '@mui
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { EventStatus, EventLifecycleStatus, EventVisibility } from '@/data/graphql/types/graphql';
-import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
+import { GetEventsDocument } from '@/data/graphql/query/Event/query';
 import { UpdateEventDocument, DeleteEventByIdDocument } from '@/data/graphql/query/Event/mutation';
 import { useAppContext } from '@/hooks/useAppContext';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
@@ -41,7 +41,7 @@ const VISIBILITY_FIELDS = Object.values(EventVisibility);
 
 export default function AdminEventsSection({ token }: AdminSectionProps) {
   const { setToastProps } = useAppContext();
-  const { data, loading, error, refetch } = useQuery(GetAllEventsDocument, {
+  const { data, loading, error, refetch } = useQuery(GetEventsDocument, {
     variables: {
       options: {
         pagination: { limit: 10 },

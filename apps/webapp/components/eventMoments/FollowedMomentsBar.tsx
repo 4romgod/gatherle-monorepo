@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { Avatar, Box, ButtonBase, Container, Skeleton, Typography } from '@mui/material';
-import { ReadFollowedMomentsDocument } from '@/data/graphql/query';
-import { EventMomentState, type ReadFollowedMomentsQuery } from '@/data/graphql/types/graphql';
+import { GetFollowedMomentsDocument } from '@/data/graphql/query';
+import { EventMomentState, type GetFollowedMomentsQuery } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import EventMomentViewer from './EventMomentViewer';
 
-type Moment = ReadFollowedMomentsQuery['readFollowedMoments']['items'][number];
+type Moment = GetFollowedMomentsQuery['readFollowedMoments']['items'][number];
 
 /** Groups moments by authorId so each followed user gets one bubble. */
 function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
@@ -25,7 +25,7 @@ export default function FollowedMomentsBar() {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading } = useQuery(ReadFollowedMomentsDocument, {
+  const { data, loading } = useQuery(GetFollowedMomentsDocument, {
     variables: { limit: 100 },
     context: token ? { headers: getAuthHeader(token) } : undefined,
     fetchPolicy: 'cache-and-network',

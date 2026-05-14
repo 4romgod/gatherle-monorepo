@@ -19,7 +19,7 @@ import { Add, Save, Delete } from '@mui/icons-material';
 import { useAppContext } from '@/hooks';
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { GetAllEventCategoriesDocument } from '@/data/graphql/query/EventCategory/query';
+import { GetEventCategoriesDocument } from '@/data/graphql/query/EventCategory/query';
 import {
   CreateEventCategoryDocument,
   UpdateEventCategoryDocument,
@@ -46,7 +46,7 @@ const DEFAULT_CATEGORY_FORM: CategoryForm = {
 
 export default function AdminCategorySection({ token }: AdminSectionProps) {
   const { setToastProps } = useAppContext();
-  const { data, loading, error, refetch } = useQuery(GetAllEventCategoriesDocument, {
+  const { data, loading, error, refetch } = useQuery(GetEventCategoriesDocument, {
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });

@@ -43,11 +43,11 @@ export function useChatRealtimeListener(enabled: boolean = true) {
         const pendingState = pendingRefetchStateRef.current;
 
         if (pendingState.shouldRefetchConversations) {
-          include.push('ReadChatConversations');
+          include.push('GetChatConversations');
         }
 
         if (pendingState.shouldRefetchMessages) {
-          include.push('ReadChatMessages');
+          include.push('GetChatMessages');
         }
 
         pendingRefetchStateRef.current = {

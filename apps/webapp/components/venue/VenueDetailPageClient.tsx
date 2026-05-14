@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowBack, Close, Language, LocationOn, People, PhotoLibrary } from '@mui/icons-material';
-import { GetAllEventOccurrencesDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
 import { SortOrderInput, type GetVenueBySlugQuery, type Location } from '@/data/graphql/types/graphql';
 import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import EventLocationMap from '@/components/events/EventLocationMap';
@@ -96,7 +96,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
     };
   }, [venue?.venueId]);
 
-  const { data: venueEventsData, loading: eventsLoading } = useQuery(GetAllEventOccurrencesDocument, {
+  const { data: venueEventsData, loading: eventsLoading } = useQuery(GetEventOccurrencesDocument, {
     skip: !eventFilterOptions,
     variables: {
       options: eventFilterOptions ?? {

@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { AccountTabButton } from '@/components/account/AccountTabButton';
 import { ProfileBadge } from '@/components/account/ProfileBadge';
 import { ProfileActionButton } from '@/components/account/ProfileActionButton';
 import { ProfileEventTile } from '@/components/account/ProfileEventTile';
@@ -14,6 +13,7 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { StateNotice } from '@/components/core/StateNotice';
+import { SwipePagerTabs } from '@/components/core/SwipePagerTabs';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
@@ -25,7 +25,7 @@ type AccountTab = 'going' | 'past' | 'hosting' | 'saved';
 
 export function AccountScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, isAuthenticated, username } = useAppShell();
+  const { authToken, isAuthenticated, userId, username } = useAppShell();
   const { theme } = useAppTheme();
   const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const {
@@ -34,7 +34,6 @@ export function AccountScreen() {
     profile,
     refetch: refetchProfile,
   } = usePreviewProfile(username, isAuthenticated);
-  const [activeTab, setActiveTab] = useState<AccountTab>('going');
   const profileName = getDisplayName(profile);
   const profileEventsCount = useMemo(
     () => dedupeOccurrencesBySeries([...upcomingEvents, ...trendingEvents]).length,
@@ -44,12 +43,51 @@ export function AccountScreen() {
 
   const eventCollections = useMemo<Record<AccountTab, MobileEventOccurrence[]>>(
     () => ({
-      going: upcomingEvents.slice(0, 4),
+      going: upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status).slice(0, 6),
       past: trendingEvents.slice(0, 4),
-      hosting: dedupeOccurrencesBySeries([...upcomingEvents.slice(1), ...trendingEvents], 4),
-      saved: dedupeOccurrencesBySeries([...trendingEvents.slice(1), ...upcomingEvents], 4),
+      hosting: dedupeOccurrencesBySeries(
+        [...upcomingEvents, ...trendingEvents].filter((occurrence) =>
+          occurrence.eventSeries?.organizers?.some((organizer) => organizer.user?.userId === userId),
+        ),
+        6,
+      ),
+      saved: dedupeOccurrencesBySeries(
+        [...trendingEvents, ...upcomingEvents].filter((occurrence) => occurrence.eventSeries?.isSavedByMe),
+        6,
+      ),
     }),
-    [trendingEvents, upcomingEvents],
+    [trendingEvents, upcomingEvents, userId],
+  );
+
+  const accountRoutes = useMemo(
+    () =>
+      (
+        [
+          { icon: 'check-square', key: 'going', label: 'Going' },
+          { icon: 'clock', key: 'past', label: 'Past' },
+          { icon: 'calendar', key: 'hosting', label: 'Hosting' },
+          { icon: 'bookmark', key: 'saved', label: 'Saved' },
+        ] as const
+      ).map((route) => ({
+        ...route,
+        render: () => (
+          <AccountTabPane
+            emptyMessage={
+              route.key === 'going'
+                ? 'This section will populate as you RSVP to more events.'
+                : route.key === 'past'
+                  ? 'Past events will show here after you build more history.'
+                  : route.key === 'hosting'
+                    ? 'Hosting activity will appear here when your events go live.'
+                    : 'Saved events will show here as you bookmark more plans.'
+            }
+            loading={loading}
+            onPressEvent={(occurrence) => navigation.navigate('EventDetails', { occurrence })}
+            occurrences={eventCollections[route.key]}
+          />
+        ),
+      })),
+    [eventCollections, loading, navigation],
   );
 
   if (!isAuthenticated) {
@@ -141,44 +179,48 @@ export function AccountScreen() {
         <ProfileActionButton icon="settings" label="Settings" onPress={() => navigation.navigate('Settings')} />
       </View>
 
-      <View style={[styles.accountTabsRow, { borderBottomColor: theme.colors.border }]}>
-        <AccountTabButton active={activeTab === 'going'} icon="check-square" onPress={() => setActiveTab('going')} />
-        <AccountTabButton active={activeTab === 'past'} icon="clock" onPress={() => setActiveTab('past')} />
-        <AccountTabButton active={activeTab === 'hosting'} icon="calendar" onPress={() => setActiveTab('hosting')} />
-        <AccountTabButton active={activeTab === 'saved'} icon="bookmark" onPress={() => setActiveTab('saved')} />
-      </View>
-
-      {loading && eventCollections[activeTab].length === 0 ? (
-        <StateNotice message="Loading your account activity..." />
-      ) : error ? (
+      {error ? (
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load your account event collections."
           onPressAction={() => void refetch()}
         />
-      ) : eventCollections[activeTab].length > 0 ? (
-        <View style={styles.profileEventGrid}>
-          {eventCollections[activeTab].map((event) => (
-            <ProfileEventTile
-              key={event.occurrenceId}
-              occurrence={event}
-              onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
-            />
-          ))}
-        </View>
       ) : (
-        <StateNotice message="This section will populate as you RSVP, host, and save more events." />
+        <SwipePagerTabs routes={accountRoutes} variant="icon" />
       )}
     </PageContainer>
   );
 }
 
+function AccountTabPane({
+  emptyMessage,
+  loading,
+  occurrences,
+  onPressEvent,
+}: {
+  emptyMessage: string;
+  loading: boolean;
+  occurrences: MobileEventOccurrence[];
+  onPressEvent: (occurrence: MobileEventOccurrence) => void;
+}) {
+  if (loading && occurrences.length === 0) {
+    return <StateNotice message="Loading your account activity..." />;
+  }
+
+  if (!occurrences.length) {
+    return <StateNotice message={emptyMessage} />;
+  }
+
+  return (
+    <View style={styles.profileEventGrid}>
+      {occurrences.map((event) => (
+        <ProfileEventTile key={event.occurrenceId} occurrence={event} onPress={() => onPressEvent(event)} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  accountTabsRow: {
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    marginTop: -10,
-  },
   profileBio: {
     ...typography.bodyRegular,
     fontSize: 14,

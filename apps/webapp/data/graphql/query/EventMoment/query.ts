@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const ReadFollowedMomentsDocument = graphql(`
-  query ReadFollowedMoments($cursor: String, $limit: Float) {
+export const GetFollowedMomentsDocument = graphql(`
+  query GetFollowedMoments($cursor: String, $limit: Float) {
     readFollowedMoments(cursor: $cursor, limit: $limit) {
       items {
         momentId
@@ -34,8 +34,8 @@ export const ReadFollowedMomentsDocument = graphql(`
   }
 `);
 
-export const ReadUserEventMomentsDocument = graphql(`
-  query ReadUserEventMoments($userId: String!, $eventId: String!) {
+export const GetUserEventMomentsDocument = graphql(`
+  query GetUserEventMoments($userId: String!, $eventId: String!) {
     readUserEventMoments(userId: $userId, eventId: $eventId) {
       momentId
       eventId
@@ -64,8 +64,8 @@ export const ReadUserEventMomentsDocument = graphql(`
   }
 `);
 
-export const ReadEventMomentsDocument = graphql(`
-  query ReadEventMoments($eventId: String!, $cursor: String, $limit: Float) {
+export const GetEventMomentsDocument = graphql(`
+  query GetEventMoments($eventId: String!, $cursor: String, $limit: Float) {
     readEventMoments(eventId: $eventId, cursor: $cursor, limit: $limit) {
       items {
         momentId

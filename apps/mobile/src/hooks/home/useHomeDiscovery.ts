@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
-import { MobileEventsFeedDocument, MobileHomeDiscoveryDocument } from '@data/graphql/query/Discovery/query';
+import { GetEventsFeedDocument, GetHomeDiscoveryDocument } from '@data/graphql/query/Discovery/query';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { SortOrderInput } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
@@ -12,7 +12,7 @@ import {
 } from '@/lib/events/formatters';
 
 export function useMobileHomeDiscovery(authToken?: string | null) {
-  const { data, loading, error, refetch } = useQuery(MobileHomeDiscoveryDocument, {
+  const { data, loading, error, refetch } = useQuery(GetHomeDiscoveryDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
       upcomingOptions: {
@@ -55,7 +55,7 @@ export function useMobileHomeDiscovery(authToken?: string | null) {
 }
 
 export function useMobileEventsFeed(authToken?: string | null) {
-  const { data, loading, error, refetch } = useQuery(MobileEventsFeedDocument, {
+  const { data, loading, error, refetch } = useQuery(GetEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
       options: {

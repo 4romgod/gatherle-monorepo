@@ -9,7 +9,7 @@ import {
   UpdateOrganizationMembershipDocument,
   DeleteOrganizationMembershipDocument,
   DeleteOrganizationDocument,
-  GetAllUsersDocument,
+  GetUsersDocument,
 } from '@/data/graphql/query';
 import type {
   Organization,
@@ -59,7 +59,7 @@ export default function useOrganizationSettingsData(slug: string) {
   );
   const memberships = membershipsData?.readOrganizationMembershipsByOrgId ?? [];
 
-  const [searchUsersQuery, { loading: searchLoading }] = useLazyQuery<{ readUsers: User[] }>(GetAllUsersDocument, {
+  const [searchUsersQuery, { loading: searchLoading }] = useLazyQuery<{ readUsers: User[] }>(GetUsersDocument, {
     fetchPolicy: 'network-only',
     context: { headers: getAuthHeader(token) },
   });

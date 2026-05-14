@@ -10,7 +10,7 @@ jest.mock('@apollo/client', () => ({
 }));
 
 jest.mock('@/data/graphql/query', () => ({
-  ReadUserEventMomentsDocument: {},
+  GetUserEventMomentsDocument: {},
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({

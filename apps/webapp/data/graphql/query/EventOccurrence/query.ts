@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetAllEventOccurrencesDocument = graphql(`
-  query GetAllEventOccurrences($options: EventsQueryOptionsInput!) {
+export const GetEventOccurrencesDocument = graphql(`
+  query GetEventOccurrences($options: EventsQueryOptionsInput!) {
     readEventOccurrences(options: $options) {
       occurrenceId
       occurrenceKey

@@ -9,13 +9,10 @@ type PreviewSessionContextValue = {
   isAuthenticated: boolean;
   isSessionReady: boolean;
   pendingVerificationEmail: string | null;
-  previewAuthEnabled: boolean;
   setPendingVerificationEmail: (value: string | null) => void;
-  setPreviewAuthenticated: (value: boolean) => void;
   updateSessionIdentity: (input: { email?: string | null; username?: string | null }) => void;
   signIn: (user: AuthenticatedMobileUser) => void;
   signOut: () => void;
-  togglePreviewAuth: () => void;
   userId: string | null;
   username: string | null;
 };
@@ -27,19 +24,10 @@ type AuthSession = {
   username: string | null;
 };
 
-function normalizeEnvValue(value?: string) {
-  const trimmedValue = value?.trim();
-  return trimmedValue ? trimmedValue : null;
-}
-
-const PREVIEW_AUTH_TOKEN = normalizeEnvValue(process.env.EXPO_PUBLIC_AUTH_TOKEN);
-const PREVIEW_USERNAME = normalizeEnvValue(process.env.EXPO_PUBLIC_PREVIEW_USERNAME);
-
 const PreviewSessionContext = createContext<PreviewSessionContextValue | null>(null);
 
 export function PreviewSessionProvider({ children }: PropsWithChildren) {
   const [isSessionReady, setSessionReady] = useState(false);
-  const [previewAuthEnabled, setPreviewAuthenticated] = useState(false);
   const [liveSession, setLiveSession] = useState<AuthSession | null>(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
@@ -64,14 +52,6 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const togglePreviewAuth = () => {
-    if (liveSession) {
-      return;
-    }
-
-    setPreviewAuthenticated((current) => !current);
-  };
-
   const signIn = (user: AuthenticatedMobileUser) => {
     const nextSession = {
       email: user.email,
@@ -89,7 +69,6 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
   const signOut = () => {
     setLiveSession(null);
     setPendingVerificationEmail(null);
-    setPreviewAuthenticated(false);
     setSessionReady(true);
     void clearStoredSession();
   };
@@ -113,23 +92,20 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<PreviewSessionContextValue>(
     () => ({
-      authToken: liveSession?.token ?? PREVIEW_AUTH_TOKEN,
+      authToken: liveSession?.token ?? null,
       email: liveSession?.email ?? pendingVerificationEmail,
       hasLiveSession: Boolean(liveSession),
-      isAuthenticated: Boolean(liveSession) || previewAuthEnabled,
+      isAuthenticated: Boolean(liveSession),
       isSessionReady,
       pendingVerificationEmail,
-      previewAuthEnabled,
       setPendingVerificationEmail,
-      setPreviewAuthenticated,
       signIn,
       signOut,
-      togglePreviewAuth,
       userId: liveSession?.userId ?? null,
       updateSessionIdentity,
-      username: liveSession?.username ?? PREVIEW_USERNAME,
+      username: liveSession?.username ?? null,
     }),
-    [isSessionReady, liveSession, pendingVerificationEmail, previewAuthEnabled],
+    [isSessionReady, liveSession, pendingVerificationEmail],
   );
 
   return <PreviewSessionContext.Provider value={value}>{children}</PreviewSessionContext.Provider>;

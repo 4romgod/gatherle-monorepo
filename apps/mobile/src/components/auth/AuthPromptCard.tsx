@@ -32,16 +32,7 @@ export function AuthPromptCard({
       : null;
 
   return (
-    <View
-      style={[
-        styles.card,
-        shadowStyle,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-        },
-      ]}
-    >
+    <View style={[shadowStyle]}>
       <View style={styles.copyBlock}>
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
         <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</Text>
@@ -55,6 +46,7 @@ export function AuthPromptCard({
             {
               backgroundColor: theme.colors.secondary,
               opacity: pressed ? 0.9 : 1,
+              marginTop: 12,
             },
           ]}
         >
@@ -80,12 +72,6 @@ export function AuthPromptCard({
 const styles = StyleSheet.create({
   actions: {
     gap: 10,
-  },
-  card: {
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 20,
-    padding: 20,
   },
   copyBlock: {
     gap: 8,

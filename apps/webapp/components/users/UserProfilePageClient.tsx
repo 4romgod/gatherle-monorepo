@@ -8,7 +8,7 @@ import { Edit as EditIcon } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
   FollowTargetType,
-  GetAllEventsDocument,
+  GetEventsDocument,
   GetMyEventOccurrenceRsvpsDocument,
   GetMyRsvpsDocument,
   GetSavedEventsDocument,
@@ -90,7 +90,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
-  } = useQuery(GetAllEventsDocument, {
+  } = useQuery(GetEventsDocument, {
     fetchPolicy: 'cache-and-network',
     context: { headers: getAuthHeader(token) },
   });

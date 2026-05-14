@@ -25,7 +25,7 @@ import {
   FollowApprovalStatus,
   FollowTargetType,
   GetEventBySlugDocument,
-  GetAllEventOccurrencesDocument,
+  GetEventOccurrencesDocument,
   ParticipantStatus,
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
@@ -75,26 +75,23 @@ export default function EventAttendeesPageClient({ slug }: EventAttendeesPageCli
     fetchPolicy: 'cache-and-network',
   });
   const event = data?.readEventBySlug;
-  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(
-    GetAllEventOccurrencesDocument,
-    {
-      skip: !event?.eventId || !requestedOccurrenceAnchor,
-      variables: {
-        options: {
-          filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
-          dateRange: {
-            startDate: requestedOccurrenceAnchor ?? '',
-            endDate: requestedOccurrenceAnchor ?? '',
-          },
-          pagination: { limit: 1, skip: 0 },
+  const { data: requestedOccurrenceData, loading: requestedOccurrenceLoading } = useQuery(GetEventOccurrencesDocument, {
+    skip: !event?.eventId || !requestedOccurrenceAnchor,
+    variables: {
+      options: {
+        filters: [{ field: 'eventSeriesId', value: [event?.eventId ?? ''] }],
+        dateRange: {
+          startDate: requestedOccurrenceAnchor ?? '',
+          endDate: requestedOccurrenceAnchor ?? '',
         },
+        pagination: { limit: 1, skip: 0 },
       },
-      context: {
-        headers: getAuthHeader(token),
-      },
-      fetchPolicy: 'cache-and-network',
     },
-  );
+    context: {
+      headers: getAuthHeader(token),
+    },
+    fetchPolicy: 'cache-and-network',
+  });
   const upcomingOccurrences = event?.upcomingOccurrences ?? [];
   const requestedOccurrence = requestedOccurrenceData?.readEventOccurrences?.[0] ?? null;
   const hasExplicitOccurrenceSelection = Boolean(requestedOccurrenceAnchor || legacyRequestedOccurrenceId);

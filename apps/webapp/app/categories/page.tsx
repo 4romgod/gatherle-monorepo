@@ -1,7 +1,7 @@
 import { Box, Container, Typography, Button } from '@mui/material';
 import { Category } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
+import { GetEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
 import type { EventCategoryGroup } from '@/data/graphql/types/graphql';
 import CategoriesClient from '@/components/categories/CategoriesClient';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -17,7 +17,7 @@ export const revalidate = 60;
 
 export default async function CategoriesPage() {
   const { data } = await getClient().query({
-    query: GetAllEventCategoryGroupsDocument,
+    query: GetEventCategoryGroupsDocument,
   });
 
   const groups: EventCategoryGroup[] = data?.readEventCategoryGroups ?? [];

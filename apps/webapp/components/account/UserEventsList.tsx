@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@apollo/client';
 import { Add, CalendarToday, Delete, Edit, Event as EventIcon } from '@mui/icons-material';
 import { Box, Button, Card, CardContent, Chip, Divider, Skeleton, Stack, Typography } from '@mui/material';
 import { FilterOperatorInput, SortOrderInput } from '@/data/graphql/types/graphql';
-import { GetAllEventsDocument } from '@/data/graphql/query/Event/query';
+import { GetEventsDocument } from '@/data/graphql/query/Event/query';
 import { DeleteEventByIdDocument } from '@/data/graphql/query/Event/mutation';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -26,7 +26,7 @@ export default function UserEventsList({ userId }: UserEventsListProps) {
   const [pendingDeleteEvent, setPendingDeleteEvent] = useState<{ eventId: string; title: string } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const { data, loading, error, refetch } = useQuery(GetAllEventsDocument, {
+  const { data, loading, error, refetch } = useQuery(GetEventsDocument, {
     variables: {
       options: {
         filters: [

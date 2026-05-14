@@ -35,11 +35,11 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
-import { DeleteEventMomentDocument, ReadEventMomentsDocument } from '@/data/graphql/query';
+import { DeleteEventMomentDocument, GetEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { differenceInSeconds } from 'date-fns';
-import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { useChatRealtime } from '@/hooks';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import Link from 'next/link';
@@ -47,7 +47,7 @@ import { ROUTES } from '@/lib/constants';
 import Hls from 'hls.js';
 
 type MomentEventShape = { event?: { slug: string; title: string } | null };
-type Moment = ReadEventMomentsQuery['readEventMoments']['items'][number] & MomentEventShape;
+type Moment = GetEventMomentsQuery['readEventMoments']['items'][number] & MomentEventShape;
 
 interface EventMomentViewerProps {
   moments: Moment[];
@@ -382,7 +382,7 @@ export default function EventMomentViewer({
         variables: { momentId },
         refetchQueries: [
           {
-            query: ReadEventMomentsDocument,
+            query: GetEventMomentsDocument,
             variables: { eventId, limit: 50 },
             context: { headers: getAuthHeader(token) },
           },

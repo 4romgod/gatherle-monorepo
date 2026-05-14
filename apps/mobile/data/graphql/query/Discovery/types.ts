@@ -1,19 +1,19 @@
 import type {
-  MobileEventsFeedQuery,
-  MobileEventsFeedQueryVariables,
-  MobileHomeDiscoveryQuery,
-  MobileHomeDiscoveryQueryVariables,
+  GetEventsFeedQuery,
+  GetEventsFeedQueryVariables,
+  GetHomeDiscoveryQuery,
+  GetHomeDiscoveryQueryVariables,
 } from '../../types/graphql';
 
-export type MobileEventOccurrence = MobileEventsFeedQuery['readEventOccurrences'][number];
+export type MobileEventOccurrence = GetEventsFeedQuery['readEventOccurrences'][number];
 export type MobileParticipant = NonNullable<MobileEventOccurrence['participants']>[number];
 export type MobileUserPreview = NonNullable<MobileParticipant['user']>;
 export type MobileEventSeries = NonNullable<MobileEventOccurrence['eventSeries']>;
-export type MobileEventCategory = MobileHomeDiscoveryQuery['readEventCategories'][number];
-export type MobileOrganization = MobileHomeDiscoveryQuery['readOrganizations'][number];
+export type MobileEventCategory = GetHomeDiscoveryQuery['readEventCategories'][number];
+export type MobileOrganization = GetHomeDiscoveryQuery['readOrganizations'][number];
 
-export type MobileHomeDiscoveryResult = MobileHomeDiscoveryQuery;
-export type MobileHomeDiscoveryVars = MobileHomeDiscoveryQueryVariables;
+export type MobileHomeDiscoveryResult = GetHomeDiscoveryQuery;
+export type MobileHomeDiscoveryVars = GetHomeDiscoveryQueryVariables;
 
-export type MobileEventsFeedResult = MobileEventsFeedQuery;
-export type MobileEventsFeedVars = MobileEventsFeedQueryVariables;
+export type MobileEventsFeedResult = GetEventsFeedQuery;
+export type MobileEventsFeedVars = GetEventsFeedQueryVariables;

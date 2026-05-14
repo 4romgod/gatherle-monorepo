@@ -273,9 +273,9 @@ describe('Logger Utilities', () => {
   describe('logger.graphql', () => {
     it('should log GraphQL operation at DEBUG level', () => {
       initLogger(LogLevel.DEBUG);
-      logger.graphql('GetAllEvents');
+      logger.graphql('GetEvents');
       expect(consoleSpy).toHaveBeenCalled();
-      expect(consoleSpy.mock.calls[0][1]).toContain('GraphQL: GetAllEvents');
+      expect(consoleSpy.mock.calls[0][1]).toContain('GraphQL: GetEvents');
     });
 
     it('should log GraphQL with variables at DEBUG level', () => {
@@ -287,7 +287,7 @@ describe('Logger Utilities', () => {
 
     it('should not log GraphQL when level is INFO or higher', () => {
       initLogger(LogLevel.INFO);
-      logger.graphql('GetAllEvents');
+      logger.graphql('GetEvents');
       expect(consoleSpy).not.toHaveBeenCalled();
     });
   });

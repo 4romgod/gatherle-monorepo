@@ -1,6 +1,6 @@
 export const getReadOrganizationMembershipByIdQuery = (membershipId: string) => ({
   query: `
-    query ReadOrganizationMembershipById($membershipId: String!) {
+    query GetOrganizationMembershipById($membershipId: String!) {
       readOrganizationMembershipById(membershipId: $membershipId) {
         membershipId
         orgId
@@ -16,7 +16,7 @@ export const getReadOrganizationMembershipByIdQuery = (membershipId: string) => 
 
 export const getReadOrganizationMembershipsByOrgIdQuery = (orgId: string) => ({
   query: `
-    query ReadOrganizationMembershipsByOrgId($orgId: String!) {
+    query GetOrganizationMembershipsByOrgId($orgId: String!) {
       readOrganizationMembershipsByOrgId(orgId: $orgId) {
         membershipId
         orgId

@@ -3,12 +3,12 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@apollo/client';
 import { Avatar, Box, ButtonBase } from '@mui/material';
-import { ReadUserEventMomentsDocument } from '@/data/graphql/query';
-import { EventMomentState, type ReadUserEventMomentsQuery } from '@/data/graphql/types/graphql';
+import { GetUserEventMomentsDocument } from '@/data/graphql/query';
+import { EventMomentState, type GetUserEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import EventMomentViewer from './EventMomentViewer';
 
-type Moment = ReadUserEventMomentsQuery['readUserEventMoments'][number];
+type Moment = GetUserEventMomentsQuery['readUserEventMoments'][number];
 
 interface FetcherProps {
   userId: string;
@@ -22,7 +22,7 @@ interface FetcherProps {
  * Renders nothing; exists only to call a hook per event without violating the Rules of Hooks.
  */
 function EventMomentsFetcher({ userId, eventId, token, onLoaded }: FetcherProps) {
-  const { data } = useQuery(ReadUserEventMomentsDocument, {
+  const { data } = useQuery(GetUserEventMomentsDocument, {
     variables: { userId, eventId },
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',

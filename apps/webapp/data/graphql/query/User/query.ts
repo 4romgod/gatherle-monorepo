@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetAllUsersDocument = graphql(`
-  query GetAllUsers($options: QueryOptionsInput) {
+export const GetUsersDocument = graphql(`
+  query GetUsers($options: QueryOptionsInput) {
     readUsers(options: $options) {
       userId
       email

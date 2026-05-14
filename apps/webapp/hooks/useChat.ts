@@ -6,8 +6,8 @@ import { useSession } from 'next-auth/react';
 import {
   GetUnreadChatCountDocument,
   MarkChatConversationReadDocument,
-  ReadChatConversationsDocument,
-  ReadChatMessagesDocument,
+  GetChatConversationsDocument,
+  GetChatMessagesDocument,
 } from '@/data/graphql/query';
 import { getAuthHeader } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ export function useChatConversations(options: UseChatConversationsOptions = {}) 
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading, error, refetch } = useQuery(ReadChatConversationsDocument, {
+  const { data, loading, error, refetch } = useQuery(GetChatConversationsDocument, {
     variables: { limit },
     skip: !token,
     fetchPolicy: 'cache-and-network',
@@ -48,7 +48,7 @@ export function useChatMessages(options: UseChatMessagesOptions = {}) {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(ReadChatMessagesDocument, {
+  const { data, loading, error, refetch, fetchMore } = useQuery(GetChatMessagesDocument, {
     variables: {
       withUserId: withUserId || '',
       limit,
@@ -143,7 +143,7 @@ export function useChatActions() {
         context: {
           headers: getAuthHeader(token),
         },
-        refetchQueries: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+        refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
         awaitRefetchQueries: true,
       });
     },

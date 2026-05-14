@@ -28,7 +28,7 @@ function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPres
   const imageUrl = event.media?.featuredImageUrl ?? null;
   const title = event.title ?? '';
   const city = event.location?.address?.city ?? '';
-  const categories = event.eventCategories?.slice(0, 2) ?? [];
+  const categories: NonNullable<MobileSearchResult['eventCategories']> = event.eventCategories?.slice(0, 2) ?? [];
 
   return (
     <Pressable

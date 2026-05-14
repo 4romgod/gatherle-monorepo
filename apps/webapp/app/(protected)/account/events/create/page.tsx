@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { Box, Container, Typography, Button, Stack } from '@mui/material';
 import { ArrowBack, AddCircleOutline } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoriesDocument } from '@/data/graphql/types/graphql';
+import { GetEventCategoriesDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
 import { ROUTES } from '@/lib/constants';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -20,7 +20,7 @@ export default async function CreateEvent() {
   const profileUrl = username ? ROUTES.USERS.USER(username) : ROUTES.ACCOUNT.ROOT;
 
   const { data: eventCategories } = await getClient().query({
-    query: GetAllEventCategoriesDocument,
+    query: GetEventCategoriesDocument,
   });
 
   return (

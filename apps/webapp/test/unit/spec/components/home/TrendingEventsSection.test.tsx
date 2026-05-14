@@ -103,7 +103,7 @@ describe('TrendingEventsSection', () => {
     expect(screen.getByTestId('event-tile-grid')).toBeTruthy();
   });
 
-  it('calls useQuery with the ReadTrendingEventsDocument and limit: 4', () => {
+  it('calls useQuery with the GetTrendingEventsDocument and limit: 4', () => {
     mockUseQuery.mockReturnValue({ data: { readTrendingEvents: [] }, loading: false, error: undefined });
 
     render(<TrendingEventsSection />);

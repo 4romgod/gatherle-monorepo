@@ -39,7 +39,7 @@ export function useMarkConversationRead({
         logger.warn('Failed to mark conversation read through GraphQL mutation', { withUserId, error });
       } finally {
         void client.refetchQueries({
-          include: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+          include: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
         });
       }
     };

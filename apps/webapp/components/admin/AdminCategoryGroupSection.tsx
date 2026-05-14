@@ -24,10 +24,10 @@ import { useAppContext } from '@/hooks';
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
 import {
-  GetAllEventCategoryGroupsDocument,
-  GetAllEventCategoryGroupsQuery,
-  GetAllEventCategoriesDocument,
-  GetAllEventCategoriesQuery,
+  GetEventCategoryGroupsDocument,
+  GetEventCategoryGroupsQuery,
+  GetEventCategoriesDocument,
+  GetEventCategoriesQuery,
 } from '@/data/graphql/types/graphql';
 import {
   CreateEventCategoryGroupDocument,
@@ -48,12 +48,12 @@ const DEFAULT_GROUP_FORM: GroupForm = {
 
 export default function AdminCategoryGroupSection({ token }: AdminSectionProps) {
   const { setToastProps } = useAppContext();
-  const { data, error, refetch } = useQuery<GetAllEventCategoryGroupsQuery>(GetAllEventCategoryGroupsDocument, {
+  const { data, error, refetch } = useQuery<GetEventCategoryGroupsQuery>(GetEventCategoryGroupsDocument, {
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
 
-  const { data: categoriesData } = useQuery<GetAllEventCategoriesQuery>(GetAllEventCategoriesDocument, {
+  const { data: categoriesData } = useQuery<GetEventCategoriesQuery>(GetEventCategoriesDocument, {
     context: { headers: getAuthHeader(token) },
   });
 

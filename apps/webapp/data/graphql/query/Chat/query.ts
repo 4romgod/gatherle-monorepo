@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const ReadChatConversationsDocument = graphql(`
-  query ReadChatConversations($limit: Int) {
+export const GetChatConversationsDocument = graphql(`
+  query GetChatConversations($limit: Int) {
     readChatConversations(limit: $limit) {
       conversationWithUserId
       conversationWithUser {
@@ -26,8 +26,8 @@ export const ReadChatConversationsDocument = graphql(`
   }
 `);
 
-export const ReadChatMessagesDocument = graphql(`
-  query ReadChatMessages($withUserId: ID!, $limit: Int, $cursor: String, $markAsRead: Boolean) {
+export const GetChatMessagesDocument = graphql(`
+  query GetChatMessages($withUserId: ID!, $limit: Int, $cursor: String, $markAsRead: Boolean) {
     readChatMessages(withUserId: $withUserId, limit: $limit, cursor: $cursor, markAsRead: $markAsRead) {
       messages {
         chatMessageId
