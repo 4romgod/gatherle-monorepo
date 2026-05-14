@@ -1,5 +1,42 @@
 import { graphql } from '../../types';
 
+export const GetUsersDocument = graphql(`
+  query GetUsers($options: QueryOptionsInput) {
+    readUsers(options: $options) {
+      userId
+      email
+      username
+      bio
+      birthdate
+      family_name
+      gender
+      given_name
+      phone_number
+      profile_picture
+      defaultVisibility
+      userRole
+      followersCount
+      location {
+        city
+        state
+        country
+        coordinates {
+          latitude
+          longitude
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
+
 export const GetUserByIdDocument = graphql(`
   query GetUserById($userId: String!) {
     readUserById(userId: $userId) {
@@ -60,8 +97,8 @@ export const GetUserByUsernameDocument = graphql(`
   }
 `);
 
-export const GetAccountProfileDocument = graphql(`
-  query GetAccountProfile($username: String!) {
+export const GetUserProfileDocument = graphql(`
+  query GetUserProfile($username: String!) {
     readUserByUsername(username: $username) {
       userId
       email

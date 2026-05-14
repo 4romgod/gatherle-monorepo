@@ -1,5 +1,5 @@
-import type { ReadChatConversationsQuery, ReadChatMessagesQuery } from '@/data/graphql/types/graphql';
+import type { GetChatConversationsQuery, GetChatMessagesQuery } from '@/data/graphql/types/graphql';
 
-export type ChatConversation = ReadChatConversationsQuery['readChatConversations'][number];
-export type ChatMessageConnection = ReadChatMessagesQuery['readChatMessages'];
+export type ChatConversation = GetChatConversationsQuery['readChatConversations'][number];
+export type ChatMessageConnection = GetChatMessagesQuery['readChatMessages'];
 export type ChatMessage = ChatMessageConnection['messages'][number];

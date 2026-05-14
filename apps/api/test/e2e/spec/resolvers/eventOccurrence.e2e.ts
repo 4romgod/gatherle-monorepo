@@ -124,7 +124,7 @@ describe('EventOccurrence Resolver', () => {
           .post('')
           .timeout({ response: OCCURRENCE_RESPONSE_TIMEOUT_MS, deadline: OCCURRENCE_DEADLINE_TIMEOUT_MS })
           .send({
-            query: `query ReadEventById($eventId: String!) {
+            query: `query GetEventById($eventId: String!) {
               readEventById(eventId: $eventId) {
                 eventId
                 upcomingOccurrences(limit: ${limit}, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
@@ -234,7 +234,7 @@ describe('EventOccurrence Resolver', () => {
     const response = await request(url)
       .post('')
       .send({
-        query: `query ReadEventOccurrences($options: EventsQueryOptionsInput!) {
+        query: `query GetEventOccurrences($options: EventsQueryOptionsInput!) {
           readEventOccurrences(options: $options) {
             occurrenceKey
             startAt
@@ -298,7 +298,7 @@ describe('EventOccurrence Resolver', () => {
     const response = await request(url)
       .post('')
       .send({
-        query: `query ReadEventById($eventId: String!) {
+        query: `query GetEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
             upcomingOccurrences(limit: 2, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {
@@ -345,7 +345,7 @@ describe('EventOccurrence Resolver', () => {
     const response = await request(url)
       .post('')
       .send({
-        query: `query ReadEventById($eventId: String!) {
+        query: `query GetEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
             upcomingOccurrences(limit: 2, fromDate: "${occurrenceFixture.rangeStartAt.toISOString()}") {

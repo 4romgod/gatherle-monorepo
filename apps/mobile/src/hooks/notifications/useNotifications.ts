@@ -1,6 +1,10 @@
 import { useMutation, useQuery } from '@apollo/client';
 import { FollowTargetType } from '@data/graphql/types/graphql';
-import { AcceptFollowRequestDocument, RejectFollowRequestDocument } from '@data/graphql/mutation/Follow/mutation';
+import {
+  AcceptFollowRequestDocument,
+  FollowDocument,
+  RejectFollowRequestDocument,
+} from '@data/graphql/mutation/Follow/mutation';
 import {
   DeleteNotificationDocument,
   MarkAllNotificationsReadDocument,
@@ -40,6 +44,7 @@ export function useNotifications(authToken: string | null, enabled = true) {
   const [deleteNotificationMutation] = useMutation(DeleteNotificationDocument, queryOptions);
   const [acceptFollowRequestMutation] = useMutation(AcceptFollowRequestDocument, queryOptions);
   const [rejectFollowRequestMutation] = useMutation(RejectFollowRequestDocument, queryOptions);
+  const [followMutation] = useMutation(FollowDocument, queryOptions);
 
   const refreshAll = async () => {
     await Promise.all([refetch(), refetchFollowRequests()]);
@@ -110,10 +115,26 @@ export function useNotifications(authToken: string | null, enabled = true) {
     await refetchFollowRequests();
   };
 
+  const followBackUser = async (targetId: string) => {
+    if (!authToken) {
+      return;
+    }
+
+    await followMutation({
+      variables: {
+        input: {
+          targetId,
+          targetType: FollowTargetType.User,
+        },
+      },
+    });
+  };
+
   return {
     acceptFollowRequest,
     deleteNotification,
     error: error ?? followRequestsError,
+    followBackUser,
     followRequests: followRequestsData?.readPendingFollowRequests ?? [],
     loading: loading || followRequestsLoading,
     markAllNotificationsRead,

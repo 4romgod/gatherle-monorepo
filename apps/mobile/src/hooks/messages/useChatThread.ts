@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client';
 import { useEffect, useState } from 'react';
-import { ReadChatMessagesDocument } from '@data/graphql/query/Chat/query';
+import { GetChatMessagesDocument } from '@data/graphql/query/Chat/query';
 import type { MobileChatMessage } from '@data/graphql/query/Chat/types';
 import { getApolloAuthContext } from '@/lib/auth';
 
@@ -11,7 +11,7 @@ type UseChatThreadOptions = {
 };
 
 export function useChatThread({ authToken, enabled = true, withUserId }: UseChatThreadOptions) {
-  const { data, error, fetchMore, loading, refetch } = useQuery(ReadChatMessagesDocument, {
+  const { data, error, fetchMore, loading, refetch } = useQuery(GetChatMessagesDocument, {
     fetchPolicy: 'cache-and-network',
     skip: !enabled || !authToken || !withUserId,
     variables: {

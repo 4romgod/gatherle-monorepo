@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { GetAllUsersDocument, type QueryOptionsInput } from '@/data/graphql/types/graphql';
+import { GetUsersDocument, type QueryOptionsInput } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { useChatRealtime } from '@/hooks';
 import { SEARCH_DEBOUNCE_MS, USER_SEARCH_FIELDS, type ShareUser } from '@/components/events/share';
@@ -28,7 +28,7 @@ export function useShareDialog({ eventTitle, resolvedEventUrl }: UseShareDialogO
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
-  const [loadUsers, { data, loading }] = useLazyQuery(GetAllUsersDocument, {
+  const [loadUsers, { data, loading }] = useLazyQuery(GetUsersDocument, {
     fetchPolicy: 'network-only',
   });
 

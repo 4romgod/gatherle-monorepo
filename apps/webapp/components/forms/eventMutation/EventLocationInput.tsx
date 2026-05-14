@@ -5,7 +5,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { Autocomplete, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
 import { Add } from '@mui/icons-material';
-import { GetAllVenuesDocument } from '@/data/graphql/query';
+import { GetVenuesDocument } from '@/data/graphql/query';
 import { GetVenuesQuery, Location } from '@/data/graphql/types/graphql';
 import { LocationInputProps, ROUTES } from '@/lib/constants';
 import LocationTypeRadioButtons from '@/components/buttons/LocationTypeRadioButton';
@@ -50,7 +50,7 @@ const buildDefaultLocation = (type: Location['locationType']): Location =>
   type === 'venue' ? { locationType: 'venue' } : { locationType: type, details: '' };
 
 export default function EventLocationInput({ onChange, value, venueId, onVenueChange }: LocationInputProps) {
-  const { data, loading } = useQuery(GetAllVenuesDocument, {
+  const { data, loading } = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
   });
 

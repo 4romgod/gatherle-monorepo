@@ -1,7 +1,7 @@
 export const getReadRecommendedFeedQuery = (limit?: number, skip?: number) => {
   return {
     query: `
-      query ReadRecommendedFeed($limit: Int, $skip: Int) {
+      query GetRecommendedFeed($limit: Int, $skip: Int) {
         readRecommendedFeed(limit: $limit, skip: $skip) {
           feedItemId
           eventId

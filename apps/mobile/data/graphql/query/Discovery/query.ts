@@ -1,7 +1,7 @@
 import { graphql } from '../../types';
 
-export const MobileHomeDiscoveryDocument = graphql(`
-  query MobileHomeDiscovery($upcomingOptions: EventsQueryOptionsInput!, $trendingOptions: EventsQueryOptionsInput!) {
+export const GetHomeDiscoveryDocument = graphql(`
+  query GetHomeDiscovery($upcomingOptions: EventsQueryOptionsInput!, $trendingOptions: EventsQueryOptionsInput!) {
     upcoming: readEventOccurrences(options: $upcomingOptions) {
       occurrenceId
       occurrenceKey
@@ -187,8 +187,8 @@ export const MobileHomeDiscoveryDocument = graphql(`
   }
 `);
 
-export const MobileEventsFeedDocument = graphql(`
-  query MobileEventsFeed($options: EventsQueryOptionsInput!) {
+export const GetEventsFeedDocument = graphql(`
+  query GetEventsFeed($options: EventsQueryOptionsInput!) {
     readEventOccurrences(options: $options) {
       occurrenceId
       occurrenceKey
@@ -283,8 +283,8 @@ export const MobileEventsFeedDocument = graphql(`
   }
 `);
 
-export const MobileEventSearchDocument = graphql(`
-  query MobileEventSearch($options: EventsQueryOptionsInput) {
+export const SearchEventsDocument = graphql(`
+  query SearchEvents($options: EventsQueryOptionsInput) {
     readEvents(options: $options) {
       eventId
       slug

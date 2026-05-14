@@ -12,7 +12,7 @@ import SessionStateSettings from '@/components/settings/SessionStateSettings';
 import PasswordSettingsPage from '@/components/settings/PasswordSettingsPage';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
-import { GetAllEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
+import { GetEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
 import { omit } from 'lodash';
 import { buildPageMetadata } from '@/lib/metadata';
 import { redirect } from 'next/navigation';
@@ -31,7 +31,7 @@ export default async function SettingsPage() {
   }
 
   const { data: groups } = await getClient().query({
-    query: GetAllEventCategoryGroupsDocument,
+    query: GetEventCategoryGroupsDocument,
   });
 
   const user = omit(session.user, ['token', '__typename']);

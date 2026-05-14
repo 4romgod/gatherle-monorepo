@@ -2,7 +2,7 @@ import type { QueryOptionsInput } from '@gatherle/commons/types';
 
 export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
   return {
-    query: `query ReadEventCategoryById($eventCategoryId: String!) {
+    query: `query GetEventCategoryById($eventCategoryId: String!) {
             readEventCategoryById(eventCategoryId: $eventCategoryId) {
                 eventCategoryId
                 name
@@ -19,7 +19,7 @@ export const getReadEventCategoryByIdQuery = (eventCategoryId: string) => {
 
 export const getReadEventCategoryBySlugQuery = (slug: string) => {
   return {
-    query: `query ReadEventCategoryBySlug($slug: String!) {
+    query: `query GetEventCategoryBySlug($slug: String!) {
             readEventCategoryBySlug(slug: $slug) {
                 eventCategoryId
                 name
@@ -36,7 +36,7 @@ export const getReadEventCategoryBySlugQuery = (slug: string) => {
 
 export const getReadEventCategoriesQuery = () => {
   return {
-    query: `query ReadEventCategories {
+    query: `query GetEventCategories {
             readEventCategories {
                 eventCategoryId
                 name
@@ -50,7 +50,7 @@ export const getReadEventCategoriesQuery = () => {
 
 export const getReadEventCategoriesWithOptionsQuery = (options: QueryOptionsInput) => {
   return {
-    query: `query ReadEventCategories($options: QueryOptionsInput) {
+    query: `query GetEventCategories($options: QueryOptionsInput) {
             readEventCategories(options: $options) {
                 eventCategoryId
                 name

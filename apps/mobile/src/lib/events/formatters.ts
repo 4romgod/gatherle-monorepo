@@ -206,6 +206,32 @@ export function formatRelativeTime(isoDate?: string | null) {
   return formatShortDate(isoDate);
 }
 
+export function formatDateGroupLabel(isoDate?: string | null) {
+  if (!isoDate) {
+    return 'Earlier';
+  }
+
+  const target = new Date(isoDate);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
+  const dayDiff = Math.round((startOfTarget - startOfToday) / 86400000);
+
+  if (dayDiff === 0) {
+    return 'Today';
+  }
+
+  if (dayDiff === -1) {
+    return 'Yesterday';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+  }).format(target);
+}
+
 export function formatCountLabel(count: number | null | undefined, singular: string, plural?: string) {
   const safeCount = count ?? 0;
   const pluralLabel = plural ?? `${singular}s`;

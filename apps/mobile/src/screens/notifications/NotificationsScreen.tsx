@@ -1,75 +1,38 @@
 import type { ApolloError } from '@apollo/client';
-import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
+import type { MobileNotification } from '@data/graphql/query/Notification/types';
+import { NotificationType } from '@data/graphql/types/graphql';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
-import { InlineButton } from '@/components/core/InlineButton';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
-import { SmallActionButton } from '@/components/core/SmallActionButton';
 import { StateNotice } from '@/components/core/StateNotice';
 import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
-import { NotificationRow } from '@/components/notifications/NotificationRow';
+import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
-import { getDisplayName, getInitials } from '@/lib/events/formatters';
+import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { typography } from '@/shared/theme/typography';
 
-type NotificationsTabValue = 'all' | 'requests';
-
-function FollowRequestRow({
-  onReject,
-  onAccept,
-  request,
-}: {
-  onReject: () => void;
-  onAccept: () => void;
-  request: MobileFollowRequest;
-}) {
-  const { theme } = useAppTheme();
-  const follower = request.follower;
-  const displayName = getDisplayName(follower);
-  const headline = follower?.bio || 'Requested to follow you.';
-  const handle = follower?.username ? `@${follower.username}` : displayName;
-
-  return (
-    <View style={[styles.followRequestRow, { borderBottomColor: theme.colors.border }]}>
-      {follower?.profile_picture ? (
-        <Image source={{ uri: follower.profile_picture }} style={styles.followAvatar} />
-      ) : (
-        <View style={[styles.followAvatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-          <Text style={[styles.followAvatarFallbackText, { color: theme.colors.primary }]}>
-            {getInitials(displayName)}
-          </Text>
-        </View>
-      )}
-      <View style={styles.followRequestCopy}>
-        <Text style={[styles.followRequestTitle, { color: theme.colors.textPrimary }]}>{handle}</Text>
-        <Text style={[styles.followRequestHeadline, { color: theme.colors.textSecondary }]}>{headline}</Text>
-      </View>
-      <View style={styles.followRequestActions}>
-        <InlineButton compact label="Accept" onPress={onAccept} />
-        <InlineButton compact label="Reject" onPress={onReject} tone="neutral" />
-      </View>
-    </View>
-  );
-}
+type NotificationFeedItem =
+  | { createdAt: string; id: string; kind: 'notification'; notification: MobileNotification }
+  | { createdAt: string; id: string; kind: 'follow-request'; request: MobileFollowRequest };
 
 export function NotificationsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
-  const [tab, setTab] = useState<NotificationsTabValue>('all');
   const {
     acceptFollowRequest,
     deleteNotification,
     error,
+    followBackUser,
     followRequests,
     loading,
-    markAllNotificationsRead,
     markNotificationRead,
     notifications,
     refetch,
@@ -89,6 +52,42 @@ export function NotificationsScreen() {
     signOut();
     navigation.navigate('Login', { redirectTab: 'Notifications' });
   }, [error, hasLiveSession, navigation, signOut]);
+
+  const feedItems = useMemo<NotificationFeedItem[]>(() => {
+    const notificationItems = notifications.map(
+      (notification): NotificationFeedItem => ({
+        createdAt: notification.createdAt,
+        id: notification.notificationId,
+        kind: 'notification',
+        notification,
+      }),
+    );
+    const followItems = followRequests.map(
+      (request): NotificationFeedItem => ({
+        createdAt: request.createdAt,
+        id: request.followId,
+        kind: 'follow-request',
+        request,
+      }),
+    );
+
+    return [...notificationItems, ...followItems].sort(
+      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    );
+  }, [followRequests, notifications]);
+
+  const groupedFeed = useMemo(() => {
+    const groups = new Map<string, NotificationFeedItem[]>();
+
+    for (const item of feedItems) {
+      const label = formatDateGroupLabel(item.createdAt);
+      const current = groups.get(label) ?? [];
+      current.push(item);
+      groups.set(label, current);
+    }
+
+    return Array.from(groups.entries()).map(([label, items]) => ({ items, label }));
+  }, [feedItems]);
 
   if (!isAuthenticated) {
     return (
@@ -117,168 +116,109 @@ export function NotificationsScreen() {
 
   return (
     <PageContainer>
-      <PageHeading title="Notifications" />
+      <PageHeading
+        subtitle={
+          unreadCount > 0 ? `${unreadCount} unread updates waiting for you.` : 'Everything new in one timeline.'
+        }
+        title="Notifications"
+      />
 
-      <View style={styles.notificationsActions}>
-        <SmallActionButton compact icon="rotate-cw" label="Refresh" onPress={() => void refetch()} />
-        <SmallActionButton
-          compact
-          icon="check"
-          label="Mark all read"
-          onPress={() => void markAllNotificationsRead()}
-          tone="outline"
+      {loading && feedItems.length === 0 ? (
+        <StateNotice message="Loading your notifications..." />
+      ) : error ? (
+        <StateNotice
+          actionLabel="Retry"
+          message="We couldn’t load your notifications."
+          onPressAction={() => void refetch()}
         />
-      </View>
-
-      <View style={styles.notificationTabs}>
-        <Pressable onPress={() => setTab('all')} style={styles.notificationTabButton}>
-          <Text
-            style={[
-              styles.notificationTabText,
-              { color: tab === 'all' ? theme.colors.primary : theme.colors.textSecondary },
-            ]}
-          >
-            All {unreadCount > 0 ? `(${unreadCount} unread)` : ''}
-          </Text>
-          <View
-            style={[
-              styles.notificationTabUnderline,
-              { backgroundColor: tab === 'all' ? theme.colors.primary : 'transparent' },
-            ]}
-          />
-        </Pressable>
-        <Pressable onPress={() => setTab('requests')} style={styles.notificationTabButton}>
-          <Text
-            style={[
-              styles.notificationTabText,
-              { color: tab === 'requests' ? theme.colors.primary : theme.colors.textSecondary },
-            ]}
-          >
-            Follow Requests
-          </Text>
-          <View
-            style={[
-              styles.notificationTabUnderline,
-              { backgroundColor: tab === 'requests' ? theme.colors.primary : 'transparent' },
-            ]}
-          />
-        </Pressable>
-      </View>
-
-      <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
-
-      {tab === 'all' ? (
-        loading && notifications.length === 0 ? (
-          <StateNotice message="Loading your notifications..." />
-        ) : error ? (
-          <StateNotice
-            actionLabel="Retry"
-            message="We couldn’t load your notifications."
-            onPressAction={() => void refetch()}
-          />
-        ) : notifications.length > 0 ? (
-          <View style={styles.messageList}>
-            {notifications.map((notification) => (
-              <NotificationRow
-                key={notification.notificationId}
-                notification={notification}
-                onDelete={() => void deleteNotification(notification.notificationId)}
-                onMarkRead={() => void markNotificationRead(notification.notificationId)}
-                onPress={() => void markNotificationRead(notification.notificationId)}
-              />
-            ))}
-          </View>
-        ) : (
-          <StateNotice message="You’re all caught up." />
-        )
-      ) : followRequests.length > 0 ? (
-        <View style={styles.messageList}>
-          {followRequests.map((request) => (
-            <FollowRequestRow
-              key={request.followId}
-              onAccept={() => void acceptFollowRequest(request.followId)}
-              onReject={() => void rejectFollowRequest(request.followId)}
-              request={request}
-            />
+      ) : groupedFeed.length > 0 ? (
+        <View style={styles.feed}>
+          {groupedFeed.map((group) => (
+            <View key={group.label} style={styles.group}>
+              <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>{group.label}</Text>
+              <View style={styles.groupItems}>
+                {group.items.map((item) =>
+                  item.kind === 'notification' ? (
+                    <SwipeableNotificationRow
+                      actionButtons={buildNotificationActions(item.notification, followBackUser)}
+                      actorImageUrl={item.notification.actor?.profile_picture}
+                      actorLabel={getDisplayName(item.notification.actor)}
+                      isRead={item.notification.isRead}
+                      key={item.id}
+                      message={item.notification.message}
+                      onDelete={() => void deleteNotification(item.notification.notificationId)}
+                      onPress={() => void markNotificationRead(item.notification.notificationId)}
+                      secondaryLabel={formatRelativeTime(item.notification.createdAt)}
+                      title={item.notification.title}
+                    />
+                  ) : (
+                    <SwipeableNotificationRow
+                      actionButtons={[
+                        {
+                          label: 'Accept',
+                          onPress: () => void acceptFollowRequest(item.request.followId),
+                          tone: 'primary',
+                        },
+                        {
+                          label: 'Decline',
+                          onPress: () => void rejectFollowRequest(item.request.followId),
+                          tone: 'neutral',
+                        },
+                      ]}
+                      actorImageUrl={item.request.follower?.profile_picture}
+                      actorLabel={getDisplayName(item.request.follower)}
+                      isRead={false}
+                      key={item.id}
+                      message={item.request.follower?.bio || 'Requested to follow you.'}
+                      onDelete={() => void rejectFollowRequest(item.request.followId)}
+                      secondaryLabel={formatRelativeTime(item.request.createdAt)}
+                      title={`${item.request.follower?.username ? `@${item.request.follower.username}` : getDisplayName(item.request.follower)} wants to connect`}
+                    />
+                  ),
+                )}
+              </View>
+            </View>
           ))}
         </View>
       ) : (
-        <StateNotice message="You have no pending follow requests." />
+        <StateNotice message="You’re all caught up." />
       )}
     </PageContainer>
   );
 }
 
+function buildNotificationActions(
+  notification: MobileNotification,
+  followBackUser: (targetId: string) => Promise<void>,
+): Array<{ label: string; onPress: () => void; tone?: 'neutral' | 'primary' }> | undefined {
+  if (
+    (notification.type === NotificationType.FollowAccepted || notification.type === NotificationType.FollowReceived) &&
+    notification.actorUserId
+  ) {
+    return [
+      {
+        label: 'Follow back',
+        onPress: () => void followBackUser(notification.actorUserId!),
+        tone: 'primary',
+      },
+    ];
+  }
+
+  return undefined;
+}
+
 const styles = StyleSheet.create({
-  followAvatar: {
-    borderRadius: 999,
-    height: 36,
-    width: 36,
+  feed: {
+    gap: 18,
   },
-  followAvatarFallback: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
+  group: {
+    gap: 8,
   },
-  followAvatarFallbackText: {
-    ...typography.displayBold,
-    fontSize: fontSize.xs,
-  },
-  followRequestCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  followRequestHeadline: {
-    ...typography.bodyRegular,
-    fontSize: fontSize.xs,
-    lineHeight: 16,
-  },
-  followRequestRow: {
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 12,
-  },
-  followRequestActions: {
-    gap: 6,
-  },
-  followRequestTitle: {
-    ...typography.bodyBold,
-    fontSize: fontSize.sm,
-  },
-  messageList: {
+  groupItems: {
     gap: 0,
   },
-  notificationTabButton: {
-    flex: 1,
-    gap: 8,
-    paddingTop: 6,
-  },
-  notificationTabText: {
+  groupTitle: {
     ...typography.bodySemiBold,
-    fontSize: fontSize.sm,
-  },
-  notificationTabUnderline: {
-    borderRadius: 999,
-    height: 2,
-    width: '100%',
-  },
-  notificationTabs: {
-    flexDirection: 'row',
-    gap: 20,
-    marginTop: 0,
-  },
-  notificationsActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: -8,
-  },
-  pageDivider: {
-    height: 1,
-    marginHorizontal: -20,
+    fontSize: 12,
   },
 });

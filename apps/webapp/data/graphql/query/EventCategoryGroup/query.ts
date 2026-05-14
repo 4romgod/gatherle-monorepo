@@ -1,7 +1,7 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetAllEventCategoryGroupsDocument = graphql(`
-  query GetAllEventCategoryGroups {
+export const GetEventCategoryGroupsDocument = graphql(`
+  query GetEventCategoryGroups {
     readEventCategoryGroups {
       eventCategoryGroupId
       name

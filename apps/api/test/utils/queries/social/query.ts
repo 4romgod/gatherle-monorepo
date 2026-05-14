@@ -1,7 +1,7 @@
 export const getReadFollowingQuery = () => {
   return {
     query: `
-      query ReadFollowing {
+      query GetFollowing {
         readFollowing {
           followId
           followerUserId
@@ -17,7 +17,7 @@ export const getReadFollowingQuery = () => {
 export const getReadFollowersQuery = (targetType: string, targetId: string) => {
   return {
     query: `
-      query ReadFollowers($targetType: FollowTargetType!, $targetId: ID!) {
+      query GetFollowers($targetType: FollowTargetType!, $targetId: ID!) {
         readFollowers(targetType: $targetType, targetId: $targetId) {
           followId
           followerUserId
@@ -37,7 +37,7 @@ export const getReadFollowersQuery = (targetType: string, targetId: string) => {
 export const getReadActivitiesByActorQuery = (actorId: string, limit?: number) => {
   return {
     query: `
-      query ReadActivitiesByActor($actorId: String!, $limit: Int) {
+      query GetActivitiesByActor($actorId: String!, $limit: Int) {
         readActivitiesByActor(actorId: $actorId, limit: $limit) {
           activityId
           actorId
@@ -58,7 +58,7 @@ export const getReadActivitiesByActorQuery = (actorId: string, limit?: number) =
 export const getReadFeedQuery = (limit?: number) => {
   return {
     query: `
-      query ReadFeed($limit: Int) {
+      query GetFeed($limit: Int) {
         readFeed(limit: $limit) {
           activityId
           actorId

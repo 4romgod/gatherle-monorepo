@@ -7,11 +7,11 @@ import { useQuery } from '@apollo/client';
 import { EventCategory, EventStatus, Organization, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
 import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import {
-  GetAllEventCategoriesDocument,
+  GetEventCategoriesDocument,
   GetEventsCountDocument,
   GetPopularOrganizationsDocument,
 } from '@/data/graphql/query';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { DATE_FILTER_LABELS, DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { getAuthHeader } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -41,7 +41,7 @@ export default function EventsPageClient() {
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
-  } = useQuery(GetAllEventOccurrencesDocument, {
+  } = useQuery(GetEventOccurrencesDocument, {
     context: authContext,
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -57,7 +57,7 @@ export default function EventsPageClient() {
     data: categoriesData,
     loading: categoriesLoading,
     error: categoriesError,
-  } = useQuery(GetAllEventCategoriesDocument, {
+  } = useQuery(GetEventCategoriesDocument, {
     fetchPolicy: 'cache-and-network',
   });
 

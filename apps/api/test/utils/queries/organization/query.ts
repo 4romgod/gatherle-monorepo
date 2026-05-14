@@ -1,6 +1,6 @@
 export const getReadOrganizationByIdQuery = (orgId: string) => ({
   query: `
-    query ReadOrganizationById($orgId: String!) {
+    query GetOrganizationById($orgId: String!) {
       readOrganizationById(orgId: $orgId) {
         orgId
         slug
@@ -15,7 +15,7 @@ export const getReadOrganizationByIdQuery = (orgId: string) => ({
 
 export const getReadOrganizationBySlugQuery = (slug: string) => ({
   query: `
-    query ReadOrganizationBySlug($slug: String!) {
+    query GetOrganizationBySlug($slug: String!) {
       readOrganizationBySlug(slug: $slug) {
         orgId
         slug
@@ -30,7 +30,7 @@ export const getReadOrganizationBySlugQuery = (slug: string) => ({
 
 export const getReadOrganizationsQuery = () => ({
   query: `
-    query ReadOrganizations {
+    query GetOrganizations {
       readOrganizations {
         orgId
         name
@@ -42,7 +42,7 @@ export const getReadOrganizationsQuery = () => ({
 
 export const getReadOrganizationsWithOptionsQuery = (options: any) => ({
   query: `
-    query ReadOrganizations($options: QueryOptionsInput) {
+    query GetOrganizations($options: QueryOptionsInput) {
       readOrganizations(options: $options) {
         orgId
         name
@@ -57,7 +57,7 @@ export const getReadOrganizationsWithOptionsQuery = (options: any) => ({
 
 export const getReadMyOrganizationsQuery = () => ({
   query: `
-    query ReadMyOrganizations {
+    query GetMyOrganizations {
       readMyOrganizations {
         role
         organization {

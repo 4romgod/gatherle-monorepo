@@ -96,7 +96,7 @@ describe('EventSeries Resolver', () => {
     const response = await request(url)
       .post('')
       .send({
-        query: `query ReadEventById($eventId: String!) {
+        query: `query GetEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
             splitFromEventSeriesId
@@ -298,7 +298,7 @@ describe('EventSeries Resolver', () => {
       const event2 = await createEvent(input2);
 
       const readResponse = await readEventsWithRetry({
-        query: `query ReadEvents {
+        query: `query GetEvents {
           readEvents {
             eventId
             title
@@ -327,7 +327,7 @@ describe('EventSeries Resolver', () => {
       const readResponse = await request(url)
         .post('')
         .send({
-          query: `query ReadEvents($options: EventsQueryOptionsInput) {
+          query: `query GetEvents($options: EventsQueryOptionsInput) {
           readEvents(options: $options) {
             eventId
             title
@@ -353,7 +353,7 @@ describe('EventSeries Resolver', () => {
       const readResponse = await request(url)
         .post('')
         .send({
-          query: `query ReadEvents($options: EventsQueryOptionsInput) {
+          query: `query GetEvents($options: EventsQueryOptionsInput) {
           readEvents(options: $options) {
             eventId
             title
@@ -384,7 +384,7 @@ describe('EventSeries Resolver', () => {
       const readResponse = await request(url)
         .post('')
         .send({
-          query: `query ReadEvents($options: EventsQueryOptionsInput) {
+          query: `query GetEvents($options: EventsQueryOptionsInput) {
           readEvents(options: $options) {
             eventId
             title
@@ -420,7 +420,7 @@ describe('EventSeries Resolver', () => {
       const readResponse = await request(url)
         .post('')
         .send({
-          query: `query ReadEventById($eventId: String!) {
+          query: `query GetEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
             organizers {
@@ -514,7 +514,7 @@ describe('EventSeries Resolver', () => {
       const response = await request(url)
         .post('')
         .send({
-          query: `query ReadEventById($eventId: String!) {
+          query: `query GetEventById($eventId: String!) {
           readEventById(eventId: $eventId) {
             eventId
             title
@@ -532,7 +532,7 @@ describe('EventSeries Resolver', () => {
       const response = await request(url)
         .post('')
         .send({
-          query: `query ReadEventBySlug($slug: String!) {
+          query: `query GetEventBySlug($slug: String!) {
           readEventBySlug(slug: $slug) {
             eventId
             title

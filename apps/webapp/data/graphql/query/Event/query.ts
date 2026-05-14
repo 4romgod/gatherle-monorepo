@@ -6,8 +6,8 @@ export const GetEventsCountDocument = graphql(`
   }
 `);
 
-export const ReadTrendingEventsDocument = graphql(`
-  query ReadTrendingEvents($limit: Int) {
+export const GetTrendingEventsDocument = graphql(`
+  query GetTrendingEvents($limit: Int) {
     readTrendingEvents(limit: $limit) {
       eventId
       slug
@@ -122,8 +122,8 @@ export const ReadTrendingEventsDocument = graphql(`
   }
 `);
 
-export const GetAllEventsDocument = graphql(`
-  query GetAllEvents($options: EventsQueryOptionsInput) {
+export const GetEventsDocument = graphql(`
+  query GetEvents($options: EventsQueryOptionsInput) {
     readEvents(options: $options) {
       venueId
       eventId

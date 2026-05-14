@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Box, Button, Typography, Stack } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { ReadTrendingEventsDocument } from '@/data/graphql/query/Event/query';
+import { GetTrendingEventsDocument } from '@/data/graphql/query/Event/query';
 import EventTileGrid from '../events/EventTileGrid';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
@@ -13,7 +13,7 @@ export default function TrendingEventsSection() {
   const { data: session } = useSession();
   const token = session?.user?.token;
 
-  const { data, loading, error } = useQuery(ReadTrendingEventsDocument, {
+  const { data, loading, error } = useQuery(GetTrendingEventsDocument, {
     variables: { limit: 4 },
     fetchPolicy: 'cache-and-network',
     context: {

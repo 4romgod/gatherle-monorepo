@@ -4,17 +4,35 @@ import type { MobileNotification } from '@data/graphql/query/Notification/types'
 import { formatRelativeTime, getDisplayName, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
+import { InlineButton } from '@/components/core/InlineButton';
 
 type NotificationRowProps = {
-  notification: MobileNotification;
-  onDelete?: () => void;
-  onMarkRead?: () => void;
+  actionButtons?: Array<{
+    label: string;
+    onPress: () => void;
+    tone?: 'neutral' | 'primary';
+  }>;
+  actorImageUrl?: string | null;
+  actorLabel?: string;
+  isRead?: boolean;
+  message: string;
   onPress?: () => void;
+  secondaryLabel?: string;
+  title: string;
 };
 
-export function NotificationRow({ notification, onDelete, onMarkRead, onPress }: NotificationRowProps) {
+export function NotificationRow({
+  actionButtons,
+  actorImageUrl,
+  actorLabel,
+  isRead = true,
+  message,
+  onPress,
+  secondaryLabel,
+  title,
+}: NotificationRowProps) {
   const { theme } = useAppTheme();
-  const actorLabel = getDisplayName(notification.actor);
+  const safeActorLabel = actorLabel || 'Gatherle Member';
 
   return (
     <Pressable
@@ -29,38 +47,43 @@ export function NotificationRow({ notification, onDelete, onMarkRead, onPress }:
       ]}
     >
       <View style={styles.leading}>
-        {!notification.isRead ? <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} /> : null}
-        {notification.actor?.profile_picture ? (
-          <Image source={{ uri: notification.actor.profile_picture }} style={styles.avatar} />
+        {!isRead ? <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} /> : null}
+        {actorImageUrl ? (
+          <Image source={{ uri: actorImageUrl }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-            <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(actorLabel)}</Text>
+            <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
+              {getInitials(safeActorLabel)}
+            </Text>
           </View>
         )}
       </View>
 
       <View style={styles.content}>
         <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
-          {notification.title}
+          {title}
         </Text>
         <Text numberOfLines={2} style={[styles.message, { color: theme.colors.textSecondary }]}>
-          {notification.message}
+          {message}
         </Text>
-        <Text style={[styles.time, { color: theme.colors.textSecondary }]}>
-          {formatRelativeTime(notification.createdAt)}
-        </Text>
-      </View>
-
-      <View style={styles.actions}>
-        {onMarkRead ? (
-          <Pressable hitSlop={8} onPress={onMarkRead} style={styles.actionButton}>
-            <Feather color={theme.colors.textSecondary} name="mail" size={17} />
-          </Pressable>
-        ) : null}
-        {onDelete ? (
-          <Pressable hitSlop={8} onPress={onDelete} style={styles.actionButton}>
-            <Feather color={theme.colors.textSecondary} name="trash-2" size={17} />
-          </Pressable>
+        <View style={styles.metaRow}>
+          {secondaryLabel ? (
+            <Text style={[styles.time, { color: theme.colors.textSecondary }]}>{secondaryLabel}</Text>
+          ) : null}
+          {!isRead ? <Feather color={theme.colors.primary} name="bell" size={13} /> : null}
+        </View>
+        {actionButtons?.length ? (
+          <View style={styles.inlineActions}>
+            {actionButtons.map((button) => (
+              <InlineButton
+                key={button.label}
+                compact
+                label={button.label}
+                onPress={button.onPress}
+                tone={button.tone ?? 'neutral'}
+              />
+            ))}
+          </View>
         ) : null}
       </View>
     </Pressable>
@@ -68,18 +91,6 @@ export function NotificationRow({ notification, onDelete, onMarkRead, onPress }:
 }
 
 const styles = StyleSheet.create({
-  actionButton: {
-    alignItems: 'center',
-    height: 24,
-    justifyContent: 'center',
-    width: 24,
-  },
-  actions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 1,
-  },
   avatar: {
     borderRadius: 999,
     height: 34,
@@ -98,8 +109,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    gap: 2,
+    gap: 3,
     minHeight: 34,
+  },
+  inlineActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
   },
   leading: {
     alignItems: 'center',
@@ -110,6 +126,12 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: 12,
     lineHeight: 17,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 1,
   },
   row: {
     alignItems: 'flex-start',

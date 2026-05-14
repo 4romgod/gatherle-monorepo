@@ -1,6 +1,6 @@
 import { graphql } from '@/data/graphql/types';
 
-export const GetAllVenuesDocument = graphql(`
+export const GetVenuesDocument = graphql(`
   query GetVenues {
     readVenues {
       slug

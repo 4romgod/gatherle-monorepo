@@ -1,7 +1,7 @@
 export const getReadTrendingEventsQuery = (limit?: number) => {
   return {
     query: `
-      query ReadTrendingEvents($limit: Int) {
+      query GetTrendingEvents($limit: Int) {
         readTrendingEvents(limit: $limit) {
           eventId
           title
@@ -19,7 +19,7 @@ export const getReadTrendingEventsQuery = (limit?: number) => {
 
 export const getReadEventByIdQuery = (eventId: string) => {
   return {
-    query: `query ReadEventById($eventId: String!) {
+    query: `query GetEventById($eventId: String!) {
             readEventById(eventId: $eventId) {
                 eventId
                 slug
@@ -35,7 +35,7 @@ export const getReadEventByIdQuery = (eventId: string) => {
 
 export const getReadEventBySlugQuery = (slug: string) => {
   return {
-    query: `query ReadEventBySlug($slug: String!) {
+    query: `query GetEventBySlug($slug: String!) {
             readEventBySlug(slug: $slug) {
                 eventId
                 slug

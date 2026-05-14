@@ -2,7 +2,7 @@
 
 import { useQuery } from '@apollo/client';
 import { alpha, Box, Container, Stack, Typography } from '@mui/material';
-import { GetAllEventCategoriesDocument, GetAllEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
+import { GetEventCategoriesDocument, GetEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { HeroSection, CategoryExplorer, ValuePropositionSection, NearbyEventsSection } from '@/components/home';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -14,13 +14,13 @@ import { useMemo } from 'react';
 import type { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 
 export default function HomeClient() {
   const { data: session } = useSession();
   const authContext = { headers: getAuthHeader(session?.user?.token) };
 
-  const { data: trendingEventsData, loading: trendingEventsLoading } = useQuery(GetAllEventOccurrencesDocument, {
+  const { data: trendingEventsData, loading: trendingEventsLoading } = useQuery(GetEventOccurrencesDocument, {
     fetchPolicy: 'cache-and-network',
     context: authContext,
     variables: {
@@ -32,7 +32,7 @@ export default function HomeClient() {
     },
   });
 
-  const { data: featuredEventsData, loading: featuredEventsLoading } = useQuery(GetAllEventsDocument, {
+  const { data: featuredEventsData, loading: featuredEventsLoading } = useQuery(GetEventsDocument, {
     fetchPolicy: 'cache-and-network',
     context: authContext,
     variables: {
@@ -43,7 +43,7 @@ export default function HomeClient() {
     },
   });
 
-  const { data: categoriesData, loading: categoriesLoading } = useQuery(GetAllEventCategoriesDocument, {
+  const { data: categoriesData, loading: categoriesLoading } = useQuery(GetEventCategoriesDocument, {
     fetchPolicy: 'cache-and-network',
   });
 

@@ -23,7 +23,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Delete, Refresh, Code, ContentCopy, CheckCircle } from '@mui/icons-material';
-import { ReadAllSessionStatesDocument } from '@/data/graphql/query/SessionState/query';
+import { GetSessionStatesDocument } from '@/data/graphql/query/SessionState/query';
 import {
   ClearSessionStateDocument,
   ClearAllSessionStatesDocument,
@@ -51,7 +51,7 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  const { data, loading, error, refetch } = useQuery(ReadAllSessionStatesDocument, {
+  const { data, loading, error, refetch } = useQuery(GetSessionStatesDocument, {
     context: { headers: getAuthHeader(token) },
     skip: !token || !userId,
     fetchPolicy: 'network-only',

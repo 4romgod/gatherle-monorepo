@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
-import type { ReadEventMomentsQuery } from '@/data/graphql/types/graphql';
+import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 
-type TestMoment = ReadEventMomentsQuery['readEventMoments']['items'][number];
+type TestMoment = GetEventMomentsQuery['readEventMoments']['items'][number];
 
 // ── hls.js mock ───────────────────────────────────────────────────────────────
 // jest.mock factories are hoisted before variable declarations, so the mock must
@@ -45,7 +45,7 @@ jest.mock('@/hooks', () => ({
 
 jest.mock('@/data/graphql/query', () => ({
   DeleteEventMomentDocument: {},
-  ReadEventMomentsDocument: {},
+  GetEventMomentsDocument: {},
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({

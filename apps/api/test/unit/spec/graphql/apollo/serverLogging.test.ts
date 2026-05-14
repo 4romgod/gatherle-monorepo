@@ -97,4 +97,26 @@ describe('createGraphQLRequestLoggingPlugin', () => {
     expect(warnContext.variables).toBeUndefined();
     expect(JSON.stringify(warnContext)).not.toContain('secret-token');
   });
+
+  it('infers the named operation from the query text when operationName is omitted', async () => {
+    const query = 'query GetHomeDiscovery { __typename }';
+    const plugin = createGraphQLRequestLoggingPlugin();
+
+    const hooks = await plugin.requestDidStart?.({
+      request: {
+        query,
+      },
+    } as any);
+
+    await hooks?.didResolveOperation?.({
+      request: { query, variables: {} },
+      operation: { operation: 'query' },
+    } as any);
+
+    expect(graphqlSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'GetHomeDiscovery',
+      }),
+    );
+  });
 });

@@ -4,12 +4,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getClient } from '@/data/graphql';
 import {
-  GetAllEventCategoryGroupsDocument,
-  GetAllEventOccurrencesDocument,
+  GetEventCategoryGroupsDocument,
+  GetEventOccurrencesDocument,
   GetEventCategoryBySlugDocument,
-  GetAllEventOccurrencesQuery,
+  GetEventOccurrencesQuery,
   GetEventCategoryBySlugQuery,
-  GetAllEventCategoryGroupsQuery,
+  GetEventCategoryGroupsQuery,
   SortOrderInput,
 } from '@/data/graphql/types/graphql';
 import EventTileGrid from '@/components/events/EventTileGrid';
@@ -70,8 +70,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
   const authHeaders = getAuthHeader(session?.user?.token);
 
   let categoryData: GetEventCategoryBySlugQuery['readEventCategoryBySlug'] | null | undefined;
-  let eventsData: GetAllEventOccurrencesQuery['readEventOccurrences'] | null | undefined;
-  let categoryGroupsData: GetAllEventCategoryGroupsQuery['readEventCategoryGroups'] | null | undefined;
+  let eventsData: GetEventOccurrencesQuery['readEventOccurrences'] | null | undefined;
+  let categoryGroupsData: GetEventCategoryGroupsQuery['readEventCategoryGroups'] | null | undefined;
 
   try {
     const [categoryResult, eventsResult, categoryGroupsResult] = await Promise.all([
@@ -79,8 +79,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         query: GetEventCategoryBySlugDocument,
         variables: { slug },
       }),
-      client.query<GetAllEventOccurrencesQuery>({
-        query: GetAllEventOccurrencesDocument,
+      client.query<GetEventOccurrencesQuery>({
+        query: GetEventOccurrencesDocument,
         variables: {
           options: {
             filters: [{ field: 'eventCategories.slug', value: slug }],
@@ -91,8 +91,8 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
         },
         context: { headers: authHeaders },
       }),
-      client.query<GetAllEventCategoryGroupsQuery>({
-        query: GetAllEventCategoryGroupsDocument,
+      client.query<GetEventCategoryGroupsQuery>({
+        query: GetEventCategoryGroupsDocument,
       }),
     ]);
 

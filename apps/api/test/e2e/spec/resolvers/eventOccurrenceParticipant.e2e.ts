@@ -312,7 +312,7 @@ describe('EventOccurrenceParticipant Resolver', () => {
         .post('')
         .set('Authorization', `Bearer ${participantUser.token}`)
         .send({
-          query: `query ReadEventOccurrences($options: EventsQueryOptionsInput!) {
+          query: `query GetEventOccurrences($options: EventsQueryOptionsInput!) {
           readEventOccurrences(options: $options) {
             occurrenceId
             rsvpCount

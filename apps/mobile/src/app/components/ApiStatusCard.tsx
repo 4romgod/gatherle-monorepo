@@ -1,14 +1,14 @@
 import { useQuery } from '@apollo/client';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GRAPHQL_URL, isUsingDefaultGraphqlUrl } from '@data/graphql/apollo-client';
-import { MobileHealthCheckDocument } from '@data/graphql/query/Health/query';
+import { GetHealthCheckDocument } from '@data/graphql/query/Health/query';
 import { SectionCard, TonePill } from '@/components/core/ScreenLayout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
 
 export function ApiStatusCard() {
   const { theme } = useAppTheme();
-  const { data, error, loading, refetch } = useQuery(MobileHealthCheckDocument, {
+  const { data, error, loading, refetch } = useQuery(GetHealthCheckDocument, {
     skip: !GRAPHQL_URL,
   });
 

@@ -159,8 +159,6 @@ export const authChecker = async (resolverData: ResolverData<ServerContext>, rol
 
   if (token && user) {
     const userRole = user.userRole;
-
-    // Attach verified user to context so resolvers can access it
     context.user = user;
 
     if (!roles.includes(userRole)) {
@@ -385,7 +383,6 @@ const isAuthorizedToManageOrganization = async (orgId: string | undefined, user:
   }
 
   try {
-    // Check if user is the owner
     const organization = await OrganizationDAO.readOrganizationById(orgId);
     if (organization.ownerId === user.userId) {
       return true;

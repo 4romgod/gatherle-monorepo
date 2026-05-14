@@ -27,7 +27,7 @@ import Tooltip from '@mui/material/Tooltip';
 import {
   CreateEventMomentDocument,
   GetEventMomentUploadUrlDocument,
-  ReadEventMomentsDocument,
+  GetEventMomentsDocument,
 } from '@/data/graphql/query';
 import { EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -390,7 +390,7 @@ export default function EventMomentComposer({
         variables: { input },
         refetchQueries: [
           {
-            query: ReadEventMomentsDocument,
+            query: GetEventMomentsDocument,
             variables: { eventId, limit: 50 },
             context: { headers: getAuthHeader(token) },
           },

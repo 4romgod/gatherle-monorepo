@@ -17,7 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { CreateVenueDocument } from '@/data/graphql/mutation/Venue/mutation';
-import { GetAllVenuesDocument } from '@/data/graphql/query';
+import { GetVenuesDocument } from '@/data/graphql/query';
 import { CreateVenueInput, VenueType } from '@/data/graphql/types/graphql';
 import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -100,7 +100,7 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
 
   const [createVenue, { loading, error: mutationError }] = useMutation(CreateVenueDocument, {
     context: { headers: getAuthHeader(token) },
-    refetchQueries: [{ query: GetAllVenuesDocument }],
+    refetchQueries: [{ query: GetVenuesDocument }],
     awaitRefetchQueries: true,
   });
 

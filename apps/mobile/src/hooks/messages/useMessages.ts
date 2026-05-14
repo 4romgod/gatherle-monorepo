@@ -1,14 +1,14 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client';
 import { useEffect, useMemo, useState } from 'react';
 import { MarkChatConversationReadDocument } from '@data/graphql/mutation/Chat/mutation';
-import { ReadChatConversationsDocument } from '@data/graphql/query/Chat/query';
+import { GetChatConversationsDocument } from '@data/graphql/query/Chat/query';
 import type { MobileChatConversation } from '@data/graphql/query/Chat/types';
 import { GetUserByIdDocument, type GetUserByIdQuery } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
 
 export function useMessages(authToken: string | null, enabled = true) {
   const apolloClient = useApolloClient();
-  const { data, error, loading, refetch } = useQuery(ReadChatConversationsDocument, {
+  const { data, error, loading, refetch } = useQuery(GetChatConversationsDocument, {
     fetchPolicy: 'cache-and-network',
     skip: !enabled || !authToken,
     variables: {

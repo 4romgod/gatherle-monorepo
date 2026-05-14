@@ -18,7 +18,6 @@ export function OrganizationListItem({ organization }: OrganizationListItemProps
       style={({ pressed }) => [
         styles.row,
         {
-          backgroundColor: theme.colors.surfaceMuted,
           borderColor: theme.colors.border,
           opacity: pressed ? 0.88 : 1,
         },
@@ -53,11 +52,11 @@ export function OrganizationListItem({ organization }: OrganizationListItemProps
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    padding: 14,
+    paddingHorizontal: 2,
+    paddingVertical: 14,
   },
   logo: {
     borderRadius: 14,

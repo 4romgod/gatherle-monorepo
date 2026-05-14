@@ -262,7 +262,7 @@ describe('useChat hooks', () => {
       context: {
         headers: { Authorization: 'Bearer token' },
       },
-      refetchQueries: ['ReadChatConversations', 'ReadChatMessages', 'GetUnreadChatCount'],
+      refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
       awaitRefetchQueries: true,
     });
   });

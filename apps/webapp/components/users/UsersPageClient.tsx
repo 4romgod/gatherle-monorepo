@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
-import { GetAllUsersDocument } from '@/data/graphql/types/graphql';
+import { GetUsersDocument } from '@/data/graphql/types/graphql';
 import { Typography, Grid, Box, Paper, Container } from '@mui/material';
 import { People } from '@mui/icons-material';
 import SearchBox from '@/components/search/SearchBox';
@@ -13,7 +13,7 @@ const SKELETON_COUNT = 8;
 
 export default function UsersPageClient() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { data, loading, error } = useQuery(GetAllUsersDocument, {
+  const { data, loading, error } = useQuery(GetUsersDocument, {
     fetchPolicy: 'cache-and-network',
   });
 

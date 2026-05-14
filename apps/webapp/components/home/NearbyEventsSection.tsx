@@ -5,8 +5,8 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQuery } from '@apollo/client';
 import {
   DateFilterOption,
-  GetAllEventOccurrencesQuery,
-  GetAllEventOccurrencesQueryVariables,
+  GetEventOccurrencesQuery,
+  GetEventOccurrencesQueryVariables,
   LocationFilterInput,
 } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
@@ -17,7 +17,7 @@ import EventBoxSm from '@/components/events/eventBoxSm';
 import EventBoxSmSkeleton from '@/components/events/eventBoxSm/EventBoxSmSkeleton';
 import { ROUTES } from '@/lib/constants';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 
 const LOCATION_RADIUS_KM = 50;
@@ -125,8 +125,8 @@ export default function NearbyEventsSection() {
 
   const shouldShowActionButton = permissionState === 'denied';
 
-  const { data, loading, error } = useQuery<GetAllEventOccurrencesQuery, GetAllEventOccurrencesQueryVariables>(
-    GetAllEventOccurrencesDocument,
+  const { data, loading, error } = useQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
+    GetEventOccurrencesDocument,
     {
       skip: !locationFilter,
       variables: {

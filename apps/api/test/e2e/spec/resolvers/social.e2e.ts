@@ -40,7 +40,7 @@ import {
 
 const getReadFollowRequestsQuery = (targetType: FollowTargetType) => ({
   query: `
-    query ReadFollowRequests($targetType: FollowTargetType!) {
+    query GetFollowRequests($targetType: FollowTargetType!) {
       readFollowRequests(targetType: $targetType) {
         followId
         followerUserId

@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
 
-export const ReadSessionStateDocument = gql`
-  query ReadSessionState($key: String!) {
+export const GetSessionStateDocument = gql`
+  query GetSessionState($key: String!) {
     readSessionState(key: $key) {
       key
       value
@@ -11,8 +11,8 @@ export const ReadSessionStateDocument = gql`
   }
 `;
 
-export const ReadAllSessionStatesDocument = gql`
-  query ReadAllSessionStates {
+export const GetSessionStatesDocument = gql`
+  query GetSessionStates {
     readAllSessionStates {
       key
       value

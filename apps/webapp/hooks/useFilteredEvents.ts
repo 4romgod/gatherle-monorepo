@@ -3,13 +3,13 @@ import { useLazyQuery } from '@apollo/client';
 import {
   FilterInput,
   FilterOperatorInput,
-  GetAllEventOccurrencesQuery,
-  GetAllEventOccurrencesQueryVariables,
+  GetEventOccurrencesQuery,
+  GetEventOccurrencesQueryVariables,
   LocationFilterInput,
   SortInput,
   EventsQueryOptionsInput,
 } from '@/data/graphql/types/graphql';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import { EventFilters, LocationFilter } from '@/components/events/filters/EventFilterContext';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
@@ -118,8 +118,8 @@ export const useFilteredEvents = (
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
   const occurrenceDateInput = useMemo(() => buildOccurrenceDateInput(filters), [filters]);
   const locationFilter = useMemo(() => buildLocationFilter(filters.location), [filters.location]);
-  const [loadEvents, { loading }] = useLazyQuery<GetAllEventOccurrencesQuery, GetAllEventOccurrencesQueryVariables>(
-    GetAllEventOccurrencesDocument,
+  const [loadEvents, { loading }] = useLazyQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
+    GetEventOccurrencesDocument,
   );
 
   const hasActiveBackendFilters =

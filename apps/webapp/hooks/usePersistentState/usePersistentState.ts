@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { SetStateAction } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { SaveSessionStateDocument } from '@/data/graphql/mutation/SessionState/mutation';
-import { ReadSessionStateDocument } from '@/data/graphql/query/SessionState/query';
+import { GetSessionStateDocument } from '@/data/graphql/query/SessionState/query';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { DEFAULT_NAMESPACE, DEFAULT_STORAGE, MAX_RETRY_ATTEMPTS } from './constants';
 import { calculateRetryDelay, sleep } from './retry';
@@ -19,7 +19,7 @@ import { logger } from '@/lib/utils';
  * - Optionally synchronizes the value with a backend session-state API when `syncToBackend` is enabled.
  * - Retries failed backend sync operations using an exponential backoff strategy up to `maxRetries`.
  * @remarks
- * Backend synchronization is performed via GraphQL operations defined by `ReadSessionStateDocument`
+ * Backend synchronization is performed via GraphQL operations defined by `GetSessionStateDocument`
  * and `SaveSessionStateDocument`. When `syncToBackend` is disabled or either `token` or `userId` is missing,
  * these network operations are skipped and the hook only uses client-side storage.
  *
@@ -58,7 +58,7 @@ export const usePersistentState = <T>(
     };
   }, []);
 
-  const { data: backendData, loading: backendLoading } = useQuery(ReadSessionStateDocument, {
+  const { data: backendData, loading: backendLoading } = useQuery(GetSessionStateDocument, {
     variables: { key },
     skip: !syncToBackend || !token || !userId,
     context: { headers: getAuthHeader(token) },

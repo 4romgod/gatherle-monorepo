@@ -11,9 +11,9 @@ import FollowStatsCard from '@/components/organization/FollowStatsCard';
 import OrganizationPageSkeleton from '@/components/organization/organizationDetailPageClient/OrganizationDetailPageSkeleton';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
-import { GetAllEventOccurrencesDocument } from '@/data/graphql/query';
+import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { GetOrganizationBySlugDocument } from '@/data/graphql/query';
-import { GetAllEventOccurrencesQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
+import { GetEventOccurrencesQuery, Organization, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
@@ -46,7 +46,7 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
-  } = useQuery<GetAllEventOccurrencesQuery>(GetAllEventOccurrencesDocument, {
+  } = useQuery<GetEventOccurrencesQuery>(GetEventOccurrencesDocument, {
     variables: {
       options: {
         filters: [{ field: 'orgId', value: orgId }],

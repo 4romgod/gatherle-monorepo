@@ -4,14 +4,14 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { Grid, Container, Typography, Box, Button, Paper } from '@mui/material';
 import { LocationOn, Add } from '@mui/icons-material';
-import { GetAllVenuesDocument } from '@/data/graphql/query';
+import { GetVenuesDocument } from '@/data/graphql/query';
 import VenueCard from '@/components/venue/VenueCard';
 import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton';
 import SearchBox from '@/components/search/SearchBox';
 
 export default function VenuesClient() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { data, loading, error } = useQuery(GetAllVenuesDocument, {
+  const { data, loading, error } = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
   });
 
