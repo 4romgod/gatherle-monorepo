@@ -5,9 +5,12 @@
   "scripts": {
     "build": "npm run typecheck && npm run export",
     "build:android": "expo export --platform android --output-dir dist/android",
+    "build:android:development": "eas build --platform android --profile development --local --verbose-logs",
+    "build:android:preview": "eas build --platform android --profile preview --local --verbose-logs",
     "build:ios": "expo export --platform ios --output-dir dist/ios",
     "build:web": "expo export --platform web --output-dir dist/web",
     "codegen": "graphql-codegen --config codegen.ts",
+    "eas-build-post-install": "npm run codegen",
     "export": "expo export --platform all --output-dir dist",
     "start": "expo start",
     "start:tunnel": "env -u ANDROID_HOME -u ANDROID_SDK_ROOT expo start --tunnel --clear",
@@ -49,6 +52,7 @@
     "@graphql-codegen/client-preset": "^5.2.4",
     "@types/node": "^25.7.0",
     "@types/react": "~19.2.10",
+    "babel-plugin-module-resolver": "^5.0.3",
     "dotenv": "^16.6.1",
     "typescript": "~5.9.2"
   },
