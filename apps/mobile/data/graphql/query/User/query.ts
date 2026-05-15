@@ -67,6 +67,57 @@ export const GetUserByIdDocument = graphql(`
   }
 `);
 
+export const GetUserProfileByIdDocument = graphql(`
+  query GetUserProfileById($userId: String!, $followersTargetType: FollowTargetType!, $followersTargetId: ID!) {
+    readUserById(userId: $userId) {
+      userId
+      email
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      defaultVisibility
+      userRole
+      followPolicy
+      followersCount
+      location {
+        city
+        state
+        country
+        coordinates {
+          latitude
+          longitude
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+    readFollowers(targetType: $followersTargetType, targetId: $followersTargetId) {
+      followId
+      followerUserId
+      approvalStatus
+      follower {
+        userId
+        username
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
+    }
+  }
+`);
+
 export const GetUserByUsernameDocument = graphql(`
   query GetUserByUsername($username: String!) {
     readUserByUsername(username: $username) {

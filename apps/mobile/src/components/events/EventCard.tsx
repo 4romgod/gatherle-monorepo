@@ -156,15 +156,15 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
             style={[
               styles.overlayPill,
               isFeatured
-                ? { backgroundColor: theme.colors.surface }
-                : { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
+                ? { backgroundColor: theme.colors.surface, borderWidth: 0 }
+                : { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.primarySoft },
             ]}
           >
             <Text
               style={[
                 styles.overlayPillText,
                 {
-                  color: isFeatured ? theme.colors.primary : theme.colors.primaryContrast,
+                  color: isFeatured ? theme.colors.primary : theme.colors.primary,
                 },
               ]}
             >

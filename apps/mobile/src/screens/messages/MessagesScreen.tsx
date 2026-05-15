@@ -1,5 +1,5 @@
 import type { ApolloError } from '@apollo/client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -10,7 +10,9 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ConversationRow } from '@/components/messages/ConversationRow';
+import { ConversationRowSkeleton } from '@/components/skeleton/ConversationRowSkeleton';
 import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useMessages } from '@/hooks/messages/useMessages';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -22,6 +24,11 @@ export function MessagesScreen() {
   const { theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const { conversations, error, loading, refetch } = useMessages(authToken, isAuthenticated);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   useChatRealtime({
     enabled: isAuthenticated,
@@ -90,13 +97,17 @@ export function MessagesScreen() {
   }
 
   return (
-    <PageContainer>
-      <PageHeading title="Messages" />
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <SearchField onChangeText={setSearchQuery} placeholder="Search conversations" value={searchQuery} />
       <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
 
       {loading && filteredConversations.length === 0 ? (
-        <StateNotice message="Loading your conversations..." />
+        <View style={styles.messageList}>
+          <ConversationRowSkeleton />
+          <ConversationRowSkeleton />
+          <ConversationRowSkeleton />
+          <ConversationRowSkeleton />
+        </View>
       ) : error ? (
         <StateNotice
           actionLabel="Retry"

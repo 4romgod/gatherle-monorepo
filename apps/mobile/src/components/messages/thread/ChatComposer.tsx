@@ -19,11 +19,11 @@ export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', 
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  const canSend = Boolean(draft.trim()) && Boolean(targetUserId) && isConnected;
+  const canSend = Boolean(draft.trim()) && Boolean(targetUserId);
 
   const handleSend = () => {
     const trimmedDraft = draft.trim();
-    if (!trimmedDraft) {
+    if (!trimmedDraft || !targetUserId) {
       return;
     }
 

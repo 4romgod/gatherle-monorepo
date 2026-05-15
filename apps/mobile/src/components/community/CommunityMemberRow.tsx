@@ -6,6 +6,7 @@ import { fontSize, typography } from '@/shared/theme/typography';
 import { InlineButton } from '@/components/core/InlineButton';
 
 type CommunityMemberRowProps = {
+  actionTone?: 'neutral' | 'primary';
   onPress?: () => void;
   primaryActionLabel?: string;
   onPressPrimaryAction?: () => void;
@@ -13,6 +14,7 @@ type CommunityMemberRowProps = {
 };
 
 export function CommunityMemberRow({
+  actionTone = 'neutral',
   onPress,
   onPressPrimaryAction,
   primaryActionLabel,
@@ -55,7 +57,7 @@ export function CommunityMemberRow({
       </View>
 
       {primaryActionLabel && onPressPrimaryAction ? (
-        <InlineButton label={primaryActionLabel} onPress={onPressPrimaryAction} tone="neutral" />
+        <InlineButton label={primaryActionLabel} onPress={onPressPrimaryAction} tone={actionTone} />
       ) : null}
     </Pressable>
   );

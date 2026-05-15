@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -9,14 +9,16 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
 import { FilterActionButton } from '@/components/core/FilterActionButton';
 import { FilterChip } from '@/components/core/FilterChip';
-import { LoadingBlock } from '@/components/core/LoadingBlock';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventSearchBar } from '@/components/core/EventSearchBar';
 import { EventCard } from '@/components/events/EventCard';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
+import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
@@ -48,6 +50,11 @@ export function EventsScreen() {
   } = useEventsFilters();
 
   const { categories, error, events, loading, refetch } = useFilteredMobileEvents(appliedFilters, authToken);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   // Client-side text search applied on top of server-side filtered results
   useEffect(() => {
@@ -111,8 +118,7 @@ export function EventsScreen() {
   };
 
   return (
-    <PageContainer>
-      <PageHeading title="Discover Events" />
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <EventSearchBar
         onSelectEvent={(event) => {
           setSearchQuery(event.title ?? '');
@@ -187,12 +193,20 @@ export function EventsScreen() {
         </View>
       ) : null}
 
-      <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-        {paginatedEvents.length} Events Found
-      </Text>
+      {loading && events.length === 0 ? (
+        <SkeletonBlock style={styles.eventsCountSkeleton} />
+      ) : (
+        <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
+          {paginatedEvents.length} Events Found
+        </Text>
+      )}
 
       {loading && events.length === 0 ? (
-        <LoadingBlock label="Loading live events..." />
+        <View style={styles.feedList}>
+          <EventCardSkeleton />
+          <EventCardSkeleton />
+          <EventCardSkeleton />
+        </View>
       ) : error ? (
         <StateNotice
           actionLabel="Retry"
@@ -264,6 +278,11 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     fontSize: fontSize.xl2,
     marginTop: 8,
+  },
+  eventsCountSkeleton: {
+    height: 22,
+    marginTop: 8,
+    width: 152,
   },
   eventsToolsRow: {
     alignItems: 'center',

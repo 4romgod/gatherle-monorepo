@@ -1,16 +1,17 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { EventPreviewCarousel } from '@/components/carousel/EventPreviewCarousel';
 import { EventSearchBar } from '@/components/core/EventSearchBar';
-import { LoadingBlock } from '@/components/core/LoadingBlock';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventCard } from '@/components/events/EventCard';
+import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 
@@ -29,6 +30,11 @@ export function HomeScreen() {
   const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const cardWidth = Math.max(width - 40, 280);
   const upcomingRsvpEvents = useMemo(() => buildUpcomingRsvpEvents(upcomingEvents), [upcomingEvents]);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   const carouselEvents = useMemo(
     () => (isAuthenticated ? upcomingRsvpEvents : trendingEvents).slice(0, 3),
@@ -40,7 +46,7 @@ export function HomeScreen() {
   );
 
   return (
-    <PageContainer>
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <EventSearchBar
         onSelectEvent={(event) =>
           navigation.navigate('Events', {
@@ -57,7 +63,7 @@ export function HomeScreen() {
       />
 
       {loading && carouselEvents.length === 0 && !heroEvent ? (
-        <LoadingBlock label="Loading your next events..." />
+        <EventCardSkeleton cardWidth={cardWidth} variant="featured" />
       ) : error ? (
         <StateNotice
           actionLabel="Retry"
@@ -92,6 +98,11 @@ export function HomeScreen() {
               variant="feed"
             />
           ))}
+        </View>
+      ) : loading ? (
+        <View style={styles.feedList}>
+          <EventCardSkeleton />
+          <EventCardSkeleton />
         </View>
       ) : (
         <StateNotice message="Recommendations will appear here once more public events are available." />

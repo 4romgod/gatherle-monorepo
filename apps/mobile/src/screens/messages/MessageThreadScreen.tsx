@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
-import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ChatBubble } from '@/components/messages/thread/ChatBubble';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
 import { ChatDayDivider } from '@/components/messages/thread/ChatDayDivider';
 import { ChatThreadHeader } from '@/components/messages/thread/ChatThreadHeader';
+import { ChatThreadSkeleton } from '@/components/skeleton/ChatThreadSkeleton';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
@@ -31,6 +32,11 @@ export function MessageThreadScreen() {
     enabled: isAuthenticated,
     withUserId,
   });
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
   const { isConnected, markConversationRead, sendChatMessage } = useChatRealtime({
     enabled: isAuthenticated && Boolean(withUserId),
     onChatMessage: (payload) => {
@@ -87,8 +93,13 @@ export function MessageThreadScreen() {
   if (!isAuthenticated) {
     return (
       <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-        <ScrollView contentContainerStyle={styles.authPromptWrap} showsVerticalScrollIndicator={false}>
-          <PageHeading subtitle="Log in to read and reply in your direct conversations." title="Conversation" />
+        <ScrollView
+          alwaysBounceVertical
+          bounces
+          contentContainerStyle={styles.authPromptWrap}
+          overScrollMode="always"
+          showsVerticalScrollIndicator={false}
+        >
           <AuthPromptCard
             description="Your direct chat history is only available once your session is active."
             onPressPrimary={() => navigation.navigate('Login', { redirectTab: 'Messages' })}
@@ -105,11 +116,23 @@ export function MessageThreadScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <View style={styles.inner}>
-        <ChatThreadHeader avatarUrl={avatarUrl} displayName={displayName} username={username} />
+        <ChatThreadHeader
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          onPress={() =>
+            navigation.navigate('UserProfile', {
+              avatarUrl,
+              displayName,
+              userId: withUserId,
+              username,
+            })
+          }
+          username={username}
+        />
 
         {loading && threadItems.length === 0 ? (
           <View style={styles.stateWrap}>
-            <StateNotice message="Loading your conversation..." />
+            <ChatThreadSkeleton />
           </View>
         ) : error ? (
           <View style={styles.stateWrap}>
@@ -121,8 +144,20 @@ export function MessageThreadScreen() {
           </View>
         ) : threadItems.length > 0 ? (
           <ScrollView
+            alwaysBounceVertical
+            bounces
             contentContainerStyle={styles.threadContent}
+            overScrollMode="always"
             ref={scrollRef}
+            refreshControl={
+              <RefreshControl
+                colors={[theme.colors.primary]}
+                onRefresh={onRefresh}
+                progressBackgroundColor={theme.colors.surfaceRaised}
+                refreshing={refreshing}
+                tintColor={theme.colors.primary}
+              />
+            }
             showsVerticalScrollIndicator={false}
             style={styles.threadScroll}
           >

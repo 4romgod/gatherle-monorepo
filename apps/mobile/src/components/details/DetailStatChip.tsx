@@ -1,0 +1,48 @@
+import { StyleSheet, Text, View } from 'react-native';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { typography } from '@/shared/theme/typography';
+
+type DetailStatChipProps = {
+  label: string;
+  value: string;
+};
+
+export function DetailStatChip({ label, value }: DetailStatChipProps) {
+  const { theme } = useAppTheme();
+
+  return (
+    <View
+      style={[
+        styles.chip,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  chip: {
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    minHeight: 70,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  label: {
+    ...typography.bodyMedium,
+    fontSize: 12,
+  },
+  value: {
+    ...typography.bodyBold,
+    fontSize: 18,
+    letterSpacing: -0.4,
+  },
+});

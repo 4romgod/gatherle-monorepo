@@ -1,6 +1,6 @@
 import { useMutation } from '@apollo/client';
 import { UpdateUserDocument } from '@data/graphql/mutation/User/mutation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -12,11 +12,12 @@ import { AccountStatusBanner } from '@/components/account/shared/AccountStatusBa
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { useAccountProfile } from '@/hooks/account/useAccountProfile';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildEditProfileInput, createEditProfileForm, validateEditProfileForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
 export function EditProfileScreen() {
   const navigation = useNavigation<MainTabNavigation>();
@@ -25,6 +26,11 @@ export function EditProfileScreen() {
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
   const [form, setForm] = useState(() => createEditProfileForm(null));
   const [status, setStatus] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   useEffect(() => {
     if (!profile) {
@@ -77,7 +83,6 @@ export function EditProfileScreen() {
   if (!isAuthenticated) {
     return (
       <PageContainer>
-        <PageHeading subtitle="Sign in to edit your public identity." title="Edit profile" />
         <AuthPromptCard
           description="Your name, handle, bio, and location live here once you’re signed in."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -92,9 +97,13 @@ export function EditProfileScreen() {
 
   if (loading && !profile) {
     return (
-      <PageContainer>
-        <PageHeading subtitle="Shape how you appear across Gatherle." title="Edit profile" />
-        <StateNotice message="Loading your editable profile..." />
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        <View style={styles.skeletonWrap}>
+          <SkeletonBlock style={styles.heroSkeleton} />
+          <SkeletonBlock style={styles.sectionSkeleton} />
+          <SkeletonBlock style={styles.sectionSkeletonShort} />
+          <SkeletonBlock style={styles.buttonSkeleton} />
+        </View>
       </PageContainer>
     );
   }
@@ -102,7 +111,6 @@ export function EditProfileScreen() {
   if (error || !profile) {
     return (
       <PageContainer>
-        <PageHeading subtitle="Shape how you appear across Gatherle." title="Edit profile" />
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load your editable profile."
@@ -113,7 +121,7 @@ export function EditProfileScreen() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <ProfileEditorHero profile={profile} />
       {status ? <AccountStatusBanner message={status.message} tone={status.tone} /> : null}
 
@@ -194,11 +202,30 @@ export function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  buttonSkeleton: {
+    borderRadius: 16,
+    height: 52,
+  },
   half: {
     flex: 1,
+  },
+  heroSkeleton: {
+    borderRadius: 20,
+    height: 152,
   },
   row: {
     flexDirection: 'row',
     gap: 12,
+  },
+  sectionSkeleton: {
+    borderRadius: 20,
+    height: 328,
+  },
+  sectionSkeletonShort: {
+    borderRadius: 20,
+    height: 214,
+  },
+  skeletonWrap: {
+    gap: 20,
   },
 });

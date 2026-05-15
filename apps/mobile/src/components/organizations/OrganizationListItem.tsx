@@ -5,16 +5,18 @@ import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
 
 type OrganizationListItemProps = {
+  onPress?: () => void;
   organization: MobileOrganization;
 };
 
-export function OrganizationListItem({ organization }: OrganizationListItemProps) {
+export function OrganizationListItem({ onPress, organization }: OrganizationListItemProps) {
   const { theme } = useAppTheme();
   const label = organization.name ?? 'Organization';
 
   return (
     <Pressable
       accessibilityRole="button"
+      onPress={onPress}
       style={({ pressed }) => [
         styles.row,
         {

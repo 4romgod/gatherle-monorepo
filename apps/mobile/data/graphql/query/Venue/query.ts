@@ -27,3 +27,31 @@ export const GetVenuesDocument = graphql(`
     }
   }
 `);
+
+export const GetVenueByIdDocument = graphql(`
+  query GetVenueById($venueId: String!) {
+    readVenueById(venueId: $venueId) {
+      slug
+      venueId
+      orgId
+      name
+      type
+      capacity
+      url
+      amenities
+      address {
+        street
+        city
+        region
+        country
+        postalCode
+      }
+      geo {
+        latitude
+        longitude
+      }
+      featuredImageUrl
+      images
+    }
+  }
+`);

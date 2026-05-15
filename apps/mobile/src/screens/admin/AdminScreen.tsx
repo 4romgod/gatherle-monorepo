@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@apollo/client';
+import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { GetOrganizationsDocument } from '@data/graphql/query/Organization/query';
 import { GetUsersDocument } from '@data/graphql/query/User/query';
@@ -7,9 +8,10 @@ import { GetVenuesDocument } from '@data/graphql/query/Venue/query';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { getApolloAuthContext } from '@/lib/auth';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -29,7 +31,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 export function AdminScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated } = useAppShell();
-  const { categories } = useMobileHomeDiscovery(authToken);
+  const { categories, refetch: refetchDiscovery } = useMobileHomeDiscovery(authToken);
   const organizationsQuery = useQuery(GetOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
@@ -43,11 +45,20 @@ export function AdminScreen() {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
   });
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await Promise.all([
+        refetchDiscovery(),
+        organizationsQuery.refetch(),
+        usersQuery.refetch(),
+        venuesQuery.refetch(),
+      ]);
+    }, [organizationsQuery, refetchDiscovery, usersQuery, venuesQuery]),
+  );
 
   if (!isAuthenticated) {
     return (
       <PageContainer>
-        <PageHeading title="Admin" />
         <AuthPromptCard
           description="Sign in with an elevated account to review platform health and discovery inventory."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -69,17 +80,19 @@ export function AdminScreen() {
     venuesQuery.data == null
   ) {
     return (
-      <PageContainer>
-        <PageHeading title="Admin" />
-        <StateNotice message="Loading admin metrics..." />
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        <View style={styles.metricsGrid}>
+          <SkeletonBlock style={styles.metricCardSkeleton} />
+          <SkeletonBlock style={styles.metricCardSkeleton} />
+          <SkeletonBlock style={styles.metricCardSkeleton} />
+          <SkeletonBlock style={styles.metricCardSkeleton} />
+        </View>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer>
-      <PageHeading subtitle="A trimmed-down operations snapshot for the mobile shell." title="Admin" />
-
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <View style={styles.metricsGrid}>
         <MetricCard label="Categories" value={String(categories.length)} />
         <MetricCard label="Organizations" value={String(organizationsQuery.data?.readOrganizations.length ?? 0)} />
@@ -103,6 +116,11 @@ const styles = StyleSheet.create({
   metricLabel: {
     ...typography.bodySemiBold,
     fontSize: 12,
+  },
+  metricCardSkeleton: {
+    borderRadius: 20,
+    height: 92,
+    width: '48.4%',
   },
   metricValue: {
     ...typography.displayBold,

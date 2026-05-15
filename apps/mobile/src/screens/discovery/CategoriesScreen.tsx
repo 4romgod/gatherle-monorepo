@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { CategoryTile } from '@/components/discovery/CategoryTile';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
+import { CategoryTileSkeleton } from '@/components/skeleton/CategoryTileSkeleton';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 
@@ -15,6 +16,11 @@ export function CategoriesScreen() {
   const { authToken } = useAppShell();
   const { categories, error, loading, refetch } = useMobileHomeDiscovery(authToken);
   const [query, setQuery] = useState('');
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   const filteredCategories = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -28,15 +34,16 @@ export function CategoriesScreen() {
   }, [categories, query]);
 
   return (
-    <PageContainer>
-      <PageHeading
-        subtitle="Find the themes people care about most on Gatherle, then jump into related events and communities."
-        title="Categories"
-      />
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <SearchField onChangeText={setQuery} placeholder="Search categories" value={query} />
 
       {loading && filteredCategories.length === 0 ? (
-        <StateNotice message="Loading categories..." />
+        <View style={styles.grid}>
+          <CategoryTileSkeleton />
+          <CategoryTileSkeleton />
+          <CategoryTileSkeleton />
+          <CategoryTileSkeleton />
+        </View>
       ) : error ? (
         <StateNotice actionLabel="Retry" message="We couldn’t load categories." onPressAction={() => void refetch()} />
       ) : filteredCategories.length > 0 ? (

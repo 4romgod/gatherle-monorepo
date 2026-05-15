@@ -8,9 +8,10 @@ import { typography } from '@/shared/theme/typography';
 type ProfileEventTileProps = {
   occurrence: MobileEventOccurrence;
   onPress: () => void;
+  size?: number;
 };
 
-export function ProfileEventTile({ occurrence, onPress }: ProfileEventTileProps) {
+export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTileProps) {
   const { theme } = useAppTheme();
   const imageUrl = getEventImageUrl(occurrence);
 
@@ -23,6 +24,7 @@ export function ProfileEventTile({ occurrence, onPress }: ProfileEventTileProps)
         {
           backgroundColor: theme.colors.surface,
           opacity: pressed ? 0.94 : 1,
+          width: size ?? '31.8%',
         },
       ]}
     >
@@ -123,7 +125,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
-    width: '31.8%',
   },
   profileEventTitle: {
     ...typography.bodyBold,

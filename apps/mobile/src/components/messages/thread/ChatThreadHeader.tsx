@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
@@ -6,14 +6,24 @@ import { fontSize, typography } from '@/shared/theme/typography';
 type ChatThreadHeaderProps = {
   avatarUrl?: string | null;
   displayName: string;
+  onPress?: () => void;
   username?: string | null;
 };
 
-export function ChatThreadHeader({ avatarUrl, displayName, username }: ChatThreadHeaderProps) {
+export function ChatThreadHeader({ avatarUrl, displayName, onPress, username }: ChatThreadHeaderProps) {
   const { theme } = useAppTheme();
 
   return (
-    <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.header,
+        {
+          borderBottomColor: theme.colors.border,
+          opacity: onPress && pressed ? 0.88 : 1,
+        },
+      ]}
+    >
       <ProfileAvatar imageUrl={avatarUrl} label={displayName} size={42} />
       <View style={styles.copy}>
         <Text numberOfLines={1} style={[styles.name, { color: theme.colors.textPrimary }]}>
@@ -21,7 +31,7 @@ export function ChatThreadHeader({ avatarUrl, displayName, username }: ChatThrea
         </Text>
         {username ? <Text style={[styles.handle, { color: theme.colors.textSecondary }]}>@{username}</Text> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
