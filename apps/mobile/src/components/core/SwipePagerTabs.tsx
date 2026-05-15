@@ -89,14 +89,7 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
               ]}
             >
               {variant === 'icon' && route.icon ? (
-                <View
-                  style={[
-                    styles.iconFrame,
-                    {
-                      backgroundColor: active ? theme.colors.primarySoft : 'transparent',
-                    },
-                  ]}
-                >
+                <View style={styles.iconFrame}>
                   <Feather
                     color={active ? theme.colors.primary : theme.colors.textSecondary}
                     name={route.icon}
@@ -147,10 +140,7 @@ const styles = StyleSheet.create({
   },
   iconFrame: {
     alignItems: 'center',
-    borderRadius: 12,
-    height: 34,
     justifyContent: 'center',
-    width: 46,
   },
   labelButton: {
     gap: 8,

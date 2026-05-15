@@ -186,4 +186,24 @@ describe('UserFeedDAO', () => {
       await expect(UserFeedDAO.removeEventFromFeed('user-1', 'event-1')).rejects.toThrow(GraphQLError);
     });
   });
+
+  describe('deleteByEventId', () => {
+    it('deletes all feed items for an event', async () => {
+      (UserFeedModel.deleteMany as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ deletedCount: 4 }),
+      });
+
+      await UserFeedDAO.deleteByEventId('event-1');
+
+      expect(UserFeedModel.deleteMany).toHaveBeenCalledWith({ eventId: 'event-1' });
+    });
+
+    it('wraps errors', async () => {
+      (UserFeedModel.deleteMany as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(UserFeedDAO.deleteByEventId('event-1')).rejects.toThrow(GraphQLError);
+    });
+  });
 });

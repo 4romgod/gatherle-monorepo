@@ -18,6 +18,7 @@ jest.mock('@/mongodb/models', () => ({
     find: jest.fn(),
     findOneAndUpdate: jest.fn(),
     findOneAndDelete: jest.fn(),
+    deleteMany: jest.fn(),
   },
 }));
 
@@ -245,6 +246,26 @@ describe('OrganizationMembershipDAO', () => {
         OrganizationMembershipDAO.update({ membershipId: 'membership-1', role: OrganizationRole.Member }),
       ).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
     });
+
+    it('does not overwrite existing fields with undefined values', async () => {
+      const mutableMembership = {
+        ...mockMembership,
+        role: OrganizationRole.Admin,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: () => ({ ...mockMembership, role: OrganizationRole.Admin }),
+      };
+      (OrganizationMembershipModel.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery(mutableMembership),
+      );
+
+      await OrganizationMembershipDAO.update({
+        membershipId: 'membership-1',
+        role: undefined,
+      });
+
+      expect(mutableMembership.role).toBe(OrganizationRole.Admin);
+      expect(mutableMembership.save).toHaveBeenCalled();
+    });
   });
 
   describe('delete', () => {
@@ -275,6 +296,50 @@ describe('OrganizationMembershipDAO', () => {
       );
 
       await expect(OrganizationMembershipDAO.delete('membership-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('deleteByOrgId', () => {
+    it('deletes all memberships for an organization', async () => {
+      (OrganizationMembershipModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ deletedCount: 3 }),
+      );
+
+      await OrganizationMembershipDAO.deleteByOrgId('org-1');
+
+      expect(OrganizationMembershipModel.deleteMany).toHaveBeenCalledWith({ orgId: 'org-1' });
+    });
+
+    it('wraps deleteMany errors', async () => {
+      (OrganizationMembershipModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new MockMongoError(0)),
+      );
+
+      await expect(OrganizationMembershipDAO.deleteByOrgId('org-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('deleteByUserId', () => {
+    it('deletes all memberships for a user', async () => {
+      (OrganizationMembershipModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ deletedCount: 2 }),
+      );
+
+      await OrganizationMembershipDAO.deleteByUserId('user-1');
+
+      expect(OrganizationMembershipModel.deleteMany).toHaveBeenCalledWith({ userId: 'user-1' });
+    });
+
+    it('wraps deleteMany errors', async () => {
+      (OrganizationMembershipModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new MockMongoError(0)),
+      );
+
+      await expect(OrganizationMembershipDAO.deleteByUserId('user-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });

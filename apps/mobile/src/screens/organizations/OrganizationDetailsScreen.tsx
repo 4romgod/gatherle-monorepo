@@ -16,6 +16,7 @@ import { DetailStatChip } from '@/components/details/DetailStatChip';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
 import { InlineButton } from '@/components/core/InlineButton';
 import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton';
+import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
@@ -202,7 +203,7 @@ export function OrganizationDetailsScreen() {
 
       <DetailSection title="Hosted events">
         {eventsLoading && occurrences.length === 0 ? (
-          <StateNotice message="Loading hosted events..." />
+          <EventTileGridSkeleton count={6} />
         ) : eventsError ? (
           <StateNotice
             actionLabel="Retry"

@@ -16,6 +16,7 @@ import { DetailSection } from '@/components/details/DetailSection';
 import { DetailStatChip } from '@/components/details/DetailStatChip';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
 import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton';
+import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { getApolloAuthContext } from '@/lib/auth';
@@ -162,7 +163,7 @@ export function VenueDetailsScreen() {
 
       <DetailSection title="Events at this venue">
         {eventsLoading && occurrences.length === 0 ? (
-          <StateNotice message="Loading venue events..." />
+          <EventTileGridSkeleton count={6} />
         ) : eventsError ? (
           <StateNotice
             actionLabel="Retry"

@@ -11,6 +11,7 @@ jest.mock('@/services', () => ({
     delete: jest.fn(),
     readByEvent: jest.fn(),
     readUserMoments: jest.fn(),
+    readUserMomentsFeed: jest.fn(),
     readFollowedMoments: jest.fn(),
   },
 }));
@@ -42,6 +43,9 @@ const mockMoment = {
 };
 
 const mockContext = {
+  user: {
+    userId: 'user-1',
+  },
   loaders: {
     user: {
       load: jest.fn(async (id: string) => ({ userId: id }) as any),
@@ -151,7 +155,7 @@ describe('EventMomentResolver', () => {
 
       const result = await resolver.readEventMoments('event-1', mockContext, 'cursor-1', 10);
 
-      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', 'cursor-1', 10, undefined);
+      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', 'cursor-1', 10, 'user-1');
       expect(result).toEqual(page);
     });
 
@@ -161,7 +165,7 @@ describe('EventMomentResolver', () => {
 
       await resolver.readEventMoments('event-1', mockContext);
 
-      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', undefined, undefined, undefined);
+      expect(EventMomentService.readByEvent).toHaveBeenCalledWith('event-1', undefined, undefined, 'user-1');
     });
   });
 
@@ -173,6 +177,27 @@ describe('EventMomentResolver', () => {
 
       expect(EventMomentService.readUserMoments).toHaveBeenCalledWith('user-2', 'event-1', 'user-1');
       expect(result).toEqual([mockMoment]);
+    });
+  });
+
+  describe('readUserMoments', () => {
+    it('delegates to EventMomentService.readUserMomentsFeed with viewer id when authenticated', async () => {
+      const page = { items: [mockMoment], hasMore: false };
+      (EventMomentService.readUserMomentsFeed as jest.Mock).mockResolvedValue(page);
+
+      const result = await resolver.readUserMoments('user-2', mockContext, 'cursor-1', 12);
+
+      expect(EventMomentService.readUserMomentsFeed).toHaveBeenCalledWith('user-2', 'user-1', 'cursor-1', 12);
+      expect(result).toEqual(page);
+    });
+
+    it('passes undefined viewer id for anonymous context', async () => {
+      const page = { items: [], hasMore: false };
+      (EventMomentService.readUserMomentsFeed as jest.Mock).mockResolvedValue(page);
+
+      await resolver.readUserMoments('user-2', { ...mockContext, user: undefined }, undefined, undefined);
+
+      expect(EventMomentService.readUserMomentsFeed).toHaveBeenCalledWith('user-2', undefined, undefined, undefined);
     });
   });
 

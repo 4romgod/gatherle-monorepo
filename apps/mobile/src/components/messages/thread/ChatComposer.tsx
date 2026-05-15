@@ -8,11 +8,26 @@ import { fontSize, typography } from '@/shared/theme/typography';
 type ChatComposerProps = {
   isConnected: boolean;
   onSend: (message: string) => boolean;
+  onAfterSend?: () => void;
+  onBlur?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
+  showStatus?: boolean;
   targetUserId?: string;
+  variant?: 'default' | 'overlay';
 };
 
-export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', targetUserId }: ChatComposerProps) {
+export function ChatComposer({
+  isConnected,
+  onAfterSend,
+  onBlur,
+  onFocus,
+  onSend,
+  placeholder = 'Message...',
+  showStatus = true,
+  targetUserId,
+  variant = 'default',
+}: ChatComposerProps) {
   const { theme } = useAppTheme();
   const [draft, setDraft] = useState('');
   const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -36,6 +51,7 @@ export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', 
 
     setDraft('');
     setSendError(null);
+    onAfterSend?.();
   };
 
   const handleInsertEmoji = (emoji: string) => {
@@ -54,10 +70,15 @@ export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', 
       <View
         style={[
           styles.inputWrap,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
+          variant === 'overlay'
+            ? {
+                backgroundColor: 'rgba(3,7,18,0.56)',
+                borderColor: 'rgba(255,255,255,0.36)',
+              }
+            : {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
         ]}
       >
         <View style={styles.iconRail}>
@@ -75,12 +96,21 @@ export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', 
               setSendError(null);
             }
           }}
-          onFocus={() => setEmojiPickerOpen(false)}
+          onBlur={onBlur}
+          onFocus={() => {
+            setEmojiPickerOpen(false);
+            onFocus?.();
+          }}
           onSubmitEditing={handleSend}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={variant === 'overlay' ? 'rgba(255,255,255,0.68)' : theme.colors.textMuted}
           selectionColor={theme.colors.primary}
-          style={[styles.input, { color: theme.colors.textPrimary }]}
+          style={[
+            styles.input,
+            {
+              color: variant === 'overlay' ? theme.colors.heroText : theme.colors.textPrimary,
+            },
+          ]}
           value={draft}
         />
         <View style={styles.sendWrap}>
@@ -96,10 +126,14 @@ export function ChatComposer({ isConnected, onSend, placeholder = 'Message...', 
           />
         </View>
       </View>
-      {sendError ? (
+      {showStatus && sendError ? (
         <Text style={[styles.status, { color: theme.colors.error }]}>{sendError}</Text>
-      ) : !isConnected ? (
-        <Text style={[styles.status, { color: theme.colors.textMuted }]}>Connecting to live chat…</Text>
+      ) : showStatus && !isConnected ? (
+        <Text
+          style={[styles.status, { color: variant === 'overlay' ? 'rgba(255,255,255,0.74)' : theme.colors.textMuted }]}
+        >
+          Connecting to live chat…
+        </Text>
       ) : null}
     </View>
   );

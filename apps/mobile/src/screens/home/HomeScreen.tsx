@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -9,8 +9,10 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventCard } from '@/components/events/EventCard';
+import { FollowedMomentsStrip } from '@/components/moments/FollowedMomentsStrip';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
@@ -28,12 +30,23 @@ export function HomeScreen() {
   const { authToken, isAuthenticated } = useAppShell();
   const { width } = useWindowDimensions();
   const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
+  const {
+    moments: followedMoments,
+    refetch: refetchFollowedMoments,
+    error: followedMomentsError,
+  } = useFollowedMoments(authToken);
   const cardWidth = Math.max(width - 40, 280);
+
+  useEffect(() => {
+    if (followedMomentsError) {
+      console.warn('[HomeScreen] Failed to load followed moments:', followedMomentsError.message);
+    }
+  }, [followedMomentsError]);
   const upcomingRsvpEvents = useMemo(() => buildUpcomingRsvpEvents(upcomingEvents), [upcomingEvents]);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await refetch();
-    }, [refetch]),
+      await Promise.all([refetch(), refetchFollowedMoments()]);
+    }, [refetch, refetchFollowedMoments]),
   );
 
   const carouselEvents = useMemo(
@@ -47,6 +60,8 @@ export function HomeScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+      {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
+
       <EventSearchBar
         onSelectEvent={(event) =>
           navigation.navigate('Events', {

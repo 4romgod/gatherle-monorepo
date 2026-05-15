@@ -11,6 +11,9 @@ export interface ChatMessageRealtimePayload {
   message: string;
   messageId: string;
   recipientUserId: string;
+  replyToMomentCaption?: string | null;
+  replyToMomentId?: string | null;
+  replyToMomentType?: string | null;
   senderUserId: string;
 }
 
@@ -45,7 +48,10 @@ export const isChatMessagePayload = (value: unknown): value is ChatMessageRealti
     typeof value.recipientUserId === 'string' &&
     typeof value.message === 'string' &&
     typeof value.isRead === 'boolean' &&
-    typeof value.createdAt === 'string'
+    typeof value.createdAt === 'string' &&
+    (value.replyToMomentId == null || typeof value.replyToMomentId === 'string') &&
+    (value.replyToMomentCaption == null || typeof value.replyToMomentCaption === 'string') &&
+    (value.replyToMomentType == null || typeof value.replyToMomentType === 'string')
   );
 };
 

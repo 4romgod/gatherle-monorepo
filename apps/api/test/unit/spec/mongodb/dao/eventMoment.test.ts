@@ -234,6 +234,31 @@ describe('EventMomentDAO', () => {
       );
     });
 
+    it('includes the viewer own pending and failed moments when viewerUserId is provided', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([]));
+
+      await EventMomentDAO.readByEvent('event-1', undefined, 30, 'user-1');
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          $and: [
+            { isPublished: true },
+            {
+              $or: [
+                { state: EventMomentState.Ready },
+                {
+                  state: {
+                    $in: [EventMomentState.UploadPending, EventMomentState.Transcoding, EventMomentState.Failed],
+                  },
+                  authorId: 'user-1',
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    });
+
     it('throws on DB error', async () => {
       (EventMomentModel.find as jest.Mock).mockReturnValue(mockQueryFail(new MockMongoError(0)));
 
@@ -323,6 +348,64 @@ describe('EventMomentDAO', () => {
       (EventMomentModel.find as jest.Mock).mockReturnValue(mockQueryFail(new MockMongoError(0)));
 
       await expect(EventMomentDAO.readFollowedStatuses(['user-1'])).rejects.toThrow();
+    });
+  });
+
+  describe('readByAuthor', () => {
+    it('returns a page of ready moments when includePending=false', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));
+
+      const result = await EventMomentDAO.readByAuthor('user-1', false);
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authorId: 'user-1',
+          state: EventMomentState.Ready,
+          isPublished: true,
+        }),
+      );
+      expect(result.items).toEqual([mockMoment]);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it('includes pending states when includePending=true', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));
+
+      await EventMomentDAO.readByAuthor('user-1', true);
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: {
+            $in: [EventMomentState.Ready, EventMomentState.UploadPending, EventMomentState.Transcoding],
+          },
+        }),
+      );
+    });
+
+    it('applies cursor filtering and pagination metadata', async () => {
+      const items = Array.from({ length: 3 }, (_, i) => ({
+        toObject: () => ({
+          ...mockMoment,
+          momentId: `moment-${i}`,
+          createdAt: new Date(Date.now() - i * 1000),
+        }),
+      }));
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery(items));
+
+      const result = await EventMomentDAO.readByAuthor('user-1', false, '2024-06-01T12:00:00.000Z', 2);
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({ createdAt: { $lt: expect.any(Date) } }),
+      );
+      expect(result.hasMore).toBe(true);
+      expect(result.items).toHaveLength(2);
+      expect(result.nextCursor).toBeDefined();
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQueryFail(new MockMongoError(0)));
+
+      await expect(EventMomentDAO.readByAuthor('user-1', false)).rejects.toThrow();
     });
   });
 
@@ -456,6 +539,19 @@ describe('EventMomentDAO', () => {
 
       expect(result).toBeNull();
     });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(
+        EventMomentDAO.publishVideoMoment('moment-1', {
+          eventId: 'event-1',
+          authorId: 'user-1',
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe('claimTranscodeStart', () => {
@@ -487,6 +583,14 @@ describe('EventMomentDAO', () => {
       const result = await EventMomentDAO.claimTranscodeStart('raw/video.mp4');
 
       expect(result).toBeNull();
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(EventMomentDAO.claimTranscodeStart('raw/video.mp4')).rejects.toThrow();
     });
   });
 

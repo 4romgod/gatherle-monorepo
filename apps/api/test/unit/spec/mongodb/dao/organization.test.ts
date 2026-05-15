@@ -149,6 +149,21 @@ describe('OrganizationDAO', () => {
   });
 
   describe('readOrganizations', () => {
+    it('reads organizations without options using a plain find query', async () => {
+      (OrganizationModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([
+          {
+            toObject: () => mockOrganization,
+          },
+        ]),
+      );
+
+      const result = await OrganizationDAO.readOrganizations();
+
+      expect(OrganizationModel.find).toHaveBeenCalledWith({});
+      expect(result).toEqual([mockOrganization]);
+    });
+
     it('reads organizations with options', async () => {
       const queryResult = createMockSuccessMongooseQuery([
         {
@@ -168,6 +183,38 @@ describe('OrganizationDAO', () => {
       (OrganizationModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(OrganizationDAO.readOrganizations()).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('readOrganizationsByIds', () => {
+    it('returns an empty array without querying when no ids are provided', async () => {
+      const result = await OrganizationDAO.readOrganizationsByIds([]);
+
+      expect(OrganizationModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('reads organizations for the provided ids', async () => {
+      (OrganizationModel.find as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([
+          {
+            toObject: () => mockOrganization,
+          },
+        ]),
+      );
+
+      const result = await OrganizationDAO.readOrganizationsByIds(['org-1', 'org-2']);
+
+      expect(OrganizationModel.find).toHaveBeenCalledWith({ orgId: { $in: ['org-1', 'org-2'] } });
+      expect(result).toEqual([mockOrganization]);
+    });
+
+    it('wraps unknown errors', async () => {
+      (OrganizationModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(OrganizationDAO.readOrganizationsByIds(['org-1'])).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });
@@ -196,11 +243,43 @@ describe('OrganizationDAO', () => {
       expect(result).toEqual(mockOrganization);
     });
 
+    it('does not overwrite existing fields with undefined values', async () => {
+      const existingOrganization = {
+        ...mockOrganization,
+        description: 'Existing description',
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: () => ({ ...mockOrganization, description: 'Existing description' }),
+      };
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(existingOrganization));
+
+      await OrganizationDAO.updateOrganization({
+        orgId: 'org-1',
+        name: 'Updated Org',
+        description: undefined,
+      });
+
+      expect(existingOrganization.description).toBe('Existing description');
+      expect(existingOrganization.name).toBe('Updated Org');
+    });
+
     it('throws not found error', async () => {
       (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
       await expect(OrganizationDAO.updateOrganization({ orgId: 'missing' })).rejects.toThrow(
         CustomError('Organization with id missing not found', ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('wraps save errors after the document is found', async () => {
+      const organization = {
+        ...mockOrganization,
+        save: jest.fn().mockRejectedValue(new MockMongoError(0)),
+        toObject: () => mockOrganization,
+      };
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(organization));
+
+      await expect(OrganizationDAO.updateOrganization({ orgId: 'org-1', name: 'Updated Org' })).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });
 

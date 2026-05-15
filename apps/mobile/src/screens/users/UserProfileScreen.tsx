@@ -1,10 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ApolloError, useQuery } from '@apollo/client';
+import { ApolloError, useApolloClient, useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { FollowTargetType, SortOrderInput } from '@data/graphql/types/graphql';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import { GetUserEventMomentsDocument } from '@data/graphql/query/EventMoment/query';
+import type { MobileUserEventMoment } from '@data/graphql/query/EventMoment/types';
 import { GetUserProfileByIdDocument } from '@data/graphql/query/User/query';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
@@ -18,11 +20,15 @@ import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { StateNotice } from '@/components/core/StateNotice';
 import { DetailSection } from '@/components/details/DetailSection';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
+import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
+import { MomentViewer } from '@/components/moments/MomentViewer';
 import { AccountScreenSkeleton } from '@/components/skeleton/AccountScreenSkeleton';
+import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { useUserEventOccurrences } from '@/hooks/events/useUserEventOccurrences';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
+import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { getApolloAuthContext } from '@/lib/auth';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -61,8 +67,11 @@ export function UserProfileScreen() {
   const route = useRoute<UserProfileRoute>();
   const { authToken, isAuthenticated, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
+  const apolloClient = useApolloClient();
   const { userId, username: routeUsername, displayName: routeDisplayName, avatarUrl } = route.params;
   const isOwnProfile = viewerUserId === userId;
+  const [fallbackMoments, setFallbackMoments] = useState<MobileUserEventMoment[]>([]);
+  const [momentsOpen, setMomentsOpen] = useState(false);
   const { data, error, loading, refetch } = useQuery(GetUserProfileByIdDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -98,10 +107,15 @@ export function UserProfileScreen() {
     occurrences: participantOccurrences,
     refetch: refetchParticipantOccurrences,
   } = useUserEventOccurrences(userId, authToken);
+  const {
+    loading: userMomentsLoading,
+    moments: userMoments,
+    refetch: refetchUserMoments,
+  } = useUserMoments(userId, authToken);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await Promise.all([refetch(), refetchEvents(), refetchParticipantOccurrences()]);
-    }, [refetch, refetchEvents, refetchParticipantOccurrences]),
+      await Promise.all([refetch(), refetchEvents(), refetchParticipantOccurrences(), refetchUserMoments()]);
+    }, [refetch, refetchEvents, refetchParticipantOccurrences, refetchUserMoments]),
   );
 
   const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || 'Gatherle member';
@@ -143,6 +157,17 @@ export function UserProfileScreen() {
     }),
     [occurrences, pastEvents, upcomingRsvpEvents],
   );
+  const candidateMomentEventIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          [...occurrences, ...participantOccurrences]
+            .map((occurrence) => occurrence.eventSeries?.eventId ?? occurrence.eventSeriesId)
+            .filter((eventId): eventId is string => Boolean(eventId)),
+        ),
+      ].slice(0, 8),
+    [occurrences, participantOccurrences],
+  );
   const profileRoutes = useMemo(
     () =>
       (
@@ -176,6 +201,67 @@ export function UserProfileScreen() {
   );
   const shouldShowEventActivityError =
     Boolean(eventsError) || (Boolean(participantEventsError) && !participantActivityUnsupported);
+  const visibleUserMoments = userMoments.length > 0 ? userMoments : fallbackMoments;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (
+      !userId ||
+      !authToken ||
+      !isAuthenticated ||
+      userMomentsLoading ||
+      userMoments.length > 0 ||
+      candidateMomentEventIds.length === 0
+    ) {
+      setFallbackMoments([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      const results = await Promise.all(
+        candidateMomentEventIds.map((eventId) =>
+          apolloClient
+            .query({
+              fetchPolicy: 'network-only',
+              query: GetUserEventMomentsDocument,
+              variables: { eventId, userId },
+              ...getApolloAuthContext(authToken),
+            })
+            .catch(() => null),
+        ),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const mergedMoments = [
+        ...new Map(
+          results
+            .flatMap((result) => result?.data?.readUserEventMoments ?? [])
+            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+            .map((moment) => [moment.momentId, moment]),
+        ).values(),
+      ];
+
+      setFallbackMoments(mergedMoments);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    apolloClient,
+    authToken,
+    candidateMomentEventIds,
+    isAuthenticated,
+    userId,
+    userMoments.length,
+    userMomentsLoading,
+  ]);
 
   const handleFollowPress = () => {
     if (isOwnProfile) {
@@ -239,7 +325,11 @@ export function UserProfileScreen() {
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <View style={styles.profileHeaderSection}>
         <View style={styles.profileTopRow}>
-          <ProfileAvatar imageUrl={profile.profile_picture ?? avatarUrl} label={profileName} size={88} />
+          {visibleUserMoments.length > 0 ? (
+            <MomentAvatarTrigger author={profile} label={profileName} onPress={() => setMomentsOpen(true)} size={88} />
+          ) : (
+            <ProfileAvatar imageUrl={profile.profile_picture ?? avatarUrl} label={profileName} size={88} />
+          )}
 
           <View style={styles.profileTopRail}>
             <View style={styles.profileIdentityRow}>
@@ -345,6 +435,10 @@ export function UserProfileScreen() {
       ) : (
         <SwipePagerTabs routes={profileRoutes} variant="icon" />
       )}
+
+      {momentsOpen && (
+        <MomentViewer moments={visibleUserMoments} onClose={() => setMomentsOpen(false)} open startIndex={0} />
+      )}
     </PageContainer>
   );
 }
@@ -361,7 +455,7 @@ function PublicProfileTabPane({
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
 }) {
   if (loading && occurrences.length === 0) {
-    return <StateNotice message="Loading event activity..." />;
+    return <EventTileGridSkeleton count={6} />;
   }
 
   if (!occurrences.length) {

@@ -51,6 +51,7 @@ jest.mock('@/mongodb/dao', () => ({
     create: jest.fn(),
     readById: jest.fn(),
     readByEvent: jest.fn(),
+    readByAuthor: jest.fn(),
     readByAuthorAndEvent: jest.fn(),
     readFollowedStatuses: jest.fn(),
     countRecentByAuthor: jest.fn(),
@@ -693,6 +694,74 @@ describe('EventMomentService', () => {
       const result = await EventMomentService.readUserMoments('unknown-user', 'event-1', 'user-1');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('readUserMomentsFeed', () => {
+    const publicUser = { userId: 'user-2', followPolicy: 'Open' };
+    const privateUser = { userId: 'user-2', followPolicy: 'RequireApproval' };
+
+    beforeEach(() => {
+      const page: EventMomentPage = { items: [mockMoment], hasMore: false };
+      (EventMomentDAO.readByAuthor as jest.Mock).mockResolvedValue(page);
+    });
+
+    it('own profile passes includePending=true to the DAO', async () => {
+      await EventMomentService.readUserMomentsFeed('user-1', 'user-1');
+
+      expect(EventMomentDAO.readByAuthor).toHaveBeenCalledWith('user-1', true, undefined, undefined);
+    });
+
+    it('public profile passes includePending=false to the DAO', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(publicUser);
+
+      const result = await EventMomentService.readUserMomentsFeed('user-2', 'user-1');
+
+      expect(EventMomentDAO.readByAuthor).toHaveBeenCalledWith('user-2', false, undefined, undefined);
+      expect(result).toEqual({ items: [mockMoment], hasMore: false });
+    });
+
+    it('private profile with accepted follow returns moments', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(privateUser);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'user-2',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+
+      const result = await EventMomentService.readUserMomentsFeed('user-2', 'user-1');
+
+      expect(result).toEqual({ items: [mockMoment], hasMore: false });
+    });
+
+    it('private profile with no follow returns empty page silently', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(privateUser);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
+
+      const result = await EventMomentService.readUserMomentsFeed('user-2', 'user-1');
+
+      expect(result).toEqual({ items: [], hasMore: false });
+      expect(EventMomentDAO.readByAuthor).not.toHaveBeenCalled();
+    });
+
+    it('private profile with anonymous viewer returns empty page', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(privateUser);
+
+      const result = await EventMomentService.readUserMomentsFeed('user-2');
+
+      expect(result).toEqual({ items: [], hasMore: false });
+      expect(EventMomentDAO.readByAuthor).not.toHaveBeenCalled();
+    });
+
+    it('returns empty page silently when target user is not found', async () => {
+      (UserDAO.readUserById as jest.Mock).mockRejectedValue(new Error('not found'));
+
+      const result = await EventMomentService.readUserMomentsFeed('unknown-user', 'user-1');
+
+      expect(result).toEqual({ items: [], hasMore: false });
+      expect(EventMomentDAO.readByAuthor).not.toHaveBeenCalled();
     });
   });
 

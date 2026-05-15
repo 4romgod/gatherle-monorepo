@@ -57,7 +57,7 @@ export function CommunityMemberRow({
       </View>
 
       {primaryActionLabel && onPressPrimaryAction ? (
-        <InlineButton label={primaryActionLabel} onPress={onPressPrimaryAction} tone={actionTone} />
+        <InlineButton compact label={primaryActionLabel} onPress={onPressPrimaryAction} tone={actionTone} />
       ) : null}
     </Pressable>
   );
