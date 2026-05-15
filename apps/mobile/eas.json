@@ -17,7 +17,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_GRAPHQL_URL": "https://api.beta.af-south-1.gatherle.com/graphql"
+        "EXPO_PUBLIC_GRAPHQL_URL": "https://api.beta.af-south-1.gatherle.com/graphql",
+        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://ws.beta.af-south-1.gatherle.com"
       },
       "android": {
         "buildType": "apk"

@@ -20,6 +20,20 @@ export type RootStackParamList = {
   Community: undefined;
   Organizations: undefined;
   Venues: undefined;
+  OrganizationDetails: {
+    orgId: string;
+    orgName?: string;
+  };
+  VenueDetails: {
+    venueId: string;
+    venueName?: string;
+  };
+  UserProfile: {
+    userId: string;
+    username?: string | null;
+    displayName?: string;
+    avatarUrl?: string | null;
+  };
   EventDetails: {
     occurrence: MobileEventOccurrence;
   };
@@ -145,6 +159,24 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     title: 'Venues',
     description: 'Venue discovery, nearby spots, and location-specific event browsing will live on this route.',
     category: 'discover',
+  },
+  OrganizationDetails: {
+    sectionLabel: 'Communities',
+    title: 'Organization details',
+    description: 'This route holds the public organization story, follower state, and hosted events on mobile.',
+    category: 'discover',
+  },
+  VenueDetails: {
+    sectionLabel: 'Places',
+    title: 'Venue details',
+    description: 'This route holds venue context, maps actions, and events happening at that location.',
+    category: 'discover',
+  },
+  UserProfile: {
+    sectionLabel: 'Social',
+    title: 'User profile',
+    description: 'This route shows a public member profile with follow, message, and visible activity surfaces.',
+    category: 'social',
   },
   EventDetails: {
     sectionLabel: 'Discover',

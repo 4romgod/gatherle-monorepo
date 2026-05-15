@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { DateFilterOption, EventCategory, EventStatus } from '@data/graphql/types/graphql';
 import { FilterChip } from '@/components/core/FilterChip';
@@ -108,6 +109,18 @@ export function EventsFilterSheet({
     onClearAll();
   };
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, { dy }) => dy > 5,
+      onPanResponderRelease: (_, { dy, vy }) => {
+        if (dy > 80 || vy > 0.5) {
+          handleClose();
+        }
+      },
+    }),
+  ).current;
+
   const inputStyle = [
     styles.locationInput,
     {
@@ -119,156 +132,169 @@ export function EventsFilterSheet({
 
   return (
     <Modal animationType="slide" onRequestClose={handleClose} transparent visible={visible}>
-      <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.3)' }]}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <SafeAreaView style={[styles.sheet, { backgroundColor: theme.colors.background }]}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-              <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Filters</Text>
-              <Pressable hitSlop={8} onPress={handleClose} style={styles.closeButton}>
-                <Feather color={theme.colors.textPrimary} name="x" size={22} />
-              </Pressable>
-            </View>
-
-            {/* Body */}
-            <ScrollView
-              contentContainerStyle={styles.body}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Categories */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>CATEGORIES</Text>
-                <View style={styles.chipWrap}>
-                  {categories.map((cat) => (
-                    <FilterChip
-                      active={draft.categories.includes(cat.name)}
-                      key={cat.eventCategoryId}
-                      label={cat.name}
-                      onPress={() => onToggleCategory(cat.name)}
-                      small
-                    />
-                  ))}
-                </View>
+      <Pressable style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.3)' }]} onPress={handleClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.sheetWrapper}
+          keyboardVerticalOffset={0}
+        >
+          <Pressable onPress={() => {}} style={styles.sheetTouchBlock}>
+            <SafeAreaView style={[styles.sheet, { backgroundColor: theme.colors.background }]}>
+              <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
+                <View style={[styles.dragHandle, { backgroundColor: theme.colors.border }]} />
+              </View>
+              {/* Header */}
+              <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+                <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Filters</Text>
+                <Pressable hitSlop={8} onPress={handleClose} style={styles.closeButton}>
+                  <Feather color={theme.colors.textPrimary} name="x" size={22} />
+                </Pressable>
               </View>
 
-              {/* Divider */}
-              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-
-              {/* Status */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>STATUS</Text>
-                <View style={styles.chipRow}>
-                  {STATUS_OPTIONS.map((opt) => (
-                    <FilterChip
-                      active={draft.statuses.includes(opt.value)}
-                      key={opt.value}
-                      label={opt.label}
-                      onPress={() => onToggleStatus(opt.value)}
-                      small
-                      tone={draft.statuses.includes(opt.value) ? opt.tone : 'primary'}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Divider */}
-              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-
-              {/* Date */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>DATE</Text>
-                <View style={styles.chipWrap}>
-                  {DATE_OPTIONS.map((opt) => (
-                    <FilterChip
-                      active={draft.dateOption === opt.value}
-                      key={opt.value}
-                      label={opt.label}
-                      onPress={() => onSetDateOption(draft.dateOption === opt.value ? null : opt.value)}
-                      small
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Divider */}
-              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-
-              {/* Location */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>LOCATION</Text>
-                <View style={styles.locationFields}>
-                  <TextInput
-                    onChangeText={setLocalCity}
-                    placeholder="City"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={inputStyle}
-                    value={localCity}
-                  />
-                  <TextInput
-                    onChangeText={setLocalState}
-                    placeholder="State / Province"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={inputStyle}
-                    value={localState}
-                  />
-                  <TextInput
-                    onChangeText={setLocalCountry}
-                    placeholder="Country"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={inputStyle}
-                    value={localCountry}
-                  />
-                  <View style={styles.locationActions}>
-                    <Pressable onPress={handleClearLocation} style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
-                      <Text style={[styles.locationActionText, { color: theme.colors.textSecondary }]}>
-                        Clear location
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={!locationDirty && !hasLocation}
-                      onPress={handleApplyLocation}
-                      style={({ pressed }) => [
-                        styles.locationApplyButton,
-                        {
-                          backgroundColor:
-                            locationDirty || hasLocation ? theme.colors.surfaceRaised : theme.colors.surfaceMuted,
-                          opacity: pressed ? 0.8 : 1,
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.locationActionText, { color: theme.colors.textPrimary }]}>
-                        Apply location
-                      </Text>
-                    </Pressable>
+              {/* Body */}
+              <ScrollView
+                contentContainerStyle={styles.body}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                style={styles.scrollArea}
+              >
+                {/* Categories */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>CATEGORIES</Text>
+                  <View style={styles.chipWrap}>
+                    {categories.map((cat) => (
+                      <FilterChip
+                        active={draft.categories.includes(cat.name)}
+                        key={cat.eventCategoryId}
+                        label={cat.name}
+                        onPress={() => onToggleCategory(cat.name)}
+                        small
+                      />
+                    ))}
                   </View>
                 </View>
-              </View>
-            </ScrollView>
 
-            {/* Bottom bar */}
-            <View
-              style={[
-                styles.bottomBar,
-                { borderTopColor: theme.colors.border, backgroundColor: theme.colors.background },
-              ]}
-            >
-              <Pressable onPress={handleClearAll} style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
-                <Text style={[styles.clearAllText, { color: theme.colors.textSecondary }]}>Clear all</Text>
-              </Pressable>
-              <Pressable
-                onPress={onApply}
-                style={({ pressed }) => [
-                  styles.showResultsButton,
-                  { backgroundColor: theme.colors.primary, opacity: pressed ? 0.88 : 1 },
+                {/* Divider */}
+                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+                {/* Status */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>STATUS</Text>
+                  <View style={styles.chipRow}>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <FilterChip
+                        active={draft.statuses.includes(opt.value)}
+                        key={opt.value}
+                        label={opt.label}
+                        onPress={() => onToggleStatus(opt.value)}
+                        small
+                        tone={draft.statuses.includes(opt.value) ? opt.tone : 'primary'}
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                {/* Divider */}
+                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+                {/* Date */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>DATE</Text>
+                  <View style={styles.chipWrap}>
+                    {DATE_OPTIONS.map((opt) => (
+                      <FilterChip
+                        active={draft.dateOption === opt.value}
+                        key={opt.value}
+                        label={opt.label}
+                        onPress={() => onSetDateOption(draft.dateOption === opt.value ? null : opt.value)}
+                        small
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                {/* Divider */}
+                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+                {/* Location */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>LOCATION</Text>
+                  <View style={styles.locationFields}>
+                    <TextInput
+                      onChangeText={setLocalCity}
+                      placeholder="City"
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={inputStyle}
+                      value={localCity}
+                    />
+                    <TextInput
+                      onChangeText={setLocalState}
+                      placeholder="State / Province"
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={inputStyle}
+                      value={localState}
+                    />
+                    <TextInput
+                      onChangeText={setLocalCountry}
+                      placeholder="Country"
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={inputStyle}
+                      value={localCountry}
+                    />
+                    <View style={styles.locationActions}>
+                      <Pressable
+                        onPress={handleClearLocation}
+                        style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                      >
+                        <Text style={[styles.locationActionText, { color: theme.colors.textSecondary }]}>
+                          Clear location
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        disabled={!locationDirty && !hasLocation}
+                        onPress={handleApplyLocation}
+                        style={({ pressed }) => [
+                          styles.locationApplyButton,
+                          {
+                            backgroundColor:
+                              locationDirty || hasLocation ? theme.colors.surfaceRaised : theme.colors.surfaceMuted,
+                            opacity: pressed ? 0.8 : 1,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.locationActionText, { color: theme.colors.textPrimary }]}>
+                          Apply location
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Bottom bar */}
+              <View
+                style={[
+                  styles.bottomBar,
+                  { borderTopColor: theme.colors.border, backgroundColor: theme.colors.background },
                 ]}
               >
-                <Text style={[styles.showResultsText, { color: theme.colors.primaryContrast }]}>Show results</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
+                <Pressable onPress={handleClearAll} style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
+                  <Text style={[styles.clearAllText, { color: theme.colors.textSecondary }]}>Clear all</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onApply}
+                  style={({ pressed }) => [
+                    styles.showResultsButton,
+                    { backgroundColor: theme.colors.primary, opacity: pressed ? 0.88 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.showResultsText, { color: theme.colors.primaryContrast }]}>Show results</Text>
+                </Pressable>
+              </View>
+            </SafeAreaView>
+          </Pressable>
         </KeyboardAvoidingView>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
@@ -277,6 +303,16 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  dragHandle: {
+    borderRadius: 999,
+    height: 4,
+    width: 40,
+  },
+  dragHandleArea: {
+    alignItems: 'center',
+    paddingBottom: 8,
+    paddingTop: 12,
   },
   body: {
     gap: 0,
@@ -369,8 +405,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sheetWrapper: {
+    flex: 1,
     justifyContent: 'flex-end',
     maxHeight: '85%',
+  },
+  sheetTouchBlock: {
+    flex: 1,
+  },
+  scrollArea: {
+    flex: 1,
   },
   showResultsButton: {
     borderRadius: 999,

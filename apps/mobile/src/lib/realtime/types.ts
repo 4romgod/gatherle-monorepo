@@ -3,7 +3,7 @@ export type RealtimeCloseEvent = {
   reason?: string;
 };
 
-export type RealtimeWebsocketSource = 'explicit' | 'derived-local' | 'missing';
+export type RealtimeWebsocketSource = 'explicit' | 'derived-local' | 'derived-remote' | 'missing';
 
 export interface SharedRealtimeSubscriber {
   enabled: boolean;

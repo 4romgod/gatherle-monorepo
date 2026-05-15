@@ -1,5 +1,5 @@
 import type { ApolloError } from '@apollo/client';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
@@ -11,8 +11,11 @@ import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
+import { NotificationRowSkeleton } from '@/components/skeleton/NotificationRowSkeleton';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
 import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -39,6 +42,11 @@ export function NotificationsScreen() {
     rejectFollowRequest,
     unreadCount,
   } = useNotifications(authToken, isAuthenticated);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   useEffect(() => {
     if (!hasLiveSession || !error) {
@@ -115,16 +123,24 @@ export function NotificationsScreen() {
   }
 
   return (
-    <PageContainer>
-      <PageHeading
-        subtitle={
-          unreadCount > 0 ? `${unreadCount} unread updates waiting for you.` : 'Everything new in one timeline.'
-        }
-        title="Notifications"
-      />
-
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       {loading && feedItems.length === 0 ? (
-        <StateNotice message="Loading your notifications..." />
+        <View style={styles.feed}>
+          <View style={styles.group}>
+            <SkeletonBlock style={styles.groupTitleSkeleton} />
+            <View style={styles.groupItems}>
+              <NotificationRowSkeleton />
+              <NotificationRowSkeleton />
+            </View>
+          </View>
+          <View style={styles.group}>
+            <SkeletonBlock style={styles.groupTitleSkeleton} />
+            <View style={styles.groupItems}>
+              <NotificationRowSkeleton withActions={false} />
+              <NotificationRowSkeleton />
+            </View>
+          </View>
+        </View>
       ) : error ? (
         <StateNotice
           actionLabel="Retry"
@@ -220,5 +236,9 @@ const styles = StyleSheet.create({
   groupTitle: {
     ...typography.bodySemiBold,
     fontSize: 12,
+  },
+  groupTitleSkeleton: {
+    height: 12,
+    width: 84,
   },
 });

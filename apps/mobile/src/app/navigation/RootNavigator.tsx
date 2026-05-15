@@ -29,7 +29,10 @@ import { MessageThreadScreen } from '@/screens/messages/MessageThreadScreen';
 import { MessagesScreen } from '@/screens/messages/MessagesScreen';
 import { NotificationsScreen } from '@/screens/notifications/NotificationsScreen';
 import { OrganizationsScreen } from '@/screens/organizations/OrganizationsScreen';
+import { OrganizationDetailsScreen } from '@/screens/organizations/OrganizationDetailsScreen';
+import { UserProfileScreen } from '@/screens/users/UserProfileScreen';
 import { VenuesScreen } from '@/screens/venues/VenuesScreen';
+import { VenueDetailsScreen } from '@/screens/venues/VenueDetailsScreen';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontFamily, fontSize } from '@/shared/theme/typography';
 import { DetailRouteName, MainTabParamList, RootStackParamList, authRouteNames } from './routes';
@@ -144,6 +147,30 @@ export function RootNavigator() {
         options={{ presentation: 'card', title: 'Organizations' }}
       />
       <Stack.Screen component={VenuesScreen} name="Venues" options={{ presentation: 'card', title: 'Venues' }} />
+      <Stack.Screen
+        component={OrganizationDetailsScreen}
+        name="OrganizationDetails"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.orgName ?? 'Organization',
+        })}
+      />
+      <Stack.Screen
+        component={VenueDetailsScreen}
+        name="VenueDetails"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.venueName ?? 'Venue',
+        })}
+      />
+      <Stack.Screen
+        component={UserProfileScreen}
+        name="UserProfile"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.displayName ?? route.params.username ?? 'Profile',
+        })}
+      />
       <Stack.Screen
         component={EventDetailsScreen}
         name="EventDetails"

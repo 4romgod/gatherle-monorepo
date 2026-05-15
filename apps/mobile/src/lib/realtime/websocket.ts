@@ -43,12 +43,26 @@ function isLocalHostname(hostname: string): boolean {
   );
 }
 
+function deriveGatherleRemoteWebsocketUrl(parsedUrl: URL): string | null {
+  const graphQlHostname = parsedUrl.hostname;
+
+  if (!graphQlHostname.startsWith('api.')) {
+    return null;
+  }
+
+  const websocketHostname = `ws.${graphQlHostname.slice('api.'.length)}`;
+  const protocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  const websocketUrl = new URL(`${protocol}//${websocketHostname}`);
+
+  return websocketUrl.toString().replace(/\/$/, '');
+}
+
 export function resolveMobileWebsocketBaseUrl(
   explicitValue?: string | null,
   graphQlUrl?: string | null,
 ): {
   websocketBaseUrl: string | null;
-  websocketSource: 'explicit' | 'derived-local' | 'missing';
+  websocketSource: 'explicit' | 'derived-local' | 'derived-remote' | 'missing';
 } {
   const normalizedExplicit = normalizeWebSocketBaseUrl(explicitValue ?? '');
   if (normalizedExplicit) {
@@ -68,9 +82,11 @@ export function resolveMobileWebsocketBaseUrl(
   try {
     const parsedUrl = new URL(graphQlUrl);
     if (!isLocalHostname(parsedUrl.hostname)) {
+      const remoteWebsocketUrl = deriveGatherleRemoteWebsocketUrl(parsedUrl);
+
       return {
-        websocketBaseUrl: null,
-        websocketSource: 'missing',
+        websocketBaseUrl: remoteWebsocketUrl,
+        websocketSource: remoteWebsocketUrl ? 'derived-remote' : 'missing',
       };
     }
 

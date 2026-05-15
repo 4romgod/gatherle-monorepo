@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -27,6 +27,7 @@ export function AccountScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, isAuthenticated, userId, username } = useAppShell();
   const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
   const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const {
     error: profileError,
@@ -40,6 +41,7 @@ export function AccountScreen() {
     [trendingEvents, upcomingEvents],
   );
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
+  const profileTileSize = useMemo(() => Math.floor((width - 40 - 12) / 3), [width]);
 
   const eventCollections = useMemo<Record<AccountTab, MobileEventOccurrence[]>>(
     () => ({
@@ -84,10 +86,11 @@ export function AccountScreen() {
             loading={loading}
             onPressEvent={(occurrence) => navigation.navigate('EventDetails', { occurrence })}
             occurrences={eventCollections[route.key]}
+            tileSize={profileTileSize}
           />
         ),
       })),
-    [eventCollections, loading, navigation],
+    [eventCollections, loading, navigation, profileTileSize],
   );
 
   if (!isAuthenticated) {
@@ -197,11 +200,13 @@ function AccountTabPane({
   loading,
   occurrences,
   onPressEvent,
+  tileSize,
 }: {
   emptyMessage: string;
   loading: boolean;
   occurrences: MobileEventOccurrence[];
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
+  tileSize: number;
 }) {
   if (loading && occurrences.length === 0) {
     return <StateNotice message="Loading your account activity..." />;
@@ -214,7 +219,12 @@ function AccountTabPane({
   return (
     <View style={styles.profileEventGrid}>
       {occurrences.map((event) => (
-        <ProfileEventTile key={event.occurrenceId} occurrence={event} onPress={() => onPressEvent(event)} />
+        <ProfileEventTile
+          key={event.occurrenceId}
+          occurrence={event}
+          onPress={() => onPressEvent(event)}
+          size={tileSize}
+        />
       ))}
     </View>
   );

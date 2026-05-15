@@ -1,21 +1,27 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { EventCard } from '@/components/events/EventCard';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
+import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
 
 export function MyEventsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   const goingEvents = useMemo(
     () => upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status).slice(0, 6),
@@ -43,7 +49,6 @@ export function MyEventsScreen() {
   if (!isAuthenticated) {
     return (
       <PageContainer>
-        <PageHeading title="My events" />
         <AuthPromptCard
           description="Sign in to manage the events you’re attending, hosting, and saving."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -57,14 +62,28 @@ export function MyEventsScreen() {
   }
 
   return (
-    <PageContainer>
-      <PageHeading
-        subtitle="Keep an eye on what you’re attending, saving, and putting into the world."
-        title="My events"
-      />
-
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       {loading && goingEvents.length === 0 && savedEvents.length === 0 && hostingEvents.length === 0 ? (
-        <StateNotice message="Loading your event activity..." />
+        <View style={styles.sections}>
+          <View style={styles.section}>
+            <SectionHeading title="Going" />
+            <View style={styles.list}>
+              <EventCardSkeleton />
+            </View>
+          </View>
+          <View style={styles.section}>
+            <SectionHeading title="Saved" />
+            <View style={styles.list}>
+              <EventCardSkeleton />
+            </View>
+          </View>
+          <View style={styles.section}>
+            <SectionHeading title="Hosting" />
+            <View style={styles.list}>
+              <EventCardSkeleton />
+            </View>
+          </View>
+        </View>
       ) : error ? (
         <StateNotice actionLabel="Retry" message="We couldn’t load your events." onPressAction={() => void refetch()} />
       ) : (

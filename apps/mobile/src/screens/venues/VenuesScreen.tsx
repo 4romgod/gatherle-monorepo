@@ -1,22 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useQuery } from '@apollo/client';
+import { useNavigation } from '@react-navigation/native';
 import { GetVenuesDocument } from '@data/graphql/query/Venue/query';
+import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
+import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton';
 import { VenueListItem } from '@/components/venues/VenueListItem';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { getApolloAuthContext } from '@/lib/auth';
 
 export function VenuesScreen() {
+  const navigation = useNavigation<DetailNavigation>();
   const { authToken } = useAppShell();
   const { data, error, loading, refetch } = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
   });
   const [query, setQuery] = useState('');
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   const venues = data?.readVenues ?? [];
   const filteredVenues = useMemo(() => {
@@ -40,21 +49,30 @@ export function VenuesScreen() {
   }, [query, venues]);
 
   return (
-    <PageContainer>
-      <PageHeading
-        subtitle="Browse place-based hosts, event-ready venues, and the locations powering the Gatherle map."
-        title="Venues"
-      />
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <SearchField onChangeText={setQuery} placeholder="Search venues" value={query} />
 
       {loading && filteredVenues.length === 0 ? (
-        <StateNotice message="Loading venues..." />
+        <View style={styles.list}>
+          <DirectoryRowSkeleton avatarShape="rounded" avatarSize={66} showTrailing trailingWidth={54} />
+          <DirectoryRowSkeleton avatarShape="rounded" avatarSize={66} showTrailing trailingWidth={54} />
+          <DirectoryRowSkeleton avatarShape="rounded" avatarSize={66} showTrailing trailingWidth={54} />
+        </View>
       ) : error ? (
         <StateNotice actionLabel="Retry" message="We couldn’t load venues." onPressAction={() => void refetch()} />
       ) : filteredVenues.length > 0 ? (
         <View style={styles.list}>
           {filteredVenues.map((venue) => (
-            <VenueListItem key={venue.venueId} venue={venue} />
+            <VenueListItem
+              key={venue.venueId}
+              onPress={() =>
+                navigation.navigate('VenueDetails', {
+                  venueId: venue.venueId,
+                  venueName: venue.name,
+                })
+              }
+              venue={venue}
+            />
           ))}
         </View>
       ) : (

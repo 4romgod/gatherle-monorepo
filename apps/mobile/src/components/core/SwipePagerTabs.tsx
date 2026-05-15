@@ -30,6 +30,8 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
   const routeIndex = useMemo(() => routes.findIndex((route) => route.key === initialKey), [initialKey, routes]);
   const [activeIndex, setActiveIndex] = useState(routeIndex >= 0 ? routeIndex : 0);
   const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
+  const [containerWidth, setContainerWidth] = useState(width);
+  const pageWidth = containerWidth || width;
 
   useEffect(() => {
     if (routeIndex < 0 || routeIndex === activeIndex) {
@@ -37,19 +39,19 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
     }
 
     setActiveIndex(routeIndex);
-    pagerRef.current?.scrollTo({ animated: false, x: width * routeIndex });
-  }, [activeIndex, routeIndex, width]);
+    pagerRef.current?.scrollTo({ animated: false, x: pageWidth * routeIndex });
+  }, [activeIndex, pageWidth, routeIndex]);
 
   const pagerHeight = routes.reduce((maxHeight, route) => Math.max(maxHeight, measuredHeights[route.key] ?? 0), 0);
 
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
     setActiveIndex(Math.max(0, Math.min(nextIndex, routes.length - 1)));
   };
 
   const handleTabPress = (index: number) => {
     setActiveIndex(index);
-    pagerRef.current?.scrollTo({ animated: true, x: width * index });
+    pagerRef.current?.scrollTo({ animated: true, x: pageWidth * index });
   };
 
   const handleLayout = (key: string) => (event: LayoutChangeEvent) => {
@@ -57,8 +59,20 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
     setMeasuredHeights((current) => (current[key] === nextHeight ? current : { ...current, [key]: nextHeight }));
   };
 
+  const handleContainerLayout = (event: LayoutChangeEvent) => {
+    const nextWidth = Math.ceil(event.nativeEvent.layout.width);
+    if (!nextWidth || nextWidth === containerWidth) {
+      return;
+    }
+
+    setContainerWidth(nextWidth);
+    requestAnimationFrame(() => {
+      pagerRef.current?.scrollTo({ animated: false, x: nextWidth * activeIndex });
+    });
+  };
+
   return (
-    <View style={styles.wrap}>
+    <View onLayout={handleContainerLayout} style={styles.wrap}>
       <View style={[styles.tabRow, { borderBottomColor: theme.colors.border }]}>
         {routes.map((route, index) => {
           const active = activeIndex === index;
@@ -80,7 +94,6 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
                     styles.iconFrame,
                     {
                       backgroundColor: active ? theme.colors.primarySoft : 'transparent',
-                      borderColor: active ? theme.colors.primary : 'transparent',
                     },
                   ]}
                 >
@@ -119,7 +132,7 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
         style={[styles.pager, pagerHeight > 0 ? { height: pagerHeight } : null]}
       >
         {routes.map((route) => (
-          <View key={route.key} onLayout={handleLayout(route.key)} style={[styles.page, { width }]}>
+          <View key={route.key} onLayout={handleLayout(route.key)} style={[styles.page, { width: pageWidth }]}>
             {route.render()}
           </View>
         ))}
@@ -135,7 +148,6 @@ const styles = StyleSheet.create({
   iconFrame: {
     alignItems: 'center',
     borderRadius: 12,
-    borderWidth: 1,
     height: 34,
     justifyContent: 'center',
     width: 46,
@@ -148,10 +160,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   page: {
-    paddingTop: 14,
+    paddingTop: 22,
   },
   pager: {
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   tabButton: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery } from '@apollo/client';
 import { CreateEventDocument } from '@data/graphql/mutation/Event/mutation';
 import { GetMyOrganizationsDocument } from '@data/graphql/query/Organization/query';
@@ -19,8 +19,9 @@ import { AccountChoiceChip } from '@/components/account/shared/AccountChoiceChip
 import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import { AccountStatusBanner } from '@/components/account/shared/AccountStatusBanner';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
-import { PageHeading } from '@/components/core/PageHeading';
+import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { getApolloAuthContext } from '@/lib/auth';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -58,24 +59,29 @@ export function CreateEventScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { theme } = useAppTheme();
-  const { categories } = useMobileHomeDiscovery(authToken);
-  const { data: organizationsData } = useQuery(GetMyOrganizationsDocument, {
+  const { categories, refetch: refetchDiscovery } = useMobileHomeDiscovery(authToken);
+  const organizationsQuery = useQuery(GetMyOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
     skip: !authToken || !isAuthenticated,
     ...getApolloAuthContext(authToken),
   });
-  const { data: venuesData } = useQuery(GetVenuesDocument, {
+  const venuesQuery = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [formState, setFormState] = useState<EventFormState>(initialFormState);
   const [statusMessage, setStatusMessage] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await Promise.all([refetchDiscovery(), organizationsQuery.refetch(), venuesQuery.refetch()]);
+    }, [organizationsQuery, refetchDiscovery, venuesQuery]),
+  );
 
   const [createEvent, { loading }] = useMutation(CreateEventDocument, getApolloAuthContext(authToken));
 
-  const eligibleOrganizations = organizationsData?.readMyOrganizations ?? [];
-  const venues = venuesData?.readVenues ?? [];
+  const eligibleOrganizations = organizationsQuery.data?.readMyOrganizations ?? [];
+  const venues = venuesQuery.data?.readVenues ?? [];
   const selectedVenue = venues.find((venue) => venue.venueId === formState.venueId);
 
   const isFormValid = Boolean(
@@ -207,8 +213,7 @@ export function CreateEventScreen() {
 
   if (!isAuthenticated) {
     return (
-      <ScrollView contentContainerStyle={styles.pageContent} style={{ backgroundColor: theme.colors.background }}>
-        <PageHeading title="Create event" />
+      <PageContainer contentContainerStyle={styles.pageContent}>
         <AuthPromptCard
           description="Sign in to publish events, attach organizations, and manage attendee flow from mobile."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -217,17 +222,12 @@ export function CreateEventScreen() {
           secondaryLabel="Create account"
           title="Host mode starts after sign-in"
         />
-      </ScrollView>
+      </PageContainer>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.pageContent} style={{ backgroundColor: theme.colors.background }}>
-      <PageHeading
-        subtitle="A lighter mobile creation flow for getting a real event live quickly."
-        title="Create event"
-      />
-
+    <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>
       {statusMessage ? <AccountStatusBanner message={statusMessage.message} tone={statusMessage.tone} /> : null}
 
       <View style={styles.section}>
@@ -363,7 +363,7 @@ export function CreateEventScreen() {
       </View>
 
       <AccountPrimaryButton icon="plus-circle" label="Create event" loading={loading} onPress={() => void submit()} />
-    </ScrollView>
+    </PageContainer>
   );
 }
 

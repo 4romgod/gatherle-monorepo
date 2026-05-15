@@ -1,5 +1,5 @@
 import * as Calendar from 'expo-calendar';
-import { Alert, Linking, Platform, Share } from 'react-native';
+import { Linking, Platform, Share } from 'react-native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { formatLocationLabel, getEventTitle } from '@/lib/events/formatters';
 
@@ -24,64 +24,44 @@ function getAddressQuery(occurrence: MobileEventOccurrence) {
   return parts.join(', ') || formatLocationLabel(occurrence);
 }
 
-async function openUrl(url: string) {
-  const supported = await Linking.canOpenURL(url);
-
-  if (!supported) {
-    throw new Error('This app is not available on your device.');
+async function openFirstAvailableUrl(urls: string[]) {
+  for (const url of urls) {
+    if (await Linking.canOpenURL(url)) {
+      await Linking.openURL(url);
+      return;
+    }
   }
 
-  await Linking.openURL(url);
+  throw new Error('No maps app is available on this device.');
 }
 
-export async function openEventLocationInMaps(occurrence: MobileEventOccurrence) {
-  const query = getAddressQuery(occurrence);
-
+export async function openLocationQueryInMaps(query: string) {
   if (!query || query === 'Location to be announced') {
     throw new Error('This event does not have a usable location yet.');
   }
 
   const encodedQuery = encodeURIComponent(query);
-  const options: Array<{ label: string; url: string }> = [];
+  const browserFallback = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+
+  if (Platform.OS === 'web') {
+    await Linking.openURL(browserFallback);
+    return;
+  }
 
   if (Platform.OS === 'ios') {
-    options.push({ label: 'Apple Maps', url: `http://maps.apple.com/?q=${encodedQuery}` });
+    await openFirstAvailableUrl([
+      `maps://?q=${encodedQuery}`,
+      `http://maps.apple.com/?q=${encodedQuery}`,
+      browserFallback,
+    ]);
+    return;
   }
 
-  options.push({ label: 'Google Maps', url: `comgooglemaps://?q=${encodedQuery}` });
-  options.push({ label: 'Waze', url: `waze://?q=${encodedQuery}&navigate=yes` });
-  options.push({ label: 'Browser', url: `https://www.google.com/maps/search/?api=1&query=${encodedQuery}` });
+  await openFirstAvailableUrl([`geo:0,0?q=${encodedQuery}`, `google.navigation:q=${encodedQuery}`, browserFallback]);
+}
 
-  const availableOptions: Array<{ label: string; onPress: () => void; style?: 'cancel' | 'default' }> = [];
-
-  for (const option of options) {
-    if (option.label === 'Browser') {
-      availableOptions.push({
-        label: option.label,
-        onPress: () => {
-          void Linking.openURL(option.url);
-        },
-      });
-      continue;
-    }
-
-    if (await Linking.canOpenURL(option.url)) {
-      availableOptions.push({
-        label: option.label,
-        onPress: () => {
-          void Linking.openURL(option.url);
-        },
-      });
-    }
-  }
-
-  availableOptions.push({
-    label: 'Cancel',
-    onPress: () => {},
-    style: 'cancel',
-  });
-
-  Alert.alert('Open directions', 'Choose a maps app', availableOptions);
+export async function openEventLocationInMaps(occurrence: MobileEventOccurrence) {
+  await openLocationQueryInMaps(getAddressQuery(occurrence));
 }
 
 function formatCalendarDate(date: Date) {
@@ -136,26 +116,10 @@ export async function addEventToCalendar(occurrence: MobileEventOccurrence) {
     return;
   }
 
-  const permission = await Calendar.requestCalendarPermissionsAsync();
-
-  if (permission.status !== 'granted') {
-    throw new Error('Calendar permission is required to save this event.');
-  }
-
-  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  const writableCalendar =
-    calendars.find((calendar) => calendar.allowsModifications && !calendar.isSynced) ||
-    calendars.find((calendar) => calendar.allowsModifications) ||
-    calendars[0];
-
-  if (!writableCalendar) {
-    throw new Error('No writable calendar was found on this device.');
-  }
-
   const startDate = new Date(occurrence.startAt);
   const endDate = occurrence.endAt ? new Date(occurrence.endAt) : new Date(startDate.getTime() + 60 * 60 * 1000);
 
-  await Calendar.createEventAsync(writableCalendar.id, {
+  await Calendar.createEventInCalendarAsync({
     alarms: [{ relativeOffset: -60 }],
     endDate,
     location: getAddressQuery(occurrence),

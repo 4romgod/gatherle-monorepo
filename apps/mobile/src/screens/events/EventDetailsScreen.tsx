@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +41,7 @@ export function EventDetailsScreen() {
   const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
   const participants = getOccurrenceParticipantPreview(occurrence, 6);
   const hostUser = occurrence.eventSeries?.organizers?.[0]?.user;
+  const hostOrganization = occurrence.eventSeries?.organization;
   const hostLabel = occurrence.eventSeries?.organization?.name ?? getDisplayName(hostUser);
   const categories = occurrence.eventSeries?.eventCategories ?? [];
   const description =
@@ -164,6 +165,25 @@ export function EventDetailsScreen() {
     });
   };
 
+  const handleOpenHostProfile = () => {
+    if (hostOrganization?.orgId) {
+      navigation.navigate('OrganizationDetails', {
+        orgId: hostOrganization.orgId,
+        orgName: hostOrganization.name,
+      });
+      return;
+    }
+
+    if (hostUser?.userId) {
+      navigation.navigate('UserProfile', {
+        avatarUrl: hostUser.profile_picture,
+        displayName: getDisplayName(hostUser),
+        userId: hostUser.userId,
+        username: hostUser.username,
+      });
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.pageContent}
@@ -263,12 +283,14 @@ export function EventDetailsScreen() {
       ) : null}
 
       <EventDetailSection title="Hosted by">
-        <View
-          style={[
+        <Pressable
+          onPress={handleOpenHostProfile}
+          style={({ pressed }) => [
             styles.hostCard,
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
+              opacity: pressed ? 0.92 : 1,
             },
           ]}
         >
@@ -283,15 +305,27 @@ export function EventDetailsScreen() {
               {occurrence.eventSeries?.organization ? 'Organizer' : 'Event host'}
             </Text>
           </View>
-        </View>
+        </Pressable>
       </EventDetailSection>
 
       {participants.length > 0 ? (
         <EventDetailSection title="People going">
           <View style={styles.attendeesRow}>
             {participants.map((participant, index) => (
-              <View
+              <Pressable
                 key={getParticipantKey(participant)}
+                onPress={() => {
+                  if (!participant.user?.userId) {
+                    return;
+                  }
+
+                  navigation.navigate('UserProfile', {
+                    avatarUrl: participant.user.profile_picture,
+                    displayName: getDisplayName(participant.user),
+                    userId: participant.user.userId,
+                    username: participant.user.username,
+                  });
+                }}
                 style={[styles.attendeeWrap, { marginLeft: index === 0 ? 0 : -10 }]}
               >
                 <ProfileAvatar
@@ -299,7 +333,7 @@ export function EventDetailsScreen() {
                   label={getDisplayName(participant.user)}
                   size={40}
                 />
-              </View>
+              </Pressable>
             ))}
             <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
               {formatCountLabel(participantCount, 'person')}

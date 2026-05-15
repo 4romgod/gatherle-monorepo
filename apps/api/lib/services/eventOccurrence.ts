@@ -311,6 +311,23 @@ class EventOccurrenceService {
     return EventOccurrenceDAO.readFirstByEventSeriesId(eventSeriesId);
   }
 
+  static async readUserEventOccurrences(userId: string, activeOnly = true): Promise<EventOccurrence[]> {
+    const participants = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
+    if (participants.length === 0) {
+      return [];
+    }
+
+    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds(
+      participants.map((participant) => participant.occurrenceId),
+    );
+    const occurrenceMap = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+
+    return participants
+      .map((participant) => occurrenceMap.get(participant.occurrenceId))
+      .filter((occurrence): occurrence is EventOccurrence => Boolean(occurrence))
+      .sort((left, right) => new Date(right.startAt).getTime() - new Date(left.startAt).getTime());
+  }
+
   static async readOccurrenceForSeries(eventSeriesId: string, occurrenceId?: string): Promise<EventOccurrence | null> {
     if (!occurrenceId) {
       return this.readSingleOccurrenceForSeries(eventSeriesId);

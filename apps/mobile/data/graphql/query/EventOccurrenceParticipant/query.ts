@@ -14,3 +14,89 @@ export const GetMyEventOccurrenceRsvpStatusDocument = graphql(`
     }
   }
 `);
+
+export const GetUserEventOccurrencesDocument = graphql(`
+  query GetUserEventOccurrences($userId: String!) {
+    readUserEventOccurrences(userId: $userId) {
+      occurrenceId
+      occurrenceKey
+      eventSeriesId
+      startAt
+      endAt
+      timezone
+      originalStartAt
+      status
+      isException
+      rsvpCount
+      participants {
+        participantId
+        occurrenceId
+        userId
+        status
+        quantity
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+          defaultVisibility
+        }
+      }
+      myRsvp {
+        participantId
+        occurrenceId
+        status
+        quantity
+      }
+      eventSeries {
+        eventId
+        slug
+        title
+        summary
+        description
+        status
+        visibility
+        eventCategories {
+          eventCategoryId
+          slug
+          name
+          iconName
+          description
+          color
+          interestedUsersCount
+        }
+        location {
+          locationType
+          address {
+            city
+            state
+            country
+          }
+        }
+        organization {
+          orgId
+          slug
+          name
+          logo
+        }
+        media {
+          featuredImageUrl
+        }
+        organizers {
+          role
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        savedByCount
+        isSavedByMe
+      }
+    }
+  }
+`);

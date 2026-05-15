@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { FollowPolicy, Gender, SocialVisibility } from '@data/graphql/types/graphql';
 import { UpdateUserDocument } from '@data/graphql/mutation/User/mutation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -14,13 +14,14 @@ import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { useAccountProfile } from '@/hooks/account/useAccountProfile';
+import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildSettingsInput, createSettingsForm, validateSettingsForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
 const VISIBILITY_OPTIONS = [SocialVisibility.Public, SocialVisibility.Followers, SocialVisibility.Private];
 const GENDER_OPTIONS = [Gender.Male, Gender.Female, Gender.Other];
@@ -33,6 +34,11 @@ export function SettingsScreen() {
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
   const [status, setStatus] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const [form, setForm] = useState(() => createSettingsForm(null, preference));
+  const { onRefresh, refreshing } = usePullToRefresh(
+    useCallback(async () => {
+      await refetch();
+    }, [refetch]),
+  );
 
   useEffect(() => {
     if (!profile) {
@@ -101,7 +107,6 @@ export function SettingsScreen() {
   if (!isAuthenticated) {
     return (
       <PageContainer>
-        <PageHeading subtitle="Sign in to manage privacy, communication, and appearance." title="Settings" />
         <AuthPromptCard
           description="Settings become useful once we know who you are and can persist your preferences."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -116,9 +121,13 @@ export function SettingsScreen() {
 
   if (loading && !profile) {
     return (
-      <PageContainer>
-        <PageHeading subtitle="Control privacy, communication, and how the app behaves." title="Settings" />
-        <StateNotice message="Loading your settings..." />
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        <View style={styles.skeletonWrap}>
+          <SkeletonBlock style={styles.sectionSkeletonMedium} />
+          <SkeletonBlock style={styles.sectionSkeletonLarge} />
+          <SkeletonBlock style={styles.sectionSkeletonLarge} />
+          <SkeletonBlock style={styles.buttonSkeleton} />
+        </View>
       </PageContainer>
     );
   }
@@ -126,7 +135,6 @@ export function SettingsScreen() {
   if (error || !profile) {
     return (
       <PageContainer>
-        <PageHeading subtitle="Control privacy, communication, and how the app behaves." title="Settings" />
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load your settings."
@@ -137,7 +145,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       {status ? <AccountStatusBanner message={status.message} tone={status.tone} /> : null}
 
       <AccountSectionCard
@@ -316,6 +324,10 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  buttonSkeleton: {
+    borderRadius: 16,
+    height: 52,
+  },
   choiceBlock: {
     gap: 10,
   },
@@ -327,5 +339,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  sectionSkeletonLarge: {
+    borderRadius: 20,
+    height: 286,
+  },
+  sectionSkeletonMedium: {
+    borderRadius: 20,
+    height: 170,
+  },
+  skeletonWrap: {
+    gap: 20,
   },
 });

@@ -9,6 +9,7 @@ import {
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';
 import EventOccurrenceService from '@/services/eventOccurrence';
+import { validateMongodbId } from '@/validation';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 import { logger } from '@/utils/logger';
 
@@ -20,6 +21,12 @@ export class EventOccurrenceResolver {
   ): Promise<EventOccurrence[]> {
     logger.debug('[readEventOccurrences] GraphQL query options:', { options });
     return EventOccurrenceService.readEventOccurrences(options);
+  }
+
+  @Query(() => [EventOccurrence], { description: 'Read event occurrences linked to a specific user participant' })
+  async readUserEventOccurrences(@Arg('userId', () => String) userId: string): Promise<EventOccurrence[]> {
+    validateMongodbId(userId);
+    return EventOccurrenceService.readUserEventOccurrences(userId);
   }
 
   @FieldResolver(() => EventSeries, {
