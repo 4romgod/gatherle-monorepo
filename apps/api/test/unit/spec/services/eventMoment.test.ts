@@ -53,6 +53,7 @@ jest.mock('@/mongodb/dao', () => ({
     readByEvent: jest.fn(),
     readByAuthor: jest.fn(),
     readByAuthorAndEvent: jest.fn(),
+    readFeedCandidates: jest.fn(),
     readFollowedStatuses: jest.fn(),
     countRecentByAuthor: jest.fn(),
     findByRawS3Key: jest.fn(),
@@ -698,7 +699,7 @@ describe('EventMomentService', () => {
   });
 
   describe('readUserMomentsFeed', () => {
-    const publicUser = { userId: 'user-2', followPolicy: 'Open' };
+    const publicUser = { userId: 'user-2', followPolicy: 'Public' };
     const privateUser = { userId: 'user-2', followPolicy: 'RequireApproval' };
 
     beforeEach(() => {
@@ -797,6 +798,128 @@ describe('EventMomentService', () => {
       const result = await EventMomentService.readFollowedMoments('user-1');
 
       expect(EventMomentDAO.readFollowedStatuses).not.toHaveBeenCalled();
+      expect(result).toEqual({ items: [], hasMore: false });
+    });
+  });
+
+  describe('readMomentsFeed', () => {
+    const viewer = {
+      userId: 'viewer-1',
+      followPolicy: 'Public',
+      interests: ['cat-music'],
+      location: { city: 'Durban', country: 'South Africa' },
+    };
+    const publicAuthor = { userId: 'author-public', followPolicy: 'Public' };
+    const privateAuthor = { userId: 'author-private', followPolicy: 'RequireApproval' };
+    const publicEvent = {
+      eventId: 'event-public',
+      visibility: 'Public',
+      eventCategories: ['cat-music'],
+      location: { address: { city: 'Durban', country: 'South Africa' } },
+    };
+    const privateEvent = {
+      eventId: 'event-private',
+      visibility: 'Private',
+      eventCategories: ['cat-music'],
+      location: { address: { city: 'Durban', country: 'South Africa' } },
+    };
+    const publicMoment = {
+      ...mockMoment,
+      momentId: 'moment-public',
+      authorId: 'author-public',
+      eventId: 'event-public',
+      createdAt: new Date('2026-05-15T08:00:00.000Z'),
+    };
+    const privateAuthorMoment = {
+      ...mockMoment,
+      momentId: 'moment-private-author',
+      authorId: 'author-private',
+      eventId: 'event-public',
+      createdAt: new Date('2026-05-15T07:00:00.000Z'),
+    };
+    const privateEventMoment = {
+      ...mockMoment,
+      momentId: 'moment-private-event',
+      authorId: 'author-public',
+      eventId: 'event-private',
+      createdAt: new Date('2026-05-15T06:00:00.000Z'),
+    };
+
+    beforeEach(() => {
+      (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
+        items: [publicMoment, privateAuthorMoment, privateEventMoment],
+        hasMore: true,
+        nextCursor: '2026-05-15T06:00:00.000Z',
+      });
+      (EventMomentDAO.readFollowedStatuses as jest.Mock).mockResolvedValue({
+        items: [],
+        hasMore: false,
+      });
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
+      (UserDAO.readUserById as jest.Mock).mockImplementation(async (userId: string) => {
+        if (userId === 'viewer-1') return viewer;
+        if (userId === 'author-public') return publicAuthor;
+        if (userId === 'author-private') return privateAuthor;
+        throw new Error('not found');
+      });
+      (EventSeriesDAO.readEventById as jest.Mock).mockImplementation(async (eventId: string) => {
+        if (eventId === 'event-public') return publicEvent;
+        if (eventId === 'event-private') return privateEvent;
+        throw new Error('not found');
+      });
+    });
+
+    it('returns only publicly visible moments for anonymous viewers', async () => {
+      const result = await EventMomentService.readMomentsFeed(undefined, undefined, 12);
+
+      expect(EventMomentDAO.readFeedCandidates).toHaveBeenCalledWith(undefined, 72);
+      expect(result.items.map((item) => item.momentId)).toEqual(['moment-public']);
+      expect(result.hasMore).toBe(true);
+      expect(result.nextCursor).toBe('2026-05-15T06:00:00.000Z');
+      expect(EventMomentDAO.readFollowedStatuses).not.toHaveBeenCalled();
+    });
+
+    it('includes accepted private-author moments for followed viewers', async () => {
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-private',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+      (EventMomentDAO.readFollowedStatuses as jest.Mock).mockResolvedValue({
+        items: [privateAuthorMoment],
+        hasMore: false,
+      });
+
+      const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
+
+      expect(EventMomentDAO.readFollowedStatuses).toHaveBeenCalledWith(['author-private'], undefined, 60);
+      expect(result.items.map((item) => item.momentId)).toEqual(['moment-private-author', 'moment-public']);
+    });
+
+    it('includes followed-author moments even when their event is not public', async () => {
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-public',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+
+      const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
+
+      expect(result.items.map((item) => item.momentId)).toEqual(['moment-public', 'moment-private-event']);
+    });
+
+    it('returns an empty page when no candidates are available', async () => {
+      (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
+        items: [],
+        hasMore: false,
+      });
+
+      const result = await EventMomentService.readMomentsFeed('viewer-1');
+
       expect(result).toEqual({ items: [], hasMore: false });
     });
   });

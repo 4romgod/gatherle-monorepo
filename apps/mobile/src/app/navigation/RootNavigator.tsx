@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { type ComponentProps, useEffect, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/core/BrandMark';
@@ -27,6 +28,7 @@ import { EventsScreen } from '@/screens/events/EventsScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { MessageThreadScreen } from '@/screens/messages/MessageThreadScreen';
 import { MessagesScreen } from '@/screens/messages/MessagesScreen';
+import { MomentsScreen } from '@/screens/moments/MomentsScreen';
 import { NotificationsScreen } from '@/screens/notifications/NotificationsScreen';
 import { OrganizationsScreen } from '@/screens/organizations/OrganizationsScreen';
 import { OrganizationDetailsScreen } from '@/screens/organizations/OrganizationDetailsScreen';
@@ -41,21 +43,40 @@ const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const TABLET_BREAKPOINT = 768;
 
+function MainTabBar({
+  isTabletLayout,
+  onActiveTabChange,
+  ...props
+}: ComponentProps<typeof BottomTabBar> & {
+  onActiveTabChange: (tab: keyof MainTabParamList) => void;
+}) {
+  const activeTab = props.state.routes[props.state.index]?.name as keyof MainTabParamList;
+
+  useEffect(() => {
+    onActiveTabChange(activeTab);
+  }, [activeTab, onActiveTabChange]);
+
+  return <BottomTabBar {...props} isTabletLayout={isTabletLayout} />;
+}
+
 function MainTabs() {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const isTabletLayout = width >= TABLET_BREAKPOINT;
+  const [activeTab, setActiveTab] = useState<keyof MainTabParamList>('Home');
 
   return (
     <SafeAreaView edges={['top']} style={[styles.mainTabsShell, { backgroundColor: theme.colors.surface }]}>
-      <View style={styles.mainTabsHeader}>
-        <View style={styles.headerLeftWrap}>
-          <BrandMark />
+      {activeTab !== 'Moments' ? (
+        <View style={styles.mainTabsHeader}>
+          <View style={styles.headerLeftWrap}>
+            <BrandMark />
+          </View>
+          <View style={styles.headerRightWrap}>
+            <HeaderMenuButton />
+          </View>
         </View>
-        <View style={styles.headerRightWrap}>
-          <HeaderMenuButton />
-        </View>
-      </View>
+      ) : null}
 
       <View style={[styles.mainTabsBody, { backgroundColor: theme.colors.background }]}>
         <Tab.Navigator
@@ -64,10 +85,11 @@ function MainTabs() {
             lazy: true,
             swipeEnabled: true,
           }}
-          tabBar={(props) => <BottomTabBar {...props} isTabletLayout={isTabletLayout} />}
+          tabBar={(props) => <MainTabBar {...props} isTabletLayout={isTabletLayout} onActiveTabChange={setActiveTab} />}
         >
           <Tab.Screen component={HomeScreen} name="Home" options={{ title: 'Home' }} />
           <Tab.Screen component={EventsScreen} name="Events" options={{ title: 'Events' }} />
+          <Tab.Screen component={MomentsScreen} name="Moments" options={{ title: 'Moments' }} />
           <Tab.Screen component={MessagesScreen} name="Messages" options={{ title: 'Messages' }} />
           <Tab.Screen component={NotificationsScreen} name="Notifications" options={{ title: 'Notifications' }} />
           <Tab.Screen component={AccountScreen} name="Account" options={{ title: 'Account' }} />

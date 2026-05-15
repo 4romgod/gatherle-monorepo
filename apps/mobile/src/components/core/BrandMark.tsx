@@ -1,7 +1,10 @@
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { navigationRef } from '@/app/navigation/navigationRef';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 export function BrandMark() {
+  const { isDark } = useAppTheme();
+
   const handlePress = () => {
     if (!navigationRef.isReady()) {
       return;
@@ -15,7 +18,11 @@ export function BrandMark() {
       <Image
         accessibilityIgnoresInvertColors
         resizeMode="contain"
-        source={require('../../../assets/favicon/orbit/android-chrome-192x192.png')}
+        source={
+          isDark
+            ? require('../../../assets/favicon/orbit/dark/android-chrome-192x192.png')
+            : require('../../../assets/favicon/orbit/light/android-chrome-192x192.png')
+        }
         style={styles.mark}
       />
     </Pressable>

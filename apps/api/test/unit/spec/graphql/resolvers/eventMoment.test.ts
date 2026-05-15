@@ -12,6 +12,7 @@ jest.mock('@/services', () => ({
     readByEvent: jest.fn(),
     readUserMoments: jest.fn(),
     readUserMomentsFeed: jest.fn(),
+    readMomentsFeed: jest.fn(),
     readFollowedMoments: jest.fn(),
   },
 }));
@@ -198,6 +199,27 @@ describe('EventMomentResolver', () => {
       await resolver.readUserMoments('user-2', { ...mockContext, user: undefined }, undefined, undefined);
 
       expect(EventMomentService.readUserMomentsFeed).toHaveBeenCalledWith('user-2', undefined, undefined, undefined);
+    });
+  });
+
+  describe('readMomentsFeed', () => {
+    it('delegates to EventMomentService.readMomentsFeed with viewer id when authenticated', async () => {
+      const page = { items: [mockMoment], hasMore: false };
+      (EventMomentService.readMomentsFeed as jest.Mock).mockResolvedValue(page);
+
+      const result = await resolver.readMomentsFeed(mockContext, 'cursor-1', 9);
+
+      expect(EventMomentService.readMomentsFeed).toHaveBeenCalledWith('user-1', 'cursor-1', 9);
+      expect(result).toEqual(page);
+    });
+
+    it('passes undefined viewer id for anonymous context', async () => {
+      const page = { items: [], hasMore: false };
+      (EventMomentService.readMomentsFeed as jest.Mock).mockResolvedValue(page);
+
+      await resolver.readMomentsFeed({ ...mockContext, user: undefined }, undefined, undefined);
+
+      expect(EventMomentService.readMomentsFeed).toHaveBeenCalledWith(undefined, undefined, undefined);
     });
   });
 

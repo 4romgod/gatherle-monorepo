@@ -32,7 +32,7 @@ function navigateTo(routeName: DrawerRouteName) {
   navigationRef.navigate(routeName);
 }
 
-function navigateToTab(tabName: 'Home' | 'Events' | 'Messages' | 'Notifications' | 'Account') {
+function navigateToTab(tabName: 'Home' | 'Events' | 'Moments' | 'Messages' | 'Notifications' | 'Account') {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -126,7 +126,7 @@ export function AppDrawer() {
     });
   };
 
-  const handleNavigateTab = (tabName: 'Home' | 'Events' | 'Messages' | 'Notifications' | 'Account') => {
+  const handleNavigateTab = (tabName: 'Home' | 'Events' | 'Moments' | 'Messages' | 'Notifications' | 'Account') => {
     closeDrawer();
     requestAnimationFrame(() => {
       navigateToTab(tabName);
