@@ -56,6 +56,36 @@ async function verifyVideoSize(mediaKey: string): Promise<void> {
 }
 
 class EventMomentService {
+  private static async canViewProtectedUserMoments(targetUserId: string, callerId?: string): Promise<boolean> {
+    const isOwnProfile = Boolean(callerId) && callerId === targetUserId;
+
+    if (isOwnProfile) {
+      return true;
+    }
+
+    let targetUser;
+    try {
+      targetUser = await UserDAO.readUserById(targetUserId);
+    } catch {
+      return false;
+    }
+
+    if (targetUser.followPolicy !== 'RequireApproval') {
+      return true;
+    }
+
+    if (!callerId) {
+      return false;
+    }
+
+    const follows = await FollowDAO.readFollowingForUser(callerId);
+    return follows.some(
+      (f) =>
+        f.targetType === FollowTargetType.User &&
+        f.targetId === targetUserId &&
+        f.approvalStatus === FollowApprovalStatus.Accepted,
+    );
+  }
   /**
    * Create an event moment.
    * Enforces:
@@ -278,31 +308,30 @@ class EventMomentService {
    *   - Private profile (RequireApproval) → only accepted followers can view; returns [] silently otherwise
    */
   static async readUserMoments(targetUserId: string, eventId: string, callerId: string): Promise<EventMoment[]> {
-    const isOwnProfile = callerId === targetUserId;
-
-    if (!isOwnProfile) {
-      let targetUser;
-      try {
-        targetUser = await UserDAO.readUserById(targetUserId);
-      } catch {
-        return [];
-      }
-
-      if (targetUser.followPolicy === 'RequireApproval') {
-        const follows = await FollowDAO.readFollowingForUser(callerId);
-        const isFollower = follows.some(
-          (f) =>
-            f.targetType === FollowTargetType.User &&
-            f.targetId === targetUserId &&
-            f.approvalStatus === FollowApprovalStatus.Accepted,
-        );
-        if (!isFollower) {
-          return [];
-        }
-      }
+    const canView = await EventMomentService.canViewProtectedUserMoments(targetUserId, callerId);
+    if (!canView) {
+      return [];
     }
 
-    return EventMomentDAO.readByAuthorAndEvent(targetUserId, eventId, isOwnProfile);
+    return EventMomentDAO.readByAuthorAndEvent(targetUserId, eventId, callerId === targetUserId);
+  }
+
+  /**
+   * Read a specific user's active moments across all events (profile story view).
+   * Respects the target user's follow policy in the same way as readUserMoments.
+   */
+  static async readUserMomentsFeed(
+    targetUserId: string,
+    callerId?: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<EventMomentPage> {
+    const canView = await EventMomentService.canViewProtectedUserMoments(targetUserId, callerId);
+    if (!canView) {
+      return { items: [], hasMore: false };
+    }
+
+    return EventMomentDAO.readByAuthor(targetUserId, callerId === targetUserId, cursor, limit);
   }
 
   /**

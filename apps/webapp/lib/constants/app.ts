@@ -1,7 +1,7 @@
 export const APP_NAME = 'Gatherle';
 export const COMPANY_LEGAL_NAME = 'Mapapa Solutions (Pty) Ltd';
 export const APP_DOMAIN = 'gatherle.com';
-export const APP_LOGO_PATH = '/logo-img.png';
+export const APP_LOGO_PATH = '/gatherle.svg';
 
 /**
  * Technical namespace prefix used for localStorage keys, WebSocket protocols, and

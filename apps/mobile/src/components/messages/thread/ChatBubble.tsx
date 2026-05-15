@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { EventMomentType } from '@data/graphql/types/graphql';
 import type { MobileChatMessage } from '@data/graphql/query/Chat/types';
 import { formatThreadTime } from '@/lib/messages/thread';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -11,6 +12,9 @@ type ChatBubbleProps = {
 
 export function ChatBubble({ isOutgoing, message }: ChatBubbleProps) {
   const { theme } = useAppTheme();
+  const replyTone = isOutgoing ? 'rgba(255,255,255,0.72)' : theme.colors.primary;
+  const replyTextColor = isOutgoing ? 'rgba(255,255,255,0.88)' : theme.colors.textSecondary;
+  const replyMetaColor = isOutgoing ? 'rgba(255,255,255,0.74)' : theme.colors.textMuted;
 
   return (
     <View style={[styles.row, isOutgoing ? styles.rowOutgoing : styles.rowIncoming]}>
@@ -23,6 +27,24 @@ export function ChatBubble({ isOutgoing, message }: ChatBubbleProps) {
           },
         ]}
       >
+        {message.replyToMomentId ? (
+          <View style={[styles.replyCard, { borderLeftColor: replyTone }]}>
+            <Text style={[styles.replyLabel, { color: replyTextColor }]}>Replied to a moment</Text>
+            {message.replyToMomentCaption ? (
+              <Text numberOfLines={1} style={[styles.replyPreview, { color: replyMetaColor }]}>
+                {message.replyToMomentCaption}
+              </Text>
+            ) : message.replyToMomentType ? (
+              <Text style={[styles.replyPreview, { color: replyMetaColor }]}>
+                {message.replyToMomentType === EventMomentType.Image
+                  ? 'Photo'
+                  : message.replyToMomentType === EventMomentType.Video
+                    ? 'Video'
+                    : 'Text moment'}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
         <Text style={[styles.message, { color: isOutgoing ? theme.colors.primaryContrast : theme.colors.textPrimary }]}>
           {message.message}
         </Text>
@@ -45,6 +67,25 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: 12,
     lineHeight: 16,
+  },
+  replyCard: {
+    borderLeftWidth: 3,
+    borderRadius: 4,
+    marginBottom: 7,
+    paddingLeft: 8,
+    paddingRight: 4,
+    paddingVertical: 2,
+  },
+  replyLabel: {
+    ...typography.bodyBold,
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  replyPreview: {
+    ...typography.bodyRegular,
+    fontSize: 10,
+    lineHeight: 13,
+    marginTop: 1,
   },
   row: {
     gap: 3,

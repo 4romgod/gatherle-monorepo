@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { EventMomentType } from '@data/graphql/types/graphql';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -19,6 +20,19 @@ import { buildChatThreadItems } from '@/lib/messages/thread';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 type MessageThreadRoute = RouteProp<RootStackParamList, 'MessageThread'>;
+
+function normalizeReplyMomentType(value: string | null | undefined): EventMomentType | null {
+  switch (value?.toLowerCase()) {
+    case 'image':
+      return EventMomentType.Image;
+    case 'video':
+      return EventMomentType.Video;
+    case 'text':
+      return EventMomentType.Text;
+    default:
+      return null;
+  }
+}
 
 export function MessageThreadScreen() {
   const navigation = useNavigation<MainTabNavigation>();
@@ -59,9 +73,9 @@ export function MessageThreadScreen() {
         message: payload.message,
         readAt: null,
         recipientUserId: payload.recipientUserId,
-        replyToMomentCaption: null,
-        replyToMomentId: null,
-        replyToMomentType: null,
+        replyToMomentCaption: payload.replyToMomentCaption ?? null,
+        replyToMomentId: payload.replyToMomentId ?? null,
+        replyToMomentType: normalizeReplyMomentType(payload.replyToMomentType),
         senderUserId: payload.senderUserId,
       });
 

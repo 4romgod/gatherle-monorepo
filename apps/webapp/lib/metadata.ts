@@ -4,9 +4,15 @@ import { APP_NAME, APP_LOGO_PATH } from '@/lib/constants';
 const SITE_NAME = APP_NAME;
 
 const ICONS: Metadata['icons'] = {
-  icon: APP_LOGO_PATH,
-  shortcut: APP_LOGO_PATH,
-  apple: APP_LOGO_PATH,
+  icon: [
+    { rel: 'icon', url: '/favicon.ico' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/favicon-16x16.png' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/favicon-32x32.png' },
+    { rel: 'icon', type: 'image/png', sizes: '192x192', url: '/android-chrome-192x192.png' },
+    { rel: 'icon', type: 'image/png', sizes: '512x512', url: '/android-chrome-512x512.png' },
+  ],
+  shortcut: '/favicon.ico',
+  apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
 };
 
 type BuildMetadataOptions = {

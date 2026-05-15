@@ -4,6 +4,8 @@ export * from './Discovery/query';
 export * from './Discovery/types';
 export * from './Event/query';
 export * from './Event/types';
+export * from './EventMoment/query';
+export * from './EventMoment/types';
 export * from './EventOccurrenceParticipant/query';
 export * from './Follow/query';
 export * from './Follow/types';

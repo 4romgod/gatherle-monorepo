@@ -4,7 +4,7 @@
     "slug": "gatherle-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/favicon/orbit/android-chrome-512x512.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -17,15 +17,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/favicon/orbit/android-chrome-512x512.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.gatherlemobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon/orbit/favicon-32x32.png"
     },
-    "plugins": ["expo-font", "expo-secure-store"],
+    "plugins": ["expo-font", "expo-secure-store", "expo-video"],
     "extra": {
       "eas": {
         "projectId": "7eee58bf-18f8-4b6d-a0a4-128a5d1f037b"

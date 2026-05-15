@@ -27,6 +27,12 @@ interface UseChatRealtimeOptions {
   onChatRead?: (payload: ChatReadRealtimePayload) => void;
 }
 
+type ChatReplyContext = {
+  replyToMomentCaption?: string;
+  replyToMomentId?: string;
+  replyToMomentType?: string;
+};
+
 const EXPLICIT_WEBSOCKET_URL = process.env.EXPO_PUBLIC_WEBSOCKET_URL ?? '';
 const GRAPHQL_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL ?? '';
 
@@ -115,11 +121,12 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     });
   }, [authToken, enabled, userId, websocketBaseUrl, websocketSource]);
 
-  const sendChatMessage = useCallback((recipientUserId: string, message: string) => {
+  const sendChatMessage = useCallback((recipientUserId: string, message: string, replyContext?: ChatReplyContext) => {
     return sendSharedRealtimeAction({
       action: 'chat.send',
       message,
       recipientUserId,
+      ...replyContext,
     });
   }, []);
 

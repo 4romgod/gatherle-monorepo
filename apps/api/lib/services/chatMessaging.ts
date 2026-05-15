@@ -16,6 +16,9 @@ interface ChatMessageEventPayload {
   message: string;
   isRead: boolean;
   createdAt: string;
+  replyToMomentCaption?: string;
+  replyToMomentId?: string;
+  replyToMomentType?: string;
 }
 
 interface ChatConversationUpdatedMessage {
@@ -25,6 +28,9 @@ interface ChatConversationUpdatedMessage {
   message: string;
   isRead: boolean;
   createdAt: string;
+  replyToMomentCaption?: string;
+  replyToMomentId?: string;
+  replyToMomentType?: string;
 }
 
 interface ChatConversationUpdatedEventPayload {
@@ -102,6 +108,11 @@ export class ChatMessagingService {
 
     const messageId = chatMessage.chatMessageId;
     const createdAt = chatMessage.createdAt.toISOString();
+    const replyPayload = {
+      ...(chatMessage.replyToMomentId ? { replyToMomentId: chatMessage.replyToMomentId } : {}),
+      ...(chatMessage.replyToMomentCaption ? { replyToMomentCaption: chatMessage.replyToMomentCaption } : {}),
+      ...(chatMessage.replyToMomentType ? { replyToMomentType: chatMessage.replyToMomentType } : {}),
+    };
 
     // Create message event payload
     const messageEventPayload = createRealtimeEventEnvelope<ChatMessageEventPayload>(
@@ -113,6 +124,7 @@ export class ChatMessagingService {
         message,
         isRead: chatMessage.isRead,
         createdAt,
+        ...replyPayload,
       },
     );
 
@@ -137,6 +149,7 @@ export class ChatMessagingService {
       messageId,
       message,
       isRead: chatMessage.isRead,
+      replyPayload,
     });
 
     logger.info('Chat message sent and delivered', {
@@ -200,6 +213,9 @@ export class ChatMessagingService {
           message: latestMessage.message,
           isRead: latestMessage.isRead,
           createdAt: latestMessage.createdAt.toISOString(),
+          ...(latestMessage.replyToMomentId ? { replyToMomentId: latestMessage.replyToMomentId } : {}),
+          ...(latestMessage.replyToMomentCaption ? { replyToMomentCaption: latestMessage.replyToMomentCaption } : {}),
+          ...(latestMessage.replyToMomentType ? { replyToMomentType: latestMessage.replyToMomentType } : {}),
         }
       : null;
 
@@ -261,6 +277,11 @@ export class ChatMessagingService {
       messageId: string;
       message: string;
       isRead: boolean;
+      replyPayload: {
+        replyToMomentCaption?: string;
+        replyToMomentId?: string;
+        replyToMomentType?: string;
+      };
     },
   ): Promise<DeliveryStats> {
     let messageDeliveredCount = 0;
@@ -287,6 +308,7 @@ export class ChatMessagingService {
               message: context.message,
               isRead: context.isRead,
               createdAt: context.createdAt,
+              ...context.replyPayload,
             },
           },
         );

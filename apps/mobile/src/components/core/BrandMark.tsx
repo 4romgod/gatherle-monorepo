@@ -1,11 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet } from 'react-native';
 import { navigationRef } from '@/app/navigation/navigationRef';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
 
 export function BrandMark() {
-  const { theme } = useAppTheme();
-
   const handlePress = () => {
     if (!navigationRef.isReady()) {
       return;
@@ -16,9 +12,12 @@ export function BrandMark() {
 
   return (
     <Pressable accessibilityRole="button" onPress={handlePress} style={styles.touchArea}>
-      <View style={[styles.mark, { backgroundColor: theme.colors.primary }]}>
-        <Text style={[styles.markText, { color: theme.colors.primaryContrast }]}>NTL</Text>
-      </View>
+      <Image
+        accessibilityIgnoresInvertColors
+        resizeMode="contain"
+        source={require('../../../assets/favicon/orbit/android-chrome-192x192.png')}
+        style={styles.mark}
+      />
     </Pressable>
   );
 }
@@ -28,15 +27,7 @@ const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   mark: {
-    alignItems: 'center',
-    borderRadius: 18,
     height: 36,
-    justifyContent: 'center',
     width: 36,
-  },
-  markText: {
-    ...typography.displayBold,
-    fontSize: 15,
-    letterSpacing: -0.4,
   },
 });
