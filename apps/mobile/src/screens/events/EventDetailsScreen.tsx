@@ -12,6 +12,9 @@ import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
 import { EventDetailSection } from '@/components/events/detail/EventDetailSection';
 import { EventDetailStat } from '@/components/events/detail/EventDetailStat';
 import { useEventDetailActions } from '@/hooks/events/useEventDetailActions';
+import { useEventMoments } from '@/hooks/moments/useEventMoments';
+import { EventMomentsRing } from '@/components/moments/EventMomentsRing';
+import { MomentComposerModal } from '@/components/moments/MomentComposerModal';
 import {
   formatCountLabel,
   formatEventScheduleTwoLine,
@@ -44,13 +47,16 @@ export function EventDetailsScreen() {
   const hostOrganization = occurrence.eventSeries?.organization;
   const hostLabel = occurrence.eventSeries?.organization?.name ?? getDisplayName(hostUser);
   const categories = occurrence.eventSeries?.eventCategories ?? [];
+  const eventId = occurrence.eventSeries?.eventId;
   const description =
     occurrence.eventSeries?.description?.trim() ||
     occurrence.eventSeries?.summary?.trim() ||
     'Event details will appear here once the organizer adds a full description.';
   const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, loading, rsvpStatus, toggleSave } =
     useEventDetailActions(occurrence, authToken);
+  const { error: momentsError, moments, refetch: refetchMoments } = useEventMoments(eventId, authToken);
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
+  const [composerVisible, setComposerVisible] = useState(false);
   const [localParticipantCount, setLocalParticipantCount] = useState(participantCount);
 
   useEffect(() => {
@@ -184,180 +190,225 @@ export function EventDetailsScreen() {
     }
   };
 
+  const handleOpenMomentComposer = () => {
+    if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    if (!eventId) {
+      Alert.alert('Moments unavailable', 'We could not find the event details needed to post a moment.');
+      return;
+    }
+
+    setComposerVisible(true);
+  };
+
   return (
-    <ScrollView
-      contentContainerStyle={styles.pageContent}
-      showsVerticalScrollIndicator={false}
-      style={{ backgroundColor: theme.colors.background }}
-    >
-      <View style={styles.heroFrame}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.heroImage} />
-        ) : (
-          <LinearGradient colors={theme.colors.heroGradient} style={styles.heroPlaceholder}>
-            <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
-              {title.charAt(0).toUpperCase()}
-            </Text>
-          </LinearGradient>
-        )}
+    <>
+      <ScrollView
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: theme.colors.background }}
+      >
+        <View style={styles.heroFrame}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.heroImage} />
+          ) : (
+            <LinearGradient colors={theme.colors.heroGradient} style={styles.heroPlaceholder}>
+              <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
+                {title.charAt(0).toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
 
-        <LinearGradient
-          colors={['rgba(15, 23, 42, 0.04)', 'rgba(15, 23, 42, 0.2)', 'rgba(15, 23, 42, 0.86)']}
-          style={styles.heroGradient}
-        />
-
-        <View style={styles.heroTopRow}>
-          <View style={[styles.heroPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Text style={[styles.heroPillText, { color: theme.colors.primary }]}>{heroPillLabel}</Text>
-          </View>
-        </View>
-
-        <View style={styles.heroContent}>
-          <Text style={[styles.heroTitle, { color: theme.colors.heroText }]}>{title}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.heroText }]}>{hostLabel}</Text>
-        </View>
-      </View>
-
-      <View style={styles.actionsRow}>
-        <EventDetailActionButton
-          icon={rsvpIcon}
-          disabled={loading}
-          label={rsvpLabel}
-          onPress={handleRsvpPress}
-          tone={rsvpTone}
-        />
-        <EventDetailActionButton
-          disabled={loading}
-          icon="bookmark"
-          label={isSaved ? 'Saved' : 'Save'}
-          onPress={handleToggleSave}
-          tone={saveTone}
-        />
-        <EventDetailActionButton icon="share-2" label="Share" onPress={handleShare} tone="secondary" />
-      </View>
-
-      <View style={styles.actionsRow}>
-        <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
-        <EventDetailActionButton
-          icon="calendar"
-          label="Add to calendar"
-          onPress={handleAddToCalendar}
-          tone="secondary"
-        />
-      </View>
-
-      <View style={styles.statGrid}>
-        <EventDetailStat icon="calendar" label="Schedule" value={formatEventScheduleTwoLine(occurrence)} />
-        <EventDetailStat
-          icon="map-pin"
-          label="Location"
-          onPress={handleOpenDirections}
-          value={formatLocationLabel(occurrence)}
-        />
-        <EventDetailStat icon="users" label="Attendance" value={attendeeLabel} />
-      </View>
-
-      <EventDetailSection title="About this event">
-        <Text style={[styles.bodyCopy, { color: theme.colors.textSecondary }]}>{description}</Text>
-      </EventDetailSection>
-
-      {categories.length > 0 ? (
-        <EventDetailSection title="Categories">
-          <View style={styles.chipRow}>
-            {categories.map((category) => (
-              <View
-                key={category.eventCategoryId}
-                style={[
-                  styles.categoryChip,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.categoryChipText, { color: theme.colors.textPrimary }]}>{category.name}</Text>
-              </View>
-            ))}
-          </View>
-        </EventDetailSection>
-      ) : null}
-
-      <EventDetailSection title="Hosted by">
-        <Pressable
-          onPress={handleOpenHostProfile}
-          style={({ pressed }) => [
-            styles.hostCard,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              opacity: pressed ? 0.92 : 1,
-            },
-          ]}
-        >
-          <ProfileAvatar
-            imageUrl={occurrence.eventSeries?.organization?.logo ?? hostUser?.profile_picture}
-            label={hostLabel}
-            size={48}
+          <LinearGradient
+            colors={['rgba(15, 23, 42, 0.04)', 'rgba(15, 23, 42, 0.2)', 'rgba(15, 23, 42, 0.86)']}
+            style={styles.heroGradient}
           />
-          <View style={styles.hostTextBlock}>
-            <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
-            <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
-              {occurrence.eventSeries?.organization ? 'Organizer' : 'Event host'}
-            </Text>
-          </View>
-        </Pressable>
-      </EventDetailSection>
 
-      {participants.length > 0 ? (
-        <EventDetailSection title="People going">
-          <View style={styles.attendeesRow}>
-            {participants.map((participant, index) => (
-              <Pressable
-                key={getParticipantKey(participant)}
-                onPress={() => {
-                  if (!participant.user?.userId) {
-                    return;
-                  }
-
-                  navigation.navigate('UserProfile', {
-                    avatarUrl: participant.user.profile_picture,
-                    displayName: getDisplayName(participant.user),
-                    userId: participant.user.userId,
-                    username: participant.user.username,
-                  });
-                }}
-                style={[styles.attendeeWrap, { marginLeft: index === 0 ? 0 : -10 }]}
-              >
-                <ProfileAvatar
-                  imageUrl={participant.user?.profile_picture}
-                  label={getDisplayName(participant.user)}
-                  size={40}
-                />
-              </Pressable>
-            ))}
-            <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
-              {formatCountLabel(participantCount, 'person')}
-            </Text>
+          <View style={styles.heroTopRow}>
+            <View
+              style={[styles.heroPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            >
+              <Text style={[styles.heroPillText, { color: theme.colors.primary }]}>{heroPillLabel}</Text>
+            </View>
           </View>
+
+          <View style={styles.heroContent}>
+            <Text style={[styles.heroTitle, { color: theme.colors.heroText }]}>{title}</Text>
+            <Text style={[styles.heroSubtitle, { color: theme.colors.heroText }]}>{hostLabel}</Text>
+          </View>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <EventDetailActionButton
+            icon={rsvpIcon}
+            disabled={loading}
+            label={rsvpLabel}
+            onPress={handleRsvpPress}
+            tone={rsvpTone}
+          />
+          <EventDetailActionButton
+            disabled={loading}
+            icon="bookmark"
+            label={isSaved ? 'Saved' : 'Save'}
+            onPress={handleToggleSave}
+            tone={saveTone}
+          />
+          <EventDetailActionButton icon="share-2" label="Share" onPress={handleShare} tone="secondary" />
+        </View>
+
+        <View style={styles.actionsRow}>
+          <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
+          <EventDetailActionButton
+            icon="calendar"
+            label="Add to calendar"
+            onPress={handleAddToCalendar}
+            tone="secondary"
+          />
+        </View>
+
+        {eventId ? (
+          <EventDetailSection title="Moments">
+            <EventMomentsRing
+              moments={moments}
+              myRsvpStatus={rsvpStatus ?? null}
+              onPressAddMoment={handleOpenMomentComposer}
+            />
+            {momentsError ? (
+              <Text style={[styles.momentsErrorText, { color: theme.colors.textMuted }]}>
+                We couldn’t load event moments right now.
+              </Text>
+            ) : null}
+          </EventDetailSection>
+        ) : null}
+
+        <View style={styles.statGrid}>
+          <EventDetailStat icon="calendar" label="Schedule" value={formatEventScheduleTwoLine(occurrence)} />
+          <EventDetailStat
+            icon="map-pin"
+            label="Location"
+            onPress={handleOpenDirections}
+            value={formatLocationLabel(occurrence)}
+          />
+          <EventDetailStat icon="users" label="Attendance" value={attendeeLabel} />
+        </View>
+
+        <EventDetailSection title="About this event">
+          <Text style={[styles.bodyCopy, { color: theme.colors.textSecondary }]}>{description}</Text>
         </EventDetailSection>
+
+        {categories.length > 0 ? (
+          <EventDetailSection title="Categories">
+            <View style={styles.chipRow}>
+              {categories.map((category) => (
+                <View
+                  key={category.eventCategoryId}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.categoryChipText, { color: theme.colors.textPrimary }]}>{category.name}</Text>
+                </View>
+              ))}
+            </View>
+          </EventDetailSection>
+        ) : null}
+
+        <EventDetailSection title="Hosted by">
+          <Pressable
+            onPress={handleOpenHostProfile}
+            style={({ pressed }) => [
+              styles.hostCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <ProfileAvatar
+              imageUrl={occurrence.eventSeries?.organization?.logo ?? hostUser?.profile_picture}
+              label={hostLabel}
+              size={48}
+            />
+            <View style={styles.hostTextBlock}>
+              <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
+              <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
+                {occurrence.eventSeries?.organization ? 'Organizer' : 'Event host'}
+              </Text>
+            </View>
+          </Pressable>
+        </EventDetailSection>
+
+        {participants.length > 0 ? (
+          <EventDetailSection title="People going">
+            <View style={styles.attendeesRow}>
+              {participants.map((participant, index) => (
+                <Pressable
+                  key={getParticipantKey(participant)}
+                  onPress={() => {
+                    if (!participant.user?.userId) {
+                      return;
+                    }
+
+                    navigation.navigate('UserProfile', {
+                      avatarUrl: participant.user.profile_picture,
+                      displayName: getDisplayName(participant.user),
+                      userId: participant.user.userId,
+                      username: participant.user.username,
+                    });
+                  }}
+                  style={[styles.attendeeWrap, { marginLeft: index === 0 ? 0 : -10 }]}
+                >
+                  <ProfileAvatar
+                    imageUrl={participant.user?.profile_picture}
+                    label={getDisplayName(participant.user)}
+                    size={40}
+                  />
+                </Pressable>
+              ))}
+              <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
+                {formatCountLabel(participantCount, 'person')}
+              </Text>
+            </View>
+          </EventDetailSection>
+        ) : null}
+
+        <EventRsvpSheet
+          currentStatus={rsvpStatus}
+          loading={loading}
+          onCancelRsvp={handleCancelRsvp}
+          onClose={() => setRsvpSheetVisible(false)}
+          onSelectStatus={(status) => {
+            if (status === ParticipantStatus.Going) {
+              handleSelectGoing();
+              return;
+            }
+
+            handleSelectInterested();
+          }}
+          visible={rsvpSheetVisible}
+        />
+      </ScrollView>
+
+      {eventId ? (
+        <MomentComposerModal
+          authToken={authToken}
+          eventId={eventId}
+          occurrenceId={occurrence.occurrenceId}
+          onClose={() => setComposerVisible(false)}
+          onCreated={() => {
+            void refetchMoments();
+          }}
+          open={composerVisible}
+        />
       ) : null}
-
-      <EventRsvpSheet
-        currentStatus={rsvpStatus}
-        loading={loading}
-        onCancelRsvp={handleCancelRsvp}
-        onClose={() => setRsvpSheetVisible(false)}
-        onSelectStatus={(status) => {
-          if (status === ParticipantStatus.Going) {
-            handleSelectGoing();
-            return;
-          }
-
-          handleSelectInterested();
-        }}
-        visible={rsvpSheetVisible}
-      />
-    </ScrollView>
+    </>
   );
 }
 
@@ -474,6 +525,11 @@ const styles = StyleSheet.create({
   hostTitle: {
     ...typography.bodyBold,
     fontSize: 16,
+  },
+  momentsErrorText: {
+    ...typography.bodyRegular,
+    fontSize: 13,
+    marginTop: 10,
   },
   pageContent: {
     gap: 22,

@@ -1,0 +1,33 @@
+import { graphql } from '../../types';
+
+export const CreateEventMomentDocument = graphql(`
+  mutation CreateEventMoment($input: CreateEventMomentInput!) {
+    createEventMoment(input: $input) {
+      momentId
+      eventId
+      occurrenceId
+      authorId
+      type
+      state
+      caption
+      mediaUrl
+      thumbnailUrl
+      background
+      durationSeconds
+      expiresAt
+      createdAt
+      author {
+        userId
+        username
+        given_name
+        family_name
+        profile_picture
+      }
+      event {
+        eventId
+        slug
+        title
+      }
+    }
+  }
+`);

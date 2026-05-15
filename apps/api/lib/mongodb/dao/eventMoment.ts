@@ -231,6 +231,47 @@ class EventMomentDAO {
   }
 
   /**
+   * Read a single user's active moments across all events.
+   * Includes pending statuses when the caller is the author.
+   */
+  static async readByAuthor(
+    authorId: string,
+    includePending: boolean,
+    cursor?: string,
+    limit = 30,
+  ): Promise<{ items: EventMomentEntity[]; nextCursor?: string; hasMore: boolean }> {
+    try {
+      const now = new Date();
+      const query: Record<string, unknown> = {
+        authorId,
+        expiresAt: { $gt: now },
+        ...publishedMomentFilter,
+        state: includePending
+          ? { $in: [EventMomentState.Ready, ...PENDING_EVENT_MOMENT_STATES, EventMomentState.Failed] }
+          : EventMomentState.Ready,
+      };
+
+      if (cursor) {
+        query['createdAt'] = { $lt: new Date(cursor) };
+      }
+
+      const items = await EventMoment.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit + 1)
+        .exec();
+
+      const hasMore = items.length > limit;
+      const page = items.slice(0, limit).map((status) => status.toObject());
+      const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
+
+      return { items: page, nextCursor, hasMore };
+    } catch (error) {
+      logDaoError('Error reading moments by author', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
    * Read statuses across all events from a set of followed author IDs (personal feed).
    */
   static async readFollowedStatuses(

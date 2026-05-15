@@ -91,6 +91,16 @@ export class EventMomentResolver {
     return EventMomentService.readUserMoments(userId, eventId, caller.userId);
   }
 
+  @Query(() => EventMomentPage, { description: "Get a user's active moments across all events (profile story view)" })
+  async readUserMoments(
+    @Arg('userId', () => String) userId: string,
+    @Ctx() context: ServerContext,
+    @Arg('cursor', () => String, { nullable: true }) cursor?: string,
+    @Arg('limit', () => Number, { nullable: true }) limit?: number,
+  ): Promise<EventMomentPage> {
+    return EventMomentService.readUserMomentsFeed(userId, context.user?.userId, cursor, limit);
+  }
+
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Query(() => EventMomentPage, { description: 'Get moments from followed users (personal feed)' })
   async readFollowedMoments(

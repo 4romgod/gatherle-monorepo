@@ -306,6 +306,20 @@ class EventMomentService {
   }
 
   /**
+   * Read a specific user's active moments across all events (profile story view).
+   * Respects the target user's follow policy in the same way as readUserMoments.
+   */
+  static async readUserMomentsFeed(
+    targetUserId: string,
+    callerId?: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<EventMomentPage> {
+    const isOwnProfile = Boolean(callerId) && callerId === targetUserId;
+    return EventMomentDAO.readByAuthor(targetUserId, Boolean(isOwnProfile), cursor, limit);
+  }
+
+  /**
    * Read moments from users the caller follows (personal cross-event feed).
    */
   static async readFollowedMoments(callerId: string, cursor?: string, limit?: number): Promise<EventMomentPage> {

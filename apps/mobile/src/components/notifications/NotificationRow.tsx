@@ -1,7 +1,5 @@
-import { Feather } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { MobileNotification } from '@data/graphql/query/Notification/types';
-import { formatRelativeTime, getDisplayName, getInitials } from '@/lib/events/formatters';
+import { getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { typography } from '@/shared/theme/typography';
 import { InlineButton } from '@/components/core/InlineButton';
@@ -59,21 +57,21 @@ export function NotificationRow({
         )}
       </View>
 
-      <View style={styles.content}>
-        <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
-          {title}
-        </Text>
-        <Text numberOfLines={2} style={[styles.message, { color: theme.colors.textSecondary }]}>
-          {message}
-        </Text>
-        <View style={styles.metaRow}>
+      <View style={styles.bodyRow}>
+        <View style={styles.content}>
+          <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
+            {title}
+          </Text>
+          <Text numberOfLines={2} style={[styles.message, { color: theme.colors.textSecondary }]}>
+            {message}
+          </Text>
           {secondaryLabel ? (
             <Text style={[styles.time, { color: theme.colors.textSecondary }]}>{secondaryLabel}</Text>
           ) : null}
-          {!isRead ? <Feather color={theme.colors.primary} name="bell" size={13} /> : null}
         </View>
+
         {actionButtons?.length ? (
-          <View style={styles.inlineActions}>
+          <View style={styles.trailingActions}>
             {actionButtons.map((button) => (
               <InlineButton
                 key={button.label}
@@ -107,15 +105,16 @@ const styles = StyleSheet.create({
     ...typography.displayBold,
     fontSize: 12,
   },
+  bodyRow: {
+    alignItems: 'flex-start',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
   content: {
     flex: 1,
     gap: 3,
     minHeight: 34,
-  },
-  inlineActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
   },
   leading: {
     alignItems: 'center',
@@ -126,12 +125,6 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: 12,
     lineHeight: 17,
-  },
-  metaRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 1,
   },
   row: {
     alignItems: 'flex-start',
@@ -144,10 +137,18 @@ const styles = StyleSheet.create({
   time: {
     ...typography.bodyMedium,
     fontSize: 11,
+    marginTop: 1,
   },
   title: {
     ...typography.bodyBold,
     fontSize: 13,
+  },
+  trailingActions: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+    gap: 6,
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   unreadDot: {
     borderRadius: 999,

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ApolloError, useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -18,11 +18,15 @@ import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { StateNotice } from '@/components/core/StateNotice';
 import { DetailSection } from '@/components/details/DetailSection';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
+import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
+import { MomentViewer } from '@/components/moments/MomentViewer';
 import { AccountScreenSkeleton } from '@/components/skeleton/AccountScreenSkeleton';
+import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { useUserEventOccurrences } from '@/hooks/events/useUserEventOccurrences';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
+import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { getApolloAuthContext } from '@/lib/auth';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -63,6 +67,7 @@ export function UserProfileScreen() {
   const { theme } = useAppTheme();
   const { userId, username: routeUsername, displayName: routeDisplayName, avatarUrl } = route.params;
   const isOwnProfile = viewerUserId === userId;
+  const [momentsOpen, setMomentsOpen] = useState(false);
   const { data, error, loading, refetch } = useQuery(GetUserProfileByIdDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -98,10 +103,11 @@ export function UserProfileScreen() {
     occurrences: participantOccurrences,
     refetch: refetchParticipantOccurrences,
   } = useUserEventOccurrences(userId, authToken);
+  const { moments: userMoments, refetch: refetchUserMoments } = useUserMoments(userId, authToken);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await Promise.all([refetch(), refetchEvents(), refetchParticipantOccurrences()]);
-    }, [refetch, refetchEvents, refetchParticipantOccurrences]),
+      await Promise.all([refetch(), refetchEvents(), refetchParticipantOccurrences(), refetchUserMoments()]);
+    }, [refetch, refetchEvents, refetchParticipantOccurrences, refetchUserMoments]),
   );
 
   const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || 'Gatherle member';
@@ -239,7 +245,11 @@ export function UserProfileScreen() {
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <View style={styles.profileHeaderSection}>
         <View style={styles.profileTopRow}>
-          <ProfileAvatar imageUrl={profile.profile_picture ?? avatarUrl} label={profileName} size={88} />
+          {userMoments.length > 0 ? (
+            <MomentAvatarTrigger author={profile} label={profileName} onPress={() => setMomentsOpen(true)} size={88} />
+          ) : (
+            <ProfileAvatar imageUrl={profile.profile_picture ?? avatarUrl} label={profileName} size={88} />
+          )}
 
           <View style={styles.profileTopRail}>
             <View style={styles.profileIdentityRow}>
@@ -345,6 +355,8 @@ export function UserProfileScreen() {
       ) : (
         <SwipePagerTabs routes={profileRoutes} variant="icon" />
       )}
+
+      <MomentViewer moments={userMoments} onClose={() => setMomentsOpen(false)} open={momentsOpen} startIndex={0} />
     </PageContainer>
   );
 }
@@ -361,7 +373,7 @@ function PublicProfileTabPane({
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
 }) {
   if (loading && occurrences.length === 0) {
-    return <StateNotice message="Loading event activity..." />;
+    return <EventTileGridSkeleton count={6} />;
   }
 
   if (!occurrences.length) {
