@@ -53,6 +53,18 @@ describe('websocket route: notification.subscribe', () => {
     });
   });
 
+  it('uses the parsed schema output for transformed topics', async () => {
+    const response = toHttpResponse(
+      await handleNotificationSubscribe({ body: JSON.stringify({ topics: [' bell '] }) } as any),
+    );
+
+    expect(response.statusCode).toBe(HttpStatusCode.OK);
+    expect(JSON.parse(response.body ?? '{}')).toEqual({
+      message: 'Subscribed',
+      topics: ['bell'],
+    });
+  });
+
   it('treats omitted topics as an empty subscription list', async () => {
     const response = toHttpResponse(await handleNotificationSubscribe({ body: JSON.stringify({}) } as any));
 

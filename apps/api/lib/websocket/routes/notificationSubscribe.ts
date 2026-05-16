@@ -12,12 +12,9 @@ export const handleNotificationSubscribe = async (event: WebSocketRequestEvent):
   await ensureDatabaseConnection();
   const connectionId = await touchConnection(event);
   const payload = parseBody<{ topics?: unknown }>(event.body);
-  validateInput(NotificationSubscribePayloadSchema, payload);
-
-  const topics =
-    payload && Array.isArray(payload.topics)
-      ? payload.topics.filter((topic): topic is string => typeof topic === 'string')
-      : [];
+  validateInput(NotificationSubscribePayloadSchema, payload ?? {});
+  const parsedPayload = NotificationSubscribePayloadSchema.parse(payload ?? {});
+  const topics = parsedPayload.topics ?? [];
 
   if (topics.some((topic) => topic !== 'bell')) {
     logger.warn('Notification subscription rejected because an unsupported topic was requested', {

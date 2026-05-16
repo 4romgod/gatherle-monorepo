@@ -105,11 +105,21 @@ export class UserResolver {
 
     try {
       const user = await UserDAO.login(input);
-      await AuthAttemptDAO.clearScopes(scopeKeys);
+      await AuthAttemptDAO.clearScopes(scopeKeys).catch((cleanupError) =>
+        logger.warn('[UserResolver] Failed to clear auth attempt state after successful login', {
+          scopeKeys,
+          error: cleanupError,
+        }),
+      );
       return user;
     } catch (error) {
       if (isAuthenticationFailure(error)) {
-        await AuthAttemptDAO.recordFailureForScopes(scopeKeys);
+        await AuthAttemptDAO.recordFailureForScopes(scopeKeys).catch((recordError) =>
+          logger.warn('[UserResolver] Failed to record auth attempt after login failure', {
+            scopeKeys,
+            error: recordError,
+          }),
+        );
       }
       throw error;
     }

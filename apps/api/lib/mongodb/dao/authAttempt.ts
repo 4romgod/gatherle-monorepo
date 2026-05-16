@@ -21,6 +21,9 @@ const buildThrottleError = (retryAfterSeconds: number): GraphQLError =>
   });
 
 const buildExpiry = (now: Date): Date => new Date(now.getTime() + TTL_MS);
+const buildWindowExpiredExpression = (windowExpiryCutoff: Date) => ({
+  $lt: [{ $ifNull: ['$windowStartedAt', new Date(0)] }, windowExpiryCutoff],
+});
 
 class AuthAttemptDAO {
   static buildEmailScopeKey(email: string): string {
@@ -56,41 +59,35 @@ class AuthAttemptDAO {
 
   static async recordFailureForScopes(scopeKeys: string[], now = new Date()): Promise<void> {
     try {
-      const attempts = await AuthAttemptModel.find({ scopeKey: { $in: scopeKeys } }).exec();
-      const attemptsByScope = new Map(attempts.map((attempt) => [attempt.scopeKey, attempt]));
+      const windowExpiryCutoff = new Date(now.getTime() - FAILURE_WINDOW_MS);
+      const blockedUntil = new Date(now.getTime() + LOCKOUT_MS);
 
       await Promise.all(
         scopeKeys.map(async (scopeKey) => {
-          const existing = attemptsByScope.get(scopeKey);
+          const windowExpiredExpression = buildWindowExpiredExpression(windowExpiryCutoff);
+          const nextAttemptCountExpression = {
+            $cond: [windowExpiredExpression, 1, { $add: [{ $ifNull: ['$attemptCount', 0] }, 1] }],
+          };
 
-          if (!existing) {
-            await AuthAttemptModel.create({
-              scopeKey,
-              attemptCount: 1,
-              windowStartedAt: now,
-              expiresAt: buildExpiry(now),
-            });
-            return;
-          }
-
-          const windowExpired = now.getTime() - existing.windowStartedAt.getTime() > FAILURE_WINDOW_MS;
-          if (windowExpired) {
-            existing.attemptCount = 1;
-            existing.windowStartedAt = now;
-            existing.blockedUntil = undefined;
-            existing.expiresAt = buildExpiry(now);
-            await existing.save();
-            return;
-          }
-
-          existing.attemptCount += 1;
-          existing.expiresAt = buildExpiry(now);
-
-          if (existing.attemptCount >= MAX_FAILED_ATTEMPTS) {
-            existing.blockedUntil = new Date(now.getTime() + LOCKOUT_MS);
-          }
-
-          await existing.save();
+          await AuthAttemptModel.findOneAndUpdate(
+            { scopeKey },
+            [
+              {
+                $set: {
+                  scopeKey,
+                  attemptCount: nextAttemptCountExpression,
+                  windowStartedAt: {
+                    $cond: [windowExpiredExpression, now, { $ifNull: ['$windowStartedAt', now] }],
+                  },
+                  blockedUntil: {
+                    $cond: [{ $gte: [nextAttemptCountExpression, MAX_FAILED_ATTEMPTS] }, blockedUntil, '$$REMOVE'],
+                  },
+                  expiresAt: buildExpiry(now),
+                },
+              },
+            ],
+            { upsert: true, new: true },
+          );
         }),
       );
     } catch (error) {
