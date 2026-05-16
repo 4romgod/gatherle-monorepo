@@ -24,6 +24,7 @@ new GitHubAuthStack(app, 'GitHubAuthStack', {
     {
       owner: '4romgod',
       repo: 'gatherle-monorepo',
+      filters: ['environment:Beta-af-south-1', 'environment:Prod-af-south-1', 'environment:dns-af-south-1'],
     },
   ],
   description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK stacks',

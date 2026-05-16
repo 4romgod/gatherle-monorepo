@@ -102,7 +102,7 @@ describe('websocket route: $default', () => {
     expect(response.statusCode).toBe(HttpStatusCode.OK);
   });
 
-  it('keeps no-op behavior for unknown actions', async () => {
+  it('returns 400 for unknown actions', async () => {
     const response = toHttpResponse(await handleDefault({ body: JSON.stringify({ action: 'unknown.action' }) } as any));
 
     expect(handleChatSend).not.toHaveBeenCalled();
@@ -111,9 +111,9 @@ describe('websocket route: $default', () => {
     expect(handlePing).not.toHaveBeenCalled();
     expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
     expect(touchConnection).toHaveBeenCalledTimes(1);
-    expect(response.statusCode).toBe(HttpStatusCode.OK);
+    expect(response.statusCode).toBe(HttpStatusCode.BAD_REQUEST);
     expect(JSON.parse(response.body ?? '{}')).toEqual({
-      message: 'Action received on default route. No-op in phase 1.',
+      message: 'Unsupported websocket action.',
       action: 'unknown.action',
     });
   });

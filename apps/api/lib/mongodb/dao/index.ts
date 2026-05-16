@@ -16,3 +16,4 @@ export { default as WebSocketConnectionDAO } from '@/mongodb/dao/websocketConnec
 export { default as UserFeedDAO } from '@/mongodb/dao/userFeed';
 export { default as EmailVerificationTokenDAO } from '@/mongodb/dao/emailVerificationToken';
 export { default as PasswordResetTokenDAO } from '@/mongodb/dao/passwordResetToken';
+export { default as AuthAttemptDAO } from '@/mongodb/dao/authAttempt';

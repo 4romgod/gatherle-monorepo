@@ -113,7 +113,7 @@ class EventCategoryGroupDAO {
 
   static async count(filter: Record<string, unknown> = {}): Promise<number> {
     try {
-      return EventCategoryGroupModel.countDocuments(filter).exec();
+      return await EventCategoryGroupModel.countDocuments(filter).exec();
     } catch (error) {
       logDaoError('Error counting event category groups', { error });
       throw KnownCommonError(error);

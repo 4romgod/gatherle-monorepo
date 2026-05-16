@@ -2,18 +2,25 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
+import { useSession } from 'next-auth/react';
 import { GetUsersDocument } from '@/data/graphql/types/graphql';
-import { Typography, Grid, Box, Paper, Container } from '@mui/material';
+import { Typography, Grid, Box, Paper, Container, Button } from '@mui/material';
 import { People } from '@mui/icons-material';
 import SearchBox from '@/components/search/SearchBox';
 import UserBox from '@/components/users/UserBox';
 import UserBoxSkeleton from '@/components/users/UserBoxSkeleton';
+import { ROUTES } from '@/lib/constants';
+import { getAuthHeader } from '@/lib/utils/auth';
 
 const SKELETON_COUNT = 8;
 
 export default function UsersPageClient() {
+  const { data: session, status } = useSession();
+  const token = session?.user?.token;
   const [searchQuery, setSearchQuery] = useState('');
   const { data, loading, error } = useQuery(GetUsersDocument, {
+    skip: !token,
+    context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
 
@@ -43,6 +50,35 @@ export default function UsersPageClient() {
       return name.includes(q) || username.includes(q);
     });
   }, [users, searchQuery]);
+
+  if (status !== 'loading' && !token) {
+    return (
+      <Container maxWidth="md">
+        <Paper
+          elevation={0}
+          sx={{
+            p: 8,
+            textAlign: 'center',
+            bgcolor: 'background.default',
+            border: '1px solid',
+            borderColor: 'divider',
+            mt: 4,
+          }}
+        >
+          <People sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+          <Typography variant="h6" color="text.primary" gutterBottom>
+            Sign in to browse community members
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Member discovery is now limited to authenticated users to reduce account and profile enumeration risk.
+          </Typography>
+          <Button variant="contained" href={ROUTES.AUTH.LOGIN}>
+            Sign in
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
 
   if (error) {
     return (

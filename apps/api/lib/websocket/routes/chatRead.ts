@@ -1,8 +1,11 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { GraphQLError } from 'graphql';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { HttpStatusCode } from '@/constants';
 import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
+import { validateInput } from '@/validation';
+import { ChatReadPayloadSchema } from '@/validation/zod';
 import { ensureDatabaseConnection } from '@/websocket/database';
 import { parseBody, response } from '@/websocket/response';
 import { touchConnection } from '@/websocket/routes/touch';
@@ -12,21 +15,30 @@ interface ChatReadPayload {
   withUserId?: unknown;
 }
 
+const toClientValidationResponse = (error: GraphQLError): APIGatewayProxyResultV2 =>
+  response((error.extensions?.http as { status?: number } | undefined)?.status ?? HttpStatusCode.BAD_REQUEST, {
+    message: error.message,
+  });
+
 export const handleChatRead = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   await ensureDatabaseConnection();
   const connectionId = await touchConnection(event);
   const payload = parseBody<ChatReadPayload>(event.body);
-
-  // Validate payload
   const withUserId = typeof payload?.withUserId === 'string' ? payload.withUserId.trim() : '';
+
   if (!withUserId) {
-    logger.warn('Chat read rejected because payload is invalid', {
-      connectionId,
-      payloadType: typeof payload,
-    });
     return response(HttpStatusCode.BAD_REQUEST, {
       message: 'Invalid payload. withUserId is required.',
     });
+  }
+
+  try {
+    validateInput(ChatReadPayloadSchema, { withUserId });
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return toClientValidationResponse(error);
+    }
+    throw error;
   }
 
   // Get reader user ID from connection

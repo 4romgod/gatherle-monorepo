@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, ID } from 'type-graphql';
-import { EmailVerificationTokenDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
+import { GraphQLError } from 'graphql';
+import { AuthAttemptDAO, EmailVerificationTokenDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import {
   User,
   CreateUserInput,
@@ -17,10 +18,44 @@ import {
 import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
 import { RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';
-import { getAuthenticatedUser } from '@/utils';
+import { CustomError, ErrorTypes, getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
 import { EmailService, UserService } from '@/services';
+
+const isAuthenticationFailure = (error: unknown): boolean =>
+  error instanceof GraphQLError && error.extensions?.code === 'UNAUTHENTICATED';
+
+const canViewSensitiveUserFields = (context: ServerContext, user: User): boolean => {
+  const authenticatedUser = context.user;
+  if (!authenticatedUser) {
+    return false;
+  }
+
+  return (
+    authenticatedUser.userRole === UserRole.Admin ||
+    authenticatedUser.userRole === UserRole.Host ||
+    authenticatedUser.userId === user.userId
+  );
+};
+
+const sanitizeUserForPublicRead = (user: User): User => ({
+  ...user,
+  email: '',
+  birthdate: undefined,
+  phone_number: undefined,
+  mutedUserIds: [],
+  mutedOrgIds: [],
+  blockedUserIds: [],
+});
+
+const redactUserIfNeeded = (user: User | null, context: ServerContext): User | null => {
+  if (!user) {
+    return null;
+  }
+
+  return canViewSensitiveUserFields(context, user) ? user : sanitizeUserForPublicRead(user);
+};
 
 @Resolver(() => User)
 export class UserResolver {
@@ -54,9 +89,30 @@ export class UserResolver {
   }
 
   @Mutation(() => UserWithToken, { description: RESOLVER_DESCRIPTIONS.USER.loginUser })
-  async loginUser(@Arg('input', () => LoginUserInput) input: LoginUserInput): Promise<UserWithToken> {
+  async loginUser(
+    @Arg('input', () => LoginUserInput) input: LoginUserInput,
+    @Ctx() context: ServerContext,
+  ): Promise<UserWithToken> {
     validateInput<LoginUserInput>(LoginUserInputSchema, input);
-    return UserDAO.login(input);
+
+    const scopeKeys = [AuthAttemptDAO.buildEmailScopeKey(input.email)];
+    const requestIp = getRequestIpFromContext(context);
+    if (requestIp) {
+      scopeKeys.push(AuthAttemptDAO.buildIpScopeKey(requestIp));
+    }
+
+    await AuthAttemptDAO.assertAllowedForScopes(scopeKeys);
+
+    try {
+      const user = await UserDAO.login(input);
+      await AuthAttemptDAO.clearScopes(scopeKeys);
+      return user;
+    } catch (error) {
+      if (isAuthenticationFailure(error)) {
+        await AuthAttemptDAO.recordFailureForScopes(scopeKeys);
+      }
+      throw error;
+    }
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
@@ -88,26 +144,49 @@ export class UserResolver {
   }
 
   @Query(() => User, { description: RESOLVER_DESCRIPTIONS.USER.readUserById })
-  async readUserById(@Arg('userId', () => String) userId: string): Promise<User | null> {
+  async readUserById(@Arg('userId', () => String) userId: string, @Ctx() context: ServerContext): Promise<User | null> {
     validateMongodbId(userId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId));
-    return UserDAO.readUserById(userId);
+    return redactUserIfNeeded(await UserDAO.readUserById(userId), context);
   }
 
   @Query(() => User, { description: RESOLVER_DESCRIPTIONS.USER.readUserByUsername })
-  async readUserByUsername(@Arg('username', () => String) username: string): Promise<User | null> {
-    return UserDAO.readUserByUsername(username);
+  async readUserByUsername(
+    @Arg('username', () => String) username: string,
+    @Ctx() context: ServerContext,
+  ): Promise<User | null> {
+    validateUsername(username);
+    return redactUserIfNeeded(await UserDAO.readUserByUsername(username), context);
   }
 
+  @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Query(() => User, { description: RESOLVER_DESCRIPTIONS.USER.readUserByEmail })
-  async readUserByEmail(@Arg('email', () => String) email: string): Promise<User | null> {
+  async readUserByEmail(
+    @Arg('email', () => String) email: string,
+    @Ctx() context: ServerContext,
+  ): Promise<User | null> {
+    validateEmail(email);
+    const currentUser = getAuthenticatedUser(context);
+    if (
+      currentUser.userRole !== UserRole.Admin &&
+      currentUser.userRole !== UserRole.Host &&
+      currentUser.email?.toLowerCase() !== email.trim().toLowerCase()
+    ) {
+      throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
+    }
     return UserDAO.readUserByEmail(email);
   }
 
+  @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Query(() => [User], { description: RESOLVER_DESCRIPTIONS.USER.readUsers })
   async readUsers(
     @Arg('options', () => QueryOptionsInput, { nullable: true }) options?: QueryOptionsInput,
+    @Ctx() context?: ServerContext,
   ): Promise<User[]> {
-    return UserDAO.readUsers(options);
+    const users = await UserDAO.readUsers(options);
+    if (!context) {
+      return users.map((user) => sanitizeUserForPublicRead(user));
+    }
+    return users.map((user) => redactUserIfNeeded(user, context) ?? sanitizeUserForPublicRead(user));
   }
 
   @FieldResolver(() => [EventCategory], { nullable: true })

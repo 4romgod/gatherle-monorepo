@@ -89,6 +89,14 @@ describe('Auth Resolver', () => {
       expect(response.body.errors).toBeDefined();
       expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
     });
+
+    it('returns BAD_USER_INPUT for a whitespace-only token', async () => {
+      const response = await request(url).post('').send(getVerifyEmailMutation('   '));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    });
   });
 
   describe('forgotPassword', () => {
@@ -135,6 +143,22 @@ describe('Auth Resolver', () => {
 
     it('returns BAD_USER_INPUT for an empty token', async () => {
       const response = await request(url).post('').send(getResetPasswordMutation('', 'newPassword123'));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    });
+
+    it('returns BAD_USER_INPUT for a whitespace-only token', async () => {
+      const response = await request(url).post('').send(getResetPasswordMutation('   ', 'newPassword123'));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    });
+
+    it('returns BAD_USER_INPUT for a password shorter than 8 characters', async () => {
+      const response = await request(url).post('').send(getResetPasswordMutation('valid-token', 'short'));
 
       expect(response.status).toBe(400);
       expect(response.body.errors).toBeDefined();

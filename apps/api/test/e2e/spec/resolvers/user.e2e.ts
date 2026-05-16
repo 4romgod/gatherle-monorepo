@@ -31,7 +31,52 @@ describe('User Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   const testPassword = 'testPassword';
   let adminUser: UserWithToken;
+  let seededUser: UserWithToken;
   const createdUserIds: string[] = [];
+
+  const getSensitiveReadUserByIdQuery = (userId: string) => ({
+    query: `query GetSensitiveUserById($userId: String!) {
+      readUserById(userId: $userId) {
+        userId
+        email
+        username
+        birthdate
+        phone_number
+        mutedUserIds
+        blockedUserIds
+      }
+    }`,
+    variables: { userId },
+  });
+
+  const getSensitiveReadUserByUsernameQuery = (username: string) => ({
+    query: `query GetSensitiveUserByUsername($username: String!) {
+      readUserByUsername(username: $username) {
+        userId
+        email
+        username
+        birthdate
+        phone_number
+        mutedUserIds
+        blockedUserIds
+      }
+    }`,
+    variables: { username },
+  });
+
+  const getSensitiveReadUsersQuery = () => ({
+    query: `query GetSensitiveUsers {
+      readUsers {
+        userId
+        email
+        username
+        birthdate
+        phone_number
+        mutedUserIds
+        blockedUserIds
+      }
+    }`,
+  });
 
   const untrackUser = (userId: string) => {
     const idx = createdUserIds.indexOf(userId);
@@ -48,6 +93,7 @@ describe('User Resolver', () => {
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+    seededUser = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
   });
 
   afterEach(async () => {
@@ -148,7 +194,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await sendUserGraphQL(getReadUsersWithoutOptionsQuery());
+        const response = await sendUserGraphQL(getReadUsersWithoutOptionsQuery(), createdUser.token);
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -167,7 +213,7 @@ describe('User Resolver', () => {
             },
           ],
         };
-        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options));
+        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options), createdUser.token);
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -184,7 +230,7 @@ describe('User Resolver', () => {
             value: (input.username ?? '').toLowerCase(),
           },
         };
-        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options));
+        const response = await sendUserGraphQL(getReadUsersWithOptionsQuery(options), createdUser.token);
         expect(response.status).toBe(200);
         const users = response.body.data.readUsers;
         const found = users.find((user: any) => user.userId === createdUser.userId);
@@ -197,7 +243,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await sendUserGraphQL(getReadUserByIdQuery(createdUser.userId));
+        const response = await sendUserGraphQL(getReadUserByIdQuery(createdUser.userId), createdUser.token);
         expect(response.status).toBe(200);
         expect(response.body.data.readUserById.email).toBe(input.email);
       });
@@ -206,7 +252,7 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await sendUserGraphQL(getReadUserByEmailQuery(createdUser.email));
+        const response = await sendUserGraphQL(getReadUserByEmailQuery(createdUser.email), createdUser.token);
         expect(response.status).toBe(200);
         expect(response.body.data.readUserByEmail.email).toBe(input.email);
       });
@@ -215,9 +261,43 @@ describe('User Resolver', () => {
         const input = newUserInput();
         const createdUser = await createUserOnServer(url, input, createdUserIds);
 
-        const response = await sendUserGraphQL(getReadUserByUsernameQuery(createdUser.username));
+        const response = await sendUserGraphQL(getReadUserByUsernameQuery(createdUser.username), createdUser.token);
         expect(response.status).toBe(200);
         expect(response.body.data.readUserByUsername.email).toBe(input.email);
+      });
+
+      it('redacts sensitive fields for public readUserById queries', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
+        const response = await sendUserGraphQL(getSensitiveReadUserByIdQuery(createdUser.userId));
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.readUserById).toEqual({
+          userId: createdUser.userId,
+          email: '',
+          username: createdUser.username,
+          birthdate: null,
+          phone_number: null,
+          mutedUserIds: [],
+          blockedUserIds: [],
+        });
+      });
+
+      it('redacts sensitive fields for public readUserByUsername queries', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
+        const response = await sendUserGraphQL(getSensitiveReadUserByUsernameQuery(createdUser.username));
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.readUserByUsername).toEqual({
+          userId: createdUser.userId,
+          email: '',
+          username: createdUser.username,
+          birthdate: null,
+          phone_number: null,
+          mutedUserIds: [],
+          blockedUserIds: [],
+        });
       });
     });
   });
@@ -265,6 +345,44 @@ describe('User Resolver', () => {
         );
         expect(response.status).toBe(401);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      });
+    });
+
+    describe('readUsers Query', () => {
+      it('returns unauthenticated when no auth token is provided', async () => {
+        const response = await sendUserGraphQL(getReadUsersWithoutOptionsQuery());
+
+        expect(response.status).toBe(401);
+        expect(response.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('redacts sensitive fields when another regular user reads the list', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
+        const response = await sendUserGraphQL(getSensitiveReadUsersQuery(), seededUser.token);
+        const found = response.body.data.readUsers.find((user: any) => user.userId === createdUser.userId);
+
+        expect(response.status).toBe(200);
+        expect(found).toEqual({
+          userId: createdUser.userId,
+          email: '',
+          username: createdUser.username,
+          birthdate: null,
+          phone_number: null,
+          mutedUserIds: [],
+          blockedUserIds: [],
+        });
+      });
+    });
+
+    describe('readUserByEmail Query', () => {
+      it('returns unauthorized when a different non-admin user queries someone else by email', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
+        const response = await sendUserGraphQL(getReadUserByEmailQuery(createdUser.email), seededUser.token);
+
+        expect(response.status).toBe(403);
+        expect(response.body.errors[0].extensions.code).toBe('UNAUTHORIZED');
       });
     });
 

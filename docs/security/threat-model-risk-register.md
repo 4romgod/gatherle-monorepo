@@ -48,19 +48,19 @@ It is a practical engineering risk model, not a formal penetration test.
 
 | ID   | Risk                                                                                                                         | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                    | Likelihood | Impact | Score | Priority |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ----- | -------- |
-| R-01 | CI/CD AWS role can lead to full account takeover if workflow/repo is compromised                                             | `infrastructure/cdk/lib/stack/github-auth-stack.ts` uses `AdministratorAccess` and broad `sub` pattern (`repo:owner/repo:*`)                                                                                                                                                                                                                                                                                                                | 4          | 5      | 20    | Critical |
+| R-01 | CI/CD deploy role is still broad enough to cause major account impact if a trusted workflow is compromised                   | `infrastructure/cdk/lib/stack/github-auth-stack.ts` now restricts OIDC trust to exact environment subjects, but the inline deploy policy still grants broad service-level access with wildcard resources, including `iam:*`                                                                                                                                                                                                                 | 3          | 5      | 15    | High     |
 | R-02 | ~~JWT secret reuse across webapp auth and API token signing increases blast radius~~                                         | Webapp uses `NEXTAUTH_SECRET` in `apps/webapp/auth.config.ts`; API signs/verifies with `JWT_SECRET` in `apps/api/lib/utils/auth.ts`; deployment now injects `NEXTAUTH_SECRET` via `.github/workflows/deploy.yaml`, and operators confirmed distinct values + rotation.                                                                                                                                                                      | 3          | 5      | 15    | High     |
 | R-03 | ~~API signs full user object into JWT instead of minimal claims~~                                                            | `apps/api/lib/utils/auth.ts` now maps to minimal `AuthClaims` (`sub`, `email`, `username`, `userRole`, optional `isTestUser`, `ver`) before signing, and verification enforces required claims/version via `toAuthClaims`                                                                                                                                                                                                                   | 4          | 4      | 16    | High     |
 | R-04 | ~~Wildcard CORS broadens attack surface for API and S3 upload flows~~                                                        | API and S3 now use explicit stage-based webapp origin allowlists with optional `CORS_ALLOWED_ORIGINS` overrides instead of `*` in `apps/api/lib/graphql/apollo/*` and `infrastructure/cdk/lib/stack/s3-bucket-stack.ts`                                                                                                                                                                                                                     | 4          | 4      | 16    | High     |
 | R-05 | ~~WebSocket query-string token exposure; residual handshake token risk remains (header/subprotocol + long-lived JWT reuse)~~ | Backend extracts `Authorization`/`Sec-WebSocket-Protocol` in `apps/api/lib/websocket/event.ts`; client sends protocol-based token in `apps/webapp/lib/utils/websocket.ts` (`buildWebSocketAuthProtocols`)                                                                                                                                                                                                                                   | 3          | 4      | 12    | High     |
-| R-06 | Missing request-abuse controls (GraphQL complexity, throttling, websocket rate limiting) raises DoS/cost risk                | No query depth/cost plugin in `apps/api/lib/graphql/schema/index.ts`; no API throttling config in `infrastructure/cdk/lib/stack/graphql-stack.ts`; no websocket rate limiter in routes                                                                                                                                                                                                                                                      | 4          | 4      | 16    | High     |
-| R-11 | No explicit L7 DDoS controls (WAF/rate-based rules) on public API and websocket edges                                        | `infrastructure/cdk/lib/stack/graphql-stack.ts` and `infrastructure/cdk/lib/stack/websocket-stack.ts` do not attach WAF/WebACL or rate-based blocking controls                                                                                                                                                                                                                                                                              | 4          | 5      | 20    | Critical |
-| R-12 | User enumeration/data scraping risk via unauthenticated user queries                                                         | `apps/api/lib/graphql/resolvers/user.ts` exposes `readUsers`, `readUserByEmail`, `readUserById`, `readUserByUsername` without `@Authorized`                                                                                                                                                                                                                                                                                                 | 4          | 4      | 16    | High     |
-| R-13 | Authentication brute-force/credential stuffing protections are not evident                                                   | Login path in `apps/webapp/data/actions/server/auth/login.ts` -> `signIn` and `apps/api/lib/mongodb/dao/user.ts` lacks attempt throttling/lockout/captcha controls                                                                                                                                                                                                                                                                          | 4          | 4      | 16    | High     |
+| R-06 | ~~Missing request-abuse controls (GraphQL complexity, throttling, websocket rate limiting) raises DoS/cost risk~~            | GraphQL query guards now enforce depth/complexity and stage-aware introspection in `apps/api/lib/graphql/security/queryGuards.ts`; API edge throttling/WAF live in `infrastructure/cdk/lib/stack/graphql-stack.ts`; websocket stage/route throttles are set in `infrastructure/cdk/lib/stack/websocket-stack.ts`; websocket payloads are validated in `apps/api/lib/validation/zod/websocket.ts` and route handlers                         | 4          | 4      | 16    | High     |
+| R-11 | GraphQL edge has baseline WAF/throttling, but websocket still lacks WAF-equivalent distributed-abuse filtering and alarms    | `infrastructure/cdk/lib/stack/graphql-stack.ts` attaches stage throttles + WAF; `infrastructure/cdk/lib/stack/websocket-stack.ts` adds stage/route throttles, but API Gateway WebSocket does not get the same WAF attachment path and the repo still lacks dedicated spike alarms                                                                                                                                                           | 3          | 4      | 12    | High     |
+| R-12 | Public profile lookups still allow limited enumeration even after directory/auth tightening                                  | `apps/api/lib/graphql/resolvers/user.ts` now requires auth for `readUsers`/`readUserByEmail`, redacts sensitive fields for public `readUserById`/`readUserByUsername`, and `apps/webapp/components/users/UsersPageClient.tsx` now requires sign-in to browse the directory                                                                                                                                                                  | 2          | 3      | 6     | Medium   |
+| R-13 | Login brute-force risk is reduced, but CAPTCHA, adaptive controls, and auth-spike alerting are still absent                  | `apps/api/lib/mongodb/dao/authAttempt.ts` now enforces email+IP lockouts for repeated failures, but there is no CAPTCHA/risk engine and no explicit alerting around auth abuse spikes                                                                                                                                                                                                                                                       | 2          | 3      | 6     | Medium   |
 | R-14 | ~~Unbounded query pagination can be abused for heavy reads and scraping~~                                                    | `apps/api/lib/utils/queries/query.ts` and `apps/api/lib/utils/queries/aggregate/pagination.ts` now enforce `pagination.limit` within `1..50` and reject invalid pagination inputs with `400`                                                                                                                                                                                                                                                | 4          | 3      | 12    | High     |
 | R-15 | ~~Webapp response security headers are not explicitly configured (CSP/HSTS/frame/referrer)~~                                 | `apps/webapp/next.config.mjs` now sets stage-aware `Content-Security-Policy`, `X-Frame-Options`, `Referrer-Policy`, and production-only `Strict-Transport-Security` headers                                                                                                                                                                                                                                                                 | 3          | 3      | 9     | Medium   |
 | R-07 | ~~GraphQL request logging may capture sensitive variables in non-prod stages~~                                               | `apps/api/lib/graphql/apollo/server.ts` logs operation metadata + query fingerprint + variable keys (not raw query text). Variable values are not emitted by the GraphQL request logging plugin.                                                                                                                                                                                                                                            | 3          | 4      | 12    | High     |
-| R-08 | Apollo landing page plugin is enabled for all stages                                                                         | `apps/api/lib/graphql/apollo/server.ts` always adds `ApolloServerPluginLandingPageLocalDefault()`                                                                                                                                                                                                                                                                                                                                           | 3          | 3      | 9     | Medium   |
+| R-08 | ~~Apollo landing page plugin is enabled for all stages~~                                                                     | `apps/api/lib/graphql/apollo/server.ts` now only enables `ApolloServerPluginLandingPageLocalDefault()` outside `Prod`                                                                                                                                                                                                                                                                                                                       | 3          | 3      | 9     | Medium   |
 | R-09 | Secrets bootstrap path can accidentally deploy empty/incorrect secret values                                                 | `infrastructure/cdk/lib/stack/secrets-management-stack.ts` uses `unsafePlainText(process.env.* ?? '')`                                                                                                                                                                                                                                                                                                                                      | 3          | 3      | 9     | Medium   |
 | R-10 | PR security gates are currently weak (dependency and code scanning not enforced)                                             | `.github/workflows/pr-check.yaml` has `npm audit` disabled and no SAST/IaC security job                                                                                                                                                                                                                                                                                                                                                     | 3          | 3      | 9     | Medium   |
 | R-16 | Presigned upload URL abuse: rate-limit bypass + duplicate MediaConvert billing via URL reuse                                 | `apps/api/lib/services/media.ts` `getEventMomentUploadUrl` counts created moments (`EventMomentDAO.countRecentByAuthor`) not issued upload URLs — user can request many upload tokens without ever calling `createEventMoment`. S3 presigned PUT URL is valid for 900 s and can be PUT multiple times; each S3 ObjectCreated trigger fires `startTranscodeJobHandler` independently, creating duplicate MediaConvert jobs for the same key. | 3          | 3      | 9     | Medium   |
@@ -69,8 +69,10 @@ It is a practical engineering risk model, not a formal penetration test.
 
 ### R-01: CI/CD role abuse -> account-wide compromise
 
-If a malicious workflow change lands on a trusted branch/repo context, the assumed role currently has admin-level
-permissions. This enables destructive infrastructure changes, secret exfiltration, and persistence.
+The OIDC trust boundary is tighter now because only exact protected environment subjects can assume the role. The
+remaining problem is privilege breadth: the deploy role still has wildcard-resource access across several sensitive
+services, including IAM. A malicious workflow in a trusted deployment environment could still pivot into destructive
+changes, secret exposure, or persistence.
 
 ### R-02: ~~Secret reuse across auth surfaces -> multi-surface auth compromise~~
 
@@ -123,14 +125,24 @@ Status (2026-04-21): Mitigated by API-032.
 
 ### R-11: L7 DDoS exposure on public API surfaces
 
-Without explicit WAF/rate-based controls at the edge, the system depends primarily on default service-level protections
-and app behavior. Targeted bursts can still cause elevated latency, higher cost, and downstream exhaustion in
-Lambda/MongoDB.
+GraphQL now has baseline API Gateway throttling and a WAF rate-based rule, and WebSocket now has stage and route
+throttles. The remaining risk is distributed abuse that spans many IPs, plus the lack of explicit alarms and the lack of
+a WAF-equivalent control path on API Gateway WebSocket.
 
 ### R-12: Public user discovery and enumeration
 
-Unauthenticated user read operations allow broad account discovery and potential scraping patterns if request volume is
-not constrained and response fields are not minimized for public callers.
+The broadest enumeration path is reduced: directory reads now require auth, sensitive `User` fields are redacted for
+public username/id lookups, and the webapp directory requires sign-in. Residual risk remains because public profile
+lookups still exist and the schema still exposes a single `User` type rather than a dedicated public-profile contract.
+
+### R-13: Login brute-force and credential stuffing
+
+Login now tracks failed attempts by email and IP and imposes temporary lockouts. Residual risk remains because there is
+no CAPTCHA/adaptive challenge, no edge-auth abuse alarms, and no user-facing unlock or review flow.
+
+### R-08: ~~Apollo landing page in production~~
+
+Status (2026-05-16): Resolved in code. The Apollo landing page is now disabled in `Prod`.
 
 ### R-14: ~~Unbounded query pagination~~
 
@@ -146,31 +158,33 @@ HSTS headers from `apps/webapp/next.config.mjs`.
 
 ### Immediate (0-7 days)
 
-1. Replace `AdministratorAccess` on GitHub deploy role with least-privilege policy scoped to required
-   CDK/CloudFormation/S3/ECR/Secrets actions.
-2. Restrict OIDC trust `sub` claims to exact branch/environment patterns used for deploy (for example `main` and
-   protected environments), not wildcard repo subject.
+1. ~~Replace `AdministratorAccess` on GitHub deploy role with a repo-specific inline deploy policy.~~ Residual next
+   step: remove wildcard-resource IAM access and split deploy roles by concern.
+2. ~~Restrict OIDC trust `sub` claims to exact branch/environment patterns used for deploy (for example `main` and
+   protected environments), not wildcard repo subject.~~
 3. ~~Split secrets: introduce separate `API_JWT_SIGNING_SECRET` and `NEXTAUTH_SECRET`; rotate both.~~
 4. Harden websocket connect auth beyond header/subprotocol migration:
    - Use short-lived websocket connect tickets instead of long-lived JWTs.
    - Ensure token-bearing handshake headers are redacted in all logs/telemetry paths.
    - Keep query-token path permanently disabled.
 5. ~~Lock CORS to explicit domain allowlists per stage for API and S3.~~
-6. Add explicit L7 DDoS controls:
-   - Attach WAF WebACL to GraphQL/API and websocket entry points.
-   - Add rate-based rules for abusive IPs/patterns.
-   - Define baseline alarms for traffic spikes, 4xx/5xx anomalies, and throttles.
+6. Complete explicit L7 abuse controls:
+   - ~~Attach WAF WebACL to the public GraphQL/API entry point.~~
+   - ~~Add baseline stage/route throttling for GraphQL and WebSocket.~~
+   - Define baseline alarms for traffic spikes, 4xx/5xx anomalies, auth failures, and throttles.
+   - Add websocket-side compensating controls for distributed abuse and spam.
 7. ~~Add max pagination bounds in generic query helpers.~~
 
 ### Near-term (1-4 weeks)
 
-1. Implement GraphQL query depth/complexity limits and conservative defaults.
-2. Add API Gateway throttling and usage limits; add websocket per-connection message rate limits.
+1. ~~Implement GraphQL query depth/complexity limits and conservative defaults.~~
+2. ~~Add API Gateway throttling and websocket stage/route throttles.~~
 3. ~~Redact sensitive GraphQL variables in logs and disable logging of auth payloads.~~
-4. Disable Apollo landing page in production stages.
+4. ~~Disable Apollo landing page in production stages.~~
 5. Add safety checks in `SecretsManagementStack` deploy path to fail if required secret inputs are blank.
-6. Require auth and field minimization for sensitive user directory queries; add anti-enumeration constraints.
-7. Add brute-force protections for login paths (IP/user throttling, temporary lockouts, and optional CAPTCHA).
+6. ~~Require auth and field minimization for sensitive user directory queries; add anti-enumeration constraints.~~
+7. ~~Add brute-force protections for login paths (IP/user throttling and temporary lockouts).~~ Residual next step:
+   optional CAPTCHA/adaptive challenge + monitoring.
 8. ~~Add webapp security headers (CSP, HSTS, frame/referrer policies) with stage-aware tuning.~~
 
 ### Medium-term (1-3 months)
@@ -183,22 +197,25 @@ HSTS headers from `apps/webapp/next.config.mjs`.
 ## Security Backlog (Implementation Candidates)
 
 - ~~JWT claims hardening in `apps/api/lib/utils/auth.ts`.~~
-- OIDC trust and policy hardening in `infrastructure/cdk/lib/stack/github-auth-stack.ts`.
+- Further OIDC least-privilege scoping and deploy-role split by stack/environment in
+  `infrastructure/cdk/lib/stack/github-auth-stack.ts`.
 - ~~CORS/domain allowlist controls in `apps/api/lib/graphql/apollo/lambdaHandler.ts`,
   `apps/api/lib/graphql/apollo/expressApolloServer.ts`, and `infrastructure/cdk/lib/stack/s3-bucket-stack.ts`.~~
 - WebSocket auth transport hardening in `apps/api/lib/websocket/event.ts`, connect flow, and
   `apps/webapp/lib/utils/websocket.ts`.
-- GraphQL abuse controls in `apps/api/lib/graphql/schema/index.ts` and server setup.
-- L7 DDoS controls via WAF/rate rules for API and websocket public edges in
+- ~~GraphQL abuse controls in `apps/api/lib/graphql/schema/index.ts` and server setup.~~
+- Complete distributed-abuse controls and alerting for API/websocket public edges in
   `infrastructure/cdk/lib/stack/graphql-stack.ts` and `infrastructure/cdk/lib/stack/websocket-stack.ts`.
-- User-directory exposure review and auth/privacy constraints in `apps/api/lib/graphql/resolvers/user.ts`.
+- Continue public-profile contract hardening in `apps/api/lib/graphql/resolvers/user.ts` and
+  `packages/commons/lib/types/user.ts`.
 - ~~Pagination hard limits in `apps/api/lib/utils/queries/query.ts`.~~
 - ~~Webapp security header policy in `apps/webapp/next.config.mjs`.~~
 - CI security workflow additions under `.github/workflows`.
 
 ## Risk Acceptance Guidance
 
-No promotion to a new stage should proceed with unresolved Critical risks (`R-01`, `R-11`).
+No promotion to a new stage should proceed with unresolved Critical risks. As of 2026-05-16, the highest open risks in
+this register are High (`R-01`, `R-11`).
 
 For High risks, promotion should require explicit temporary risk acceptance with a dated remediation owner and target
 completion window.

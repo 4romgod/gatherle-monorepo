@@ -40,8 +40,8 @@ export const handleDefault = async (event: WebSocketRequestEvent): Promise<APIGa
 
   logger.warn('Unhandled websocket action', { connectionId, action });
 
-  return response(HttpStatusCode.OK, {
-    message: 'Action received on default route. No-op in phase 1.',
+  return response(HttpStatusCode.BAD_REQUEST, {
+    message: 'Unsupported websocket action.',
     action,
   });
 };
