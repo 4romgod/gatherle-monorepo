@@ -121,6 +121,13 @@ describe('NotificationDAO', () => {
 
       await expect(NotificationDAO.createMany([mockInput])).rejects.toThrow(GraphQLError);
     });
+
+    it('rethrows GraphQLError when bulk create fails with a GraphQLError', async () => {
+      const graphqlError = new GraphQLError('Bulk validation failed');
+      (NotificationModel.insertMany as jest.Mock).mockRejectedValue(graphqlError);
+
+      await expect(NotificationDAO.createMany([mockInput])).rejects.toThrow(graphqlError);
+    });
   });
 
   describe('readByUserId', () => {
@@ -178,6 +185,12 @@ describe('NotificationDAO', () => {
         recipientUserId: 'user-1',
         isRead: false,
       });
+    });
+
+    it('wraps unexpected read failures', async () => {
+      (NotificationModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new Error('find failed')));
+
+      await expect(NotificationDAO.readByUserId('user-1')).rejects.toThrow(GraphQLError);
     });
   });
 
@@ -415,6 +428,32 @@ describe('NotificationDAO', () => {
       expect(NotificationModel.deleteMany).toHaveBeenCalledWith({
         occurrenceId: { $in: ['occ-1', 'occ-2'] },
       });
+    });
+
+    it('wraps deleteByUserId failures', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('delete failed')),
+      );
+
+      await expect(NotificationDAO.deleteByUserId('user-1')).rejects.toThrow(GraphQLError);
+    });
+
+    it('wraps deleteByTargetReference failures', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('delete failed')),
+      );
+
+      await expect(
+        NotificationDAO.deleteByTargetReference(NotificationTargetType.Organization, 'org-slug'),
+      ).rejects.toThrow(GraphQLError);
+    });
+
+    it('wraps deleteByOccurrenceIds failures', async () => {
+      (NotificationModel.deleteMany as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('delete failed')),
+      );
+
+      await expect(NotificationDAO.deleteByOccurrenceIds(['occ-1'])).rejects.toThrow(GraphQLError);
     });
   });
 });

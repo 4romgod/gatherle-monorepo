@@ -98,6 +98,33 @@ describe('VenueDAO', () => {
       expect(result.slug).toBe('test-venue');
     });
 
+    it('falls back to a generic slug when slug, name, and venueId are all missing', async () => {
+      (VenueModel.create as jest.Mock).mockResolvedValue({
+        toObject: () => ({
+          orgId: 'org-1',
+          type: VenueType.Physical,
+          slug: undefined,
+          name: undefined,
+          venueId: undefined,
+        }),
+      });
+
+      const result = await VenueDAO.create({
+        orgId: 'org-1',
+        type: VenueType.Physical,
+        name: 'Test Venue',
+        address: {
+          street: '123 Test St',
+          city: 'Test City',
+          region: 'Test State',
+          country: 'Test Country',
+          postalCode: '12345',
+        },
+      });
+
+      expect(result.slug).toBe('venue');
+    });
+
     it('wraps errors', async () => {
       (VenueModel.create as jest.Mock).mockRejectedValue(new MockMongoError(0));
 

@@ -13,6 +13,7 @@ import { ApolloServerErrorCode } from '@apollo/server/errors';
 import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
+import { enforceQueryGuards, resolveQueryGuardLimits } from '@/graphql/security';
 import type DataLoader from 'dataloader';
 import type {
   User,
@@ -23,12 +24,15 @@ import type {
   EventOccurrenceParticipant,
 } from '@gatherle/commons/types';
 import type { AuthClaims } from '@/utils/auth';
+import type { APIGatewayProxyEvent, Context as LambdaContext } from 'aws-lambda';
 
 export interface ServerContext {
   token?: string;
   user?: AuthClaims;
   req?: Request;
   res?: Response;
+  lambdaEvent?: APIGatewayProxyEvent;
+  lambdaContext?: LambdaContext;
   loaders: {
     user: DataLoader<string, User | null>;
     eventCategory: DataLoader<string, EventCategory | null>;
@@ -43,6 +47,8 @@ export interface ServerContext {
     myEventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
   };
 }
+
+const queryGuardLimits = resolveQueryGuardLimits(STAGE);
 
 const GRAPHQL_CLIENT_ERROR_CODES = new Set<string>([
   ApolloServerErrorCode.GRAPHQL_PARSE_FAILED,
@@ -226,9 +232,27 @@ export const createApolloServer = async (expressApp?: Express) => {
       };
     },
     plugins: [
-      ApolloServerPluginLandingPageLocalDefault(),
+      ...(STAGE !== APPLICATION_STAGES.PROD ? [ApolloServerPluginLandingPageLocalDefault()] : []),
       ...(expressApp ? [ApolloServerPluginDrainHttpServer({ httpServer: createServer(expressApp) })] : []),
       ...(STAGE !== APPLICATION_STAGES.PROD ? [createGraphQLRequestLoggingPlugin()] : []),
+      {
+        async requestDidStart() {
+          return {
+            async didResolveOperation(requestContext) {
+              if (!requestContext.document || !requestContext.operation) {
+                return;
+              }
+
+              enforceQueryGuards(
+                requestContext.document,
+                requestContext.operation,
+                (requestContext.request.variables ?? {}) as Record<string, unknown>,
+                queryGuardLimits,
+              );
+            },
+          };
+        },
+      },
     ],
   });
 

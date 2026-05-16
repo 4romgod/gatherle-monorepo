@@ -16,3 +16,4 @@ export { default as WebSocketConnection } from './websocketConnection';
 export { default as UserFeed } from './userFeed';
 export { default as EmailVerificationToken } from './emailVerificationToken';
 export { default as PasswordResetToken } from './passwordResetToken';
+export { default as AuthAttempt } from './authAttempt';

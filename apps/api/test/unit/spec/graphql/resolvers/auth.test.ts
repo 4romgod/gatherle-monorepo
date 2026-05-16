@@ -4,6 +4,7 @@ import { EmailVerificationTokenDAO, PasswordResetTokenDAO, UserDAO } from '@/mon
 import { EmailService } from '@/services';
 import { validateInput } from '@/validation';
 import { verifyExternalIdentityToken } from '@/utils';
+import { logger } from '@/utils/logger';
 
 // Keep the real validation module exports so transitive schema imports still work.
 jest.mock('@/validation', () => {
@@ -57,14 +58,23 @@ jest.mock('@/services', () => ({
 }));
 
 jest.mock('@/utils/exceptions', () => ({
-  CustomError: jest.fn((message: string, type: string) => {
+  CustomError: jest.fn((message: string, type: { errorCode: string; errorStatus: number }) => {
     const err: any = new Error(message);
-    err.extensions = { code: type };
+    err.extensions = {
+      code: type.errorCode,
+      http: { status: type.errorStatus },
+    };
     return err;
   }),
   ErrorTypes: {
-    BAD_USER_INPUT: 'BAD_USER_INPUT',
-    NOT_FOUND: 'NOT_FOUND',
+    BAD_USER_INPUT: {
+      errorCode: 'BAD_USER_INPUT',
+      errorStatus: 400,
+    },
+    NOT_FOUND: {
+      errorCode: 'NOT_FOUND',
+      errorStatus: 404,
+    },
   },
 }));
 
@@ -90,6 +100,8 @@ const mockUser = {
   emailVerified: false,
 };
 
+const flushPromises = async () => new Promise((resolve) => setImmediate(resolve));
+
 describe('AuthResolver', () => {
   let resolver: AuthResolver;
 
@@ -111,13 +123,29 @@ describe('AuthResolver', () => {
     });
 
     it('returns true silently when the email is not registered (no info leakage)', async () => {
-      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(new Error('not found'));
+      const notFoundError = Object.assign(new Error('not found'), {
+        extensions: { code: 'NOT_FOUND' },
+      });
+      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(notFoundError);
 
       const result = await resolver.requestEmailVerification('unknown@example.com');
 
       expect(result).toBe(true);
       expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it('returns true even when email delivery fails after token creation', async () => {
+      const deliveryError = new Error('smtp is down');
+      (UserDAO.readUserByEmail as jest.Mock).mockResolvedValue(mockUser);
+      (EmailVerificationTokenDAO.create as jest.Mock).mockResolvedValue('plainToken123');
+      (EmailService.sendEmailVerification as jest.Mock).mockRejectedValue(deliveryError);
+
+      await expect(resolver.requestEmailVerification('user@example.com')).resolves.toBe(true);
+      expect(logger.error).toHaveBeenCalledWith('[AuthResolver] Email delivery failed for email verification', {
+        email: 'user@example.com',
+        error: deliveryError,
+      });
     });
 
     it('returns true immediately when the user is already verified', async () => {
@@ -128,6 +156,16 @@ describe('AuthResolver', () => {
       expect(result).toBe(true);
       expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it('rethrows unexpected lookup failures instead of masking them', async () => {
+      const lookupError = new Error('database offline');
+      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(lookupError);
+
+      await expect(resolver.requestEmailVerification('user@example.com')).rejects.toBe(lookupError);
+      expect(logger.error).toHaveBeenCalledWith('[AuthResolver] Unexpected error in requestEmailVerification', {
+        error: lookupError,
+      });
     });
 
     it('throws BAD_USER_INPUT for a malformed email address', async () => {
@@ -183,6 +221,22 @@ describe('AuthResolver', () => {
 
       expect(EmailVerificationTokenDAO.deleteByUserId).toHaveBeenCalledWith(mockUser.userId);
     });
+
+    it('returns the updated user even when cleanup fails after verification', async () => {
+      const updatedUser = { ...mockUser, emailVerified: true };
+      const cleanupError = new Error('cleanup failed');
+      (EmailVerificationTokenDAO.verify as jest.Mock).mockResolvedValue(mockUser.userId);
+      (UserDAO.setEmailVerified as jest.Mock).mockResolvedValue(updatedUser);
+      (EmailVerificationTokenDAO.deleteByUserId as jest.Mock).mockRejectedValue(cleanupError);
+
+      await expect(resolver.verifyEmail('valid-token')).resolves.toEqual(updatedUser);
+      await flushPromises();
+
+      expect(logger.warn).toHaveBeenCalledWith('[AuthResolver] Failed to clean up email verification token', {
+        userId: mockUser.userId,
+        error: cleanupError,
+      });
+    });
   });
 
   describe('forgotPassword', () => {
@@ -198,13 +252,39 @@ describe('AuthResolver', () => {
     });
 
     it('returns true silently when the email is not registered (no info leakage)', async () => {
-      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(new Error('not found'));
+      const notFoundError = Object.assign(new Error('not found'), {
+        extensions: { code: 'NOT_FOUND' },
+      });
+      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(notFoundError);
 
       const result = await resolver.forgotPassword('unknown@example.com');
 
       expect(result).toBe(true);
       expect(PasswordResetTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('returns true even when password reset email delivery fails', async () => {
+      const deliveryError = new Error('mail provider unavailable');
+      (UserDAO.readUserByEmail as jest.Mock).mockResolvedValue(mockUser);
+      (PasswordResetTokenDAO.create as jest.Mock).mockResolvedValue('resetToken123');
+      (EmailService.sendPasswordReset as jest.Mock).mockRejectedValue(deliveryError);
+
+      await expect(resolver.forgotPassword('user@example.com')).resolves.toBe(true);
+      expect(logger.warn).toHaveBeenCalledWith('[AuthResolver] Email delivery failed for password reset', {
+        email: 'user@example.com',
+        error: deliveryError,
+      });
+    });
+
+    it('rethrows unexpected lookup failures instead of masking them', async () => {
+      const lookupError = new Error('database offline');
+      (UserDAO.readUserByEmail as jest.Mock).mockRejectedValue(lookupError);
+
+      await expect(resolver.forgotPassword('user@example.com')).rejects.toBe(lookupError);
+      expect(logger.error).toHaveBeenCalledWith('[AuthResolver] Unexpected error in forgotPassword', {
+        error: lookupError,
+      });
     });
 
     it('throws BAD_USER_INPUT for a malformed email address', async () => {
@@ -264,6 +344,21 @@ describe('AuthResolver', () => {
       await resolver.resetPassword('valid-token', 'newPassword123');
 
       expect(PasswordResetTokenDAO.deleteByUserId).toHaveBeenCalledWith(mockUser.userId);
+    });
+
+    it('returns true even when reset-token cleanup fails', async () => {
+      const cleanupError = new Error('cleanup failed');
+      (PasswordResetTokenDAO.verify as jest.Mock).mockResolvedValue(mockUser.userId);
+      (UserDAO.updatePassword as jest.Mock).mockResolvedValue(undefined);
+      (PasswordResetTokenDAO.deleteByUserId as jest.Mock).mockRejectedValue(cleanupError);
+
+      await expect(resolver.resetPassword('valid-token', 'newPassword123')).resolves.toBe(true);
+      await flushPromises();
+
+      expect(logger.warn).toHaveBeenCalledWith('[AuthResolver] Failed to clean up password reset token', {
+        userId: mockUser.userId,
+        error: cleanupError,
+      });
     });
   });
 

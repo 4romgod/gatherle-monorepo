@@ -1,9 +1,12 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { GraphQLError } from 'graphql';
 import { EventMomentType } from '@gatherle/commons/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
 import { CHAT_MESSAGE_MAX_LENGTH } from '@/websocket/constants';
+import { validateInput } from '@/validation';
+import { ChatSendPayloadSchema } from '@/validation/zod';
 
 const MOMENT_CAPTION_MAX_LENGTH = 280;
 const VALID_MOMENT_TYPES = new Set<string>(Object.values(EventMomentType));
@@ -21,14 +24,24 @@ interface ChatSendPayload {
   replyToMomentType?: unknown;
 }
 
+const toClientValidationResponse = (error: GraphQLError): APIGatewayProxyResultV2 =>
+  response((error.extensions?.http as { status?: number } | undefined)?.status ?? HttpStatusCode.BAD_REQUEST, {
+    message: error.message,
+  });
+
 export const handleChatSend = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   await ensureDatabaseConnection();
   const connectionId = await touchConnection(event);
   const payload = parseBody<ChatSendPayload>(event.body);
-
-  // Validate payload
   const recipientUserId = typeof payload?.recipientUserId === 'string' ? payload.recipientUserId.trim() : '';
   const message = typeof payload?.message === 'string' ? payload.message.trim() : '';
+
+  if (!recipientUserId || !message) {
+    return response(HttpStatusCode.BAD_REQUEST, {
+      message: 'Invalid payload. recipientUserId and message are required.',
+    });
+  }
+
   const replyToMomentId =
     typeof payload?.replyToMomentId === 'string' ? payload.replyToMomentId.trim() || undefined : undefined;
   const replyToMomentCaption = (() => {
@@ -42,16 +55,19 @@ export const handleChatSend = async (event: WebSocketRequestEvent): Promise<APIG
     return VALID_MOMENT_TYPES.has(normalised) ? (normalised as EventMomentType) : undefined;
   })();
 
-  if (!recipientUserId || !message) {
-    logger.warn('Chat send rejected because payload is invalid', {
-      connectionId,
-      hasRecipientUserId: Boolean(recipientUserId),
-      hasMessage: Boolean(message),
-      payloadType: typeof payload,
+  try {
+    validateInput(ChatSendPayloadSchema, {
+      recipientUserId,
+      message,
+      ...(replyToMomentId ? { replyToMomentId } : {}),
+      ...(replyToMomentCaption ? { replyToMomentCaption } : {}),
+      ...(replyToMomentType ? { replyToMomentType } : {}),
     });
-    return response(HttpStatusCode.BAD_REQUEST, {
-      message: 'Invalid payload. recipientUserId and message are required.',
-    });
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return toClientValidationResponse(error);
+    }
+    throw error;
   }
 
   if (message.length > CHAT_MESSAGE_MAX_LENGTH) {

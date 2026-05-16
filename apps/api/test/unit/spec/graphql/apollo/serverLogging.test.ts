@@ -119,4 +119,85 @@ describe('createGraphQLRequestLoggingPlugin', () => {
       }),
     );
   });
+
+  it('suppresses request logging for introspection queries', async () => {
+    const query = 'query IntrospectionQuery { __schema { queryType { name } } }';
+    const plugin = createGraphQLRequestLoggingPlugin();
+
+    const hooks = await plugin.requestDidStart?.({
+      request: {
+        query,
+        operationName: 'IntrospectionQuery',
+      },
+    } as any);
+
+    await hooks?.didResolveOperation?.({
+      request: { query, operationName: 'IntrospectionQuery', variables: {} },
+      operationName: 'IntrospectionQuery',
+      operation: { operation: 'query' },
+    } as any);
+
+    await hooks?.didEncounterErrors?.({
+      request: { query, operationName: 'IntrospectionQuery', variables: {} },
+      operationName: 'IntrospectionQuery',
+      operation: undefined,
+      errors: [{ extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } }],
+    } as any);
+
+    expect(debugSpy).not.toHaveBeenCalled();
+    expect(graphqlSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not emit a pre-resolution warning after the operation has already been resolved', async () => {
+    const query = 'query Viewer { __typename }';
+    const plugin = createGraphQLRequestLoggingPlugin();
+
+    const hooks = await plugin.requestDidStart?.({
+      request: {
+        query,
+        operationName: 'Viewer',
+      },
+    } as any);
+
+    await hooks?.didResolveOperation?.({
+      request: { query, operationName: 'Viewer', variables: {} },
+      operationName: 'Viewer',
+      operation: { operation: 'query' },
+    } as any);
+
+    await hooks?.didEncounterErrors?.({
+      request: { query, operationName: 'Viewer', variables: {} },
+      operationName: 'Viewer',
+      operation: undefined,
+      errors: [{ extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } }],
+    } as any);
+
+    expect(graphqlSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('logs a pre-resolution warning only once even if multiple early errors are reported', async () => {
+    const query = 'query Broken($token: String!) { broken(token: $token) }';
+    const plugin = createGraphQLRequestLoggingPlugin();
+
+    const hooks = await plugin.requestDidStart?.({
+      request: {
+        query,
+        operationName: 'Broken',
+      },
+    } as any);
+
+    const requestContext = {
+      request: { query, operationName: 'Broken', variables: { token: 'secret-token' } },
+      operationName: 'Broken',
+      operation: undefined,
+      errors: [{ extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } }],
+    } as any;
+
+    await hooks?.didEncounterErrors?.(requestContext);
+    await hooks?.didEncounterErrors?.(requestContext);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
 });

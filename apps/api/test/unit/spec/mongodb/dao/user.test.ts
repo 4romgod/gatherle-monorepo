@@ -358,6 +358,118 @@ describe('UserDAO', () => {
         token: 'oauth-token',
       });
     });
+
+    it('returns an existing provider-linked user without saving when no profile fields need updates', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Google,
+        providerUserId: 'google-user-1',
+        email: 'user@example.com',
+        emailVerified: false,
+      };
+      const existingUser = {
+        emailVerified: true,
+        profile_picture: 'https://example.com/avatar.png',
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'user-1',
+          email: 'user@example.com',
+          username: 'existing-user',
+          emailVerified: true,
+          profile_picture: 'https://example.com/avatar.png',
+          googleSubject: 'google-user-1',
+        }),
+      };
+
+      (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(existingUser));
+      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
+
+      const result = await UserDAO.loginWithOAuth(identity);
+
+      expect(existingUser.save).not.toHaveBeenCalled();
+      expect(result.token).toBe('oauth-token');
+    });
+
+    it('throws conflict when a verified email account is already linked to another provider subject', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Google,
+        providerUserId: 'google-user-2',
+        email: 'user@example.com',
+        emailVerified: true,
+      };
+      const existingEmailUser: any = {
+        googleSubject: 'google-user-1',
+      };
+
+      (User.findOne as jest.Mock)
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(null))
+        .mockReturnValueOnce(createMockSuccessMongooseQuery(existingEmailUser));
+
+      await expect(UserDAO.loginWithOAuth(identity)).rejects.toThrow(
+        CustomError('Google sign-in is already linked to a different account.', ErrorTypes.CONFLICT),
+      );
+    });
+
+    it('throws bad user input when first-time OAuth account creation has no email', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Apple,
+        providerUserId: 'apple-user-1',
+        emailVerified: true,
+      };
+
+      (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(null));
+
+      await expect(UserDAO.loginWithOAuth(identity)).rejects.toThrow(
+        CustomError(
+          'Apple sign-in did not return an email address for first-time account creation.',
+          ErrorTypes.BAD_USER_INPUT,
+        ),
+      );
+    });
+
+    it('creates a new OAuth user for an unverified identity and derives fallback profile fields', async () => {
+      const identity: OAuthIdentity = {
+        provider: OAuthProvider.Apple,
+        providerUserId: 'apple-user-2',
+        email: 'appleperson@example.com',
+        emailVerified: false,
+      };
+
+      const createdUser = {
+        toObject: jest.fn().mockReturnValue({
+          userId: 'user-3',
+          email: 'appleperson@example.com',
+          given_name: 'appleperson',
+          family_name: 'User',
+          emailVerified: false,
+          appleSubject: 'apple-user-2',
+        }),
+      };
+
+      (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(null));
+      (User.create as jest.Mock).mockResolvedValue(createdUser);
+      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
+
+      const result = await UserDAO.loginWithOAuth(identity);
+
+      expect(User.create).toHaveBeenCalledWith({
+        email: 'appleperson@example.com',
+        given_name: 'appleperson',
+        family_name: 'User',
+        password: expect.any(String),
+        emailVerified: false,
+        profile_picture: undefined,
+        appleSubject: 'apple-user-2',
+      });
+      expect(result).toMatchObject({
+        userId: 'user-3',
+        email: 'appleperson@example.com',
+        given_name: 'appleperson',
+        family_name: 'User',
+        emailVerified: false,
+        appleSubject: 'apple-user-2',
+        token: 'oauth-token',
+      });
+    });
   });
 
   describe('readUserById', () => {

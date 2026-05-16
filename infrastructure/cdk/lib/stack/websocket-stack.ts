@@ -12,11 +12,16 @@ import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
-import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ApiMapping, CfnStage, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
-import { DNS_STACK_CONFIG } from '../constants/dns';
-import { buildBackendSecretName, buildResourceName, buildTargetSuffix } from '../utils/naming';
+import {
+  DEFAULT_WEBSOCKET_ROUTE_THROTTLES,
+  DEFAULT_WEBSOCKET_STAGE_THROTTLE_BURST_LIMITS,
+  DEFAULT_WEBSOCKET_STAGE_THROTTLE_RATE_LIMITS,
+  DNS_STACK_CONFIG,
+} from '../constants';
+import { buildBackendSecretName, buildResourceName, buildTargetSuffix, parsePositiveIntegerEnv } from '../utils';
 
 configDotenv();
 
@@ -42,6 +47,59 @@ export class WebSocketApiStack extends Stack {
     const stageSegment = props.applicationStage.toLowerCase();
     const targetSuffix = buildTargetSuffix(props.applicationStage, props.awsRegion);
     const enableCustomDomains = props.enableCustomDomains ?? false;
+    const websocketStageThrottleRateLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_STAGE_THROTTLE_RATE_LIMIT',
+      process.env.WEBSOCKET_STAGE_THROTTLE_RATE_LIMIT,
+      DEFAULT_WEBSOCKET_STAGE_THROTTLE_RATE_LIMITS[props.applicationStage] ?? 12,
+    );
+    const websocketStageThrottleBurstLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_STAGE_THROTTLE_BURST_LIMIT',
+      process.env.WEBSOCKET_STAGE_THROTTLE_BURST_LIMIT,
+      DEFAULT_WEBSOCKET_STAGE_THROTTLE_BURST_LIMITS[props.applicationStage] ?? 24,
+    );
+    const routeThrottleDefaults =
+      DEFAULT_WEBSOCKET_ROUTE_THROTTLES[props.applicationStage] ??
+      DEFAULT_WEBSOCKET_ROUTE_THROTTLES[APPLICATION_STAGES.BETA];
+    const pingRateLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_PING_RATE_LIMIT',
+      process.env.WEBSOCKET_PING_RATE_LIMIT,
+      routeThrottleDefaults.pingRateLimit,
+    );
+    const pingBurstLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_PING_BURST_LIMIT',
+      process.env.WEBSOCKET_PING_BURST_LIMIT,
+      routeThrottleDefaults.pingBurstLimit,
+    );
+    const subscribeRateLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_SUBSCRIBE_RATE_LIMIT',
+      process.env.WEBSOCKET_SUBSCRIBE_RATE_LIMIT,
+      routeThrottleDefaults.subscribeRateLimit,
+    );
+    const subscribeBurstLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_SUBSCRIBE_BURST_LIMIT',
+      process.env.WEBSOCKET_SUBSCRIBE_BURST_LIMIT,
+      routeThrottleDefaults.subscribeBurstLimit,
+    );
+    const chatSendRateLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_CHAT_SEND_RATE_LIMIT',
+      process.env.WEBSOCKET_CHAT_SEND_RATE_LIMIT,
+      routeThrottleDefaults.chatSendRateLimit,
+    );
+    const chatSendBurstLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_CHAT_SEND_BURST_LIMIT',
+      process.env.WEBSOCKET_CHAT_SEND_BURST_LIMIT,
+      routeThrottleDefaults.chatSendBurstLimit,
+    );
+    const chatReadRateLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_CHAT_READ_RATE_LIMIT',
+      process.env.WEBSOCKET_CHAT_READ_RATE_LIMIT,
+      routeThrottleDefaults.chatReadRateLimit,
+    );
+    const chatReadBurstLimit = parsePositiveIntegerEnv(
+      'WEBSOCKET_CHAT_READ_BURST_LIMIT',
+      process.env.WEBSOCKET_CHAT_READ_BURST_LIMIT,
+      routeThrottleDefaults.chatReadBurstLimit,
+    );
     const websocketLambdaName = buildResourceName('WebSocketLambdaFunction', props.applicationStage, props.awsRegion);
 
     const gatherleSecret = Secret.fromSecretNameV2(
@@ -133,7 +191,31 @@ export class WebSocketApiStack extends Stack {
       webSocketApi: this.websocketApi,
       stageName: stageSegment,
       autoDeploy: true,
+      throttle: {
+        rateLimit: websocketStageThrottleRateLimit,
+        burstLimit: websocketStageThrottleBurstLimit,
+      },
     });
+
+    const websocketStageResource = this.websocketStage.node.defaultChild as CfnStage;
+    websocketStageResource.routeSettings = {
+      ping: {
+        throttlingRateLimit: pingRateLimit,
+        throttlingBurstLimit: pingBurstLimit,
+      },
+      'notification.subscribe': {
+        throttlingRateLimit: subscribeRateLimit,
+        throttlingBurstLimit: subscribeBurstLimit,
+      },
+      'chat.send': {
+        throttlingRateLimit: chatSendRateLimit,
+        throttlingBurstLimit: chatSendBurstLimit,
+      },
+      'chat.read': {
+        throttlingRateLimit: chatReadRateLimit,
+        throttlingBurstLimit: chatReadBurstLimit,
+      },
+    };
 
     let websocketApiEndpoint = this.websocketStage.url;
 

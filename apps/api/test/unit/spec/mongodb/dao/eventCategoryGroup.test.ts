@@ -284,6 +284,25 @@ describe('EventCategoryGroupDAO', () => {
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });
+
+    it('should wrap save errors after loading the group', async () => {
+      const input: UpdateEventCategoryGroupInput = {
+        eventCategoryGroupId: '1',
+        name: 'Updated Group',
+        eventCategories: mockEventCategoryIds,
+      };
+
+      const mockQuery = createMockSuccessMongooseQuery({
+        ...mockEventCategoryGroup,
+        save: jest.fn().mockRejectedValue(new MockMongoError(0)),
+        toObject: jest.fn().mockReturnValue(mockEventCategoryGroup),
+      });
+      (EventCategoryGroupModel.findById as jest.Mock).mockReturnValue(mockQuery);
+
+      await expect(EventCategoryGroupDAO.updateEventCategoryGroup(input)).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
   });
 
   describe('deleteEventCategoryGroupBySlug', () => {
@@ -324,6 +343,27 @@ describe('EventCategoryGroupDAO', () => {
       (EventCategoryGroupModel.findOneAndDelete as jest.Mock).mockReturnValue(mockQuery);
 
       await expect(EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(slug)).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('count', () => {
+    it('should return the number of matching groups', async () => {
+      (EventCategoryGroupModel as any).countDocuments = jest.fn().mockReturnValue(createMockSuccessMongooseQuery(4));
+
+      const result = await EventCategoryGroupDAO.count({ slug: 'test-group' });
+
+      expect((EventCategoryGroupModel as any).countDocuments).toHaveBeenCalledWith({ slug: 'test-group' });
+      expect(result).toBe(4);
+    });
+
+    it('should wrap errors when counting groups', async () => {
+      (EventCategoryGroupModel as any).countDocuments = jest
+        .fn()
+        .mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(EventCategoryGroupDAO.count()).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });
