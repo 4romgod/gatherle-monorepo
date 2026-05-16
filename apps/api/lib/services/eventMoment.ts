@@ -8,6 +8,8 @@ import type {
 import {
   EventMomentState,
   EventMomentType,
+  EventVisibility,
+  FollowPolicy,
   FollowApprovalStatus,
   FollowTargetType,
   ParticipantStatus,
@@ -22,6 +24,185 @@ import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
+const DEFAULT_MOMENTS_FEED_LIMIT = 12;
+const MAX_MOMENTS_FEED_LIMIT = 24;
+const MIN_MOMENTS_FEED_LIMIT = 1;
+const MIN_MOMENTS_FEED_CANDIDATE_POOL = 48;
+const MOMENTS_FEED_CURSOR_VERSION = 1;
+
+type RankedMomentCandidate = {
+  event: EventSeries | null;
+  moment: EventMoment;
+  score: number;
+};
+
+type MomentsFeedCursorState = {
+  candidateCursor?: string;
+  offset: number;
+  version: number;
+};
+
+function clampFeedLimit(limit?: number): number {
+  if (!limit || Number.isNaN(limit)) {
+    return DEFAULT_MOMENTS_FEED_LIMIT;
+  }
+
+  return Math.max(MIN_MOMENTS_FEED_LIMIT, Math.min(MAX_MOMENTS_FEED_LIMIT, Math.floor(limit)));
+}
+
+function normalizeRefId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) {
+    return value;
+  }
+
+  if (value && typeof value === 'object') {
+    if ('eventCategoryId' in (value as Record<string, unknown>)) {
+      return normalizeRefId((value as { eventCategoryId?: unknown }).eventCategoryId);
+    }
+
+    if ('_id' in (value as Record<string, unknown>)) {
+      return normalizeRefId((value as { _id?: unknown })._id);
+    }
+
+    if (typeof (value as { toString?: () => string }).toString === 'function') {
+      const asString = (value as { toString: () => string }).toString();
+      return asString && asString !== '[object Object]' ? asString : null;
+    }
+  }
+
+  return null;
+}
+
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isEventPublic(event: EventSeries | null): boolean {
+  if (!event) {
+    return false;
+  }
+
+  return !event.visibility || event.visibility === EventVisibility.Public;
+}
+
+function scoreMomentCandidate(params: {
+  acceptedFollowedUserIds: Set<string>;
+  eventMomentCounts: Map<string, number>;
+  event: EventSeries | null;
+  moment: EventMoment;
+  viewerInterests: Set<string>;
+  viewerLocation?: { city?: string; country?: string } | null;
+}): number {
+  const { acceptedFollowedUserIds, eventMomentCounts, event, moment, viewerInterests, viewerLocation } = params;
+  let score = 0;
+
+  if (acceptedFollowedUserIds.has(moment.authorId)) {
+    score += 40;
+  }
+
+  if (event) {
+    const eventCategoryIds = new Set(
+      (event.eventCategories ?? []).map((category) => normalizeRefId(category)).filter(Boolean),
+    );
+    if ([...eventCategoryIds].some((categoryId) => viewerInterests.has(categoryId as string))) {
+      score += 24;
+    }
+
+    const eventCity = event.location?.address?.city?.trim().toLowerCase();
+    const eventCountry = event.location?.address?.country?.trim().toLowerCase();
+    const viewerCity = viewerLocation?.city?.trim().toLowerCase();
+    const viewerCountry = viewerLocation?.country?.trim().toLowerCase();
+    if (viewerCity && viewerCountry && eventCity === viewerCity && eventCountry === viewerCountry) {
+      score += 20;
+    } else if (viewerCountry && eventCountry === viewerCountry) {
+      score += 8;
+    }
+  }
+
+  const eventMomentum = Math.min((eventMomentCounts.get(moment.eventId) ?? 1) * 4, 18);
+  score += eventMomentum;
+
+  const hoursSinceCreated = Math.max(0, (Date.now() - moment.createdAt.getTime()) / (60 * 60 * 1000));
+  score += Math.max(0, 30 - hoursSinceCreated * 1.5);
+
+  return score;
+}
+
+function diversifyRankedMoments(candidates: RankedMomentCandidate[]): RankedMomentCandidate[] {
+  const remaining = [...candidates].sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+
+    return right.moment.createdAt.getTime() - left.moment.createdAt.getTime();
+  });
+  const result: RankedMomentCandidate[] = [];
+
+  while (remaining.length > 0) {
+    const lastAuthorId = result.at(-1)?.moment.authorId;
+    const previousAuthorId = result.at(-2)?.moment.authorId;
+    const lastEventId = result.at(-1)?.moment.eventId;
+    const previousEventId = result.at(-2)?.moment.eventId;
+
+    const nextIndex = remaining.findIndex((candidate) => {
+      const sameAuthorStreak =
+        candidate.moment.authorId === lastAuthorId && candidate.moment.authorId === previousAuthorId;
+      const sameEventStreak = candidate.moment.eventId === lastEventId && candidate.moment.eventId === previousEventId;
+
+      return !sameAuthorStreak && !sameEventStreak;
+    });
+
+    if (nextIndex === -1) {
+      result.push(...remaining);
+      break;
+    }
+
+    result.push(remaining.splice(nextIndex, 1)[0]);
+  }
+
+  return result;
+}
+
+function decodeMomentsFeedCursor(cursor?: string): MomentsFeedCursorState {
+  if (!cursor) {
+    return { offset: 0, version: MOMENTS_FEED_CURSOR_VERSION };
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<MomentsFeedCursorState>;
+    if (
+      parsed &&
+      parsed.version === MOMENTS_FEED_CURSOR_VERSION &&
+      typeof parsed.offset === 'number' &&
+      parsed.offset >= 0 &&
+      Number.isFinite(parsed.offset)
+    ) {
+      return {
+        candidateCursor: typeof parsed.candidateCursor === 'string' ? parsed.candidateCursor : undefined,
+        offset: Math.floor(parsed.offset),
+        version: MOMENTS_FEED_CURSOR_VERSION,
+      };
+    }
+  } catch {
+    // Fall back to treating legacy cursors as raw candidate-stream cursors.
+  }
+
+  return {
+    candidateCursor: cursor,
+    offset: 0,
+    version: MOMENTS_FEED_CURSOR_VERSION,
+  };
+}
+
+function encodeMomentsFeedCursor(state: Omit<MomentsFeedCursorState, 'version'>): string {
+  return Buffer.from(
+    JSON.stringify({
+      ...state,
+      version: MOMENTS_FEED_CURSOR_VERSION,
+    }),
+    'utf8',
+  ).toString('base64url');
+}
 
 function getPostingWindowCloseMs(occurrence: Pick<EventOccurrence, 'startAt' | 'endAt'>): number {
   return (occurrence.endAt ?? occurrence.startAt).getTime() + POSTING_WINDOW_HOURS_AFTER_EVENT * 60 * 60 * 1000;
@@ -346,6 +527,147 @@ class EventMomentService {
     }
 
     return EventMomentDAO.readFollowedStatuses(followedUserIds, cursor, limit);
+  }
+
+  /**
+   * Read a discovery feed of active moments across public events.
+   * Guests get a freshness/momentum feed; signed-in viewers get additional
+   * personalization from follows, interests, and locality.
+   */
+  static async readMomentsFeed(callerId?: string, cursor?: string, limit?: number): Promise<EventMomentPage> {
+    const pageSize = clampFeedLimit(limit);
+    const candidatePoolSize = Math.max(MIN_MOMENTS_FEED_CANDIDATE_POOL, pageSize * 6);
+    const initialCursorState = decodeMomentsFeedCursor(cursor);
+
+    const [follows, viewer] = await Promise.all([
+      callerId ? FollowDAO.readFollowingForUser(callerId) : Promise.resolve([]),
+      callerId ? UserDAO.readUserById(callerId).catch(() => null) : Promise.resolve(null),
+    ]);
+
+    const acceptedFollowedUserIds = new Set(
+      follows
+        .filter(
+          (follow) =>
+            follow.targetType === FollowTargetType.User && follow.approvalStatus === FollowApprovalStatus.Accepted,
+        )
+        .map((follow) => follow.targetId),
+    );
+
+    let candidateCursor = initialCursorState.candidateCursor;
+    let remainingOffset = initialCursorState.offset;
+
+    while (true) {
+      const candidatePage = await EventMomentDAO.readFeedCandidates(candidateCursor, candidatePoolSize);
+      const candidates = candidatePage.items;
+
+      if (candidates.length === 0) {
+        return { items: [], hasMore: false };
+      }
+
+      const [authors, events] = await Promise.all([
+        UserDAO.readUsersByIds([...new Set(candidates.map((moment) => moment.authorId))]).catch(() => []),
+        EventSeriesDAO.readEventsByIds([...new Set(candidates.map((moment) => moment.eventId))]).catch(() => []),
+      ]);
+
+      const authorsById = new Map<string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null>(
+        authors.map((author): readonly [string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null] => [
+          author.userId,
+          author,
+        ]),
+      );
+      const eventsById = new Map<string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null>(
+        events.map((event): readonly [string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null] => [
+          event.eventId,
+          event,
+        ]),
+      );
+      const viewerInterests = new Set<string>(
+        (viewer?.interests ?? []).map((interest) => normalizeRefId(interest)).filter(isNonEmptyString),
+      );
+      const eventMomentCounts = new Map<string, number>();
+
+      for (const moment of candidates) {
+        eventMomentCounts.set(moment.eventId, (eventMomentCounts.get(moment.eventId) ?? 0) + 1);
+      }
+
+      const ranked = candidates
+        .filter((moment) => {
+          const author = authorsById.get(moment.authorId);
+          const event = eventsById.get(moment.eventId) ?? null;
+          const isTrustedAuthor =
+            Boolean(callerId) && (author?.userId === callerId || acceptedFollowedUserIds.has(author?.userId ?? ''));
+
+          if (!author || !event) {
+            return false;
+          }
+
+          if (author.followPolicy === FollowPolicy.RequireApproval) {
+            return Boolean(isTrustedAuthor);
+          }
+
+          if (isEventPublic(event)) {
+            return true;
+          }
+
+          return Boolean(isTrustedAuthor);
+        })
+        .map((moment) => ({
+          moment,
+          event: eventsById.get(moment.eventId) ?? null,
+          score: scoreMomentCandidate({
+            acceptedFollowedUserIds,
+            event: eventsById.get(moment.eventId) ?? null,
+            eventMomentCounts,
+            moment,
+            viewerInterests,
+            viewerLocation: viewer?.location,
+          }),
+        }));
+
+      const diversified = diversifyRankedMoments(ranked);
+
+      if (diversified.length === 0) {
+        if (candidatePage.hasMore && candidatePage.nextCursor) {
+          candidateCursor = candidatePage.nextCursor;
+          remainingOffset = 0;
+          continue;
+        }
+
+        return { items: [], hasMore: false };
+      }
+
+      if (remainingOffset >= diversified.length) {
+        if (candidatePage.hasMore && candidatePage.nextCursor) {
+          remainingOffset -= diversified.length;
+          candidateCursor = candidatePage.nextCursor;
+          continue;
+        }
+
+        return { items: [], hasMore: false };
+      }
+
+      const pagedItems = diversified
+        .slice(remainingOffset, remainingOffset + pageSize)
+        .map((candidate) => candidate.moment);
+      const hasMoreInWindow = remainingOffset + pageSize < diversified.length;
+      const nextCursor = hasMoreInWindow
+        ? encodeMomentsFeedCursor({
+            candidateCursor,
+            offset: remainingOffset + pageSize,
+          })
+        : candidatePage.hasMore && candidatePage.nextCursor
+          ? encodeMomentsFeedCursor({
+              candidateCursor: candidatePage.nextCursor,
+              offset: 0,
+            })
+          : undefined;
+
+      return {
+        items: pagedItems,
+        nextCursor,
+        hasMore: Boolean(nextCursor),
+      };
+    }
   }
 }
 

@@ -351,6 +351,49 @@ describe('EventMomentDAO', () => {
     });
   });
 
+  describe('readFeedCandidates', () => {
+    it('returns a page of ready published moments', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));
+
+      const result = await EventMomentDAO.readFeedCandidates();
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: EventMomentState.Ready,
+          isPublished: true,
+        }),
+      );
+      expect(result.items).toEqual([mockMoment]);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it('applies the cursor filter and computes nextCursor when extra rows exist', async () => {
+      const items = Array.from({ length: 4 }, (_, i) => ({
+        toObject: () => ({
+          ...mockMoment,
+          momentId: `moment-${i}`,
+          createdAt: new Date(Date.now() - i * 1000),
+        }),
+      }));
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery(items));
+
+      const result = await EventMomentDAO.readFeedCandidates('2024-06-01T12:00:00.000Z', 3);
+
+      expect(EventMomentModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({ createdAt: { $lt: expect.any(Date) } }),
+      );
+      expect(result.hasMore).toBe(true);
+      expect(result.items).toHaveLength(3);
+      expect(result.nextCursor).toBeDefined();
+    });
+
+    it('throws on DB error', async () => {
+      (EventMomentModel.find as jest.Mock).mockReturnValue(mockQueryFail(new MockMongoError(0)));
+
+      await expect(EventMomentDAO.readFeedCandidates()).rejects.toThrow();
+    });
+  });
+
   describe('readByAuthor', () => {
     it('returns a page of ready moments when includePending=false', async () => {
       (EventMomentModel.find as jest.Mock).mockReturnValue(mockQuery([{ toObject: () => mockMoment }]));

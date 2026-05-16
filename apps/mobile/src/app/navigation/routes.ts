@@ -9,6 +9,7 @@ export type MainTabParamList = {
         initialSearch?: string;
       }
     | undefined;
+  Moments: undefined;
   Messages: undefined;
   Notifications: undefined;
   Account: undefined;
@@ -113,6 +114,12 @@ export const tabScreenContent: Record<TabRouteName, ScreenContent> = {
     sectionLabel: 'Discover',
     title: 'Events',
     description: 'This tab is reserved for the mobile event feed, filters, and RSVP journey that mirrors the webapp.',
+  },
+  Moments: {
+    sectionLabel: 'Live',
+    title: 'Moments',
+    description:
+      'A full-screen vertical moments feed lives here, blending followed activity, local events, and live discovery.',
   },
   Messages: {
     sectionLabel: 'Social',

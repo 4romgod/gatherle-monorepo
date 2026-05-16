@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { GraphQLError } from 'graphql';
 import { Arg, Authorized, Ctx, FieldResolver, Mutation, Query, Resolver, Root } from 'type-graphql';
 import {
   CreateEventMomentInput,
@@ -14,6 +15,48 @@ import { CreateEventMomentInputSchema } from '@/validation/zod';
 import type { ServerContext } from '@/graphql';
 import { getAuthenticatedUser } from '@/utils';
 import { EventMomentService } from '@/services';
+
+const ANONYMOUS_MOMENTS_FEED_LIMIT = 30;
+const ANONYMOUS_MOMENTS_FEED_WINDOW_MS = 60_000;
+const anonymousMomentsFeedRequests = new Map<string, number[]>();
+
+const resolveMomentsFeedRequesterKey = (context: ServerContext): string => {
+  const forwardedFor = context.req?.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  return context.req?.ip ?? context.req?.socket?.remoteAddress ?? 'anonymous';
+};
+
+const assertMomentsFeedAccessAllowed = (context: ServerContext) => {
+  if (context.user?.userId) {
+    return;
+  }
+
+  const now = Date.now();
+  const requesterKey = resolveMomentsFeedRequesterKey(context);
+  const recentTimestamps = (anonymousMomentsFeedRequests.get(requesterKey) ?? []).filter(
+    (timestamp) => now - timestamp < ANONYMOUS_MOMENTS_FEED_WINDOW_MS,
+  );
+
+  if (recentTimestamps.length >= ANONYMOUS_MOMENTS_FEED_LIMIT) {
+    anonymousMomentsFeedRequests.set(requesterKey, recentTimestamps);
+    throw new GraphQLError('Too many anonymous moments feed requests. Please try again shortly.', {
+      extensions: {
+        code: 'TOO_MANY_REQUESTS',
+        http: { status: 429 },
+      },
+    });
+  }
+
+  recentTimestamps.push(now);
+  anonymousMomentsFeedRequests.set(requesterKey, recentTimestamps);
+};
+
+export const __resetAnonymousMomentsFeedLimiterForTests = () => {
+  anonymousMomentsFeedRequests.clear();
+};
 
 @Resolver(() => EventMoment)
 export class EventMomentResolver {
@@ -100,6 +143,16 @@ export class EventMomentResolver {
     @Arg('limit', () => Number, { nullable: true }) limit?: number,
   ): Promise<EventMomentPage> {
     return EventMomentService.readUserMomentsFeed(userId, context.user?.userId, cursor, limit);
+  }
+
+  @Query(() => EventMomentPage, { description: 'Get a discoverable feed of active moments across public events' })
+  async readMomentsFeed(
+    @Ctx() context: ServerContext,
+    @Arg('cursor', () => String, { nullable: true }) cursor?: string,
+    @Arg('limit', () => Number, { nullable: true }) limit?: number,
+  ): Promise<EventMomentPage> {
+    assertMomentsFeedAccessAllowed(context);
+    return EventMomentService.readMomentsFeed(context.user?.userId, cursor, limit);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

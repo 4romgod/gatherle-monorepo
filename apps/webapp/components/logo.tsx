@@ -2,12 +2,15 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Box } from '@mui/material';
-import { ROUTES, APP_LOGO_PATH, APP_NAME } from '@/lib/constants';
+import { Box, useTheme } from '@mui/material';
+import { ROUTES, APP_LOGO_DARK_PATH, APP_LOGO_LIGHT_PATH, APP_NAME } from '@/lib/constants';
 import { useIsAuthenticated } from '@/hooks/useIsAuthenticated';
 
 export default function Logo() {
   const isAuth = useIsAuthenticated();
+  const theme = useTheme();
+  const logoPath = theme.palette.mode === 'dark' ? APP_LOGO_DARK_PATH : APP_LOGO_LIGHT_PATH;
+
   return (
     <Box
       component={Link}
@@ -22,7 +25,7 @@ export default function Logo() {
       }}
     >
       <Box sx={{ width: 36, height: 36, position: 'relative' }}>
-        <Image alt={APP_NAME} fill priority sizes="36px" src={APP_LOGO_PATH} />
+        <Image alt={APP_NAME} fill priority sizes="36px" src={logoPath} />
       </Box>
     </Box>
   );

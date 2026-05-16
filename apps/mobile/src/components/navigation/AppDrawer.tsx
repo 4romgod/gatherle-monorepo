@@ -4,7 +4,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimen
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { navigationRef } from '@/app/navigation/navigationRef';
-import type { DetailRouteName } from '@/app/navigation/routes';
+import type { DetailRouteName, MainTabParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -32,7 +32,7 @@ function navigateTo(routeName: DrawerRouteName) {
   navigationRef.navigate(routeName);
 }
 
-function navigateToTab(tabName: 'Home' | 'Events' | 'Messages' | 'Notifications' | 'Account') {
+function navigateToTab(tabName: keyof MainTabParamList) {
   if (!navigationRef.isReady()) {
     return;
   }
@@ -126,7 +126,7 @@ export function AppDrawer() {
     });
   };
 
-  const handleNavigateTab = (tabName: 'Home' | 'Events' | 'Messages' | 'Notifications' | 'Account') => {
+  const handleNavigateTab = (tabName: keyof MainTabParamList) => {
     closeDrawer();
     requestAnimationFrame(() => {
       navigateToTab(tabName);

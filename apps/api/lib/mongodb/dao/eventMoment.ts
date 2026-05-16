@@ -261,7 +261,7 @@ class EventMomentDAO {
         .exec();
 
       const hasMore = items.length > limit;
-      const page = items.slice(0, limit).map((status) => status.toObject());
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
       const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor, hasMore };
@@ -272,7 +272,7 @@ class EventMomentDAO {
   }
 
   /**
-   * Read statuses across all events from a set of followed author IDs (personal feed).
+   * Read moments across all events from a set of followed author IDs (personal feed).
    */
   static async readFollowedStatuses(
     followerAuthorIds: string[],
@@ -298,7 +298,7 @@ class EventMomentDAO {
         .exec();
 
       const hasMore = items.length > limit;
-      const page = items.slice(0, limit).map((s) => s.toObject());
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
       const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor, hasMore };
@@ -308,7 +308,43 @@ class EventMomentDAO {
     }
   }
 
-  /** Find a single status by ID. */
+  /**
+   * Read recent published Ready moments across all authors/events.
+   * The service layer applies visibility and ranking rules on top of this candidate pool.
+   */
+  static async readFeedCandidates(
+    cursor?: string,
+    limit = 90,
+  ): Promise<{ items: EventMomentEntity[]; nextCursor?: string; hasMore: boolean }> {
+    try {
+      const now = new Date();
+      const query: Record<string, unknown> = {
+        state: EventMomentState.Ready,
+        expiresAt: { $gt: now },
+        ...publishedMomentFilter,
+      };
+
+      if (cursor) {
+        query['createdAt'] = { $lt: new Date(cursor) };
+      }
+
+      const items = await EventMoment.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit + 1)
+        .exec();
+
+      const hasMore = items.length > limit;
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
+      const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
+
+      return { items: page, nextCursor, hasMore };
+    } catch (error) {
+      logDaoError('Error reading moment feed candidates', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /** Find a single moment by ID. */
   static async readById(momentId: string): Promise<EventMomentEntity | null> {
     try {
       const doc = await EventMoment.findOne({ momentId }).exec();
