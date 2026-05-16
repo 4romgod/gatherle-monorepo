@@ -261,7 +261,7 @@ class EventMomentDAO {
         .exec();
 
       const hasMore = items.length > limit;
-      const page = items.slice(0, limit).map((status) => status.toObject());
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
       const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor, hasMore };
@@ -272,7 +272,7 @@ class EventMomentDAO {
   }
 
   /**
-   * Read statuses across all events from a set of followed author IDs (personal feed).
+   * Read moments across all events from a set of followed author IDs (personal feed).
    */
   static async readFollowedStatuses(
     followerAuthorIds: string[],
@@ -298,7 +298,7 @@ class EventMomentDAO {
         .exec();
 
       const hasMore = items.length > limit;
-      const page = items.slice(0, limit).map((s) => s.toObject());
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
       const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor, hasMore };
@@ -334,7 +334,7 @@ class EventMomentDAO {
         .exec();
 
       const hasMore = items.length > limit;
-      const page = items.slice(0, limit).map((status) => status.toObject());
+      const page = items.slice(0, limit).map((moment) => moment.toObject());
       const nextCursor = hasMore ? page[page.length - 1].createdAt.toISOString() : undefined;
 
       return { items: page, nextCursor, hasMore };
@@ -344,7 +344,7 @@ class EventMomentDAO {
     }
   }
 
-  /** Find a single status by ID. */
+  /** Find a single moment by ID. */
   static async readById(momentId: string): Promise<EventMomentEntity | null> {
     try {
       const doc = await EventMoment.findOne({ momentId }).exec();

@@ -28,11 +28,18 @@ const DEFAULT_MOMENTS_FEED_LIMIT = 12;
 const MAX_MOMENTS_FEED_LIMIT = 24;
 const MIN_MOMENTS_FEED_LIMIT = 1;
 const MIN_MOMENTS_FEED_CANDIDATE_POOL = 48;
+const MOMENTS_FEED_CURSOR_VERSION = 1;
 
 type RankedMomentCandidate = {
   event: EventSeries | null;
   moment: EventMoment;
   score: number;
+};
+
+type MomentsFeedCursorState = {
+  candidateCursor?: string;
+  offset: number;
+  version: number;
 };
 
 function clampFeedLimit(limit?: number): number {
@@ -154,6 +161,47 @@ function diversifyRankedMoments(candidates: RankedMomentCandidate[]): RankedMome
   }
 
   return result;
+}
+
+function decodeMomentsFeedCursor(cursor?: string): MomentsFeedCursorState {
+  if (!cursor) {
+    return { offset: 0, version: MOMENTS_FEED_CURSOR_VERSION };
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<MomentsFeedCursorState>;
+    if (
+      parsed &&
+      parsed.version === MOMENTS_FEED_CURSOR_VERSION &&
+      typeof parsed.offset === 'number' &&
+      parsed.offset >= 0 &&
+      Number.isFinite(parsed.offset)
+    ) {
+      return {
+        candidateCursor: typeof parsed.candidateCursor === 'string' ? parsed.candidateCursor : undefined,
+        offset: Math.floor(parsed.offset),
+        version: MOMENTS_FEED_CURSOR_VERSION,
+      };
+    }
+  } catch {
+    // Fall back to treating legacy cursors as raw candidate-stream cursors.
+  }
+
+  return {
+    candidateCursor: cursor,
+    offset: 0,
+    version: MOMENTS_FEED_CURSOR_VERSION,
+  };
+}
+
+function encodeMomentsFeedCursor(state: Omit<MomentsFeedCursorState, 'version'>): string {
+  return Buffer.from(
+    JSON.stringify({
+      ...state,
+      version: MOMENTS_FEED_CURSOR_VERSION,
+    }),
+    'utf8',
+  ).toString('base64url');
 }
 
 function getPostingWindowCloseMs(occurrence: Pick<EventOccurrence, 'startAt' | 'endAt'>): number {
@@ -489,9 +537,9 @@ class EventMomentService {
   static async readMomentsFeed(callerId?: string, cursor?: string, limit?: number): Promise<EventMomentPage> {
     const pageSize = clampFeedLimit(limit);
     const candidatePoolSize = Math.max(MIN_MOMENTS_FEED_CANDIDATE_POOL, pageSize * 6);
+    const initialCursorState = decodeMomentsFeedCursor(cursor);
 
-    const [candidatePage, follows, viewer] = await Promise.all([
-      EventMomentDAO.readFeedCandidates(cursor, candidatePoolSize),
+    const [follows, viewer] = await Promise.all([
       callerId ? FollowDAO.readFollowingForUser(callerId) : Promise.resolve([]),
       callerId ? UserDAO.readUserById(callerId).catch(() => null) : Promise.resolve(null),
     ]);
@@ -505,112 +553,121 @@ class EventMomentService {
         .map((follow) => follow.targetId),
     );
 
-    let supplementalFollowedPage: { items: EventMoment[]; nextCursor?: string; hasMore: boolean } | null = null;
-    if (acceptedFollowedUserIds.size > 0) {
-      supplementalFollowedPage = await EventMomentDAO.readFollowedStatuses(
-        [...acceptedFollowedUserIds],
-        cursor,
-        candidatePoolSize,
-      );
-    }
+    let candidateCursor = initialCursorState.candidateCursor;
+    let remainingOffset = initialCursorState.offset;
 
-    const dedupedCandidates = new Map<string, EventMoment>();
-    const mergedCandidates = [...candidatePage.items, ...(supplementalFollowedPage?.items ?? [])].sort(
-      (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
-    );
+    while (true) {
+      const candidatePage = await EventMomentDAO.readFeedCandidates(candidateCursor, candidatePoolSize);
+      const candidates = candidatePage.items;
 
-    for (const moment of mergedCandidates) {
-      if (!dedupedCandidates.has(moment.momentId)) {
-        dedupedCandidates.set(moment.momentId, moment);
+      if (candidates.length === 0) {
+        return { items: [], hasMore: false };
       }
-    }
 
-    const candidates = [...dedupedCandidates.values()];
-    if (candidates.length === 0) {
-      return { items: [], hasMore: false };
-    }
+      const [authors, events] = await Promise.all([
+        UserDAO.readUsersByIds([...new Set(candidates.map((moment) => moment.authorId))]).catch(() => []),
+        EventSeriesDAO.readEventsByIds([...new Set(candidates.map((moment) => moment.eventId))]).catch(() => []),
+      ]);
 
-    const [authorEntries, eventEntries] = await Promise.all([
-      Promise.all(
-        [...new Set(candidates.map((moment) => moment.authorId))].map(
-          async (authorId): Promise<readonly [string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null]> => [
-            authorId,
-            await UserDAO.readUserById(authorId).catch(() => null),
-          ],
-        ),
-      ),
-      Promise.all(
-        [...new Set(candidates.map((moment) => moment.eventId))].map(
-          async (
-            eventId,
-          ): Promise<readonly [string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null]> => [
-            eventId,
-            await EventSeriesDAO.readEventById(eventId).catch(() => null),
-          ],
-        ),
-      ),
-    ]);
+      const authorsById = new Map<string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null>(
+        authors.map((author): readonly [string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null] => [
+          author.userId,
+          author,
+        ]),
+      );
+      const eventsById = new Map<string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null>(
+        events.map((event): readonly [string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null] => [
+          event.eventId,
+          event,
+        ]),
+      );
+      const viewerInterests = new Set<string>(
+        (viewer?.interests ?? []).map((interest) => normalizeRefId(interest)).filter(isNonEmptyString),
+      );
+      const eventMomentCounts = new Map<string, number>();
 
-    const authorsById = new Map<string, Awaited<ReturnType<typeof UserDAO.readUserById>> | null>(authorEntries);
-    const eventsById = new Map<string, Awaited<ReturnType<typeof EventSeriesDAO.readEventById>> | null>(eventEntries);
-    const viewerInterests = new Set<string>(
-      (viewer?.interests ?? []).map((interest) => normalizeRefId(interest)).filter(isNonEmptyString),
-    );
-    const eventMomentCounts = new Map<string, number>();
+      for (const moment of candidates) {
+        eventMomentCounts.set(moment.eventId, (eventMomentCounts.get(moment.eventId) ?? 0) + 1);
+      }
 
-    for (const moment of candidates) {
-      eventMomentCounts.set(moment.eventId, (eventMomentCounts.get(moment.eventId) ?? 0) + 1);
-    }
+      const ranked = candidates
+        .filter((moment) => {
+          const author = authorsById.get(moment.authorId);
+          const event = eventsById.get(moment.eventId) ?? null;
+          const isTrustedAuthor =
+            Boolean(callerId) && (author?.userId === callerId || acceptedFollowedUserIds.has(author?.userId ?? ''));
 
-    const ranked = candidates
-      .filter((moment) => {
-        const author = authorsById.get(moment.authorId);
-        const event = eventsById.get(moment.eventId) ?? null;
-        const isTrustedAuthor =
-          Boolean(callerId) && (author?.userId === callerId || acceptedFollowedUserIds.has(author?.userId ?? ''));
+          if (!author || !event) {
+            return false;
+          }
 
-        if (!author || !event) {
-          return false;
-        }
+          if (author.followPolicy === FollowPolicy.RequireApproval) {
+            return Boolean(isTrustedAuthor);
+          }
 
-        if (author.followPolicy === FollowPolicy.RequireApproval) {
+          if (isEventPublic(event)) {
+            return true;
+          }
+
           return Boolean(isTrustedAuthor);
-        }
-
-        if (isEventPublic(event)) {
-          return true;
-        }
-
-        return Boolean(isTrustedAuthor);
-      })
-      .map((moment) => ({
-        moment,
-        event: eventsById.get(moment.eventId) ?? null,
-        score: scoreMomentCandidate({
-          acceptedFollowedUserIds,
-          event: eventsById.get(moment.eventId) ?? null,
-          eventMomentCounts,
+        })
+        .map((moment) => ({
           moment,
-          viewerInterests,
-          viewerLocation: viewer?.location,
-        }),
-      }));
+          event: eventsById.get(moment.eventId) ?? null,
+          score: scoreMomentCandidate({
+            acceptedFollowedUserIds,
+            event: eventsById.get(moment.eventId) ?? null,
+            eventMomentCounts,
+            moment,
+            viewerInterests,
+            viewerLocation: viewer?.location,
+          }),
+        }));
 
-    if (ranked.length === 0) {
-      return { items: [], hasMore: false };
+      const diversified = diversifyRankedMoments(ranked);
+
+      if (diversified.length === 0) {
+        if (candidatePage.hasMore && candidatePage.nextCursor) {
+          candidateCursor = candidatePage.nextCursor;
+          remainingOffset = 0;
+          continue;
+        }
+
+        return { items: [], hasMore: false };
+      }
+
+      if (remainingOffset >= diversified.length) {
+        if (candidatePage.hasMore && candidatePage.nextCursor) {
+          remainingOffset -= diversified.length;
+          candidateCursor = candidatePage.nextCursor;
+          continue;
+        }
+
+        return { items: [], hasMore: false };
+      }
+
+      const pagedItems = diversified
+        .slice(remainingOffset, remainingOffset + pageSize)
+        .map((candidate) => candidate.moment);
+      const hasMoreInWindow = remainingOffset + pageSize < diversified.length;
+      const nextCursor = hasMoreInWindow
+        ? encodeMomentsFeedCursor({
+            candidateCursor,
+            offset: remainingOffset + pageSize,
+          })
+        : candidatePage.hasMore && candidatePage.nextCursor
+          ? encodeMomentsFeedCursor({
+              candidateCursor: candidatePage.nextCursor,
+              offset: 0,
+            })
+          : undefined;
+
+      return {
+        items: pagedItems,
+        nextCursor,
+        hasMore: Boolean(nextCursor),
+      };
     }
-
-    const diversified = diversifyRankedMoments(ranked).slice(0, pageSize);
-    const hasMore = candidatePage.hasMore || Boolean(supplementalFollowedPage?.hasMore);
-    const nextCursor = hasMore
-      ? (mergedCandidates.at(-1)?.createdAt.toISOString() ?? candidatePage.nextCursor)
-      : undefined;
-
-    return {
-      items: diversified.map((candidate) => candidate.moment),
-      nextCursor,
-      hasMore,
-    };
   }
 }
 

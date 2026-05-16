@@ -1,9 +1,10 @@
 import 'reflect-metadata';
-import { EventMomentResolver } from '@/graphql/resolvers/eventMoment';
+import { __resetAnonymousMomentsFeedLimiterForTests, EventMomentResolver } from '@/graphql/resolvers/eventMoment';
 import { EventMomentService } from '@/services';
 import { getAuthenticatedUser } from '@/utils';
 import { validateInput } from '@/validation';
 import { EventMomentType, EventMomentState } from '@gatherle/commons/types';
+import { GraphQLError } from 'graphql';
 
 jest.mock('@/services', () => ({
   EventMomentService: {
@@ -66,6 +67,7 @@ describe('EventMomentResolver', () => {
   beforeEach(() => {
     resolver = new EventMomentResolver();
     jest.clearAllMocks();
+    __resetAnonymousMomentsFeedLimiterForTests();
     (getAuthenticatedUser as jest.Mock).mockReturnValue({ userId: 'user-1' });
   });
 
@@ -220,6 +222,24 @@ describe('EventMomentResolver', () => {
       await resolver.readMomentsFeed({ ...mockContext, user: undefined }, undefined, undefined);
 
       expect(EventMomentService.readMomentsFeed).toHaveBeenCalledWith(undefined, undefined, undefined);
+    });
+
+    it('rate limits anonymous callers before delegating to the service', async () => {
+      const anonymousContext = {
+        ...mockContext,
+        req: { ip: '127.0.0.1', headers: {} },
+        user: undefined,
+      } as any;
+      (EventMomentService.readMomentsFeed as jest.Mock).mockResolvedValue({ items: [], hasMore: false });
+
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await resolver.readMomentsFeed(anonymousContext, undefined, undefined);
+      }
+
+      await expect(resolver.readMomentsFeed(anonymousContext, undefined, undefined)).rejects.toBeInstanceOf(
+        GraphQLError,
+      );
+      expect(EventMomentService.readMomentsFeed).toHaveBeenCalledTimes(30);
     });
   });
 

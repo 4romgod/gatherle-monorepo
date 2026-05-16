@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
@@ -24,13 +25,30 @@ type BottomTabBarProps = MaterialTopTabBarProps & {
 };
 
 export function BottomTabBar({ isTabletLayout, navigation, position, state }: BottomTabBarProps) {
-  const { isAuthenticated, username } = useAppShell();
+  const { isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
   const { theme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileLabel = getDisplayName(profile);
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: theme.colors.tabBar, borderTopColor: theme.colors.tabBarBorder }]}>
+    <View
+      onLayout={(event) => {
+        const nextHeight = Math.round(event.nativeEvent.layout.height);
+        if (nextHeight > 0) {
+          setBottomTabBarHeight(nextHeight);
+        }
+      }}
+      style={[
+        styles.tabBar,
+        {
+          backgroundColor: theme.colors.tabBar,
+          borderTopColor: theme.colors.tabBarBorder,
+          minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 8),
+        },
+      ]}
+    >
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const routeName = route.name as keyof MainTabParamList;
@@ -118,6 +136,5 @@ const styles = StyleSheet.create({
   tabBar: {
     borderTopWidth: 1,
     flexDirection: 'row',
-    minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT,
   },
 });

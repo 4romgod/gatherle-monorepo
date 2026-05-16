@@ -58,6 +58,11 @@ export function MomentFeedPage({
   const targetUserId = authorUserId && authorUserId !== viewerUserId ? authorUserId : undefined;
 
   useEventListener(videoPlayer, 'statusChange', (payload) => {
+    if (payload.status === 'readyToPlay') {
+      setMediaReady(true);
+      setMediaError(false);
+    }
+
     if (payload.error) {
       setMediaError(true);
       setMediaReady(true);
@@ -81,7 +86,6 @@ export function MomentFeedPage({
       return;
     }
 
-    setMediaReady(true);
     videoPlayer.play();
 
     return () => {

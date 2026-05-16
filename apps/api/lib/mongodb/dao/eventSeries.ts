@@ -200,6 +200,20 @@ class EventSeriesDAO {
     return events[0];
   }
 
+  static async readEventsByIds(eventIds: string[]): Promise<EventEntity[]> {
+    try {
+      if (eventIds.length === 0) {
+        return [];
+      }
+
+      const pipeline = [{ $match: { eventId: { $in: eventIds } } }, ...createEventLookupStages()];
+      return await EventSeriesModel.aggregate<EventEntity>(pipeline).exec();
+    } catch (error) {
+      logDaoError('Error reading events by ids', { error, eventIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readEventBySlug(slug: string): Promise<EventEntity> {
     let events;
     try {

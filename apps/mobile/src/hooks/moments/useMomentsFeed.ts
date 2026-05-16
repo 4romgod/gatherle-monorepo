@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@apollo/client';
+import { useEffect, useMemo, useState } from 'react';
+import { useLazyQuery } from '@apollo/client';
 import { GetMomentsFeedDocument } from '@data/graphql/query/EventMoment/query';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
 import { getApolloAuthContext } from '@/lib/auth';
@@ -8,19 +8,25 @@ const FEED_PAGE_SIZE = 12;
 
 export function useMomentsFeed(authToken: string | null) {
   const [isFetchingMore, setFetchingMore] = useState(false);
-  const { data, error, loading, fetchMore, refetch } = useQuery(GetMomentsFeedDocument, {
+  const [loadFeed, { called, data, error, fetchMore, loading, refetch }] = useLazyQuery(GetMomentsFeedDocument, {
     fetchPolicy: 'cache-and-network',
-    variables: {
-      limit: FEED_PAGE_SIZE,
-    },
+    notifyOnNetworkStatusChange: true,
     ...getApolloAuthContext(authToken),
   });
+
+  useEffect(() => {
+    void loadFeed({
+      variables: {
+        limit: FEED_PAGE_SIZE,
+      },
+    });
+  }, [authToken, loadFeed]);
 
   const moments = useMemo<MobileMomentsFeedMoment[]>(() => data?.readMomentsFeed.items ?? [], [data]);
   const hasMore = data?.readMomentsFeed.hasMore ?? false;
   const nextCursor = data?.readMomentsFeed.nextCursor;
 
-  const fetchNextPage = async () => {
+  const loadMore = async () => {
     if (!hasMore || !nextCursor || isFetchingMore) {
       return;
     }
@@ -60,13 +66,29 @@ export function useMomentsFeed(authToken: string | null) {
     }
   };
 
+  const refresh = async () => {
+    if (!called) {
+      await loadFeed({
+        variables: {
+          limit: FEED_PAGE_SIZE,
+        },
+      });
+      return;
+    }
+
+    await refetch?.({
+      cursor: undefined,
+      limit: FEED_PAGE_SIZE,
+    });
+  };
+
   return {
     error,
-    fetchNextPage,
     hasMore,
     isFetchingMore,
+    loadMore,
     loading,
     moments,
-    refetch,
+    refresh,
   };
 }

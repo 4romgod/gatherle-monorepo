@@ -4,18 +4,17 @@ import type { ViewToken } from 'react-native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { MomentFeedPage } from '@/components/moments/feed/MomentFeedPage';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
-import { MOBILE_BOTTOM_TAB_BAR_HEIGHT } from '@/lib/constants/layout';
 import { useMomentsFeed } from '@/hooks/moments/useMomentsFeed';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
 export function MomentsScreen() {
-  const { authToken } = useAppShell();
+  const { authToken, bottomTabBarHeight } = useAppShell();
   const { theme } = useAppTheme();
   const { height: screenHeight } = useWindowDimensions();
   const [pageHeight, setPageHeight] = useState(screenHeight);
   const [activeIndex, setActiveIndex] = useState(0);
-  const { error, fetchNextPage, hasMore, isFetchingMore, loading, moments, refetch } = useMomentsFeed(authToken);
+  const { error, hasMore, isFetchingMore, loadMore, loading, moments, refresh } = useMomentsFeed(authToken);
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken<MobileMomentsFeedMoment>[] }) => {
       const firstVisibleIndex = viewableItems[0]?.index;
@@ -62,7 +61,7 @@ export function MomentsScreen() {
   return (
     <View
       onLayout={(event) => {
-        const nextHeight = Math.max(1, Math.round(event.nativeEvent.layout.height + MOBILE_BOTTOM_TAB_BAR_HEIGHT));
+        const nextHeight = Math.max(1, Math.round(event.nativeEvent.layout.height + bottomTabBarHeight));
         if (nextHeight > 0 && nextHeight !== pageHeight) {
           setPageHeight(nextHeight);
         }
@@ -80,7 +79,7 @@ export function MomentsScreen() {
         keyExtractor={(item) => item.momentId}
         onEndReached={() => {
           if (hasMore) {
-            void fetchNextPage();
+            void loadMore();
           }
         }}
         onEndReachedThreshold={0.6}
@@ -90,7 +89,7 @@ export function MomentsScreen() {
           <RefreshControl
             colors={[theme.colors.primary]}
             onRefresh={() => {
-              void refetch();
+              void refresh();
             }}
             progressBackgroundColor={theme.colors.surfaceRaised}
             refreshing={loading && moments.length > 0}
@@ -100,14 +99,14 @@ export function MomentsScreen() {
         renderItem={({ index, item }) => (
           <MomentFeedPage
             active={index === activeIndex}
-            bottomOverlayOffset={MOBILE_BOTTOM_TAB_BAR_HEIGHT}
+            bottomOverlayOffset={bottomTabBarHeight}
             moment={item}
             pageHeight={pageHeight}
           />
         )}
         showsVerticalScrollIndicator={false}
         snapToAlignment="start"
-        style={styles.feed}
+        style={[styles.feed, { marginBottom: -bottomTabBarHeight }]}
       />
       {isFetchingMore ? (
         <View style={styles.fetchingBadge}>
@@ -134,7 +133,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   feed: {
-    marginBottom: -MOBILE_BOTTOM_TAB_BAR_HEIGHT,
+    flex: 1,
   },
   screen: {
     flex: 1,

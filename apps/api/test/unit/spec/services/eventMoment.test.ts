@@ -60,9 +60,6 @@ jest.mock('@/mongodb/dao', () => ({
     publishVideoMoment: jest.fn(),
     delete: jest.fn(),
   },
-  EventSeriesDAO: {
-    readEventById: jest.fn(),
-  },
   EventOccurrenceDAO: {
     readByOccurrenceId: jest.fn(),
     readFirstByEventSeriesId: jest.fn(),
@@ -79,6 +76,11 @@ jest.mock('@/mongodb/dao', () => ({
   },
   UserDAO: {
     readUserById: jest.fn(),
+    readUsersByIds: jest.fn(),
+  },
+  EventSeriesDAO: {
+    readEventById: jest.fn(),
+    readEventsByIds: jest.fn(),
   },
 }));
 
@@ -200,6 +202,8 @@ describe('EventMomentService', () => {
     (EventMomentDAO.readById as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
     (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
     (EventMomentDAO.publishVideoMoment as jest.Mock).mockResolvedValue(mockPublishedVideoMoment);
+    (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([]);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([]);
     (getS3ObjectSize as jest.Mock).mockResolvedValue(1000);
   });
 
@@ -851,10 +855,6 @@ describe('EventMomentService', () => {
         hasMore: true,
         nextCursor: '2026-05-15T06:00:00.000Z',
       });
-      (EventMomentDAO.readFollowedStatuses as jest.Mock).mockResolvedValue({
-        items: [],
-        hasMore: false,
-      });
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
       (UserDAO.readUserById as jest.Mock).mockImplementation(async (userId: string) => {
         if (userId === 'viewer-1') return viewer;
@@ -862,11 +862,29 @@ describe('EventMomentService', () => {
         if (userId === 'author-private') return privateAuthor;
         throw new Error('not found');
       });
+      (UserDAO.readUsersByIds as jest.Mock).mockImplementation(async (userIds: string[]) =>
+        userIds
+          .map((userId) => {
+            if (userId === 'author-public') return publicAuthor;
+            if (userId === 'author-private') return privateAuthor;
+            return null;
+          })
+          .filter(Boolean),
+      );
       (EventSeriesDAO.readEventById as jest.Mock).mockImplementation(async (eventId: string) => {
         if (eventId === 'event-public') return publicEvent;
         if (eventId === 'event-private') return privateEvent;
         throw new Error('not found');
       });
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockImplementation(async (eventIds: string[]) =>
+        eventIds
+          .map((eventId) => {
+            if (eventId === 'event-public') return publicEvent;
+            if (eventId === 'event-private') return privateEvent;
+            return null;
+          })
+          .filter(Boolean),
+      );
     });
 
     it('returns only publicly visible moments for anonymous viewers', async () => {
@@ -875,8 +893,7 @@ describe('EventMomentService', () => {
       expect(EventMomentDAO.readFeedCandidates).toHaveBeenCalledWith(undefined, 72);
       expect(result.items.map((item) => item.momentId)).toEqual(['moment-public']);
       expect(result.hasMore).toBe(true);
-      expect(result.nextCursor).toBe('2026-05-15T06:00:00.000Z');
-      expect(EventMomentDAO.readFollowedStatuses).not.toHaveBeenCalled();
+      expect(typeof result.nextCursor).toBe('string');
     });
 
     it('includes accepted private-author moments for followed viewers', async () => {
@@ -887,14 +904,8 @@ describe('EventMomentService', () => {
           approvalStatus: FollowApprovalStatus.Accepted,
         },
       ]);
-      (EventMomentDAO.readFollowedStatuses as jest.Mock).mockResolvedValue({
-        items: [privateAuthorMoment],
-        hasMore: false,
-      });
-
       const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
 
-      expect(EventMomentDAO.readFollowedStatuses).toHaveBeenCalledWith(['author-private'], undefined, 60);
       expect(result.items.map((item) => item.momentId)).toEqual(['moment-private-author', 'moment-public']);
     });
 
@@ -921,6 +932,111 @@ describe('EventMomentService', () => {
       const result = await EventMomentService.readMomentsFeed('viewer-1');
 
       expect(result).toEqual({ items: [], hasMore: false });
+    });
+
+    it('diversifies the feed when the same author dominates the candidate window', async () => {
+      const dominantAuthor = { userId: 'author-dominant', followPolicy: 'Public' };
+      const secondaryAuthor = { userId: 'author-secondary', followPolicy: 'Public' };
+      const dominantOne = {
+        ...publicMoment,
+        momentId: 'dominant-1',
+        authorId: 'author-dominant',
+        eventId: 'event-public',
+        createdAt: new Date('2026-05-15T09:00:00.000Z'),
+      };
+      const dominantTwo = {
+        ...publicMoment,
+        momentId: 'dominant-2',
+        authorId: 'author-dominant',
+        eventId: 'event-public',
+        createdAt: new Date('2026-05-15T08:30:00.000Z'),
+      };
+      const dominantThree = {
+        ...publicMoment,
+        momentId: 'dominant-3',
+        authorId: 'author-dominant',
+        eventId: 'event-public',
+        createdAt: new Date('2026-05-15T08:00:00.000Z'),
+      };
+      const secondaryMoment = {
+        ...publicMoment,
+        momentId: 'secondary-1',
+        authorId: 'author-secondary',
+        eventId: 'event-secondary',
+        createdAt: new Date('2026-05-15T07:30:00.000Z'),
+      };
+      const secondaryEvent = {
+        ...publicEvent,
+        eventId: 'event-secondary',
+      };
+
+      (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
+        items: [dominantOne, dominantTwo, dominantThree, secondaryMoment],
+        hasMore: false,
+      });
+      (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([dominantAuthor, secondaryAuthor]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([publicEvent, secondaryEvent]);
+
+      const result = await EventMomentService.readMomentsFeed(undefined, undefined, 4);
+
+      expect(result.items.map((item) => item.momentId)).toEqual([
+        'dominant-1',
+        'dominant-2',
+        'secondary-1',
+        'dominant-3',
+      ]);
+    });
+
+    it('uses an opaque cursor to continue within a ranked candidate window before advancing the DAO cursor', async () => {
+      const firstWindowMomentOne = {
+        ...publicMoment,
+        momentId: 'window-1-a',
+        createdAt: new Date('2026-05-15T09:00:00.000Z'),
+      };
+      const firstWindowMomentTwo = {
+        ...publicMoment,
+        momentId: 'window-1-b',
+        createdAt: new Date('2026-05-15T08:00:00.000Z'),
+      };
+      const firstWindowMomentThree = {
+        ...publicMoment,
+        momentId: 'window-1-c',
+        createdAt: new Date('2026-05-15T07:00:00.000Z'),
+      };
+      const secondWindowMoment = {
+        ...publicMoment,
+        momentId: 'window-2-a',
+        createdAt: new Date('2026-05-15T06:00:00.000Z'),
+      };
+
+      (EventMomentDAO.readFeedCandidates as jest.Mock)
+        .mockResolvedValueOnce({
+          items: [firstWindowMomentOne, firstWindowMomentTwo, firstWindowMomentThree],
+          hasMore: true,
+          nextCursor: 'candidate-page-2',
+        })
+        .mockResolvedValueOnce({
+          items: [firstWindowMomentOne, firstWindowMomentTwo, firstWindowMomentThree],
+          hasMore: true,
+          nextCursor: 'candidate-page-2',
+        })
+        .mockResolvedValueOnce({
+          items: [secondWindowMoment],
+          hasMore: false,
+        });
+      (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([publicAuthor]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([publicEvent]);
+
+      const firstPage = await EventMomentService.readMomentsFeed(undefined, undefined, 2);
+      const secondPage = await EventMomentService.readMomentsFeed(undefined, firstPage.nextCursor, 2);
+      const thirdPage = await EventMomentService.readMomentsFeed(undefined, secondPage.nextCursor, 2);
+
+      expect(firstPage.items.map((item) => item.momentId)).toEqual(['window-1-a', 'window-1-b']);
+      expect(secondPage.items.map((item) => item.momentId)).toEqual(['window-1-c']);
+      expect(thirdPage.items.map((item) => item.momentId)).toEqual(['window-2-a']);
+      expect(EventMomentDAO.readFeedCandidates).toHaveBeenNthCalledWith(1, undefined, 48);
+      expect(EventMomentDAO.readFeedCandidates).toHaveBeenNthCalledWith(2, undefined, 48);
+      expect(EventMomentDAO.readFeedCandidates).toHaveBeenNthCalledWith(3, 'candidate-page-2', 48);
     });
   });
 });

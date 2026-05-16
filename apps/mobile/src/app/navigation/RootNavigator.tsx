@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { type ComponentProps, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/core/BrandMark';
@@ -43,22 +43,6 @@ const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const TABLET_BREAKPOINT = 768;
 
-function MainTabBar({
-  isTabletLayout,
-  onActiveTabChange,
-  ...props
-}: ComponentProps<typeof BottomTabBar> & {
-  onActiveTabChange: (tab: keyof MainTabParamList) => void;
-}) {
-  const activeTab = props.state.routes[props.state.index]?.name as keyof MainTabParamList;
-
-  useEffect(() => {
-    onActiveTabChange(activeTab);
-  }, [activeTab, onActiveTabChange]);
-
-  return <BottomTabBar {...props} isTabletLayout={isTabletLayout} />;
-}
-
 function MainTabs() {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
@@ -80,12 +64,21 @@ function MainTabs() {
 
       <View style={[styles.mainTabsBody, { backgroundColor: theme.colors.background }]}>
         <Tab.Navigator
+          screenListeners={{
+            state: (event) => {
+              const tabState = event.data.state as { index?: number; routes?: { name: string }[] } | undefined;
+              const nextRoute = tabState?.routes?.[tabState.index ?? 0]?.name;
+              if (nextRoute) {
+                setActiveTab(nextRoute as keyof MainTabParamList);
+              }
+            },
+          }}
           tabBarPosition="bottom"
           screenOptions={{
             lazy: true,
             swipeEnabled: true,
           }}
-          tabBar={(props) => <MainTabBar {...props} isTabletLayout={isTabletLayout} onActiveTabChange={setActiveTab} />}
+          tabBar={(props) => <BottomTabBar {...props} isTabletLayout={isTabletLayout} />}
         >
           <Tab.Screen component={HomeScreen} name="Home" options={{ title: 'Home' }} />
           <Tab.Screen component={EventsScreen} name="Events" options={{ title: 'Events' }} />

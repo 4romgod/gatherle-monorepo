@@ -191,6 +191,20 @@ class UserDAO {
     return user.toObject();
   }
 
+  static async readUsersByIds(userIds: string[]): Promise<User[]> {
+    try {
+      if (userIds.length === 0) {
+        return [];
+      }
+
+      const users = await UserModel.find({ _id: { $in: userIds } }).exec();
+      return users.map((user) => user.toObject());
+    } catch (error) {
+      logDaoError('Error reading users by ids', { error, userIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readUserByUsername(username: string): Promise<User> {
     let user;
     try {

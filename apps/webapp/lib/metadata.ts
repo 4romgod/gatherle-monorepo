@@ -5,10 +5,8 @@ const SITE_NAME = APP_NAME;
 
 const ICONS: Metadata['icons'] = {
   icon: [
-    { rel: 'icon', url: '/favicon-light.ico' },
     { rel: 'icon', url: '/favicon-light.ico', media: '(prefers-color-scheme: light)' },
     { rel: 'icon', url: '/favicon-dark.ico', media: '(prefers-color-scheme: dark)' },
-    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/favicon-light-16x16.png' },
     {
       rel: 'icon',
       type: 'image/png',
@@ -23,7 +21,6 @@ const ICONS: Metadata['icons'] = {
       url: '/favicon-dark-16x16.png',
       media: '(prefers-color-scheme: dark)',
     },
-    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/favicon-light-32x32.png' },
     {
       rel: 'icon',
       type: 'image/png',
@@ -38,7 +35,6 @@ const ICONS: Metadata['icons'] = {
       url: '/favicon-dark-32x32.png',
       media: '(prefers-color-scheme: dark)',
     },
-    { rel: 'icon', type: 'image/png', sizes: '192x192', url: '/android-chrome-light-192x192.png' },
     {
       rel: 'icon',
       type: 'image/png',
@@ -53,7 +49,6 @@ const ICONS: Metadata['icons'] = {
       url: '/android-chrome-dark-192x192.png',
       media: '(prefers-color-scheme: dark)',
     },
-    { rel: 'icon', type: 'image/png', sizes: '512x512', url: '/android-chrome-light-512x512.png' },
     {
       rel: 'icon',
       type: 'image/png',
@@ -71,7 +66,6 @@ const ICONS: Metadata['icons'] = {
   ],
   shortcut: '/favicon-light.ico',
   apple: [
-    { url: '/apple-touch-icon-light.png', sizes: '180x180', type: 'image/png' },
     {
       url: '/apple-touch-icon-light.png',
       sizes: '180x180',

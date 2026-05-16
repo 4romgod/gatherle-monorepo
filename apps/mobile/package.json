@@ -4,7 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "apk:release": "expo prebuild --no-install && ./android/gradlew -p android app:assembleRelease",
-    "apk:install": "adb install -r android/app/build/outputs/apk/release/app-release.apk",
+    "apk:install": "sh -c 'if [ -n \"$ANDROID_SERIAL\" ]; then adb -s \"$ANDROID_SERIAL\" install -r android/app/build/outputs/apk/release/app-release.apk; else adb install -r android/app/build/outputs/apk/release/app-release.apk; fi'",
     "build": "npm run typecheck && expo export --platform all --output-dir dist",
     "build:android": "expo export --platform android --output-dir dist/android",
     "build:ios": "expo export --platform ios --output-dir dist/ios",

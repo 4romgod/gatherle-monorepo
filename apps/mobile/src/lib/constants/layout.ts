@@ -1,1 +1,1 @@
-export const MOBILE_BOTTOM_TAB_BAR_HEIGHT = 64;
+export const MOBILE_BOTTOM_TAB_BAR_HEIGHT = 68;
