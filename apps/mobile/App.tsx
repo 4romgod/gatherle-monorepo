@@ -57,11 +57,11 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <BottomSheetModalProvider>
-        <AppProviders>
+      <AppProviders>
+        <BottomSheetModalProvider>
           <AppContent />
-        </AppProviders>
-      </BottomSheetModalProvider>
+        </BottomSheetModalProvider>
+      </AppProviders>
     </GestureHandlerRootView>
   );
 }

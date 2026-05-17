@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
-import { useEvent, useEventListener } from 'expo';
+import { useEventListener } from 'expo';
 import { useNavigation } from '@react-navigation/native';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import type { VideoPlayer } from 'expo-video';
 import type { EventMomentState } from '@data/graphql/types/graphql';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetEventsDocument } from '@data/graphql/query/Event/query';
@@ -12,6 +24,7 @@ import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
+import { useDeleteEventMoment } from '@/hooks/moments/useDeleteEventMoment';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
@@ -66,14 +79,22 @@ function getMomentDurationMs(moment: MomentLike): number {
 }
 
 export function MomentViewer({
+  active = true,
+  containerHeight,
+  embedded = false,
   moments,
   onClose,
   open,
+  showCloseButton = true,
   startIndex = 0,
 }: {
+  active?: boolean;
+  containerHeight?: number;
+  embedded?: boolean;
   moments: MomentLike[];
   onClose: () => void;
   open: boolean;
+  showCloseButton?: boolean;
   startIndex?: number;
 }) {
   const navigation = useNavigation<MainTabNavigation>();
@@ -88,6 +109,7 @@ export function MomentViewer({
   const [progress, setProgress] = useState(0);
   const [replySent, setReplySent] = useState(false);
   const elapsedRef = useRef(0);
+  const progressRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closingRef = useRef(false);
@@ -95,36 +117,40 @@ export function MomentViewer({
   const translateY = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const currentMoment = moments[currentIndex] ?? null;
+  const canInteractWithMoment = open && (!embedded || active);
   currentMomentRef.current = currentMoment;
   const displayName = useMemo(() => getDisplayName(currentMoment?.author), [currentMoment?.author]);
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
   });
-  const videoSource =
-    currentMoment?.type === EventMomentType.Video && currentMoment.mediaUrl ? { uri: currentMoment.mediaUrl } : null;
-  const videoPlayer = useVideoPlayer(videoSource, (player) => {
+  const { deleteMoment } = useDeleteEventMoment(authToken);
+  const videoSource = useMemo(
+    () =>
+      currentMoment?.type === EventMomentType.Video && currentMoment.mediaUrl ? { uri: currentMoment.mediaUrl } : null,
+    [currentMoment?.mediaUrl, currentMoment?.type],
+  );
+  const configureVideoPlayer = useCallback((player: VideoPlayer) => {
     player.loop = false;
     player.muted = true;
-    player.timeUpdateEventInterval = 0.25;
-  });
+    player.timeUpdateEventInterval = 0.5;
+  }, []);
+  const videoPlayer = useVideoPlayer(videoSource, configureVideoPlayer);
   const [loadLinkedEvent] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
     ...getApolloAuthContext(authToken),
   });
-  const videoProgress = useEvent(videoPlayer, 'timeUpdate', {
-    bufferedPosition: 0,
-    currentLiveTimestamp: null,
-    currentOffsetFromLive: null,
-    currentTime: 0,
-  });
-
   useEventListener(videoPlayer, 'playToEnd', () => {
     const activeMoment = currentMomentRef.current;
-    if (!open || !activeMoment || activeMoment.type !== EventMomentType.Video) {
+    if (!canInteractWithMoment || !activeMoment || activeMoment.type !== EventMomentType.Video) {
       return;
     }
 
     if (currentIndex >= moments.length - 1) {
+      if (embedded) {
+        setProgress(1);
+        return;
+      }
+
       requestClose();
       return;
     }
@@ -134,14 +160,34 @@ export function MomentViewer({
 
   useEventListener(videoPlayer, 'statusChange', (payload) => {
     const activeMoment = currentMomentRef.current;
-    if (!open || !activeMoment || activeMoment.type !== EventMomentType.Video) {
+    if (!canInteractWithMoment || !activeMoment || activeMoment.type !== EventMomentType.Video) {
       return;
+    }
+
+    if (payload.status === 'readyToPlay') {
+      setMomentReady(true);
+      setMediaError(false);
     }
 
     if (payload.error) {
       setMomentReady(true);
       setMediaError(true);
     }
+  });
+
+  useEventListener(videoPlayer, 'timeUpdate', (payload) => {
+    const activeMoment = currentMomentRef.current;
+    if (!canInteractWithMoment || !activeMoment || activeMoment.type !== EventMomentType.Video || !isMomentReady) {
+      return;
+    }
+
+    const nextProgress = Math.min(1, (payload.currentTime * 1000) / getMomentDurationMs(activeMoment));
+    if (Math.abs(nextProgress - progressRef.current) < 0.02 && nextProgress < 1) {
+      return;
+    }
+
+    progressRef.current = nextProgress;
+    setProgress(nextProgress);
   });
 
   const clearReplySentTimeout = () => {
@@ -176,6 +222,14 @@ export function MomentViewer({
 
   const requestClose = useCallback(
     (afterClose?: () => void) => {
+      if (embedded) {
+        setMenuOpen(false);
+        setPaused(false);
+        onClose();
+        afterClose?.();
+        return;
+      }
+
       if (closingRef.current) {
         return;
       }
@@ -208,7 +262,7 @@ export function MomentViewer({
         afterClose?.();
       });
     },
-    [onClose, overlayOpacity, translateY],
+    [embedded, onClose, overlayOpacity, translateY],
   );
 
   const goTo = useCallback(
@@ -224,6 +278,7 @@ export function MomentViewer({
 
       elapsedRef.current = 0;
       setProgress(0);
+      progressRef.current = 0;
       setMenuOpen(false);
       setMomentReady(false);
       setMediaError(false);
@@ -279,6 +334,12 @@ export function MomentViewer({
     setReplySent(false);
     setPaused(false);
     setMomentReady(startMoment.type === EventMomentType.Text);
+    if (embedded) {
+      translateY.setValue(0);
+      overlayOpacity.setValue(1);
+      return;
+    }
+
     translateY.setValue(18);
     overlayOpacity.setValue(0.94);
 
@@ -294,7 +355,7 @@ export function MomentViewer({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [moments, open, overlayOpacity, startIndex, translateY]);
+  }, [embedded, moments, open, overlayOpacity, startIndex, translateY]);
 
   useEffect(() => {
     if (!open || !currentMoment) {
@@ -303,6 +364,7 @@ export function MomentViewer({
 
     elapsedRef.current = 0;
     setProgress(0);
+    progressRef.current = 0;
     setMenuOpen(false);
     setReplySent(false);
     setMediaError(false);
@@ -310,7 +372,13 @@ export function MomentViewer({
   }, [currentIndex, currentMoment, open]);
 
   useEffect(() => {
-    if (!open || !currentMoment || currentMoment.type === EventMomentType.Video || !isMomentReady || paused) {
+    if (
+      !canInteractWithMoment ||
+      !currentMoment ||
+      currentMoment.type === EventMomentType.Video ||
+      !isMomentReady ||
+      paused
+    ) {
       return;
     }
 
@@ -321,8 +389,14 @@ export function MomentViewer({
       lastFrameAt = now;
       const nextProgress = Math.min(1, elapsedRef.current / getMomentDurationMs(currentMoment));
       setProgress(nextProgress);
+      progressRef.current = nextProgress;
 
       if (nextProgress >= 1) {
+        if (embedded && moments.length === 1) {
+          setProgress(1);
+          return;
+        }
+
         if (currentIndex >= moments.length - 1) {
           requestClose();
           return;
@@ -343,20 +417,28 @@ export function MomentViewer({
         rafRef.current = null;
       }
     };
-  }, [currentIndex, currentMoment, goTo, isMomentReady, moments.length, open, paused, requestClose]);
+  }, [
+    canInteractWithMoment,
+    currentIndex,
+    currentMoment,
+    embedded,
+    goTo,
+    isMomentReady,
+    moments.length,
+    paused,
+    requestClose,
+  ]);
 
   useEffect(() => {
-    if (!open || !currentMoment || currentMoment.type !== EventMomentType.Video || !isMomentReady) {
-      return;
-    }
-
-    const durationMs = getMomentDurationMs(currentMoment);
-    setProgress(Math.min(1, (videoProgress.currentTime * 1000) / durationMs));
-  }, [currentMoment, isMomentReady, open, videoProgress.currentTime]);
-
-  useEffect(() => {
-    if (!open || !currentMoment || currentMoment.type !== EventMomentType.Video) {
+    if (!canInteractWithMoment || !currentMoment || currentMoment.type !== EventMomentType.Video) {
       videoPlayer.pause();
+
+      if (embedded && currentMoment?.type === EventMomentType.Video) {
+        videoPlayer.currentTime = 0;
+        setProgress(0);
+        progressRef.current = 0;
+      }
+
       return;
     }
 
@@ -365,19 +447,29 @@ export function MomentViewer({
       return;
     }
 
+    if (embedded && videoPlayer.currentTime >= Math.max((currentMoment.durationSeconds ?? 0) - 0.1, 0.1)) {
+      videoPlayer.currentTime = 0;
+      setProgress(0);
+      progressRef.current = 0;
+    }
+
     videoPlayer.play();
-  }, [currentMoment, isMomentReady, open, paused, videoPlayer]);
+  }, [canInteractWithMoment, currentMoment, embedded, isMomentReady, paused, videoPlayer]);
 
   useEffect(() => {
     videoPlayer.muted = isMuted;
   }, [isMuted, videoPlayer]);
 
   useEffect(() => {
-    if (!open || !mediaError) {
+    if (!canInteractWithMoment || !mediaError) {
       return;
     }
 
     const timer = setTimeout(() => {
+      if (embedded && moments.length === 1) {
+        return;
+      }
+
       if (currentIndex >= moments.length - 1) {
         requestClose();
         return;
@@ -387,7 +479,7 @@ export function MomentViewer({
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [currentIndex, goTo, mediaError, moments.length, open, requestClose]);
+  }, [canInteractWithMoment, currentIndex, embedded, goTo, mediaError, moments.length, requestClose]);
 
   useEffect(() => {
     return () => {
@@ -404,6 +496,7 @@ export function MomentViewer({
   const supportsMedia = currentMoment.type === EventMomentType.Image || currentMoment.type === EventMomentType.Video;
   const momentEventId = currentMoment.event?.eventId ?? currentMoment.eventId;
   const showReplyComposer = Boolean(viewerUserId && viewerUserId !== currentMoment.authorId && currentMoment.authorId);
+  const isOwnedByViewer = Boolean(viewerUserId && currentMoment.authorId === viewerUserId);
 
   const handleOpenAuthor = () => {
     const authorUserId = currentMoment.author?.userId ?? currentMoment.authorId;
@@ -477,131 +570,151 @@ export function MomentViewer({
     });
   };
 
-  return (
-    <Modal animationType="none" onRequestClose={() => requestClose()} statusBarTranslucent transparent visible={open}>
-      <View style={styles.modalRoot}>
-        <Animated.View
-          style={[
-            styles.viewerShell,
-            {
-              opacity: overlayOpacity,
-              transform: [{ translateY }],
-            },
-          ]}
-        >
-          <View style={styles.storyArea} {...panResponder.panHandlers}>
-            <View style={styles.topFade} pointerEvents="none" />
-            <View style={styles.bottomFade} pointerEvents="none" />
+  const handleDeleteMoment = () => {
+    Alert.alert('Delete moment?', 'This action cannot be undone.', [
+      { style: 'cancel', text: 'Cancel' },
+      {
+        style: 'destructive',
+        text: 'Delete',
+        onPress: () => {
+          void (async () => {
+            try {
+              const deleted = await deleteMoment(currentMoment.momentId);
+              if (!deleted) {
+                throw new Error('Delete failed');
+              }
+              setMenuOpen(false);
+              requestClose();
+            } catch {
+              Alert.alert('Delete failed', 'We could not delete this moment right now.');
+            }
+          })();
+        },
+      },
+    ]);
+  };
 
-            <View style={styles.progressRow} pointerEvents="none">
-              {moments.map((moment, index) => (
-                <View
-                  key={moment.momentId}
-                  style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.28)' }]}
-                >
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        backgroundColor: theme.colors.heroText,
-                        width:
-                          index < currentIndex
-                            ? '100%'
-                            : index === currentIndex
-                              ? `${Math.max(progress, 0) * 100}%`
-                              : '0%',
-                      },
-                    ]}
-                  />
-                </View>
-              ))}
+  const storyContent = (
+    <Animated.View
+      style={[
+        styles.viewerShell,
+        embedded ? [styles.embeddedViewerShell, containerHeight ? { height: containerHeight } : null] : null,
+        {
+          opacity: overlayOpacity,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
+      <View style={styles.storyArea} {...(embedded ? undefined : panResponder.panHandlers)}>
+        <View style={styles.topFade} pointerEvents="none" />
+        <View style={styles.bottomFade} pointerEvents="none" />
+
+        <View style={styles.progressRow} pointerEvents="none">
+          {moments.map((moment, index) => (
+            <View key={moment.momentId} style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.28)' }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    backgroundColor: theme.colors.heroText,
+                    width:
+                      index < currentIndex ? '100%' : index === currentIndex ? `${Math.max(progress, 0) * 100}%` : '0%',
+                  },
+                ]}
+              />
             </View>
+          ))}
+        </View>
 
-            <View style={styles.headerRow}>
-              <Pressable hitSlop={10} onPress={handleOpenAuthor} style={styles.authorRow}>
-                <ProfileAvatar imageUrl={currentMoment.author?.profile_picture} label={displayName} size={38} />
-                <View style={styles.authorCopy}>
-                  <Text numberOfLines={1} style={[styles.authorName, { color: theme.colors.heroText }]}>
-                    {displayName}
-                  </Text>
-                  <Text style={[styles.authorTime, { color: theme.colors.heroSubtle }]}>
-                    {formatRelativeTime(currentMoment.createdAt)}
-                  </Text>
-                </View>
+        <View style={styles.headerRow}>
+          <Pressable hitSlop={10} onPress={handleOpenAuthor} style={styles.authorRow}>
+            <ProfileAvatar imageUrl={currentMoment.author?.profile_picture} label={displayName} size={38} />
+            <View style={styles.authorCopy}>
+              <Text numberOfLines={1} style={[styles.authorName, { color: theme.colors.heroText }]}>
+                {displayName}
+              </Text>
+              <Text style={[styles.authorTime, { color: theme.colors.heroSubtle }]}>
+                {formatRelativeTime(currentMoment.createdAt)}
+              </Text>
+            </View>
+          </Pressable>
+
+          <View style={styles.headerActions}>
+            {isVideoMoment ? (
+              <Pressable hitSlop={10} onPress={() => setIsMuted((currentMuted) => !currentMuted)}>
+                <Feather color={theme.colors.heroText} name={isMuted ? 'volume-x' : 'volume-2'} size={22} />
               </Pressable>
-
-              <View style={styles.headerActions}>
-                {isVideoMoment ? (
-                  <Pressable hitSlop={10} onPress={() => setIsMuted((currentMuted) => !currentMuted)}>
-                    <Feather color={theme.colors.heroText} name={isMuted ? 'volume-x' : 'volume-2'} size={22} />
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  hitSlop={10}
-                  onPress={() => {
-                    setMenuOpen(true);
-                    setPaused(true);
-                  }}
-                >
-                  <Feather color={theme.colors.heroText} name="more-horizontal" size={22} />
-                </Pressable>
-                <Pressable hitSlop={10} onPress={() => requestClose()}>
-                  <Feather color={theme.colors.heroText} name="x" size={28} />
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.mediaWrap}>
-              {supportsMedia && currentMoment.mediaUrl ? (
-                currentMoment.type === EventMomentType.Video ? (
-                  <>
-                    <VideoView
-                      contentFit="cover"
-                      nativeControls={false}
-                      onFirstFrameRender={() => setMomentReady(true)}
-                      player={videoPlayer}
-                      style={styles.mediaFrame}
-                      useExoShutter={false}
-                    />
-                    {mediaError ? (
-                      <View style={styles.mediaStateOverlay}>
-                        <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Video unavailable</Text>
-                      </View>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <Image
-                      onError={() => {
-                        setMomentReady(true);
-                        setMediaError(true);
-                      }}
-                      onLoad={() => setMomentReady(true)}
-                      source={{ uri: currentMoment.mediaUrl }}
-                      style={styles.mediaFrame}
-                    />
-                    {mediaError ? (
-                      <View style={styles.mediaStateOverlay}>
-                        <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Image unavailable</Text>
-                      </View>
-                    ) : null}
-                  </>
-                )
-              ) : (
-                <View style={[styles.textMoment, { backgroundColor: currentBackground }]}>
-                  <Text style={[styles.textMomentCaption, { color: theme.colors.heroText }]}>
-                    {currentMoment.caption || 'Moment'}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {supportsMedia && currentMoment.caption ? (
-              <View style={styles.captionWrap}>
-                <Text style={[styles.captionText, { color: theme.colors.heroText }]}>{currentMoment.caption}</Text>
-              </View>
             ) : null}
+            <Pressable
+              hitSlop={10}
+              onPress={() => {
+                setMenuOpen(true);
+                setPaused(true);
+              }}
+            >
+              <Feather color={theme.colors.heroText} name="more-horizontal" size={22} />
+            </Pressable>
+            {showCloseButton ? (
+              <Pressable hitSlop={10} onPress={() => requestClose()}>
+                <Feather color={theme.colors.heroText} name="x" size={28} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
 
+        <View style={styles.mediaWrap}>
+          {supportsMedia && currentMoment.mediaUrl ? (
+            currentMoment.type === EventMomentType.Video ? (
+              <>
+                <VideoView
+                  contentFit="cover"
+                  nativeControls={false}
+                  onFirstFrameRender={() => setMomentReady(true)}
+                  player={videoPlayer}
+                  style={styles.mediaFrame}
+                  useExoShutter={false}
+                />
+                {mediaError ? (
+                  <View style={styles.mediaStateOverlay}>
+                    <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Video unavailable</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Image
+                  onError={() => {
+                    setMomentReady(true);
+                    setMediaError(true);
+                  }}
+                  onLoad={() => setMomentReady(true)}
+                  source={{ uri: currentMoment.mediaUrl }}
+                  style={styles.mediaFrame}
+                />
+                {mediaError ? (
+                  <View style={styles.mediaStateOverlay}>
+                    <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Image unavailable</Text>
+                  </View>
+                ) : null}
+              </>
+            )
+          ) : (
+            <View style={[styles.textMoment, { backgroundColor: currentBackground }]}>
+              <Text style={[styles.textMomentCaption, { color: theme.colors.heroText }]}>
+                {currentMoment.caption || 'Moment'}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {supportsMedia && currentMoment.caption ? (
+          <View style={styles.captionWrap}>
+            <Text style={[styles.captionText, { color: theme.colors.heroText }]}>{currentMoment.caption}</Text>
+          </View>
+        ) : null}
+
+        {!embedded ? (
+          <>
             <Pressable onPress={() => goTo(currentIndex - 1)} style={styles.leftTapZone} />
             <Pressable
               onPress={() => {
@@ -614,92 +727,112 @@ export function MomentViewer({
               }}
               style={styles.rightTapZone}
             />
+          </>
+        ) : null}
 
-            {isMenuOpen ? (
+        {isMenuOpen ? (
+          <Pressable
+            onPress={() => {
+              setMenuOpen(false);
+              setPaused(false);
+            }}
+            style={styles.menuBackdrop}
+          />
+        ) : null}
+
+        {isMenuOpen ? (
+          <View
+            style={[
+              styles.menuCard,
+              {
+                backgroundColor: theme.colors.surfaceRaised,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
+                handleOpenAuthor();
+              }}
+              style={styles.menuItem}
+            >
+              <Feather color={theme.colors.primary} name="user" size={16} />
+              <View style={styles.menuCopy}>
+                <Text style={[styles.menuLabel, { color: theme.colors.textPrimary }]}>View profile</Text>
+                <Text style={[styles.menuHint, { color: theme.colors.textSecondary }]}>
+                  @{currentMoment.author?.username ?? 'member'}
+                </Text>
+              </View>
+            </Pressable>
+
+            {momentEventId ? (
               <Pressable
                 onPress={() => {
                   setMenuOpen(false);
-                  setPaused(false);
+                  void handleOpenEvent();
                 }}
-                style={styles.menuBackdrop}
-              />
+                style={styles.menuItem}
+              >
+                <Feather color={theme.colors.primary} name="calendar" size={16} />
+                <View style={styles.menuCopy}>
+                  <Text style={[styles.menuLabel, { color: theme.colors.textPrimary }]}>View event</Text>
+                  <Text numberOfLines={1} style={[styles.menuHint, { color: theme.colors.textSecondary }]}>
+                    {currentMoment.event?.title ?? 'Open related event'}
+                  </Text>
+                </View>
+              </Pressable>
             ) : null}
 
-            {isMenuOpen ? (
-              <View
-                style={[
-                  styles.menuCard,
-                  {
-                    backgroundColor: theme.colors.surfaceRaised,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <Pressable
-                  onPress={() => {
-                    setMenuOpen(false);
-                    handleOpenAuthor();
-                  }}
-                  style={styles.menuItem}
-                >
-                  <Feather color={theme.colors.primary} name="user" size={16} />
-                  <View style={styles.menuCopy}>
-                    <Text style={[styles.menuLabel, { color: theme.colors.textPrimary }]}>View profile</Text>
-                    <Text style={[styles.menuHint, { color: theme.colors.textSecondary }]}>
-                      @{currentMoment.author?.username ?? 'member'}
-                    </Text>
-                  </View>
-                </Pressable>
-
-                {momentEventId ? (
-                  <Pressable
-                    onPress={() => {
-                      setMenuOpen(false);
-                      void handleOpenEvent();
-                    }}
-                    style={styles.menuItem}
-                  >
-                    <Feather color={theme.colors.primary} name="calendar" size={16} />
-                    <View style={styles.menuCopy}>
-                      <Text style={[styles.menuLabel, { color: theme.colors.textPrimary }]}>View event</Text>
-                      <Text numberOfLines={1} style={[styles.menuHint, { color: theme.colors.textSecondary }]}>
-                        {currentMoment.event?.title ?? 'Open related event'}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ) : null}
-              </View>
+            {isOwnedByViewer ? (
+              <Pressable onPress={handleDeleteMoment} style={styles.menuItem}>
+                <Feather color={theme.colors.error} name="trash-2" size={16} />
+                <View style={styles.menuCopy}>
+                  <Text style={[styles.menuLabel, { color: theme.colors.error }]}>Delete moment</Text>
+                  <Text style={[styles.menuHint, { color: theme.colors.textSecondary }]}>Remove this story</Text>
+                </View>
+              </Pressable>
             ) : null}
           </View>
-
-          {showReplyComposer ? (
-            <View style={styles.composerShell}>
-              <ChatComposer
-                isConnected={isConnected}
-                onAfterSend={() => {
-                  setReplySent(true);
-                  clearReplySentTimeout();
-                  pauseTimeoutRef.current = setTimeout(() => setReplySent(false), 2200);
-                }}
-                onBlur={() => {
-                  if (!isMenuOpen) {
-                    setPaused(false);
-                  }
-                }}
-                onFocus={() => setPaused(true)}
-                onSend={handleReply}
-                placeholder={`Reply to ${displayName}…`}
-                showStatus={false}
-                targetUserId={currentMoment.authorId}
-                variant="overlay"
-              />
-              {replySent ? (
-                <Text style={[styles.replySentLabel, { color: theme.colors.heroSubtle }]}>Reply sent</Text>
-              ) : null}
-            </View>
-          ) : null}
-        </Animated.View>
+        ) : null}
       </View>
+
+      {showReplyComposer ? (
+        <View style={styles.composerShell}>
+          <ChatComposer
+            isConnected={isConnected}
+            onAfterSend={() => {
+              setReplySent(true);
+              clearReplySentTimeout();
+              pauseTimeoutRef.current = setTimeout(() => setReplySent(false), 2200);
+            }}
+            onBlur={() => {
+              if (!isMenuOpen) {
+                setPaused(false);
+              }
+            }}
+            onFocus={() => setPaused(true)}
+            onSend={handleReply}
+            placeholder={`Reply to ${displayName}…`}
+            showStatus={false}
+            targetUserId={currentMoment.authorId}
+            variant="overlay"
+          />
+          {replySent ? (
+            <Text style={[styles.replySentLabel, { color: theme.colors.heroSubtle }]}>Reply sent</Text>
+          ) : null}
+        </View>
+      ) : null}
+    </Animated.View>
+  );
+
+  if (embedded) {
+    return <View style={styles.embeddedContainer}>{storyContent}</View>;
+  }
+
+  return (
+    <Modal animationType="none" onRequestClose={() => requestClose()} statusBarTranslucent transparent visible={open}>
+      <View style={styles.modalRoot}>{storyContent}</View>
     </Modal>
   );
 }
@@ -750,6 +883,13 @@ const styles = StyleSheet.create({
     minHeight: FOOTER_HEIGHT,
     paddingHorizontal: 16,
     paddingTop: 6,
+  },
+  embeddedContainer: {
+    backgroundColor: '#030712',
+    flex: 1,
+  },
+  embeddedViewerShell: {
+    backgroundColor: '#030712',
   },
   headerActions: {
     alignItems: 'center',

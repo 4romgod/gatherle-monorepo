@@ -11,6 +11,7 @@ jest.mock('@/services', () => ({
     create: jest.fn(),
     delete: jest.fn(),
     readByEvent: jest.fn(),
+    readMomentById: jest.fn(),
     readUserMoments: jest.fn(),
     readUserMomentsFeed: jest.fn(),
     readMomentsFeed: jest.fn(),
@@ -201,6 +202,26 @@ describe('EventMomentResolver', () => {
       await resolver.readUserMoments('user-2', { ...mockContext, user: undefined }, undefined, undefined);
 
       expect(EventMomentService.readUserMomentsFeed).toHaveBeenCalledWith('user-2', undefined, undefined, undefined);
+    });
+  });
+
+  describe('readMomentById', () => {
+    it('delegates to EventMomentService.readMomentById with the viewer id when authenticated', async () => {
+      (EventMomentService.readMomentById as jest.Mock).mockResolvedValue(mockMoment);
+
+      const result = await resolver.readMomentById('moment-1', mockContext);
+
+      expect(EventMomentService.readMomentById).toHaveBeenCalledWith('moment-1', 'user-1');
+      expect(result).toEqual(mockMoment);
+    });
+
+    it('passes undefined viewer id for anonymous context', async () => {
+      (EventMomentService.readMomentById as jest.Mock).mockResolvedValue(null);
+
+      const result = await resolver.readMomentById('moment-1', { ...mockContext, user: undefined });
+
+      expect(EventMomentService.readMomentById).toHaveBeenCalledWith('moment-1', undefined);
+      expect(result).toBeNull();
     });
   });
 

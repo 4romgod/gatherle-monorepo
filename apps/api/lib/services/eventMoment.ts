@@ -516,6 +516,30 @@ class EventMomentService {
   }
 
   /**
+   * Read a single moment by id for deep links / reply-to-moment navigation.
+   * Published ready moments are readable whenever the author's follow policy allows it.
+   * Authors may also view their own pending / failed moments.
+   */
+  static async readMomentById(momentId: string, callerId?: string): Promise<EventMoment | null> {
+    const moment = await EventMomentDAO.readById(momentId);
+
+    if (!moment || moment.expiresAt.getTime() <= Date.now()) {
+      return null;
+    }
+
+    const canView = await EventMomentService.canViewProtectedUserMoments(moment.authorId, callerId);
+    if (!canView) {
+      return null;
+    }
+
+    if (moment.authorId === callerId) {
+      return moment;
+    }
+
+    return moment.state === EventMomentState.Ready && moment.isPublished ? moment : null;
+  }
+
+  /**
    * Read moments from users the caller follows (personal cross-event feed).
    */
   static async readFollowedMoments(callerId: string, cursor?: string, limit?: number): Promise<EventMomentPage> {

@@ -31,3 +31,9 @@ export const CreateEventMomentDocument = graphql(`
     }
   }
 `);
+
+export const DeleteEventMomentDocument = graphql(`
+  mutation DeleteEventMoment($momentId: String!) {
+    deleteEventMoment(momentId: $momentId)
+  }
+`);

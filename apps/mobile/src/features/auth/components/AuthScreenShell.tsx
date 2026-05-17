@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BrandMark } from '@/components/core/BrandMark';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
@@ -16,6 +17,7 @@ export function AuthScreenShell({ children, subtitle, title }: AuthScreenShellPr
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
       style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       <ScrollView

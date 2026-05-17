@@ -16,6 +16,68 @@ Or directly from this workspace:
 npm run start
 ```
 
+## APK Build And Install
+
+Generate a local Android release APK from this workspace:
+
+```bash
+npm run apk:release
+```
+
+That script:
+
+- runs Expo prebuild without reinstalling dependencies
+- builds the Android release APK with Gradle
+
+The generated APK will be at:
+
+```bash
+apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Or, from inside this workspace:
+
+```bash
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+Install it with:
+
+```bash
+npm run apk:install
+```
+
+If more than one Android device/emulator is connected, target one explicitly with `ANDROID_SERIAL`:
+
+```bash
+ANDROID_SERIAL=<device-id> npm run apk:install
+```
+
+Examples:
+
+```bash
+ANDROID_SERIAL=emulator-5554 npm run apk:install
+ANDROID_SERIAL=<phone-ip>:<connect-port> npm run apk:install
+```
+
+You can find available device IDs with:
+
+```bash
+adb devices
+```
+
+If Android rejects the install with a version downgrade error, uninstall the existing app first:
+
+```bash
+adb -s <device-id> uninstall com.gatherle.mobile
+ANDROID_SERIAL=<device-id> npm run apk:install
+```
+
+Notes:
+
+- the release APK has the JavaScript bundle embedded, so it does not depend on the Expo dev server
+- `run:android` is different: it builds and installs a development build for local development
+
 ## Environment Variables
 
 The mobile app primarily uses:
@@ -25,11 +87,11 @@ EXPO_PUBLIC_GRAPHQL_URL=
 EXPO_PUBLIC_WEBSOCKET_URL=
 ```
 
-For local development, create `apps/mobile/.env.local`:
+For local development, create `apps/mobile/.env`:
 
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
-EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:3001/local
+EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
 ```
 
 Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
@@ -48,7 +110,23 @@ It lets the phone use `localhost` while actually reaching the laptop's API and w
 npm run dev:api
 ```
 
-2. Make sure your phone is connected to `adb` wirelessly:
+2. Pair your phone with `adb` wirelessly if it is not already paired.
+
+On the phone, enable wireless debugging in Developer Options, then use the pairing details shown on the phone:
+
+```bash
+adb pair <phone-ip>:<pair-port>
+```
+
+You will be prompted for the pairing code displayed on the phone.
+
+3. Connect the phone to the wireless `adb` session:
+
+```bash
+adb connect <phone-ip>:<connect-port>
+```
+
+4. Make sure the phone is visible to `adb`:
 
 ```bash
 adb devices
@@ -58,35 +136,34 @@ Example output:
 
 ```bash
 List of devices attached
-192.168.0.5:39243 device
+<phone-ip>:<connect-port> device
 ```
 
-3. Reverse the GraphQL and websocket ports to that device:
+5. Reverse the GraphQL and websocket ports to that device:
 
 ```bash
-adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
-adb -s 192.168.0.5:39243 reverse tcp:3001 tcp:3001
+adb -s <phone-ip>:<connect-port> reverse tcp:9000 tcp:9000
 ```
 
-4. Start Expo from this workspace:
+6. Start Expo from this workspace:
 
 ```bash
 npm run start
 ```
 
-5. Open the app on the phone.
+7. Open the app on the phone.
 
 With that setup, these local values work correctly on the device:
 
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
-EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:3001/local
+EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
 ```
 
 Why this works:
 
 - without port reversal, `localhost` on the phone points to the phone
-- with `adb reverse`, `localhost:9000` and `localhost:3001` on the phone are forwarded back to your laptop
+- with `adb reverse`, `localhost:9000` on the phone are forwarded back to your laptop
 
 This is Android-only. iPhone does not support `adb reverse`.
 
@@ -100,11 +177,11 @@ If you do not want to rely on `adb reverse`, or you are testing on iPhone, use y
 hostname -I
 ```
 
-2. Set the mobile env vars to that IP:
+2. Set the mobile env vars to your laptop IP:
 
 ```bash
-EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.10:9000/v1/graphql
-EXPO_PUBLIC_WEBSOCKET_URL=ws://192.168.1.10:3001/local
+EXPO_PUBLIC_GRAPHQL_URL=http://<laptop-ip>:9000/v1/graphql
+EXPO_PUBLIC_WEBSOCKET_URL=ws://<laptop-ip>:9000/local
 ```
 
 3. Start Expo:
@@ -138,7 +215,7 @@ Useful checks:
 
 ```bash
 adb devices
-adb -s 192.168.0.5:39243 reverse --list
+adb -s <phone-ip>:<connect-port> reverse --list
 ```
 
 ### `adb reverse` command fails
@@ -146,7 +223,7 @@ adb -s 192.168.0.5:39243 reverse --list
 Make sure the device selector comes before `reverse`:
 
 ```bash
-adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
+adb -s <phone-ip>:<connect-port> reverse tcp:9000 tcp:9000
 ```
 
 Not:
@@ -161,8 +238,8 @@ Target the phone explicitly in `adb` commands:
 
 ```bash
 adb devices
-adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
-adb -s 192.168.0.5:39243 reverse tcp:3001 tcp:3001
+adb -s <phone-ip>:<connect-port> reverse tcp:9000 tcp:9000
+adb -s <phone-ip>:<connect-port> reverse --list
 ```
 
 ### The websocket works on beta but not locally

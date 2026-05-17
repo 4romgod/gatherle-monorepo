@@ -6,7 +6,7 @@ import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 
 const mobileDiscoveryQuerySource = readFileSync(
-  resolve(__dirname, '../../../../../../mobile/data/graphql/query/Discovery/query.ts'),
+  resolve(__dirname, '../../../../../../apps/mobile/data/graphql/query/Discovery/query.ts'),
   'utf8',
 );
 

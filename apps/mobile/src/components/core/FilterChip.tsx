@@ -29,8 +29,8 @@ export function FilterChip({ active, label, onPress, onRemove, small, tone = 'pr
         styles.filterChip,
         small && styles.filterChipSmall,
         {
-          backgroundColor: active ? soft : theme.colors.surface,
-          borderColor: active ? accent : theme.colors.border,
+          backgroundColor: active ? soft : theme.colors.surfaceMuted,
+          borderColor: active ? accent : 'transparent',
           opacity: pressed ? 0.86 : 1,
         },
       ]}

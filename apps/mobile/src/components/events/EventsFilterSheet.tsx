@@ -59,7 +59,8 @@ export function EventsFilterSheet({
 }: EventsFilterSheetProps) {
   const { theme } = useAppTheme();
   const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['85%'], []);
+  const snapPoints = useMemo(() => ['80%'], []);
+  const [mounted, setMounted] = useState(visible);
 
   const [localCity, setLocalCity] = useState(draft.location.city);
   const [localState, setLocalState] = useState(draft.location.state);
@@ -73,14 +74,28 @@ export function EventsFilterSheet({
     setLocalCity(draft.location.city);
     setLocalState(draft.location.state);
     setLocalCountry(draft.location.country);
-    sheetRef.current?.present();
   }, [draft.location.city, draft.location.country, draft.location.state, visible]);
 
   useEffect(() => {
-    if (!visible) {
-      sheetRef.current?.dismiss();
+    if (visible) {
+      setMounted(true);
+      return;
     }
+
+    sheetRef.current?.dismiss();
   }, [visible]);
+
+  useEffect(() => {
+    if (!mounted || !visible) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      sheetRef.current?.present();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [mounted, visible]);
 
   const locationDirty =
     localCity !== draft.location.city || localState !== draft.location.state || localCountry !== draft.location.country;
@@ -132,22 +147,26 @@ export function EventsFilterSheet({
     },
   ];
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <BottomSheetModal
+      ref={sheetRef}
       backdropComponent={renderBackdrop}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       enableDynamicSizing={false}
       enablePanDownToClose
       handleIndicatorStyle={{ backgroundColor: theme.colors.border, width: 40 }}
-      index={0}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       onDismiss={() => {
+        setMounted(false);
         if (visible) {
           handleClose();
         }
       }}
-      ref={sheetRef}
       snapPoints={snapPoints}
     >
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -377,11 +396,11 @@ const styles = StyleSheet.create({
   },
   showResultsButton: {
     borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
   },
   showResultsText: {
     ...typography.bodyBold,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
   },
 });

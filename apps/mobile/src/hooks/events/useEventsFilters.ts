@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DateFilterOption, EventStatus } from '@data/graphql/types/graphql';
+import { DEVICE_STORAGE_KEYS, readStoredJson, writeStoredJson } from '@/lib/deviceStorage';
 
 export type EventsLocationFilter = {
   city: string;
@@ -21,6 +22,41 @@ export const DEFAULT_FILTER_STATE: EventsFilterState = {
   location: { city: '', state: '', country: '' },
 };
 
+type PersistedEventsFilterState = EventsFilterState;
+
+const VALID_EVENT_STATUSES = new Set(Object.values(EventStatus));
+const VALID_DATE_FILTER_OPTIONS = new Set(Object.values(DateFilterOption));
+
+function restoreFilterState(value: PersistedEventsFilterState | null): EventsFilterState | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const nextValue = value as Partial<EventsFilterState>;
+
+  return {
+    categories: Array.isArray(nextValue.categories)
+      ? nextValue.categories.filter((category): category is string => typeof category === 'string')
+      : DEFAULT_FILTER_STATE.categories,
+    statuses: Array.isArray(nextValue.statuses)
+      ? nextValue.statuses.filter((status): status is EventStatus => VALID_EVENT_STATUSES.has(status as EventStatus))
+      : DEFAULT_FILTER_STATE.statuses,
+    dateOption:
+      nextValue.dateOption && VALID_DATE_FILTER_OPTIONS.has(nextValue.dateOption as DateFilterOption)
+        ? (nextValue.dateOption as DateFilterOption)
+        : DEFAULT_FILTER_STATE.dateOption,
+    location: {
+      city: typeof nextValue.location?.city === 'string' ? nextValue.location.city : DEFAULT_FILTER_STATE.location.city,
+      state:
+        typeof nextValue.location?.state === 'string' ? nextValue.location.state : DEFAULT_FILTER_STATE.location.state,
+      country:
+        typeof nextValue.location?.country === 'string'
+          ? nextValue.location.country
+          : DEFAULT_FILTER_STATE.location.country,
+    },
+  };
+}
+
 export function countActiveFilters(filters: EventsFilterState): number {
   let count = 0;
   if (filters.categories.length > 0) count++;
@@ -30,12 +66,48 @@ export function countActiveFilters(filters: EventsFilterState): number {
   return count;
 }
 
-export function useEventsFilters() {
+export function useEventsFilters(storageScope?: string | null) {
   // Applied: what the query actually uses
   const [appliedFilters, setAppliedFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   // Draft: what the sheet is editing before "Show results"
   const [draftFilters, setDraftFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [hasHydratedFilters, setHasHydratedFilters] = useState(false);
+  const storageKey = `${DEVICE_STORAGE_KEYS.eventsFilters}:${storageScope ?? 'guest'}`;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const restoreFilters = async () => {
+      const storedFilters = await readStoredJson<PersistedEventsFilterState>(storageKey);
+      const nextFilters = restoreFilterState(storedFilters);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (nextFilters) {
+        setAppliedFilters(nextFilters);
+        setDraftFilters(nextFilters);
+      }
+
+      setHasHydratedFilters(true);
+    };
+
+    void restoreFilters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hasHydratedFilters) {
+      return;
+    }
+
+    void writeStoredJson(storageKey, appliedFilters);
+  }, [appliedFilters, hasHydratedFilters, storageKey]);
 
   const openSheet = () => {
     setDraftFilters(appliedFilters);

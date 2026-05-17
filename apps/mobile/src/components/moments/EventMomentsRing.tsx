@@ -39,7 +39,11 @@ export function EventMomentsRing({
   const canPost = myRsvpStatus !== null && ALLOWED_STATUSES.has(myRsvpStatus);
 
   if (!canPost && groupedMoments.length === 0) {
-    return null;
+    return (
+      <Text style={[styles.emptyHint, { color: theme.colors.textSecondary }]}>
+        Moments from this event will appear here. RSVP as going to post your own.
+      </Text>
+    );
   }
 
   return (
@@ -114,6 +118,11 @@ const styles = StyleSheet.create({
     ...typography.displayBold,
     fontSize: 26,
     lineHeight: 28,
+  },
+  emptyHint: {
+    ...typography.bodyRegular,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
   row: {
     alignItems: 'flex-start',

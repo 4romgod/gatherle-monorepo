@@ -140,6 +140,38 @@ export const GetUserEventMomentsDocument = graphql(`
   }
 `);
 
+export const GetMomentByIdDocument = graphql(`
+  query GetMomentById($momentId: String!) {
+    readMomentById(momentId: $momentId) {
+      momentId
+      eventId
+      occurrenceId
+      authorId
+      type
+      state
+      caption
+      mediaUrl
+      thumbnailUrl
+      background
+      durationSeconds
+      expiresAt
+      createdAt
+      author {
+        userId
+        username
+        given_name
+        family_name
+        profile_picture
+      }
+      event {
+        eventId
+        slug
+        title
+      }
+    }
+  }
+`);
+
 export const GetUserMomentsDocument = graphql(`
   query GetUserMoments($userId: String!, $cursor: String, $limit: Float) {
     readUserMoments(userId: $userId, cursor: $cursor, limit: $limit) {

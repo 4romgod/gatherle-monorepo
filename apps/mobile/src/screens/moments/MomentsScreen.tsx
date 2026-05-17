@@ -9,12 +9,17 @@ import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
 export function MomentsScreen() {
-  const { authToken, bottomTabBarHeight } = useAppShell();
+  const { authToken } = useAppShell();
   const { theme } = useAppTheme();
   const { height: screenHeight } = useWindowDimensions();
   const [pageHeight, setPageHeight] = useState(screenHeight);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hiddenMomentIds, setHiddenMomentIds] = useState<string[]>([]);
   const { error, hasMore, isFetchingMore, loadMore, loading, moments, refresh } = useMomentsFeed(authToken);
+  const visibleMoments = useMemo(
+    () => moments.filter((moment) => !hiddenMomentIds.includes(moment.momentId)),
+    [hiddenMomentIds, moments],
+  );
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken<MobileMomentsFeedMoment>[] }) => {
       const firstVisibleIndex = viewableItems[0]?.index;
@@ -30,7 +35,7 @@ export function MomentsScreen() {
     [],
   );
 
-  if (loading && moments.length === 0) {
+  if (loading && visibleMoments.length === 0) {
     return (
       <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
         <ActivityIndicator color={theme.colors.heroText} size="small" />
@@ -38,7 +43,7 @@ export function MomentsScreen() {
     );
   }
 
-  if (error && moments.length === 0) {
+  if (error && visibleMoments.length === 0) {
     return (
       <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
         <Text style={[styles.stateTitle, { color: theme.colors.heroText }]}>Moments are unavailable right now.</Text>
@@ -47,7 +52,7 @@ export function MomentsScreen() {
     );
   }
 
-  if (moments.length === 0) {
+  if (visibleMoments.length === 0) {
     return (
       <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
         <Text style={[styles.stateTitle, { color: theme.colors.heroText }]}>No moments yet.</Text>
@@ -61,7 +66,7 @@ export function MomentsScreen() {
   return (
     <View
       onLayout={(event) => {
-        const nextHeight = Math.max(1, Math.round(event.nativeEvent.layout.height + bottomTabBarHeight));
+        const nextHeight = Math.max(1, Math.round(event.nativeEvent.layout.height));
         if (nextHeight > 0 && nextHeight !== pageHeight) {
           setPageHeight(nextHeight);
         }
@@ -69,7 +74,7 @@ export function MomentsScreen() {
       style={[styles.screen, { backgroundColor: '#020617' }]}
     >
       <FlatList
-        data={moments}
+        data={visibleMoments}
         decelerationRate="fast"
         getItemLayout={(_data, index) => ({
           index,
@@ -92,21 +97,23 @@ export function MomentsScreen() {
               void refresh();
             }}
             progressBackgroundColor={theme.colors.surfaceRaised}
-            refreshing={loading && moments.length > 0}
+            refreshing={loading && visibleMoments.length > 0}
             tintColor={theme.colors.primary}
           />
         }
         renderItem={({ index, item }) => (
           <MomentFeedPage
             active={index === activeIndex}
-            bottomOverlayOffset={bottomTabBarHeight}
             moment={item}
+            onDeleted={(momentId) => {
+              setHiddenMomentIds((current) => (current.includes(momentId) ? current : [...current, momentId]));
+            }}
             pageHeight={pageHeight}
           />
         )}
         showsVerticalScrollIndicator={false}
         snapToAlignment="start"
-        style={[styles.feed, { marginBottom: -bottomTabBarHeight }]}
+        style={styles.feed}
       />
       {isFetchingMore ? (
         <View style={styles.fetchingBadge}>

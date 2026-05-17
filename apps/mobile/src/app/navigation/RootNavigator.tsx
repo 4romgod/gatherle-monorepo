@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -78,7 +79,7 @@ function MainTabs() {
             lazy: true,
             swipeEnabled: true,
           }}
-          tabBar={(props) => <BottomTabBar {...props} isTabletLayout={isTabletLayout} />}
+          tabBar={(props: MaterialTopTabBarProps) => <BottomTabBar {...props} isTabletLayout={isTabletLayout} />}
         >
           <Tab.Screen component={HomeScreen} name="Home" options={{ title: 'Home' }} />
           <Tab.Screen component={EventsScreen} name="Events" options={{ title: 'Events' }} />

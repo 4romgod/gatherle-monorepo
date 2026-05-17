@@ -7,18 +7,25 @@ import {
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 import {
   MOMENT_BACKGROUND_SWATCHES,
   MOMENT_DEFAULT_BACKGROUND,
+  MOMENT_IMAGE_EXTENSIONS,
   MOMENT_MAX_CAPTION_LENGTH,
+  MOMENT_MAX_IMAGE_BYTES,
+  MOMENT_MAX_VIDEO_BYTES,
+  MOMENT_MAX_VIDEO_DURATION_MS,
+  MOMENT_VIDEO_EXTENSIONS,
 } from '@/lib/moments/constants';
 import type { MomentBackgroundToken } from '@/lib/moments/constants';
+import { getMomentAssetExtension } from '@/lib/moments/upload';
 import { useCreateEventMoment } from '@/hooks/moments/useCreateEventMoment';
 
-type ComposerTab = 'text' | 'image';
+type ComposerTab = 'text' | 'image' | 'video';
 
 export function MomentComposerModal({
   authToken,
@@ -36,23 +43,53 @@ export function MomentComposerModal({
   open: boolean;
 }) {
   const { theme } = useAppTheme();
-  const { createMoment, loading } = useCreateEventMoment(authToken);
   const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);
+  const { createMoment, loading } = useCreateEventMoment(authToken);
+  const snapPoints = useMemo(() => ['85%'], []);
+  const [mounted, setMounted] = useState(open);
   const [activeTab, setActiveTab] = useState<ComposerTab>('text');
   const [caption, setCaption] = useState('');
   const [selectedBackground, setSelectedBackground] = useState<MomentBackgroundToken>(MOMENT_DEFAULT_BACKGROUND);
   const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const remainingCaption = useMemo(() => MOMENT_MAX_CAPTION_LENGTH - caption.length, [caption.length]);
+  const videoPreviewSource = activeTab === 'video' && selectedAsset?.uri ? { uri: selectedAsset.uri } : null;
+  const videoPreviewPlayer = useVideoPlayer(videoPreviewSource, (player) => {
+    player.loop = true;
+    player.muted = true;
+  });
+
+  useEffect(() => {
+    if (!videoPreviewSource) {
+      return;
+    }
+
+    videoPreviewPlayer.play();
+
+    return () => {
+      videoPreviewPlayer.pause();
+    };
+  }, [videoPreviewPlayer, videoPreviewSource]);
 
   useEffect(() => {
     if (open) {
-      sheetRef.current?.present();
+      setMounted(true);
       return;
     }
 
     sheetRef.current?.dismiss();
   }, [open]);
+
+  useEffect(() => {
+    if (!mounted || !open) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      sheetRef.current?.present();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [mounted, open]);
 
   const resetState = () => {
     setActiveTab('text');
@@ -78,8 +115,54 @@ export function MomentComposerModal({
       return;
     }
 
-    setSelectedAsset(result.assets[0]);
+    const asset = result.assets[0];
+    const extension = getMomentAssetExtension(asset);
+
+    if (!MOMENT_IMAGE_EXTENSIONS.includes(extension as (typeof MOMENT_IMAGE_EXTENSIONS)[number])) {
+      Alert.alert('Unsupported image', 'Please choose a JPEG, PNG, or WEBP image.');
+      return;
+    }
+
+    if (asset.fileSize && asset.fileSize > MOMENT_MAX_IMAGE_BYTES) {
+      Alert.alert('Image too large', 'Images must be 15 MB or smaller.');
+      return;
+    }
+
+    setSelectedAsset(asset);
     setActiveTab('image');
+  };
+
+  const handlePickVideo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['videos'],
+      quality: 0.85,
+      selectionLimit: 1,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    const extension = getMomentAssetExtension(asset);
+
+    if (!MOMENT_VIDEO_EXTENSIONS.includes(extension as (typeof MOMENT_VIDEO_EXTENSIONS)[number])) {
+      Alert.alert('Unsupported video', 'Please choose an MP4, MOV, or WEBM video.');
+      return;
+    }
+
+    if (asset.fileSize && asset.fileSize > MOMENT_MAX_VIDEO_BYTES) {
+      Alert.alert('Video too large', 'Videos must be 75 MB or smaller.');
+      return;
+    }
+
+    if (asset.duration && asset.duration > MOMENT_MAX_VIDEO_DURATION_MS) {
+      Alert.alert('Video too long', 'Videos must be 30 seconds or shorter.');
+      return;
+    }
+
+    setSelectedAsset(asset);
+    setActiveTab('video');
   };
 
   const handleSubmit = async () => {
@@ -92,7 +175,7 @@ export function MomentComposerModal({
           occurrenceId,
           type: 'text',
         });
-      } else {
+      } else if (activeTab === 'image') {
         if (!selectedAsset) {
           Alert.alert('Image required', 'Choose an image before posting this moment.');
           return;
@@ -104,6 +187,19 @@ export function MomentComposerModal({
           eventId,
           occurrenceId,
           type: 'image',
+        });
+      } else {
+        if (!selectedAsset) {
+          Alert.alert('Video required', 'Choose a video before posting this moment.');
+          return;
+        }
+
+        await createMoment({
+          asset: selectedAsset,
+          caption,
+          eventId,
+          occurrenceId,
+          type: 'video',
         });
       }
 
@@ -118,22 +214,26 @@ export function MomentComposerModal({
     <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.52} pressBehavior="close" />
   );
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <BottomSheetModal
+      ref={sheetRef}
       backdropComponent={renderBackdrop}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       enableDynamicSizing={false}
       enablePanDownToClose
       handleIndicatorStyle={{ backgroundColor: theme.colors.border, width: 40 }}
-      index={0}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       onDismiss={() => {
+        setMounted(false);
         if (open) {
           handleClose();
         }
       }}
-      ref={sheetRef}
       snapPoints={snapPoints}
     >
       <View style={styles.sheet}>
@@ -145,12 +245,17 @@ export function MomentComposerModal({
         </View>
 
         <View style={[styles.tabRow, { borderColor: theme.colors.border }]}>
-          {(['text', 'image'] as const).map((tab) => {
+          {(['text', 'image', 'video'] as const).map((tab) => {
             const active = tab === activeTab;
             return (
               <Pressable
                 key={tab}
-                onPress={() => setActiveTab(tab)}
+                onPress={() => {
+                  if (tab !== activeTab) {
+                    setSelectedAsset(null);
+                  }
+                  setActiveTab(tab);
+                }}
                 style={[
                   styles.tabButton,
                   {
@@ -160,14 +265,19 @@ export function MomentComposerModal({
                 ]}
               >
                 <Text style={[styles.tabLabel, { color: active ? theme.colors.primary : theme.colors.textSecondary }]}>
-                  {tab === 'text' ? 'Text' : 'Image'}
+                  {tab === 'text' ? 'Text' : tab === 'image' ? 'Image' : 'Video'}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
-        <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <BottomSheetScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollArea}
+        >
           {activeTab === 'text' ? (
             <View style={styles.contentBlock}>
               <View
@@ -201,7 +311,7 @@ export function MomentComposerModal({
                 })}
               </View>
             </View>
-          ) : (
+          ) : activeTab === 'image' ? (
             <View style={styles.contentBlock}>
               {selectedAsset ? (
                 <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
@@ -225,6 +335,42 @@ export function MomentComposerModal({
                   <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change image</Text>
                 </Pressable>
               ) : null}
+              <Text style={[styles.mediaHintText, { color: theme.colors.textMuted }]}>JPEG, PNG, WEBP up to 15 MB</Text>
+            </View>
+          ) : (
+            <View style={styles.contentBlock}>
+              {selectedAsset ? (
+                <View style={styles.videoPreviewWrap}>
+                  <VideoView
+                    contentFit="cover"
+                    nativeControls={false}
+                    player={videoPreviewPlayer}
+                    style={styles.imagePreview}
+                  />
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => void handlePickVideo()}
+                  style={[
+                    styles.imagePickerButton,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.imagePickerLabel, { color: theme.colors.textPrimary }]}>Choose video</Text>
+                </Pressable>
+              )}
+
+              {selectedAsset ? (
+                <Pressable onPress={() => void handlePickVideo()}>
+                  <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change video</Text>
+                </Pressable>
+              ) : null}
+              <Text style={[styles.mediaHintText, { color: theme.colors.textMuted }]}>
+                MP4, MOV, WEBM up to 75 MB, 30 seconds max
+              </Text>
             </View>
           )}
 
@@ -248,25 +394,24 @@ export function MomentComposerModal({
             />
             <Text style={[styles.remainingText, { color: theme.colors.textMuted }]}>{remainingCaption}</Text>
           </View>
+          <Pressable
+            disabled={loading}
+            onPress={() => void handleSubmit()}
+            style={[
+              styles.submitButton,
+              {
+                backgroundColor: theme.colors.secondary,
+                opacity: loading ? 0.7 : 1,
+              },
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator color={theme.colors.primaryContrast} />
+            ) : (
+              <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>Post moment</Text>
+            )}
+          </Pressable>
         </BottomSheetScrollView>
-
-        <Pressable
-          disabled={loading}
-          onPress={() => void handleSubmit()}
-          style={[
-            styles.submitButton,
-            {
-              backgroundColor: theme.colors.secondary,
-              opacity: loading ? 0.7 : 1,
-            },
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator color={theme.colors.primaryContrast} />
-          ) : (
-            <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>Post moment</Text>
-          )}
-        </Pressable>
       </View>
     </BottomSheetModal>
   );
@@ -292,7 +437,7 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 18,
-    paddingBottom: 24,
+    paddingBottom: 28,
   },
   contentBlock: {
     gap: 12,
@@ -321,28 +466,35 @@ const styles = StyleSheet.create({
   inputWrap: {
     gap: 6,
   },
+  mediaHintText: {
+    ...typography.bodyMedium,
+    fontSize: fontSize.sm,
+  },
   remainingText: {
     ...typography.bodyMedium,
     alignSelf: 'flex-end',
     fontSize: fontSize.sm,
     paddingRight: 2,
   },
+  scrollArea: {
+    flex: 1,
+  },
   sheet: {
     flex: 1,
     gap: 18,
-    paddingBottom: 26,
     paddingHorizontal: 20,
     paddingTop: 8,
   },
   submitButton: {
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 22,
     justifyContent: 'center',
-    minHeight: 52,
+    marginTop: 8,
+    minHeight: 48,
   },
   submitLabel: {
     ...typography.bodyBold,
-    fontSize: fontSize.xl2,
+    fontSize: fontSize.xl,
   },
   swatch: {
     borderRadius: 999,
@@ -388,5 +540,9 @@ const styles = StyleSheet.create({
   title: {
     ...typography.displayBold,
     fontSize: fontSize.xl3,
+  },
+  videoPreviewWrap: {
+    overflow: 'hidden',
+    borderRadius: 24,
   },
 });
