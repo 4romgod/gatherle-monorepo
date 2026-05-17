@@ -17,6 +17,7 @@ export type QueryGuardLimits = {
   maxComplexity: number;
   allowIntrospection: boolean;
 };
+
 export type SelectionMetrics = {
   complexity: number;
   maxDepth: number;
@@ -27,14 +28,14 @@ const DEFAULT_QUERY_DEPTH_LIMITS: Record<string, number> = {
   [APPLICATION_STAGES.DEV]: 14,
   [APPLICATION_STAGES.BETA]: 10,
   [APPLICATION_STAGES.GAMMA]: 10,
-  [APPLICATION_STAGES.PROD]: 8,
+  [APPLICATION_STAGES.PROD]: 10,
 };
 
 const DEFAULT_QUERY_COMPLEXITY_LIMITS: Record<string, number> = {
-  [APPLICATION_STAGES.DEV]: 600,
-  [APPLICATION_STAGES.BETA]: 300,
-  [APPLICATION_STAGES.GAMMA]: 400,
-  [APPLICATION_STAGES.PROD]: 250,
+  [APPLICATION_STAGES.DEV]: 1200,
+  [APPLICATION_STAGES.BETA]: 800,
+  [APPLICATION_STAGES.GAMMA]: 800,
+  [APPLICATION_STAGES.PROD]: 800,
 };
 
 const MAX_ARGUMENT_LIST_MULTIPLIER = 50;
@@ -212,32 +213,21 @@ const calculateSelectionMetrics = (
   return { complexity, maxDepth, usesIntrospection };
 };
 
-export const resolveQueryGuardLimits = (stage: string): QueryGuardLimits => ({
-  maxDepth: parsePositiveIntegerEnv(
-    process.env.GRAPHQL_QUERY_MAX_DEPTH,
-    DEFAULT_QUERY_DEPTH_LIMITS[stage] ?? DEFAULT_QUERY_DEPTH_LIMITS[APPLICATION_STAGES.BETA],
-  ),
-  maxComplexity: parsePositiveIntegerEnv(
-    process.env.GRAPHQL_QUERY_MAX_COMPLEXITY,
-    DEFAULT_QUERY_COMPLEXITY_LIMITS[stage] ?? DEFAULT_QUERY_COMPLEXITY_LIMITS[APPLICATION_STAGES.BETA],
-  ),
-  allowIntrospection: getBooleanEnv(process.env.GRAPHQL_ALLOW_INTROSPECTION, stage !== APPLICATION_STAGES.PROD),
-});
-
-export const enforceQueryGuards = (
+export const collectQuerySelectionMetrics = (
   document: DocumentNode,
   operation: OperationDefinitionNode,
   variables: VariablesMap,
-  limits: QueryGuardLimits,
-): void => {
+): SelectionMetrics => {
   const fragments = new Map(
     document.definitions
       .filter((definition): definition is FragmentDefinitionNode => definition.kind === Kind.FRAGMENT_DEFINITION)
       .map((definition) => [definition.name.value, definition]),
   );
 
-  const metrics = calculateSelectionMetrics(operation.selectionSet, fragments, variables, 1, new Set());
+  return calculateSelectionMetrics(operation.selectionSet, fragments, variables, 1, new Set());
+};
 
+export const assertQuerySelectionMetricsWithinLimits = (metrics: SelectionMetrics, limits: QueryGuardLimits): void => {
   if (!limits.allowIntrospection && metrics.usesIntrospection) {
     throw CustomError('Schema introspection is disabled for this stage.', ErrorTypes.BAD_REQUEST, {
       http: { status: QUERY_LIMIT_HTTP_STATUS },
@@ -263,4 +253,27 @@ export const enforceQueryGuards = (
       },
     );
   }
+};
+
+export const resolveQueryGuardLimits = (stage: string): QueryGuardLimits => ({
+  maxDepth: parsePositiveIntegerEnv(
+    process.env.GRAPHQL_QUERY_MAX_DEPTH,
+    DEFAULT_QUERY_DEPTH_LIMITS[stage] ?? DEFAULT_QUERY_DEPTH_LIMITS[APPLICATION_STAGES.BETA],
+  ),
+  maxComplexity: parsePositiveIntegerEnv(
+    process.env.GRAPHQL_QUERY_MAX_COMPLEXITY,
+    DEFAULT_QUERY_COMPLEXITY_LIMITS[stage] ?? DEFAULT_QUERY_COMPLEXITY_LIMITS[APPLICATION_STAGES.BETA],
+  ),
+  allowIntrospection: getBooleanEnv(process.env.GRAPHQL_ALLOW_INTROSPECTION, stage !== APPLICATION_STAGES.PROD),
+});
+
+export const enforceQueryGuards = (
+  document: DocumentNode,
+  operation: OperationDefinitionNode,
+  variables: VariablesMap,
+  limits: QueryGuardLimits,
+): SelectionMetrics => {
+  const metrics = collectQuerySelectionMetrics(document, operation, variables);
+  assertQuerySelectionMetricsWithinLimits(metrics, limits);
+  return metrics;
 };

@@ -10,31 +10,171 @@ From the repository root:
 npm run dev:mobile
 ```
 
-Set the GraphQL endpoint with `EXPO_PUBLIC_GRAPHQL_URL`.
+Or directly from this workspace:
+
+```bash
+npm run start
+```
+
+## Environment Variables
+
+The mobile app primarily uses:
+
+```bash
+EXPO_PUBLIC_GRAPHQL_URL=
+EXPO_PUBLIC_WEBSOCKET_URL=
+```
 
 For local development, create `apps/mobile/.env.local`:
 
 ```bash
-EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.10:9000/v1/graphql
+EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
+EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:3001/local
 ```
 
-For iOS/Android devices, `localhost` points at the device, not your laptop. Use your machine's LAN IP when testing
-against a local API server from Expo Go.
+Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
+Android `adb reverse` flow documented below.
+
+## Physical Phone + Local API
+
+### Recommended For Android: Wireless `adb reverse`
+
+If you are testing on a real Android phone and your API is running locally on your laptop, this is the cleanest setup.
+It lets the phone use `localhost` while actually reaching the laptop's API and websocket server.
+
+1. Start the local API from the repo root:
 
 ```bash
-EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.10:9000/v1/graphql npm run dev:mobile
+npm run dev:api
 ```
 
-When you run the Expo web preview, local/LAN GraphQL URLs such as `http://192.168.x.x:9000/v1/graphql` will usually fail
-on browser CORS unless the API explicitly allows that origin. The mobile app now falls back to the public beta GraphQL
-endpoint on `react-native-web` in that case, while native iOS/Android builds can still use the local API URL.
+2. Make sure your phone is connected to `adb` wirelessly:
+
+```bash
+adb devices
+```
+
+Example output:
+
+```bash
+List of devices attached
+192.168.0.5:39243 device
+```
+
+3. Reverse the GraphQL and websocket ports to that device:
+
+```bash
+adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
+adb -s 192.168.0.5:39243 reverse tcp:3001 tcp:3001
+```
+
+4. Start Expo from this workspace:
+
+```bash
+npm run start
+```
+
+5. Open the app on the phone.
+
+With that setup, these local values work correctly on the device:
+
+```bash
+EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
+EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:3001/local
+```
+
+Why this works:
+
+- without port reversal, `localhost` on the phone points to the phone
+- with `adb reverse`, `localhost:9000` and `localhost:3001` on the phone are forwarded back to your laptop
+
+This is Android-only. iPhone does not support `adb reverse`.
+
+### Alternative: Use Your Laptop's LAN IP
+
+If you do not want to rely on `adb reverse`, or you are testing on iPhone, use your laptop's local network IP instead.
+
+1. Find your laptop IP:
+
+```bash
+hostname -I
+```
+
+2. Set the mobile env vars to that IP:
+
+```bash
+EXPO_PUBLIC_GRAPHQL_URL=http://192.168.1.10:9000/v1/graphql
+EXPO_PUBLIC_WEBSOCKET_URL=ws://192.168.1.10:3001/local
+```
+
+3. Start Expo:
+
+```bash
+npm run start:lan
+```
+
+Requirements for the LAN-IP approach:
+
+- phone and laptop must be on the same Wi-Fi network
+- the API must listen on `0.0.0.0`, not only `127.0.0.1`
+- local firewall rules must allow the API and websocket ports
+
+## Expo Web Note
+
+When you run the Expo web preview, local or LAN GraphQL URLs such as `http://192.168.x.x:9000/v1/graphql` will usually
+fail on browser CORS unless the API explicitly allows that origin. Native iOS and Android builds can still use those
+local URLs.
+
+## Troubleshooting
+
+### The phone can open the Expo app, but API requests fail
+
+Check that one of these is true:
+
+- you are using Android and `adb reverse` is active
+- or you are using a LAN IP that the phone can reach
+
+Useful checks:
+
+```bash
+adb devices
+adb -s 192.168.0.5:39243 reverse --list
+```
+
+### `adb reverse` command fails
+
+Make sure the device selector comes before `reverse`:
+
+```bash
+adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
+```
+
+Not:
+
+```bash
+adb reverse tcp:9000 tcp:9000 -s 192.168.0.5:39243
+```
+
+### More than one device/emulator is connected
+
+Target the phone explicitly in `adb` commands:
+
+```bash
+adb devices
+adb -s 192.168.0.5:39243 reverse tcp:9000 tcp:9000
+adb -s 192.168.0.5:39243 reverse tcp:3001 tcp:3001
+```
+
+### The websocket works on beta but not locally
+
+Make sure the local websocket server is actually running on the port used by `EXPO_PUBLIC_WEBSOCKET_URL`.
 
 ## GraphQL Codegen
 
 The mobile app mirrors the webapp's codegen strategy:
 
-- Use `packages/commons/schema.graphql` when it exists.
-- Fall back to `EXPO_PUBLIC_GRAPHQL_URL` when the schema file is not present.
+- use `packages/commons/schema.graphql` when it exists
+- fall back to `EXPO_PUBLIC_GRAPHQL_URL` when the schema file is not present
 
 Generate the schema and mobile types with:
 

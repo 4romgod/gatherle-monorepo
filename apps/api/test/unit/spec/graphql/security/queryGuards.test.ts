@@ -1,5 +1,8 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { parse, type OperationDefinitionNode } from 'graphql';
-import { enforceQueryGuards } from '@/graphql/security';
+import { enforceQueryGuards, resolveQueryGuardLimits } from '@/graphql/security';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 
 const getOperation = (source: string): { document: ReturnType<typeof parse>; operation: OperationDefinitionNode } => {
   const document = parse(source);
@@ -130,5 +133,39 @@ describe('enforceQueryGuards', () => {
     expect(() =>
       enforceQueryGuards(document, operation, {}, { maxDepth: 10, maxComplexity: 100, allowIntrospection: false }),
     ).toThrow('Schema introspection is disabled for this stage.');
+  });
+
+  it('allows the shipped mobile home discovery query within beta defaults', () => {
+    const mobileDiscoverySource = readFileSync(
+      resolve(__dirname, '../../../../../../mobile/data/graphql/query/Discovery/query.ts'),
+      'utf8',
+    );
+    const match = mobileDiscoverySource.match(/query GetHomeDiscovery[\s\S]*?`/);
+
+    if (!match) {
+      throw new Error('Expected GetHomeDiscovery query in mobile discovery document');
+    }
+
+    const { document, operation } = getOperation(match[0].slice(0, -1));
+
+    expect(() =>
+      enforceQueryGuards(
+        document,
+        operation,
+        {
+          upcomingOptions: {
+            dateRange: {},
+            sort: [{ field: 'startAt', order: 'Asc' }],
+            pagination: { limit: 10 },
+          },
+          trendingOptions: {
+            dateRange: {},
+            sort: [{ field: 'rsvpCount', order: 'Desc' }],
+            pagination: { limit: 18 },
+          },
+        },
+        resolveQueryGuardLimits(APPLICATION_STAGES.BETA),
+      ),
+    ).not.toThrow();
   });
 });

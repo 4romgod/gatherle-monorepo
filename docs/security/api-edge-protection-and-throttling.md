@@ -363,7 +363,7 @@ It is a different threat shape:
 API Gateway WebSocket APIs support:
 
 - account-level throttling
-- stage and route throttling
+- stage throttling
 - message size enforcement
 
 API Gateway documents WebSocket-specific close behavior for:
@@ -375,7 +375,7 @@ API Gateway documents WebSocket-specific close behavior for:
 
 Current repo state:
 
-- `infrastructure/cdk/lib/stack/websocket-stack.ts` does not yet configure stage or route throttles
+- `infrastructure/cdk/lib/stack/websocket-stack.ts` configures stage throttles
 - there is no current websocket WAF association in the stack
 
 Important design constraint:
@@ -385,7 +385,7 @@ Important design constraint:
 
 That means our WebSocket protection path should be:
 
-1. add route-level throttling in the WebSocket stage
+1. keep conservative stage throttling in the WebSocket stage
 2. add message schema validation on every action
 3. add payload size checks and conservative per-action limits
 4. add per-user or per-connection abuse controls for chat and notification subscription paths
@@ -393,11 +393,11 @@ That means our WebSocket protection path should be:
 
 ### Recommended WebSocket Next Steps
 
-1. Add default route throttling on the WebSocket stage
-2. Add tighter throttles for `chat.send`, `notification.subscribe`, and `ping`
-3. Enforce payload schema validation for every route
-4. Add app-level anti-spam limits for chat sends and read receipts
-5. Add alarms for connection spikes, route throttles, and backend send failures
+1. Keep conservative stage throttling on the WebSocket stage
+2. Enforce payload schema validation for every route
+3. Add app-level anti-spam limits for chat sends and read receipts
+4. Add alarms for connection spikes, throttles, and backend send failures
+5. Consider connection-level or identity-level quotas where stage throttling is too coarse
 
 ### 4. Frontend Protection
 
@@ -460,7 +460,7 @@ Recommended operating stance:
 - keep the WAF rate rule enabled
 - add CloudWatch and budget alarms before broad beta exposure
 - add GraphQL query-cost controls in the next phase before raising limits materially
-- add WebSocket route throttles before scaling realtime adoption
+- add websocket app-level quotas before scaling realtime adoption
 
 ---
 
@@ -476,7 +476,7 @@ This is a meaningful improvement, but not the final protection model.
 The next phase should focus on:
 
 - GraphQL query-cost controls
-- WebSocket route throttling and app-level message limits
+- websocket app-level message limits and connection-level quotas
 - frontend edge protection for dynamic routes and auth flows
 - monitoring and budget alarms
 
