@@ -24,6 +24,39 @@ export const DEFAULT_FILTER_STATE: EventsFilterState = {
 
 type PersistedEventsFilterState = EventsFilterState;
 
+const VALID_EVENT_STATUSES = new Set(Object.values(EventStatus));
+const VALID_DATE_FILTER_OPTIONS = new Set(Object.values(DateFilterOption));
+
+function restoreFilterState(value: PersistedEventsFilterState | null): EventsFilterState | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const nextValue = value as Partial<EventsFilterState>;
+
+  return {
+    categories: Array.isArray(nextValue.categories)
+      ? nextValue.categories.filter((category): category is string => typeof category === 'string')
+      : DEFAULT_FILTER_STATE.categories,
+    statuses: Array.isArray(nextValue.statuses)
+      ? nextValue.statuses.filter((status): status is EventStatus => VALID_EVENT_STATUSES.has(status as EventStatus))
+      : DEFAULT_FILTER_STATE.statuses,
+    dateOption:
+      nextValue.dateOption && VALID_DATE_FILTER_OPTIONS.has(nextValue.dateOption as DateFilterOption)
+        ? (nextValue.dateOption as DateFilterOption)
+        : DEFAULT_FILTER_STATE.dateOption,
+    location: {
+      city: typeof nextValue.location?.city === 'string' ? nextValue.location.city : DEFAULT_FILTER_STATE.location.city,
+      state:
+        typeof nextValue.location?.state === 'string' ? nextValue.location.state : DEFAULT_FILTER_STATE.location.state,
+      country:
+        typeof nextValue.location?.country === 'string'
+          ? nextValue.location.country
+          : DEFAULT_FILTER_STATE.location.country,
+    },
+  };
+}
+
 export function countActiveFilters(filters: EventsFilterState): number {
   let count = 0;
   if (filters.categories.length > 0) count++;
@@ -39,6 +72,7 @@ export function useEventsFilters(storageScope?: string | null) {
   // Draft: what the sheet is editing before "Show results"
   const [draftFilters, setDraftFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [hasHydratedFilters, setHasHydratedFilters] = useState(false);
   const storageKey = `${DEVICE_STORAGE_KEYS.eventsFilters}:${storageScope ?? 'guest'}`;
 
   useEffect(() => {
@@ -46,12 +80,18 @@ export function useEventsFilters(storageScope?: string | null) {
 
     const restoreFilters = async () => {
       const storedFilters = await readStoredJson<PersistedEventsFilterState>(storageKey);
-      if (!isMounted || !storedFilters) {
+      const nextFilters = restoreFilterState(storedFilters);
+
+      if (!isMounted) {
         return;
       }
 
-      setAppliedFilters(storedFilters);
-      setDraftFilters(storedFilters);
+      if (nextFilters) {
+        setAppliedFilters(nextFilters);
+        setDraftFilters(nextFilters);
+      }
+
+      setHasHydratedFilters(true);
     };
 
     void restoreFilters();
@@ -62,8 +102,12 @@ export function useEventsFilters(storageScope?: string | null) {
   }, [storageKey]);
 
   useEffect(() => {
+    if (!hasHydratedFilters) {
+      return;
+    }
+
     void writeStoredJson(storageKey, appliedFilters);
-  }, [appliedFilters, storageKey]);
+  }, [appliedFilters, hasHydratedFilters, storageKey]);
 
   const openSheet = () => {
     setDraftFilters(appliedFilters);

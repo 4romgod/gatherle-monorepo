@@ -10,7 +10,15 @@ function getExtensionFromAsset(asset: ImagePickerAsset): string {
   if (asset.mimeType?.includes('/')) {
     const subtype = asset.mimeType.split('/')[1]?.toLowerCase();
     if (subtype) {
-      return subtype === 'jpeg' ? 'jpg' : subtype;
+      if (subtype === 'jpeg') {
+        return 'jpg';
+      }
+
+      if (subtype === 'quicktime') {
+        return 'mov';
+      }
+
+      return subtype;
     }
   }
 

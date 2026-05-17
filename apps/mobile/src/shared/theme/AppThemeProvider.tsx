@@ -23,6 +23,7 @@ const AppThemeContext = createContext<AppThemeContextValue | null>(null);
 export function AppThemeProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>('system');
+  const [hasHydratedPreference, setHasHydratedPreference] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,6 +37,8 @@ export function AppThemeProvider({ children }: PropsWithChildren) {
       if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
         setPreference(storedPreference);
       }
+
+      setHasHydratedPreference(true);
     };
 
     void restorePreference();
@@ -46,8 +49,12 @@ export function AppThemeProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
+    if (!hasHydratedPreference) {
+      return;
+    }
+
     void writeStoredString(DEVICE_STORAGE_KEYS.themePreference, preference);
-  }, [preference]);
+  }, [hasHydratedPreference, preference]);
 
   const mode = preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
   const theme = mode === 'dark' ? darkTheme : lightTheme;

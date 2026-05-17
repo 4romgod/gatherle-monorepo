@@ -536,7 +536,7 @@ class EventMomentService {
       return moment;
     }
 
-    return moment.state === EventMomentState.Ready ? moment : null;
+    return moment.state === EventMomentState.Ready && moment.isPublished ? moment : null;
   }
 
   /**

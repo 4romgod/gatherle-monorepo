@@ -34,17 +34,22 @@ export function ChatComposer({
   const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [hasHydratedRecentEmojis, setHasHydratedRecentEmojis] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const restoreEmojiRecents = async () => {
       const storedEmojiRecents = await readStoredJson<string[]>(DEVICE_STORAGE_KEYS.chatEmojiRecents);
-      if (!isMounted || !Array.isArray(storedEmojiRecents)) {
+      if (!isMounted) {
         return;
       }
 
-      setRecentEmojis(storedEmojiRecents.filter((emoji) => typeof emoji === 'string').slice(0, 8));
+      if (Array.isArray(storedEmojiRecents)) {
+        setRecentEmojis(storedEmojiRecents.filter((emoji) => typeof emoji === 'string').slice(0, 8));
+      }
+
+      setHasHydratedRecentEmojis(true);
     };
 
     void restoreEmojiRecents();
@@ -55,8 +60,12 @@ export function ChatComposer({
   }, []);
 
   useEffect(() => {
+    if (!hasHydratedRecentEmojis) {
+      return;
+    }
+
     void writeStoredJson(DEVICE_STORAGE_KEYS.chatEmojiRecents, recentEmojis);
-  }, [recentEmojis]);
+  }, [hasHydratedRecentEmojis, recentEmojis]);
 
   const canSend = Boolean(draft.trim()) && Boolean(targetUserId);
 

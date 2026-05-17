@@ -770,6 +770,84 @@ describe('EventMomentService', () => {
     });
   });
 
+  describe('readMomentById', () => {
+    const publicAuthor = { userId: 'user-2', followPolicy: 'Public' };
+    const privateAuthor = { userId: 'user-2', followPolicy: 'RequireApproval' };
+
+    it('returns null when the moment is expired', async () => {
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue({
+        ...mockMoment,
+        expiresAt: new Date(now - 60_000),
+      });
+
+      const result = await EventMomentService.readMomentById('moment-1', 'user-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns the moment for the author even when it is not published and not ready', async () => {
+      const pendingOwnMoment = {
+        ...mockReservedVideoMoment,
+        authorId: 'user-1',
+        state: EventMomentState.UploadPending,
+        isPublished: false,
+      };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue(pendingOwnMoment);
+
+      const result = await EventMomentService.readMomentById('moment-1', 'user-1');
+
+      expect(result).toEqual(pendingOwnMoment);
+    });
+
+    it('returns null when a non-owner tries to read an unpublished ready moment', async () => {
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue({
+        ...mockMoment,
+        authorId: 'user-2',
+        isPublished: false,
+      });
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(publicAuthor);
+
+      const result = await EventMomentService.readMomentById('moment-1', 'user-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null when a private author is not viewable by the caller', async () => {
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue({
+        ...mockMoment,
+        authorId: 'user-2',
+      });
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(privateAuthor);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);
+
+      const result = await EventMomentService.readMomentById('moment-1', 'user-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns a published ready moment when the caller may view the author', async () => {
+      const visibleMoment = {
+        ...mockMoment,
+        authorId: 'user-2',
+        isPublished: true,
+        state: EventMomentState.Ready,
+      };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue(visibleMoment);
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(privateAuthor);
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'user-2',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+
+      const result = await EventMomentService.readMomentById('moment-1', 'user-1');
+
+      expect(result).toEqual(visibleMoment);
+    });
+  });
+
   describe('readFollowedMoments', () => {
     it('returns empty page when caller follows nobody', async () => {
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([]);

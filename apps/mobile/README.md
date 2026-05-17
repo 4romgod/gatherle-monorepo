@@ -16,6 +16,68 @@ Or directly from this workspace:
 npm run start
 ```
 
+## APK Build And Install
+
+Generate a local Android release APK from this workspace:
+
+```bash
+npm run apk:release
+```
+
+That script:
+
+- runs Expo prebuild without reinstalling dependencies
+- builds the Android release APK with Gradle
+
+The generated APK will be at:
+
+```bash
+apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Or, from inside this workspace:
+
+```bash
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+Install it with:
+
+```bash
+npm run apk:install
+```
+
+If more than one Android device/emulator is connected, target one explicitly with `ANDROID_SERIAL`:
+
+```bash
+ANDROID_SERIAL=<device-id> npm run apk:install
+```
+
+Examples:
+
+```bash
+ANDROID_SERIAL=emulator-5554 npm run apk:install
+ANDROID_SERIAL=<phone-ip>:<connect-port> npm run apk:install
+```
+
+You can find available device IDs with:
+
+```bash
+adb devices
+```
+
+If Android rejects the install with a version downgrade error, uninstall the existing app first:
+
+```bash
+adb -s <device-id> uninstall com.gatherle.mobile
+ANDROID_SERIAL=<device-id> npm run apk:install
+```
+
+Notes:
+
+- the release APK has the JavaScript bundle embedded, so it does not depend on the Expo dev server
+- `run:android` is different: it builds and installs a development build for local development
+
 ## Environment Variables
 
 The mobile app primarily uses:
@@ -177,7 +239,7 @@ Target the phone explicitly in `adb` commands:
 ```bash
 adb devices
 adb -s <phone-ip>:<connect-port> reverse tcp:9000 tcp:9000
-adb -s <phone-ip>:<connect-port> reverse tcp:3001 tcp:3001
+adb -s <phone-ip>:<connect-port> reverse --list
 ```
 
 ### The websocket works on beta but not locally
