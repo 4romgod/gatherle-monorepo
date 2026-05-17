@@ -231,9 +231,9 @@ single argument.
 | Stage | Max Complexity | Why?                                                                            |
 | ----- | -------------- | ------------------------------------------------------------------------------- |
 | Dev   | 1200           | Very permissive for developers testing complex features                         |
-| Beta  | 700            | Covers real shipped mobile/web discovery queries while staying bounded          |
+| Beta  | 800            | Covers real shipped mobile/web discovery queries while staying bounded          |
 | Gamma | 800            | Slightly higher than Beta for final validation                                  |
-| Prod  | 650            | Tight enough to reject pathological queries, high enough for legitimate clients |
+| Prod  | 800            | Tight enough to reject pathological queries, high enough for legitimate clients |
 
 **Key insight:** A query with high depth (many levels) and high breadth (many fields at each level) on a large list
 multiplier will quickly exceed the complexity limit and get rejected.
