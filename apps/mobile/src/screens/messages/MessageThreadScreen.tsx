@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { EventMomentType } from '@data/graphql/types/graphql';
+import { GetMomentByIdDocument } from '@data/graphql/query/EventMoment/query';
+import type { MobileEventMoment } from '@data/graphql/query/EventMoment/types';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -12,9 +15,13 @@ import { ChatBubble } from '@/components/messages/thread/ChatBubble';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
 import { ChatDayDivider } from '@/components/messages/thread/ChatDayDivider';
 import { ChatThreadHeader } from '@/components/messages/thread/ChatThreadHeader';
+import { MomentViewer } from '@/components/moments/MomentViewer';
 import { ChatThreadSkeleton } from '@/components/skeleton/ChatThreadSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
+import { getApolloAuthContext } from '@/lib/auth';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
+import { DEVICE_STORAGE_KEYS, writeStoredString } from '@/lib/deviceStorage';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
@@ -41,10 +48,16 @@ export function MessageThreadScreen() {
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { avatarUrl, displayName, username, withUserId } = route.params;
   const scrollRef = useRef<ScrollView | null>(null);
+  const [replyMomentViewerOpen, setReplyMomentViewerOpen] = useState(false);
+  const [replyMomentViewerItems, setReplyMomentViewerItems] = useState<MobileEventMoment[]>([]);
   const { appendMessage, error, loading, messages, refetch } = useChatThread({
     authToken,
     enabled: isAuthenticated,
     withUserId,
+  });
+  const [loadReplyMoment] = useLazyQuery(GetMomentByIdDocument, {
+    fetchPolicy: 'network-only',
+    ...getApolloAuthContext(authToken),
   });
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
@@ -94,6 +107,21 @@ export function MessageThreadScreen() {
     [sendChatMessage, withUserId],
   );
 
+  const handleOpenReplyMoment = useCallback(
+    async (momentId: string) => {
+      const { data } = await loadReplyMoment({ variables: { momentId } });
+      const moment = data?.readMomentById;
+
+      if (!moment) {
+        return;
+      }
+
+      setReplyMomentViewerItems([moment]);
+      setReplyMomentViewerOpen(true);
+    },
+    [loadReplyMoment],
+  );
+
   useEffect(() => {
     if (threadItems.length === 0) {
       return;
@@ -103,6 +131,14 @@ export function MessageThreadScreen() {
       scrollRef.current?.scrollToEnd({ animated: false });
     });
   }, [threadItems.length]);
+
+  useEffect(() => {
+    if (!username) {
+      return;
+    }
+
+    void writeStoredString(DEVICE_STORAGE_KEYS.lastOpenChatUsername, username);
+  }, [username]);
 
   if (!isAuthenticated) {
     return (
@@ -128,7 +164,11 @@ export function MessageThreadScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.inner}>
         <ChatThreadHeader
           avatarUrl={avatarUrl}
@@ -179,7 +219,12 @@ export function MessageThreadScreen() {
               item.kind === 'day' ? (
                 <ChatDayDivider key={item.key} label={item.label} />
               ) : (
-                <ChatBubble isOutgoing={item.isOutgoing} key={item.key} message={item.message} />
+                <ChatBubble
+                  isOutgoing={item.isOutgoing}
+                  key={item.key}
+                  message={item.message}
+                  onPressReplyMoment={handleOpenReplyMoment}
+                />
               ),
             )}
           </ScrollView>
@@ -191,7 +236,13 @@ export function MessageThreadScreen() {
 
         <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
       </View>
-    </View>
+      <MomentViewer
+        moments={replyMomentViewerItems}
+        onClose={() => setReplyMomentViewerOpen(false)}
+        open={replyMomentViewerOpen}
+        startIndex={0}
+      />
+    </KeyboardAvoidingView>
   );
 }
 

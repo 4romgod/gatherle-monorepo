@@ -7,9 +7,10 @@ import { typography } from '@/shared/theme/typography';
 type OrganizationListItemProps = {
   onPress?: () => void;
   organization: MobileOrganization;
+  trailingBadgeLabel?: string;
 };
 
-export function OrganizationListItem({ onPress, organization }: OrganizationListItemProps) {
+export function OrganizationListItem({ onPress, organization, trailingBadgeLabel }: OrganizationListItemProps) {
   const { theme } = useAppTheme();
   const label = organization.name ?? 'Organization';
 
@@ -20,7 +21,7 @@ export function OrganizationListItem({ onPress, organization }: OrganizationList
       style={({ pressed }) => [
         styles.row,
         {
-          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surfaceMuted,
           opacity: pressed ? 0.88 : 1,
         },
       ]}
@@ -46,6 +47,11 @@ export function OrganizationListItem({ onPress, organization }: OrganizationList
         <Text style={[styles.metaText, { color: theme.colors.textPrimary }]}>
           {formatCountLabel(organization.followersCount, 'follower')}
         </Text>
+        {trailingBadgeLabel ? (
+          <View style={[styles.roleBadge, { backgroundColor: theme.colors.primarySoft }]}>
+            <Text style={[styles.roleBadgeText, { color: theme.colors.primary }]}>{trailingBadgeLabel}</Text>
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -54,10 +60,10 @@ export function OrganizationListItem({ onPress, organization }: OrganizationList
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderRadius: 22,
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 2,
+    gap: 8,
+    paddingHorizontal: 14,
     paddingVertical: 14,
   },
   logo: {
@@ -91,9 +97,24 @@ const styles = StyleSheet.create({
   },
   meta: {
     alignItems: 'flex-end',
+    gap: 8,
   },
   metaText: {
     ...typography.bodyBold,
     fontSize: 11,
+  },
+  roleBadge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    justifyContent: 'center',
+    minHeight: 28,
+    minWidth: 72,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  roleBadgeText: {
+    ...typography.bodySemiBold,
+    fontSize: 11,
+    textTransform: 'capitalize',
   },
 });

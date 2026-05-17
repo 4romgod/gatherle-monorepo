@@ -81,6 +81,6 @@ export function OrganizationsScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    gap: 12,
+    gap: 8,
   },
 });

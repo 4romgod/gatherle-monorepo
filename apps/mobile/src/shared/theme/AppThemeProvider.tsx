@@ -3,8 +3,9 @@ import {
   DefaultTheme as NavigationDefaultTheme,
   Theme,
 } from '@react-navigation/native';
-import { PropsWithChildren, createContext, useContext, useState } from 'react';
+import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { DEVICE_STORAGE_KEYS, readStoredString, writeStoredString } from '@/lib/deviceStorage';
 import { AppTheme, ThemePreference, darkTheme, lightTheme } from './palette';
 
 type AppThemeContextValue = {
@@ -22,6 +23,31 @@ const AppThemeContext = createContext<AppThemeContextValue | null>(null);
 export function AppThemeProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
   const [preference, setPreference] = useState<ThemePreference>('system');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const restorePreference = async () => {
+      const storedPreference = await readStoredString(DEVICE_STORAGE_KEYS.themePreference);
+      if (!isMounted) {
+        return;
+      }
+
+      if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
+        setPreference(storedPreference);
+      }
+    };
+
+    void restorePreference();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void writeStoredString(DEVICE_STORAGE_KEYS.themePreference, preference);
+  }, [preference]);
 
   const mode = preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
   const theme = mode === 'dark' ? darkTheme : lightTheme;

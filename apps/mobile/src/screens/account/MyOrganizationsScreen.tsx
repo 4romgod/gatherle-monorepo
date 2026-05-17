@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -12,13 +12,10 @@ import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { getApolloAuthContext } from '@/lib/auth';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
 
 export function MyOrganizationsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated } = useAppShell();
-  const { theme } = useAppTheme();
   const { data, error, loading, refetch } = useQuery(GetMyOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
     skip: !isAuthenticated || !authToken,
@@ -46,6 +43,11 @@ export function MyOrganizationsScreen() {
   }
 
   const memberships = data?.readMyOrganizations ?? [];
+  const formatRoleLabel = (role: string) =>
+    role
+      .replace(/[_-]+/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
@@ -64,18 +66,17 @@ export function MyOrganizationsScreen() {
       ) : memberships.length > 0 ? (
         <View style={styles.list}>
           {memberships.map((membership) => (
-            <View key={`${membership.organization.orgId}-${membership.role}`} style={styles.membershipCard}>
-              <OrganizationListItem
-                onPress={() =>
-                  navigation.navigate('OrganizationDetails', {
-                    orgId: membership.organization.orgId,
-                    orgName: membership.organization.name,
-                  })
-                }
-                organization={membership.organization}
-              />
-              <Text style={[styles.roleText, { color: theme.colors.primary }]}>{membership.role}</Text>
-            </View>
+            <OrganizationListItem
+              key={`${membership.organization.orgId}-${membership.role}`}
+              onPress={() =>
+                navigation.navigate('OrganizationDetails', {
+                  orgId: membership.organization.orgId,
+                  orgName: membership.organization.name,
+                })
+              }
+              organization={membership.organization}
+              trailingBadgeLabel={formatRoleLabel(membership.role)}
+            />
           ))}
         </View>
       ) : (
@@ -87,14 +88,6 @@ export function MyOrganizationsScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    gap: 12,
-  },
-  membershipCard: {
     gap: 8,
-  },
-  roleText: {
-    ...typography.bodySemiBold,
-    fontSize: 12,
-    marginLeft: 8,
   },
 });

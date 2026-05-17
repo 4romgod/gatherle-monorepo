@@ -31,7 +31,7 @@ export function CommunityMemberRow({
       style={({ pressed }) => [
         styles.row,
         {
-          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surfaceMuted,
           opacity: pressed ? 0.86 : 1,
         },
       ]}
@@ -95,10 +95,10 @@ const styles = StyleSheet.create({
   },
   row: {
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderRadius: 22,
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 2,
+    gap: 8,
+    paddingHorizontal: 14,
     paddingVertical: 14,
   },
   title: {

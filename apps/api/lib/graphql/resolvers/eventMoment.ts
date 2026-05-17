@@ -145,6 +145,14 @@ export class EventMomentResolver {
     return EventMomentService.readUserMomentsFeed(userId, context.user?.userId, cursor, limit);
   }
 
+  @Query(() => EventMoment, { nullable: true, description: 'Get a single moment by id for deep links and replies' })
+  async readMomentById(
+    @Arg('momentId', () => String) momentId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventMoment | null> {
+    return EventMomentService.readMomentById(momentId, context.user?.userId);
+  }
+
   @Query(() => EventMomentPage, { description: 'Get a discoverable feed of active moments across public events' })
   async readMomentsFeed(
     @Ctx() context: ServerContext,

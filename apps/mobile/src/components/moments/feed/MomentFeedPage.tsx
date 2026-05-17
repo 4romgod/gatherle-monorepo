@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import type { VideoPlayer } from 'expo-video';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetEventsDocument } from '@data/graphql/query/Event/query';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
@@ -12,6 +13,7 @@ import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
+import { useDeleteEventMoment } from '@/hooks/moments/useDeleteEventMoment';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
@@ -20,19 +22,29 @@ import { MOMENT_BACKGROUND_SWATCHES } from '@/lib/moments/constants';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
+const STORY_DURATION_MS = 5000;
+
 function resolveBackgroundColor(token?: string | null): string {
   return MOMENT_BACKGROUND_SWATCHES.find((swatch) => swatch.token === token)?.color ?? '#9333ea';
 }
 
+function getMomentDurationMs(moment: MobileMomentsFeedMoment): number {
+  if (moment.type === EventMomentType.Video && moment.durationSeconds) {
+    return Math.max(moment.durationSeconds * 1000, 1000);
+  }
+
+  return STORY_DURATION_MS;
+}
+
 export function MomentFeedPage({
   active,
-  bottomOverlayOffset,
   moment,
+  onDeleted,
   pageHeight,
 }: {
   active: boolean;
-  bottomOverlayOffset: number;
   moment: MobileMomentsFeedMoment;
+  onDeleted?: (momentId: string) => void;
   pageHeight: number;
 }) {
   const navigation = useNavigation<MainTabNavigation>();
@@ -41,21 +53,33 @@ export function MomentFeedPage({
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
   });
+  const { deleteMoment } = useDeleteEventMoment(authToken);
+  const [isMuted, setIsMuted] = useState(true);
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isMediaReady, setMediaReady] = useState(moment.type === EventMomentType.Text);
   const [hasMediaError, setMediaError] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const elapsedRef = useRef(0);
+  const progressRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
   const [loadLinkedEvent] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
     ...getApolloAuthContext(authToken),
   });
-  const videoSource = moment.type === EventMomentType.Video && moment.mediaUrl ? { uri: moment.mediaUrl } : null;
-  const videoPlayer = useVideoPlayer(videoSource, (player) => {
-    player.loop = true;
+  const videoSource = useMemo(
+    () => (moment.type === EventMomentType.Video && moment.mediaUrl ? { uri: moment.mediaUrl } : null),
+    [moment.mediaUrl, moment.type],
+  );
+  const configureVideoPlayer = useCallback((player: VideoPlayer) => {
+    player.loop = false;
     player.muted = true;
-  });
+    player.timeUpdateEventInterval = 0.5;
+  }, []);
+  const videoPlayer = useVideoPlayer(videoSource, configureVideoPlayer);
   const authorUserId = moment.author?.userId ?? moment.authorId;
   const displayName = useMemo(() => getDisplayName(moment.author), [moment.author]);
   const targetUserId = authorUserId && authorUserId !== viewerUserId ? authorUserId : undefined;
+  const isOwnedByViewer = Boolean(viewerUserId && moment.authorId === viewerUserId);
 
   useEventListener(videoPlayer, 'statusChange', (payload) => {
     if (payload.status === 'readyToPlay') {
@@ -69,29 +93,115 @@ export function MomentFeedPage({
     }
   });
 
+  useEventListener(videoPlayer, 'timeUpdate', (payload) => {
+    if (!active || moment.type !== EventMomentType.Video || !isMediaReady) {
+      return;
+    }
+
+    const nextProgress = Math.min(1, (payload.currentTime * 1000) / getMomentDurationMs(moment));
+    if (Math.abs(nextProgress - progressRef.current) < 0.02 && nextProgress < 1) {
+      return;
+    }
+
+    progressRef.current = nextProgress;
+    setProgress(nextProgress);
+  });
+
   useEffect(() => {
     setMenuOpen(false);
+    setIsMuted(true);
     setMediaError(false);
     setMediaReady(moment.type === EventMomentType.Text);
+    setProgress(0);
+    progressRef.current = 0;
+    elapsedRef.current = 0;
   }, [moment.background, moment.mediaUrl, moment.momentId, moment.type]);
 
   useEffect(() => {
-    if (!videoSource) {
-      return;
-    }
-
     if (!active) {
-      videoPlayer.pause();
-      videoPlayer.currentTime = 0;
+      if (videoSource) {
+        videoPlayer.pause();
+        videoPlayer.currentTime = 0;
+      }
+      setProgress(0);
+      progressRef.current = 0;
+      elapsedRef.current = 0;
       return;
     }
 
-    videoPlayer.play();
+    if (moment.type === EventMomentType.Video) {
+      if (!videoSource || !isMediaReady) {
+        return;
+      }
+
+      if (videoPlayer.currentTime >= Math.max((moment.durationSeconds ?? 0) - 0.1, 0.1)) {
+        videoPlayer.currentTime = 0;
+        setProgress(0);
+        progressRef.current = 0;
+      }
+
+      videoPlayer.play();
+
+      return () => {
+        videoPlayer.pause();
+      };
+    }
+
+    if (!isMediaReady) {
+      return;
+    }
+
+    let lastFrameAt = performance.now();
+
+    const tick = (now: number) => {
+      elapsedRef.current += now - lastFrameAt;
+      lastFrameAt = now;
+      const nextProgress = Math.min(1, elapsedRef.current / getMomentDurationMs(moment));
+      setProgress(nextProgress);
+      progressRef.current = nextProgress;
+
+      if (nextProgress >= 1) {
+        return;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
 
     return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [active, isMediaReady, moment, videoPlayer, videoSource]);
+
+  useEffect(() => {
+    videoPlayer.muted = isMuted;
+  }, [isMuted, videoPlayer]);
+
+  useEventListener(videoPlayer, 'playToEnd', () => {
+    if (!active || moment.type !== EventMomentType.Video) {
+      return;
+    }
+
+    setProgress(1);
+    progressRef.current = 1;
+    videoPlayer.pause();
+  });
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      if (!videoSource) {
+        return;
+      }
       videoPlayer.pause();
     };
-  }, [active, videoPlayer, videoSource]);
+  }, [videoPlayer, videoSource]);
 
   const handleOpenProfile = () => {
     setMenuOpen(false);
@@ -162,6 +272,30 @@ export function MomentFeedPage({
     });
   };
 
+  const handleDeleteMoment = () => {
+    Alert.alert('Delete moment?', 'This action cannot be undone.', [
+      { style: 'cancel', text: 'Cancel' },
+      {
+        style: 'destructive',
+        text: 'Delete',
+        onPress: () => {
+          void (async () => {
+            try {
+              const deleted = await deleteMoment(moment.momentId);
+              if (!deleted) {
+                throw new Error('Delete failed');
+              }
+              setMenuOpen(false);
+              onDeleted?.(moment.momentId);
+            } catch {
+              Alert.alert('Delete failed', 'We could not delete this moment right now.');
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   const backgroundColor = moment.type === EventMomentType.Text ? resolveBackgroundColor(moment.background) : '#020617';
 
   return (
@@ -170,6 +304,20 @@ export function MomentFeedPage({
 
       <View style={styles.topGradient} pointerEvents="none" />
       <View style={styles.bottomGradient} pointerEvents="none" />
+
+      <View style={styles.progressRow} pointerEvents="none">
+        <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.28)' }]}>
+          <View
+            style={[
+              styles.progressFill,
+              {
+                backgroundColor: theme.colors.heroText,
+                width: `${Math.max(progress, 0) * 100}%`,
+              },
+            ]}
+          />
+        </View>
+      </View>
 
       <View style={styles.header}>
         <Pressable onPress={handleOpenProfile} style={styles.authorRow}>
@@ -185,6 +333,11 @@ export function MomentFeedPage({
         </Pressable>
 
         <View style={styles.headerActions}>
+          {moment.type === EventMomentType.Video ? (
+            <Pressable onPress={() => setIsMuted((currentMuted) => !currentMuted)} style={styles.headerButton}>
+              <Feather color={theme.colors.heroText} name={isMuted ? 'volume-x' : 'volume-2'} size={22} />
+            </Pressable>
+          ) : null}
           <Pressable onPress={() => setMenuOpen((current) => !current)} style={styles.headerButton}>
             <Feather color={theme.colors.heroText} name="more-horizontal" size={24} />
           </Pressable>
@@ -203,6 +356,12 @@ export function MomentFeedPage({
             <Feather color={theme.colors.heroText} name="calendar" size={17} />
             <Text style={[styles.menuLabel, { color: theme.colors.heroText }]}>View event</Text>
           </Pressable>
+          {isOwnedByViewer ? (
+            <Pressable onPress={handleDeleteMoment} style={styles.menuItem}>
+              <Feather color={theme.colors.error} name="trash-2" size={17} />
+              <Text style={[styles.menuLabel, { color: theme.colors.error }]}>Delete moment</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
@@ -227,7 +386,14 @@ export function MomentFeedPage({
 
         {moment.type === EventMomentType.Video && moment.mediaUrl ? (
           <>
-            <VideoView contentFit="cover" player={videoPlayer} style={styles.media} />
+            <VideoView
+              contentFit="cover"
+              nativeControls={false}
+              onFirstFrameRender={() => setMediaReady(true)}
+              player={videoPlayer}
+              style={styles.media}
+              useExoShutter={false}
+            />
             {moment.caption ? (
               <Text style={[styles.caption, { color: theme.colors.heroText }]}>{moment.caption}</Text>
             ) : null}
@@ -257,7 +423,7 @@ export function MomentFeedPage({
         ) : null}
       </View>
 
-      <View style={[styles.footer, { bottom: bottomOverlayOffset + 10 }]}>
+      <View style={styles.footer}>
         <ChatComposer
           isConnected={isConnected}
           onSend={handleReply}
@@ -299,7 +465,7 @@ const styles = StyleSheet.create({
   },
   caption: {
     ...typography.bodyBold,
-    bottom: 144,
+    bottom: 100,
     fontSize: fontSize.xl,
     left: 18,
     position: 'absolute',
@@ -315,6 +481,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
+    bottom: 4,
     left: 0,
     paddingHorizontal: 14,
     position: 'absolute',
@@ -328,8 +495,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     position: 'absolute',
     right: 0,
-    top: 18,
-    zIndex: 3,
+    top: 24,
+    zIndex: 4,
   },
   headerActions: {
     alignItems: 'center',
@@ -363,8 +530,8 @@ const styles = StyleSheet.create({
     padding: 8,
     position: 'absolute',
     right: 14,
-    top: 58,
-    zIndex: 4,
+    top: 68,
+    zIndex: 5,
   },
   menuItem: {
     alignItems: 'center',
@@ -380,6 +547,23 @@ const styles = StyleSheet.create({
   page: {
     overflow: 'hidden',
     position: 'relative',
+  },
+  progressFill: {
+    borderRadius: 999,
+    height: 2.5,
+  },
+  progressRow: {
+    left: 12,
+    paddingTop: 12,
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    zIndex: 5,
+  },
+  progressTrack: {
+    borderRadius: 999,
+    height: 2.5,
+    overflow: 'hidden',
   },
   textMoment: {
     alignItems: 'center',

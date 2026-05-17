@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import type { MobileChatMessage } from '@data/graphql/query/Chat/types';
 import { formatThreadTime } from '@/lib/messages/thread';
@@ -8,13 +8,15 @@ import { fontSize, typography } from '@/shared/theme/typography';
 type ChatBubbleProps = {
   isOutgoing: boolean;
   message: MobileChatMessage;
+  onPressReplyMoment?: (momentId: string) => void;
 };
 
-export function ChatBubble({ isOutgoing, message }: ChatBubbleProps) {
+export function ChatBubble({ isOutgoing, message, onPressReplyMoment }: ChatBubbleProps) {
   const { theme } = useAppTheme();
   const replyTone = isOutgoing ? 'rgba(255,255,255,0.72)' : theme.colors.primary;
   const replyTextColor = isOutgoing ? 'rgba(255,255,255,0.88)' : theme.colors.textSecondary;
   const replyMetaColor = isOutgoing ? 'rgba(255,255,255,0.74)' : theme.colors.textMuted;
+  const replyMomentId = message.replyToMomentId ?? null;
 
   return (
     <View style={[styles.row, isOutgoing ? styles.rowOutgoing : styles.rowIncoming]}>
@@ -27,8 +29,18 @@ export function ChatBubble({ isOutgoing, message }: ChatBubbleProps) {
           },
         ]}
       >
-        {message.replyToMomentId ? (
-          <View style={[styles.replyCard, { borderLeftColor: replyTone }]}>
+        {replyMomentId ? (
+          <Pressable
+            onPress={() => onPressReplyMoment?.(replyMomentId)}
+            style={({ pressed }) => [
+              styles.replyCard,
+              {
+                backgroundColor: isOutgoing ? 'rgba(255,255,255,0.08)' : theme.colors.surfaceRaised,
+                borderLeftColor: replyTone,
+                opacity: pressed ? 0.82 : 1,
+              },
+            ]}
+          >
             <Text style={[styles.replyLabel, { color: replyTextColor }]}>Replied to a moment</Text>
             {message.replyToMomentCaption ? (
               <Text numberOfLines={1} style={[styles.replyPreview, { color: replyMetaColor }]}>
@@ -43,7 +55,7 @@ export function ChatBubble({ isOutgoing, message }: ChatBubbleProps) {
                     : 'Text moment'}
               </Text>
             ) : null}
-          </View>
+          </Pressable>
         ) : null}
         <Text style={[styles.message, { color: isOutgoing ? theme.colors.primaryContrast : theme.colors.textPrimary }]}>
           {message.message}
@@ -69,6 +81,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   replyCard: {
+    borderBottomRightRadius: 8,
+    borderTopRightRadius: 8,
     borderLeftWidth: 3,
     borderRadius: 4,
     marginBottom: 7,

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DateFilterOption, EventStatus } from '@data/graphql/types/graphql';
+import { DEVICE_STORAGE_KEYS, readStoredJson, writeStoredJson } from '@/lib/deviceStorage';
 
 export type EventsLocationFilter = {
   city: string;
@@ -21,6 +22,8 @@ export const DEFAULT_FILTER_STATE: EventsFilterState = {
   location: { city: '', state: '', country: '' },
 };
 
+type PersistedEventsFilterState = EventsFilterState;
+
 export function countActiveFilters(filters: EventsFilterState): number {
   let count = 0;
   if (filters.categories.length > 0) count++;
@@ -30,12 +33,37 @@ export function countActiveFilters(filters: EventsFilterState): number {
   return count;
 }
 
-export function useEventsFilters() {
+export function useEventsFilters(storageScope?: string | null) {
   // Applied: what the query actually uses
   const [appliedFilters, setAppliedFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   // Draft: what the sheet is editing before "Show results"
   const [draftFilters, setDraftFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const storageKey = `${DEVICE_STORAGE_KEYS.eventsFilters}:${storageScope ?? 'guest'}`;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const restoreFilters = async () => {
+      const storedFilters = await readStoredJson<PersistedEventsFilterState>(storageKey);
+      if (!isMounted || !storedFilters) {
+        return;
+      }
+
+      setAppliedFilters(storedFilters);
+      setDraftFilters(storedFilters);
+    };
+
+    void restoreFilters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    void writeStoredJson(storageKey, appliedFilters);
+  }, [appliedFilters, storageKey]);
 
   const openSheet = () => {
     setDraftFilters(appliedFilters);

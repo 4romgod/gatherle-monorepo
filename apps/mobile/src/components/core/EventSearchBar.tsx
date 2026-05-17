@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 import { useEventSearch } from '@/hooks/search/useEventSearch';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
@@ -131,6 +132,7 @@ export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
       <Modal animationType="slide" onRequestClose={handleClose} statusBarTranslucent visible={modalVisible}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
           style={[styles.modalRoot, { backgroundColor: theme.colors.background }]}
         >
           {/* Header: input + cancel */}

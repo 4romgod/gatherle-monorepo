@@ -21,6 +21,14 @@ type CreateMomentArgs =
       eventId: string;
       occurrenceId?: string;
       type: 'image';
+    }
+  | {
+      asset: ImagePickerAsset;
+      caption?: string;
+      eventId: string;
+      occurrenceId?: string;
+      thumbnailAsset?: ImagePickerAsset;
+      type: 'video';
     };
 
 export function useCreateEventMoment(authToken: string | null) {
@@ -67,21 +75,54 @@ export function useCreateEventMoment(authToken: string | null) {
 
     const uploadTarget = uploadUrlResult.data?.getEventMomentUploadUrl;
     if (!uploadTarget) {
-      throw new Error('We could not prepare this image upload.');
+      throw new Error('We could not prepare this media upload.');
+    }
+
+    if (args.type === 'video' && !uploadTarget.momentId) {
+      throw new Error('We could not reserve this video moment.');
     }
 
     await uploadMomentAssetToSignedUrl(uploadTarget.uploadUrl, args.asset);
 
-    const createResult = await createMomentMutation({
-      variables: {
-        input: {
-          caption: args.caption?.trim().slice(0, MOMENT_MAX_CAPTION_LENGTH) || undefined,
+    let thumbnailKey: string | undefined;
+
+    if (args.type === 'video' && args.thumbnailAsset) {
+      const thumbnailUploadUrlResult = await getUploadUrlMutation({
+        variables: {
           eventId: args.eventId,
-          mediaKey: uploadTarget.key,
           occurrenceId: args.occurrenceId,
-          type: EventMomentType.Image,
+          extension: getMomentAssetExtension(args.thumbnailAsset),
         },
-      },
+      });
+
+      const thumbnailUploadTarget = thumbnailUploadUrlResult.data?.getEventMomentUploadUrl;
+      if (thumbnailUploadTarget) {
+        await uploadMomentAssetToSignedUrl(thumbnailUploadTarget.uploadUrl, args.thumbnailAsset);
+        thumbnailKey = thumbnailUploadTarget.key;
+      }
+    }
+
+    const input =
+      args.type === 'video'
+        ? {
+            caption: args.caption?.trim().slice(0, MOMENT_MAX_CAPTION_LENGTH) || undefined,
+            eventId: args.eventId,
+            mediaKey: uploadTarget.key,
+            momentId: uploadTarget.momentId,
+            occurrenceId: args.occurrenceId,
+            thumbnailKey,
+            type: EventMomentType.Video,
+          }
+        : {
+            caption: args.caption?.trim().slice(0, MOMENT_MAX_CAPTION_LENGTH) || undefined,
+            eventId: args.eventId,
+            mediaKey: uploadTarget.key,
+            occurrenceId: args.occurrenceId,
+            type: EventMomentType.Image,
+          };
+
+    const createResult = await createMomentMutation({
+      variables: { input },
     });
 
     return createResult.data?.createEventMoment ?? null;

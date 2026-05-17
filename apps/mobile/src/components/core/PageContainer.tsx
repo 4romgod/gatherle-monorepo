@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 
 type PageContainerProps = {
@@ -14,32 +15,43 @@ export function PageContainer({ children, contentContainerStyle, onRefresh, refr
   const { theme } = useAppTheme();
 
   return (
-    <ScrollView
-      alwaysBounceVertical
-      bounces
-      contentContainerStyle={[styles.pageContent, contentContainerStyle]}
-      keyboardShouldPersistTaps="handled"
-      overScrollMode="always"
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            colors={[theme.colors.primary]}
-            onRefresh={onRefresh}
-            progressBackgroundColor={theme.colors.surfaceRaised}
-            refreshing={refreshing}
-            tintColor={theme.colors.primary}
-          />
-        ) : undefined
-      }
-      showsVerticalScrollIndicator={false}
-      style={{ backgroundColor: theme.colors.background }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
+      style={styles.keyboardShell}
     >
-      {children}
-    </ScrollView>
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        alwaysBounceVertical
+        bounces
+        contentContainerStyle={[styles.pageContent, contentContainerStyle]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        overScrollMode="always"
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              colors={[theme.colors.primary]}
+              onRefresh={onRefresh}
+              progressBackgroundColor={theme.colors.surfaceRaised}
+              refreshing={refreshing}
+              tintColor={theme.colors.primary}
+            />
+          ) : undefined
+        }
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: theme.colors.background }}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardShell: {
+    flex: 1,
+  },
   pageContent: {
     flexGrow: 1,
     gap: 30,

@@ -84,6 +84,6 @@ export function VenuesScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    gap: 12,
+    gap: 8,
   },
 });

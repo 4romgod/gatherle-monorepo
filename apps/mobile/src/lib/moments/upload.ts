@@ -1,3 +1,4 @@
+import { uploadAsync, FileSystemUploadType, type FileSystemUploadResult } from 'expo-file-system/legacy';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
 function getExtensionFromAsset(asset: ImagePickerAsset): string {
@@ -16,24 +17,42 @@ function getExtensionFromAsset(asset: ImagePickerAsset): string {
   return 'jpg';
 }
 
-async function createBlobFromAsset(asset: ImagePickerAsset): Promise<Blob> {
-  const response = await fetch(asset.uri);
-  return response.blob();
+function getUploadHeaders(asset: ImagePickerAsset): Record<string, string> | undefined {
+  if (!asset.mimeType) {
+    return undefined;
+  }
+
+  return {
+    'Content-Type': asset.mimeType,
+  };
+}
+
+function ensureSuccessfulUpload(result: FileSystemUploadResult): void {
+  if (result.status >= 200 && result.status < 300) {
+    return;
+  }
+
+  throw new Error(`Upload failed (${result.status}).`);
 }
 
 export async function uploadMomentAssetToSignedUrl(uploadUrl: string, asset: ImagePickerAsset): Promise<string> {
-  const fileBlob = await createBlobFromAsset(asset);
-  const uploadResponse = await fetch(uploadUrl, {
-    body: fileBlob,
-    headers: asset.mimeType ? { 'Content-Type': asset.mimeType } : undefined,
-    method: 'PUT',
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error('We could not upload this moment media.');
+  if (!asset.uri) {
+    throw new Error('Selected media is missing a file URI.');
   }
 
-  return getExtensionFromAsset(asset);
+  try {
+    const uploadResult = await uploadAsync(uploadUrl, asset.uri, {
+      headers: getUploadHeaders(asset),
+      httpMethod: 'PUT',
+      uploadType: FileSystemUploadType.BINARY_CONTENT,
+    });
+
+    ensureSuccessfulUpload(uploadResult);
+    return getExtensionFromAsset(asset);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown upload error.';
+    throw new Error(`We could not upload this moment media. ${detail}`);
+  }
 }
 
 export function getMomentAssetExtension(asset: ImagePickerAsset): string {

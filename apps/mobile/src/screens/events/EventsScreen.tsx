@@ -24,7 +24,7 @@ import { fontSize, typography } from '@/shared/theme/typography';
 
 export function EventsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken } = useAppShell();
+  const { authToken, userId } = useAppShell();
   const { theme } = useAppTheme();
   const route = useRoute<RouteProp<MainTabParamList, 'Events'>>();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
@@ -47,7 +47,7 @@ export function EventsScreen() {
     removeAppliedCategory,
     removeAppliedStatus,
     removeAppliedLocation,
-  } = useEventsFilters();
+  } = useEventsFilters(userId);
 
   const { categories, error, events, loading, refetch } = useFilteredMobileEvents(appliedFilters, authToken);
   const { onRefresh, refreshing } = usePullToRefresh(

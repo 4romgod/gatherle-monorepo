@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ComposerIconButton } from '@/components/core/ComposerIconButton';
 import { EmojiPicker } from '@/components/core/EmojiPicker';
+import { DEVICE_STORAGE_KEYS, readStoredJson, writeStoredJson } from '@/lib/deviceStorage';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
 
@@ -33,6 +34,29 @@ export function ChatComposer({
   const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const restoreEmojiRecents = async () => {
+      const storedEmojiRecents = await readStoredJson<string[]>(DEVICE_STORAGE_KEYS.chatEmojiRecents);
+      if (!isMounted || !Array.isArray(storedEmojiRecents)) {
+        return;
+      }
+
+      setRecentEmojis(storedEmojiRecents.filter((emoji) => typeof emoji === 'string').slice(0, 8));
+    };
+
+    void restoreEmojiRecents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void writeStoredJson(DEVICE_STORAGE_KEYS.chatEmojiRecents, recentEmojis);
+  }, [recentEmojis]);
 
   const canSend = Boolean(draft.trim()) && Boolean(targetUserId);
 
