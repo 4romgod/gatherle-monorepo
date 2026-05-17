@@ -1,16 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+  BottomSheetBackdrop,
+  type BottomSheetBackdropProps,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { fontSize, typography } from '@/shared/theme/typography';
@@ -41,11 +37,22 @@ export function MomentComposerModal({
 }) {
   const { theme } = useAppTheme();
   const { createMoment, loading } = useCreateEventMoment(authToken);
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
   const [activeTab, setActiveTab] = useState<ComposerTab>('text');
   const [caption, setCaption] = useState('');
   const [selectedBackground, setSelectedBackground] = useState<MomentBackgroundToken>(MOMENT_DEFAULT_BACKGROUND);
   const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const remainingCaption = useMemo(() => MOMENT_MAX_CAPTION_LENGTH - caption.length, [caption.length]);
+
+  useEffect(() => {
+    if (open) {
+      sheetRef.current?.present();
+      return;
+    }
+
+    sheetRef.current?.dismiss();
+  }, [open]);
 
   const resetState = () => {
     setActiveTab('text');
@@ -107,154 +114,161 @@ export function MomentComposerModal({
     }
   };
 
+  const renderBackdrop = (props: BottomSheetBackdropProps) => (
+    <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.52} pressBehavior="close" />
+  );
+
   return (
-    <Modal animationType="slide" onRequestClose={handleClose} transparent visible={open}>
-      <View style={styles.overlay}>
-        <Pressable onPress={handleClose} style={StyleSheet.absoluteFillObject} />
-        <View
+    <BottomSheetModal
+      backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      enableDynamicSizing={false}
+      enablePanDownToClose
+      handleIndicatorStyle={{ backgroundColor: theme.colors.border, width: 40 }}
+      index={0}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      onDismiss={() => {
+        if (open) {
+          handleClose();
+        }
+      }}
+      ref={sheetRef}
+      snapPoints={snapPoints}
+    >
+      <View style={styles.sheet}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Share a moment</Text>
+          <Pressable hitSlop={12} onPress={handleClose}>
+            <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>Close</Text>
+          </Pressable>
+        </View>
+
+        <View style={[styles.tabRow, { borderColor: theme.colors.border }]}>
+          {(['text', 'image'] as const).map((tab) => {
+            const active = tab === activeTab;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[
+                  styles.tabButton,
+                  {
+                    backgroundColor: active ? theme.colors.primarySoft : theme.colors.surface,
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.tabLabel, { color: active ? theme.colors.primary : theme.colors.textSecondary }]}>
+                  {tab === 'text' ? 'Text' : 'Image'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {activeTab === 'text' ? (
+            <View style={styles.contentBlock}>
+              <View
+                style={[
+                  styles.textPreview,
+                  {
+                    backgroundColor:
+                      MOMENT_BACKGROUND_SWATCHES.find((swatch) => swatch.token === selectedBackground)?.color ??
+                      MOMENT_BACKGROUND_SWATCHES[0].color,
+                  },
+                ]}
+              >
+                <Text style={styles.textPreviewCopy}>{caption.trim() || 'Type a caption for your moment'}</Text>
+              </View>
+              <View style={styles.swatchRow}>
+                {MOMENT_BACKGROUND_SWATCHES.map((swatch) => {
+                  const selected = swatch.token === selectedBackground;
+                  return (
+                    <Pressable
+                      key={swatch.token}
+                      onPress={() => setSelectedBackground(swatch.token)}
+                      style={[
+                        styles.swatch,
+                        {
+                          backgroundColor: swatch.color,
+                          borderColor: selected ? theme.colors.textPrimary : 'transparent',
+                        },
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.contentBlock}>
+              {selectedAsset ? (
+                <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
+              ) : (
+                <Pressable
+                  onPress={() => void handlePickImage()}
+                  style={[
+                    styles.imagePickerButton,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.imagePickerLabel, { color: theme.colors.textPrimary }]}>Choose image</Text>
+                </Pressable>
+              )}
+
+              {selectedAsset ? (
+                <Pressable onPress={() => void handlePickImage()}>
+                  <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change image</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )}
+
+          <View style={styles.inputWrap}>
+            <BottomSheetTextInput
+              maxLength={MOMENT_MAX_CAPTION_LENGTH}
+              multiline
+              onChangeText={setCaption}
+              placeholder={activeTab === 'text' ? 'What’s happening?' : 'Add a caption (optional)'}
+              placeholderTextColor={theme.colors.textMuted}
+              style={[
+                styles.captionInput,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.textPrimary,
+                },
+              ]}
+              textAlignVertical="top"
+              value={caption}
+            />
+            <Text style={[styles.remainingText, { color: theme.colors.textMuted }]}>{remainingCaption}</Text>
+          </View>
+        </BottomSheetScrollView>
+
+        <Pressable
+          disabled={loading}
+          onPress={() => void handleSubmit()}
           style={[
-            styles.sheet,
+            styles.submitButton,
             {
-              backgroundColor: theme.colors.background,
-              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.secondary,
+              opacity: loading ? 0.7 : 1,
             },
           ]}
         >
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Share a moment</Text>
-            <Pressable hitSlop={12} onPress={handleClose}>
-              <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>Close</Text>
-            </Pressable>
-          </View>
-
-          <View style={[styles.tabRow, { borderColor: theme.colors.border }]}>
-            {(['text', 'image'] as const).map((tab) => {
-              const active = tab === activeTab;
-              return (
-                <Pressable
-                  key={tab}
-                  onPress={() => setActiveTab(tab)}
-                  style={[
-                    styles.tabButton,
-                    {
-                      backgroundColor: active ? theme.colors.primarySoft : theme.colors.surface,
-                      borderColor: active ? theme.colors.primary : theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.tabLabel, { color: active ? theme.colors.primary : theme.colors.textSecondary }]}
-                  >
-                    {tab === 'text' ? 'Text' : 'Image'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {activeTab === 'text' ? (
-              <View style={styles.contentBlock}>
-                <View
-                  style={[
-                    styles.textPreview,
-                    {
-                      backgroundColor:
-                        MOMENT_BACKGROUND_SWATCHES.find((swatch) => swatch.token === selectedBackground)?.color ??
-                        MOMENT_BACKGROUND_SWATCHES[0].color,
-                    },
-                  ]}
-                >
-                  <Text style={styles.textPreviewCopy}>{caption.trim() || 'Type a caption for your moment'}</Text>
-                </View>
-                <View style={styles.swatchRow}>
-                  {MOMENT_BACKGROUND_SWATCHES.map((swatch) => {
-                    const selected = swatch.token === selectedBackground;
-                    return (
-                      <Pressable
-                        key={swatch.token}
-                        onPress={() => setSelectedBackground(swatch.token)}
-                        style={[
-                          styles.swatch,
-                          {
-                            backgroundColor: swatch.color,
-                            borderColor: selected ? theme.colors.textPrimary : 'transparent',
-                          },
-                        ]}
-                      />
-                    );
-                  })}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.contentBlock}>
-                {selectedAsset ? (
-                  <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
-                ) : (
-                  <Pressable
-                    onPress={handlePickImage}
-                    style={[
-                      styles.imagePickerButton,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.imagePickerLabel, { color: theme.colors.textPrimary }]}>Choose image</Text>
-                  </Pressable>
-                )}
-
-                {selectedAsset ? (
-                  <Pressable onPress={handlePickImage}>
-                    <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change image</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            )}
-
-            <View style={styles.inputWrap}>
-              <TextInput
-                maxLength={MOMENT_MAX_CAPTION_LENGTH}
-                multiline
-                onChangeText={setCaption}
-                placeholder={activeTab === 'text' ? 'What’s happening?' : 'Add a caption (optional)'}
-                placeholderTextColor={theme.colors.textMuted}
-                style={[
-                  styles.captionInput,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.textPrimary,
-                  },
-                ]}
-                textAlignVertical="top"
-                value={caption}
-              />
-              <Text style={[styles.remainingText, { color: theme.colors.textMuted }]}>{remainingCaption}</Text>
-            </View>
-          </ScrollView>
-
-          <Pressable
-            disabled={loading}
-            onPress={() => void handleSubmit()}
-            style={[
-              styles.submitButton,
-              {
-                backgroundColor: theme.colors.secondary,
-                opacity: loading ? 0.7 : 1,
-              },
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator color={theme.colors.primaryContrast} />
-            ) : (
-              <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>Post moment</Text>
-            )}
-          </Pressable>
-        </View>
+          {loading ? (
+            <ActivityIndicator color={theme.colors.primaryContrast} />
+          ) : (
+            <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>Post moment</Text>
+          )}
+        </Pressable>
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
@@ -307,11 +321,6 @@ const styles = StyleSheet.create({
   inputWrap: {
     gap: 6,
   },
-  overlay: {
-    backgroundColor: 'rgba(15, 23, 42, 0.52)',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
   remainingText: {
     ...typography.bodyMedium,
     alignSelf: 'flex-end',
@@ -319,14 +328,11 @@ const styles = StyleSheet.create({
     paddingRight: 2,
   },
   sheet: {
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    borderWidth: 1,
+    flex: 1,
     gap: 18,
-    maxHeight: '90%',
     paddingBottom: 26,
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 8,
   },
   submitButton: {
     alignItems: 'center',

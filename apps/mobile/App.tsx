@@ -9,6 +9,7 @@ import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AppDrawer } from '@/components/navigation/AppDrawer';
@@ -56,9 +57,11 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AppProviders>
-        <AppContent />
-      </AppProviders>
+      <BottomSheetModalProvider>
+        <AppProviders>
+          <AppContent />
+        </AppProviders>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }

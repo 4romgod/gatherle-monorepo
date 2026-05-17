@@ -40,6 +40,13 @@ The dashboard includes the following widgets:
 - **Cold Starts Detected**: Lambda initialization overhead per 5-minute interval
 - **Lambda Throttles**: Sum of throttled Lambda requests (indicates concurrency limit issues)
 
+#### **Query Guard Metrics**
+
+- **Query Complexity**: Average, P95, and max GraphQL complexity scores for real executed operations
+- **Query Depth**: Average, P95, and max GraphQL nesting depth for real executed operations
+- **Query Guard Outcomes**: Accepted vs rejected operations based on guard enforcement
+- **High-Complexity Operations**: Table of the heaviest operations observed in Lambda logs
+
 #### **Error Patterns**
 
 - **Error Types Distribution**: Pie chart showing proportional breakdown of all error types

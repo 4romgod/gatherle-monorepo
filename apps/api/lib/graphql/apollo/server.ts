@@ -13,7 +13,11 @@ import { ApolloServerErrorCode } from '@apollo/server/errors';
 import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
 import createSchema from '@/graphql/schema';
-import { enforceQueryGuards, resolveQueryGuardLimits } from '@/graphql/security';
+import {
+  assertQuerySelectionMetricsWithinLimits,
+  collectQuerySelectionMetrics,
+  resolveQueryGuardLimits,
+} from '@/graphql/security';
 import type DataLoader from 'dataloader';
 import type {
   User,
@@ -25,6 +29,7 @@ import type {
 } from '@gatherle/commons/types';
 import type { AuthClaims } from '@/utils/auth';
 import type { APIGatewayProxyEvent, Context as LambdaContext } from 'aws-lambda';
+import { emitGraphqlQueryGuardMetrics } from '@/utils/graphqlQueryGuardMetrics';
 
 export interface ServerContext {
   token?: string;
@@ -199,6 +204,53 @@ export const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerCo
   },
 });
 
+export const createGraphqlQueryGuardMetricsPlugin = (): ApolloServerPlugin<ServerContext> => ({
+  async requestDidStart() {
+    return {
+      async didResolveOperation(requestContext) {
+        if (!requestContext.document || !requestContext.operation) {
+          return;
+        }
+
+        const query = getQueryStringFromRequest(requestContext.request.query as GraphQLQueryValue | undefined).trim();
+        const operationName =
+          requestContext.operationName ?? requestContext.request.operationName ?? inferOperationNameFromQuery(query);
+
+        if (isIntrospectionOperation(operationName, query)) {
+          return;
+        }
+
+        const variables = (requestContext.request.variables ?? {}) as Record<string, unknown>;
+        const selectionMetrics = collectQuerySelectionMetrics(
+          requestContext.document,
+          requestContext.operation,
+          variables,
+        );
+
+        try {
+          assertQuerySelectionMetricsWithinLimits(selectionMetrics, queryGuardLimits);
+          emitGraphqlQueryGuardMetrics({
+            operation: operationName,
+            operationType: requestContext.operation.operation,
+            complexity: selectionMetrics.complexity,
+            depth: selectionMetrics.maxDepth,
+            accepted: true,
+          });
+        } catch (error) {
+          emitGraphqlQueryGuardMetrics({
+            operation: operationName,
+            operationType: requestContext.operation.operation,
+            complexity: selectionMetrics.complexity,
+            depth: selectionMetrics.maxDepth,
+            accepted: false,
+          });
+          throw error;
+        }
+      },
+    };
+  },
+});
+
 export const createApolloServer = async (expressApp?: Express) => {
   logger.info('Creating Apollo Server...');
   const apolloServer = new ApolloServer<ServerContext>({
@@ -235,24 +287,7 @@ export const createApolloServer = async (expressApp?: Express) => {
       ...(STAGE !== APPLICATION_STAGES.PROD ? [ApolloServerPluginLandingPageLocalDefault()] : []),
       ...(expressApp ? [ApolloServerPluginDrainHttpServer({ httpServer: createServer(expressApp) })] : []),
       ...(STAGE !== APPLICATION_STAGES.PROD ? [createGraphQLRequestLoggingPlugin()] : []),
-      {
-        async requestDidStart() {
-          return {
-            async didResolveOperation(requestContext) {
-              if (!requestContext.document || !requestContext.operation) {
-                return;
-              }
-
-              enforceQueryGuards(
-                requestContext.document,
-                requestContext.operation,
-                (requestContext.request.variables ?? {}) as Record<string, unknown>,
-                queryGuardLimits,
-              );
-            },
-          };
-        },
-      },
+      createGraphqlQueryGuardMetricsPlugin(),
     ],
   });
 

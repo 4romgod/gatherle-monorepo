@@ -27,6 +27,7 @@ export interface GraphqlMonitoringDashboardConstructProps {
 }
 
 const OCCURRENCE_MAINTENANCE_METRIC_NAMESPACE = 'Gatherle/EventOccurrenceMaintenance';
+const GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE = 'Gatherle/GraphQLQueryGuards';
 
 export class GraphqlMonitoringDashboardConstruct extends Construct {
   readonly dashboard: Dashboard;
@@ -62,6 +63,26 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
           Stage: stageName,
           Region: awsRegion,
           Service: 'OccurrenceMaintenance',
+        },
+      });
+
+    const queryGuardMetric = (
+      metricName: string,
+      label: string,
+      statistic: string,
+      color?: string,
+      period: Duration = Duration.minutes(5),
+    ) =>
+      new Metric({
+        namespace: GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE,
+        metricName,
+        label,
+        color,
+        statistic,
+        period,
+        dimensionsMap: {
+          Stage: stageName,
+          Region: awsRegion,
         },
       });
 
@@ -204,6 +225,63 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
           'filter (level = "ERROR" or level = "WARN") and ispresent(operation)',
           'stats count() as errors by operation',
           'sort errors desc',
+          'limit 15',
+        ],
+        width: 12,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Query Guard Metrics',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Query Complexity (Avg, P95, Max)',
+        left: [
+          queryGuardMetric('QueryComplexity', 'Average complexity', 'Average'),
+          queryGuardMetric('QueryComplexity', 'P95 complexity', 'p95', '#ff7f0e'),
+          queryGuardMetric('QueryComplexity', 'Max complexity', 'Maximum', '#d62728'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new GraphWidget({
+        title: 'Query Depth (Avg, P95, Max)',
+        left: [
+          queryGuardMetric('QueryDepth', 'Average depth', 'Average'),
+          queryGuardMetric('QueryDepth', 'P95 depth', 'p95', '#17becf'),
+          queryGuardMetric('QueryDepth', 'Max depth', 'Maximum', '#9467bd'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Query Guard Outcomes',
+        left: [
+          queryGuardMetric('QueryGuardAccepted', 'Accepted queries', 'Sum', '#2ca02c'),
+          queryGuardMetric('QueryGuardRejected', 'Rejected queries', 'Sum', '#d62728'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new LogQueryWidget({
+        title: 'High-Complexity Operations',
+        logGroupNames: [graphqlLambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.TABLE,
+        queryLines: [
+          'fields Operation, OperationType, QueryComplexity, QueryDepth',
+          'filter ispresent(QueryComplexity) and ispresent(Operation)',
+          'stats max(QueryComplexity) as maxComplexity, avg(QueryComplexity) as avgComplexity, max(QueryDepth) as maxDepth by Operation, OperationType',
+          'sort maxComplexity desc',
           'limit 15',
         ],
         width: 12,

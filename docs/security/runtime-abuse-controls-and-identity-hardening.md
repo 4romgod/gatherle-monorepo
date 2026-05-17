@@ -23,6 +23,8 @@ Implemented in:
 
 - [apps/api/lib/graphql/security/queryGuards.ts](../../apps/api/lib/graphql/security/queryGuards.ts)
 - [apps/api/lib/graphql/apollo/server.ts](../../apps/api/lib/graphql/apollo/server.ts)
+- [apps/api/lib/utils/graphqlQueryGuardMetrics.ts](../../apps/api/lib/utils/graphqlQueryGuardMetrics.ts)
+- [infrastructure/cdk/lib/constructs/graphql-monitoring-dashboard-construct.ts](../../infrastructure/cdk/lib/constructs/graphql-monitoring-dashboard-construct.ts)
 
 #### The Problem We're Solving
 
@@ -56,6 +58,15 @@ Every incoming GraphQL query is checked against three rules:
 
 All three checks run in the Apollo middleware before resolver execution. If any check fails, the query is rejected with
 a `400 Bad Request` error and never touches the database.
+
+We now also emit CloudWatch custom metrics for every non-introspection GraphQL operation:
+
+- `QueryComplexity`
+- `QueryDepth`
+- `QueryGuardAccepted`
+- `QueryGuardRejected`
+
+These are published into the `Gatherle/GraphQLQueryGuards` namespace and surfaced on the existing GraphQL ops dashboard.
 
 ---
 
@@ -217,15 +228,22 @@ single argument.
 
 **Default complexity limits by stage:**
 
-| Stage | Max Complexity | Why?                                                     |
-| ----- | -------------- | -------------------------------------------------------- |
-| Dev   | 600            | Very permissive for developers testing complex features  |
-| Beta  | 300            | Reasonable limit for feature validation and load testing |
-| Gamma | 400            | Slightly higher than Beta for final validation           |
-| Prod  | 250            | Tight controls to protect production infrastructure      |
+| Stage | Max Complexity | Why?                                                                            |
+| ----- | -------------- | ------------------------------------------------------------------------------- |
+| Dev   | 1200           | Very permissive for developers testing complex features                         |
+| Beta  | 800            | Covers real shipped mobile/web discovery queries while staying bounded          |
+| Gamma | 800            | Slightly higher than Beta for final validation                                  |
+| Prod  | 800            | Tight enough to reject pathological queries, high enough for legitimate clients |
 
 **Key insight:** A query with high depth (many levels) and high breadth (many fields at each level) on a large list
 multiplier will quickly exceed the complexity limit and get rejected.
+
+Important implementation note:
+
+- We raised these defaults after validating them against real client operations in this repo.
+- `GetHomeDiscovery` currently scores about `524` complexity.
+- The heaviest event-list detail queries currently score about `373`.
+- The previous Beta/Prod defaults (`300` / `250`) were too low for legitimate app traffic.
 
 ---
 
@@ -307,10 +325,10 @@ The critical point: **guards run before resolvers**, so they prevent expensive w
 
 | Stage | Max Depth | Max Complexity | Introspection Default |
 | ----- | --------- | -------------- | --------------------- |
-| Dev   | 14        | 600            | Enabled               |
-| Beta  | 10        | 300            | Enabled               |
-| Gamma | 10        | 400            | Enabled               |
-| Prod  | 8         | 250            | Disabled              |
+| Dev   | 14        | 1200           | Enabled               |
+| Beta  | 10        | 700            | Enabled               |
+| Gamma | 10        | 800            | Enabled               |
+| Prod  | 8         | 650            | Disabled              |
 
 **Environment variable overrides:**
 
@@ -418,7 +436,7 @@ query {
 - 50 × 20 posts × 4 fields = 4,000 complexity for posts
 - 50 × 30 comments × 3 fields = 4,500 complexity for comments
 - **Total: ~8,850 complexity**
-- If `maxComplexity: 250`, **REJECTED**: "Query complexity 8850 exceeds the maximum allowed complexity of 250."
+- If `maxComplexity: 650`, **REJECTED**: "Query complexity 8850 exceeds the maximum allowed complexity of 650."
 
 **Example 3: Introspection in Prod**
 
@@ -490,14 +508,6 @@ Supported environment overrides:
 
 - `WEBSOCKET_STAGE_THROTTLE_RATE_LIMIT`
 - `WEBSOCKET_STAGE_THROTTLE_BURST_LIMIT`
-- `WEBSOCKET_PING_RATE_LIMIT`
-- `WEBSOCKET_PING_BURST_LIMIT`
-- `WEBSOCKET_SUBSCRIBE_RATE_LIMIT`
-- `WEBSOCKET_SUBSCRIBE_BURST_LIMIT`
-- `WEBSOCKET_CHAT_SEND_RATE_LIMIT`
-- `WEBSOCKET_CHAT_SEND_BURST_LIMIT`
-- `WEBSOCKET_CHAT_READ_RATE_LIMIT`
-- `WEBSOCKET_CHAT_READ_BURST_LIMIT`
 
 Important note:
 
