@@ -25,6 +25,10 @@ export type RootStackParamList = {
     orgId: string;
     orgName?: string;
   };
+  OrganizationMembers: {
+    orgId: string;
+    orgName?: string;
+  };
   VenueDetails: {
     venueId: string;
     venueName?: string;
@@ -58,6 +62,10 @@ export type RootStackParamList = {
     orgName?: string;
   };
   CreateVenue: undefined;
+  EditVenue: {
+    venueId: string;
+    venueName?: string;
+  };
   Admin: undefined;
   Login:
     | {
@@ -182,6 +190,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     description: 'This route holds the public organization story, follower state, and hosted events on mobile.',
     category: 'discover',
   },
+  OrganizationMembers: {
+    sectionLabel: 'Creator',
+    title: 'Organization members',
+    description: 'Invite teammates, adjust roles, and remove members for an organization you manage.',
+    category: 'account',
+  },
   VenueDetails: {
     sectionLabel: 'Places',
     title: 'Venue details',
@@ -259,6 +273,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     sectionLabel: 'Creator',
     title: 'Create venue',
     description: 'Add a new venue with address, type, and capacity details.',
+    category: 'account',
+  },
+  EditVenue: {
+    sectionLabel: 'Creator',
+    title: 'Edit venue',
+    description: 'Update an existing venue profile, location details, and media.',
     category: 'account',
   },
   Admin: {

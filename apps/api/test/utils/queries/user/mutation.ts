@@ -25,6 +25,7 @@ export const getUpdateUserMutation = (user: any) => {
             updateUser(input: $input) {
               userId
               email
+              emailVerified
               username
               location {
                 city

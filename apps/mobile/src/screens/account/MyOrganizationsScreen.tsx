@@ -4,7 +4,6 @@ import { useCallback, useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { GetMyOrganizationsDocument } from '@data/graphql/query/Organization/query';
-import { OrganizationRole } from '@data/graphql/types/graphql';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -52,8 +51,6 @@ export function MyOrganizationsScreen() {
       .replace(/[_-]+/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  const canEditOrganization = (role: OrganizationRole) =>
-    role === OrganizationRole.Owner || role === OrganizationRole.Admin;
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -101,16 +98,6 @@ export function MyOrganizationsScreen() {
                 })
               }
               organization={membership.organization}
-              trailingActionLabel={canEditOrganization(membership.role) ? 'Edit' : undefined}
-              trailingActionOnPress={
-                canEditOrganization(membership.role)
-                  ? () =>
-                      navigation.navigate('EditOrganization', {
-                        orgId: membership.organization.orgId,
-                        orgName: membership.organization.name ?? undefined,
-                      })
-                  : undefined
-              }
               trailingBadgeLabel={formatRoleLabel(membership.role)}
             />
           ))}

@@ -29,7 +29,8 @@ const GENDER_OPTIONS = [Gender.Male, Gender.Female, Gender.Other];
 export function SettingsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { showToast, withBlockingLoader } = useAppFeedback();
-  const { authToken, isAuthenticated, signOut, updateSessionIdentity, username } = useAppShell();
+  const { authToken, isAuthenticated, setPendingVerificationEmail, signOut, updateSessionIdentity, username } =
+    useAppShell();
   const { preference, setPreference, theme } = useAppTheme();
   const { error, loading, profile, refetch } = useAccountProfile(username, authToken, isAuthenticated);
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
@@ -72,6 +73,10 @@ export function SettingsScreen() {
       return;
     }
 
+    const normalizedCurrentEmail = profile.email.trim().toLowerCase();
+    const normalizedNextEmail = form.email.trim().toLowerCase();
+    const emailChanged = normalizedCurrentEmail !== normalizedNextEmail;
+
     try {
       await withBlockingLoader('Saving your settings…', async () => {
         const response = await updateUser({
@@ -90,12 +95,22 @@ export function SettingsScreen() {
           email: updatedUser.email,
           username: updatedUser.username,
         });
+        if (emailChanged) {
+          setPendingVerificationEmail(updatedUser.email);
+        }
         setForm((current) => ({
           ...createSettingsForm(updatedUser, current.themePreference),
           themePreference: current.themePreference,
         }));
-        showToast({ message: 'Settings updated successfully.', tone: 'success' });
+        showToast({
+          message: emailChanged ? 'Settings updated. Verify your new email address.' : 'Settings updated successfully.',
+          tone: 'success',
+        });
         void refetch();
+
+        if (emailChanged) {
+          navigation.navigate('VerifyPending', { email: updatedUser.email });
+        }
       });
     } catch (mutationError) {
       showToast({
@@ -148,7 +163,7 @@ export function SettingsScreen() {
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <AccountSectionCard
-        description="Account details stay close at hand, while profile presentation lives on the edit profile screen."
+        description="Account details stay close at hand. Changing your email will require reverification."
         title="Account"
       >
         <AccountTextField

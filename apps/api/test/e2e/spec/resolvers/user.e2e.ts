@@ -151,6 +151,7 @@ describe('User Resolver', () => {
         );
         expect(response.status).toBe(200);
         expect(response.body.data.updateUser.email).toBe(updatedEmail);
+        expect(response.body.data.updateUser.emailVerified).toBe(false);
       });
     });
 

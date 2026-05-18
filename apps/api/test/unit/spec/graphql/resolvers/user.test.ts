@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { GraphQLError } from 'graphql';
 import { UserResolver } from '@/graphql/resolvers/user';
-import { AuthAttemptDAO, UserDAO } from '@/mongodb/dao';
+import { AuthAttemptDAO, EmailVerificationTokenDAO, UserDAO } from '@/mongodb/dao';
+import { EmailService } from '@/services';
 import { logger } from '@/utils/logger';
 
 jest.mock('@/mongodb/dao', () => ({
@@ -20,6 +21,8 @@ jest.mock('@/mongodb/dao', () => ({
   },
   UserDAO: {
     login: jest.fn(),
+    readUserById: jest.fn(),
+    updateUser: jest.fn(),
   },
 }));
 
@@ -53,6 +56,7 @@ const context = {
 
 describe('UserResolver login hardening', () => {
   let resolver: UserResolver;
+  const validUserId = '507f1f77bcf86cd799439011';
 
   beforeEach(() => {
     resolver = new UserResolver();
@@ -102,6 +106,72 @@ describe('UserResolver login hardening', () => {
     expect(logger.warn).toHaveBeenCalledWith('[UserResolver] Failed to record auth attempt after login failure', {
       scopeKeys: ['email:user@example.com', 'ip:203.0.113.10'],
       error: recordError,
+    });
+  });
+
+  describe('updateUser email verification flow', () => {
+    it('sends a verification email when the email address changes', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        email: 'before@example.com',
+      });
+      (UserDAO.updateUser as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        email: 'after@example.com',
+        username: 'updated-user',
+      });
+      (EmailVerificationTokenDAO.create as jest.Mock).mockResolvedValue('verification-token');
+      (EmailService.sendEmailVerification as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await resolver.updateUser({
+        userId: validUserId,
+        email: 'after@example.com',
+      } as any);
+
+      expect(UserDAO.readUserById).toHaveBeenCalledWith(validUserId);
+      expect(UserDAO.updateUser).toHaveBeenCalledWith({
+        userId: validUserId,
+        email: 'after@example.com',
+      });
+      expect(EmailVerificationTokenDAO.create).toHaveBeenCalledWith(validUserId);
+      expect(EmailService.sendEmailVerification).toHaveBeenCalledWith('after@example.com', 'verification-token');
+      expect(result.email).toBe('after@example.com');
+    });
+
+    it('does not send a verification email when the email address is unchanged', async () => {
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        email: 'same@example.com',
+      });
+      (UserDAO.updateUser as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        email: 'same@example.com',
+        username: 'same-user',
+      });
+
+      await resolver.updateUser({
+        userId: validUserId,
+        email: 'same@example.com',
+      } as any);
+
+      expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
+      expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it('does not read the existing user when the update does not include email', async () => {
+      (UserDAO.updateUser as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        username: 'same-user',
+      });
+
+      await resolver.updateUser({
+        userId: validUserId,
+        username: 'same-user',
+      } as any);
+
+      expect(UserDAO.readUserById).not.toHaveBeenCalled();
+      expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
+      expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
     });
   });
 });

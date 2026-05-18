@@ -23,9 +23,11 @@ type DrawerRouteName = Exclude<
   DetailRouteName,
   | 'EditEvent'
   | 'EditOrganization'
+  | 'EditVenue'
   | 'EventDetails'
   | 'MessageThread'
   | 'OrganizationDetails'
+  | 'OrganizationMembers'
   | 'VenueDetails'
   | 'UserProfile'
 >;

@@ -13,12 +13,14 @@ import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton
 import { VenueListItem } from '@/components/venues/VenueListItem';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useVenueManagementAccess } from '@/hooks/venues/useVenueManagementAccess';
 import { getApolloAuthContext } from '@/lib/auth';
 
 export function VenuesScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken } = useAppShell();
   const { theme } = useAppTheme();
+  const { canCreateVenue } = useVenueManagementAccess();
   const { data, error, loading, refetch } = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
@@ -53,23 +55,25 @@ export function VenuesScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          accessibilityLabel="Create venue"
-          accessibilityRole="button"
-          onPress={() => navigation.navigate('CreateVenue')}
-          style={({ pressed }) => [
-            styles.headerAction,
-            {
-              opacity: pressed ? 0.64 : 1,
-            },
-          ]}
-        >
-          <Feather color={theme.colors.primary} name="plus-circle" size={20} />
-        </Pressable>
-      ),
+      headerRight: canCreateVenue
+        ? () => (
+            <Pressable
+              accessibilityLabel="Create venue"
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('CreateVenue')}
+              style={({ pressed }) => [
+                styles.headerAction,
+                {
+                  opacity: pressed ? 0.64 : 1,
+                },
+              ]}
+            >
+              <Feather color={theme.colors.primary} name="plus-circle" size={20} />
+            </Pressable>
+          )
+        : undefined,
     });
-  }, [navigation, theme.colors.primary]);
+  }, [canCreateVenue, navigation, theme.colors.primary]);
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>

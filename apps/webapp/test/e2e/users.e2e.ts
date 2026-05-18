@@ -15,20 +15,23 @@ test.describe('Users Page', () => {
     await expect(communityHeading.or(loadError)).toBeVisible({ timeout: 20_000 });
   });
 
-  test('shows community browsing section when data loads', async ({ page }) => {
+  test('shows sign-in gate for unauthenticated community browsing', async ({ page }) => {
     await page.goto('/users');
 
-    const loadError = page.getByText('Unable to load community members right now.');
     const peopleHeading = page.getByRole('heading', { name: 'Discover your community' });
+    const signInHeading = page.getByRole('heading', { name: 'Sign in to browse community members' });
+    const signInButton = page.getByRole('link', { name: /^Sign in$/ });
+    const loadError = page.getByText('Unable to load community members right now.');
 
-    await expect(peopleHeading.or(loadError)).toBeVisible({ timeout: 20_000 });
+    await expect(peopleHeading).toBeVisible({ timeout: 20_000 });
+    await expect(signInHeading.or(loadError)).toBeVisible({ timeout: 20_000 });
 
     if (await loadError.isVisible()) {
       await expect(loadError).toBeVisible();
       return;
     }
 
-    await expect(peopleHeading).toBeVisible();
-    await expect(page.getByRole('combobox').first()).toBeVisible({ timeout: 20_000 });
+    await expect(signInHeading).toBeVisible();
+    await expect(signInButton).toBeVisible();
   });
 });

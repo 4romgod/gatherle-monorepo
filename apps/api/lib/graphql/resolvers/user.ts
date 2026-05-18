@@ -129,7 +129,36 @@ export class UserResolver {
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.updateUser })
   async updateUser(@Arg('input', () => UpdateUserInput) input: UpdateUserInput): Promise<User> {
     validateInput<UpdateUserInput>(UpdateUserInputSchema, input);
-    return UserDAO.updateUser(input);
+
+    const requestedEmail = typeof input.email === 'string' ? input.email.trim().toLowerCase() : null;
+    let emailChanged = false;
+
+    if (requestedEmail !== null) {
+      const existingUser = await UserDAO.readUserById(input.userId);
+      const previousEmail = (existingUser.email ?? '').trim().toLowerCase();
+      emailChanged = requestedEmail !== previousEmail;
+    }
+
+    const updatedUser = await UserDAO.updateUser(input);
+
+    if (emailChanged && updatedUser.email) {
+      try {
+        const plainToken = await EmailVerificationTokenDAO.create(updatedUser.userId);
+        await EmailService.sendEmailVerification(updatedUser.email, plainToken);
+        logger.info('[UserResolver] Verification email sent after email update', {
+          userId: updatedUser.userId,
+          email: updatedUser.email,
+        });
+      } catch (err) {
+        logger.warn('[UserResolver] Failed to send verification email after email update', {
+          userId: updatedUser.userId,
+          email: updatedUser.email,
+          err,
+        });
+      }
+    }
+
+    return updatedUser;
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])

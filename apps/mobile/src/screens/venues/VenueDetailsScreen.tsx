@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from 'react';
-import { Image, Linking, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import { SortOrderInput } from '@data/graphql/types/graphql';
 import { GetVenueByIdDocument } from '@data/graphql/query/Venue/query';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
@@ -19,6 +20,7 @@ import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton
 import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
+import { useVenueManagementAccess } from '@/hooks/venues/useVenueManagementAccess';
 import { getApolloAuthContext } from '@/lib/auth';
 import { openLocationQueryInMaps } from '@/lib/events/deviceActions';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -31,6 +33,7 @@ export function VenueDetailsScreen() {
   const route = useRoute<VenueDetailsRoute>();
   const { authToken } = useAppShell();
   const { theme } = useAppTheme();
+  const { canManageVenue } = useVenueManagementAccess();
   const { venueId } = route.params;
   const { data, error, loading, refetch } = useQuery(GetVenueByIdDocument, {
     fetchPolicy: 'cache-and-network',
@@ -65,6 +68,34 @@ export function VenueDetailsScreen() {
     [venue],
   );
   const amenityList = useMemo(() => venue?.amenities?.filter(Boolean) ?? [], [venue?.amenities]);
+  const canEditVenue = canManageVenue(venue?.orgId);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canEditVenue
+        ? () => (
+            <Pressable
+              accessibilityLabel="Edit venue"
+              accessibilityRole="button"
+              onPress={() =>
+                navigation.navigate('EditVenue', {
+                  venueId,
+                  venueName: venue?.name ?? undefined,
+                })
+              }
+              style={({ pressed }) => [
+                styles.headerAction,
+                {
+                  opacity: pressed ? 0.64 : 1,
+                },
+              ]}
+            >
+              <Feather color={theme.colors.primary} name="edit-2" size={18} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [canEditVenue, navigation, theme.colors.primary, venue?.name, venueId]);
 
   const handleOpenWebsite = () => {
     if (!venue?.url) {
@@ -213,6 +244,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 16,
+  },
+  headerAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 40,
   },
   loadingGroup: {
     gap: 18,

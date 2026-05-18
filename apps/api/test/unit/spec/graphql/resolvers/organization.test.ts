@@ -155,6 +155,7 @@ describe('OrganizationResolver', () => {
           role: OrganizationRole.Owner,
         },
         'user-001',
+        { allowOwnerAssignment: true },
       );
       expect(result).toEqual(mockOrganization);
     });
