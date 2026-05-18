@@ -1,4 +1,5 @@
 import { App } from 'aws-cdk-lib';
+import { DNS_STACK_CONFIG } from './constants';
 import { GitHubAuthStack } from './stack';
 import { buildAccountScopedStackName } from './utils';
 
@@ -13,6 +14,37 @@ if (!deploymentRegion || !targetAccountId) {
   );
 }
 
+const deployRoles =
+  targetAccountId === DNS_STACK_CONFIG.accountNumber
+    ? [
+        {
+          roleId: 'GithubDnsDeployRole',
+          roleNamePrefix: 'githubActionsDnsDeployRole',
+          description: 'GitHub Actions DNS deploy role for the Gatherle root hosted zone account',
+          outputKey: 'GithubActionDnsDeployRoleArn',
+          permissionProfile: 'dns' as const,
+          filters: [`environment:dns-${deploymentRegion}`],
+        },
+      ]
+    : [
+        {
+          roleId: 'GithubBetaRuntimeDeployRole',
+          roleNamePrefix: 'githubActionsBetaDeployRole',
+          description: 'GitHub Actions runtime deploy role for Gatherle Beta infrastructure',
+          outputKey: 'GithubActionBetaDeployRoleArn',
+          permissionProfile: 'runtime' as const,
+          filters: [`environment:Beta-${deploymentRegion}`],
+        },
+        {
+          roleId: 'GithubProdRuntimeDeployRole',
+          roleNamePrefix: 'githubActionsProdDeployRole',
+          description: 'GitHub Actions runtime deploy role for Gatherle Prod infrastructure',
+          outputKey: 'GithubActionProdDeployRoleArn',
+          permissionProfile: 'runtime' as const,
+          filters: [`environment:Prod-${deploymentRegion}`],
+        },
+      ];
+
 new GitHubAuthStack(app, 'GitHubAuthStack', {
   env: {
     account: targetAccountId,
@@ -20,13 +52,9 @@ new GitHubAuthStack(app, 'GitHubAuthStack', {
   },
   stackName: buildAccountScopedStackName('github-auth', targetAccountId),
   accountNumberForNaming: targetAccountId,
-  repositoryConfig: [
-    {
-      owner: '4romgod',
-      repo: 'gatherle-monorepo',
-      filters: ['environment:Beta-af-south-1', 'environment:Prod-af-south-1', 'environment:dns-af-south-1'],
-    },
-  ],
+  repositoryOwner: '4romgod',
+  repositoryName: 'gatherle-monorepo',
+  deployRoles,
   description: 'This stack includes resources needed by GitHub Actions (CI/CD) to deploy AWS CDK stacks',
 });
 

@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './authAbuseMetrics';
 export * from './eventOccurrence';
 export * from './externalAuth';
 export * from './exceptions';

@@ -9,6 +9,8 @@ configDotenv();
 export interface SecretsManagementStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
+  mongoDbUrl: string;
+  jwtSecret: string;
 }
 
 export class SecretsManagementStack extends Stack {
@@ -21,8 +23,8 @@ export class SecretsManagementStack extends Stack {
       secretName: buildBackendSecretName(props.applicationStage, props.awsRegion),
       description: 'Gatherle backend secrets',
       secretObjectValue: {
-        MONGO_DB_URL: SecretValue.unsafePlainText(process.env.MONGO_DB_URL ?? ''),
-        JWT_SECRET: SecretValue.unsafePlainText(process.env.JWT_SECRET ?? ''),
+        MONGO_DB_URL: SecretValue.unsafePlainText(props.mongoDbUrl),
+        JWT_SECRET: SecretValue.unsafePlainText(props.jwtSecret),
       },
     });
   }

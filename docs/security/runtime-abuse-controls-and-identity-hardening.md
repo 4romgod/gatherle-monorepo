@@ -557,8 +557,12 @@ What changed:
 - The GitHub OIDC trust policy no longer accepts a blanket repo-wide subject.
 - Trust is restricted to exact protected environment subjects used by deployment.
 - `AdministratorAccess` was removed.
-- The deploy role now uses an inline policy that is still broad, but is scoped to the service set currently needed by
-  deployment rather than unconstrained admin.
+- Deploy roles are now split by environment concern:
+  - Beta runtime deploy
+  - Prod runtime deploy
+  - DNS deploy
+- The broad `iam:*` grant was replaced with explicit IAM actions, and SSM/Secrets Manager access is now scoped to
+  Gatherle parameter/secret prefixes.
 
 Current trusted GitHub subjects:
 
@@ -568,8 +572,8 @@ Current trusted GitHub subjects:
 
 Important note:
 
-- This is not the end state. The deploy role still has wildcard-resource permissions across several services, including
-  IAM.
+- This is not the end state. The runtime deploy roles still have wildcard-resource permissions across several AWS
+  services, and there is not yet a dedicated secrets/bootstrap role.
 
 ## Verification
 
@@ -580,6 +584,11 @@ The following checks were run successfully in this worktree:
 - `npm run typecheck -w @gatherle/webapp`
 - `STAGE=Beta AWS_REGION=af-south-1 npm run build:cdk -w @gatherle/cdk`
 - `AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=327319899143 npm run build:cdk:github-auth -w @gatherle/cdk`
+- `npm run test:unit -w @gatherle/api -- --coverage=false --runTestsByPath test/unit/spec/mongodb/dao/websocketRequestThrottle.test.ts test/unit/spec/websocket/routes/connect.test.ts test/unit/spec/websocket/routes/chatSend.test.ts test/unit/spec/websocket/routes/chatRead.test.ts test/unit/spec/websocket/routes/notificationSubscribe.test.ts test/unit/spec/websocket/routes/ping.test.ts`
+- `AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=327319899143 npm run cdk:github-auth -w @gatherle/cdk -- synth GitHubAuthStack --exclusively`
+- `AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=072092344224 npm run cdk:github-auth -w @gatherle/cdk -- synth GitHubAuthStack --exclusively`
+- `STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<value>' JWT_SECRET='<value>' npm run cdk:secrets -w @gatherle/cdk -- synth SecretsManagementStack --exclusively`
+- `STAGE=Beta AWS_REGION=af-south-1 npm run cdk -w @gatherle/cdk -- synth MonitoringDashboardStack --exclusively`
 
 Additional note:
 
@@ -591,7 +600,8 @@ The largest remaining gaps after this phase are:
 
 1. WebSocket distributed-abuse handling
    - There is still no WAF-equivalent protection path for API Gateway WebSocket.
-   - Next step: add alarms, connection-level spam controls, and short-lived websocket connect tickets.
+   - Per-connection/per-user route quotas now exist, but the platform still lacks stronger multi-IP distributed-abuse
+     controls and short-lived websocket connect tickets.
 
 2. Public-profile contract design
    - The schema still uses a single `User` type for both public and private reads.
@@ -600,27 +610,22 @@ The largest remaining gaps after this phase are:
 
 3. CI/CD least privilege
    - The deploy role is narrower than before, but still too broad for a mature production posture.
-   - Next step: split deploy roles by stack/environment and remove wildcard-resource IAM access.
+   - Next step: tighten wildcard-resource access further and add a dedicated secrets/bootstrap role.
 
 4. Auth abuse detection
-   - Lockouts exist, but there is no CAPTCHA, adaptive risk engine, or CloudWatch/SIEM alerting for spikes.
+   - Lockouts and CloudWatch alerting now exist, but there is still no CAPTCHA, adaptive risk engine, or user-facing
+     unlock/review flow.
 
 5. Edge monitoring
-   - The repo still needs explicit alarms for WAF blocks, GraphQL throttles, websocket throttles, login spikes, and
-     concurrency anomalies.
+   - The repo still needs WAF blocked-request alarms and budget alerts.
 
 ## Recommended Next Phase
 
-1. Add CloudWatch alarms and budget alerts for:
+1. Add WAF block-rate alarms and budget alerts for:
    - WAF block rate
-   - API Gateway `4xx`/`429`
-   - Lambda concurrency and errors
-   - websocket throttles
-   - login lockout spikes
+   - API Gateway/Lambda spend anomalies
+   - CloudWatch log ingestion spikes
 2. Replace long-lived websocket bearer auth with short-lived connect tickets.
-3. Split GitHub deploy roles by concern:
-   - runtime deploy
-   - DNS deploy
-   - secrets/bootstrap deploy
+3. Add a dedicated secrets/bootstrap deploy role and keep narrowing runtime role resource scope.
 4. Design a dedicated public-profile GraphQL contract so public data exposure is explicit in schema, not implicit in
    resolver logic.

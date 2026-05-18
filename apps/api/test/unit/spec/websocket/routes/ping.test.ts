@@ -5,9 +5,14 @@ import { getConnectionMetadata } from '@/websocket/event';
 import { createRealtimeEventEnvelope, postToConnection } from '@/websocket/gateway';
 import { handlePing } from '@/websocket/routes/ping';
 import { touchConnection } from '@/websocket/routes/touch';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/abuseControl', () => ({
+  assertWebSocketRateLimit: jest.fn(),
 }));
 
 jest.mock('@/websocket/routes/touch', () => ({
@@ -27,6 +32,7 @@ describe('websocket route: ping', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
+    (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
     (touchConnection as jest.Mock).mockResolvedValue('conn-ping');
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-ping',
@@ -53,6 +59,7 @@ describe('websocket route: ping', () => {
     const result = (await handlePing(event)) as { statusCode: number; body?: string };
 
     expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
+    expect(assertWebSocketRateLimit).toHaveBeenCalledWith('ping', { connectionId: 'conn-ping' });
     expect(touchConnection).toHaveBeenCalledWith(event);
     expect(getConnectionMetadata).toHaveBeenCalledWith(event);
     expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.PING_PONG, {

@@ -14,18 +14,25 @@ import { buildStackName } from './naming';
 
 export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   const enableCustomDomains = process.env.ENABLE_CUSTOM_DOMAINS === 'true';
+  const mongoDbUrl = process.env.MONGO_DB_URL?.trim();
+  const jwtSecret = process.env.JWT_SECRET?.trim();
+  const shouldIncludeSecretsManagementStack = Boolean(mongoDbUrl && jwtSecret);
   const stackEnv = {
     account: account.accountNumber,
     region: account.awsRegion,
   };
 
-  const secretsManagementStack = new SecretsManagementStack(app, 'SecretsManagementStack', {
-    env: stackEnv,
-    stackName: buildStackName('secrets-management', account.applicationStage, account.awsRegion),
-    applicationStage: account.applicationStage,
-    awsRegion: account.awsRegion,
-    description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
-  });
+  const secretsManagementStack = shouldIncludeSecretsManagementStack
+    ? new SecretsManagementStack(app, 'SecretsManagementStack', {
+        env: stackEnv,
+        stackName: buildStackName('secrets-management', account.applicationStage, account.awsRegion),
+        applicationStage: account.applicationStage,
+        awsRegion: account.awsRegion,
+        mongoDbUrl: mongoDbUrl as string,
+        jwtSecret: jwtSecret as string,
+        description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
+      })
+    : undefined;
 
   const sesStack = new SesStack(app, 'SesStack', {
     env: stackEnv,
@@ -65,7 +72,9 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     description: 'This stack includes infrastructure for the GraphQL API. This includes serverless resources.',
   });
 
-  graphqlStack.addDependency(secretsManagementStack);
+  if (secretsManagementStack) {
+    graphqlStack.addDependency(secretsManagementStack);
+  }
   graphqlStack.addDependency(s3BucketStack);
   graphqlStack.addDependency(sesStack);
   graphqlStack.addDependency(stageInfraStack);
@@ -79,7 +88,9 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     description: 'This stack includes infrastructure for websocket routes used by realtime features.',
   });
 
-  webSocketApiStack.addDependency(secretsManagementStack);
+  if (secretsManagementStack) {
+    webSocketApiStack.addDependency(secretsManagementStack);
+  }
   webSocketApiStack.addDependency(stageInfraStack);
 
   // Grant Lambda permissions to access S3 bucket
@@ -101,7 +112,9 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   });
 
   mediaStack.addDependency(s3BucketStack);
-  mediaStack.addDependency(secretsManagementStack);
+  if (secretsManagementStack) {
+    mediaStack.addDependency(secretsManagementStack);
+  }
 
   // Create monitoring dashboard
   const monitoringStack = new MonitoringDashboardStack(app, 'MonitoringDashboardStack', {
@@ -109,6 +122,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     stackName: buildStackName('monitoring-dashboard', account.applicationStage, account.awsRegion),
     applicationStage: account.applicationStage,
     awsRegion: account.awsRegion,
+    graphqlApi: graphqlStack.graphqlApi,
     graphqlLambdaFunction: graphqlStack.graphqlLambda,
     graphqlLambdaLogGroup: graphqlStack.graphqlLambdaLogGroup,
     graphqlApiAccessLogGroup: graphqlStack.graphqlApiAccessLogGroup,

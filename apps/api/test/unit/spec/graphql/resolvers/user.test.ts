@@ -3,6 +3,7 @@ import { GraphQLError } from 'graphql';
 import { UserResolver } from '@/graphql/resolvers/user';
 import { AuthAttemptDAO, EmailVerificationTokenDAO, UserDAO } from '@/mongodb/dao';
 import { EmailService } from '@/services';
+import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { logger } from '@/utils/logger';
 
 jest.mock('@/mongodb/dao', () => ({
@@ -31,6 +32,10 @@ jest.mock('@/services', () => ({
     sendEmailVerification: jest.fn(),
   },
   UserService: {},
+}));
+
+jest.mock('@/utils/authAbuseMetrics', () => ({
+  emitAuthAbuseMetric: jest.fn(),
 }));
 
 jest.mock('@/utils/logger', () => ({
@@ -88,6 +93,7 @@ describe('UserResolver login hardening', () => {
         error: cleanupError,
       },
     );
+    expect(emitAuthAbuseMetric).not.toHaveBeenCalled();
   });
 
   it('preserves the original unauthenticated error when failure recording also fails', async () => {
@@ -103,6 +109,7 @@ describe('UserResolver login hardening', () => {
     ).rejects.toBe(authError);
 
     expect(AuthAttemptDAO.recordFailureForScopes).toHaveBeenCalledWith(['email:user@example.com', 'ip:203.0.113.10']);
+    expect(emitAuthAbuseMetric).toHaveBeenCalledWith('LoginFailure');
     expect(logger.warn).toHaveBeenCalledWith('[UserResolver] Failed to record auth attempt after login failure', {
       scopeKeys: ['email:user@example.com', 'ip:203.0.113.10'],
       error: recordError,

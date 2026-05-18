@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { AuthAttempt as AuthAttemptModel } from '@/mongodb/models';
+import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
 const AUTH_FAILURE_WINDOW_MINUTES = 15;
@@ -46,6 +47,7 @@ class AuthAttemptDAO {
       }
 
       const retryAfterSeconds = Math.max(1, Math.ceil((blockingAttempt.blockedUntil.getTime() - now.getTime()) / 1000));
+      emitAuthAbuseMetric('LoginLockout');
       throw buildThrottleError(retryAfterSeconds);
     } catch (error) {
       if (isThrottleError(error)) {

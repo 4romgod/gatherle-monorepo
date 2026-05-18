@@ -75,7 +75,7 @@ Read role ARN (Beta):
 ```bash
 AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --stack-name gatherle-github-auth-327319899143 \
-  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionBetaDeployRoleArn'].OutputValue" \
   --output text \
   --profile gatherle-beta
 ```
@@ -91,12 +91,13 @@ Read role ARN (DNS):
 ```bash
 AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --stack-name gatherle-github-auth-072092344224 \
-  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionDnsDeployRoleArn'].OutputValue" \
   --output text \
   --profile gatherle-dns
 ```
 
-Set each ARN into the matching GitHub Environment secret `ASSUME_ROLE_ARN`.
+Set each ARN into the matching GitHub Environment secret `ASSUME_ROLE_ARN`. If Prod is enabled in the runtime account,
+use `GithubActionProdDeployRoleArn` for the `prod-<region>` environment.
 
 ## 4. Configure GitHub environments and secrets
 
@@ -113,7 +114,8 @@ gh api --method PUT /repos/{owner}/{repo}/environments/beta-af-south-1
 
 Set environment secrets:
 
-- `ASSUME_ROLE_ARN` (from `GitHubAuthStack` output for that target account; DNS workflows must use DNS account ARN)
+- `ASSUME_ROLE_ARN` (from the environment-matched `GitHubAuthStack` output: `GithubActionBetaDeployRoleArn`,
+  `GithubActionProdDeployRoleArn`, or `GithubActionDnsDeployRoleArn`)
 - `NEXTAUTH_SECRET` (webapp session signing secret; keep distinct from backend `JWT_SECRET` in Secrets Manager)
 - `VERCEL_TOKEN` (if web deploy enabled)
 - `VERCEL_ORG_ID` (if web deploy enabled)
@@ -542,10 +544,16 @@ Read the role ARN:
 ```bash
 AWS_REGION=<region> aws cloudformation describe-stacks \
   --stack-name gatherle-github-auth-<account-id> \
-  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionBetaDeployRoleArn'].OutputValue" \
   --output text \
   --profile <profile>
 ```
+
+Use the output that matches the environment you are wiring:
+
+- runtime beta -> `GithubActionBetaDeployRoleArn`
+- runtime prod -> `GithubActionProdDeployRoleArn`
+- DNS -> `GithubActionDnsDeployRoleArn`
 
 4. Create GitHub Environment `<stage-lower>-<region>` and set secrets.
 

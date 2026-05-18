@@ -1,14 +1,14 @@
-name: PR Check
+name: 'Presubmit CI (PR validation)'
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 permissions:
   contents: read
 
 jobs:
-  pr-check:
+  presubmit-ci:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -44,6 +44,9 @@ jobs:
 
       - name: API Unit Tests
         run: npm run test:unit -w @gatherle/api
+
+      - name: CDK TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/cdk
 
       - name: Webapp Lint
         run: npm run lint:check -w @gatherle/webapp

@@ -10,43 +10,58 @@ import {
   WebIdentityPrincipal,
 } from 'aws-cdk-lib/aws-iam';
 
-export interface GitHubRepositoryConfigProps {
-  owner: string;
-  repo: string;
-  filter?: string;
+type DeployRolePermissionProfile = 'dns' | 'runtime';
+
+export interface GitHubDeployRoleConfig {
+  roleId: string;
+  roleNamePrefix: string;
+  description: string;
+  outputKey: string;
+  permissionProfile: DeployRolePermissionProfile;
   filters?: string[];
 }
 
 export interface GitHubAuthStackProps extends StackProps {
   readonly accountNumberForNaming: string;
-  readonly repositoryConfig: GitHubRepositoryConfigProps[];
+  readonly repositoryOwner: string;
+  readonly repositoryName: string;
+  readonly deployRoles: GitHubDeployRoleConfig[];
 }
 
 export class GitHubAuthStack extends Stack {
-  constructor(scope: Construct, id: string, props: GitHubAuthStackProps) {
-    super(scope, id, props);
+  private readonly githubDomain = 'token.actions.githubusercontent.com';
+  private readonly stsService = 'sts.amazonaws.com';
 
-    const githubDomain = 'token.actions.githubusercontent.com';
-    const stsService = 'sts.amazonaws.com';
+  private buildRuntimeDeployPolicy(): PolicyDocument {
+    const ssmParameterArns = [
+      this.formatArn({
+        service: 'ssm',
+        resource: 'parameter',
+        resourceName: 'gatherle/*',
+      }),
+      this.formatArn({
+        service: 'ssm',
+        resource: 'parameter',
+        resourceName: 'cdk-bootstrap/*',
+      }),
+    ];
+    const backendSecretArns = [
+      this.formatArn({
+        service: 'secretsmanager',
+        resource: 'secret',
+        resourceName: 'gatherle/backend/*',
+      }),
+    ];
+    const accountRoleArns = [
+      this.formatArn({
+        service: 'iam',
+        region: '',
+        resource: 'role',
+        resourceName: '*',
+      }),
+    ];
 
-    const githubProvider = new OpenIdConnectProvider(this, 'GithubActionsProvider', {
-      url: `https://${githubDomain}`,
-      clientIds: [stsService],
-    });
-
-    const iamRepoDeployAccess = props.repositoryConfig.flatMap((repo) => {
-      const filters = repo.filters?.length ? repo.filters : [repo.filter ?? '*'];
-      return filters.map((filter) => `repo:${repo.owner}/${repo.repo}:${filter}`);
-    });
-
-    const conditions: Conditions = {
-      StringLike: {
-        [`${githubDomain}:sub`]: iamRepoDeployAccess,
-        [`${githubDomain}:aud`]: stsService,
-      },
-    };
-
-    const deployPolicy = new PolicyDocument({
+    return new PolicyDocument({
       statements: [
         new PolicyStatement({
           effect: Effect.ALLOW,
@@ -65,8 +80,48 @@ export class GitHubAuthStack extends Stack {
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['iam:*'],
+          actions: [
+            'iam:AttachRolePolicy',
+            'iam:CreatePolicy',
+            'iam:CreatePolicyVersion',
+            'iam:CreateRole',
+            'iam:CreateServiceLinkedRole',
+            'iam:DeletePolicy',
+            'iam:DeletePolicyVersion',
+            'iam:DeleteRole',
+            'iam:DeleteRolePolicy',
+            'iam:DeleteServiceLinkedRole',
+            'iam:DetachRolePolicy',
+            'iam:GetPolicy',
+            'iam:GetPolicyVersion',
+            'iam:GetRole',
+            'iam:GetRolePolicy',
+            'iam:GetServiceLinkedRoleDeletionStatus',
+            'iam:ListAttachedRolePolicies',
+            'iam:ListPolicies',
+            'iam:ListPolicyVersions',
+            'iam:ListRolePolicies',
+            'iam:ListRoles',
+            'iam:PutRolePolicy',
+            'iam:TagPolicy',
+            'iam:TagRole',
+            'iam:UntagPolicy',
+            'iam:UntagRole',
+            'iam:UpdateAssumeRolePolicy',
+            'iam:UpdateRole',
+            'iam:UpdateRoleDescription',
+          ],
           resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['iam:PassRole'],
+          resources: accountRoleArns,
+          conditions: {
+            StringEquals: {
+              'iam:PassedToService': ['lambda.amazonaws.com', 'scheduler.amazonaws.com', 'apigateway.amazonaws.com'],
+            },
+          },
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
@@ -100,8 +155,8 @@ export class GitHubAuthStack extends Stack {
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['ssm:*'],
-          resources: ['*'],
+          actions: ['ssm:GetParameter', 'ssm:GetParameters', 'ssm:DeleteParameter', 'ssm:PutParameter'],
+          resources: ssmParameterArns,
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
@@ -125,8 +180,19 @@ export class GitHubAuthStack extends Stack {
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['secretsmanager:*'],
-          resources: ['*'],
+          actions: [
+            'secretsmanager:CreateSecret',
+            'secretsmanager:DeleteSecret',
+            'secretsmanager:DescribeSecret',
+            'secretsmanager:GetSecretValue',
+            'secretsmanager:ListSecretVersionIds',
+            'secretsmanager:PutSecretValue',
+            'secretsmanager:RestoreSecret',
+            'secretsmanager:TagResource',
+            'secretsmanager:UntagResource',
+            'secretsmanager:UpdateSecret',
+          ],
+          resources: backendSecretArns,
         }),
         new PolicyStatement({
           effect: Effect.ALLOW,
@@ -143,29 +209,98 @@ export class GitHubAuthStack extends Stack {
           actions: ['cloudfront:*'],
           resources: ['*'],
         }),
+      ],
+    });
+  }
+
+  private buildDnsDeployPolicy(): PolicyDocument {
+    const ssmParameterArns = [
+      this.formatArn({
+        service: 'ssm',
+        resource: 'parameter',
+        resourceName: 'cdk-bootstrap/*',
+      }),
+    ];
+
+    return new PolicyDocument({
+      statements: [
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['tag:*'],
+          actions: ['sts:GetCallerIdentity'],
           resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['cloudformation:*'],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['s3:*'],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'route53:ChangeResourceRecordSets',
+            'route53:ChangeTagsForResource',
+            'route53:CreateHostedZone',
+            'route53:DeleteHostedZone',
+            'route53:GetChange',
+            'route53:GetHostedZone',
+            'route53:ListHostedZones',
+            'route53:ListHostedZonesByName',
+            'route53:ListResourceRecordSets',
+          ],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+          resources: ssmParameterArns,
         }),
       ],
     });
+  }
 
-    const role = new Role(this, 'gitHubDeployRole', {
-      roleName: `githubActionsDeployRole-${props.accountNumberForNaming}`,
-      assumedBy: new WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, conditions),
-      inlinePolicies: {
-        GitHubActionsDeployPolicy: deployPolicy,
-      },
-      description: 'This role is used via GitHub Actions to deploy with AWS CDK or Terraform on the target AWS account',
-      maxSessionDuration: Duration.hours(1),
+  private buildDeployPolicy(permissionProfile: DeployRolePermissionProfile): PolicyDocument {
+    return permissionProfile === 'dns' ? this.buildDnsDeployPolicy() : this.buildRuntimeDeployPolicy();
+  }
+
+  constructor(scope: Construct, id: string, props: GitHubAuthStackProps) {
+    super(scope, id, props);
+
+    const githubProvider = new OpenIdConnectProvider(this, 'GithubActionsProvider', {
+      url: `https://${this.githubDomain}`,
+      clientIds: [this.stsService],
     });
 
-    new CfnOutput(this, 'GithubActionOidcIamRoleArn', {
-      value: role.roleArn,
-      description: `Arn for AWS IAM role with Github OIDC auth for ${iamRepoDeployAccess}`,
-      exportName: `GithubActionOidcIamRoleArn-${props.accountNumberForNaming}`,
-    });
+    for (const deployRole of props.deployRoles) {
+      const filters = deployRole.filters?.length ? deployRole.filters : ['*'];
+      const subjectFilters = filters.map((filter) => `repo:${props.repositoryOwner}/${props.repositoryName}:${filter}`);
+      const conditions: Conditions = {
+        StringLike: {
+          [`${this.githubDomain}:sub`]: subjectFilters,
+          [`${this.githubDomain}:aud`]: this.stsService,
+        },
+      };
+
+      const role = new Role(this, deployRole.roleId, {
+        roleName: `${deployRole.roleNamePrefix}-${props.accountNumberForNaming}`,
+        assumedBy: new WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, conditions),
+        inlinePolicies: {
+          GitHubActionsDeployPolicy: this.buildDeployPolicy(deployRole.permissionProfile),
+        },
+        description: deployRole.description,
+        maxSessionDuration: Duration.hours(1),
+      });
+
+      new CfnOutput(this, deployRole.outputKey, {
+        value: role.roleArn,
+        description: `Arn for AWS IAM role with GitHub OIDC auth for ${subjectFilters.join(', ')}`,
+        exportName: `${deployRole.outputKey}-${props.accountNumberForNaming}`,
+      });
+    }
 
     Tags.of(this).add('component', 'CdkGithubActionsOidcIamRole');
   }

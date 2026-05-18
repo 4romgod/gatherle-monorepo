@@ -1,16 +1,29 @@
 import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import {
+  Alarm,
+  AlarmWidget,
+  ComparisonOperator,
   Dashboard,
   GraphWidget,
   LogQueryVisualizationType,
   LogQueryWidget,
   Metric,
   TextWidget,
+  TreatMissingData,
 } from 'aws-cdk-lib/aws-cloudwatch';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ILogGroup } from 'aws-cdk-lib/aws-logs';
 import { Duration } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
+import {
+  DEFAULT_WEBSOCKET_CLIENT_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_CONNECT_SPIKE_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_EXECUTION_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_INTEGRATION_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_LAMBDA_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_LAMBDA_THROTTLE_ALARM_THRESHOLDS,
+  DEFAULT_WEBSOCKET_MESSAGE_SPIKE_ALARM_THRESHOLDS,
+} from '../constants';
 
 export interface WebsocketMonitoringDashboardConstructProps {
   stageName: string;
@@ -55,6 +68,69 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
         period: Duration.minutes(5),
         color,
       });
+
+    const websocketLambdaErrorAlarm = new Alarm(this, 'WebsocketLambdaErrorAlarm', {
+      metric: websocketLambdaFunction.metricErrors({ statistic: 'Sum', period: Duration.minutes(5) }),
+      threshold: DEFAULT_WEBSOCKET_LAMBDA_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when the WebSocket Lambda errors.',
+    });
+
+    const websocketLambdaThrottleAlarm = new Alarm(this, 'WebsocketLambdaThrottleAlarm', {
+      metric: websocketLambdaFunction.metricThrottles({ statistic: 'Sum', period: Duration.minutes(5) }),
+      threshold: DEFAULT_WEBSOCKET_LAMBDA_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when the WebSocket Lambda is throttled.',
+    });
+
+    const websocketClientErrorAlarm = new Alarm(this, 'WebsocketClientErrorAlarm', {
+      metric: webSocketMetric('ClientError', 'ClientError', '#d62728'),
+      threshold: DEFAULT_WEBSOCKET_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 12,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when WebSocket client-side rejections spike.',
+    });
+
+    const websocketIntegrationErrorAlarm = new Alarm(this, 'WebsocketIntegrationErrorAlarm', {
+      metric: webSocketMetric('IntegrationError', 'IntegrationError', '#9467bd'),
+      threshold: DEFAULT_WEBSOCKET_INTEGRATION_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when API Gateway WebSocket integration errors spike.',
+    });
+
+    const websocketExecutionErrorAlarm = new Alarm(this, 'WebsocketExecutionErrorAlarm', {
+      metric: webSocketMetric('ExecutionError', 'ExecutionError', '#8c564b'),
+      threshold: DEFAULT_WEBSOCKET_EXECUTION_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when API Gateway WebSocket execution errors spike.',
+    });
+
+    const websocketConnectSpikeAlarm = new Alarm(this, 'WebsocketConnectSpikeAlarm', {
+      metric: webSocketMetric('ConnectCount', 'ConnectCount'),
+      threshold: DEFAULT_WEBSOCKET_CONNECT_SPIKE_ALARM_THRESHOLDS[stageName] ?? 20,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when WebSocket connection attempts spike unexpectedly.',
+    });
+
+    const websocketMessageSpikeAlarm = new Alarm(this, 'WebsocketMessageSpikeAlarm', {
+      metric: webSocketMetric('MessageCount', 'MessageCount', '#2ca02c'),
+      threshold: DEFAULT_WEBSOCKET_MESSAGE_SPIKE_ALARM_THRESHOLDS[stageName] ?? 60,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when WebSocket message volume spikes unexpectedly.',
+    });
 
     this.dashboard.addWidgets(
       new TextWidget({
@@ -123,6 +199,16 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
         width: 12,
         height: 6,
       }),
+      new GraphWidget({
+        title: 'Traffic Spike Signals',
+        left: [
+          webSocketMetric('ConnectCount', 'ConnectCount'),
+          webSocketMetric('DisconnectCount', 'DisconnectCount', '#ff7f0e'),
+          webSocketMetric('MessageCount', 'MessageCount', '#2ca02c'),
+        ],
+        width: 12,
+        height: 6,
+      }),
       new LogQueryWidget({
         title: 'Route Mix (5m)',
         logGroupNames: [websocketLambdaLogGroup.logGroupName],
@@ -133,6 +219,65 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
           'stats count() as requests by routeKey, bin(5m)',
         ],
         width: 12,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Security Alarms',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new AlarmWidget({
+        title: 'WebSocket Lambda Errors',
+        alarm: websocketLambdaErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'WebSocket Lambda Throttles',
+        alarm: websocketLambdaThrottleAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'WebSocket Client Errors',
+        alarm: websocketClientErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new AlarmWidget({
+        title: 'WebSocket Integration Errors',
+        alarm: websocketIntegrationErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'WebSocket Execution Errors',
+        alarm: websocketExecutionErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'WebSocket Connect Spike',
+        alarm: websocketConnectSpikeAlarm,
+        width: 8,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new AlarmWidget({
+        title: 'WebSocket Message Spike',
+        alarm: websocketMessageSpikeAlarm,
+        width: 24,
         height: 6,
       }),
     );

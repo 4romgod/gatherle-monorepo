@@ -20,7 +20,7 @@ you to validate CI changes without pushing to GitHub.
 
 | File                  | Trigger                 | Purpose                                         |
 | --------------------- | ----------------------- | ----------------------------------------------- |
-| `pr-check.yaml`       | `pull_request` → `main` | Lint, typecheck, build, unit tests              |
+| `presubmit-ci.yaml`   | `pull_request` → `main` | Lint, typecheck, build, unit tests              |
 | `deploy-trigger.yaml` | `push` → `main`         | Orchestrates DNS + runtime deploys to Beta/Prod |
 | `deploy.yaml`         | Reusable                | Runtime CDK deploy + e2e tests                  |
 | `deploy-dns.yaml`     | Reusable                | DNS CDK deploy                                  |
@@ -34,7 +34,7 @@ credentials stored locally. Clear them and retry:
 
 ```bash
 docker logout
-act pull_request -W .github/workflows/pr-check.yaml
+act pull_request -W .github/workflows/presubmit-ci.yaml
 ```
 
 Public images (like `catthehacker/ubuntu`) do not require a Docker Hub login. If you want to stay authenticated, run
@@ -44,7 +44,7 @@ As a workaround, pull the image manually first and skip the registry check:
 
 ```bash
 docker pull catthehacker/ubuntu:act-latest
-act -j pr-check --pull=false
+act -j presubmit-ci --pull=false
 ```
 
 ## Most Common Usage
@@ -59,25 +59,25 @@ This shows all jobs across all workflows with their IDs, e.g.:
 
 ```
 Stage  Job ID    Job name  Workflow name  Workflow file    Events
-0      pr-check  PR Check  PR Check       pr-check.yaml    pull_request
+0      presubmit-ci  Presubmit CI (PR validation)  Presubmit CI (PR validation)  presubmit-ci.yaml  pull_request
 0      deploy    Deploy    Deploy         deploy.yaml      ...
 ```
 
 ### Step 2 — run a job by ID
 
 ```bash
-act -j pr-check
+act -j presubmit-ci
 ```
 
 ### Alternative: target a specific workflow file + event
 
 ```bash
-act pull_request -W .github/workflows/pr-check.yaml
+act pull_request -W .github/workflows/presubmit-ci.yaml
 ```
 
 ## Secrets & Environment Variables
 
-The PR check workflow does not require AWS credentials and runs without secrets.
+The presubmit CI workflow does not require AWS credentials and runs without secrets.
 
 For the deploy workflows, `act` needs AWS credentials and app secrets. Create a local `.secrets` file (already in
 `.gitignore`) in the repo root:
@@ -112,7 +112,7 @@ act push -W .github/workflows/deploy-trigger.yaml --secret-file .secrets
 If a step fails due to a missing tool (e.g., `node` not found), switch to the medium image:
 
 ```bash
-act pull_request -W .github/workflows/pr-check.yaml \
+act pull_request -W .github/workflows/presubmit-ci.yaml \
   -P ubuntu-latest=catthehacker/ubuntu:full-latest
 ```
 
@@ -129,9 +129,9 @@ act pull_request -W .github/workflows/pr-check.yaml \
 | `-v`                   | Verbose output                                   |
 | `--reuse`              | Reuse containers between runs (faster iteration) |
 
-## Workflow Step Reference (pr-check)
+## Workflow Step Reference (presubmit-ci)
 
-These are the steps executed in order by `pr-check.yaml`:
+These are the steps executed in order by `presubmit-ci.yaml`:
 
 1. `commons` — Lint + TypeScript build
 2. `api` — Lint + TypeScript build + unit tests

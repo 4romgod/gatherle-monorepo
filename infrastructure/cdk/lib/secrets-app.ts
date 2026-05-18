@@ -7,8 +7,16 @@ const app = new App();
 
 const deploymentStage = process.env.STAGE;
 const deploymentRegion = process.env.AWS_REGION;
-const mongoDbUrl = process.env.MONGO_DB_URL;
-const jwtSecret = process.env.JWT_SECRET;
+const requireNonEmptyEnv = (name: 'JWT_SECRET' | 'MONGO_DB_URL'): string => {
+  const value = process.env[name];
+  if (!value?.trim()) {
+    throw new Error(
+      `Missing secret value for ${name}. Provide a non-empty ${name} before deploying SecretsManagementStack.`,
+    );
+  }
+
+  return value.trim();
+};
 
 if (!deploymentStage || !deploymentRegion) {
   throw new Error(
@@ -17,11 +25,8 @@ if (!deploymentStage || !deploymentRegion) {
   );
 }
 
-if (!mongoDbUrl || !jwtSecret) {
-  throw new Error(
-    'Missing secret values. Provide both `MONGO_DB_URL` and `JWT_SECRET` for SecretsManagementStack deployment.',
-  );
-}
+const mongoDbUrl = requireNonEmptyEnv('MONGO_DB_URL');
+const jwtSecret = requireNonEmptyEnv('JWT_SECRET');
 
 const serviceAccount = resolveServiceAccount(deploymentStage, deploymentRegion);
 
@@ -33,6 +38,8 @@ new SecretsManagementStack(app, 'SecretsManagementStack', {
   stackName: buildStackName('secrets-management', serviceAccount.applicationStage, serviceAccount.awsRegion),
   applicationStage: serviceAccount.applicationStage,
   awsRegion: serviceAccount.awsRegion,
+  mongoDbUrl,
+  jwtSecret,
   description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
 });
 

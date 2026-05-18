@@ -158,6 +158,9 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - DNS deploy derives GitHub Environment name as `dns-<region>` (for example `dns-af-south-1`).
 - Create one GitHub **Environment** per target (for example `dns-af-south-1`, `beta-af-south-1`, `prod-af-south-1`) so
   each target has isolated secrets/approvals.
+- PR security now has dedicated workflows:
+  - `.github/workflows/security-check.yaml`
+  - `.github/workflows/codeql.yaml`
 
 ### GitHub Environment Secrets (sensitive)
 
@@ -215,8 +218,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 ### Manual Auth Bootstrap (one-time per AWS account)
 
-`GitHubAuthStack` (from `npm run cdk:github-auth`) creates the IAM OIDC provider and deploy role that CI/CD later
-assumes.  
+`GitHubAuthStack` (from `npm run cdk:github-auth`) creates the IAM OIDC provider and environment-specific deploy roles
+that CI/CD later assumes.  
 Because this role does not exist on day one, bootstrap it manually with admin AWS credentials:
 
 ```bash
@@ -224,19 +227,28 @@ cd /home/bigfish/code/projects/gatherle-monorepo
 AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=327319899143 npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively
 ```
 
-Then capture the created role ARN and store it as GitHub Environment secret `ASSUME_ROLE_ARN`:
+Then capture the created role ARN and store the environment-specific value as GitHub Environment secret
+`ASSUME_ROLE_ARN`:
 
 ```bash
 cd /home/bigfish/code/projects/gatherle-monorepo
 STAGE=Beta AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --stack-name gatherle-github-auth-327319899143 \
-  --query "Stacks[0].Outputs[?OutputKey=='GithubActionOidcIamRoleArn'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionBetaDeployRoleArn'].OutputValue" \
   --output text
 ```
+
+Use the matching output key per environment:
+
+- `beta-<region>` -> `GithubActionBetaDeployRoleArn`
+- `prod-<region>` -> `GithubActionProdDeployRoleArn`
+- `dns-<region>` -> `GithubActionDnsDeployRoleArn`
 
 ### Manual Secrets Bootstrap / Rotation (intentional only)
 
 - Runtime deployment intentionally excludes `SecretsManagementStack`.
+- The main runtime CDK app now only instantiates `SecretsManagementStack` when both `MONGO_DB_URL` and `JWT_SECRET` are
+  provided, so routine synth/deploy flows do not accidentally stage blank secret values.
 - Bootstrap or rotate backend secret values manually:
 
 ```bash

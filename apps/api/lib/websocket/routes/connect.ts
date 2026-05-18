@@ -2,12 +2,13 @@ import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
 import { logger } from '@/utils/logger';
-import { CONNECTION_TTL_HOURS, WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
+import { CONNECTION_TTL_HOURS, WEBSOCKET_AUTH_PROTOCOL_PREFIX, WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
 import { extractToken, getConnectionMetadata, getHeader } from '@/websocket/event';
 import { response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 import { HttpStatusCode } from '@/constants';
 
 const extractAuthProtocol = (event: WebSocketRequestEvent): string | undefined => {
@@ -54,6 +55,7 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
   }
 
   await ensureDatabaseConnection();
+  await assertWebSocketRateLimit(WEBSOCKET_ROUTES.CONNECT, { userId: user.userId });
 
   const { connectionId, domainName, stage } = getConnectionMetadata(event);
 
