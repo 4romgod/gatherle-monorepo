@@ -10,6 +10,7 @@ export * from './EventOccurrenceParticipant/query';
 export * from './Follow/query';
 export * from './Follow/types';
 export * from './Health/query';
+export * from './Media/query';
 export * from './Notification/query';
 export * from './Notification/types';
 export * from './Organization/query';

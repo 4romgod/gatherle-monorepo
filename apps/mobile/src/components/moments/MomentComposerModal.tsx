@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
@@ -24,6 +25,7 @@ import {
 import type { MomentBackgroundToken } from '@/lib/moments/constants';
 import { getMomentAssetExtension } from '@/lib/moments/upload';
 import { useCreateEventMoment } from '@/hooks/moments/useCreateEventMoment';
+import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 
 type ComposerTab = 'text' | 'image' | 'video';
 
@@ -42,6 +44,7 @@ export function MomentComposerModal({
   onCreated: () => void;
   open: boolean;
 }) {
+  const { showToast, withBlockingLoader } = useAppFeedback();
   const { theme } = useAppTheme();
   const sheetRef = useRef<BottomSheetModal>(null);
   const { createMoment, loading } = useCreateEventMoment(authToken);
@@ -52,7 +55,10 @@ export function MomentComposerModal({
   const [selectedBackground, setSelectedBackground] = useState<MomentBackgroundToken>(MOMENT_DEFAULT_BACKGROUND);
   const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const remainingCaption = useMemo(() => MOMENT_MAX_CAPTION_LENGTH - caption.length, [caption.length]);
-  const videoPreviewSource = activeTab === 'video' && selectedAsset?.uri ? { uri: selectedAsset.uri } : null;
+  const videoPreviewSource = useMemo(
+    () => (activeTab === 'video' && selectedAsset?.uri ? { uri: selectedAsset.uri } : null),
+    [activeTab, selectedAsset?.uri],
+  );
   const videoPreviewPlayer = useVideoPlayer(videoPreviewSource, (player) => {
     player.loop = true;
     player.muted = true;
@@ -119,12 +125,22 @@ export function MomentComposerModal({
     const extension = getMomentAssetExtension(asset);
 
     if (!MOMENT_IMAGE_EXTENSIONS.includes(extension as (typeof MOMENT_IMAGE_EXTENSIONS)[number])) {
-      Alert.alert('Unsupported image', 'Please choose a JPEG, PNG, or WEBP image.');
+      showToast({ message: 'Please choose a JPEG, PNG, or WEBP image.', title: 'Unsupported image', tone: 'error' });
       return;
     }
 
-    if (asset.fileSize && asset.fileSize > MOMENT_MAX_IMAGE_BYTES) {
-      Alert.alert('Image too large', 'Images must be 15 MB or smaller.');
+    let effectiveImageSize = asset.fileSize;
+    if (effectiveImageSize == null) {
+      try {
+        const info = await FileSystem.getInfoAsync(asset.uri);
+        effectiveImageSize = info.exists ? info.size : undefined;
+      } catch {
+        effectiveImageSize = undefined;
+      }
+    }
+
+    if (effectiveImageSize != null && effectiveImageSize > MOMENT_MAX_IMAGE_BYTES) {
+      showToast({ message: 'Images must be 15 MB or smaller.', title: 'Image too large', tone: 'error' });
       return;
     }
 
@@ -147,17 +163,17 @@ export function MomentComposerModal({
     const extension = getMomentAssetExtension(asset);
 
     if (!MOMENT_VIDEO_EXTENSIONS.includes(extension as (typeof MOMENT_VIDEO_EXTENSIONS)[number])) {
-      Alert.alert('Unsupported video', 'Please choose an MP4, MOV, or WEBM video.');
+      showToast({ message: 'Please choose an MP4, MOV, or WEBM video.', title: 'Unsupported video', tone: 'error' });
       return;
     }
 
     if (asset.fileSize && asset.fileSize > MOMENT_MAX_VIDEO_BYTES) {
-      Alert.alert('Video too large', 'Videos must be 75 MB or smaller.');
+      showToast({ message: 'Videos must be 75 MB or smaller.', title: 'Video too large', tone: 'error' });
       return;
     }
 
     if (asset.duration && asset.duration > MOMENT_MAX_VIDEO_DURATION_MS) {
-      Alert.alert('Video too long', 'Videos must be 30 seconds or shorter.');
+      showToast({ message: 'Videos must be 30 seconds or shorter.', title: 'Video too long', tone: 'error' });
       return;
     }
 
@@ -167,46 +183,61 @@ export function MomentComposerModal({
 
   const handleSubmit = async () => {
     try {
-      if (activeTab === 'text') {
-        await createMoment({
-          background: selectedBackground,
-          caption,
-          eventId,
-          occurrenceId,
-          type: 'text',
-        });
-      } else if (activeTab === 'image') {
-        if (!selectedAsset) {
-          Alert.alert('Image required', 'Choose an image before posting this moment.');
-          return;
+      await withBlockingLoader('Sharing your moment…', async () => {
+        if (activeTab === 'text') {
+          await createMoment({
+            background: selectedBackground,
+            caption,
+            eventId,
+            occurrenceId,
+            type: 'text',
+          });
+        } else if (activeTab === 'image') {
+          if (!selectedAsset) {
+            showToast({
+              message: 'Choose an image before posting this moment.',
+              title: 'Image required',
+              tone: 'error',
+            });
+            return;
+          }
+
+          await createMoment({
+            asset: selectedAsset,
+            caption,
+            eventId,
+            occurrenceId,
+            type: 'image',
+          });
+        } else {
+          if (!selectedAsset) {
+            showToast({
+              message: 'Choose a video before posting this moment.',
+              title: 'Video required',
+              tone: 'error',
+            });
+            return;
+          }
+
+          await createMoment({
+            asset: selectedAsset,
+            caption,
+            eventId,
+            occurrenceId,
+            type: 'video',
+          });
         }
 
-        await createMoment({
-          asset: selectedAsset,
-          caption,
-          eventId,
-          occurrenceId,
-          type: 'image',
-        });
-      } else {
-        if (!selectedAsset) {
-          Alert.alert('Video required', 'Choose a video before posting this moment.');
-          return;
-        }
-
-        await createMoment({
-          asset: selectedAsset,
-          caption,
-          eventId,
-          occurrenceId,
-          type: 'video',
-        });
-      }
-
-      handleClose();
-      onCreated();
+        handleClose();
+        onCreated();
+        showToast({ message: 'Your moment is live.', tone: 'success' });
+      });
     } catch (error) {
-      Alert.alert('Moment failed', error instanceof Error ? error.message : 'We could not post this moment.');
+      showToast({
+        message: error instanceof Error ? error.message : 'We could not post this moment.',
+        title: 'Moment failed',
+        tone: 'error',
+      });
     }
   };
 

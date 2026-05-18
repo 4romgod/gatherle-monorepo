@@ -235,4 +235,28 @@ describe('GraphQL API hardening', () => {
       expect(response.body.errors[0].message).toContain('maximum allowed complexity');
     });
   });
+
+  describe('readMomentById query', () => {
+    it('returns null for a non-existent moment ID as an anonymous caller', async () => {
+      const response = await request(url).post('').send({
+        query: `query { readMomentById(momentId: "00000000-0000-0000-0000-000000000000") { momentId } }`,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data.readMomentById).toBeNull();
+    });
+
+    it('returns null for a non-existent moment ID as an authenticated caller', async () => {
+      const seededUsers = await getSeededTestUsers();
+      const token = await loginSeededUser(seededUsers[0]);
+      const response = await request(url).post('').set('Authorization', `Bearer ${token}`).send({
+        query: `query { readMomentById(momentId: "00000000-0000-0000-0000-000000000000") { momentId } }`,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data.readMomentById).toBeNull();
+    });
+  });
 });

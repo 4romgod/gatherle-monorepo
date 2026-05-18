@@ -163,7 +163,7 @@ EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
 Why this works:
 
 - without port reversal, `localhost` on the phone points to the phone
-- with `adb reverse`, `localhost:9000` on the phone are forwarded back to your laptop
+- with `adb reverse`, `localhost:9000` on the phone is forwarded back to your laptop
 
 This is Android-only. iPhone does not support `adb reverse`.
 

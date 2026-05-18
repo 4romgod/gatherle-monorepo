@@ -63,7 +63,9 @@ class MediaService {
     const key =
       mediaType === MediaType.Gallery
         ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/gallery/${randomBytes(8).toString('base64url')}.${cleanExt}`
-        : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}.${cleanExt}`;
+        : entityType === MediaEntityType.User && mediaType === MediaType.Avatar
+          ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}-${randomBytes(8).toString('base64url')}.${cleanExt}`
+          : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}.${cleanExt}`;
 
     if (!MEDIA_CDN_DOMAIN) {
       throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');

@@ -3,6 +3,7 @@ import { ApolloProvider } from '@apollo/client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { apolloClient } from '@data/graphql/apollo-client';
 import { AppShellProvider } from './providers/AppShellProvider';
+import { AppFeedbackProvider } from './providers/AppFeedbackProvider';
 import { AppThemeProvider } from '@/shared/theme/AppThemeProvider';
 
 export function AppProviders({ children }: PropsWithChildren) {
@@ -10,7 +11,9 @@ export function AppProviders({ children }: PropsWithChildren) {
     <ApolloProvider client={apolloClient}>
       <SafeAreaProvider>
         <AppThemeProvider>
-          <AppShellProvider>{children}</AppShellProvider>
+          <AppShellProvider>
+            <AppFeedbackProvider>{children}</AppFeedbackProvider>
+          </AppShellProvider>
         </AppThemeProvider>
       </SafeAreaProvider>
     </ApolloProvider>

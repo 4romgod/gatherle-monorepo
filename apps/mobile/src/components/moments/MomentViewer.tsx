@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLazyQuery } from '@apollo/client';
+import { useApolloClient, useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
 import { useEventListener } from 'expo';
 import { useNavigation } from '@react-navigation/native';
@@ -84,6 +84,7 @@ export function MomentViewer({
   embedded = false,
   moments,
   onClose,
+  onDeleted,
   open,
   showCloseButton = true,
   startIndex = 0,
@@ -93,6 +94,7 @@ export function MomentViewer({
   embedded?: boolean;
   moments: MomentLike[];
   onClose: () => void;
+  onDeleted?: (momentId: string) => void;
   open: boolean;
   showCloseButton?: boolean;
   startIndex?: number;
@@ -123,6 +125,7 @@ export function MomentViewer({
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
   });
+  const apolloClient = useApolloClient();
   const { deleteMoment } = useDeleteEventMoment(authToken);
   const videoSource = useMemo(
     () =>
@@ -583,6 +586,11 @@ export function MomentViewer({
               if (!deleted) {
                 throw new Error('Delete failed');
               }
+              apolloClient.cache.evict({
+                id: apolloClient.cache.identify({ __typename: 'EventMoment', momentId: currentMoment.momentId }),
+              });
+              apolloClient.cache.gc();
+              onDeleted?.(currentMoment.momentId);
               setMenuOpen(false);
               requestClose();
             } catch {

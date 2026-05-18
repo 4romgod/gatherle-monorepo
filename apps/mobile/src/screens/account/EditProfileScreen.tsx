@@ -1,14 +1,17 @@
-import { useMutation } from '@apollo/client';
+import { useMutation, useLazyQuery } from '@apollo/client';
 import { UpdateUserDocument } from '@data/graphql/mutation/User/mutation';
+import { GetMediaUploadUrlDocument } from '@data/graphql/query/Media/query';
+import { MediaEntityType, MediaType } from '@data/graphql/types/graphql';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
+import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileEditorHero } from '@/components/account/edit-profile/ProfileEditorHero';
 import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import { AccountSectionCard } from '@/components/account/shared/AccountSectionCard';
-import { AccountStatusBanner } from '@/components/account/shared/AccountStatusBanner';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
@@ -17,20 +20,53 @@ import { useAccountProfile } from '@/hooks/account/useAccountProfile';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildEditProfileInput, createEditProfileForm, validateEditProfileForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
+import { uploadImageAssetToSignedUrl, getImageAssetExtension } from '@/lib/media/upload';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
 export function EditProfileScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, isAuthenticated, updateSessionIdentity, username } = useAppShell();
+  const { showToast, withBlockingLoader } = useAppFeedback();
+  const { authToken, isAuthenticated, updateSessionIdentity, userId, username } = useAppShell();
   const { error, loading, profile, refetch } = useAccountProfile(username, authToken, isAuthenticated);
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
+  const [getUploadUrl] = useLazyQuery(GetMediaUploadUrlDocument, {
+    fetchPolicy: 'no-cache',
+    ...getApolloAuthContext(authToken),
+  });
   const [form, setForm] = useState(() => createEditProfileForm(null));
-  const [status, setStatus] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  const [selectedAvatarAsset, setSelectedAvatarAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
       await refetch();
     }, [refetch]),
   );
+
+  const handleAvatarPress = async () => {
+    if (!userId) {
+      showToast({
+        message: 'Your account session is missing profile identity. Please sign in again.',
+        tone: 'error',
+      });
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast({ message: 'Photo library access is required to update your avatar.', tone: 'error' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      mediaTypes: 'images',
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setSelectedAvatarAsset(asset);
+    setAvatarPreviewUrl(asset.uri);
+  };
 
   useEffect(() => {
     if (!profile) {
@@ -41,39 +77,68 @@ export function EditProfileScreen() {
   }, [profile]);
 
   const handleSave = async () => {
-    if (!profile || !authToken) {
+    if (!profile || !authToken || !userId) {
       return;
     }
 
     const validationMessage = validateEditProfileForm(form);
     if (validationMessage) {
-      setStatus({ message: validationMessage, tone: 'error' });
+      showToast({ message: validationMessage, tone: 'error' });
       return;
     }
 
     try {
-      const response = await updateUser({
-        variables: {
-          input: buildEditProfileInput(profile, form),
-        },
-        ...getApolloAuthContext(authToken),
-      });
+      await withBlockingLoader('Saving your profile…', async () => {
+        const selectedAvatarPreviewUrl = selectedAvatarAsset?.uri ?? null;
+        let nextAvatarUrl: string | undefined;
 
-      const updatedUser = response.data?.updateUser;
-      if (!updatedUser) {
-        setStatus({ message: 'We could not save your profile just now.', tone: 'error' });
-        return;
-      }
+        if (selectedAvatarAsset) {
+          const ext = getImageAssetExtension(selectedAvatarAsset);
+          const { data: urlData } = await getUploadUrl({
+            variables: {
+              entityId: userId,
+              entityType: MediaEntityType.User,
+              extension: ext,
+              mediaType: MediaType.Avatar,
+            },
+          });
 
-      updateSessionIdentity({
-        email: updatedUser.email,
-        username: updatedUser.username,
+          if (!urlData?.getMediaUploadUrl) {
+            throw new Error('Could not get avatar upload URL.');
+          }
+
+          const { uploadUrl, readUrl } = urlData.getMediaUploadUrl;
+          await uploadImageAssetToSignedUrl(uploadUrl, selectedAvatarAsset);
+          nextAvatarUrl = readUrl;
+        }
+
+        const response = await updateUser({
+          variables: {
+            input: {
+              ...buildEditProfileInput(profile, form),
+              profile_picture: nextAvatarUrl,
+            },
+          },
+          ...getApolloAuthContext(authToken),
+        });
+
+        const updatedUser = response.data?.updateUser;
+        if (!updatedUser) {
+          throw new Error('We could not save your profile just now.');
+        }
+
+        updateSessionIdentity({
+          email: updatedUser.email,
+          username: updatedUser.username,
+        });
+        setForm(createEditProfileForm(updatedUser));
+        setSelectedAvatarAsset(null);
+        setAvatarPreviewUrl(selectedAvatarPreviewUrl ?? nextAvatarUrl ?? updatedUser.profile_picture ?? null);
+        showToast({ message: 'Profile updated successfully.', tone: 'success' });
+        void refetch();
       });
-      setForm(createEditProfileForm(updatedUser));
-      setStatus({ message: 'Profile updated successfully.', tone: 'success' });
-      void refetch();
     } catch (mutationError) {
-      setStatus({
+      showToast({
         message: mutationError instanceof Error ? mutationError.message : 'We could not save your profile just now.',
         tone: 'error',
       });
@@ -122,8 +187,11 @@ export function EditProfileScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      <ProfileEditorHero profile={profile} />
-      {status ? <AccountStatusBanner message={status.message} tone={status.tone} /> : null}
+      <ProfileEditorHero
+        avatarUrlOverride={avatarPreviewUrl}
+        onAvatarPress={() => void handleAvatarPress()}
+        profile={profile}
+      />
 
       <AccountSectionCard
         description="These details follow you into event cards, messages, and your profile header."

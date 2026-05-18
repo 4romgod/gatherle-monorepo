@@ -12,3 +12,32 @@ export const CreateEventDocument = graphql(`
     }
   }
 `);
+
+export const UpdateEventDocument = graphql(`
+  mutation UpdateEvent($input: UpdateEventInput!) {
+    updateEvent(input: $input) {
+      eventId
+      slug
+      title
+      status
+      lifecycleStatus
+      visibility
+      privacySetting
+      capacity
+      waitlistEnabled
+      allowGuestPlusOnes
+      eventLink
+      summary
+      description
+    }
+  }
+`);
+
+export const DeleteEventByIdDocument = graphql(`
+  mutation DeleteEventById($eventId: String!) {
+    deleteEventById(eventId: $eventId) {
+      eventId
+      title
+    }
+  }
+`);

@@ -5,5 +5,7 @@ export * from './EventOccurrenceParticipant/mutation';
 export * from './Follow/mutation';
 export * from './Media/mutation';
 export * from './Notification/mutation';
+export * from './Organization/mutation';
 export * from './User/mutation';
 export * from './User/types';
+export * from './Venue/mutation';
