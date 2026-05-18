@@ -28,8 +28,8 @@ import {
 } from '@/lib/events/formatters';
 import { addEventToCalendar, openEventLocationInMaps, shareEvent } from '@/lib/events/deviceActions';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type EventDetailsRoute = RouteProp<RootStackParamList, 'EventDetails'>;
 

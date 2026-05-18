@@ -2,7 +2,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
 import { NotificationRow } from '@/components/notifications/NotificationRow';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type SwipeableNotificationRowProps = React.ComponentProps<typeof NotificationRow> & {
   onDelete?: () => void;

@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import type { MobileChatMessage } from '@data/graphql/query/Chat/types';
 import { formatThreadTime } from '@/lib/messages/thread';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type ChatBubbleProps = {
   isOutgoing: boolean;

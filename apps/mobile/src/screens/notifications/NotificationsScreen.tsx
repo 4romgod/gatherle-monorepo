@@ -13,13 +13,13 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { NotificationRowSkeleton } from '@/components/skeleton/NotificationRowSkeleton';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
-import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
+import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type NotificationFeedItem =
   | { createdAt: string; id: string; kind: 'notification'; notification: MobileNotification }

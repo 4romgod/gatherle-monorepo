@@ -5,11 +5,11 @@ import { useEffect, useState } from 'react';
 import { VerifyEmailDocument } from '@data/graphql/mutation/User/mutation';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
-import { AuthScreenShell } from '@/features/auth/components/AuthScreenShell';
-import { AuthStatusPanel } from '@/features/auth/components/AuthStatusPanel';
-import { getApolloErrorMessage } from '@/features/auth/lib/apolloErrors';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
+import { AuthStatusPanel } from '@/components/auth/AuthStatusPanel';
+import { getApolloErrorMessage } from '@/lib/auth/apolloErrors';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type VerifyEmailRoute = RouteProp<RootStackParamList, 'VerifyEmail'>;
 type VerifyStatus = 'error' | 'success' | 'verifying';

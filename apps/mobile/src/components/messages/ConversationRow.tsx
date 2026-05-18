@@ -1,8 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileChatConversation } from '@data/graphql/query/Chat/types';
 import { formatRelativeTime, getDisplayName, getInitials } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type ConversationRowProps = {
   conversation: MobileChatConversation;

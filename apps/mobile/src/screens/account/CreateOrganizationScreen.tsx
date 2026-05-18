@@ -16,8 +16,8 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { getApolloAuthContext } from '@/lib/auth';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type OrgFormState = {
   billingEmail: string;

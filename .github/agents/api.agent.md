@@ -189,7 +189,7 @@ resolver implementation, database optimization, security enforcement, and mainta
 
 ### Out of Scope
 
-❌ Frontend/webapp work (use webapp agent)  
+❌ Frontend/mobile/webapp work (use frontend agent)  
 ❌ General infrastructure/DevOps (use infra agent)  
 ❌ CLI tools (apps/ops-cli — see that workspace's README)  
 ❌ Documentation-only changes

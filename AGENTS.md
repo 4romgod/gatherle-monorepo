@@ -39,6 +39,183 @@
 - **Local CI:** GitHub Actions workflows can be run locally with `act`. See [docs/local-ci.md](docs/local-ci.md) for
   setup and usage.
 
+## Frontend Workspace Guidance
+
+- Treat the frontend as **two product surfaces**:
+  - `apps/webapp` for Next.js/MUI/Tailwind
+  - `apps/mobile` for Expo React Native
+- The default parity target is **the mobile app and the mobile-sized webapp**, not the desktop webapp.
+- Before changing a user-facing flow on one surface, inspect the other surface and decide whether the current difference
+  is intentional or just drift.
+
+### Webapp Structure
+
+- `apps/webapp/app`: Next.js App Router routes and route groups, including `(protected)` and `auth/*`.
+- `apps/webapp/components`: shared web UI by domain (`events`, `messages`, `organization`, `venue`, `navigation`,
+  `core`, etc.).
+- `apps/webapp/data/graphql`: generated GraphQL docs/types plus query and mutation definitions.
+- `apps/webapp/hooks`, `apps/webapp/lib`, `apps/webapp/public`, `apps/webapp/test`.
+- Before writing or materially changing web UI, read and apply `docs/webapp/design-system.md`.
+- The default web visual language is Elevation Zero unless the task is explicitly constrained by an existing surface.
+
+### Mobile Structure
+
+- `apps/mobile/src/app`: app shell only
+  - `navigation`: root navigation, tab bar, drawer, header shell
+  - `providers`: app-wide providers and session shell
+  - `theme`: palette, typography, `AppThemeProvider`
+- `apps/mobile/src/screens`: route-level screens, organized by domain (`auth`, `events`, `messages`, `moments`, etc.)
+- `apps/mobile/src/components`: reusable UI by domain
+- `apps/mobile/src/hooks`: reusable React hooks
+- `apps/mobile/src/lib`: non-React helpers and product utilities
+- App shell providers are inlined in `apps/mobile/App.tsx`.
+- Bottom sheets use `@gorhom/bottom-sheet`.
+- Mobile auth is token/device-session based, not NextAuth.
+- Secure local storage uses Expo SecureStore through the shared device storage layer.
+
+### Common Frontend Commands
+
+- Web:
+  - `npm run dev:web`
+  - `npm run typecheck -w @gatherle/webapp`
+  - `npm run codegen -w @gatherle/webapp`
+  - `npm run test:e2e -w @gatherle/webapp`
+- Mobile:
+  - `npm run start -w @gatherle/mobile`
+  - `npm run start:lan -w @gatherle/mobile`
+  - `npm run run:android -w @gatherle/mobile`
+  - `npm run typecheck -w @gatherle/mobile`
+  - `npm run codegen -w @gatherle/mobile`
+  - `npm run apk:release -w @gatherle/mobile`
+  - `npm run apk:install -w @gatherle/mobile`
+- Shared frontend/backend contract:
+  - `npm run emit-schema -w @gatherle/api`
+
+### Common Frontend Workflows
+
+- Webapp uses NextAuth/browser-session semantics; mobile uses local token restoration with device storage.
+- Both surfaces use the same GraphQL backend and generated types. If a frontend feature needs backend changes, update
+  the contract, regenerate schema/types, then update both consumers when parity is expected.
+- Mobile uses `@gorhom/bottom-sheet`, explicit app-shell providers in `apps/mobile/App.tsx`, and shared feedback
+  patterns (blocking loader + toast/snackbar style feedback).
+- Media flows often use pre-signed upload URLs. When changing avatar/media behavior, verify that uploads, previews,
+  persistence, and cache invalidation all behave correctly on the target surface.
+- Moments/stories are core product surfaces. Be careful about parity across:
+  - regular moment viewer
+  - vertical moments feed
+  - moment reply deep links
+  - video readiness/mute/progress behavior
+
+### Frontend Architecture Rule
+
+- New frontend code should follow the current structure rather than reintroducing parallel patterns.
+- For mobile specifically:
+  - app shell concerns belong in `src/app`
+  - route screens belong in `src/screens`
+  - reusable UI belongs in `src/components`
+  - hooks belong in `src/hooks`
+  - non-React utilities belong in `src/lib`
+- Avoid recreating duplicate organizational models once a cleanup direction has been chosen.
+
+### Frontend File Placement Rules
+
+Use these rules when creating new frontend files so the structure stays consistent.
+
+#### Mobile (`apps/mobile`)
+
+- `App.tsx`
+  - app entry only
+  - compose top-level providers and root app shell
+  - do not place reusable UI or business logic here
+- `src/app/navigation`
+  - app-shell navigation only
+  - navigators, route definitions, route params/types, drawer/tab/header shell components
+  - examples: `RootNavigator`, `routes.ts`, `AppDrawer`, `BottomTabBar`, `HeaderMenuButton`
+- `src/app/providers`
+  - app-wide providers and global runtime wrappers
+  - examples: session shell, drawer state, feedback/toast provider, preview session provider
+- `src/app/theme`
+  - palette, typography, theme provider, theme helpers/constants
+  - do not create a second `shared/theme` or `components/theme` folder
+- `src/screens/<domain>`
+  - route-level screens only
+  - if it is mounted directly by navigation, it belongs here
+  - examples: `screens/events/EventsScreen.tsx`, `screens/account/EditProfileScreen.tsx`
+- `src/components/core`
+  - cross-domain reusable UI primitives
+  - examples: buttons, chips, page containers, loaders, toast surfaces, shared form atoms
+- `src/components/<domain>`
+  - reusable UI for one product area, used by multiple screens or multiple components in that area
+  - examples:
+    - `components/moments/MomentViewer.tsx`
+    - `components/events/EventsFilterSheet.tsx`
+    - `components/messages/ChatComposer.tsx`
+- `src/hooks`
+  - reusable React hooks
+  - put hooks here when they are reused or encapsulate meaningful UI/app-state behavior
+  - do not hide reusable hooks inside a screen file unless they are truly local implementation details
+- `src/lib/<domain>`
+  - non-React code only
+  - examples: upload helpers, storage helpers, formatters, serializers, constants, pure utilities
+  - if it does not render JSX and does not use React hooks, it probably belongs here
+- `data/graphql/query`, `data/graphql/mutation`, `data/graphql/types`
+  - GraphQL documents and generated artifacts only
+  - keep mobile GraphQL operations here, not inside `src/screens` or `src/components`
+
+Do not create new mobile folders that reintroduce old parallel patterns:
+
+- no new `src/features`
+- no new `src/shared`
+- no new `src/components/navigation`
+- no new `src/shared/theme`
+
+#### Webapp (`apps/webapp`)
+
+- `app/**`
+  - Next.js App Router routes, layouts, route groups, metadata, route-local loading/error states
+  - if it is a page, layout, route handler, or route-local server action wrapper, it belongs under `app`
+- `components/core`
+  - cross-domain reusable web UI primitives and shells
+- `components/<domain>`
+  - reusable domain UI shared across multiple routes/components
+  - examples: `components/events/*`, `components/messages/*`, `components/organization/*`
+- `components/navigation`
+  - web navigation UI only
+  - examples: headers, nav bars, sidebars, mobile nav drawers
+- `data/graphql/query`, `data/graphql/mutation`, `data/graphql/types`
+  - GraphQL documents and generated types only
+- `data/actions`
+  - data mutations and server/client action wrappers that are intentionally centralized outside route files
+- `hooks`
+  - reusable React hooks
+- `lib/constants`
+  - shared constants and config values
+- `lib/utils`
+  - pure helpers and formatting utilities
+- `public`
+  - static assets only
+- `test/e2e`, `test/unit`
+  - browser and unit/integration tests
+
+#### Placement Decision Rules
+
+- If navigation mounts it directly, it is a screen/route file.
+- If it is reused by multiple screens/routes, it is a component.
+- If it is app-shell infrastructure, it belongs in `app`.
+- If it is a reusable React hook, it belongs in `hooks`.
+- If it is a pure helper with no JSX/hooks, it belongs in `lib`.
+- If it is a GraphQL document or generated GraphQL type, it belongs in `data/graphql`.
+
+#### Anti-Patterns
+
+Avoid these mistakes:
+
+- putting route screens inside `components`
+- putting reusable UI inside `app`
+- putting non-React helpers inside `hooks`
+- creating a new parallel folder because an older file happens to live there
+- reintroducing feature buckets that compete with `screens`, `components`, `hooks`, or `lib`
+
 ## Coding Style & Naming Conventions
 
 - TypeScript everywhere; `tsconfig.base.json` enforces strict mode and path aliases (`@gatherle/commons/*`).
@@ -150,7 +327,8 @@ The per-domain agents and planning prompts live under `.github/` so you can revi
 work.
 
 - **`.github/agents/api.agent.md`** – Backend engineer instructions for TypeGraphQL/MongoDB work inside `apps/api`.
-- **`.github/agents/webapp.agent.md`** – Frontend/UI agent for Next.js/MUI/Tailwind jobs in `apps/webapp`.
+- **`.github/agents/frontend.agent.md`** – Shared frontend agent for `apps/webapp` and `apps/mobile`, with parity focus
+  between the mobile app and the mobile-sized webapp.
 - **`.github/agents/architect.agent.md`** – Strategic architecture leadership guidance for infrastructure, scalability,
   and roadmap discussions.
 - **`.github/agents/security.agent.md`** – Security engineering guidance for GraphQL, WebSocket, webapp, CI/CD, AWS IAM,

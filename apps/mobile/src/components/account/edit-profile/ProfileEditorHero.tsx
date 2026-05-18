@@ -3,8 +3,8 @@ import { Feather } from '@expo/vector-icons';
 import type { MobileAccountProfile } from '@data/graphql/query/User/types';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type ProfileEditorHeroProps = {
   avatarUrlOverride?: string | null;

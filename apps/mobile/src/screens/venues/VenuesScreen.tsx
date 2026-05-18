@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { GetVenuesDocument } from '@data/graphql/query/Venue/query';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';

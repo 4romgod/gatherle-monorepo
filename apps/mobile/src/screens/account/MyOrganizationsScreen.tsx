@@ -7,7 +7,7 @@ import { GetMyOrganizationsDocument } from '@data/graphql/query/Organization/que
 import { OrganizationRole } from '@data/graphql/types/graphql';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { PageContainer } from '@/components/core/PageContainer';
 import { StateNotice } from '@/components/core/StateNotice';
 import { OrganizationListItem } from '@/components/organizations/OrganizationListItem';

@@ -14,8 +14,8 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { getApolloAuthContext } from '@/lib/auth';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   const { theme } = useAppTheme();

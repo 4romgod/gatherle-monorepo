@@ -17,8 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 import { useEventSearch } from '@/hooks/search/useEventSearch';
 import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type EventSearchBarProps = {
   onSelectEvent: (event: MobileSearchResult) => void;

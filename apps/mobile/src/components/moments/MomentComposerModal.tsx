@@ -10,8 +10,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as ImagePicker from 'expo-image-picker';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 import {
   MOMENT_BACKGROUND_SWATCHES,
   MOMENT_DEFAULT_BACKGROUND,

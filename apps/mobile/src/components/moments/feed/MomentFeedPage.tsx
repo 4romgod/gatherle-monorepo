@@ -19,8 +19,8 @@ import { getApolloAuthContext } from '@/lib/auth';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
 import { formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { MOMENT_BACKGROUND_SWATCHES } from '@/lib/moments/constants';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 const STORY_DURATION_MS = 5000;
 

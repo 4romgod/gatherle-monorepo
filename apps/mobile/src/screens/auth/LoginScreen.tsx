@@ -6,12 +6,12 @@ import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { LoginUserDocument } from '@data/graphql/mutation/User/mutation';
-import { AuthFormField } from '@/features/auth/components/AuthFormField';
-import { AuthScreenShell } from '@/features/auth/components/AuthScreenShell';
-import { getApolloErrorMessage } from '@/features/auth/lib/apolloErrors';
-import { type FieldErrors, loginSchema, toFieldErrors } from '@/features/auth/lib/validation';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { AuthFormField } from '@/components/auth/AuthFormField';
+import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
+import { getApolloErrorMessage } from '@/lib/auth/apolloErrors';
+import { type FieldErrors, loginSchema, toFieldErrors } from '@/lib/auth/validation';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type EmailLoginRoute = RouteProp<RootStackParamList, 'EmailLogin'>;
 

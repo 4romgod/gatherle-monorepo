@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 export function HeaderMenuButton() {
   const { openDrawer } = useAppShell();

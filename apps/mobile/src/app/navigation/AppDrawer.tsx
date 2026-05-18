@@ -8,8 +8,8 @@ import type { DetailRouteName, MainTabParamList } from '@/app/navigation/routes'
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { getDisplayName } from '@/lib/events/formatters';
-import { fontSize, typography } from '@/shared/theme/typography';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type DrawerItemConfig = {
   icon: React.ComponentProps<typeof Feather>['name'];

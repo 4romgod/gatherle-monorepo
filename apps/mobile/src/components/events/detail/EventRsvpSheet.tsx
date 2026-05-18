@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type EventRsvpSheetProps = {
   currentStatus: ParticipantStatus | null;

@@ -22,8 +22,8 @@ import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
 import { getApolloAuthContext } from '@/lib/auth';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type OrganizationDetailsRoute = RouteProp<RootStackParamList, 'OrganizationDetails'>;
 

@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventMoment } from '@data/graphql/query/EventMoment/types';
 import { EventMomentState, ParticipantStatus } from '@data/graphql/types/graphql';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography, fontSize } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography, fontSize } from '@/app/theme/typography';
 import { MomentAvatarBubble } from '@/components/moments/MomentAvatarBubble';
 import { MomentViewer } from '@/components/moments/MomentViewer';
 
