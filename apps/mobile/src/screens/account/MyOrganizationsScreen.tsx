@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { GetMyOrganizationsDocument } from '@data/graphql/query/Organization/query';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
+import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { PageContainer } from '@/components/core/PageContainer';
 import { StateNotice } from '@/components/core/StateNotice';
@@ -82,6 +83,11 @@ export function MyOrganizationsScreen() {
       ) : (
         <StateNotice message="You are not part of any organizations yet." />
       )}
+      <AccountPrimaryButton
+        icon="plus-circle"
+        label="Create organization"
+        onPress={() => navigation.navigate('CreateOrganization')}
+      />
     </PageContainer>
   );
 }

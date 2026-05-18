@@ -48,7 +48,16 @@ export type RootStackParamList = {
   Settings: undefined;
   MyEvents: undefined;
   CreateEvent: undefined;
+  EditEvent: {
+    eventId: string;
+  };
   MyOrganizations: undefined;
+  CreateOrganization: undefined;
+  EditOrganization: {
+    orgId: string;
+    orgName?: string;
+  };
+  CreateVenue: undefined;
   Admin: undefined;
   Login:
     | {
@@ -222,10 +231,34 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
       'The mobile create-event flow, draft state, and step-based publishing UX will eventually be implemented here.',
     category: 'account',
   },
+  EditEvent: {
+    sectionLabel: 'Creator',
+    title: 'Edit event',
+    description: "Edit an existing event's details, schedule, and media.",
+    category: 'account',
+  },
   MyOrganizations: {
     sectionLabel: 'Creator',
     title: 'My organizations',
-    description: 'This route is reserved for the user’s owned organizations and membership management tools.',
+    description: "This route is reserved for the user's owned organizations and membership management tools.",
+    category: 'account',
+  },
+  CreateOrganization: {
+    sectionLabel: 'Creator',
+    title: 'Create organization',
+    description: 'Create a new organization to host events and build community.',
+    category: 'account',
+  },
+  EditOrganization: {
+    sectionLabel: 'Creator',
+    title: 'Edit organization',
+    description: 'Update organization details, logo, and settings.',
+    category: 'account',
+  },
+  CreateVenue: {
+    sectionLabel: 'Creator',
+    title: 'Create venue',
+    description: 'Add a new venue with address, type, and capacity details.',
     category: 'account',
   },
   Admin: {

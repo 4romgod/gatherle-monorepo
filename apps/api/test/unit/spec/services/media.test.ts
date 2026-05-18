@@ -142,7 +142,7 @@ describe('MediaService', () => {
 
   describe('getMediaUploadUrl', () => {
     describe('S3 key generation', () => {
-      it('builds a deterministic key for avatar images', async () => {
+      it('builds a unique key for avatar images', async () => {
         const result = await MediaService.getMediaUploadUrl({
           ...baseMediaParams,
           entityType: MediaEntityType.User,
@@ -150,7 +150,7 @@ describe('MediaService', () => {
           entityId: null,
           userId: 'user-abc',
         });
-        expect(result.key).toBe('test/users/user-abc/avatar.jpg');
+        expect(result.key).toMatch(/^test\/users\/user-abc\/avatar-[A-Za-z0-9_-]+\.jpg$/);
       });
 
       it('builds a deterministic key for logo images', async () => {
@@ -214,7 +214,7 @@ describe('MediaService', () => {
           extension: 'JPG',
           entityId: null,
         });
-        expect(result.key).toMatch(/avatar\.jpg$/);
+        expect(result.key).toMatch(/avatar-[A-Za-z0-9_-]+\.jpg$/);
       });
 
       it('strips a leading dot from the extension', async () => {
@@ -225,7 +225,7 @@ describe('MediaService', () => {
           extension: '.png',
           entityId: null,
         });
-        expect(result.key).toMatch(/avatar\.png$/);
+        expect(result.key).toMatch(/avatar-[A-Za-z0-9_-]+\.png$/);
       });
 
       it('throws BAD_USER_INPUT for an unsupported extension', async () => {
@@ -276,7 +276,7 @@ describe('MediaService', () => {
     });
 
     describe('returned URLs', () => {
-      it('returns uploadUrl and stable CDN-backed readUrl', async () => {
+      it('returns uploadUrl and CDN-backed readUrl for the generated avatar key', async () => {
         const result = await MediaService.getMediaUploadUrl({
           ...baseMediaParams,
           entityType: MediaEntityType.User,
@@ -285,7 +285,7 @@ describe('MediaService', () => {
           userId: 'user-abc',
         });
         expect(result.uploadUrl).toBe('https://upload.example.com/signed');
-        expect(result.readUrl).toBe('https://d111111abcdef8.cloudfront.net/test/users/user-abc/avatar.jpg');
+        expect(result.readUrl).toBe(`https://d111111abcdef8.cloudfront.net/${result.key}`);
       });
 
       it('includes the S3 key in the readUrl', async () => {

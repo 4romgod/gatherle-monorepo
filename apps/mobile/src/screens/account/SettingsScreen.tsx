@@ -5,11 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
+import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AccountChoiceChip } from '@/components/account/shared/AccountChoiceChip';
 import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import { AccountSectionCard } from '@/components/account/shared/AccountSectionCard';
-import { AccountStatusBanner } from '@/components/account/shared/AccountStatusBanner';
 import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
@@ -28,11 +28,11 @@ const GENDER_OPTIONS = [Gender.Male, Gender.Female, Gender.Other];
 
 export function SettingsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
+  const { showToast, withBlockingLoader } = useAppFeedback();
   const { authToken, isAuthenticated, signOut, updateSessionIdentity, username } = useAppShell();
   const { preference, setPreference, theme } = useAppTheme();
   const { error, loading, profile, refetch } = useAccountProfile(username, authToken, isAuthenticated);
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
-  const [status, setStatus] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const [form, setForm] = useState(() => createSettingsForm(null, preference));
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
@@ -68,36 +68,37 @@ export function SettingsScreen() {
 
     const validationMessage = validateSettingsForm(form);
     if (validationMessage) {
-      setStatus({ message: validationMessage, tone: 'error' });
+      showToast({ message: validationMessage, tone: 'error' });
       return;
     }
 
     try {
-      const response = await updateUser({
-        variables: {
-          input: buildSettingsInput(profile, form),
-        },
-        ...getApolloAuthContext(authToken),
-      });
+      await withBlockingLoader('Saving your settings…', async () => {
+        const response = await updateUser({
+          variables: {
+            input: buildSettingsInput(profile, form),
+          },
+          ...getApolloAuthContext(authToken),
+        });
 
-      const updatedUser = response.data?.updateUser;
-      if (!updatedUser) {
-        setStatus({ message: 'We could not save your settings just now.', tone: 'error' });
-        return;
-      }
+        const updatedUser = response.data?.updateUser;
+        if (!updatedUser) {
+          throw new Error('We could not save your settings just now.');
+        }
 
-      updateSessionIdentity({
-        email: updatedUser.email,
-        username: updatedUser.username,
+        updateSessionIdentity({
+          email: updatedUser.email,
+          username: updatedUser.username,
+        });
+        setForm((current) => ({
+          ...createSettingsForm(updatedUser, current.themePreference),
+          themePreference: current.themePreference,
+        }));
+        showToast({ message: 'Settings updated successfully.', tone: 'success' });
+        void refetch();
       });
-      setForm((current) => ({
-        ...createSettingsForm(updatedUser, current.themePreference),
-        themePreference: current.themePreference,
-      }));
-      setStatus({ message: 'Settings updated successfully.', tone: 'success' });
-      void refetch();
     } catch (mutationError) {
-      setStatus({
+      showToast({
         message: mutationError instanceof Error ? mutationError.message : 'We could not save your settings just now.',
         tone: 'error',
       });
@@ -146,8 +147,6 @@ export function SettingsScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      {status ? <AccountStatusBanner message={status.message} tone={status.tone} /> : null}
-
       <AccountSectionCard
         description="Account details stay close at hand, while profile presentation lives on the edit profile screen."
         title="Account"

@@ -19,9 +19,13 @@ import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { EditProfileScreen } from '@/screens/account/EditProfileScreen';
 import { AccountScreen } from '@/screens/account/AccountScreen';
 import { CreateEventScreen } from '@/screens/account/CreateEventScreen';
+import { EditEventScreen } from '@/screens/account/EditEventScreen';
 import { MyEventsScreen } from '@/screens/account/MyEventsScreen';
 import { MyOrganizationsScreen } from '@/screens/account/MyOrganizationsScreen';
+import { CreateOrganizationScreen } from '@/screens/account/CreateOrganizationScreen';
+import { EditOrganizationScreen } from '@/screens/account/EditOrganizationScreen';
 import { SettingsScreen } from '@/screens/account/SettingsScreen';
+import { CreateVenueScreen } from '@/screens/venues/CreateVenueScreen';
 import { CategoriesScreen } from '@/screens/discovery/CategoriesScreen';
 import { CommunityScreen } from '@/screens/discovery/CommunityScreen';
 import { EventDetailsScreen } from '@/screens/events/EventDetailsScreen';
@@ -221,9 +225,32 @@ export function RootNavigator() {
         options={{ presentation: 'card', title: 'Create event' }}
       />
       <Stack.Screen
+        component={EditEventScreen}
+        name="EditEvent"
+        options={{ presentation: 'card', title: 'Edit event' }}
+      />
+      <Stack.Screen
         component={MyOrganizationsScreen}
         name="MyOrganizations"
         options={{ presentation: 'card', title: 'My organizations' }}
+      />
+      <Stack.Screen
+        component={CreateOrganizationScreen}
+        name="CreateOrganization"
+        options={{ presentation: 'card', title: 'Create organization' }}
+      />
+      <Stack.Screen
+        component={EditOrganizationScreen}
+        name="EditOrganization"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.orgName ? `Edit ${route.params.orgName}` : 'Edit organization',
+        })}
+      />
+      <Stack.Screen
+        component={CreateVenueScreen}
+        name="CreateVenue"
+        options={{ presentation: 'card', title: 'Create venue' }}
       />
       <Stack.Screen component={AdminScreen} name="Admin" options={{ presentation: 'card', title: 'Admin' }} />
     </Stack.Navigator>

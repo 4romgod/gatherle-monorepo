@@ -94,3 +94,47 @@ export const GetEventsDocument = graphql(`
     }
   }
 `);
+export const GetEventByIdDocument = graphql(`
+  query GetEventById($eventId: String!) {
+    readEventById(eventId: $eventId) {
+      eventId
+      slug
+      title
+      summary
+      description
+      status
+      lifecycleStatus
+      visibility
+      privacySetting
+      capacity
+      waitlistEnabled
+      allowGuestPlusOnes
+      eventLink
+      orgId
+      venueId
+      location {
+        locationType
+        details
+        address {
+          city
+          state
+          country
+          street
+        }
+      }
+      media {
+        featuredImageUrl
+      }
+      eventCategories {
+        eventCategoryId
+        name
+      }
+      primarySchedule {
+        anchorStartAt
+        occurrenceDurationMinutes
+        timezone
+        recurrenceRule
+      }
+    }
+  }
+`);

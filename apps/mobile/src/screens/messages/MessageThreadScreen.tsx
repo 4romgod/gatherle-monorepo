@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -109,15 +109,20 @@ export function MessageThreadScreen() {
 
   const handleOpenReplyMoment = useCallback(
     async (momentId: string) => {
-      const { data } = await loadReplyMoment({ variables: { momentId } });
-      const moment = data?.readMomentById;
+      try {
+        const { data } = await loadReplyMoment({ variables: { momentId } });
+        const moment = data?.readMomentById;
 
-      if (!moment) {
-        return;
+        if (!moment) {
+          Alert.alert("Couldn't open moment", 'This moment is no longer available.');
+          return;
+        }
+
+        setReplyMomentViewerItems([moment]);
+        setReplyMomentViewerOpen(true);
+      } catch {
+        Alert.alert("Couldn't open moment", 'This moment is no longer available.');
       }
-
-      setReplyMomentViewerItems([moment]);
-      setReplyMomentViewerOpen(true);
     },
     [loadReplyMoment],
   );

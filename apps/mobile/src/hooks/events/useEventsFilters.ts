@@ -72,7 +72,7 @@ export function useEventsFilters(storageScope?: string | null) {
   // Draft: what the sheet is editing before "Show results"
   const [draftFilters, setDraftFilters] = useState<EventsFilterState>(DEFAULT_FILTER_STATE);
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [hasHydratedFilters, setHasHydratedFilters] = useState(false);
+  const [hydratedStorageKey, setHydratedStorageKey] = useState<string | null>(null);
   const storageKey = `${DEVICE_STORAGE_KEYS.eventsFilters}:${storageScope ?? 'guest'}`;
 
   useEffect(() => {
@@ -89,9 +89,12 @@ export function useEventsFilters(storageScope?: string | null) {
       if (nextFilters) {
         setAppliedFilters(nextFilters);
         setDraftFilters(nextFilters);
+      } else {
+        setAppliedFilters(DEFAULT_FILTER_STATE);
+        setDraftFilters(DEFAULT_FILTER_STATE);
       }
 
-      setHasHydratedFilters(true);
+      setHydratedStorageKey(storageKey);
     };
 
     void restoreFilters();
@@ -102,12 +105,12 @@ export function useEventsFilters(storageScope?: string | null) {
   }, [storageKey]);
 
   useEffect(() => {
-    if (!hasHydratedFilters) {
+    if (hydratedStorageKey !== storageKey) {
       return;
     }
 
     void writeStoredJson(storageKey, appliedFilters);
-  }, [appliedFilters, hasHydratedFilters, storageKey]);
+  }, [appliedFilters, hydratedStorageKey, storageKey]);
 
   const openSheet = () => {
     setDraftFilters(appliedFilters);

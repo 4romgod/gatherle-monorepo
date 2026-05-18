@@ -60,10 +60,13 @@ class MediaService {
       entityType === MediaEntityType.User ? userId : (entityId ?? randomBytes(8).toString('base64url'));
 
     const stagePrefix = STAGE.toLowerCase();
+    const randomSuffix = randomBytes(8).toString('base64url');
     const key =
       mediaType === MediaType.Gallery
-        ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/gallery/${randomBytes(8).toString('base64url')}.${cleanExt}`
-        : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}.${cleanExt}`;
+        ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/gallery/${randomSuffix}.${cleanExt}`
+        : entityType === MediaEntityType.User && mediaType === MediaType.Avatar
+          ? `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}-${randomSuffix}.${cleanExt}`
+          : `${stagePrefix}/${entityFolder}/${resolvedEntityId}/${mediaType}.${cleanExt}`;
 
     if (!MEDIA_CDN_DOMAIN) {
       throw new Error('MEDIA_CDN_DOMAIN is required to generate stable media URLs');

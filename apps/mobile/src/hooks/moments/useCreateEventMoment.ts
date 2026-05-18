@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import type { ImagePickerAsset } from 'expo-image-picker';
-import { CreateEventMomentDocument } from '@data/graphql/mutation/EventMoment/mutation';
+import { CreateEventMomentDocument, DeleteEventMomentDocument } from '@data/graphql/mutation/EventMoment/mutation';
 import { GetEventMomentUploadUrlDocument } from '@data/graphql/mutation/Media/mutation';
 import { getApolloAuthContext } from '@/lib/auth';
 import { getMomentAssetExtension, uploadMomentAssetToSignedUrl } from '@/lib/moments/upload';
@@ -37,6 +37,7 @@ export function useCreateEventMoment(authToken: string | null) {
     GetEventMomentUploadUrlDocument,
     getApolloAuthContext(authToken),
   );
+  const [deleteMomentMutation] = useMutation(DeleteEventMomentDocument, getApolloAuthContext(authToken));
 
   const createMoment = async (args: CreateMomentArgs) => {
     if (!authToken) {
@@ -82,7 +83,16 @@ export function useCreateEventMoment(authToken: string | null) {
       throw new Error('We could not reserve this video moment.');
     }
 
-    await uploadMomentAssetToSignedUrl(uploadTarget.uploadUrl, args.asset);
+    const reservedMomentId = args.type === 'video' ? uploadTarget.momentId : undefined;
+
+    try {
+      await uploadMomentAssetToSignedUrl(uploadTarget.uploadUrl, args.asset);
+    } catch (err) {
+      if (reservedMomentId) {
+        await deleteMomentMutation({ variables: { momentId: reservedMomentId } }).catch(() => undefined);
+      }
+      throw err;
+    }
 
     let thumbnailKey: string | undefined;
 
@@ -97,8 +107,15 @@ export function useCreateEventMoment(authToken: string | null) {
 
       const thumbnailUploadTarget = thumbnailUploadUrlResult.data?.getEventMomentUploadUrl;
       if (thumbnailUploadTarget) {
-        await uploadMomentAssetToSignedUrl(thumbnailUploadTarget.uploadUrl, args.thumbnailAsset);
-        thumbnailKey = thumbnailUploadTarget.key;
+        try {
+          await uploadMomentAssetToSignedUrl(thumbnailUploadTarget.uploadUrl, args.thumbnailAsset);
+          thumbnailKey = thumbnailUploadTarget.key;
+        } catch (err) {
+          if (reservedMomentId) {
+            await deleteMomentMutation({ variables: { momentId: reservedMomentId } }).catch(() => undefined);
+          }
+          throw err;
+        }
       }
     }
 
@@ -121,9 +138,17 @@ export function useCreateEventMoment(authToken: string | null) {
             type: EventMomentType.Image,
           };
 
-    const createResult = await createMomentMutation({
-      variables: { input },
-    });
+    let createResult;
+    try {
+      createResult = await createMomentMutation({
+        variables: { input },
+      });
+    } catch (err) {
+      if (reservedMomentId) {
+        await deleteMomentMutation({ variables: { momentId: reservedMomentId } }).catch(() => undefined);
+      }
+      throw err;
+    }
 
     return createResult.data?.createEventMoment ?? null;
   };
