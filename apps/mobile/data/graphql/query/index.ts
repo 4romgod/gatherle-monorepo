@@ -14,6 +14,7 @@ export * from './Media/query';
 export * from './Notification/query';
 export * from './Notification/types';
 export * from './Organization/query';
+export * from './OrganizationMembership/query';
 export * from './Organization/types';
 export * from './User/query';
 export * from './User/types';

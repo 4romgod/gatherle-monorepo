@@ -89,24 +89,44 @@ export function OrganizationDetailsScreen() {
     navigation.setOptions({
       headerRight: canEditOrganization
         ? () => (
-            <Pressable
-              accessibilityLabel="Edit organization"
-              accessibilityRole="button"
-              onPress={() =>
-                navigation.navigate('EditOrganization', {
-                  orgId,
-                  orgName: organization?.name ?? undefined,
-                })
-              }
-              style={({ pressed }) => [
-                styles.headerAction,
-                {
-                  opacity: pressed ? 0.64 : 1,
-                },
-              ]}
-            >
-              <Feather color={theme.colors.primary} name="edit-2" size={18} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityLabel="Manage organization members"
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('OrganizationMembers', {
+                    orgId,
+                    orgName: organization?.name ?? undefined,
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.headerAction,
+                  {
+                    opacity: pressed ? 0.64 : 1,
+                  },
+                ]}
+              >
+                <Feather color={theme.colors.primary} name="users" size={18} />
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Edit organization"
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('EditOrganization', {
+                    orgId,
+                    orgName: organization?.name ?? undefined,
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.headerAction,
+                  {
+                    opacity: pressed ? 0.64 : 1,
+                  },
+                ]}
+              >
+                <Feather color={theme.colors.primary} name="edit-2" size={18} />
+              </Pressable>
+            </View>
           )
         : undefined,
     });
@@ -273,6 +293,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 40,
     minWidth: 40,
+  },
+  headerActions: {
+    flexDirection: 'row',
   },
   description: {
     ...typography.bodyRegular,

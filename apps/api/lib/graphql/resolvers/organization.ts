@@ -73,6 +73,7 @@ export class OrganizationResolver {
           role: OrganizationRole.Owner,
         },
         user.userId,
+        { allowOwnerAssignment: true },
       );
     } catch (error) {
       // Rollback: delete organization if membership creation fails

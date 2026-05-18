@@ -32,8 +32,16 @@ class OrganizationMembershipService {
   static async addMember(
     input: CreateOrganizationMembershipInput,
     addedByUserId?: string,
+    options?: { allowOwnerAssignment?: boolean },
   ): Promise<OrganizationMembership> {
     logger.debug(`[OrganizationMembershipService.addMember] Adding user ${input.userId} to org ${input.orgId}`);
+
+    if (input.role === OrganizationRole.Owner && !options?.allowOwnerAssignment) {
+      throw CustomError(
+        'Owner membership cannot be assigned from member management. Use the organization ownership flow instead.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
 
     // Create the membership
     const membership = await OrganizationMembershipDAO.create(input);
@@ -82,6 +90,20 @@ class OrganizationMembershipService {
     if (existingMembership.userId === updatedByUserId) {
       throw CustomError(
         'Users cannot modify their own role. Another organization admin must change your role.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    if (existingMembership.role === OrganizationRole.Owner) {
+      throw CustomError(
+        'Owner membership cannot be modified from member management. Use the organization ownership flow instead.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    if (input.role === OrganizationRole.Owner) {
+      throw CustomError(
+        'Owner membership cannot be assigned from member management. Use the organization ownership flow instead.',
         ErrorTypes.UNAUTHORIZED,
       );
     }
@@ -148,6 +170,13 @@ class OrganizationMembershipService {
     if (existingMembership.userId === removedByUserId) {
       throw CustomError(
         'Users cannot remove themselves from an organization. Use the leave organization feature instead.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    if (existingMembership.role === OrganizationRole.Owner) {
+      throw CustomError(
+        'Owner membership cannot be removed from member management. Use the organization ownership flow instead.',
         ErrorTypes.UNAUTHORIZED,
       );
     }

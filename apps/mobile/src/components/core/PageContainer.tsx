@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, StyleSheet } from 'react-native';
 import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 
 type PageContainerProps = {
   children: ReactNode;
@@ -20,7 +21,7 @@ export function PageContainer({ children, contentContainerStyle, onRefresh, refr
       keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
       style={styles.keyboardShell}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         automaticallyAdjustKeyboardInsets
         alwaysBounceVertical
         bounces
@@ -43,7 +44,7 @@ export function PageContainer({ children, contentContainerStyle, onRefresh, refr
         style={{ backgroundColor: theme.colors.background }}
       >
         {children}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 }

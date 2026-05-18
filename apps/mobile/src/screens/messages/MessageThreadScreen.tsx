@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -18,9 +18,9 @@ import { ChatThreadHeader } from '@/components/messages/thread/ChatThreadHeader'
 import { MomentViewer } from '@/components/moments/MomentViewer';
 import { ChatThreadSkeleton } from '@/components/skeleton/ChatThreadSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useKeyboardBottomInset } from '@/hooks/core/useKeyboardBottomInset';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
-import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { DEVICE_STORAGE_KEYS, writeStoredString } from '@/lib/deviceStorage';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
@@ -45,6 +45,7 @@ export function MessageThreadScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const route = useRoute<MessageThreadRoute>();
   const { theme } = useAppTheme();
+  const keyboardInset = useKeyboardBottomInset();
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { avatarUrl, displayName, username, withUserId } = route.params;
   const scrollRef = useRef<ScrollView | null>(null);
@@ -169,12 +170,8 @@ export function MessageThreadScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-      keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
-      style={[styles.screen, { backgroundColor: theme.colors.background }]}
-    >
-      <View style={styles.inner}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.inner, { paddingBottom: keyboardInset > 0 ? keyboardInset + 8 : 0 }]}>
         <ChatThreadHeader
           avatarUrl={avatarUrl}
           displayName={displayName}
@@ -206,6 +203,7 @@ export function MessageThreadScreen() {
             alwaysBounceVertical
             bounces
             contentContainerStyle={styles.threadContent}
+            keyboardShouldPersistTaps="handled"
             overScrollMode="always"
             ref={scrollRef}
             refreshControl={
@@ -247,7 +245,7 @@ export function MessageThreadScreen() {
         open={replyMomentViewerOpen}
         startIndex={0}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

@@ -26,6 +26,7 @@ import { CreateOrganizationScreen } from '@/screens/account/CreateOrganizationSc
 import { EditOrganizationScreen } from '@/screens/account/EditOrganizationScreen';
 import { SettingsScreen } from '@/screens/account/SettingsScreen';
 import { CreateVenueScreen } from '@/screens/venues/CreateVenueScreen';
+import { EditVenueScreen } from '@/screens/venues/EditVenueScreen';
 import { CategoriesScreen } from '@/screens/discovery/CategoriesScreen';
 import { CommunityScreen } from '@/screens/discovery/CommunityScreen';
 import { EventDetailsScreen } from '@/screens/events/EventDetailsScreen';
@@ -37,6 +38,7 @@ import { MomentsScreen } from '@/screens/moments/MomentsScreen';
 import { NotificationsScreen } from '@/screens/notifications/NotificationsScreen';
 import { OrganizationsScreen } from '@/screens/organizations/OrganizationsScreen';
 import { OrganizationDetailsScreen } from '@/screens/organizations/OrganizationDetailsScreen';
+import { OrganizationMembersScreen } from '@/screens/organizations/OrganizationMembersScreen';
 import { UserProfileScreen } from '@/screens/users/UserProfileScreen';
 import { VenuesScreen } from '@/screens/venues/VenuesScreen';
 import { VenueDetailsScreen } from '@/screens/venues/VenueDetailsScreen';
@@ -176,6 +178,14 @@ export function RootNavigator() {
         })}
       />
       <Stack.Screen
+        component={OrganizationMembersScreen}
+        name="OrganizationMembers"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.orgName ? `${route.params.orgName} team` : 'Organization members',
+        })}
+      />
+      <Stack.Screen
         component={VenueDetailsScreen}
         name="VenueDetails"
         options={({ route }) => ({
@@ -251,6 +261,14 @@ export function RootNavigator() {
         component={CreateVenueScreen}
         name="CreateVenue"
         options={{ presentation: 'card', title: 'Create venue' }}
+      />
+      <Stack.Screen
+        component={EditVenueScreen}
+        name="EditVenue"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.venueName ? `Edit ${route.params.venueName}` : 'Edit venue',
+        })}
       />
       <Stack.Screen component={AdminScreen} name="Admin" options={{ presentation: 'card', title: 'Admin' }} />
     </Stack.Navigator>

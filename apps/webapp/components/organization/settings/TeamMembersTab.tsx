@@ -1,7 +1,7 @@
 'use client';
 
-import { Dispatch, SetStateAction } from 'react';
-
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import Link from 'next/link';
 import {
   Autocomplete,
   Avatar,
@@ -11,22 +11,19 @@ import {
   Chip,
   CircularProgress,
   FormControl,
-  IconButton,
+  Grid,
   InputLabel,
   MenuItem,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
-import { Close, PersonAdd } from '@mui/icons-material';
+import { CalendarToday, PersonAdd, ShieldOutlined } from '@mui/icons-material';
+import { alpha, useTheme } from '@mui/material/styles';
 import { OrganizationMembership, OrganizationRole, User } from '@/data/graphql/types/graphql';
+import { ROUTES } from '@/lib/constants';
+import UserBoxSkeleton from '@/components/users/UserBoxSkeleton';
 import { MembershipAction } from './types';
 
 interface TeamMembersTabProps {
@@ -57,6 +54,20 @@ const ROLE_OPTIONS = [
   OrganizationRole.Owner,
 ];
 
+const MANAGEABLE_ROLE_OPTIONS = ROLE_OPTIONS.filter((role) => role !== OrganizationRole.Owner);
+
+const ROLE_PRIORITY: Record<OrganizationRole, number> = {
+  [OrganizationRole.Owner]: 0,
+  [OrganizationRole.Admin]: 1,
+  [OrganizationRole.Host]: 2,
+  [OrganizationRole.Moderator]: 3,
+  [OrganizationRole.Member]: 4,
+};
+
+function formatRoleLabel(role: OrganizationRole) {
+  return role.replace(/[_-]+/g, ' ');
+}
+
 export default function TeamMembersTab({
   memberships,
   membershipsLoading,
@@ -76,7 +87,25 @@ export default function TeamMembersTab({
   promptRemoveMember,
   currentUserId,
 }: TeamMembersTabProps) {
-  const availableUsers = userOptions.filter((user) => !memberships.some((m) => m.userId === user.userId));
+  const theme = useTheme();
+  const [expandedMembershipId, setExpandedMembershipId] = useState<string | null>(null);
+
+  const availableUsers = useMemo(
+    () => userOptions.filter((user) => !memberships.some((membership) => membership.userId === user.userId)),
+    [memberships, userOptions],
+  );
+
+  const sortedMemberships = useMemo(
+    () =>
+      [...memberships].sort((left, right) => {
+        const roleDiff = ROLE_PRIORITY[left.role] - ROLE_PRIORITY[right.role];
+        if (roleDiff !== 0) {
+          return roleDiff;
+        }
+        return (left.username ?? left.userId).localeCompare(right.username ?? right.userId);
+      }),
+    [memberships],
+  );
 
   return (
     <Stack spacing={3}>
@@ -84,8 +113,16 @@ export default function TeamMembersTab({
         Team Members
       </Typography>
 
-      <Card variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+      <Card
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 4 },
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
           <Autocomplete
             options={availableUsers}
             value={selectedUser}
@@ -115,7 +152,7 @@ export default function TeamMembersTab({
             fullWidth
           />
 
-          <FormControl size="small" sx={{ minWidth: 150 }} disabled={isMembershipActionInProgress}>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150 } }} disabled={isMembershipActionInProgress}>
             <InputLabel>Role</InputLabel>
             <Select
               value={addMemberRole}
@@ -123,9 +160,9 @@ export default function TeamMembersTab({
               onChange={(event) => setAddMemberRole(event.target.value as OrganizationRole)}
               disabled={isMembershipActionInProgress}
             >
-              {ROLE_OPTIONS.filter((role) => role !== OrganizationRole.Owner).map((role) => (
+              {MANAGEABLE_ROLE_OPTIONS.map((role) => (
                 <MenuItem key={role} value={role}>
-                  {role}
+                  {formatRoleLabel(role)}
                 </MenuItem>
               ))}
             </Select>
@@ -150,124 +187,222 @@ export default function TeamMembersTab({
         </Stack>
       </Card>
 
-      {membershipsLoading && <CircularProgress />}
+      {membershipsLoading ? (
+        <Grid container spacing={3}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <UserBoxSkeleton key={`team-member-skeleton-${index}`} />
+          ))}
+        </Grid>
+      ) : (
+        <Box sx={{ position: 'relative' }}>
+          {isMembershipActionInProgress && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                bgcolor: alpha(theme.palette.background.paper, 0.9),
+                zIndex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 3,
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={24} />
+                {membershipActionLabel && (
+                  <Typography variant="body2" color="text.secondary">
+                    {membershipActionLabel}
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+          )}
 
-      {!membershipsLoading && (
-        <>
-          <TableContainer sx={{ position: 'relative' }}>
-            {isMembershipActionInProgress && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  bgcolor: (theme) => theme.palette.background.paper,
-                  opacity: 0.9,
-                  zIndex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 1,
-                }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <CircularProgress size={24} />
-                  {membershipActionLabel && (
-                    <Typography variant="body2" color="text.secondary">
-                      {membershipActionLabel}
-                    </Typography>
-                  )}
-                </Stack>
-              </Box>
-            )}
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Member</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {memberships.map((membership) => {
-                  const displayName = membership.username || membership.userId || 'Member';
-                  const isCurrentUser = membership.userId === currentUserId;
+          {sortedMemberships.length > 0 ? (
+            <Grid container spacing={3}>
+              {sortedMemberships.map((membership) => {
+                const displayName = membership.username ? `@${membership.username}` : 'Gatherle member';
+                const initialsSource = membership.username || membership.userId || 'M';
+                const joinedLabel = new Date(membership.joinedAt).toLocaleDateString();
+                const isCurrentUser = membership.userId === currentUserId;
+                const isOwnerMembership = membership.role === OrganizationRole.Owner;
+                const canEditMembership = !isCurrentUser && !isOwnerMembership;
+                const isExpanded = expandedMembershipId === membership.membershipId;
+                const profileHref = membership.username ? ROUTES.USERS.USER(membership.username) : null;
 
-                  return (
-                    <TableRow key={membership.membershipId}>
-                      <TableCell>
+                return (
+                  <Grid key={membership.membershipId} size={{ xs: 12, sm: 6, lg: 4 }}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        height: '100%',
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Stack direction="row" spacing={2} alignItems="center">
-                          <Avatar sx={{ width: 32, height: 32 }}>{displayName.charAt(0).toUpperCase()}</Avatar>
-                          <Typography variant="body2">{displayName}</Typography>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        {isCurrentUser ? (
-                          <Chip label={membership.role} size="small" color="primary" />
-                        ) : (
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Select
-                              value={membership.role}
-                              onChange={(event) => promptRoleChange(membership, event.target.value as OrganizationRole)}
-                              disabled={
-                                isMembershipActionInProgress ||
-                                (membershipAction?.type === 'update' &&
-                                  membershipAction.membershipId === membership.membershipId)
-                              }
-                              size="small"
-                              sx={{ minWidth: 120 }}
-                            >
-                              {ROLE_OPTIONS.map((role) => (
-                                <MenuItem key={role} value={role}>
-                                  {role}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                            {membershipAction?.type === 'update' &&
-                              membershipAction.membershipId === membership.membershipId && (
-                                <CircularProgress size={16} />
-                              )}
-                          </Stack>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(membership.joinedAt).toLocaleDateString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        {!isCurrentUser && (
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => promptRemoveMember(membership)}
-                            disabled={
-                              isMembershipActionInProgress ||
-                              (membershipAction?.type === 'remove' &&
-                                membershipAction.membershipId === membership.membershipId)
-                            }
+                          <Avatar
+                            sx={{
+                              width: 56,
+                              height: 56,
+                              border: '2px solid',
+                              borderColor: 'divider',
+                              bgcolor: alpha(theme.palette.primary.main, 0.08),
+                              color: 'text.primary',
+                            }}
                           >
-                            {membershipAction?.type === 'remove' &&
-                            membershipAction.membershipId === membership.membershipId ? (
-                              <CircularProgress size={20} color="error" />
+                            {initialsSource.charAt(0).toUpperCase()}
+                          </Avatar>
+
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            {profileHref ? (
+                              <Typography
+                                component={Link}
+                                href={profileHref}
+                                variant="subtitle1"
+                                fontWeight={700}
+                                lineHeight={1.2}
+                                noWrap
+                                color="text.primary"
+                                sx={{ textDecoration: 'none', '&:hover': { color: 'primary.main' } }}
+                              >
+                                {displayName}
+                              </Typography>
                             ) : (
-                              <Close />
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                lineHeight={1.2}
+                                noWrap
+                                color="text.primary"
+                              >
+                                {displayName}
+                              </Typography>
                             )}
-                          </IconButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
+
+                            <Typography variant="caption" color="text.secondary">
+                              {membership.username ? 'Organization team member' : membership.userId}
+                            </Typography>
+                          </Box>
+                        </Stack>
+
+                        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
+                          <Chip
+                            label={formatRoleLabel(membership.role)}
+                            size="small"
+                            sx={{
+                              fontWeight: 600,
+                              bgcolor: alpha(theme.palette.primary.main, 0.08),
+                              color: 'text.primary',
+                              border: 'none',
+                            }}
+                          />
+                          <Chip
+                            icon={<CalendarToday sx={{ fontSize: 14 }} />}
+                            label={`Joined ${joinedLabel}`}
+                            size="small"
+                            sx={{
+                              fontWeight: 600,
+                              bgcolor: alpha(theme.palette.text.primary, 0.06),
+                              color: 'text.secondary',
+                              border: 'none',
+                            }}
+                          />
+                          {isCurrentUser ? (
+                            <Chip
+                              label="You"
+                              size="small"
+                              sx={{
+                                fontWeight: 700,
+                                bgcolor: alpha(theme.palette.success.main, 0.12),
+                                color: 'success.dark',
+                                border: 'none',
+                              }}
+                            />
+                          ) : null}
+                        </Stack>
+
+                        {isOwnerMembership ? (
+                          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 2 }}>
+                            <ShieldOutlined sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">
+                              Owner access is managed separately from team roles.
+                            </Typography>
+                          </Stack>
+                        ) : isCurrentUser ? (
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
+                            Your role is view-only here. Another organization admin must change it.
+                          </Typography>
+                        ) : null}
+
+                        {canEditMembership ? (
+                          <>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 'auto', pt: 3 }}>
+                              <Button
+                                variant="outlined"
+                                fullWidth
+                                onClick={() =>
+                                  setExpandedMembershipId((current) =>
+                                    current === membership.membershipId ? null : membership.membershipId,
+                                  )
+                                }
+                                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+                              >
+                                {isExpanded ? 'Hide role options' : 'Change role'}
+                              </Button>
+                              <Button
+                                variant="text"
+                                color="error"
+                                fullWidth
+                                onClick={() => promptRemoveMember(membership)}
+                                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+                              >
+                                Remove
+                              </Button>
+                            </Stack>
+
+                            {isExpanded ? (
+                              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
+                                {MANAGEABLE_ROLE_OPTIONS.map((role) => (
+                                  <Chip
+                                    key={`${membership.membershipId}-${role}`}
+                                    label={formatRoleLabel(role)}
+                                    clickable
+                                    color={membership.role === role ? 'primary' : 'default'}
+                                    onClick={() => promptRoleChange(membership, role)}
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                ))}
+                              </Stack>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </Box>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          ) : (
+            <Card
+              elevation={0}
+              sx={{
+                p: { xs: 3, md: 4 },
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                This organization does not have any team members yet.
+              </Typography>
+            </Card>
+          )}
+        </Box>
       )}
     </Stack>
   );

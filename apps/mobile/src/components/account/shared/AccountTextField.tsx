@@ -1,6 +1,7 @@
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import { useKeyboardAwareField } from '@/hooks/core/useKeyboardAwareField';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const styleId = 'rn-account-input-no-outline';
@@ -44,6 +45,7 @@ export function AccountTextField({
   value,
 }: AccountTextFieldProps) {
   const { theme } = useAppTheme();
+  const { handleFocus, inputRef } = useKeyboardAwareField();
 
   return (
     <View style={styles.fieldBlock}>
@@ -64,8 +66,10 @@ export function AccountTextField({
           keyboardType={keyboardType}
           multiline={multiline}
           onChangeText={onChangeText}
+          onFocus={handleFocus}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.textMuted}
+          ref={inputRef}
           selectionColor={theme.colors.primary}
           style={[styles.input, multiline ? styles.inputMultiline : null, { color: theme.colors.textPrimary }]}
           textAlignVertical={multiline ? 'top' : 'center'}

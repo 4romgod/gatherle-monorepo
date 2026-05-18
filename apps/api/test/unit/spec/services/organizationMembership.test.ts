@@ -202,6 +202,43 @@ describe('OrganizationMembershipService', () => {
 
       expect(result.role).toEqual(OrganizationRole.Admin);
     });
+
+    it('rejects assigning Owner role through member management', async () => {
+      await expect(
+        OrganizationMembershipService.addMember(
+          {
+            orgId: 'org-1',
+            userId: 'user-2',
+            role: OrganizationRole.Owner,
+          },
+          'admin-user',
+        ),
+      ).rejects.toThrow('Owner membership cannot be assigned from member management');
+
+      expect(OrganizationMembershipDAO.create).not.toHaveBeenCalled();
+    });
+
+    it('allows assigning Owner role for organization bootstrap flows', async () => {
+      const ownerMembership = { ...mockMembership, role: OrganizationRole.Owner, userId: 'owner-user' };
+      (OrganizationMembershipDAO.create as jest.Mock).mockResolvedValue(ownerMembership);
+
+      const result = await OrganizationMembershipService.addMember(
+        {
+          orgId: 'org-1',
+          userId: 'owner-user',
+          role: OrganizationRole.Owner,
+        },
+        'owner-user',
+        { allowOwnerAssignment: true },
+      );
+
+      expect(result).toEqual(ownerMembership);
+      expect(OrganizationMembershipDAO.create).toHaveBeenCalledWith({
+        orgId: 'org-1',
+        userId: 'owner-user',
+        role: OrganizationRole.Owner,
+      });
+    });
   });
 
   describe('updateMemberRole', () => {
@@ -296,6 +333,35 @@ describe('OrganizationMembershipService', () => {
 
       expect(OrganizationMembershipDAO.update).not.toHaveBeenCalled();
     });
+
+    it('rejects changing an existing Owner membership', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue({
+        ...mockMembership,
+        role: OrganizationRole.Owner,
+      });
+
+      await expect(
+        OrganizationMembershipService.updateMemberRole(
+          { membershipId: 'membership-1', role: OrganizationRole.Admin },
+          'admin-user',
+        ),
+      ).rejects.toThrow('Owner membership cannot be modified from member management');
+
+      expect(OrganizationMembershipDAO.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects promoting a member to Owner through member management', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue(mockMembership);
+
+      await expect(
+        OrganizationMembershipService.updateMemberRole(
+          { membershipId: 'membership-1', role: OrganizationRole.Owner },
+          'admin-user',
+        ),
+      ).rejects.toThrow('Owner membership cannot be assigned from member management');
+
+      expect(OrganizationMembershipDAO.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('removeMember', () => {
@@ -317,6 +383,19 @@ describe('OrganizationMembershipService', () => {
       await expect(
         OrganizationMembershipService.removeMember('membership-1', 'user-1'), // Same as membership userId
       ).rejects.toThrow('Users cannot remove themselves from an organization');
+
+      expect(OrganizationMembershipDAO.delete).not.toHaveBeenCalled();
+    });
+
+    it('rejects removing the Owner membership through member management', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue({
+        ...mockMembership,
+        role: OrganizationRole.Owner,
+      });
+
+      await expect(OrganizationMembershipService.removeMember('membership-1', 'admin-user')).rejects.toThrow(
+        'Owner membership cannot be removed from member management',
+      );
 
       expect(OrganizationMembershipDAO.delete).not.toHaveBeenCalled();
     });

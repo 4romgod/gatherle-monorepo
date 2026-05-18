@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { BrandMark } from '@/components/core/BrandMark';
+import { KeyboardAwareScrollView } from '@/components/core/KeyboardAwareScrollView';
 import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
@@ -20,7 +21,7 @@ export function AuthScreenShell({ children, subtitle, title }: AuthScreenShellPr
       keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
       style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -35,7 +36,7 @@ export function AuthScreenShell({ children, subtitle, title }: AuthScreenShellPr
           </View>
           {children}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
 }

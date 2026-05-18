@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { useState } from 'react';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import { useKeyboardAwareField } from '@/hooks/core/useKeyboardAwareField';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const styleId = 'rn-auth-input-no-outline';
@@ -53,6 +54,7 @@ export function AuthFormField({
   const { theme } = useAppTheme();
   const [showSecret, setShowSecret] = useState(false);
   const shouldMask = secureTextEntry && !showSecret;
+  const { handleFocus, inputRef } = useKeyboardAwareField();
 
   return (
     <View style={styles.fieldBlock}>
@@ -71,8 +73,10 @@ export function AuthFormField({
           autoComplete={autoComplete}
           keyboardType={keyboardType}
           onChangeText={onChangeText}
+          onFocus={handleFocus}
           placeholder={placeholder}
           placeholderTextColor={theme.colors.textMuted}
+          ref={inputRef}
           returnKeyType={returnKeyType}
           secureTextEntry={shouldMask}
           selectionColor={theme.colors.primary}

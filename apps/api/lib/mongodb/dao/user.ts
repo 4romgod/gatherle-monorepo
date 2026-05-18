@@ -280,6 +280,21 @@ class UserDAO {
       const fieldsToUpdate = Object.fromEntries(
         Object.entries(updatableFields).filter(([_, value]) => value !== undefined),
       );
+
+      const requestedEmail =
+        typeof fieldsToUpdate.email === 'string' ? fieldsToUpdate.email.trim().toLowerCase() : undefined;
+      const currentEmail = existingUser.email?.trim().toLowerCase();
+
+      if (requestedEmail && requestedEmail !== currentEmail) {
+        const existingEmailUser = await UserModel.findOne({ email: requestedEmail }).select('userId').lean().exec();
+        if (existingEmailUser && existingEmailUser.userId !== userId) {
+          throw CustomError(`User with email ${requestedEmail} already exists`, ErrorTypes.CONFLICT);
+        }
+
+        fieldsToUpdate.email = requestedEmail;
+        fieldsToUpdate.emailVerified = false;
+      }
+
       Object.assign(existingUser, fieldsToUpdate);
       await existingUser.save();
       return existingUser.toObject();
