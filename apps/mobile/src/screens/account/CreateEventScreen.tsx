@@ -134,17 +134,6 @@ export function CreateEventScreen() {
   const venues = venuesQuery.data?.readVenues ?? [];
   const selectedVenue = venues.find((venue) => venue.venueId === formState.venueId);
 
-  const isFormValid = Boolean(
-    userId &&
-    formState.title.trim() &&
-    formState.summary.trim() &&
-    formState.description.trim() &&
-    formState.date &&
-    formState.startTime &&
-    formState.endTime &&
-    selectedCategories.length > 0,
-  );
-
   const loading = creating;
 
   const venueSuggestions = useMemo(() => venues.slice(0, 6), [venues]);

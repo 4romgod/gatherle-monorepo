@@ -7,6 +7,9 @@ export const isUsingDefaultGraphqlUrl = !process.env.EXPO_PUBLIC_GRAPHQL_URL?.tr
 export const apolloClient = new ApolloClient({
   cache: new InMemoryCache({
     typePolicies: {
+      EventMoment: {
+        keyFields: ['momentId'],
+      },
       Query: {
         fields: {
           notifications: {

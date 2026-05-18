@@ -4,7 +4,8 @@ import type { ImagePickerAsset } from 'expo-image-picker';
 function getExtensionFromAsset(asset: ImagePickerAsset): string {
   const fileName = asset.fileName?.trim();
   if (fileName?.includes('.')) {
-    return fileName.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const extension = fileName.split('.').pop()?.trim().toLowerCase();
+    return extension || 'jpg';
   }
 
   if (asset.mimeType?.includes('/')) {

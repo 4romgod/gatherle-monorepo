@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { FollowTargetType, SortOrderInput } from '@data/graphql/types/graphql';
-import { GetOrganizationByIdDocument } from '@data/graphql/query/Organization/query';
+import { Feather } from '@expo/vector-icons';
+import { FollowTargetType, OrganizationRole, SortOrderInput } from '@data/graphql/types/graphql';
+import { GetMyOrganizationsDocument, GetOrganizationByIdDocument } from '@data/graphql/query/Organization/query';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -29,7 +30,7 @@ type OrganizationDetailsRoute = RouteProp<RootStackParamList, 'OrganizationDetai
 export function OrganizationDetailsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<OrganizationDetailsRoute>();
-  const { authToken, isAuthenticated } = useAppShell();
+  const { authToken, isAuthenticated, userId } = useAppShell();
   const { theme } = useAppTheme();
   const { orgId } = route.params;
   const { data, error, loading, refetch } = useQuery(GetOrganizationByIdDocument, {
@@ -37,7 +38,18 @@ export function OrganizationDetailsScreen() {
     variables: { orgId },
     ...getApolloAuthContext(authToken),
   });
+  const membershipsQuery = useQuery(GetMyOrganizationsDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
+    ...getApolloAuthContext(authToken),
+  });
   const organization = data?.readOrganizationById ?? null;
+  const membership =
+    membershipsQuery.data?.readMyOrganizations?.find((item) => item.organization.orgId === orgId) ?? null;
+  const canEditOrganization =
+    organization?.ownerId === userId ||
+    membership?.role === OrganizationRole.Owner ||
+    membership?.role === OrganizationRole.Admin;
   const { follow, isFollowing, isPending, unfollow } = useFollowTarget({
     authToken,
     targetId: orgId,
@@ -72,6 +84,33 @@ export function OrganizationDetailsScreen() {
         : 'Follow';
   const domainList = useMemo(() => organization?.domainsAllowed?.filter(Boolean) ?? [], [organization?.domainsAllowed]);
   const tagList = useMemo(() => organization?.tags?.filter(Boolean) ?? [], [organization?.tags]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canEditOrganization
+        ? () => (
+            <Pressable
+              accessibilityLabel="Edit organization"
+              accessibilityRole="button"
+              onPress={() =>
+                navigation.navigate('EditOrganization', {
+                  orgId,
+                  orgName: organization?.name ?? undefined,
+                })
+              }
+              style={({ pressed }) => [
+                styles.headerAction,
+                {
+                  opacity: pressed ? 0.64 : 1,
+                },
+              ]}
+            >
+              <Feather color={theme.colors.primary} name="edit-2" size={18} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [canEditOrganization, navigation, orgId, organization?.name, theme.colors.primary]);
 
   const handleFollowPress = () => {
     if (!isAuthenticated) {
@@ -228,6 +267,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  headerAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 40,
   },
   description: {
     ...typography.bodyRegular,

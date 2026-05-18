@@ -7,10 +7,18 @@ import { typography } from '@/shared/theme/typography';
 type OrganizationListItemProps = {
   onPress?: () => void;
   organization: MobileOrganization;
+  trailingActionLabel?: string;
+  trailingActionOnPress?: () => void;
   trailingBadgeLabel?: string;
 };
 
-export function OrganizationListItem({ onPress, organization, trailingBadgeLabel }: OrganizationListItemProps) {
+export function OrganizationListItem({
+  onPress,
+  organization,
+  trailingActionLabel,
+  trailingActionOnPress,
+  trailingBadgeLabel,
+}: OrganizationListItemProps) {
   const { theme } = useAppTheme();
   const label = organization.name ?? 'Organization';
 
@@ -52,6 +60,22 @@ export function OrganizationListItem({ onPress, organization, trailingBadgeLabel
             <Text style={[styles.roleBadgeText, { color: theme.colors.primary }]}>{trailingBadgeLabel}</Text>
           </View>
         ) : null}
+        {trailingActionLabel && trailingActionOnPress ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={trailingActionOnPress}
+            style={({ pressed }) => [
+              styles.actionButton,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                opacity: pressed ? 0.88 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.actionButtonText, { color: theme.colors.textPrimary }]}>{trailingActionLabel}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -85,6 +109,20 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     gap: 4,
+  },
+  actionButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 28,
+    minWidth: 72,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  actionButtonText: {
+    ...typography.bodySemiBold,
+    fontSize: 11,
   },
   title: {
     ...typography.bodyBold,

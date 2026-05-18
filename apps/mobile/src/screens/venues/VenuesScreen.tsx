@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import { GetVenuesDocument } from '@data/graphql/query/Venue/query';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
+import { useAppTheme } from '@/shared/theme/AppThemeProvider';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
@@ -16,6 +18,7 @@ import { getApolloAuthContext } from '@/lib/auth';
 export function VenuesScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken } = useAppShell();
+  const { theme } = useAppTheme();
   const { data, error, loading, refetch } = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
     ...getApolloAuthContext(authToken),
@@ -47,6 +50,26 @@ export function VenuesScreen() {
         .some((value) => value!.toLowerCase().includes(normalized)),
     );
   }, [query, venues]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          accessibilityLabel="Create venue"
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('CreateVenue')}
+          style={({ pressed }) => [
+            styles.headerAction,
+            {
+              opacity: pressed ? 0.64 : 1,
+            },
+          ]}
+        >
+          <Feather color={theme.colors.primary} name="plus-circle" size={20} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, theme.colors.primary]);
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
@@ -83,6 +106,12 @@ export function VenuesScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 40,
+  },
   list: {
     gap: 8,
   },

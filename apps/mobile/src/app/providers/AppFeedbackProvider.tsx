@@ -53,7 +53,7 @@ export function AppFeedbackProvider({ children }: PropsWithChildren) {
   const [toast, setToast] = useState<AppToastState | null>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslateY = useRef(new Animated.Value(18)).current;
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextToastIdRef = useRef(1);
 
   const hideToast = useCallback(() => {
