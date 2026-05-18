@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { SkeletonBlock } from './SkeletonBlock';
 
 type DirectoryRowSkeletonProps = {

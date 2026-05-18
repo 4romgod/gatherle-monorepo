@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileVenue } from '@data/graphql/query/Venue/types';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type VenueListItemProps = {
   onPress?: () => void;

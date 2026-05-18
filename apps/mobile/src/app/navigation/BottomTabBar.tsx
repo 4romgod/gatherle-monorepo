@@ -7,8 +7,8 @@ import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { MOBILE_BOTTOM_TAB_BAR_HEIGHT } from '@/lib/constants/layout';
 import { getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontFamily, fontSize } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontFamily, fontSize } from '@/app/theme/typography';
 import type { MainTabParamList } from '@/app/navigation/routes';
 
 const TAB_ICONS: Record<keyof MainTabParamList, React.ComponentProps<typeof Feather>['name']> = {

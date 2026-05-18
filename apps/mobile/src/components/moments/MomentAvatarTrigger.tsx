@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type MomentAuthorLike = {
   family_name?: string | null;

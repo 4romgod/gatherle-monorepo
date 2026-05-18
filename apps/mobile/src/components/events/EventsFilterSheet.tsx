@@ -11,8 +11,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { DateFilterOption, EventCategory, EventStatus } from '@data/graphql/types/graphql';
 import { FilterChip } from '@/components/core/FilterChip';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 import type { EventsFilterState, EventsLocationFilter } from '@/hooks/events/useEventsFilters';
 
 const STATUS_OPTIONS: { label: string; value: EventStatus; tone: 'primary' | 'success' }[] = [

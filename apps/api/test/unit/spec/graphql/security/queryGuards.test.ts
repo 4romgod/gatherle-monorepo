@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { parse, type OperationDefinitionNode } from 'graphql';
 import { enforceQueryGuards, resolveQueryGuardLimits } from '@/graphql/security';
 import { APPLICATION_STAGES } from '@gatherle/commons';
+import { SortOrderInput } from '@gatherle/commons/types';
 
 const getOperation = (source: string): { document: ReturnType<typeof parse>; operation: OperationDefinitionNode } => {
   const document = parse(source);
@@ -155,12 +156,12 @@ describe('enforceQueryGuards', () => {
         {
           upcomingOptions: {
             dateRange: {},
-            sort: [{ field: 'startAt', order: 'Asc' }],
+            sort: [{ field: 'startAt', order: SortOrderInput.asc }],
             pagination: { limit: 10 },
           },
           trendingOptions: {
             dateRange: {},
-            sort: [{ field: 'rsvpCount', order: 'Desc' }],
+            sort: [{ field: 'rsvpCount', order: SortOrderInput.desc }],
             pagination: { limit: 18 },
           },
         },

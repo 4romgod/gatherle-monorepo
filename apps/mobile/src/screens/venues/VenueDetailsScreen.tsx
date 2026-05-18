@@ -21,8 +21,8 @@ import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { usePublicEvents } from '@/hooks/events/usePublicEvents';
 import { getApolloAuthContext } from '@/lib/auth';
 import { openLocationQueryInMaps } from '@/lib/events/deviceActions';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type VenueDetailsRoute = RouteProp<RootStackParamList, 'VenueDetails'>;
 

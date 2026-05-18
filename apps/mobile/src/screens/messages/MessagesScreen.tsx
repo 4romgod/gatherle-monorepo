@@ -11,12 +11,12 @@ import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ConversationRow } from '@/components/messages/ConversationRow';
 import { ConversationRowSkeleton } from '@/components/skeleton/ConversationRowSkeleton';
-import { getApolloErrorCode } from '@/features/auth/lib/apolloErrors';
+import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useMessages } from '@/hooks/messages/useMessages';
 import { getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 export function MessagesScreen() {
   const navigation = useNavigation<MainTabNavigation>();

@@ -1,8 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileDirectoryUser } from '@data/graphql/query/User/types';
 import { getDisplayName, getInitials } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 import { InlineButton } from '@/components/core/InlineButton';
 
 type CommunityMemberRowProps = {

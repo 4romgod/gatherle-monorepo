@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Alert, Pressable, StyleSheet } from 'react-native';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 export type ProfileBadgeTone = 'primary' | 'secondary' | 'success';
 

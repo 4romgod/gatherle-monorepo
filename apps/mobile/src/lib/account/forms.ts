@@ -1,7 +1,7 @@
 import type { MobileAccountProfile } from '@data/graphql/query/User/types';
 import type { UpdateUserMutation } from '@data/graphql/types/graphql';
 import { FollowPolicy, Gender, SocialVisibility, type UpdateUserInput } from '@data/graphql/types/graphql';
-import type { ThemePreference } from '@/shared/theme/palette';
+import type { ThemePreference } from '@/app/theme/palette';
 
 export type EditProfileFormState = {
   bio: string;

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type PageContainerProps = {
   children: ReactNode;

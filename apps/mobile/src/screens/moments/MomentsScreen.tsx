@@ -5,8 +5,8 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { MomentFeedPage } from '@/components/moments/feed/MomentFeedPage';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
 import { useMomentsFeed } from '@/hooks/moments/useMomentsFeed';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 export function MomentsScreen() {
   const { authToken } = useAppShell();

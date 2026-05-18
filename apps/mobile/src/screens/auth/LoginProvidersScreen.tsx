@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { AuthScreenShell } from '@/features/auth/components/AuthScreenShell';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type LoginRoute = RouteProp<RootStackParamList, 'Login'>;
 

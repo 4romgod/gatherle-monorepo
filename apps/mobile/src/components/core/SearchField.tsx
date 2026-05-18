@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { TextInput, View, StyleSheet } from 'react-native';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 // Inject a global CSS rule once on web to strip the browser focus outline from
 // all TextInput elements (which render as <input> or <textarea> in RN Web).

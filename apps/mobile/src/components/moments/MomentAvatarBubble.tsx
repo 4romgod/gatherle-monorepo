@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type MomentAuthorLike = {
   family_name?: string | null;

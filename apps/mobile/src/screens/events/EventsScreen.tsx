@@ -19,8 +19,8 @@ import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 export function EventsScreen() {
   const navigation = useNavigation<MainTabNavigation>();

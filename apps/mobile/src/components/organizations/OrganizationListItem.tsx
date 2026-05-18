@@ -1,8 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileOrganization } from '@data/graphql/query/Discovery/types';
 import { formatCountLabel, getInitials } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type OrganizationListItemProps = {
   onPress?: () => void;

@@ -9,14 +9,19 @@ import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ApolloProvider } from '@apollo/client';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { apolloClient } from '@data/graphql/apollo-client';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { AppDrawer } from '@/components/navigation/AppDrawer';
+import { AppFeedbackProvider } from '@/app/providers/AppFeedbackProvider';
+import { AppShellProvider } from '@/app/providers/AppShellProvider';
+import { AppDrawer } from '@/app/navigation/AppDrawer';
 import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
-import { AppProviders } from '@/app/AppProviders';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { AppThemeProvider } from '@/app/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 function AppContent() {
   const { isDark, navigationTheme } = useAppTheme();
@@ -57,11 +62,19 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AppProviders>
-        <BottomSheetModalProvider>
-          <AppContent />
-        </BottomSheetModalProvider>
-      </AppProviders>
+      <ApolloProvider client={apolloClient}>
+        <SafeAreaProvider>
+          <AppThemeProvider>
+            <AppShellProvider>
+              <AppFeedbackProvider>
+                <BottomSheetModalProvider>
+                  <AppContent />
+                </BottomSheetModalProvider>
+              </AppFeedbackProvider>
+            </AppShellProvider>
+          </AppThemeProvider>
+        </SafeAreaProvider>
+      </ApolloProvider>
     </GestureHandlerRootView>
   );
 }

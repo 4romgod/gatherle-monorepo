@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet } from 'react-native';
 import { navigationRef } from '@/app/navigation/navigationRef';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 export function BrandMark() {
   const { isDark } = useAppTheme();

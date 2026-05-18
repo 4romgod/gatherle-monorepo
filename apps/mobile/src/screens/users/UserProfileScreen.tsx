@@ -32,8 +32,8 @@ import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { getApolloAuthContext } from '@/lib/auth';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type UserProfileRoute = RouteProp<RootStackParamList, 'UserProfile'>;
 type PublicProfileTab = 'going' | 'past' | 'hosting';

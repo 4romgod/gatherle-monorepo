@@ -24,7 +24,7 @@ import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout'
 import { DEVICE_STORAGE_KEYS, writeStoredString } from '@/lib/deviceStorage';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type MessageThreadRoute = RouteProp<RootStackParamList, 'MessageThread'>;
 

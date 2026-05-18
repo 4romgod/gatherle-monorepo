@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type AccountTabButtonProps = {
   active: boolean;

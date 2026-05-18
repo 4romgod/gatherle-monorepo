@@ -30,8 +30,8 @@ import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { getApolloAuthContext } from '@/lib/auth';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 const COMMON_TIMEZONES = [
   'Africa/Johannesburg',

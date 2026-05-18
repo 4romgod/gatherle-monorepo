@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const styleId = 'rn-auth-input-no-outline';

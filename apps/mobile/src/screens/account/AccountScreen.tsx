@@ -18,8 +18,8 @@ import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { dedupeOccurrencesBySeries, getDisplayName } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type AccountTab = 'going' | 'past' | 'hosting' | 'saved';
 

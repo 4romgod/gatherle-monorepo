@@ -3,8 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ComposerIconButton } from '@/components/core/ComposerIconButton';
 import { EmojiPicker } from '@/components/core/EmojiPicker';
 import { DEVICE_STORAGE_KEYS, readStoredJson, writeStoredJson } from '@/lib/deviceStorage';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type ChatComposerProps = {
   isConnected: boolean;

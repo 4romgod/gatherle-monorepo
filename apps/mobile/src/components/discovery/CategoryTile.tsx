@@ -2,8 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventCategory } from '@data/graphql/query/Discovery/types';
 import { formatCountLabel } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type CategoryTileProps = {
   category: MobileEventCategory;

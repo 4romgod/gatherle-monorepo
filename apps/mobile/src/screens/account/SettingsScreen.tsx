@@ -19,8 +19,8 @@ import { useAccountProfile } from '@/hooks/account/useAccountProfile';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildSettingsInput, createSettingsForm, validateSettingsForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { fontSize, typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { fontSize, typography } from '@/app/theme/typography';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
 const VISIBILITY_OPTIONS = [SocialVisibility.Public, SocialVisibility.Followers, SocialVisibility.Private];

@@ -1,7 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { getInitials } from '@/lib/events/formatters';
-import { useAppTheme } from '@/shared/theme/AppThemeProvider';
-import { typography } from '@/shared/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 type ProfileAvatarProps = {
   active?: boolean;

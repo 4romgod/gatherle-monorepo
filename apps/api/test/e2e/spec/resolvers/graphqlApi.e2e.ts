@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import request from 'supertest';
+import { SortOrderInput } from '@gatherle/commons/types';
 import { testUserSeedUser } from '@/mongodb/mockData';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
@@ -23,6 +24,66 @@ const extractTaggedQuery = (source: string, operationName: string): string => {
 
 const getHomeDiscoveryQuery = extractTaggedQuery(mobileDiscoveryQuerySource, 'GetHomeDiscovery');
 const getEventsFeedQuery = extractTaggedQuery(mobileDiscoveryQuerySource, 'GetEventsFeed');
+const getEventsFeedOccurrenceSelection = (() => {
+  const match = getEventsFeedQuery.match(
+    /readEventOccurrences\(options: \$options\)\s*\{([\s\S]*?)\n\s*\}\n\s*readEventCategories/,
+  );
+
+  if (!match?.[1]) {
+    throw new Error('Unable to extract readEventOccurrences selection set from mobile discovery query source.');
+  }
+
+  return match[1];
+})();
+const inflatedHomeDiscoveryQuery = getHomeDiscoveryQuery.replace(
+  '    readEventCategories {',
+  `    overflowA: readEventOccurrences(options: $trendingOptions) {${getEventsFeedOccurrenceSelection}
+    }
+    overflowB: readEventOccurrences(options: $trendingOptions) {${getEventsFeedOccurrenceSelection}
+    }
+    overflowC: readEventOccurrences(options: $trendingOptions) {${getEventsFeedOccurrenceSelection}
+    }
+    overflowD: readEventOccurrences(options: $trendingOptions) {${getEventsFeedOccurrenceSelection}
+    }
+    readEventCategories {`,
+);
+const tooDeepNonIntrospectionQuery = `
+  query TooDeep {
+    readEvents(options: { pagination: { limit: 1 } }) {
+      representativeOccurrence {
+        eventSeries {
+          representativeOccurrence {
+            eventSeries {
+              representativeOccurrence {
+                eventSeries {
+                  representativeOccurrence {
+                    eventSeries {
+                      representativeOccurrence {
+                        eventSeries {
+                          representativeOccurrence {
+                            eventSeries {
+                              representativeOccurrence {
+                                eventSeries {
+                                  representativeOccurrence {
+                                    occurrenceId
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 const buildMobileOccurrenceDateRange = (fromDate: Date = new Date()) => {
   const startDate = new Date(fromDate);
@@ -72,45 +133,9 @@ describe('GraphQL API hardening', () => {
   });
 
   it('rejects excessively deep queries before resolver execution', async () => {
-    const response = await request(url)
-      .post('')
-      .send({
-        query: `
-        query TooDeep {
-          __schema {
-            queryType {
-              fields {
-                type {
-                  ofType {
-                    ofType {
-                      ofType {
-                        ofType {
-                          ofType {
-                            ofType {
-                              ofType {
-                                ofType {
-                                  ofType {
-                                    ofType {
-                                      ofType {
-                                        name
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      `,
-      });
+    const response = await request(url).post('').send({
+      query: tooDeepNonIntrospectionQuery,
+    });
 
     expect(response.status).toBe(400);
     expect(response.body.errors[0].extensions.code).toBe('BAD_REQUEST');
@@ -145,12 +170,12 @@ describe('GraphQL API hardening', () => {
           variables: {
             upcomingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'startAt', order: 'Asc' }],
+              sort: [{ field: 'startAt', order: SortOrderInput.asc }],
               pagination: { limit: 10 },
             },
             trendingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'rsvpCount', order: 'Desc' }],
+              sort: [{ field: 'rsvpCount', order: SortOrderInput.desc }],
               pagination: { limit: 18 },
             },
           },
@@ -175,12 +200,12 @@ describe('GraphQL API hardening', () => {
           variables: {
             upcomingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'startAt', order: 'Asc' }],
+              sort: [{ field: 'startAt', order: SortOrderInput.asc }],
               pagination: { limit: 10 },
             },
             trendingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'rsvpCount', order: 'Desc' }],
+              sort: [{ field: 'rsvpCount', order: SortOrderInput.desc }],
               pagination: { limit: 18 },
             },
           },
@@ -200,7 +225,7 @@ describe('GraphQL API hardening', () => {
           variables: {
             options: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'startAt', order: 'Asc' }],
+              sort: [{ field: 'startAt', order: SortOrderInput.asc }],
               pagination: { limit: 40 },
             },
           },
@@ -215,16 +240,16 @@ describe('GraphQL API hardening', () => {
       const response = await request(url)
         .post('')
         .send({
-          query: getHomeDiscoveryQuery,
+          query: inflatedHomeDiscoveryQuery,
           variables: {
             upcomingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'startAt', order: 'Asc' }],
+              sort: [{ field: 'startAt', order: SortOrderInput.asc }],
               pagination: { limit: 50 },
             },
             trendingOptions: {
               dateRange: buildMobileOccurrenceDateRange(),
-              sort: [{ field: 'rsvpCount', order: 'Desc' }],
+              sort: [{ field: 'rsvpCount', order: SortOrderInput.desc }],
               pagination: { limit: 50 },
             },
           },
@@ -248,9 +273,9 @@ describe('GraphQL API hardening', () => {
     });
 
     it('returns null for a non-existent moment ID as an authenticated caller', async () => {
-      const seededUsers = await getSeededTestUsers();
-      const token = await loginSeededUser(seededUsers[0]);
-      const response = await request(url).post('').set('Authorization', `Bearer ${token}`).send({
+      const seededUsers = getSeededTestUsers();
+      const userWithToken = await loginSeededUser(url, seededUsers.user.email, seededUsers.user.password);
+      const response = await request(url).post('').set('Authorization', `Bearer ${userWithToken.token}`).send({
         query: `query { readMomentById(momentId: "00000000-0000-0000-0000-000000000000") { momentId } }`,
       });
 
