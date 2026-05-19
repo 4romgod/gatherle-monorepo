@@ -42,6 +42,6 @@
     "typescript": "^6.0.2"
   },
   "overrides": {
-    "mongoose": "~8.21.1"
+    "mongoose": "~9.6.0"
   }
 }

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, index, modelOptions, prop } from '@typegoose/typegoose';
+import type { MongoModelForClass } from './modelTypes';
 
 @index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 @index({ scopeKey: 1 }, { unique: true })
@@ -21,4 +22,7 @@ class WebSocketRequestThrottleModel {
   expiresAt!: Date;
 }
 
-export default getModelForClass(WebSocketRequestThrottleModel);
+const WebSocketRequestThrottle: MongoModelForClass<typeof WebSocketRequestThrottleModel> =
+  getModelForClass(WebSocketRequestThrottleModel);
+
+export default WebSocketRequestThrottle;

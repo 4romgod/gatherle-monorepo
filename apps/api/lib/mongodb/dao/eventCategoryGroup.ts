@@ -21,7 +21,8 @@ class EventCategoryGroupDAO {
    */
   static async create(input: CreateEventCategoryGroupInput): Promise<EventCategoryGroup> {
     try {
-      const eventCategoryGroup = await EventCategoryGroupModel.create(input);
+      const eventCategoryGroup = new EventCategoryGroupModel(input);
+      await eventCategoryGroup.save();
       return eventCategoryGroup.toObject();
     } catch (error) {
       logDaoError('Error creating event category group', { error });

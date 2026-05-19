@@ -35,7 +35,7 @@ class ChatMessageDAO {
 
   static async create(input: CreateChatMessageInput): Promise<ChatMessageEntity> {
     try {
-      const chatMessage = await ChatMessageModel.create({
+      const chatMessage = new ChatMessageModel({
         senderUserId: input.senderUserId,
         recipientUserId: input.recipientUserId,
         conversationKey: this.buildConversationKey(input.senderUserId, input.recipientUserId),
@@ -47,6 +47,7 @@ class ChatMessageDAO {
           replyToMomentType: input.replyToMomentType,
         }),
       });
+      await chatMessage.save();
 
       return toChatMessageEntity(chatMessage.toObject());
     } catch (error) {

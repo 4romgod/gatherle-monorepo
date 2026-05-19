@@ -8,8 +8,7 @@ import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';
 
 jest.mock('@/mongodb/models', () => ({
-  User: {
-    create: jest.fn(),
+  User: Object.assign(jest.fn(), {
     findById: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
@@ -19,7 +18,7 @@ jest.mock('@/mongodb/models', () => ({
     findOneAndUpdate: jest.fn(),
     countDocuments: jest.fn(),
     aggregate: jest.fn(),
-  },
+  }),
   Organization: {
     findById: jest.fn(),
   },
@@ -54,6 +53,27 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
   exec: jest.fn().mockRejectedValue(error),
   select: jest.fn().mockReturnThis(),
 });
+
+const UserModelMock = User as unknown as jest.Mock & {
+  findById: jest.Mock;
+  findOne: jest.Mock;
+  find: jest.Mock;
+  findByIdAndUpdate: jest.Mock;
+  findByIdAndDelete: jest.Mock;
+  findOneAndDelete: jest.Mock;
+  findOneAndUpdate: jest.Mock;
+  countDocuments: jest.Mock;
+  aggregate: jest.Mock;
+};
+
+const mockConstructedUser = (payload: { toObject: jest.Mock; save?: jest.Mock } & Record<string, unknown>) => {
+  const document = {
+    save: jest.fn().mockResolvedValue(undefined),
+    ...payload,
+  };
+  UserModelMock.mockImplementationOnce(() => document);
+  return document;
+};
 
 type OAuthIdentity = Parameters<typeof UserDAO.loginWithOAuth>[0];
 
@@ -93,40 +113,41 @@ describe('UserDAO', () => {
 
     it('should create a user and return the user object with token', async () => {
       (generateToken as jest.Mock).mockReturnValue('mockToken');
-      (User.create as jest.Mock).mockResolvedValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => mockUser,
-        }),
-      );
+      const createdUser = mockConstructedUser({
+        toObject: jest.fn().mockReturnValue(mockUser),
+      });
 
       const result = await UserDAO.create(mockCreateUserInput);
 
       expect(result).toEqual({ ...mockUser, token: 'mockToken' });
+      expect(UserModelMock).toHaveBeenCalledWith(mockCreateUserInput);
+      expect(createdUser.save).toHaveBeenCalled();
       expect(generateToken).toHaveBeenCalledWith(mockUser);
     });
 
     it('should create a user (with default username) and return the user object with token', async () => {
       (generateToken as jest.Mock).mockReturnValue('mockToken');
-      (User.create as jest.Mock).mockResolvedValue(
-        createMockSuccessMongooseQuery({
-          toObject: () => {
-            return {
-              ...mockUser,
-              username: 'test',
-            };
-          },
+      const createdUser = mockConstructedUser({
+        toObject: jest.fn().mockReturnValue({
+          ...mockUser,
+          username: 'test',
         }),
-      );
+      });
 
       const result = await UserDAO.create({ ...mockCreateUserInput, username: undefined });
 
       expect(result).toEqual({ ...mockUser, username: 'test', token: 'mockToken' });
+      expect(UserModelMock).toHaveBeenCalledWith({ ...mockCreateUserInput, username: undefined });
+      expect(createdUser.save).toHaveBeenCalled();
       expect(generateToken).toHaveBeenCalledWith({ ...mockUser, username: 'test' });
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
       const mockError = new Error('Mongodb Error');
-      (User.create as jest.Mock).mockRejectedValue(mockError);
+      mockConstructedUser({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(mockError),
+      });
 
       await expect(UserDAO.create(mockCreateUserInput)).rejects.toThrow(KnownCommonError(mockError));
     });
@@ -240,14 +261,14 @@ describe('UserDAO', () => {
       (User.findOne as jest.Mock)
         .mockReturnValueOnce(createMockSuccessMongooseQuery(null))
         .mockReturnValueOnce(createMockSuccessMongooseQuery(null));
-      (User.create as jest.Mock).mockResolvedValue(createdUser);
+      const createdUserDoc = mockConstructedUser(createdUser);
       (generateToken as jest.Mock).mockResolvedValue('oauth-token');
 
       const result = await UserDAO.loginWithOAuth(identity);
 
       expect(User.findOne).toHaveBeenNthCalledWith(1, { googleSubject: 'google-user-1' });
       expect(User.findOne).toHaveBeenNthCalledWith(2, { email: 'oauthuser@example.com' });
-      expect(User.create).toHaveBeenCalledWith({
+      expect(UserModelMock).toHaveBeenCalledWith({
         email: 'oauthuser@example.com',
         given_name: 'OAuth',
         family_name: 'User',
@@ -256,6 +277,7 @@ describe('UserDAO', () => {
         profile_picture: 'https://example.com/avatar.png',
         googleSubject: 'google-user-1',
       });
+      expect(createdUserDoc.save).toHaveBeenCalled();
       expect(result).toEqual({
         userId: 'user-1',
         email: 'oauthuser@example.com',
@@ -301,7 +323,7 @@ describe('UserDAO', () => {
       expect(existingUser.emailVerified).toBe(true);
       expect(existingUser.profile_picture).toBe('https://example.com/avatar.png');
       expect(existingUser.save).toHaveBeenCalled();
-      expect(User.create).not.toHaveBeenCalled();
+      expect(UserModelMock).not.toHaveBeenCalled();
       expect(result).toEqual({
         userId: 'user-1',
         email: 'user@example.com',
@@ -347,7 +369,7 @@ describe('UserDAO', () => {
       expect(existingEmailUser.emailVerified).toBe(true);
       expect(existingEmailUser.profile_picture).toBe('https://example.com/avatar.png');
       expect(existingEmailUser.save).toHaveBeenCalled();
-      expect(User.create).not.toHaveBeenCalled();
+      expect(UserModelMock).not.toHaveBeenCalled();
       expect(result).toEqual({
         userId: 'user-2',
         email: 'user@example.com',
@@ -446,12 +468,12 @@ describe('UserDAO', () => {
       };
 
       (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(null));
-      (User.create as jest.Mock).mockResolvedValue(createdUser);
+      const createdUserDoc = mockConstructedUser(createdUser);
       (generateToken as jest.Mock).mockResolvedValue('oauth-token');
 
       const result = await UserDAO.loginWithOAuth(identity);
 
-      expect(User.create).toHaveBeenCalledWith({
+      expect(UserModelMock).toHaveBeenCalledWith({
         email: 'appleperson@example.com',
         given_name: 'appleperson',
         family_name: 'User',
@@ -460,6 +482,7 @@ describe('UserDAO', () => {
         profile_picture: undefined,
         appleSubject: 'apple-user-2',
       });
+      expect(createdUserDoc.save).toHaveBeenCalled();
       expect(result).toMatchObject({
         userId: 'user-3',
         email: 'appleperson@example.com',

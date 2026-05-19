@@ -143,7 +143,8 @@ class EventSeriesDAO {
     slug: string,
     extraFields: Record<string, unknown> = {},
   ): Promise<EventEntity> {
-    const event = await EventSeriesModel.create({ ...input, slug, ...extraFields });
+    const event = new EventSeriesModel({ ...input, slug, ...extraFields });
+    await event.save();
     return event.toObject();
   }
 

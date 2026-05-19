@@ -19,7 +19,11 @@ class UserFeedDAO {
    */
   static async readFeedForUser(userId: string, limit = 50, skip = 0): Promise<UserFeedItemEntity[]> {
     try {
-      const items = await UserFeedModel.find({ userId }).sort({ score: -1 }).skip(skip).limit(limit).exec();
+      const items = await UserFeedModel.find({ userId })
+        .sort({ score: -1, feedItemId: 1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
       return items.map((item) => item.toObject());
     } catch (error) {
       logDaoError('Error reading user feed', { error });

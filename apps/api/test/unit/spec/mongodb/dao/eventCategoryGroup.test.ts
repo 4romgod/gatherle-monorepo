@@ -12,16 +12,33 @@ import { ERROR_MESSAGES } from '@/validation';
 import { MockMongoError } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({
-  EventCategoryGroup: {
-    create: jest.fn(),
+  EventCategoryGroup: Object.assign(jest.fn(), {
     findById: jest.fn(),
     findOne: jest.fn(),
     findByIdAndUpdate: jest.fn(),
     findByIdAndDelete: jest.fn(),
     findOneAndDelete: jest.fn(),
     find: jest.fn(),
-  },
+  }),
 }));
+
+const EventCategoryGroupModelMock = EventCategoryGroupModel as unknown as jest.Mock & {
+  findById: jest.Mock;
+  findOne: jest.Mock;
+  findByIdAndUpdate: jest.Mock;
+  findByIdAndDelete: jest.Mock;
+  findOneAndDelete: jest.Mock;
+  find: jest.Mock;
+};
+
+const mockConstructedEventCategoryGroup = (payload: { toObject: jest.Mock; save?: jest.Mock }) => {
+  const document = {
+    save: jest.fn().mockResolvedValue(undefined),
+    ...payload,
+  };
+  EventCategoryGroupModelMock.mockImplementationOnce(() => document);
+  return document;
+};
 
 jest.mock('@/utils/queries/query', () => ({
   transformOptionsToQuery: jest.fn(),
@@ -85,20 +102,19 @@ describe('EventCategoryGroupDAO', () => {
         eventCategories: mockEventCategoryIds,
       };
 
-      const mockCreatedDocument = {
+      const mockCreatedDocument = mockConstructedEventCategoryGroup({
         ...mockEventCategoryGroup,
         eventCategories: mockEventCategoryIds,
         toObject: jest.fn().mockReturnValue({
           ...mockEventCategoryGroup,
           eventCategories: mockEventCategoryIds,
         }),
-      };
-
-      (EventCategoryGroupModel.create as jest.Mock).mockResolvedValue(mockCreatedDocument);
+      });
 
       const result = await EventCategoryGroupDAO.create(input);
 
-      expect(EventCategoryGroupModel.create).toHaveBeenCalledWith(input);
+      expect(EventCategoryGroupModelMock).toHaveBeenCalledWith(input);
+      expect(mockCreatedDocument.save).toHaveBeenCalled();
       expect(result.eventCategories).toEqual(mockEventCategoryIds);
       expect(result.eventCategories).toHaveLength(mockEventCategoryIds.length);
 
@@ -115,7 +131,10 @@ describe('EventCategoryGroupDAO', () => {
       };
 
       const mongoError = new MockMongoError(11000, 'Duplicate key error');
-      (EventCategoryGroupModel.create as jest.Mock).mockRejectedValue(mongoError);
+      mockConstructedEventCategoryGroup({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(mongoError),
+      });
 
       await expect(EventCategoryGroupDAO.create(input)).rejects.toThrow();
     });

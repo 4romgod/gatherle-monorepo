@@ -47,13 +47,13 @@ describe('UserFeedDAO', () => {
 
   describe('readFeedForUser', () => {
     it('returns feed items sorted by score for a user', async () => {
-      (UserFeedModel.find as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery([{ toObject: () => mockFeedItem }]),
-      );
+      const mockQuery = createMockSuccessMongooseQuery([{ toObject: () => mockFeedItem }]);
+      (UserFeedModel.find as jest.Mock).mockReturnValue(mockQuery);
 
       const result = await UserFeedDAO.readFeedForUser('user-1');
 
       expect(UserFeedModel.find).toHaveBeenCalledWith({ userId: 'user-1' });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ score: -1, feedItemId: 1 });
       expect(result).toEqual([mockFeedItem]);
     });
 

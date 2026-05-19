@@ -4,6 +4,7 @@ import { getModelForClass, pre } from '@typegoose/typegoose';
 import { User as UserEntity } from '@gatherle/commons/types';
 import { genSalt, hash, compare } from 'bcryptjs';
 import { logger } from '@/utils/logger';
+import type { MongoModelForClass } from './modelTypes';
 
 async function hashPassword(plainPassword: string): Promise<string> {
   const salt = await genSalt(10);
@@ -16,7 +17,7 @@ type UpdateFields = {
   [key: string]: unknown;
 };
 
-@pre<UserModel>('validate', async function (next) {
+@pre<UserModel>('validate', async function () {
   try {
     if (!this.userId && this._id) {
       this.userId = this._id.toString();
@@ -41,13 +42,12 @@ type UpdateFields = {
     if (this.isModified('email')) {
       this.email = this.email.toLowerCase();
     }
-    next();
   } catch (error) {
     logger.debug('Error when pre-saving the user', { error });
-    next(error as Error);
+    throw error;
   }
 })
-@pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function (next) {
+@pre<UserModel>(['findOneAndUpdate', 'updateOne'], async function () {
   try {
     type UpdateContext = {
       getUpdate?: () => unknown;
@@ -57,7 +57,7 @@ type UpdateFields = {
     const update = context.getUpdate?.();
 
     if (!update || typeof update !== 'object' || Array.isArray(update)) {
-      return next();
+      return;
     }
 
     const updateObj = { ...(update as Record<string, unknown>) } as UpdateFields;
@@ -70,10 +70,9 @@ type UpdateFields = {
       updateObj.email = updateObj.email.toLowerCase();
     }
     context.setUpdate?.(updateObj);
-    next();
   } catch (error) {
     logger.error('Error in pre-update hook', { error });
-    next(error as Error);
+    throw error;
   }
 })
 class UserModel extends UserEntity {
@@ -84,7 +83,7 @@ class UserModel extends UserEntity {
 
 export type UserDocument = DocumentType<UserModel>;
 
-const User = getModelForClass(UserModel, {
+const User: MongoModelForClass<typeof UserModel> = getModelForClass(UserModel, {
   options: { customName: 'User' },
   schemaOptions: {
     toObject: { getters: true },

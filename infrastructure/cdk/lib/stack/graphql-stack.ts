@@ -123,7 +123,6 @@ export class GraphQLStack extends Stack {
         tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
-        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
         loader: { '.html': 'file' },
       },
       environment: {
@@ -165,7 +164,6 @@ export class GraphQLStack extends Stack {
         tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
-        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
       },
       environment: {
         STAGE: props.applicationStage,
