@@ -2,15 +2,25 @@ import { HttpStatusCode } from '@/constants';
 import { handleChatRead } from '@/websocket/routes/chatRead';
 import { ChatMessageDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import { ensureDatabaseConnection } from '@/websocket/database';
+import { getConnectionMetadata } from '@/websocket/event';
 import { touchConnection } from '@/websocket/routes/touch';
 import { isGoneConnectionError, postToConnection } from '@/websocket/gateway';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
 }));
 
+jest.mock('@/websocket/abuseControl', () => ({
+  assertWebSocketRateLimit: jest.fn(),
+}));
+
 jest.mock('@/websocket/routes/touch', () => ({
   touchConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/event', () => ({
+  getConnectionMetadata: jest.fn(),
 }));
 
 jest.mock('@/mongodb/dao', () => ({
@@ -51,6 +61,12 @@ describe('websocket route: chat.read', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
+    (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
+    (getConnectionMetadata as jest.Mock).mockReturnValue({
+      connectionId: 'conn-reader',
+      domainName: 'api.example.com',
+      stage: 'beta',
+    });
     (touchConnection as jest.Mock).mockResolvedValue('conn-reader');
   });
 
@@ -109,6 +125,10 @@ describe('websocket route: chat.read', () => {
 
     const parsed = JSON.parse(response.body ?? '{}');
     expect(response.statusCode).toBe(HttpStatusCode.OK);
+    expect(assertWebSocketRateLimit).toHaveBeenCalledWith('chat.read', {
+      connectionId: 'conn-reader',
+      userId: 'user-1',
+    });
     expect(parsed).toMatchObject({
       message: 'Chat conversation marked as read',
       withUserId: 'user-2',

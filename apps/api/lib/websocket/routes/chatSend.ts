@@ -4,9 +4,11 @@ import { EventMomentType } from '@gatherle/commons/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
-import { CHAT_MESSAGE_MAX_LENGTH } from '@/websocket/constants';
+import { CHAT_MESSAGE_MAX_LENGTH, WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { validateInput } from '@/validation';
 import { ChatSendPayloadSchema } from '@/validation/zod';
+import { getConnectionMetadata } from '@/websocket/event';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 
 const MOMENT_CAPTION_MAX_LENGTH = 280;
 const VALID_MOMENT_TYPES = new Set<string>(Object.values(EventMomentType));
@@ -31,7 +33,7 @@ const toClientValidationResponse = (error: GraphQLError): APIGatewayProxyResultV
 
 export const handleChatSend = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   await ensureDatabaseConnection();
-  const connectionId = await touchConnection(event);
+  const { connectionId } = getConnectionMetadata(event);
   const payload = parseBody<ChatSendPayload>(event.body);
   const recipientUserId = typeof payload?.recipientUserId === 'string' ? payload.recipientUserId.trim() : '';
   const message = typeof payload?.message === 'string' ? payload.message.trim() : '';
@@ -91,6 +93,8 @@ export const handleChatSend = async (event: WebSocketRequestEvent): Promise<APIG
   }
 
   const senderUserId = senderConnection.userId;
+  await assertWebSocketRateLimit(WEBSOCKET_ROUTES.CHAT_SEND, { connectionId, userId: senderUserId });
+  await touchConnection(event);
 
   // Delegate to service
   const result = await chatMessagingService.sendMessage(senderUserId, recipientUserId, message, {

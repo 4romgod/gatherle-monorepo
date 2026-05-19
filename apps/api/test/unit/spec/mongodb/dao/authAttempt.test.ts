@@ -1,6 +1,7 @@
 import { GraphQLError } from 'graphql';
 import AuthAttemptDAO from '@/mongodb/dao/authAttempt';
 import { AuthAttempt as AuthAttemptModel } from '@/mongodb/models';
+import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { logDaoError } from '@/utils';
 
 jest.mock('@/mongodb/models', () => ({
@@ -18,6 +19,10 @@ jest.mock('@/utils', () => {
     logDaoError: jest.fn(),
   };
 });
+
+jest.mock('@/utils/authAbuseMetrics', () => ({
+  emitAuthAbuseMetric: jest.fn(),
+}));
 
 const createLeanQuery = <T>(value: T, shouldReject = false) => ({
   lean: jest.fn().mockImplementation(() => (shouldReject ? Promise.reject(value) : Promise.resolve(value))),
@@ -76,6 +81,7 @@ describe('AuthAttemptDAO', () => {
           retryAfterSeconds: 210,
         },
       });
+      expect(emitAuthAbuseMetric).toHaveBeenCalledWith('LoginLockout');
     });
 
     it('wraps unexpected lookup failures', async () => {

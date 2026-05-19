@@ -4,6 +4,7 @@ import { ensureDatabaseConnection } from '@/websocket/database';
 import { extractToken, getConnectionMetadata } from '@/websocket/event';
 import { handleConnect } from '@/websocket/routes/connect';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 
 jest.mock('@/utils/auth', () => ({
   verifyToken: jest.fn(),
@@ -18,6 +19,10 @@ jest.mock('@/utils/logger', () => ({
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/abuseControl', () => ({
+  assertWebSocketRateLimit: jest.fn(),
 }));
 
 jest.mock('@/websocket/event', () => ({
@@ -45,6 +50,7 @@ describe('websocket route: connect', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
+    (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
     (verifyToken as jest.Mock).mockResolvedValue({ userId: 'user-abc' });
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-123',
@@ -97,6 +103,7 @@ describe('websocket route: connect', () => {
       const result = (await handleConnect(makeEvent())) as { statusCode: number; body: string };
 
       expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
+      expect(assertWebSocketRateLimit).toHaveBeenCalledWith('$connect', { userId: 'user-abc' });
       expect(WebSocketConnectionDAO.upsertConnection).toHaveBeenCalledWith(
         expect.objectContaining({
           connectionId: 'conn-123',

@@ -18,6 +18,7 @@ import {
 import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
 import { RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';
+import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { CustomError, ErrorTypes, getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
@@ -114,6 +115,7 @@ export class UserResolver {
       return user;
     } catch (error) {
       if (isAuthenticationFailure(error)) {
+        emitAuthAbuseMetric('LoginFailure');
         await AuthAttemptDAO.recordFailureForScopes(scopeKeys).catch((recordError) =>
           logger.warn('[UserResolver] Failed to record auth attempt after login failure', {
             scopeKeys,

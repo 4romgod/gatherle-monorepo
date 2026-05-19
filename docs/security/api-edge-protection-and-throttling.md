@@ -396,7 +396,7 @@ That means our WebSocket protection path should be:
 1. Keep conservative stage throttling on the WebSocket stage
 2. Enforce payload schema validation for every route
 3. Add app-level anti-spam limits for chat sends and read receipts
-4. Add alarms for connection spikes, throttles, and backend send failures
+4. Add app-level spam/quotas and backend send-failure alarms on top of the baseline connection/throttle alarms
 5. Consider connection-level or identity-level quotas where stage throttling is too coarse
 
 ### 4. Frontend Protection
@@ -440,13 +440,13 @@ For SSR or server actions, the protection needs look much closer to API protecti
 
 Protection is incomplete without visibility.
 
-Next phase monitoring should include:
+Baseline monitoring now includes CloudWatch alarms on GraphQL/WebSocket traffic spikes, API `4XX`/`5XX`, throttles,
+Lambda errors, and login abuse spikes. The next phase should add:
 
-1. CloudWatch alarms on API Gateway `4XXError`, `5XXError`, and throttle spikes
-2. alarms on WAF blocked-request spikes
-3. Lambda concurrency and error alarms for GraphQL and WebSocket handlers
-4. AWS Budgets alerts for API Gateway, Lambda, WAF, and CloudWatch logs
-5. dashboards for blocked, throttled, and allowed request patterns by stage
+1. alarms on WAF blocked-request spikes
+2. AWS Budgets alerts for API Gateway, Lambda, WAF, and CloudWatch logs
+3. dashboards for blocked, throttled, and allowed request patterns by stage
+4. backend send-failure or stale-connection anomaly alarms for realtime delivery paths
 
 ---
 
@@ -458,7 +458,7 @@ Recommended operating stance:
 
 - keep the current beta stage throttles low until real traffic baselines are known
 - keep the WAF rate rule enabled
-- add CloudWatch and budget alarms before broad beta exposure
+- keep the new CloudWatch alarms enabled and add budget alarms before broad beta exposure
 - add GraphQL query-cost controls in the next phase before raising limits materially
 - add websocket app-level quotas before scaling realtime adoption
 

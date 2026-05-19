@@ -6,6 +6,9 @@ import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
 import { validateInput } from '@/validation';
 import { ChatReadPayloadSchema } from '@/validation/zod';
+import { getConnectionMetadata } from '@/websocket/event';
+import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
+import { WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
 import { parseBody, response } from '@/websocket/response';
 import { touchConnection } from '@/websocket/routes/touch';
@@ -22,7 +25,7 @@ const toClientValidationResponse = (error: GraphQLError): APIGatewayProxyResultV
 
 export const handleChatRead = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   await ensureDatabaseConnection();
-  const connectionId = await touchConnection(event);
+  const { connectionId } = getConnectionMetadata(event);
   const payload = parseBody<ChatReadPayload>(event.body);
   const withUserId = typeof payload?.withUserId === 'string' ? payload.withUserId.trim() : '';
 
@@ -51,6 +54,8 @@ export const handleChatRead = async (event: WebSocketRequestEvent): Promise<APIG
   }
 
   const readerUserId = readerConnection.userId;
+  await assertWebSocketRateLimit(WEBSOCKET_ROUTES.CHAT_READ, { connectionId, userId: readerUserId });
+  await touchConnection(event);
 
   // Delegate to service
   const result = await chatMessagingService.markConversationAsRead(readerUserId, withUserId);

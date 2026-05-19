@@ -2,6 +2,7 @@ import request from 'supertest';
 import { usersMockData } from '@/mongodb/mockData';
 import {
   getForgotPasswordMutation,
+  getLoginUserMutation,
   getRequestEmailVerificationMutation,
   getResetPasswordMutation,
   getVerifyEmailMutation,
@@ -9,6 +10,7 @@ import {
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';
+import { ERROR_MESSAGES } from '@/validation';
 import {
   buildCreateUserInput,
   cleanupUsersById,
@@ -24,6 +26,17 @@ describe('Auth Resolver', () => {
 
   const newUserInput = (suffix = uniqueSuffix()): CreateUserInput =>
     buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, testPassword, suffix);
+
+  const nextForwardedIp = () => `auth-lockout-scope-${uniqueSuffix()}`;
+
+  const attemptLogin = async (email: string, password: string, forwardedIp?: string) => {
+    const requestBuilder = request(url).post('');
+    if (forwardedIp) {
+      requestBuilder.set('x-forwarded-for', forwardedIp);
+    }
+
+    return requestBuilder.send(getLoginUserMutation({ email, password }));
+  };
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -163,6 +176,70 @@ describe('Auth Resolver', () => {
       expect(response.status).toBe(400);
       expect(response.body.errors).toBeDefined();
       expect(response.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    });
+  });
+
+  describe('loginUser lockouts', () => {
+    it('locks a login scope after repeated failures and rejects valid credentials during the active block', async () => {
+      const input = newUserInput();
+      const createdUser = await createUserOnServer(url, input, createdUserIds);
+      const forwardedIp = nextForwardedIp();
+
+      for (let attempt = 1; attempt <= 8; attempt++) {
+        const response = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+
+        expect(response.status).toBe(401);
+        expect(response.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+        expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      }
+
+      const lockedInvalidResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+      expect(lockedInvalidResponse.status).toBe(429);
+      expect(lockedInvalidResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
+      expect(lockedInvalidResponse.body.errors[0].message).toContain('Too many login attempts');
+      expect(lockedInvalidResponse.body.errors[0].extensions.retryAfterSeconds).toEqual(expect.any(Number));
+      expect(lockedInvalidResponse.body.errors[0].extensions.retryAfterSeconds).toBeGreaterThan(0);
+      expect(lockedInvalidResponse.body.errors[0].extensions.retryAfterSeconds).toBeLessThanOrEqual(15 * 60);
+
+      const lockedValidResponse = await attemptLogin(createdUser.email, testPassword, forwardedIp);
+      expect(lockedValidResponse.status).toBe(429);
+      expect(lockedValidResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
+      expect(lockedValidResponse.body.errors[0].message).toContain('Too many login attempts');
+      expect(lockedValidResponse.body.errors[0].extensions.retryAfterSeconds).toEqual(expect.any(Number));
+      expect(lockedValidResponse.body.errors[0].extensions.retryAfterSeconds).toBeGreaterThan(0);
+      expect(lockedValidResponse.body.errors[0].extensions.retryAfterSeconds).toBeLessThanOrEqual(15 * 60);
+    });
+
+    it('clears prior failures after a successful login so the counter restarts from zero', async () => {
+      const input = newUserInput();
+      const createdUser = await createUserOnServer(url, input, createdUserIds);
+      const forwardedIp = nextForwardedIp();
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const failedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+
+        expect(failedResponse.status).toBe(401);
+        expect(failedResponse.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+      }
+
+      const successResponse = await attemptLogin(createdUser.email, testPassword, forwardedIp);
+      expect(successResponse.status).toBe(200);
+      expect(successResponse.body.errors).toBeUndefined();
+      expect(successResponse.body.data.loginUser.userId).toBe(createdUser.userId);
+      expect(successResponse.body.data.loginUser.token).toBeTruthy();
+
+      for (let attempt = 1; attempt <= 8; attempt++) {
+        const failedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+
+        expect(failedResponse.status).toBe(401);
+        expect(failedResponse.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+        expect(failedResponse.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      }
+
+      const lockedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+      expect(lockedResponse.status).toBe(429);
+      expect(lockedResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
+      expect(lockedResponse.body.errors[0].message).toContain('Too many login attempts');
     });
   });
 });

@@ -1,3 +1,4 @@
+import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import {
   Alarm,
   AlarmWidget,
@@ -14,11 +15,20 @@ import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ILogGroup } from 'aws-cdk-lib/aws-logs';
 import { Duration } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
+import {
+  DEFAULT_AUTH_FAILURE_ALARM_THRESHOLDS,
+  DEFAULT_AUTH_LOCKOUT_ALARM_THRESHOLDS,
+  DEFAULT_GRAPHQL_API_CLIENT_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_GRAPHQL_API_SERVER_ERROR_ALARM_THRESHOLDS,
+  DEFAULT_GRAPHQL_API_THROTTLE_ALARM_THRESHOLDS,
+  DEFAULT_GRAPHQL_QUERY_GUARD_REJECTION_ALARM_THRESHOLDS,
+} from '../constants';
 
 export interface GraphqlMonitoringDashboardConstructProps {
   stageName: string;
   awsRegion: string;
   targetSuffix: string;
+  graphqlApi: RestApi;
   graphqlLambdaFunction: IFunction;
   graphqlLambdaLogGroup: ILogGroup;
   graphqlApiAccessLogGroup: ILogGroup;
@@ -28,6 +38,7 @@ export interface GraphqlMonitoringDashboardConstructProps {
 
 const OCCURRENCE_MAINTENANCE_METRIC_NAMESPACE = 'Gatherle/EventOccurrenceMaintenance';
 const GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE = 'Gatherle/GraphQLQueryGuards';
+const AUTH_ABUSE_METRIC_NAMESPACE = 'Gatherle/AuthAbuse';
 
 export class GraphqlMonitoringDashboardConstruct extends Construct {
   readonly dashboard: Dashboard;
@@ -39,6 +50,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       stageName,
       awsRegion,
       targetSuffix,
+      graphqlApi,
       graphqlLambdaFunction,
       graphqlLambdaLogGroup,
       graphqlApiAccessLogGroup,
@@ -79,6 +91,25 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         label,
         color,
         statistic,
+        period,
+        dimensionsMap: {
+          Stage: stageName,
+          Region: awsRegion,
+        },
+      });
+
+    const authAbuseMetric = (
+      metricName: 'LoginFailure' | 'LoginLockout',
+      label: string,
+      color?: string,
+      period: Duration = Duration.minutes(5),
+    ) =>
+      new Metric({
+        namespace: AUTH_ABUSE_METRIC_NAMESPACE,
+        metricName,
+        label,
+        color,
+        statistic: 'Sum',
         period,
         dimensionsMap: {
           Stage: stageName,
@@ -242,6 +273,15 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new GraphWidget({
+        title: 'Auth Abuse Signals',
+        left: [
+          authAbuseMetric('LoginFailure', 'Login failures', '#ff7f0e'),
+          authAbuseMetric('LoginLockout', 'Login lockouts', '#d62728'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new GraphWidget({
         title: 'Query Complexity (Avg, P95, Max)',
         left: [
           queryGuardMetric('QueryComplexity', 'Average complexity', 'Average'),
@@ -257,6 +297,26 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
           queryGuardMetric('QueryDepth', 'Average depth', 'Average'),
           queryGuardMetric('QueryDepth', 'P95 depth', 'p95', '#17becf'),
           queryGuardMetric('QueryDepth', 'Max depth', 'Maximum', '#9467bd'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new GraphWidget({
+        title: 'GraphQL API Error Signals',
+        left: [
+          graphqlApi.metricClientError({ statistic: 'Sum', period: Duration.minutes(5), label: '4xx' }),
+          graphqlApi.metricServerError({
+            statistic: 'Sum',
+            period: Duration.minutes(5),
+            label: '5xx',
+            color: '#d62728',
+          }),
+          graphqlApi.metric('ThrottleCount', {
+            statistic: 'Sum',
+            period: Duration.minutes(5),
+            label: 'ThrottleCount',
+            color: '#9467bd',
+          }),
         ],
         width: 12,
         height: 6,
@@ -324,6 +384,60 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       alarmDescription: 'Alert when the scheduled occurrence maintenance Lambda errors.',
     });
 
+    const graphqlApiClientErrorAlarm = new Alarm(this, 'GraphqlApiClientErrorAlarm', {
+      metric: graphqlApi.metricClientError({ statistic: 'Sum', period: Duration.minutes(5) }),
+      threshold: DEFAULT_GRAPHQL_API_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 20,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when GraphQL API 4xx responses spike, indicating abuse or a broken client rollout.',
+    });
+
+    const graphqlApiServerErrorAlarm = new Alarm(this, 'GraphqlApiServerErrorAlarm', {
+      metric: graphqlApi.metricServerError({ statistic: 'Sum', period: Duration.minutes(5) }),
+      threshold: DEFAULT_GRAPHQL_API_SERVER_ERROR_ALARM_THRESHOLDS[stageName] ?? 5,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when GraphQL API 5xx responses spike.',
+    });
+
+    const graphqlApiThrottleAlarm = new Alarm(this, 'GraphqlApiThrottleAlarm', {
+      metric: graphqlApi.metric('ThrottleCount', { statistic: 'Sum', period: Duration.minutes(5) }),
+      threshold: DEFAULT_GRAPHQL_API_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when API Gateway throttles GraphQL requests.',
+    });
+
+    const graphqlQueryGuardRejectionAlarm = new Alarm(this, 'GraphqlQueryGuardRejectionAlarm', {
+      metric: queryGuardMetric('QueryGuardRejected', 'Rejected queries', 'Sum'),
+      threshold: DEFAULT_GRAPHQL_QUERY_GUARD_REJECTION_ALARM_THRESHOLDS[stageName] ?? 10,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when GraphQL query guards reject an unusual volume of requests.',
+    });
+
+    const authFailureAlarm = new Alarm(this, 'GraphqlAuthFailureAlarm', {
+      metric: authAbuseMetric('LoginFailure', 'Login failures'),
+      threshold: DEFAULT_AUTH_FAILURE_ALARM_THRESHOLDS[stageName] ?? 10,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when login failures spike, indicating potential credential stuffing or client breakage.',
+    });
+
+    const authLockoutAlarm = new Alarm(this, 'GraphqlAuthLockoutAlarm', {
+      metric: authAbuseMetric('LoginLockout', 'Login lockouts'),
+      threshold: DEFAULT_AUTH_LOCKOUT_ALARM_THRESHOLDS[stageName] ?? 2,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'Alert when login lockouts trigger, indicating active brute-force pressure.',
+    });
+
     const missingOccurrencesAlarm = new Alarm(this, 'OccurrenceMaintenanceMissingOccurrencesAlarm', {
       metric: occurrenceMaintenanceMetric('RemainingMissingSeriesCount', 'Missing series remaining'),
       threshold: 1,
@@ -365,6 +479,56 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       treatMissingData: TreatMissingData.BREACHING,
       alarmDescription: 'Alert when no successful occurrence maintenance run is recorded in the last 24 hours.',
     });
+
+    this.dashboard.addWidgets(
+      new TextWidget({
+        markdown: '## Security Alarms',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new AlarmWidget({
+        title: 'GraphQL API 4xx Spike',
+        alarm: graphqlApiClientErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'GraphQL API 5xx Spike',
+        alarm: graphqlApiServerErrorAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'GraphQL API Throttles',
+        alarm: graphqlApiThrottleAlarm,
+        width: 8,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new AlarmWidget({
+        title: 'Query Guard Rejections',
+        alarm: graphqlQueryGuardRejectionAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'Login Failure Spike',
+        alarm: authFailureAlarm,
+        width: 8,
+        height: 6,
+      }),
+      new AlarmWidget({
+        title: 'Login Lockouts',
+        alarm: authLockoutAlarm,
+        width: 8,
+        height: 6,
+      }),
+    );
 
     this.dashboard.addWidgets(
       new TextWidget({

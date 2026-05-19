@@ -1,3 +1,4 @@
+import { RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { Dashboard } from 'aws-cdk-lib/aws-cloudwatch';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
@@ -10,6 +11,7 @@ import { buildTargetSuffix } from '../utils/naming';
 export interface MonitoringDashboardStackProps extends StackProps {
   applicationStage: string;
   awsRegion: string;
+  graphqlApi: RestApi;
   graphqlLambdaFunction: IFunction;
   graphqlLambdaLogGroup: ILogGroup;
   graphqlApiAccessLogGroup: ILogGroup;
@@ -38,6 +40,7 @@ export class MonitoringDashboardStack extends Stack {
         stageName,
         awsRegion: props.awsRegion,
         targetSuffix,
+        graphqlApi: props.graphqlApi,
         graphqlLambdaFunction: props.graphqlLambdaFunction,
         graphqlLambdaLogGroup: props.graphqlLambdaLogGroup,
         graphqlApiAccessLogGroup: props.graphqlApiAccessLogGroup,
