@@ -148,13 +148,13 @@ describe('AuthAttemptDAO', () => {
         1,
         { scopeKey: 'email:user@example.com' },
         expect.any(Array),
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after', updatePipeline: true },
       );
       expect(AuthAttemptModelMock.findOneAndUpdate).toHaveBeenNthCalledWith(
         2,
         { scopeKey: 'ip:203.0.113.1' },
         expect.any(Array),
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after', updatePipeline: true },
       );
       const pipeline = AuthAttemptModelMock.findOneAndUpdate.mock.calls[0][1];
       expect(pipeline[0].$set.scopeKey).toBe('email:user@example.com');

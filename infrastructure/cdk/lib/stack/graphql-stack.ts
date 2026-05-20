@@ -114,7 +114,7 @@ export class GraphQLStack extends Stack {
         'This lambda function is a GraphQL Lambda that uses Apollo server: https://www.apollographql.com/docs/apollo-server/deployment/lambda',
       runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
-      memorySize: 256,
+      memorySize: 512,
       handler: 'graphqlLambdaHandler',
       entry: pathHandlerFile,
       projectRoot: pathRoot,

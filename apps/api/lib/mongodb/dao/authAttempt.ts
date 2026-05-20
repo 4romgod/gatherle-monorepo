@@ -122,7 +122,7 @@ class AuthAttemptDAO {
               $unset: ['_windowExpired', '_attemptBase', '_windowStartedBase'],
             },
           ],
-          { upsert: true, new: true },
+          { upsert: true, returnDocument: 'after', updatePipeline: true },
         ).exec();
 
         if (!updatedAttempt) {
