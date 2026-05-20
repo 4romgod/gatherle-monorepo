@@ -84,7 +84,6 @@ export class WebSocketApiStack extends Stack {
         tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
-        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
       },
       environment: {
         STAGE: props.applicationStage,

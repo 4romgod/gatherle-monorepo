@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, index, modelOptions, prop } from '@typegoose/typegoose';
+import type { MongoModelForClass } from './modelTypes';
 
 @index({ connectionId: 1 }, { unique: true })
 @index({ userId: 1 })
@@ -35,7 +36,8 @@ class WebSocketConnectionModel {
   expiresAt?: Date;
 }
 
-const WebSocketConnection = getModelForClass(WebSocketConnectionModel);
+const WebSocketConnection: MongoModelForClass<typeof WebSocketConnectionModel> =
+  getModelForClass(WebSocketConnectionModel);
 
 export type WebSocketConnectionEntity = WebSocketConnectionModel;
 export default WebSocketConnection;

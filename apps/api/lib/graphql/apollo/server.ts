@@ -255,11 +255,9 @@ export const createApolloServer = async (expressApp?: Express) => {
   logger.info('Creating Apollo Server...');
   const apolloServer = new ApolloServer<ServerContext>({
     schema: createSchema(),
-    includeStacktraceInErrorResponses: STAGE !== APPLICATION_STAGES.PROD,
+    includeStacktraceInErrorResponses: STAGE === APPLICATION_STAGES.DEV,
     status400ForVariableCoercionErrors: true,
     formatError: (formattedError: GraphQLFormattedError, error: unknown) => {
-      logger.warn('GraphQL Error:', { formattedError, error });
-
       const graphQLError = error as GraphQLError;
 
       const { exception: _exception, http: _http, ...extensionsWithoutException } = formattedError.extensions ?? {};
@@ -270,6 +268,19 @@ export const createApolloServer = async (expressApp?: Express) => {
       const resolvedErrorCode = baseErrorCode;
       const message = useInvalidQueryMessage(resolvedErrorCode) ? ERROR_MESSAGES.INVALID_QUERY : formattedError.message;
       const status = getHttpStatusFromError(resolvedErrorCode, graphQLError);
+      const logContext = {
+        code: resolvedErrorCode,
+        status,
+        message,
+        path: formattedError.path,
+        locations: formattedError.locations,
+      };
+
+      if (status >= HttpStatusCode.INTERNAL_SERVER_ERROR) {
+        logger.error('GraphQL Error:', { ...logContext, error });
+      } else {
+        logger.warn('GraphQL client error', logContext);
+      }
 
       return {
         ...formattedError,

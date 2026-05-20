@@ -2,23 +2,19 @@ import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
 import { Organization as OrganizationEntity } from '@gatherle/commons/types';
+import type { MongoModelForClass } from './modelTypes';
 
-@pre<OrganizationModel>('validate', function (next) {
-  try {
-    if (!this.orgId && this._id) {
-      this.orgId = this._id.toString();
-    }
-    if (this.isNew || !this.slug) {
-      this.slug = kebabCase(this.name);
-    }
-    next();
-  } catch (error) {
-    next(error as Error);
+@pre<OrganizationModel>('validate', function () {
+  if (!this.orgId && this._id) {
+    this.orgId = this._id.toString();
+  }
+  if (this.isNew || !this.slug) {
+    this.slug = kebabCase(this.name);
   }
 })
 class OrganizationModel extends OrganizationEntity {}
 
-const Organization = getModelForClass(OrganizationModel, {
+const Organization: MongoModelForClass<typeof OrganizationModel> = getModelForClass(OrganizationModel, {
   options: { customName: 'Organization' },
 });
 

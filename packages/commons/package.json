@@ -43,11 +43,11 @@
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty"
   },
   "dependencies": {
-    "@typegoose/typegoose": "^12.21.1",
+    "@typegoose/typegoose": "^13.3.0",
     "date-fns": "^3.6.0",
     "graphql": "^16.13.2",
     "graphql-type-json": "^0.3.2",
-    "mongoose": "~8.21.1",
+    "mongoose": "~9.6.0",
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.1",
     "zod": "^3.25.76"

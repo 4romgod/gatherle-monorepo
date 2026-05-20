@@ -5,11 +5,11 @@ import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { logDaoError } from '@/utils';
 
 jest.mock('@/mongodb/models', () => ({
-  AuthAttempt: {
+  AuthAttempt: Object.assign(jest.fn(), {
     find: jest.fn(),
     findOneAndUpdate: jest.fn(),
     deleteMany: jest.fn(),
-  },
+  }),
 }));
 
 jest.mock('@/utils', () => {
@@ -24,10 +24,6 @@ jest.mock('@/utils/authAbuseMetrics', () => ({
   emitAuthAbuseMetric: jest.fn(),
 }));
 
-const createLeanQuery = <T>(value: T, shouldReject = false) => ({
-  lean: jest.fn().mockImplementation(() => (shouldReject ? Promise.reject(value) : Promise.resolve(value))),
-});
-
 const createAttemptDocument = (overrides: Record<string, unknown> = {}) => ({
   scopeKey: 'email:user@example.com',
   attemptCount: 1,
@@ -37,6 +33,16 @@ const createAttemptDocument = (overrides: Record<string, unknown> = {}) => ({
   save: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });
+
+const createExecQuery = <T>(value: T, shouldReject = false) => ({
+  exec: jest.fn().mockImplementation(() => (shouldReject ? Promise.reject(value) : Promise.resolve(value))),
+});
+
+const AuthAttemptModelMock = AuthAttemptModel as unknown as jest.Mock & {
+  find: jest.Mock;
+  findOneAndUpdate: jest.Mock;
+  deleteMany: jest.Mock;
+};
 
 describe('AuthAttemptDAO', () => {
   beforeEach(() => {
@@ -51,7 +57,7 @@ describe('AuthAttemptDAO', () => {
   describe('assertAllowedForScopes', () => {
     it('allows login when there is no active block', async () => {
       (AuthAttemptModel.find as jest.Mock).mockReturnValue(
-        createLeanQuery([
+        createExecQuery([
           createAttemptDocument({
             blockedUntil: new Date('2026-05-16T11:59:00.000Z'),
           }),
@@ -65,7 +71,7 @@ describe('AuthAttemptDAO', () => {
 
     it('throws a 429 GraphQLError when a scope is currently blocked', async () => {
       (AuthAttemptModel.find as jest.Mock).mockReturnValue(
-        createLeanQuery([
+        createExecQuery([
           createAttemptDocument({
             blockedUntil: new Date('2026-05-16T12:03:30.000Z'),
           }),
@@ -86,7 +92,7 @@ describe('AuthAttemptDAO', () => {
 
     it('wraps unexpected lookup failures', async () => {
       const error = new Error('lookup failed');
-      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createLeanQuery(error, true));
+      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createExecQuery(error, true));
 
       await expect(AuthAttemptDAO.assertAllowedForScopes(['email:user@example.com'])).rejects.toBeInstanceOf(
         GraphQLError,
@@ -104,7 +110,7 @@ describe('AuthAttemptDAO', () => {
           http: { status: 400 },
         },
       });
-      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createLeanQuery(error, true));
+      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createExecQuery(error, true));
 
       await expect(AuthAttemptDAO.assertAllowedForScopes(['email:user@example.com'])).rejects.toBe(error);
       expect(logDaoError).toHaveBeenCalledWith('Error checking auth attempt lockout state', {
@@ -119,7 +125,7 @@ describe('AuthAttemptDAO', () => {
           code: 'BAD_REQUEST',
         },
       });
-      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createLeanQuery(error, true));
+      (AuthAttemptModel.find as jest.Mock).mockReturnValue(createExecQuery(error, true));
 
       await expect(AuthAttemptDAO.assertAllowedForScopes(['email:user@example.com'])).rejects.toBe(error);
       expect(logDaoError).toHaveBeenCalledWith('Error checking auth attempt lockout state', {
@@ -130,34 +136,44 @@ describe('AuthAttemptDAO', () => {
   });
 
   describe('recordFailureForScopes', () => {
-    it('uses atomic upserts when scopes have no existing state', async () => {
+    it('uses atomic upserts for each scope', async () => {
       const now = new Date('2026-05-16T12:00:00.000Z');
-      (AuthAttemptModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+      AuthAttemptModelMock.findOneAndUpdate
+        .mockReturnValueOnce(createExecQuery(createAttemptDocument({ scopeKey: 'email:user@example.com' })))
+        .mockReturnValueOnce(createExecQuery(createAttemptDocument({ scopeKey: 'ip:203.0.113.1' })));
 
       await AuthAttemptDAO.recordFailureForScopes(['email:user@example.com', 'ip:203.0.113.1'], now);
 
-      expect(AuthAttemptModel.findOneAndUpdate).toHaveBeenCalledTimes(2);
-      expect(AuthAttemptModel.findOneAndUpdate).toHaveBeenNthCalledWith(
+      expect(AuthAttemptModelMock.findOneAndUpdate).toHaveBeenNthCalledWith(
         1,
         { scopeKey: 'email:user@example.com' },
-        [
-          {
-            $set: expect.objectContaining({
-              scopeKey: 'email:user@example.com',
-              attemptCount: expect.any(Object),
-              windowStartedAt: expect.any(Object),
-              blockedUntil: expect.any(Object),
-              expiresAt: new Date('2026-05-17T12:00:00.000Z'),
-            }),
-          },
-        ],
-        { upsert: true, new: true },
+        expect.any(Array),
+        { upsert: true, returnDocument: 'after', updatePipeline: true },
       );
+      expect(AuthAttemptModelMock.findOneAndUpdate).toHaveBeenNthCalledWith(
+        2,
+        { scopeKey: 'ip:203.0.113.1' },
+        expect.any(Array),
+        { upsert: true, returnDocument: 'after', updatePipeline: true },
+      );
+      const pipeline = AuthAttemptModelMock.findOneAndUpdate.mock.calls[0][1];
+      expect(pipeline[0].$set.scopeKey).toBe('email:user@example.com');
+      expect(pipeline[3].$unset).toEqual(['_windowExpired', '_attemptBase', '_windowStartedBase']);
+    });
+
+    it('retries once on duplicate key races', async () => {
+      const now = new Date('2026-05-16T12:00:00.000Z');
+      AuthAttemptModelMock.findOneAndUpdate
+        .mockReturnValueOnce(createExecQuery({ code: 11000 }, true))
+        .mockReturnValueOnce(createExecQuery(createAttemptDocument()));
+
+      await expect(AuthAttemptDAO.recordFailureForScopes(['email:user@example.com'], now)).resolves.toBeUndefined();
+      expect(AuthAttemptModelMock.findOneAndUpdate).toHaveBeenCalledTimes(2);
     });
 
     it('wraps unexpected persistence failures', async () => {
       const error = new Error('upsert failed');
-      (AuthAttemptModel.findOneAndUpdate as jest.Mock).mockRejectedValue(error);
+      AuthAttemptModelMock.findOneAndUpdate.mockReturnValue(createExecQuery(error, true));
 
       await expect(AuthAttemptDAO.recordFailureForScopes(['email:user@example.com'])).rejects.toBeInstanceOf(
         GraphQLError,
@@ -167,11 +183,23 @@ describe('AuthAttemptDAO', () => {
         scopeKeys: ['email:user@example.com'],
       });
     });
+
+    it('sets blockedUntil once the failure threshold is reached', async () => {
+      const now = new Date('2026-05-16T12:00:00.000Z');
+      AuthAttemptModelMock.findOneAndUpdate.mockReturnValue(createExecQuery(createAttemptDocument()));
+
+      await AuthAttemptDAO.recordFailureForScopes(['email:user@example.com'], now);
+
+      const pipeline = AuthAttemptModelMock.findOneAndUpdate.mock.calls[0][1];
+      expect(pipeline[2].$set.blockedUntil.$cond[0]).toEqual({ $gte: ['$attemptCount', 8] });
+      expect(pipeline[2].$set.blockedUntil.$cond[1]).toEqual(new Date('2026-05-16T12:15:00.000Z'));
+      expect(pipeline[2].$set.expiresAt).toEqual(new Date('2026-05-17T12:00:00.000Z'));
+    });
   });
 
   describe('clearScopes', () => {
     it('deletes all matching scope records', async () => {
-      (AuthAttemptModel.deleteMany as jest.Mock).mockResolvedValue({ deletedCount: 2 });
+      (AuthAttemptModel.deleteMany as jest.Mock).mockReturnValue(createExecQuery({ deletedCount: 2 }));
 
       await AuthAttemptDAO.clearScopes(['email:user@example.com', 'ip:203.0.113.1']);
 
@@ -182,7 +210,7 @@ describe('AuthAttemptDAO', () => {
 
     it('wraps unexpected deletion failures', async () => {
       const error = new Error('delete failed');
-      (AuthAttemptModel.deleteMany as jest.Mock).mockRejectedValue(error);
+      (AuthAttemptModel.deleteMany as jest.Mock).mockReturnValue(createExecQuery(error, true));
 
       await expect(AuthAttemptDAO.clearScopes(['email:user@example.com'])).rejects.toBeInstanceOf(GraphQLError);
       expect(logDaoError).toHaveBeenCalledWith('Error clearing auth attempt state', {

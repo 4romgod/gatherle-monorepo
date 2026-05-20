@@ -3,15 +3,31 @@ import { ChatMessageDAO } from '@/mongodb/dao';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
 
 jest.mock('@/mongodb/models', () => ({
-  ChatMessage: {
-    create: jest.fn(),
+  ChatMessage: Object.assign(jest.fn(), {
     find: jest.fn(),
     countDocuments: jest.fn(),
     findOne: jest.fn(),
     aggregate: jest.fn(),
     updateMany: jest.fn(),
-  },
+  }),
 }));
+
+const ChatMessageModelMock = ChatMessageModel as unknown as jest.Mock & {
+  find: jest.Mock;
+  countDocuments: jest.Mock;
+  findOne: jest.Mock;
+  aggregate: jest.Mock;
+  updateMany: jest.Mock;
+};
+
+const mockConstructedChatMessage = (payload: { toObject: () => unknown; save?: jest.Mock }) => {
+  const document = {
+    save: jest.fn().mockResolvedValue(undefined),
+    ...payload,
+  };
+  ChatMessageModelMock.mockImplementationOnce(() => document);
+  return document;
+};
 
 const createExecQuery = <T>(result: T) => ({
   exec: jest.fn().mockResolvedValue(result),
@@ -40,7 +56,7 @@ describe('ChatMessageDAO', () => {
 
   it('create persists conversationKey and marks self-message as read', async () => {
     const createdAt = new Date('2026-02-15T12:00:00.000Z');
-    (ChatMessageModel.create as jest.Mock).mockResolvedValue({
+    const mockDocument = mockConstructedChatMessage({
       toObject: () => ({
         chatMessageId: 'msg-1',
         senderUserId: 'user-1',
@@ -57,20 +73,21 @@ describe('ChatMessageDAO', () => {
       message: 'hello',
     });
 
-    expect(ChatMessageModel.create).toHaveBeenCalledWith({
+    expect(ChatMessageModelMock).toHaveBeenCalledWith({
       senderUserId: 'user-1',
       recipientUserId: 'user-1',
       conversationKey: 'user-1:user-1',
       message: 'hello',
       isRead: true,
     });
+    expect(mockDocument.save).toHaveBeenCalled();
     expect(result.chatMessageId).toBe('msg-1');
     expect(result.isRead).toBe(true);
   });
 
   it('persists reply-to moment fields when all three are provided', async () => {
     const createdAt = new Date('2026-04-18T10:00:00.000Z');
-    (ChatMessageModel.create as jest.Mock).mockResolvedValue({
+    mockConstructedChatMessage({
       toObject: () => ({
         chatMessageId: 'msg-2',
         senderUserId: 'user-1',
@@ -93,7 +110,7 @@ describe('ChatMessageDAO', () => {
       replyToMomentType: 'image',
     });
 
-    expect(ChatMessageModel.create).toHaveBeenCalledWith(
+    expect(ChatMessageModelMock).toHaveBeenCalledWith(
       expect.objectContaining({
         replyToMomentId: 'moment-abc',
         replyToMomentCaption: 'Great sunset',
@@ -104,7 +121,7 @@ describe('ChatMessageDAO', () => {
 
   it('omits reply-to fields from the document when replyToMomentId is absent', async () => {
     const createdAt = new Date('2026-04-18T10:00:00.000Z');
-    (ChatMessageModel.create as jest.Mock).mockResolvedValue({
+    mockConstructedChatMessage({
       toObject: () => ({
         chatMessageId: 'msg-3',
         senderUserId: 'user-1',
@@ -121,7 +138,7 @@ describe('ChatMessageDAO', () => {
       message: 'plain message',
     });
 
-    const createCall = (ChatMessageModel.create as jest.Mock).mock.calls[0][0];
+    const createCall = ChatMessageModelMock.mock.calls[0][0];
     expect(createCall).not.toHaveProperty('replyToMomentId');
     expect(createCall).not.toHaveProperty('replyToMomentCaption');
     expect(createCall).not.toHaveProperty('replyToMomentType');

@@ -25,6 +25,8 @@ const buildExpiry = (now: Date): Date => new Date(now.getTime() + TTL_MS);
 const buildWindowExpiredExpression = (windowExpiryCutoff: Date) => ({
   $lt: [{ $ifNull: ['$windowStartedAt', new Date(0)] }, windowExpiryCutoff],
 });
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 11000;
 
 class AuthAttemptDAO {
   static buildEmailScopeKey(email: string): string {
@@ -37,7 +39,7 @@ class AuthAttemptDAO {
 
   static async assertAllowedForScopes(scopeKeys: string[], now = new Date()): Promise<void> {
     try {
-      const attempts = await AuthAttemptModel.find({ scopeKey: { $in: scopeKeys } }).lean();
+      const attempts = await AuthAttemptModel.find({ scopeKey: { $in: scopeKeys } }).exec();
       const blockingAttempt = attempts.find(
         (attempt) => attempt.blockedUntil && attempt.blockedUntil.getTime() > now.getTime(),
       );
@@ -63,34 +65,12 @@ class AuthAttemptDAO {
     try {
       const windowExpiryCutoff = new Date(now.getTime() - FAILURE_WINDOW_MS);
       const blockedUntil = new Date(now.getTime() + LOCKOUT_MS);
+      const expiresAt = buildExpiry(now);
 
       await Promise.all(
-        scopeKeys.map(async (scopeKey) => {
-          const windowExpiredExpression = buildWindowExpiredExpression(windowExpiryCutoff);
-          const nextAttemptCountExpression = {
-            $cond: [windowExpiredExpression, 1, { $add: [{ $ifNull: ['$attemptCount', 0] }, 1] }],
-          };
-
-          await AuthAttemptModel.findOneAndUpdate(
-            { scopeKey },
-            [
-              {
-                $set: {
-                  scopeKey,
-                  attemptCount: nextAttemptCountExpression,
-                  windowStartedAt: {
-                    $cond: [windowExpiredExpression, now, { $ifNull: ['$windowStartedAt', now] }],
-                  },
-                  blockedUntil: {
-                    $cond: [{ $gte: [nextAttemptCountExpression, MAX_FAILED_ATTEMPTS] }, blockedUntil, '$$REMOVE'],
-                  },
-                  expiresAt: buildExpiry(now),
-                },
-              },
-            ],
-            { upsert: true, new: true },
-          );
-        }),
+        scopeKeys.map((scopeKey) =>
+          this.recordFailureForScope(scopeKey, now, windowExpiryCutoff, blockedUntil, expiresAt),
+        ),
       );
     } catch (error) {
       logDaoError('Error recording auth failure attempt', { error, scopeKeys });
@@ -98,9 +78,71 @@ class AuthAttemptDAO {
     }
   }
 
+  private static async recordFailureForScope(
+    scopeKey: string,
+    now: Date,
+    windowExpiryCutoff: Date,
+    blockedUntil: Date,
+    expiresAt: Date,
+  ): Promise<void> {
+    for (let retry = 0; retry < 2; retry += 1) {
+      const windowExpiredExpression = buildWindowExpiredExpression(windowExpiryCutoff);
+
+      try {
+        const updatedAttempt = await AuthAttemptModel.findOneAndUpdate(
+          { scopeKey },
+          [
+            {
+              $set: {
+                scopeKey,
+                _windowExpired: windowExpiredExpression,
+                _attemptBase: { $ifNull: ['$attemptCount', 0] },
+                _windowStartedBase: { $ifNull: ['$windowStartedAt', now] },
+              },
+            },
+            {
+              $set: {
+                attemptCount: {
+                  $cond: ['$_windowExpired', 1, { $add: ['$_attemptBase', 1] }],
+                },
+                windowStartedAt: {
+                  $cond: ['$_windowExpired', now, '$_windowStartedBase'],
+                },
+              },
+            },
+            {
+              $set: {
+                blockedUntil: {
+                  $cond: [{ $gte: ['$attemptCount', MAX_FAILED_ATTEMPTS] }, blockedUntil, null],
+                },
+                expiresAt,
+              },
+            },
+            {
+              $unset: ['_windowExpired', '_attemptBase', '_windowStartedBase'],
+            },
+          ],
+          { upsert: true, returnDocument: 'after', updatePipeline: true },
+        ).exec();
+
+        if (!updatedAttempt) {
+          throw new Error(`Failed to update auth attempt record for ${scopeKey}`);
+        }
+
+        return;
+      } catch (error) {
+        if (retry === 0 && isDuplicateKeyError(error)) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+  }
+
   static async clearScopes(scopeKeys: string[]): Promise<void> {
     try {
-      await AuthAttemptModel.deleteMany({ scopeKey: { $in: scopeKeys } });
+      await AuthAttemptModel.deleteMany({ scopeKey: { $in: scopeKeys } }).exec();
     } catch (error) {
       logDaoError('Error clearing auth attempt state', { error, scopeKeys });
       throw KnownCommonError(error);

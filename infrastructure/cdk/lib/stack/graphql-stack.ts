@@ -114,7 +114,7 @@ export class GraphQLStack extends Stack {
         'This lambda function is a GraphQL Lambda that uses Apollo server: https://www.apollographql.com/docs/apollo-server/deployment/lambda',
       runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
-      memorySize: 256,
+      memorySize: 512,
       handler: 'graphqlLambdaHandler',
       entry: pathHandlerFile,
       projectRoot: pathRoot,
@@ -123,7 +123,6 @@ export class GraphQLStack extends Stack {
         tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
-        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
         loader: { '.html': 'file' },
       },
       environment: {
@@ -165,7 +164,6 @@ export class GraphQLStack extends Stack {
         tsconfig: join(pathApi, 'tsconfig.json'),
         sourceMap: true,
         minify: false,
-        nodeModules: ['@typegoose/typegoose', 'reflect-metadata', 'mongoose', 'mongodb'],
       },
       environment: {
         STAGE: props.applicationStage,

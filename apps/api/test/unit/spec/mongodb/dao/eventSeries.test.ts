@@ -12,8 +12,7 @@ import { ERROR_MESSAGES } from '@/validation';
 import { MockMongoError } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({
-  EventSeries: {
-    create: jest.fn(),
+  EventSeries: Object.assign(jest.fn(), {
     findById: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
@@ -22,8 +21,19 @@ jest.mock('@/mongodb/models', () => ({
     findByIdAndDelete: jest.fn(),
     findOneAndDelete: jest.fn(),
     aggregate: jest.fn(),
-  },
+  }),
 }));
+
+const EventSeriesModelMock = EventSeriesModel as unknown as jest.Mock & {
+  findById: jest.Mock;
+  findOne: jest.Mock;
+  find: jest.Mock;
+  findByIdAndUpdate: jest.Mock;
+  findOneAndUpdate: jest.Mock;
+  findByIdAndDelete: jest.Mock;
+  findOneAndDelete: jest.Mock;
+  aggregate: jest.Mock;
+};
 
 jest.mock('@/mongodb/dao/eventOccurrence', () => ({
   __esModule: true,
@@ -52,6 +62,15 @@ const createMockFailedMongooseQuery = <T>(error: T) => ({
   limit: jest.fn().mockReturnThis(),
   lean: jest.fn().mockReturnThis(),
 });
+
+const mockConstructedEventSeries = (payload: { toObject: jest.Mock; save?: jest.Mock }) => {
+  const document = {
+    save: jest.fn().mockResolvedValue(undefined),
+    ...payload,
+  };
+  EventSeriesModelMock.mockImplementationOnce(() => document);
+  return document;
+};
 
 describe('EventSeriesDAO', () => {
   beforeEach(() => {
@@ -90,17 +109,17 @@ describe('EventSeriesDAO', () => {
     });
 
     it('should create an event and return the event object', async () => {
-      const mockDocument = {
+      const mockDocument = mockConstructedEventSeries({
         toObject: jest.fn().mockReturnValue(expectedEvent),
-      };
-      (EventSeriesModel.create as jest.Mock).mockResolvedValue(mockDocument);
+      });
 
       const createdEvent = await EventSeriesDAO.create(mockEventInput);
       expect(createdEvent).toEqual(expectedEvent);
       expect(EventSeriesModel.findOne).toHaveBeenCalledWith({ slug: 'sample-event-series' });
-      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+      expect(EventSeriesModelMock).toHaveBeenCalledWith(
         expect.objectContaining({ ...mockEventInput, slug: 'sample-event-series' }),
       );
+      expect(mockDocument.save).toHaveBeenCalled();
     });
 
     it('should throw CONFLICT GraphQLError when the derived slug already exists', async () => {
@@ -112,27 +131,33 @@ describe('EventSeriesDAO', () => {
         CustomError('Slug sample-event-series already exists', ErrorTypes.CONFLICT),
       );
       expect(EventSeriesModel.findOne).toHaveBeenCalledWith({ slug: 'sample-event-series' });
-      expect(EventSeriesModel.create).not.toHaveBeenCalled();
+      expect(EventSeriesModelMock).not.toHaveBeenCalled();
     });
 
-    it('should throw INTERNAL_SERVER_ERROR GraphQLError when EventSeriesModel.create throws an UNKNOWN error', async () => {
-      (EventSeriesModel.create as jest.Mock).mockRejectedValue(new Error('Mongodb Error'));
+    it('should throw INTERNAL_SERVER_ERROR GraphQLError when saving a new EventSeries throws an UNKNOWN error', async () => {
+      mockConstructedEventSeries({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(new Error('Mongodb Error')),
+      });
 
       await expect(EventSeriesDAO.create(mockEventInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
-      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+      expect(EventSeriesModelMock).toHaveBeenCalledWith(
         expect.objectContaining({ ...mockEventInput, slug: 'sample-event-series' }),
       );
     });
 
-    it('should throw BAD_USER_INPUT GraphQLError when EventSeriesModel.create throws a mongodb 10334 error', async () => {
-      (EventSeriesModel.create as jest.Mock).mockRejectedValue(new MockMongoError(10334));
+    it('should throw BAD_USER_INPUT GraphQLError when saving a new EventSeries throws a mongodb 10334 error', async () => {
+      mockConstructedEventSeries({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(new MockMongoError(10334)),
+      });
 
       await expect(EventSeriesDAO.create(mockEventInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.CONTENT_TOO_LARGE, ErrorTypes.BAD_USER_INPUT),
       );
-      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+      expect(EventSeriesModelMock).toHaveBeenCalledWith(
         expect.objectContaining({ ...mockEventInput, slug: 'sample-event-series' }),
       );
     });
@@ -145,12 +170,15 @@ describe('EventSeriesDAO', () => {
         },
       };
 
-      (EventSeriesModel.create as jest.Mock).mockRejectedValue(validationError);
+      mockConstructedEventSeries({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(validationError),
+      });
 
       await expect(EventSeriesDAO.create(mockEventInput)).rejects.toThrow(
         CustomError('Title is required', ErrorTypes.BAD_USER_INPUT),
       );
-      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+      expect(EventSeriesModelMock).toHaveBeenCalledWith(
         expect.objectContaining({ ...mockEventInput, slug: 'sample-event-series' }),
       );
     });
@@ -748,7 +776,7 @@ describe('EventSeriesDAO', () => {
         .mockReturnValueOnce(createMockSuccessMongooseQuery({ _id: 'existing-1' }))
         .mockReturnValueOnce(createMockSuccessMongooseQuery({ _id: 'existing-2' }))
         .mockReturnValueOnce(createMockSuccessMongooseQuery(null));
-      (EventSeriesModel.create as jest.Mock).mockResolvedValue({
+      const createdDocument = mockConstructedEventSeries({
         toObject: jest.fn().mockReturnValue(createdSuccessor),
       });
 
@@ -762,13 +790,14 @@ describe('EventSeriesDAO', () => {
       expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(1, { slug: 'sample-event-series-from-2026-05-20' });
       expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(2, { slug: 'sample-event-series-from-2026-05-20-2' });
       expect(EventSeriesModel.findOne).toHaveBeenNthCalledWith(3, { slug: 'sample-event-series-from-2026-05-20-3' });
-      expect(EventSeriesModel.create).toHaveBeenCalledWith(
+      expect(EventSeriesModelMock).toHaveBeenCalledWith(
         expect.objectContaining({
           ...mockEventInput,
           slug: 'sample-event-series-from-2026-05-20-3',
           splitFromEventSeriesId: 'source-id',
         }),
       );
+      expect(createdDocument.save).toHaveBeenCalled();
     });
 
     it('surfaces validation errors when successor creation fails validation', async () => {
@@ -779,7 +808,10 @@ describe('EventSeriesDAO', () => {
         },
       };
       (EventSeriesModel.findOne as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
-      (EventSeriesModel.create as jest.Mock).mockRejectedValue(validationError);
+      mockConstructedEventSeries({
+        toObject: jest.fn(),
+        save: jest.fn().mockRejectedValue(validationError),
+      });
 
       await expect(
         EventSeriesDAO.createSplitSuccessor(mockEventInput, 'sample-event-series-from-2026-05-20', 'source-id'),

@@ -67,7 +67,8 @@ const toUserWithToken = async (user: { toObject(): Omit<UserWithToken, 'token'> 
 class UserDAO {
   static async create(userData: CreateUserInput): Promise<UserWithToken> {
     try {
-      const savedUser = await UserModel.create(userData);
+      const savedUser = new UserModel(userData);
+      await savedUser.save();
       const tokenPayload = savedUser.toObject();
       const token = await generateToken(tokenPayload);
       return { ...tokenPayload, token };
@@ -159,7 +160,7 @@ class UserDAO {
         );
       }
 
-      const createdUser = await UserModel.create({
+      const createdUser = new UserModel({
         email: normalizedEmail,
         given_name: deriveGivenName(identity),
         family_name: deriveFamilyName(identity),
@@ -168,6 +169,7 @@ class UserDAO {
         profile_picture: identity.profilePicture,
         [providerField]: identity.providerUserId,
       });
+      await createdUser.save();
 
       return toUserWithToken(createdUser);
     } catch (error) {
