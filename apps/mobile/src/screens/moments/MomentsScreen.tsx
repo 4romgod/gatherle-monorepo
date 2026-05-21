@@ -75,7 +75,7 @@ export function MomentsScreen() {
           setPageHeight(nextHeight);
         }
       }}
-      style={[styles.screen]}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       <FlatList
         data={visibleMoments}

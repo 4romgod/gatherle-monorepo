@@ -34,10 +34,6 @@ export function useMomentsFeed(
   }, [authToken, loadFeed]);
 
   useEffect(() => {
-    isFetchingMoreRef.current = isFetchingMore;
-  }, [isFetchingMore]);
-
-  useEffect(() => {
     isLoadingRef.current = loading;
   }, [loading]);
 
@@ -46,11 +42,13 @@ export function useMomentsFeed(
   const nextCursor = data?.readMomentsFeed.nextCursor;
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || !nextCursor || isFetchingMore) {
+    if (!hasMore || !nextCursor || isFetchingMoreRef.current) {
       return;
     }
 
+    isFetchingMoreRef.current = true;
     setFetchingMore(true);
+
     try {
       await fetchMore({
         variables: {
@@ -81,9 +79,10 @@ export function useMomentsFeed(
         },
       });
     } finally {
+      isFetchingMoreRef.current = false;
       setFetchingMore(false);
     }
-  }, [fetchMore, hasMore, isFetchingMore, nextCursor]);
+  }, [fetchMore, hasMore, nextCursor]);
 
   const refresh = useCallback(async () => {
     if (isLoadingRef.current || isFetchingMoreRef.current || isRefreshingRef.current) {

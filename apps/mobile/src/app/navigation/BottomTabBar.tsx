@@ -45,7 +45,7 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
           backgroundColor: theme.colors.tabBar,
           borderTopColor: theme.colors.surfaceRaised,
           minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
-          paddingBottom: 2,
+          paddingBottom: 2, // TODO: restore bottom safe-area padding, Math.max(insets.bottom, 2)
         },
       ]}
     >

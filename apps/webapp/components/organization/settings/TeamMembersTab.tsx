@@ -15,7 +15,6 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -223,7 +222,7 @@ export default function TeamMembersTab({
           {sortedMemberships.length > 0 ? (
             <Grid container spacing={3}>
               {sortedMemberships.map((membership) => {
-                const displayName = membership.username ? `@${membership.username}` : null;
+                const displayName = membership.username ? `@${membership.username}` : membership.userId;
                 const initialsSource = membership.username || membership.userId || 'M';
                 const joinedLabel = new Date(membership.joinedAt).toLocaleDateString();
                 const isCurrentUser = membership.userId === currentUserId;
@@ -260,37 +259,33 @@ export default function TeamMembersTab({
                           </Avatar>
 
                           <Box sx={{ minWidth: 0, flex: 1 }}>
-                            {displayName ? (
-                              profileHref ? (
-                                <Typography
-                                  component={Link}
-                                  href={profileHref}
-                                  variant="subtitle1"
-                                  fontWeight={700}
-                                  lineHeight={1.2}
-                                  noWrap
-                                  color="text.primary"
-                                  sx={{ textDecoration: 'none', '&:hover': { color: 'primary.main' } }}
-                                >
-                                  {displayName}
-                                </Typography>
-                              ) : (
-                                <Typography
-                                  variant="subtitle1"
-                                  fontWeight={700}
-                                  lineHeight={1.2}
-                                  noWrap
-                                  color="text.primary"
-                                >
-                                  {displayName}
-                                </Typography>
-                              )
+                            {profileHref ? (
+                              <Typography
+                                component={Link}
+                                href={profileHref}
+                                variant="subtitle1"
+                                fontWeight={700}
+                                lineHeight={1.2}
+                                noWrap
+                                color="text.primary"
+                                sx={{ textDecoration: 'none', '&:hover': { color: 'primary.main' } }}
+                              >
+                                {displayName}
+                              </Typography>
                             ) : (
-                              <Skeleton variant="text" width={120} height={22} />
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                lineHeight={1.2}
+                                noWrap
+                                color="text.primary"
+                              >
+                                {displayName}
+                              </Typography>
                             )}
 
                             <Typography variant="caption" color="text.secondary">
-                              {membership.username ? 'Organization team member' : membership.userId}
+                              {membership.username ? 'Organization team member' : 'Team member'}
                             </Typography>
                           </Box>
                         </Stack>

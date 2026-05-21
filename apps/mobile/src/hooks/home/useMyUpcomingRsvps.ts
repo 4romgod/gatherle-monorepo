@@ -23,7 +23,11 @@ export function useMyUpcomingRsvps(authToken?: string | null) {
         return new Date(comparisonDate).getTime() >= now.getTime();
       })
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-      .slice(0, 3) as unknown as MobileEventOccurrence[];
+      .slice(0, 3)
+      .map<MobileEventOccurrence>((occurrence) => ({
+        ...occurrence,
+        participants: undefined,
+      }));
   }, [data]);
 
   return { error, loading, refetch, upcomingRsvps };

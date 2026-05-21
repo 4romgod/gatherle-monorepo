@@ -132,6 +132,13 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
       alarmDescription: 'Alert when WebSocket message volume spikes unexpectedly.',
     });
 
+    const runtimeAwareErrorQueryLines = [
+      'fields @timestamp, level, message, context.routeKey as routeKey, context.connectionId as connectionId, error.name as errorName, error.message as errorMessage, @message',
+      'filter level = "ERROR" or @message like /Task timed out/ or @message like /Process exited before completing request/ or @message like /Runtime\\./ or @message like /Unhandled/',
+      'sort @timestamp desc',
+      'limit 100',
+    ];
+
     this.dashboard.addWidgets(
       new TextWidget({
         markdown: '## Core Health',
@@ -191,16 +198,6 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
     this.dashboard.addWidgets(
       new GraphWidget({
         title: 'Connections and Message Throughput',
-        left: [
-          webSocketMetric('ConnectCount', 'ConnectCount'),
-          webSocketMetric('DisconnectCount', 'DisconnectCount', '#ff7f0e'),
-          webSocketMetric('MessageCount', 'MessageCount', '#2ca02c'),
-        ],
-        width: 12,
-        height: 6,
-      }),
-      new GraphWidget({
-        title: 'Traffic Spike Signals',
         left: [
           webSocketMetric('ConnectCount', 'ConnectCount'),
           webSocketMetric('DisconnectCount', 'DisconnectCount', '#ff7f0e'),
@@ -344,14 +341,9 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
         height: 8,
       }),
       new LogQueryWidget({
-        title: 'Recent Errors',
+        title: 'Recent Application and Runtime Errors',
         logGroupNames: [websocketLambdaLogGroup.logGroupName],
-        queryLines: [
-          'fields @timestamp, message, context.routeKey as routeKey, context.connectionId as connectionId, error.name as errorName, error.message as errorMessage',
-          'filter level = "ERROR"',
-          'sort @timestamp desc',
-          'limit 100',
-        ],
+        queryLines: runtimeAwareErrorQueryLines,
         width: 8,
         height: 8,
       }),

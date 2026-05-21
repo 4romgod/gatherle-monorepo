@@ -104,8 +104,8 @@ export function AppDrawer() {
   const progress = useRef(new Animated.Value(0)).current;
   const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileName = getDisplayName(profile);
-  const profileEmail = profile?.email ?? email ?? (username ? `@${username}` : 'Preview profile');
-  const profileUsername = profile?.username ? `@${profile.username}` : `@${username}`;
+  const profileUsernameValue = profile?.username ?? username ?? null;
+  const profileUsername = profileUsernameValue ? `@${profileUsernameValue}` : null;
 
   const drawerWidth = useMemo(() => {
     const proposedWidth = Math.round(width * 0.62);
@@ -279,8 +279,11 @@ export function AppDrawer() {
                 <ProfileAvatar imageUrl={profile?.profile_picture} label={profileName} size={62} />
                 <View style={styles.authedProfileCopy}>
                   <Text style={[styles.authedName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
-                  <Text style={[styles.authedEmail, { color: theme.colors.textSecondary }]}>{profileEmail}</Text>
-                  <Text style={[styles.authedUsername, { color: theme.colors.textSecondary }]}>{profileUsername}</Text>
+                  {profileUsername ? (
+                    <Text style={[styles.authedUsername, { color: theme.colors.textSecondary }]}>
+                      {profileUsername}
+                    </Text>
+                  ) : null}
                 </View>
               </Pressable>
               <DrawerCloseButton />

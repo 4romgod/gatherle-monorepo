@@ -117,6 +117,20 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         },
       });
 
+    const runtimeAwareErrorQueryLines = [
+      'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, @message',
+      'filter level = "ERROR" or @message like /Task timed out/ or @message like /Process exited before completing request/ or @message like /Runtime\\./ or @message like /Unhandled/',
+      'sort @timestamp desc',
+      'limit 100',
+    ];
+
+    const warningQueryLines = [
+      'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, @message',
+      'filter level = "WARN"',
+      'sort @timestamp desc',
+      'limit 100',
+    ];
+
     this.dashboard = new Dashboard(this, 'GatherleGraphqlDashboard', {
       dashboardName: `Gatherle-GraphQL-${targetSuffix}`,
     });
@@ -168,26 +182,16 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new LogQueryWidget({
-        title: '🔴 Error Logs',
+        title: '🔴 Application and Runtime Errors',
         logGroupNames: [graphqlLambdaLogGroup.logGroupName],
-        queryLines: [
-          'fields @timestamp, error.name as errorName, error.message as errorMessage, message',
-          'filter level = "ERROR"',
-          'sort @timestamp desc',
-          'limit 100',
-        ],
+        queryLines: runtimeAwareErrorQueryLines,
         width: 12,
         height: 8,
       }),
       new LogQueryWidget({
         title: '⚠️ Warning Logs',
         logGroupNames: [graphqlLambdaLogGroup.logGroupName],
-        queryLines: [
-          'fields @timestamp, error.name as errorName, error.message as errorMessage, message',
-          'filter level = "WARN"',
-          'sort @timestamp desc',
-          'limit 100',
-        ],
+        queryLines: warningQueryLines,
         width: 12,
         height: 8,
       }),
@@ -593,7 +597,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         title: 'Occurrence Maintenance Logs',
         logGroupNames: [occurrenceMaintenanceLambdaLogGroup.logGroupName],
         queryLines: [
-          'fields @timestamp, level, message, context.error.message as errorMessage, context',
+          'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, context',
           'sort @timestamp desc',
           'limit 100',
         ],
@@ -687,7 +691,13 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       }),
       new GraphWidget({
         title: 'Concurrent Executions',
-        left: [graphqlLambdaFunction.metricInvocations({ statistic: 'Sum', period: Duration.seconds(60) })],
+        left: [
+          graphqlLambdaFunction.metric('ConcurrentExecutions', {
+            statistic: 'Maximum',
+            period: Duration.minutes(5),
+            label: 'Concurrent executions',
+          }),
+        ],
         width: 12,
         height: 6,
       }),
