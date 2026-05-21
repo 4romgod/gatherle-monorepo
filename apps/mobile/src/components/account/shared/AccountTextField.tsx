@@ -55,7 +55,6 @@ export function AccountTextField({
           styles.inputWrap,
           multiline ? styles.inputWrapMultiline : null,
           {
-            backgroundColor: theme.colors.surfaceMuted,
             borderColor: theme.colors.border,
           },
         ]}
@@ -97,7 +96,7 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     minHeight: 54,
     paddingHorizontal: 16,
     paddingVertical: 14,

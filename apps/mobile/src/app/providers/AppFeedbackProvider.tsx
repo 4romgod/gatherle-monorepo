@@ -155,10 +155,20 @@ export function AppFeedbackProvider({ children }: PropsWithChildren) {
 
   const withBlockingLoader = useCallback(
     async <T,>(message: string | undefined, task: () => Promise<T>) => {
+      let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+      const safety = new Promise<never>((_, reject) => {
+        safetyTimer = setTimeout(() => {
+          reject(new Error('Operation timed out. Please try again.'));
+        }, 90_000);
+      });
+
       showBlockingLoader(message);
       try {
-        return await task();
+        return await Promise.race([task(), safety]);
       } finally {
+        if (safetyTimer !== null) {
+          clearTimeout(safetyTimer);
+        }
         hideBlockingLoader();
       }
     },

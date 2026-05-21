@@ -1,4 +1,5 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -13,7 +14,6 @@ type ProfileAvatarProps = {
 export function ProfileAvatar({ active = false, imageUrl, label, size = 30 }: ProfileAvatarProps) {
   const { theme } = useAppTheme();
   const borderColor = active ? theme.colors.primary : theme.colors.border;
-  const initials = getInitials(label ?? 'Gatherle Member');
 
   if (imageUrl) {
     return (
@@ -33,18 +33,26 @@ export function ProfileAvatar({ active = false, imageUrl, label, size = 30 }: Pr
     );
   }
 
+  const bg = active ? theme.colors.primarySoft : theme.colors.surfaceMuted;
+
+  if (!label) {
+    return (
+      <View
+        style={[
+          styles.fallback,
+          { backgroundColor: bg, borderColor, borderRadius: size / 2, height: size, width: size },
+        ]}
+      >
+        <Feather color={active ? theme.colors.primary : theme.colors.textMuted} name="user" size={size * 0.45} />
+      </View>
+    );
+  }
+
+  const initials = getInitials(label);
+
   return (
     <View
-      style={[
-        styles.fallback,
-        {
-          backgroundColor: active ? theme.colors.primarySoft : theme.colors.surfaceMuted,
-          borderColor,
-          borderRadius: size / 2,
-          height: size,
-          width: size,
-        },
-      ]}
+      style={[styles.fallback, { backgroundColor: bg, borderColor, borderRadius: size / 2, height: size, width: size }]}
     >
       <Text style={[styles.initials, { color: theme.colors.textPrimary, fontSize: size * 0.36 }]}>{initials}</Text>
     </View>

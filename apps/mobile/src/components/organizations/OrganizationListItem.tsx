@@ -29,7 +29,7 @@ export function OrganizationListItem({
       style={({ pressed }) => [
         styles.row,
         {
-          backgroundColor: theme.colors.surfaceMuted,
+          backgroundColor: theme.colors.surfaceRaised,
           opacity: pressed ? 0.88 : 1,
         },
       ]}

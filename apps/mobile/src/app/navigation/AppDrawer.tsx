@@ -105,6 +105,7 @@ export function AppDrawer() {
   const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileName = getDisplayName(profile);
   const profileEmail = profile?.email ?? email ?? (username ? `@${username}` : 'Preview profile');
+  const profileUsername = profile?.username ? `@${profile.username}` : `@${username}`;
 
   const drawerWidth = useMemo(() => {
     const proposedWidth = Math.round(width * 0.62);
@@ -267,7 +268,7 @@ export function AppDrawer() {
             <View style={styles.authedHeaderRow}>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => handleNavigate('Profile')}
+                onPress={() => handleNavigateTab('Account')}
                 style={({ pressed }) => [
                   styles.authedProfileButton,
                   {
@@ -279,6 +280,7 @@ export function AppDrawer() {
                 <View style={styles.authedProfileCopy}>
                   <Text style={[styles.authedName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
                   <Text style={[styles.authedEmail, { color: theme.colors.textSecondary }]}>{profileEmail}</Text>
+                  <Text style={[styles.authedUsername, { color: theme.colors.textSecondary }]}>{profileUsername}</Text>
                 </View>
               </Pressable>
               <DrawerCloseButton />
@@ -370,6 +372,11 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     fontSize: fontSize.xl,
     lineHeight: 22,
+  },
+  authedUsername: {
+    ...typography.bodyRegular,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
   },
   authedEmail: {
     ...typography.bodyRegular,

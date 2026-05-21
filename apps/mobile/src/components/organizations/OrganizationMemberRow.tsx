@@ -7,6 +7,7 @@ import { fontSize, typography } from '@/app/theme/typography';
 import { AccountChoiceChip } from '@/components/account/shared/AccountChoiceChip';
 import { InlineButton } from '@/components/core/InlineButton';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
 type OrganizationMemberRowProps = {
   canEditMembership: boolean;
@@ -36,19 +37,22 @@ export function OrganizationMemberRow({
   roleOptions,
 }: OrganizationMemberRowProps) {
   const { theme } = useAppTheme();
-  const handle = membership.username ? `@${membership.username}` : 'Gatherle member';
   const joinedLabel = `Joined ${new Date(membership.joinedAt).toLocaleDateString()}`;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.surfaceMuted }]}>
+    <View style={[styles.card, { backgroundColor: theme.colors.surfaceRaised }]}>
       <View style={styles.headerRow}>
         <View style={styles.identity}>
-          <ProfileAvatar label={membership.username ?? membership.userId} size={52} />
+          <ProfileAvatar label={membership.username ?? null} size={52} />
 
           <View style={styles.copy}>
-            <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
-              {handle}
-            </Text>
+            {membership.username ? (
+              <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
+                @{membership.username}
+              </Text>
+            ) : (
+              <SkeletonBlock style={styles.titleSkeleton} />
+            )}
             <Text numberOfLines={1} style={[styles.meta, { color: theme.colors.textSecondary }]}>
               {joinedLabel}
             </Text>
@@ -163,6 +167,11 @@ const styles = StyleSheet.create({
   title: {
     ...typography.bodyBold,
     fontSize: fontSize.lg,
+  },
+  titleSkeleton: {
+    borderRadius: 6,
+    height: 15,
+    width: '55%',
   },
   trailing: {
     alignItems: 'flex-end',

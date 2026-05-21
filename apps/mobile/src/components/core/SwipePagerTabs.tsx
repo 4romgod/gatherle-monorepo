@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   page: {
+    alignSelf: 'flex-start',
     paddingTop: 22,
   },
   pager: {

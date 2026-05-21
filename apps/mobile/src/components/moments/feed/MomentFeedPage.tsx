@@ -296,7 +296,8 @@ export function MomentFeedPage({
     ]);
   };
 
-  const backgroundColor = moment.type === EventMomentType.Text ? resolveBackgroundColor(moment.background) : '#020617';
+  const backgroundColor =
+    moment.type === EventMomentType.Text ? resolveBackgroundColor(moment.background) : theme.colors.background;
 
   return (
     <View style={[styles.page, { backgroundColor, height: pageHeight }]}>

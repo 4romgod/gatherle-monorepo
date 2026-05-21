@@ -319,19 +319,6 @@ export function SettingsScreen() {
           ))}
         </View>
       </AccountSectionCard>
-
-      <AccountSectionCard description="Keep access to your mobile session under control." title="Session">
-        <AccountPrimaryButton
-          icon="log-out"
-          label="Sign out"
-          onPress={() => {
-            signOut();
-            navigation.navigate('MainTabs', { screen: 'Home' });
-          }}
-          tone="danger"
-        />
-      </AccountSectionCard>
-
       <AccountPrimaryButton icon="save" label="Save settings" loading={saving} onPress={() => void handleSave()} />
     </PageContainer>
   );

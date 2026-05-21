@@ -106,7 +106,7 @@ export function OrganizationDetailsScreen() {
                   },
                 ]}
               >
-                <Feather color={theme.colors.primary} name="users" size={18} />
+                <Feather color={theme.colors.primary} name="users" size={22} />
               </Pressable>
               <Pressable
                 accessibilityLabel="Edit organization"
@@ -124,7 +124,7 @@ export function OrganizationDetailsScreen() {
                   },
                 ]}
               >
-                <Feather color={theme.colors.primary} name="edit-2" size={18} />
+                <Feather color={theme.colors.primary} name="edit-2" size={22} />
               </Pressable>
             </View>
           )
@@ -183,7 +183,7 @@ export function OrganizationDetailsScreen() {
         style={[
           styles.heroCard,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.surfaceRaised,
             borderColor: theme.colors.border,
           },
         ]}

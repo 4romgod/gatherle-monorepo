@@ -19,7 +19,7 @@ export function ProfileActionButton({ icon, label, onPress }: ProfileActionButto
       style={({ pressed }) => [
         styles.profileActionButton,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.surfaceRaised,
           borderColor: theme.colors.border,
           opacity: pressed ? 0.9 : 1,
         },

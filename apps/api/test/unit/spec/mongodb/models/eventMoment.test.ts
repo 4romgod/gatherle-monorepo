@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import EventMoment from '@/mongodb/models/eventMoment';
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
 
 describe('EventMoment Model', () => {
@@ -14,7 +15,7 @@ describe('EventMoment Model', () => {
         caption: 'hello',
         state: EventMomentState.Ready,
         isPublished: true,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + EVENT_MOMENT_EXPIRY_MS),
       });
 
       await doc.validate();
@@ -32,7 +33,7 @@ describe('EventMoment Model', () => {
         rawS3Key: 'event-moments/event/user/clip.mp4',
         mediaUrl: 'https://cdn.example.com/event-moments/event/user/clip.mp4',
         isPublished: false,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + EVENT_MOMENT_EXPIRY_MS),
       });
 
       await doc.validate();

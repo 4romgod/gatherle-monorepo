@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     flex: 1,
     flexDirection: 'row',
     gap: 8,

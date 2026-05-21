@@ -29,9 +29,26 @@ const MAX_MOMENTS_FEED_LIMIT = 24;
 const MIN_MOMENTS_FEED_LIMIT = 1;
 const MIN_MOMENTS_FEED_CANDIDATE_POOL = 48;
 const MOMENTS_FEED_CURSOR_VERSION = 1;
+const MOMENTS_FEED_DISCOVERY_CADENCE = 3;
+
+const MOMENTS_FEED_SCORE = {
+  CATEGORY_MATCH: 60,
+  AUTHOR_DISCOVERY: 18,
+  EVENT_DISCOVERY: 10,
+  ORG_DISCOVERY: 8,
+  FOLLOWED_AUTHOR: 20,
+  FOLLOWED_ORG: 6,
+  LOCAL_CITY: 16,
+  LOCAL_COUNTRY: 6,
+  EVENT_MOMENTUM_MAX: 18,
+  EVENT_MOMENTUM_PER_MOMENT: 4,
+  FRESHNESS_MAX: 18,
+  FRESHNESS_DECAY_PER_HOUR: 0.75,
+} as const;
 
 type RankedMomentCandidate = {
   event: EventSeries | null;
+  isDiscoveryCandidate: boolean;
   moment: EventMoment;
   score: number;
 };
@@ -85,19 +102,39 @@ function isEventPublic(event: EventSeries | null): boolean {
   return !event.visibility || event.visibility === EventVisibility.Public;
 }
 
-function scoreMomentCandidate(params: {
+function rankMomentCandidate(params: {
+  acceptedFollowedOrgIds: Set<string>;
   acceptedFollowedUserIds: Set<string>;
   eventMomentCounts: Map<string, number>;
   event: EventSeries | null;
   moment: EventMoment;
+  savedEventIds: Set<string>;
   viewerInterests: Set<string>;
   viewerLocation?: { city?: string; country?: string } | null;
-}): number {
-  const { acceptedFollowedUserIds, eventMomentCounts, event, moment, viewerInterests, viewerLocation } = params;
+}): Pick<RankedMomentCandidate, 'isDiscoveryCandidate' | 'score'> {
+  const {
+    acceptedFollowedOrgIds,
+    acceptedFollowedUserIds,
+    eventMomentCounts,
+    event,
+    moment,
+    savedEventIds,
+    viewerInterests,
+    viewerLocation,
+  } = params;
   let score = 0;
+  const eventOrgId = typeof event?.orgId === 'string' && event.orgId.length > 0 ? event.orgId : null;
+  const isFollowedAuthor = acceptedFollowedUserIds.has(moment.authorId);
+  const isFollowedOrg = eventOrgId !== null ? acceptedFollowedOrgIds.has(eventOrgId) : false;
+  const isSavedEvent = savedEventIds.has(moment.eventId);
+  const isDiscoveryOrg = eventOrgId !== null ? !acceptedFollowedOrgIds.has(eventOrgId) : false;
+  const isDiscoveryEvent = !isSavedEvent && (isFollowedAuthor || isFollowedOrg);
+  const isDiscoveryCandidate = !isFollowedAuthor || isDiscoveryOrg || isDiscoveryEvent;
 
-  if (acceptedFollowedUserIds.has(moment.authorId)) {
-    score += 40;
+  if (isFollowedAuthor) {
+    score += MOMENTS_FEED_SCORE.FOLLOWED_AUTHOR;
+  } else {
+    score += MOMENTS_FEED_SCORE.AUTHOR_DISCOVERY;
   }
 
   if (event) {
@@ -105,7 +142,17 @@ function scoreMomentCandidate(params: {
       (event.eventCategories ?? []).map((category) => normalizeRefId(category)).filter(Boolean),
     );
     if ([...eventCategoryIds].some((categoryId) => viewerInterests.has(categoryId as string))) {
-      score += 24;
+      score += MOMENTS_FEED_SCORE.CATEGORY_MATCH;
+    }
+
+    if (isFollowedOrg) {
+      score += MOMENTS_FEED_SCORE.FOLLOWED_ORG;
+    } else if (isDiscoveryOrg) {
+      score += MOMENTS_FEED_SCORE.ORG_DISCOVERY;
+    }
+
+    if (isDiscoveryEvent) {
+      score += MOMENTS_FEED_SCORE.EVENT_DISCOVERY;
     }
 
     const eventCity = event.location?.address?.city?.trim().toLowerCase();
@@ -113,19 +160,44 @@ function scoreMomentCandidate(params: {
     const viewerCity = viewerLocation?.city?.trim().toLowerCase();
     const viewerCountry = viewerLocation?.country?.trim().toLowerCase();
     if (viewerCity && viewerCountry && eventCity === viewerCity && eventCountry === viewerCountry) {
-      score += 20;
+      score += MOMENTS_FEED_SCORE.LOCAL_CITY;
     } else if (viewerCountry && eventCountry === viewerCountry) {
-      score += 8;
+      score += MOMENTS_FEED_SCORE.LOCAL_COUNTRY;
     }
   }
 
-  const eventMomentum = Math.min((eventMomentCounts.get(moment.eventId) ?? 1) * 4, 18);
+  const eventMomentum = Math.min(
+    (eventMomentCounts.get(moment.eventId) ?? 1) * MOMENTS_FEED_SCORE.EVENT_MOMENTUM_PER_MOMENT,
+    MOMENTS_FEED_SCORE.EVENT_MOMENTUM_MAX,
+  );
   score += eventMomentum;
 
   const hoursSinceCreated = Math.max(0, (Date.now() - moment.createdAt.getTime()) / (60 * 60 * 1000));
-  score += Math.max(0, 30 - hoursSinceCreated * 1.5);
+  score += Math.max(
+    0,
+    MOMENTS_FEED_SCORE.FRESHNESS_MAX - hoursSinceCreated * MOMENTS_FEED_SCORE.FRESHNESS_DECAY_PER_HOUR,
+  );
 
-  return score;
+  return { isDiscoveryCandidate, score };
+}
+
+function isAllowedDiversifiedCandidate(
+  candidate: RankedMomentCandidate,
+  result: RankedMomentCandidate[],
+  requireDiscovery = false,
+): boolean {
+  if (requireDiscovery && !candidate.isDiscoveryCandidate) {
+    return false;
+  }
+
+  const lastAuthorId = result.at(-1)?.moment.authorId;
+  const previousAuthorId = result.at(-2)?.moment.authorId;
+  const lastEventId = result.at(-1)?.moment.eventId;
+  const previousEventId = result.at(-2)?.moment.eventId;
+  const sameAuthorStreak = candidate.moment.authorId === lastAuthorId && candidate.moment.authorId === previousAuthorId;
+  const sameEventStreak = candidate.moment.eventId === lastEventId && candidate.moment.eventId === previousEventId;
+
+  return !sameAuthorStreak && !sameEventStreak;
 }
 
 function diversifyRankedMoments(candidates: RankedMomentCandidate[]): RankedMomentCandidate[] {
@@ -139,18 +211,22 @@ function diversifyRankedMoments(candidates: RankedMomentCandidate[]): RankedMome
   const result: RankedMomentCandidate[] = [];
 
   while (remaining.length > 0) {
-    const lastAuthorId = result.at(-1)?.moment.authorId;
-    const previousAuthorId = result.at(-2)?.moment.authorId;
-    const lastEventId = result.at(-1)?.moment.eventId;
-    const previousEventId = result.at(-2)?.moment.eventId;
+    const shouldForceDiscovery =
+      result.length >= MOMENTS_FEED_DISCOVERY_CADENCE - 1 &&
+      result.slice(-(MOMENTS_FEED_DISCOVERY_CADENCE - 1)).every((candidate) => !candidate.isDiscoveryCandidate);
 
-    const nextIndex = remaining.findIndex((candidate) => {
-      const sameAuthorStreak =
-        candidate.moment.authorId === lastAuthorId && candidate.moment.authorId === previousAuthorId;
-      const sameEventStreak = candidate.moment.eventId === lastEventId && candidate.moment.eventId === previousEventId;
+    const nextIndex = shouldForceDiscovery
+      ? (() => {
+          const discoveryIndex = remaining.findIndex((candidate) =>
+            isAllowedDiversifiedCandidate(candidate, result, true),
+          );
+          if (discoveryIndex !== -1) {
+            return discoveryIndex;
+          }
 
-      return !sameAuthorStreak && !sameEventStreak;
-    });
+          return remaining.findIndex((candidate) => isAllowedDiversifiedCandidate(candidate, result));
+        })()
+      : remaining.findIndex((candidate) => isAllowedDiversifiedCandidate(candidate, result));
 
     if (nextIndex === -1) {
       result.push(...remaining);
@@ -555,8 +631,8 @@ class EventMomentService {
 
   /**
    * Read a discovery feed of active moments across public events.
-   * Guests get a freshness/momentum feed; signed-in viewers get additional
-   * personalization from follows, interests, and locality.
+   * Guests get a freshness/momentum feed; signed-in viewers get discovery-first
+   * personalization from interests, novelty, follows, and locality.
    */
   static async readMomentsFeed(callerId?: string, cursor?: string, limit?: number): Promise<EventMomentPage> {
     const pageSize = clampFeedLimit(limit);
@@ -573,6 +649,24 @@ class EventMomentService {
         .filter(
           (follow) =>
             follow.targetType === FollowTargetType.User && follow.approvalStatus === FollowApprovalStatus.Accepted,
+        )
+        .map((follow) => follow.targetId),
+    );
+    const acceptedFollowedOrgIds = new Set(
+      follows
+        .filter(
+          (follow) =>
+            follow.targetType === FollowTargetType.Organization &&
+            follow.approvalStatus === FollowApprovalStatus.Accepted,
+        )
+        .map((follow) => follow.targetId),
+    );
+    const savedEventIds = new Set(
+      follows
+        .filter(
+          (follow) =>
+            follow.targetType === FollowTargetType.EventSeries &&
+            follow.approvalStatus === FollowApprovalStatus.Accepted,
         )
         .map((follow) => follow.targetId),
     );
@@ -638,11 +732,13 @@ class EventMomentService {
         .map((moment) => ({
           moment,
           event: eventsById.get(moment.eventId) ?? null,
-          score: scoreMomentCandidate({
+          ...rankMomentCandidate({
+            acceptedFollowedOrgIds,
             acceptedFollowedUserIds,
             event: eventsById.get(moment.eventId) ?? null,
             eventMomentCounts,
             moment,
+            savedEventIds,
             viewerInterests,
             viewerLocation: viewer?.location,
           }),

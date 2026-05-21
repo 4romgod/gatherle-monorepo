@@ -23,7 +23,7 @@ export function AccountPrimaryButton({
   const palette =
     tone === 'secondary'
       ? {
-          background: theme.colors.surface,
+          background: theme.colors.surfaceRaised,
           border: theme.colors.border,
           color: theme.colors.textPrimary,
         }

@@ -43,8 +43,8 @@ import { UserProfileScreen } from '@/screens/users/UserProfileScreen';
 import { VenuesScreen } from '@/screens/venues/VenuesScreen';
 import { VenueDetailsScreen } from '@/screens/venues/VenueDetailsScreen';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
-import { fontFamily, fontSize } from '@/app/theme/typography';
-import { DetailRouteName, MainTabParamList, RootStackParamList, authRouteNames } from './routes';
+import { fontFamily } from '@/app/theme/typography';
+import { MainTabParamList, RootStackParamList } from './routes';
 
 const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -97,10 +97,6 @@ function MainTabs() {
       </View>
     </SafeAreaView>
   );
-}
-
-function isAuthRoute(routeName: DetailRouteName) {
-  return authRouteNames.includes(routeName);
 }
 
 export function RootNavigator() {
@@ -289,9 +285,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    minHeight: 78,
-    paddingBottom: 14,
-    paddingTop: 8,
+    minHeight: 58,
+    paddingBottom: 6,
+    paddingTop: 6,
   },
   mainTabsShell: {
     flex: 1,

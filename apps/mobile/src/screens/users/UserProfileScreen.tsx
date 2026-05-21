@@ -118,7 +118,7 @@ export function UserProfileScreen() {
     }, [refetch, refetchEvents, refetchParticipantOccurrences, refetchUserMoments]),
   );
 
-  const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || 'Gatherle member';
+  const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || '';
   const badges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
   const followerPreview = followers.slice(0, 3);

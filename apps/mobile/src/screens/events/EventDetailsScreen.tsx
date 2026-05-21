@@ -325,7 +325,7 @@ export function EventDetailsScreen() {
             style={({ pressed }) => [
               styles.hostCard,
               {
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.surfaceRaised,
                 borderColor: theme.colors.border,
                 opacity: pressed ? 0.92 : 1,
               },
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   hostCard: {
     alignItems: 'center',
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     flexDirection: 'row',
     gap: 14,
     paddingHorizontal: 14,

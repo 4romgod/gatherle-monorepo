@@ -76,7 +76,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
     theme.mode === 'light'
       ? {
           elevation: 4,
-          shadowColor: '#0f172a',
+          shadowColor: theme.colors.heroBackground,
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.08,
           shadowRadius: 8,
@@ -135,7 +135,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
           shadowStyle,
           {
             backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
+            borderWidth: 0,
             opacity: pressed ? 0.94 : 1,
             width: cardWidth,
           },
@@ -151,7 +151,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
               </Text>
             </LinearGradient>
           )}
-          <View style={styles.imageOverlay} />
+          <View style={[styles.imageOverlay, { backgroundColor: theme.colors.heroBackground + '24' }]} />
           <View
             style={[
               styles.overlayPill,
@@ -164,7 +164,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
               style={[
                 styles.overlayPillText,
                 {
-                  color: isFeatured ? theme.colors.primary : theme.colors.primary,
+                  color: isFeatured ? theme.colors.primary : theme.colors.textPrimary,
                 },
               ]}
             >
@@ -325,8 +325,7 @@ const styles = StyleSheet.create({
     height: 190,
   },
   imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.14)',
+    ...StyleSheet.absoluteFill,
   },
   imagePlaceholder: {
     alignItems: 'center',
@@ -359,26 +358,26 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     left: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
     position: 'absolute',
-    top: 12,
+    top: 6,
   },
   overlayPillText: {
     ...typography.bodyBold,
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 0.2,
   },
   participantFallback: {
     alignItems: 'center',
     borderRadius: 999,
-    height: 30,
+    height: 24,
     justifyContent: 'center',
     width: 30,
   },
   participantFallbackText: {
     ...typography.bodyBold,
-    fontSize: 11,
+    fontSize: 10,
   },
   participantImage: {
     borderRadius: 999,

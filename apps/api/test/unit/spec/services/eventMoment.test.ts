@@ -117,6 +117,7 @@ import {
   UserDAO,
 } from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
   EventMomentState,
@@ -148,7 +149,7 @@ describe('EventMomentService', () => {
     type: EventMomentType.Text,
     state: EventMomentState.Ready,
     isPublished: true,
-    expiresAt: new Date(now + 24 * 60 * 60 * 1000),
+    expiresAt: new Date(now + EVENT_MOMENT_EXPIRY_MS),
     createdAt: new Date(now),
   };
 
@@ -896,12 +897,14 @@ describe('EventMomentService', () => {
     const publicEvent = {
       eventId: 'event-public',
       visibility: 'Public',
+      orgId: 'org-public',
       eventCategories: ['cat-music'],
       location: { address: { city: 'Durban', country: 'South Africa' } },
     };
     const privateEvent = {
       eventId: 'event-private',
       visibility: 'Private',
+      orgId: 'org-private',
       eventCategories: ['cat-music'],
       location: { address: { city: 'Durban', country: 'South Africa' } },
     };
@@ -1001,6 +1004,53 @@ describe('EventMomentService', () => {
       expect(result.items.map((item) => item.momentId)).toEqual(['moment-public', 'moment-private-event']);
     });
 
+    it('prioritizes category matches over followed-author affinity', async () => {
+      const followedAuthor = { userId: 'author-followed', followPolicy: 'Public' };
+      const discoveryAuthor = { userId: 'author-discovery', followPolicy: 'Public' };
+      const followedEvent = {
+        ...publicEvent,
+        eventId: 'event-followed',
+        eventCategories: ['cat-food'],
+      };
+      const interestEvent = {
+        ...publicEvent,
+        eventId: 'event-interest',
+        eventCategories: ['cat-music'],
+      };
+      const followedMoment = {
+        ...publicMoment,
+        momentId: 'moment-followed',
+        authorId: 'author-followed',
+        eventId: 'event-followed',
+        createdAt: new Date('2026-05-15T09:00:00.000Z'),
+      };
+      const interestMoment = {
+        ...publicMoment,
+        momentId: 'moment-interest',
+        authorId: 'author-discovery',
+        eventId: 'event-interest',
+        createdAt: new Date('2026-05-15T09:00:00.000Z'),
+      };
+
+      (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
+        items: [followedMoment, interestMoment],
+        hasMore: false,
+      });
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-followed',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+      (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([followedAuthor, discoveryAuthor]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([followedEvent, interestEvent]);
+
+      const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
+
+      expect(result.items.map((item) => item.momentId)).toEqual(['moment-interest', 'moment-followed']);
+    });
+
     it('returns an empty page when no candidates are available', async () => {
       (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
         items: [],
@@ -1062,6 +1112,123 @@ describe('EventMomentService', () => {
         'dominant-2',
         'secondary-1',
         'dominant-3',
+      ]);
+    });
+
+    it('forces discovery back into the feed after two network-heavy items when available', async () => {
+      const followedAuthorOne = { userId: 'author-followed-1', followPolicy: 'Public' };
+      const followedAuthorTwo = { userId: 'author-followed-2', followPolicy: 'Public' };
+      const followedAuthorThree = { userId: 'author-followed-3', followPolicy: 'Public' };
+      const discoveryAuthor = { userId: 'author-discovery', followPolicy: 'Public' };
+      const followedEventOne = {
+        ...publicEvent,
+        eventId: 'event-followed-1',
+      };
+      const followedEventTwo = {
+        ...publicEvent,
+        eventId: 'event-followed-2',
+      };
+      const followedEventThree = {
+        ...publicEvent,
+        eventId: 'event-followed-3',
+      };
+      const discoveryEvent = {
+        ...publicEvent,
+        eventId: 'event-discovery',
+        orgId: 'org-discovery',
+        eventCategories: ['cat-food'],
+        location: { address: { city: 'Cape Town', country: 'South Africa' } },
+      };
+      const followedMomentOne = {
+        ...publicMoment,
+        momentId: 'followed-1',
+        authorId: 'author-followed-1',
+        eventId: 'event-followed-1',
+        createdAt: new Date('2026-05-15T10:00:00.000Z'),
+      };
+      const followedMomentTwo = {
+        ...publicMoment,
+        momentId: 'followed-2',
+        authorId: 'author-followed-2',
+        eventId: 'event-followed-2',
+        createdAt: new Date('2026-05-15T09:30:00.000Z'),
+      };
+      const followedMomentThree = {
+        ...publicMoment,
+        momentId: 'followed-3',
+        authorId: 'author-followed-3',
+        eventId: 'event-followed-3',
+        createdAt: new Date('2026-05-15T09:00:00.000Z'),
+      };
+      const discoveryMoment = {
+        ...publicMoment,
+        momentId: 'discovery-1',
+        authorId: 'author-discovery',
+        eventId: 'event-discovery',
+        createdAt: new Date('2026-05-15T08:00:00.000Z'),
+      };
+
+      (EventMomentDAO.readFeedCandidates as jest.Mock).mockResolvedValue({
+        items: [followedMomentOne, followedMomentTwo, followedMomentThree, discoveryMoment],
+        hasMore: false,
+      });
+      (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-followed-1',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-followed-2',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.User,
+          targetId: 'author-followed-3',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.Organization,
+          targetId: 'org-public',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.EventSeries,
+          targetId: 'event-followed-1',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.EventSeries,
+          targetId: 'event-followed-2',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+        {
+          targetType: FollowTargetType.EventSeries,
+          targetId: 'event-followed-3',
+          approvalStatus: FollowApprovalStatus.Accepted,
+        },
+      ]);
+      (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([
+        followedAuthorOne,
+        followedAuthorTwo,
+        followedAuthorThree,
+        discoveryAuthor,
+      ]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([
+        followedEventOne,
+        followedEventTwo,
+        followedEventThree,
+        discoveryEvent,
+      ]);
+
+      const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
+
+      expect(result.items.map((item) => item.momentId)).toEqual([
+        'followed-1',
+        'followed-2',
+        'discovery-1',
+        'followed-3',
       ]);
     });
 

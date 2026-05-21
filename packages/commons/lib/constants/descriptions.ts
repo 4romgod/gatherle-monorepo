@@ -1,3 +1,5 @@
+import { EVENT_MOMENT_EXPIRY_LABEL } from './eventMoment';
+
 export const EVENT_DESCRIPTIONS = {
   RSVP: {
     USER_ID_LIST: 'A unique list (set) of user IDs, (e.g. userIdList: ["userId001", "userId254"])',
@@ -128,7 +130,7 @@ export const EVENT_DESCRIPTIONS = {
 };
 
 export const EVENT_MOMENT_DESCRIPTIONS = {
-  TYPE: 'Represents an ephemeral moment post linked to an event occurrence and automatically expires after 24 hours.',
+  TYPE: `Represents an ephemeral moment post linked to an event occurrence and automatically expires after ${EVENT_MOMENT_EXPIRY_LABEL}.`,
   PAGE_TYPE: 'Paginated list of event moments.',
   CREATE_INPUT: 'Input for creating an event moment or publishing a reserved video upload.',
   TYPE_ENUM: 'The media type of an event moment post.',

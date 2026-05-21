@@ -29,7 +29,7 @@ export function FilterChip({ active, label, onPress, onRemove, small, tone = 'pr
         styles.filterChip,
         small && styles.filterChipSmall,
         {
-          backgroundColor: active ? soft : theme.colors.surfaceMuted,
+          backgroundColor: active ? soft : theme.colors.surfaceRaised,
           borderColor: active ? accent : 'transparent',
           opacity: pressed ? 0.86 : 1,
         },
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   filterChipSmall: {
-    minHeight: 24,
+    minHeight: 30,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextSmall: {
     ...typography.bodyRegular,
-    fontSize: 11,
+    fontSize: 12,
   },
 });

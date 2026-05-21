@@ -13,7 +13,7 @@ export function AccountSectionCard({ children, description, title }: AccountSect
   const { theme } = useAppTheme();
 
   return (
-    <View style={[styles.section, { borderBottomColor: theme.colors.border }]}>
+    <View style={styles.section}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
         {description ? (
@@ -38,9 +38,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   section: {
-    borderBottomWidth: 1,
     gap: 18,
-    paddingBottom: 24,
   },
   title: {
     ...typography.bodyBold,

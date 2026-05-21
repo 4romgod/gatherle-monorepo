@@ -1,6 +1,6 @@
 import type { ApolloError } from '@apollo/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -15,8 +15,10 @@ import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useMessages } from '@/hooks/messages/useMessages';
-import { getDisplayName } from '@/lib/events/formatters';
+import { useUserSearch } from '@/hooks/search/useUserSearch';
+import { getDisplayName, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { typography } from '@/app/theme/typography';
 
 export function MessagesScreen() {
   const navigation = useNavigation<MainTabNavigation>();
@@ -24,6 +26,12 @@ export function MessagesScreen() {
   const { theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const { conversations, error, loading, refetch } = useMessages(authToken, isAuthenticated);
+  const {
+    clear: clearUserSearch,
+    loading: userSearchLoading,
+    results: userSearchResults,
+    search: searchUsers,
+  } = useUserSearch(authToken);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
       await refetch();
@@ -57,6 +65,19 @@ export function MessagesScreen() {
       return haystack.includes(normalizedQuery);
     });
   }, [conversations, searchQuery]);
+
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      searchUsers(text);
+    },
+    [searchUsers],
+  );
+
+  const handleClear = useCallback(() => {
+    setSearchQuery('');
+    clearUserSearch();
+  }, [clearUserSearch]);
 
   useEffect(() => {
     if (!hasLiveSession || !error) {
@@ -98,10 +119,65 @@ export function MessagesScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      <SearchField onChangeText={setSearchQuery} placeholder="Search conversations" value={searchQuery} />
+      <SearchField
+        onChangeText={handleSearchChange}
+        onClear={handleClear}
+        placeholder="Search conversations"
+        value={searchQuery}
+      />
       <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
 
-      {loading && filteredConversations.length === 0 ? (
+      {searchQuery.trim().length >= 2 ? (
+        userSearchLoading ? (
+          <ActivityIndicator color={theme.colors.primary} style={styles.loader} />
+        ) : userSearchResults.length > 0 ? (
+          <View style={styles.messageList}>
+            {userSearchResults.map((user) => {
+              const displayName = getDisplayName(user);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  key={user.userId}
+                  onPress={() =>
+                    navigation.navigate('MessageThread', {
+                      avatarUrl: user.profile_picture ?? undefined,
+                      displayName,
+                      username: user.username ?? undefined,
+                      withUserId: user.userId,
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.userRow,
+                    { borderBottomColor: theme.colors.border, opacity: pressed ? 0.82 : 1 },
+                  ]}
+                >
+                  {user.profile_picture ? (
+                    <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+                      <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
+                        {getInitials(displayName)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.userInfo}>
+                    <Text numberOfLines={1} style={[styles.userDisplayName, { color: theme.colors.textPrimary }]}>
+                      {displayName}
+                    </Text>
+                    {user.username ? (
+                      <Text numberOfLines={1} style={[styles.userHandle, { color: theme.colors.textSecondary }]}>
+                        @{user.username}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <StateNotice message="No users found." />
+        )
+      ) : loading && filteredConversations.length === 0 ? (
         <View style={styles.messageList}>
           <ConversationRowSkeleton />
           <ConversationRowSkeleton />
@@ -139,11 +215,48 @@ export function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
+  avatar: {
+    borderRadius: 999,
+    height: 40,
+    width: 40,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  avatarFallbackText: {
+    ...typography.displayBold,
+    fontSize: 13,
+  },
+  loader: {
+    marginTop: 24,
+  },
   messageList: {
     gap: 0,
   },
   pageDivider: {
     height: 1,
     marginHorizontal: -20,
+  },
+  userDisplayName: {
+    ...typography.bodyMedium,
+  },
+  userHandle: {
+    ...typography.bodyRegular,
+    fontSize: 13,
+  },
+  userInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  userRow: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
   },
 });

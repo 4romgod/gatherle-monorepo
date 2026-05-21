@@ -24,7 +24,7 @@ type BottomTabBarProps = MaterialTopTabBarProps & {
   isTabletLayout: boolean;
 };
 
-export function BottomTabBar({ isTabletLayout, navigation, position, state }: BottomTabBarProps) {
+export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBarProps) {
   const { isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -43,9 +43,9 @@ export function BottomTabBar({ isTabletLayout, navigation, position, state }: Bo
         styles.tabBar,
         {
           backgroundColor: theme.colors.tabBar,
-          borderTopColor: theme.colors.tabBarBorder,
+          borderTopColor: theme.colors.surfaceRaised,
           minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 8),
+          paddingBottom: 2,
         },
       ]}
     >
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   indicator: {
     borderRadius: 999,
     height: 3,
-    marginTop: 6,
+    marginTop: 3,
     width: 14,
   },
   item: {
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
   },
   itemPhone: {
     gap: 0,
-    paddingTop: 6,
+    paddingTop: 3,
   },
   itemTablet: {
     gap: 6,
-    paddingTop: 6,
+    paddingTop: 3,
   },
   label: {
     fontFamily: fontFamily.bodySemiBold,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   tabBar: {
-    borderTopWidth: 1,
+    borderTopWidth: 0.2,
     flexDirection: 'row',
   },
 });

@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   filterActionButton: {
     alignItems: 'center',
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 1.5,
     minHeight: 38,
     paddingHorizontal: 14,
     position: 'relative',
