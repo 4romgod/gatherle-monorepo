@@ -15,7 +15,7 @@ export function DetailStatChip({ label, value }: DetailStatChipProps) {
       style={[
         styles.chip,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.surfaceRaised,
           borderColor: theme.colors.border,
         },
       ]}

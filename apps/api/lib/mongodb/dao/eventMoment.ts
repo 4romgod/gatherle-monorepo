@@ -1,9 +1,9 @@
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import type { EventMoment as EventMomentEntity, CreateEventMomentInput } from '@gatherle/commons/types';
 import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
 import { EventMoment } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 
-const EXPIRY_HOURS = 24;
 const MAX_STATUSES_PER_ROLLING_WINDOW = 5;
 const ROLLING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PENDING_EVENT_MOMENT_STATES = [EventMomentState.UploadPending, EventMomentState.Transcoding];
@@ -40,7 +40,7 @@ class EventMomentDAO {
   ): Promise<EventMomentEntity> {
     try {
       const now = new Date();
-      const expiresAt = new Date(now.getTime() + EXPIRY_HOURS * 60 * 60 * 1000);
+      const expiresAt = new Date(now.getTime() + EVENT_MOMENT_EXPIRY_MS);
 
       const doc = await EventMoment.create({
         eventId: input.eventId,
@@ -70,7 +70,7 @@ class EventMomentDAO {
   static async createVideoUpload(params: CreateVideoUploadParams): Promise<EventMomentEntity> {
     try {
       const now = new Date();
-      const expiresAt = new Date(now.getTime() + EXPIRY_HOURS * 60 * 60 * 1000);
+      const expiresAt = new Date(now.getTime() + EVENT_MOMENT_EXPIRY_MS);
 
       const doc = await EventMoment.create({
         eventId: params.eventId,

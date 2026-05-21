@@ -36,18 +36,18 @@ export function OrganizationMemberRow({
   roleOptions,
 }: OrganizationMemberRowProps) {
   const { theme } = useAppTheme();
-  const handle = membership.username ? `@${membership.username}` : 'Gatherle member';
   const joinedLabel = `Joined ${new Date(membership.joinedAt).toLocaleDateString()}`;
+  const titleLabel = membership.username ? `@${membership.username}` : membership.userId;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.surfaceMuted }]}>
+    <View style={[styles.card, { backgroundColor: theme.colors.surfaceRaised }]}>
       <View style={styles.headerRow}>
         <View style={styles.identity}>
-          <ProfileAvatar label={membership.username ?? membership.userId} size={52} />
+          <ProfileAvatar label={membership.username ?? null} size={52} />
 
           <View style={styles.copy}>
             <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
-              {handle}
+              {titleLabel}
             </Text>
             <Text numberOfLines={1} style={[styles.meta, { color: theme.colors.textSecondary }]}>
               {joinedLabel}

@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Platform } from 'react-native';
-import { TextInput, View, StyleSheet } from 'react-native';
+import { Pressable, TextInput, View, StyleSheet } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 
@@ -18,11 +18,12 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 type SearchFieldProps = {
   onChangeText: (value: string) => void;
+  onClear?: () => void;
   placeholder: string;
   value: string;
 };
 
-export function SearchField({ onChangeText, placeholder, value }: SearchFieldProps) {
+export function SearchField({ onChangeText, onClear, placeholder, value }: SearchFieldProps) {
   const { theme } = useAppTheme();
   const elevatedShadow =
     theme.mode === 'light'
@@ -56,11 +57,27 @@ export function SearchField({ onChangeText, placeholder, value }: SearchFieldPro
         style={[styles.input, { color: theme.colors.textPrimary }]}
         value={value}
       />
+      {value.length > 0 && onClear ? (
+        <Pressable
+          hitSlop={8}
+          onPress={onClear}
+          style={[styles.clearButton, { backgroundColor: theme.colors.textMuted }]}
+        >
+          <Feather color={theme.colors.surface} name="x" size={11} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  clearButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
   container: {
     alignItems: 'center',
     borderRadius: 999,

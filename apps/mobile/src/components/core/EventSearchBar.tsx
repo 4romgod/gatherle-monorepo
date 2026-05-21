@@ -78,17 +78,6 @@ export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
   const [query, setQuery] = useState('');
   const { clear, loading, results, search } = useEventSearch();
 
-  const elevatedShadow =
-    theme.mode === 'light'
-      ? {
-          elevation: 4,
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 6,
-        }
-      : null;
-
   const handleChangeText = (text: string) => {
     setQuery(text);
     search(text);
@@ -118,14 +107,12 @@ export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
       <Pressable
         accessibilityRole="search"
         onPress={() => setModalVisible(true)}
-        style={[
-          styles.pill,
-          elevatedShadow,
-          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-        ]}
+        style={[styles.pill, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
       >
-        <Feather color={theme.colors.textMuted} name="search" size={18} />
-        <Text style={[styles.pillPlaceholder, { color: theme.colors.textMuted }]}>Search events, categories...</Text>
+        <Feather color={theme.colors.textSecondary} name="search" size={18} />
+        <Text style={[styles.pillPlaceholder, { color: theme.colors.textSecondary }]}>
+          Search events, categories...
+        </Text>
       </Pressable>
 
       {/* Full-screen search modal */}
@@ -146,17 +133,26 @@ export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
             ]}
           >
             <View
-              style={[styles.inputRow, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              style={[
+                styles.inputRow,
+                { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border },
+              ]}
             >
-              <Feather color={theme.colors.textMuted} name="search" size={18} />
+              <Feather color={theme.colors.textSecondary} name="search" size={18} />
               <TextInput
                 autoFocus
                 onChangeText={handleChangeText}
                 placeholder="Search events, categories..."
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={theme.colors.textSecondary}
                 returnKeyType="search"
                 selectionColor={theme.colors.primary}
-                style={[styles.input, { color: theme.colors.textPrimary, paddingRight: query.length > 0 ? 36 : 0 }]}
+                style={[
+                  styles.input,
+                  {
+                    color: theme.colors.textPrimary,
+                    paddingRight: query.length > 0 ? 36 : 0,
+                  },
+                ]}
                 value={query}
               />
               {query.length > 0 ? (
@@ -248,7 +244,6 @@ const styles = StyleSheet.create({
   inputRow: {
     alignItems: 'center',
     borderRadius: 999,
-    borderWidth: 1,
     flex: 1,
     flexDirection: 'row',
     gap: 10,
@@ -282,7 +277,6 @@ const styles = StyleSheet.create({
   pill: {
     alignItems: 'center',
     borderRadius: 999,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
     minHeight: 44,

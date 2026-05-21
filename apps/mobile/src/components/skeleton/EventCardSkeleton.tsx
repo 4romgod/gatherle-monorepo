@@ -18,7 +18,7 @@ export function EventCardSkeleton({ cardWidth = '100%', variant = 'feed' }: Even
         styles.card,
         {
           backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
+          borderWidth: 0,
           width: cardWidth,
         },
       ]}

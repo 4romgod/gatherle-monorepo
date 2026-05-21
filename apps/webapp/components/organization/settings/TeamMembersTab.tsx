@@ -222,7 +222,7 @@ export default function TeamMembersTab({
           {sortedMemberships.length > 0 ? (
             <Grid container spacing={3}>
               {sortedMemberships.map((membership) => {
-                const displayName = membership.username ? `@${membership.username}` : 'Gatherle member';
+                const displayName = membership.username ? `@${membership.username}` : membership.userId;
                 const initialsSource = membership.username || membership.userId || 'M';
                 const joinedLabel = new Date(membership.joinedAt).toLocaleDateString();
                 const isCurrentUser = membership.userId === currentUserId;
@@ -285,7 +285,7 @@ export default function TeamMembersTab({
                             )}
 
                             <Typography variant="caption" color="text.secondary">
-                              {membership.username ? 'Organization team member' : membership.userId}
+                              {membership.username ? 'Organization team member' : 'Team member'}
                             </Typography>
                           </Box>
                         </Stack>

@@ -3,6 +3,7 @@
   "include": ["App.tsx", "index.ts", "src", "data", "env.d.ts"],
   "compilerOptions": {
     "strict": true,
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"],
       "@data/*": ["./data/*"]

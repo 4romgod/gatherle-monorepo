@@ -57,7 +57,7 @@ type UserNameLike = {
 
 export function getDisplayName(user?: UserNameLike | null) {
   const fullName = [user?.given_name, user?.family_name].filter(Boolean).join(' ').trim();
-  return fullName || user?.username || 'Gatherle Member';
+  return fullName || user?.username || '';
 }
 
 export function getInitials(label: string) {

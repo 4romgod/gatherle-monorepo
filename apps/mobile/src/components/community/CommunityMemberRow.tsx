@@ -31,7 +31,7 @@ export function CommunityMemberRow({
       style={({ pressed }) => [
         styles.row,
         {
-          backgroundColor: theme.colors.surfaceMuted,
+          backgroundColor: theme.colors.surfaceRaised,
           opacity: pressed ? 0.86 : 1,
         },
       ]}

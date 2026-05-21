@@ -12,6 +12,7 @@ import { EventCard } from '@/components/events/EventCard';
 import { FollowedMomentsStrip } from '@/components/moments/FollowedMomentsStrip';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { useMyUpcomingRsvps } from '@/hooks/home/useMyUpcomingRsvps';
 import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
@@ -21,15 +22,12 @@ function buildRecommendedEvents(trendingEvents: MobileEventOccurrence[], upcomin
   return dedupeOccurrencesBySeries([...trendingEvents, ...upcomingEvents], 5);
 }
 
-function buildUpcomingRsvpEvents(upcomingEvents: MobileEventOccurrence[]) {
-  return upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status && occurrence.myRsvp.status !== 'Cancelled');
-}
-
 export function HomeScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, isAuthenticated } = useAppShell();
   const { width } = useWindowDimensions();
   const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
+  const { upcomingRsvps, refetch: refetchRsvps } = useMyUpcomingRsvps(isAuthenticated ? authToken : null);
   const {
     moments: followedMoments,
     refetch: refetchFollowedMoments,
@@ -42,16 +40,15 @@ export function HomeScreen() {
       console.warn('[HomeScreen] Failed to load followed moments:', followedMomentsError.message);
     }
   }, [followedMomentsError]);
-  const upcomingRsvpEvents = useMemo(() => buildUpcomingRsvpEvents(upcomingEvents), [upcomingEvents]);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await Promise.all([refetch(), refetchFollowedMoments()]);
-    }, [refetch, refetchFollowedMoments]),
+      await Promise.all([refetch(), refetchFollowedMoments(), refetchRsvps()]);
+    }, [refetch, refetchFollowedMoments, refetchRsvps]),
   );
 
   const carouselEvents = useMemo(
-    () => (isAuthenticated ? upcomingRsvpEvents : trendingEvents).slice(0, 3),
-    [isAuthenticated, trendingEvents, upcomingRsvpEvents],
+    () => (isAuthenticated ? upcomingRsvps : trendingEvents.slice(0, 3)),
+    [isAuthenticated, trendingEvents, upcomingRsvps],
   );
   const recommendedEvents = useMemo(
     () => buildRecommendedEvents(trendingEvents, upcomingEvents).slice(0, 4),

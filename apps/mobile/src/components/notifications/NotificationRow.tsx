@@ -1,4 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -30,7 +31,6 @@ export function NotificationRow({
   title,
 }: NotificationRowProps) {
   const { theme } = useAppTheme();
-  const safeActorLabel = actorLabel || 'Gatherle Member';
 
   return (
     <Pressable
@@ -48,11 +48,13 @@ export function NotificationRow({
         {!isRead ? <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} /> : null}
         {actorImageUrl ? (
           <Image source={{ uri: actorImageUrl }} style={styles.avatar} />
-        ) : (
+        ) : actorLabel ? (
           <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-            <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
-              {getInitials(safeActorLabel)}
-            </Text>
+            <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(actorLabel)}</Text>
+          </View>
+        ) : (
+          <View style={[styles.avatarFallback, { backgroundColor: theme.colors.surfaceMuted }]}>
+            <Feather color={theme.colors.textMuted} name="user" size={18} />
           </View>
         )}
       </View>

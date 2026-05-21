@@ -36,7 +36,7 @@ export function ComposerIconButton({
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: filled ? (disabled ? theme.colors.surfaceRaised : theme.colors.primary) : 'transparent',
+          backgroundColor: filled ? (disabled ? theme.colors.textMuted : theme.colors.primary) : 'transparent',
           borderColor: filled ? 'transparent' : theme.colors.border,
           height: buttonSize,
           opacity: disabled ? 0.5 : pressed ? 0.82 : 1,

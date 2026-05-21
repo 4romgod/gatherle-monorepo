@@ -10,7 +10,6 @@ import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
 import { FilterActionButton } from '@/components/core/FilterActionButton';
 import { FilterChip } from '@/components/core/FilterChip';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventSearchBar } from '@/components/core/EventSearchBar';
 import { EventCard } from '@/components/events/EventCard';

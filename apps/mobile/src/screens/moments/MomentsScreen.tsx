@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { ViewToken } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { MomentFeedPage } from '@/components/moments/feed/MomentFeedPage';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
@@ -10,12 +11,15 @@ import { fontSize, typography } from '@/app/theme/typography';
 
 export function MomentsScreen() {
   const { authToken } = useAppShell();
+  const isFocused = useIsFocused();
   const { theme } = useAppTheme();
   const { height: screenHeight } = useWindowDimensions();
   const [pageHeight, setPageHeight] = useState(screenHeight);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hiddenMomentIds, setHiddenMomentIds] = useState<string[]>([]);
-  const { error, hasMore, isFetchingMore, loadMore, loading, moments, refresh } = useMomentsFeed(authToken);
+  const { error, hasMore, isFetchingMore, loadMore, loading, moments, refresh } = useMomentsFeed(authToken, {
+    enableAutoRefresh: isFocused,
+  });
   const visibleMoments = useMemo(
     () => moments.filter((moment) => !hiddenMomentIds.includes(moment.momentId)),
     [hiddenMomentIds, moments],
@@ -37,7 +41,7 @@ export function MomentsScreen() {
 
   if (loading && visibleMoments.length === 0) {
     return (
-      <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
+      <View style={[styles.centeredState, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator color={theme.colors.heroText} size="small" />
       </View>
     );
@@ -45,7 +49,7 @@ export function MomentsScreen() {
 
   if (error && visibleMoments.length === 0) {
     return (
-      <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
+      <View style={[styles.centeredState, { backgroundColor: theme.colors.background }]}>
         <Text style={[styles.stateTitle, { color: theme.colors.heroText }]}>Moments are unavailable right now.</Text>
         <Text style={[styles.stateBody, { color: 'rgba(255,255,255,0.72)' }]}>Pull down to try again.</Text>
       </View>
@@ -54,9 +58,9 @@ export function MomentsScreen() {
 
   if (visibleMoments.length === 0) {
     return (
-      <View style={[styles.centeredState, { backgroundColor: '#020617' }]}>
-        <Text style={[styles.stateTitle, { color: theme.colors.heroText }]}>No moments yet.</Text>
-        <Text style={[styles.stateBody, { color: 'rgba(255,255,255,0.72)' }]}>
+      <View style={[styles.centeredState, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.stateTitle, { color: theme.colors.textPrimary }]}>No moments yet</Text>
+        <Text style={[styles.stateBody, { color: theme.colors.textMuted }]}>
           When people start posting from live events, they’ll show up here.
         </Text>
       </View>
@@ -71,7 +75,7 @@ export function MomentsScreen() {
           setPageHeight(nextHeight);
         }
       }}
-      style={[styles.screen, { backgroundColor: '#020617' }]}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       <FlatList
         data={visibleMoments}
@@ -103,7 +107,7 @@ export function MomentsScreen() {
         }
         renderItem={({ index, item }) => (
           <MomentFeedPage
-            active={index === activeIndex}
+            active={isFocused && index === activeIndex}
             moment={item}
             onDeleted={(momentId) => {
               setHiddenMomentIds((current) => (current.includes(momentId) ? current : [...current, momentId]));

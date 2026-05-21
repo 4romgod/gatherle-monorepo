@@ -29,6 +29,7 @@ import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { OrganizationMemberRow } from '@/components/organizations/OrganizationMemberRow';
 import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton';
+import { OrganizationMemberRowSkeleton } from '@/components/skeleton/OrganizationMemberRowSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { getApolloAuthContext } from '@/lib/auth';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -271,9 +272,9 @@ export function OrganizationMembersScreen() {
     return (
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         <View style={styles.list}>
-          <DirectoryRowSkeleton avatarSize={48} />
-          <DirectoryRowSkeleton avatarSize={48} />
-          <DirectoryRowSkeleton avatarSize={48} />
+          <OrganizationMemberRowSkeleton />
+          <OrganizationMemberRowSkeleton />
+          <OrganizationMemberRowSkeleton />
         </View>
       </PageContainer>
     );
@@ -339,7 +340,7 @@ export function OrganizationMembersScreen() {
                   style={({ pressed }) => [
                     styles.memberCard,
                     {
-                      backgroundColor: theme.colors.surfaceMuted,
+                      backgroundColor: theme.colors.surfaceRaised,
                       borderColor: theme.colors.border,
                       opacity: pressed ? 0.9 : 1,
                     },
@@ -351,9 +352,11 @@ export function OrganizationMembersScreen() {
                       <Text numberOfLines={1} style={[styles.memberName, { color: theme.colors.textPrimary }]}>
                         {getDisplayName(user)}
                       </Text>
-                      <Text numberOfLines={1} style={[styles.memberMeta, { color: theme.colors.textSecondary }]}>
-                        {user.username ? `@${user.username}` : 'Gatherle member'}
-                      </Text>
+                      {user.username ? (
+                        <Text numberOfLines={1} style={[styles.memberMeta, { color: theme.colors.textSecondary }]}>
+                          @{user.username}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                   <InlineButton

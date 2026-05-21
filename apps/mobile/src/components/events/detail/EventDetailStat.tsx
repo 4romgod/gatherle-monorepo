@@ -20,7 +20,7 @@ export function EventDetailStat({ icon, label, onPress, value }: EventDetailStat
       style={({ pressed }) => [
         styles.detailStatCard,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.surfaceMuted,
           borderColor: theme.colors.border,
           opacity: onPress && pressed ? 0.84 : 1,
         },
@@ -36,7 +36,6 @@ export function EventDetailStat({ icon, label, onPress, value }: EventDetailStat
 const styles = StyleSheet.create({
   detailStatCard: {
     borderRadius: 18,
-    borderWidth: 1,
     flexBasis: '48%',
     gap: 8,
     minHeight: 110,
