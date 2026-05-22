@@ -43,6 +43,7 @@ export function EditVenueScreen() {
 
   const venueQuery = useQuery(GetVenueByIdDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
     variables: { venueId },
     ...getApolloAuthContext(authToken),
   });
@@ -65,8 +66,12 @@ export function EditVenueScreen() {
 
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
+      if (!isAuthenticated || !authToken) {
+        return;
+      }
+
       await venueQuery.refetch();
-    }, [venueQuery]),
+    }, [authToken, isAuthenticated, venueQuery]),
   );
 
   const updateField = <K extends keyof VenueFormState>(field: K, value: VenueFormState[K]) => {

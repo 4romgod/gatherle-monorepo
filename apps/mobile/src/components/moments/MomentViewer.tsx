@@ -3,6 +3,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Easing,
   Image,
   Modal,
   PanResponder,
@@ -13,8 +14,10 @@ import {
 } from 'react-native';
 import { useApolloClient, useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEventListener } from 'expo';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import type { VideoPlayer } from 'expo-video';
 import type { EventMomentState } from '@data/graphql/types/graphql';
@@ -39,6 +42,11 @@ const SCREEN_WIDTH = SCREEN.width;
 const SCREEN_HEIGHT = SCREEN.height;
 const FOOTER_HEIGHT = 118;
 const HEADER_ZONE_HEIGHT = 112;
+const DISMISS_PAN_ACTIVATION_DISTANCE = 6;
+const DISMISS_DRAG_THRESHOLD = 120;
+const DISMISS_VELOCITY_THRESHOLD = 0.85;
+const GROUP_SWIPE_DISTANCE = 70;
+const GROUP_SWIPE_VELOCITY = 0.55;
 
 type MomentLike = {
   author?: {
@@ -83,8 +91,12 @@ export function MomentViewer({
   containerHeight,
   embedded = false,
   moments,
+  hasNextGroup = false,
+  hasPreviousGroup = false,
   onClose,
   onDeleted,
+  onRequestNextGroup,
+  onRequestPreviousGroup,
   open,
   showCloseButton = true,
   startIndex = 0,
@@ -92,9 +104,13 @@ export function MomentViewer({
   active?: boolean;
   containerHeight?: number;
   embedded?: boolean;
+  hasNextGroup?: boolean;
+  hasPreviousGroup?: boolean;
   moments: MomentLike[];
   onClose: () => void;
   onDeleted?: (momentId: string) => void;
+  onRequestNextGroup?: () => boolean;
+  onRequestPreviousGroup?: () => boolean;
   open: boolean;
   showCloseButton?: boolean;
   startIndex?: number;
@@ -102,6 +118,7 @@ export function MomentViewer({
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [isMuted, setIsMuted] = useState(true);
   const [isMenuOpen, setMenuOpen] = useState(false);
@@ -116,9 +133,13 @@ export function MomentViewer({
   const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closingRef = useRef(false);
   const currentMomentRef = useRef<MomentLike | null>(null);
+  const groupTransitionRef = useRef(false);
+  const pendingGroupDirectionRef = useRef<'next' | 'previous' | null>(null);
   const translateY = useRef(new Animated.Value(0)).current;
+  const groupTranslateX = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const currentMoment = moments[currentIndex] ?? null;
+  const groupKey = moments[0]?.authorId ?? moments[0]?.momentId ?? 'empty';
   const canInteractWithMoment = open && (!embedded || active);
   currentMomentRef.current = currentMoment;
   const displayName = useMemo(() => getDisplayName(currentMoment?.author), [currentMoment?.author]);
@@ -154,7 +175,7 @@ export function MomentViewer({
         return;
       }
 
-      requestClose();
+      requestNextGroup();
       return;
     }
 
@@ -214,13 +235,19 @@ export function MomentViewer({
           toValue: 1,
           useNativeDriver: true,
         }),
+        Animated.spring(groupTranslateX, {
+          bounciness: 0,
+          speed: 18,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
       ]).start(() => {
         if (resumePlayback) {
           setPaused(false);
         }
       });
     },
-    [overlayOpacity, translateY],
+    [groupTranslateX, overlayOpacity, translateY],
   );
 
   const requestClose = useCallback(
@@ -261,21 +288,82 @@ export function MomentViewer({
 
         translateY.setValue(0);
         overlayOpacity.setValue(1);
+        groupTranslateX.setValue(0);
         onClose();
         afterClose?.();
       });
     },
-    [embedded, onClose, overlayOpacity, translateY],
+    [embedded, groupTranslateX, onClose, overlayOpacity, translateY],
   );
+
+  const transitionToGroup = useCallback(
+    (direction: 'next' | 'previous', changeGroup: () => boolean) => {
+      if (embedded) {
+        return changeGroup();
+      }
+
+      if (groupTransitionRef.current) {
+        return true;
+      }
+
+      groupTransitionRef.current = true;
+      pendingGroupDirectionRef.current = direction;
+      clearReplySentTimeout();
+      setMenuOpen(false);
+      setPaused(true);
+
+      Animated.timing(groupTranslateX, {
+        duration: 150,
+        easing: Easing.out(Easing.cubic),
+        toValue: direction === 'next' ? -SCREEN_WIDTH : SCREEN_WIDTH,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) {
+          groupTransitionRef.current = false;
+          pendingGroupDirectionRef.current = null;
+          animateResetPosition(true);
+          return;
+        }
+
+        const didChangeGroup = changeGroup();
+        if (!didChangeGroup) {
+          groupTransitionRef.current = false;
+          pendingGroupDirectionRef.current = null;
+          animateResetPosition(true);
+        }
+      });
+
+      return true;
+    },
+    [animateResetPosition, embedded, groupTranslateX],
+  );
+
+  const requestNextGroup = useCallback(() => {
+    if (hasNextGroup && onRequestNextGroup) {
+      return transitionToGroup('next', onRequestNextGroup);
+    }
+
+    requestClose();
+    return false;
+  }, [hasNextGroup, onRequestNextGroup, requestClose, transitionToGroup]);
+
+  const requestPreviousGroup = useCallback(() => {
+    if (hasPreviousGroup && onRequestPreviousGroup) {
+      return transitionToGroup('previous', onRequestPreviousGroup);
+    }
+
+    return false;
+  }, [hasPreviousGroup, onRequestPreviousGroup, transitionToGroup]);
 
   const goTo = useCallback(
     (index: number) => {
       if (index < 0) {
+        requestPreviousGroup();
         return;
       }
 
       if (index >= moments.length) {
-        requestClose();
+        requestNextGroup();
         return;
       }
 
@@ -288,18 +376,32 @@ export function MomentViewer({
       setReplySent(false);
       setCurrentIndex(index);
     },
-    [moments.length, requestClose],
+    [moments.length, requestNextGroup, requestPreviousGroup],
   );
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_event, gestureState) =>
-          gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+          (gestureState.dy > DISMISS_PAN_ACTIVATION_DISTANCE &&
+            Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.15) ||
+          (Math.abs(gestureState.dx) > DISMISS_PAN_ACTIVATION_DISTANCE &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2),
+        onMoveShouldSetPanResponderCapture: (_event, gestureState) =>
+          (gestureState.dy > DISMISS_PAN_ACTIVATION_DISTANCE &&
+            Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.15) ||
+          (Math.abs(gestureState.dx) > DISMISS_PAN_ACTIVATION_DISTANCE &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2),
         onPanResponderGrant: () => {
+          groupTranslateX.stopAnimation();
           setPaused(true);
         },
         onPanResponderMove: (_event, gestureState) => {
+          if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
+            groupTranslateX.setValue(Math.max(-SCREEN_WIDTH, Math.min(SCREEN_WIDTH, gestureState.dx * 0.72)));
+            return;
+          }
+
           if (gestureState.dy <= 0) {
             return;
           }
@@ -308,7 +410,25 @@ export function MomentViewer({
           overlayOpacity.setValue(Math.max(0.72, 1 - gestureState.dy / 420));
         },
         onPanResponderRelease: (_event, gestureState) => {
-          if (gestureState.dy > 140) {
+          if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2) {
+            const shouldMoveNext = gestureState.dx < -GROUP_SWIPE_DISTANCE || gestureState.vx < -GROUP_SWIPE_VELOCITY;
+            const shouldMovePrevious = gestureState.dx > GROUP_SWIPE_DISTANCE || gestureState.vx > GROUP_SWIPE_VELOCITY;
+
+            if (shouldMoveNext) {
+              requestNextGroup();
+              return;
+            }
+
+            if (shouldMovePrevious) {
+              requestPreviousGroup();
+              return;
+            }
+
+            animateResetPosition(true);
+            return;
+          }
+
+          if (gestureState.dy > DISMISS_DRAG_THRESHOLD || gestureState.vy > DISMISS_VELOCITY_THRESHOLD) {
             requestClose();
             return;
           }
@@ -318,8 +438,18 @@ export function MomentViewer({
         onPanResponderTerminate: () => {
           animateResetPosition(true);
         },
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => false,
       }),
-    [animateResetPosition, overlayOpacity, requestClose, translateY],
+    [
+      animateResetPosition,
+      groupTranslateX,
+      overlayOpacity,
+      requestClose,
+      requestNextGroup,
+      requestPreviousGroup,
+      translateY,
+    ],
   );
 
   useEffect(() => {
@@ -335,7 +465,7 @@ export function MomentViewer({
     setMenuOpen(false);
     setMediaError(false);
     setReplySent(false);
-    setPaused(false);
+    setPaused(Boolean(pendingGroupDirectionRef.current));
     setMomentReady(startMoment.type === EventMomentType.Text);
     if (embedded) {
       translateY.setValue(0);
@@ -343,6 +473,13 @@ export function MomentViewer({
       return;
     }
 
+    if (pendingGroupDirectionRef.current) {
+      translateY.setValue(0);
+      overlayOpacity.setValue(1);
+      return;
+    }
+
+    groupTranslateX.setValue(0);
     translateY.setValue(18);
     overlayOpacity.setValue(0.94);
 
@@ -358,7 +495,30 @@ export function MomentViewer({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [embedded, moments, open, overlayOpacity, startIndex, translateY]);
+  }, [embedded, groupTranslateX, moments, open, overlayOpacity, startIndex, translateY]);
+
+  useEffect(() => {
+    if (!open || embedded) {
+      return;
+    }
+
+    const direction = pendingGroupDirectionRef.current;
+    if (!direction) {
+      return;
+    }
+
+    groupTranslateX.setValue(direction === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH);
+    Animated.timing(groupTranslateX, {
+      duration: 190,
+      easing: Easing.out(Easing.cubic),
+      toValue: 0,
+      useNativeDriver: true,
+    }).start(() => {
+      groupTransitionRef.current = false;
+      pendingGroupDirectionRef.current = null;
+      setPaused(false);
+    });
+  }, [embedded, groupKey, groupTranslateX, open]);
 
   useEffect(() => {
     if (!open || !currentMoment) {
@@ -401,7 +561,7 @@ export function MomentViewer({
         }
 
         if (currentIndex >= moments.length - 1) {
-          requestClose();
+          requestNextGroup();
           return;
         }
 
@@ -474,7 +634,7 @@ export function MomentViewer({
       }
 
       if (currentIndex >= moments.length - 1) {
-        requestClose();
+        requestNextGroup();
         return;
       }
 
@@ -482,7 +642,7 @@ export function MomentViewer({
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [canInteractWithMoment, currentIndex, embedded, goTo, mediaError, moments.length, requestClose]);
+  }, [canInteractWithMoment, currentIndex, embedded, goTo, mediaError, moments.length, requestNextGroup]);
 
   useEffect(() => {
     return () => {
@@ -500,6 +660,7 @@ export function MomentViewer({
   const momentEventId = currentMoment.event?.eventId ?? currentMoment.eventId;
   const showReplyComposer = Boolean(viewerUserId && viewerUserId !== currentMoment.authorId && currentMoment.authorId);
   const isOwnedByViewer = Boolean(viewerUserId && currentMoment.authorId === viewerUserId);
+  const captionBottomOffset = showReplyComposer ? 18 : 28;
 
   const handleOpenAuthor = () => {
     const authorUserId = currentMoment.author?.userId ?? currentMoment.authorId;
@@ -604,17 +765,24 @@ export function MomentViewer({
 
   const storyContent = (
     <Animated.View
+      {...(embedded ? undefined : panResponder.panHandlers)}
       style={[
         styles.viewerShell,
         embedded ? [styles.embeddedViewerShell, containerHeight ? { height: containerHeight } : null] : null,
+        !embedded
+          ? {
+              paddingBottom: insets.bottom,
+              paddingTop: insets.top,
+            }
+          : null,
         {
           opacity: overlayOpacity,
-          transform: [{ translateY }],
+          transform: [{ translateY }, { translateX: groupTranslateX }],
         },
       ]}
     >
-      <View style={styles.storyArea} {...(embedded ? undefined : panResponder.panHandlers)}>
-        <View style={styles.topFade} pointerEvents="none" />
+      <View style={styles.storyArea}>
+        <LinearGradient colors={['rgba(3,7,18,0.62)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
         <View style={styles.bottomFade} pointerEvents="none" />
 
         <View style={styles.progressRow} pointerEvents="none">
@@ -716,7 +884,7 @@ export function MomentViewer({
         </View>
 
         {supportsMedia && currentMoment.caption ? (
-          <View style={styles.captionWrap}>
+          <View style={[styles.captionWrap, { bottom: captionBottomOffset }]}>
             <Text style={[styles.captionText, { color: theme.colors.heroText }]}>{currentMoment.caption}</Text>
           </View>
         ) : null}
@@ -727,7 +895,7 @@ export function MomentViewer({
             <Pressable
               onPress={() => {
                 if (currentIndex >= moments.length - 1) {
-                  requestClose();
+                  requestNextGroup();
                   return;
                 }
 
@@ -879,10 +1047,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   captionWrap: {
-    bottom: FOOTER_HEIGHT + 20,
+    backgroundColor: 'rgba(3,7,18,0.34)',
+    borderRadius: 16,
     left: 18,
+    maxHeight: 112,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     position: 'absolute',
     right: 18,
+    zIndex: 5,
   },
   composerShell: {
     backgroundColor: '#030712',
@@ -1039,8 +1212,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   topFade: {
-    backgroundColor: 'rgba(0,0,0,0.34)',
-    height: 120,
+    height: 150,
     left: 0,
     position: 'absolute',
     right: 0,

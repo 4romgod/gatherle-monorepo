@@ -78,6 +78,7 @@ export function OrganizationMembersScreen() {
   });
   const membershipsQuery = useQuery(GetOrganizationMembershipsByOrgIdDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
     variables: { orgId },
     ...getApolloAuthContext(authToken),
   });
@@ -394,6 +395,14 @@ export function OrganizationMembersScreen() {
                     isOwnerMembership={isOwnerMembership}
                     key={membership.membershipId}
                     membership={membership}
+                    onPressAvatar={() =>
+                      navigation.navigate('UserProfile', {
+                        displayName: membership.username ?? 'Gatherle member',
+                        openMoments: true,
+                        userId: membership.userId,
+                        username: membership.username,
+                      })
+                    }
                     onPressManage={() =>
                       setExpandedMembershipId((current) =>
                         current === membership.membershipId ? null : membership.membershipId,

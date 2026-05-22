@@ -1,5 +1,6 @@
 import type { AuthenticatedMobileUser } from '@data/graphql/mutation/User/types';
-import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useApolloClient } from '@apollo/client';
+import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/lib/sessionStorage';
 
 type PreviewSessionContextValue = {
@@ -27,6 +28,7 @@ type AuthSession = {
 const PreviewSessionContext = createContext<PreviewSessionContextValue | null>(null);
 
 export function PreviewSessionProvider({ children }: PropsWithChildren) {
+  const apolloClient = useApolloClient();
   const [isSessionReady, setSessionReady] = useState(false);
   const [liveSession, setLiveSession] = useState<AuthSession | null>(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const signIn = (user: AuthenticatedMobileUser) => {
+  const signIn = useCallback((user: AuthenticatedMobileUser) => {
     const nextSession = {
       email: user.email,
       token: user.token,
@@ -63,17 +65,24 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     setLiveSession(nextSession);
     setPendingVerificationEmail(null);
     setSessionReady(true);
-    void writeStoredSession(nextSession);
-  };
+    void writeStoredSession(nextSession).catch((error) => {
+      console.warn('[PreviewSessionProvider] Failed to persist session after sign-in', error);
+    });
+  }, []);
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     setLiveSession(null);
     setPendingVerificationEmail(null);
     setSessionReady(true);
-    void clearStoredSession();
-  };
+    void clearStoredSession().catch((error) => {
+      console.warn('[PreviewSessionProvider] Failed to clear stored session after sign-out', error);
+    });
+    void apolloClient.clearStore().catch((error) => {
+      console.warn('[PreviewSessionProvider] Failed to clear Apollo store after sign-out', error);
+    });
+  }, [apolloClient]);
 
-  const updateSessionIdentity = (input: { email?: string | null; username?: string | null }) => {
+  const updateSessionIdentity = useCallback((input: { email?: string | null; username?: string | null }) => {
     setLiveSession((currentSession) => {
       if (!currentSession) {
         return currentSession;
@@ -85,10 +94,12 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
         username: input.username ?? currentSession.username,
       };
 
-      void writeStoredSession(nextSession);
+      void writeStoredSession(nextSession).catch((error) => {
+        console.warn('[PreviewSessionProvider] Failed to persist updated session identity', error);
+      });
       return nextSession;
     });
-  };
+  }, []);
 
   const value = useMemo<PreviewSessionContextValue>(
     () => ({
@@ -105,7 +116,15 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
       updateSessionIdentity,
       username: liveSession?.username ?? null,
     }),
-    [isSessionReady, liveSession, pendingVerificationEmail],
+    [
+      isSessionReady,
+      liveSession,
+      pendingVerificationEmail,
+      setPendingVerificationEmail,
+      signIn,
+      signOut,
+      updateSessionIdentity,
+    ],
   );
 
   return <PreviewSessionContext.Provider value={value}>{children}</PreviewSessionContext.Provider>;

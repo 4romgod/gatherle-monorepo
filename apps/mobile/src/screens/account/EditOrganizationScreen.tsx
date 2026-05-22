@@ -13,6 +13,7 @@ import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
+import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
@@ -34,12 +35,13 @@ export function EditOrganizationScreen() {
   const { showToast, withBlockingLoader } = useAppFeedback();
   const route = useRoute<EditOrganizationRouteProps>();
   const { orgId } = route.params;
-  const { authToken } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const { theme } = useAppTheme();
 
   const orgQuery = useQuery(GetOrganizationByIdDocument, {
     variables: { orgId },
     fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
     ...getApolloAuthContext(authToken),
   });
 
@@ -66,8 +68,12 @@ export function EditOrganizationScreen() {
 
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
+      if (!isAuthenticated || !authToken) {
+        return;
+      }
+
       await orgQuery.refetch();
-    }, [orgQuery]),
+    }, [authToken, isAuthenticated, orgQuery]),
   );
 
   const [updateOrganization, { loading: saving }] = useMutation(
@@ -146,6 +152,21 @@ export function EditOrganizationScreen() {
   };
 
   const currentLogoUrl = org?.logo;
+
+  if (!isAuthenticated) {
+    return (
+      <PageContainer contentContainerStyle={styles.pageContent}>
+        <AuthPromptCard
+          description="Sign in to edit organizations that you manage."
+          onPressPrimary={() => navigation.navigate('Login')}
+          onPressSecondary={() => navigation.navigate('Register')}
+          primaryLabel="Login"
+          secondaryLabel="Create account"
+          title="Sign in to continue"
+        />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>

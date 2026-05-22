@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ApolloError, useApolloClient, useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -68,10 +68,17 @@ export function UserProfileScreen() {
   const { authToken, isAuthenticated, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
   const apolloClient = useApolloClient();
-  const { userId, username: routeUsername, displayName: routeDisplayName, avatarUrl } = route.params;
+  const {
+    userId,
+    username: routeUsername,
+    displayName: routeDisplayName,
+    avatarUrl,
+    openMoments = false,
+  } = route.params;
   const isOwnProfile = viewerUserId === userId;
   const [fallbackMoments, setFallbackMoments] = useState<MobileUserEventMoment[]>([]);
   const [momentsOpen, setMomentsOpen] = useState(false);
+  const autoOpenedMomentsRef = useRef(false);
   const { data, error, loading, refetch } = useQuery(GetUserProfileByIdDocument, {
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -202,6 +209,15 @@ export function UserProfileScreen() {
   const shouldShowEventActivityError =
     Boolean(eventsError) || (Boolean(participantEventsError) && !participantActivityUnsupported);
   const visibleUserMoments = userMoments.length > 0 ? userMoments : fallbackMoments;
+
+  useEffect(() => {
+    if (!openMoments || autoOpenedMomentsRef.current || userMomentsLoading || visibleUserMoments.length === 0) {
+      return;
+    }
+
+    autoOpenedMomentsRef.current = true;
+    setMomentsOpen(true);
+  }, [openMoments, userMomentsLoading, visibleUserMoments.length]);
 
   useEffect(() => {
     let cancelled = false;
