@@ -13,6 +13,7 @@ import {
   InputAdornment,
   InputLabel,
   OutlinedInput,
+  Typography,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useActionState, useState } from 'react';
@@ -66,15 +67,7 @@ export default function LoginForm() {
         <InputLabel htmlFor="email" color="secondary">
           Email Address
         </InputLabel>
-        <OutlinedInput
-          id="email"
-          label="Email Address"
-          name="email"
-          type="email"
-          autoComplete="email"
-          autoFocus
-          color="secondary"
-        />
+        <OutlinedInput id="email" label="Email Address" name="email" type="email" autoComplete="email" autoFocus />
         <FormErrors error={formState.zodErrors?.email} />
       </FormControl>
 
@@ -88,7 +81,6 @@ export default function LoginForm() {
           name="password"
           type={showPassword ? 'text' : 'password'}
           autoComplete="current-password"
-          color="secondary"
           endAdornment={
             <InputAdornment position="end">
               <IconButton
@@ -113,16 +105,20 @@ export default function LoginForm() {
 
       <Grid container>
         <Grid>
-          <Link href={ROUTES.AUTH.FORGOT_PASSWORD} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+          <Typography
+            component={Link}
+            href={ROUTES.AUTH.FORGOT_PASSWORD}
+            sx={{ color: 'primary.main', cursor: 'pointer' }}
+          >
             Forgot password?
-          </Link>
+          </Typography>
         </Grid>
         <Grid>
           <Box>
             <span>Don&apos;t have an account?&nbsp;</span>
-            <Link href={ROUTES.AUTH.REGISTER} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+            <Typography component={Link} href={ROUTES.AUTH.REGISTER} sx={{ color: 'primary.main', cursor: 'pointer' }}>
               Sign Up
-            </Link>
+            </Typography>
           </Box>
         </Grid>
       </Grid>

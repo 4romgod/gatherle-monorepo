@@ -3,11 +3,13 @@ import { resolve } from 'path';
 import type { UserWithToken } from '@gatherle/commons/types';
 import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
-import { getSeededTestUsers } from './utils/helpers';
+import { getSeededTestUsers, type SeededUserCredentials } from './utils/helpers';
 import { clearRuntimeContext, writeRuntimeContext } from './runtimeContext';
+import { generateToken } from '@/utils/auth';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
+const jwtSecret = process.env.JWT_SECRET;
 
 const WARMUP_QUERY = JSON.stringify({ query: '{ __typename }' });
 
@@ -85,6 +87,60 @@ const postGraphQL = async (
   } finally {
     clearTimeout(timeout);
   }
+};
+
+const getReadSeededUserByUsernameQuery = (username: string) => ({
+  query: `query ReadSeededUserByUsername($username: String!) {
+    readUserByUsername(username: $username) {
+      userId
+      email
+      username
+    }
+  }`,
+  variables: { username },
+});
+
+const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
+  if (status !== 429 || !jwtSecret) {
+    return false;
+  }
+
+  const payload = body as { errors?: Array<{ message?: unknown }> };
+  return Array.isArray(payload.errors) && payload.errors.some((error) => `${error.message ?? ''}`.includes('Too many'));
+};
+
+const mintSeededUserToken = async (graphqlUrl: string, user: SeededUserCredentials): Promise<UserWithToken> => {
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET is required to mint seeded user tokens locally.');
+  }
+
+  const response = await postGraphQL(graphqlUrl, getReadSeededUserByUsernameQuery(user.username), 20_000);
+  const seededUser = response.body.data?.readUserByUsername;
+
+  if (response.status !== 200 || response.body.errors || !seededUser?.userId) {
+    throw new Error(
+      `Failed to read seeded user ${user.email} for token minting: ${JSON.stringify(response.body.errors ?? response.body)}`,
+    );
+  }
+
+  const token = await generateToken(
+    {
+      userId: seededUser.userId,
+      email: user.email,
+      username: user.username,
+      userRole: user.userRole,
+      isTestUser: true,
+    },
+    jwtSecret,
+  );
+
+  return {
+    ...seededUser,
+    email: user.email,
+    username: user.username,
+    userRole: user.userRole,
+    token,
+  } as UserWithToken;
 };
 
 const warmUpLambda = async (url: string, count: number): Promise<void> => {
@@ -177,7 +233,11 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
     let lastFailure = '';
 
     for (let attempt = 1; attempt <= 5; attempt++) {
-      const response = await postGraphQL(graphqlUrl, getLoginUserMutation(user), 20_000);
+      const response = await postGraphQL(
+        graphqlUrl,
+        getLoginUserMutation({ email: user.email, password: user.password }),
+        20_000,
+      );
 
       if (response.status === 200 && !response.body.errors && response.body.data?.loginUser?.token) {
         seededUsersByEmail[user.email] = response.body.data.loginUser as UserWithToken;
@@ -186,6 +246,13 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
       }
 
       lastFailure = JSON.stringify(response.body.errors ?? response.body);
+      if (canFallbackToLocalToken(response.status, response.body)) {
+        console.warn(`[setup] seeded user ${user.email} is temporarily locked; minting local e2e token instead`);
+        seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
+        lastFailure = '';
+        break;
+      }
+
       const shouldRetry = attempt < 5 && isRetryableFailure(response.status, response.body);
       if (!shouldRetry) {
         throw new Error(`Failed to prime seeded user ${user.email}: ${lastFailure}`);

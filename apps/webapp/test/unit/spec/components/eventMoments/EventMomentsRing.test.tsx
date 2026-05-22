@@ -81,6 +81,6 @@ describe('EventMomentsRing', () => {
 
     fireEvent.click(screen.getByText(/Pending/).parentElement!);
 
-    expect(onMomentClick).toHaveBeenCalledWith([baseMoment], 0);
+    expect(onMomentClick).toHaveBeenCalledWith([[baseMoment]], 0);
   });
 });

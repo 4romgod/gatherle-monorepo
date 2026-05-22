@@ -96,6 +96,24 @@ export default function UserProfileStats({
     }
   };
 
+  const getInteractiveStatProps = (onActivate?: () => void) => {
+    if (!onActivate) {
+      return {};
+    }
+
+    return {
+      onClick: onActivate,
+      onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onActivate();
+        }
+      },
+      role: 'button',
+      tabIndex: 0,
+    };
+  };
+
   // Common styles for clickable stat boxes
   const clickableStatSx = {
     cursor: 'pointer',
@@ -106,6 +124,94 @@ export default function UserProfileStats({
 
   // Common styles for non-clickable stat boxes
   const staticStatSx = {};
+
+  if (compact) {
+    return (
+      <>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 0,
+            justifyContent: 'space-around',
+            '& > .MuiBox-root': {
+              flex: '1 1 0',
+              minWidth: 0,
+              textAlign: 'center',
+            },
+            '& .MuiTypography-caption': {
+              display: 'block',
+              fontSize: { xs: '0.6rem', sm: '0.7rem' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            },
+          }}
+        >
+          <Box
+            {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('events-created') : undefined)}
+            sx={isOwnProfile ? clickableStatSx : staticStatSx}
+          >
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="secondary"
+              className="stat-number"
+              sx={{ lineHeight: 1.2, transition: 'color 0.2s' }}
+            >
+              {formatCount(organizedEventsCount)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Events
+            </Typography>
+          </Box>
+
+          <Box
+            {...getInteractiveStatProps(isOwnProfile ? () => setFollowersOpen(true) : undefined)}
+            sx={isOwnProfile ? clickableStatSx : staticStatSx}
+          >
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="secondary"
+              className="stat-number"
+              sx={{ lineHeight: 1.2, transition: 'color 0.2s' }}
+            >
+              {formatCount(followersCount)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Followers
+            </Typography>
+          </Box>
+
+          <Box
+            {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('interests') : undefined)}
+            sx={isOwnProfile ? clickableStatSx : staticStatSx}
+          >
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="secondary"
+              className="stat-number"
+              sx={{ lineHeight: 1.2, transition: 'color 0.2s' }}
+            >
+              {formatCount(interestsCount)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Interests
+            </Typography>
+          </Box>
+        </Stack>
+
+        <FollowersList
+          targetId={userId}
+          targetType={FollowTargetType.User}
+          open={followersOpen}
+          onClose={() => setFollowersOpen(false)}
+          title={`${displayName}'s Followers`}
+        />
+      </>
+    );
+  }
 
   return (
     <>

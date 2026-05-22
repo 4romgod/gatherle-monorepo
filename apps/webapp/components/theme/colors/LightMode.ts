@@ -53,82 +53,100 @@ declare module '@mui/material/styles' {
 
 /**
  * Gatherle Light Mode Color Palette
- *
- * Philosophy: Clean, energetic, and approachable
- * - Primary (Indigo): Professional, trustworthy, not overwhelming
- * - Secondary (Coral): Energy, excitement, call-to-action
- * - Neutral-first with strategic color accents
- *
- * All colors meet WCAG AA contrast requirements
+ * Keep this aligned with the mobile palette in apps/mobile/src/app/theme/palette.ts.
  */
 const lightModeColors: PaletteOptions = {
+  common: {
+    black: '#000000',
+    white: '#ffffff',
+  },
   primary: {
-    light: '#818cf8', // Soft indigo for hover states
-    main: '#4f46e5', // Balanced indigo - professional, less intense than violet
-    dark: '#3730a3', // Deep indigo for emphasis
+    light: '#7a73ff',
+    main: '#5850ec',
+    dark: '#4338ca',
     contrastText: '#ffffff',
   },
   secondary: {
-    light: '#fb923c', // Bright coral for hover
-    main: '#f97316', // Vibrant coral - energy, excitement, CTAs
-    dark: '#c2410c', // Deep coral for active states
+    light: '#ff9b55',
+    main: '#ff7a1a',
+    dark: '#c2410c',
     contrastText: '#ffffff',
   },
   error: {
-    main: '#dc2626', // Clear, accessible red
-    light: '#ef4444',
-    dark: '#991b1b',
+    main: '#f04438',
+    light: '#f97066',
+    dark: '#b42318',
     contrastText: '#ffffff',
   },
   warning: {
-    main: '#f59e0b', // Amber for warnings
-    light: '#fbbf24',
-    dark: '#d97706',
+    main: '#f79009',
+    light: '#fdb022',
+    dark: '#b54708',
     contrastText: '#ffffff',
   },
   info: {
-    main: '#0284c7', // Sky blue for informational states
+    main: '#0284c7',
     light: '#0ea5e9',
     dark: '#0369a1',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#059669', // Emerald for confirmations, RSVP success
-    light: '#10b981',
-    dark: '#047857',
+    main: '#12b76a',
+    light: '#32d583',
+    dark: '#027a48',
     contrastText: '#ffffff',
   },
   background: {
-    default: '#f9fafb', // Gray 50 - softer than pure white
-    paper: '#ffffff', // Pure white for cards
+    default: '#ffffff',
+    paper: '#ffffff',
+  },
+  action: {
+    active: '#667085',
+    hover: '#f8fafc',
+    selected: '#ede9fe',
+    disabled: '#98a2b3',
+    disabledBackground: '#f2f2f2',
+    focus: '#ede9fe',
+  },
+  grey: {
+    50: '#f8fafc',
+    100: '#f2f2f2',
+    200: '#d9dee7',
+    300: '#cbd5e1',
+    400: '#98a2b3',
+    500: '#667085',
+    600: '#475467',
+    700: '#344054',
+    800: '#1d2939',
+    900: '#0b1736',
   },
   surface: {
-    border: 'rgba(15, 23, 42, 0.12)',
+    border: '#d9dee7',
     shadow: '0 24px 60px rgba(15, 23, 42, 0.12)',
   },
   text: {
-    primary: '#111827', // Gray 900 - excellent contrast
-    secondary: '#6b7280', // Gray 500 - clear secondary text
-    disabled: '#e5e8ec', // Gray 300 - disabled states
+    primary: '#0b1736',
+    secondary: '#667085',
+    disabled: '#98a2b3',
   },
-  divider: '#e5e7eb', // Gray 200 - subtle divisions
+  divider: '#d9dee7',
   hero: {
-    background: '#1e293b', // Slate 800 - sophisticated, not purple
-    text: '#f8fafc', // Slate 50 - crisp white text
-    textSecondary: '#e2e8f0', // Slate 200 - high contrast secondary
-    overlay: 'rgba(15, 23, 42, 0.5)', // Slate overlay
-    cardBg: 'rgba(255, 255, 255, 0.08)', // Neutral white tint
-    cardBorder: 'rgba(255, 255, 255, 0.15)', // Subtle border
-    gradient: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', // Indigo gradient
+    background: '#111827',
+    text: '#f8fafc',
+    textSecondary: '#e2e8f0',
+    overlay: 'rgba(15, 23, 42, 0.5)',
+    cardBg: 'rgba(255, 255, 255, 0.08)',
+    cardBorder: 'rgba(255, 255, 255, 0.15)',
+    gradient: 'linear-gradient(135deg, #5850ec 0%, #4338ca 100%)',
   },
   icon: {
-    primary: '#4f46e5', // Indigo - navigation, core actions
-    secondary: '#f97316', // Coral - CTAs, energy (RSVP, Going, Interested)
-    muted: '#6b7280', // Gray 500 - informational icons (location, time, capacity)
-    success: '#059669', // Emerald - confirmations, verified badges
-    warning: '#f59e0b', // Amber - alerts, capacity warnings
-    error: '#dc2626', // Red - errors, cancellations
-    info: '#0284c7', // Sky blue - helpful hints, tooltips
+    primary: '#5850ec',
+    secondary: '#ff7a1a',
+    muted: '#98a2b3',
+    success: '#12b76a',
+    warning: '#f79009',
+    error: '#f04438',
+    info: '#0284c7',
   },
 };
 

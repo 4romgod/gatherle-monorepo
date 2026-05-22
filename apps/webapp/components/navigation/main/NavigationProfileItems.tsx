@@ -2,18 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useApolloClient } from '@apollo/client';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { Divider, ListItemIcon, ListItemText } from '@mui/material';
 import { AccountCircle, Logout, Settings, Business, Security, DarkMode, LightMode } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
-import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import NProgress from 'nprogress';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useSession } from 'next-auth/react';
-import { logger } from '@/lib/utils';
+import { useLogout } from '@/hooks/useLogout';
 
 type ProfilesMenuProps = {
   ProfilesMenuAnchorEl: HTMLElement | null;
@@ -29,10 +27,10 @@ export default function ProfilesMenu({
   isProfilesMenuOpen,
 }: ProfilesMenuProps) {
   const pathname = usePathname();
-  const apolloClient = useApolloClient();
   const isAdmin = useIsAdmin();
   const { themeMode, setThemeMode } = useAppContext();
   const { data: session } = useSession();
+  const { logout } = useLogout();
   const profileUrl = session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT;
 
   const handleNavClick = (targetPath: string) => {
@@ -146,22 +144,7 @@ export default function ProfilesMenu({
       <MenuItem
         onClick={async () => {
           handleProfilesMenuClose();
-          try {
-            await apolloClient.clearStore();
-          } catch {
-            // Best-effort cache clear
-          }
-          try {
-            await logoutUserAction();
-          } catch (error) {
-            // logoutUserAction may throw a NEXT_REDIRECT — that's expected
-            if (error instanceof Error && (error as any).digest === 'NEXT_REDIRECT') {
-              throw error;
-            }
-            // Log unexpected errors to aid debugging
-            // eslint-disable-next-line no-console
-            logger.error('Unexpected error during logoutUserAction', error);
-          }
+          await logout();
         }}
       >
         <ListItemIcon>

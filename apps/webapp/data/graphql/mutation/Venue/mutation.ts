@@ -20,3 +20,26 @@ export const CreateVenueDocument = graphql(`
     }
   }
 `);
+
+export const UpdateVenueDocument = graphql(`
+  mutation UpdateVenue($input: UpdateVenueInput!) {
+    updateVenue(input: $input) {
+      venueId
+      slug
+      name
+      type
+      capacity
+      url
+      amenities
+      featuredImageUrl
+      images
+      address {
+        street
+        city
+        region
+        postalCode
+        country
+      }
+    }
+  }
+`);

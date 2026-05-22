@@ -32,15 +32,31 @@ export default function NavLinksList({ variant = 'toolbar' }: Props) {
     );
   }
 
-  // Events is already in the mobile bottom nav, so exclude it from the drawer to avoid duplication.
-  const drawerLinks = NAV_LINKS.filter((link) => link.label !== 'Events');
+  // Events and Moments are already in the mobile bottom nav, so exclude them from the drawer to avoid duplication.
+  const drawerLinks = NAV_LINKS.filter((link) => !['Events', 'Moments'].includes(link.label));
 
   return (
     <List>
       {drawerLinks.map((link) => (
         <Link key={link.label} href={link.href}>
           <ListItem disablePadding>
-            <ListItemButton>
+            <ListItemButton
+              sx={{
+                borderRadius: 2.25,
+                gap: 1.5,
+                minHeight: 56,
+                px: 1,
+                py: 1.35,
+                '& .MuiListItemIcon-root': {
+                  color: 'text.secondary',
+                  minWidth: 30,
+                },
+                '& .MuiListItemText-primary': {
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                },
+              }}
+            >
               <ListItemIcon>
                 <link.icon />
               </ListItemIcon>

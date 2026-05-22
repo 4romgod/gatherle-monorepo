@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -28,47 +28,78 @@ import {
   LightMode,
 } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
-import { useApolloClient } from '@apollo/client';
 import NavLinksList from '@/components/navigation/main/NavLinksList';
-import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import { ROUTES } from '@/lib/constants';
-import { getDisplayName, getAvatarSrc, logger } from '@/lib/utils';
+import { getDisplayName, getAvatarSrc } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 import { APP_NAME } from '@/lib/constants';
+import { useLogout } from '@/hooks/useLogout';
+
+const drawerItemSx = {
+  borderRadius: 2.25,
+  gap: 1.5,
+  minHeight: 56,
+  px: 1,
+  py: 1.35,
+  '& .MuiListItemIcon-root': {
+    color: 'text.secondary',
+    minWidth: 30,
+  },
+  '& .MuiListItemText-primary': {
+    fontSize: '1rem',
+    fontWeight: 600,
+  },
+};
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
-  const apolloClient = useApolloClient();
   const isAdmin = useIsAdmin();
   const { themeMode, setThemeMode } = useAppContext();
+  const { logout } = useLogout();
+  const drawerWidth = 'min(420px, max(280px, 62vw))';
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
   };
 
+  const profileHref = useMemo(
+    () => (session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT),
+    [session?.user?.username],
+  );
+
   const DrawerList = (
-    <Box sx={{ width: 280 }} role="presentation" onClick={toggleDrawer(false)}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
+    <Box
+      sx={{
+        bgcolor: 'background.paper',
+        height: '100%',
+        px: 2.75,
+        py: 2,
+        width: drawerWidth,
+      }}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
         {isAuthN && session?.user ? (
           <Link
-            href={session.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT}
+            href={profileHref}
             aria-label="View profile"
-            style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, textDecoration: 'none' }}
           >
             <Avatar
               src={getAvatarSrc(session.user)}
               alt={getDisplayName(session.user)}
-              sx={{ width: 48, height: 48 }}
+              sx={{ width: 62, height: 62, fontWeight: 800 }}
             />
-            <Box>
-              <Typography variant="subtitle1" sx={{ color: 'text.primary' }}>
+            <Box sx={{ minWidth: 0, pt: 0.25 }}>
+              <Typography noWrap variant="subtitle1" sx={{ color: 'text.primary', fontWeight: 800, lineHeight: 1.25 }}>
                 {getDisplayName(session.user)}
               </Typography>
-              {session.user.email && (
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {session.user.email}
+              {session.user.username && (
+                <Typography noWrap variant="body2" sx={{ color: 'text.secondary' }}>
+                  @{session.user.username}
                 </Typography>
               )}
             </Box>
@@ -77,41 +108,34 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           <Box />
         )}
 
-        <IconButton onClick={toggleDrawer(false)} aria-label="close drawer">
+        <IconButton onClick={toggleDrawer(false)} aria-label="close drawer" sx={{ color: 'text.secondary' }}>
           <Clear />
         </IconButton>
       </Box>
 
-      {isAuthN && <Divider sx={{ my: 1 }} />}
+      <Button
+        variant="contained"
+        color="secondary"
+        fullWidth
+        startIcon={isAuthN ? <ControlPointOutlined /> : undefined}
+        component={Link}
+        href={isAuthN ? ROUTES.ACCOUNT.EVENTS.CREATE : ROUTES.AUTH.REGISTER}
+        sx={{ borderRadius: 2, fontWeight: 800, mb: 2.25, py: 1.65 }}
+      >
+        {isAuthN ? 'Host an event' : `Join ${APP_NAME}`}
+      </Button>
 
-      {isAuthN && (
-        <>
-          <Box sx={{ px: 2, pb: 1 }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              fullWidth
-              startIcon={<ControlPointOutlined />}
-              component={Link}
-              href={ROUTES.ACCOUNT.EVENTS.CREATE}
-            >
-              Host an event
-            </Button>
-          </Box>
-        </>
-      )}
-
-      <Divider sx={{ my: 1 }} />
+      <Divider sx={{ mb: 1.5 }} />
 
       <NavLinksList variant="drawer" />
 
-      <Divider sx={{ color: 'primary', my: 1 }} />
+      <Divider sx={{ my: 1.5 }} />
 
       {isAuthN && (
         <>
           <List>
             <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT}>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT} sx={drawerItemSx}>
                 <ListItemIcon>
                   <Business />
                 </ListItemIcon>
@@ -120,7 +144,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
             </ListItem>
 
             <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ROOT}>
+              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ROOT} sx={drawerItemSx}>
                 <ListItemIcon>
                   <Settings />
                 </ListItemIcon>
@@ -128,18 +152,9 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
               </ListItemButton>
             </ListItem>
 
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'))}
-              >
-                <ListItemIcon>{themeMode === 'dark' ? <LightMode /> : <DarkMode />}</ListItemIcon>
-                <ListItemText primary={themeMode === 'dark' ? 'Light mode' : 'Dark mode'} />
-              </ListItemButton>
-            </ListItem>
-
             {isAdmin && (
               <ListItem disablePadding>
-                <ListItemButton component={Link} href={ROUTES.ADMIN.ROOT}>
+                <ListItemButton component={Link} href={ROUTES.ADMIN.ROOT} sx={drawerItemSx}>
                   <ListItemIcon>
                     <Security />
                   </ListItemIcon>
@@ -152,25 +167,10 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           <List>
             <ListItem disablePadding>
               <ListItemButton
+                sx={drawerItemSx}
                 onClick={async () => {
-                  try {
-                    await apolloClient.clearStore();
-                  } catch {
-                    // Best-effort cache clear
-                  }
-                  try {
-                    await logoutUserAction();
-                  } catch (error) {
-                    // signOut may throw NEXT_REDIRECT — that's expected
-                    if (error instanceof Error && (error as any).digest === 'NEXT_REDIRECT') {
-                      throw error;
-                    }
-                    // Log unexpected errors to aid debugging
-                    // eslint-disable-next-line no-console
-                    logger.error('Failed to log out user', error);
-                  } finally {
-                    setOpen(false);
-                  }
+                  setOpen(false);
+                  await logout();
                 }}
               >
                 <ListItemIcon>
@@ -183,15 +183,17 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         </>
       )}
 
-      {!isAuthN && (
-        <>
-          <Box sx={{ px: 2, pt: 1 }}>
-            <Button variant="contained" color="secondary" fullWidth component={Link} href={ROUTES.AUTH.REGISTER}>
-              Join {APP_NAME}
-            </Button>
-          </Box>
-        </>
-      )}
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'))}
+            sx={drawerItemSx}
+          >
+            <ListItemIcon>{themeMode === 'dark' ? <LightMode /> : <DarkMode />}</ListItemIcon>
+            <ListItemText primary={themeMode === 'dark' ? 'Light mode' : 'Dark mode'} />
+          </ListItemButton>
+        </ListItem>
+      </List>
     </Box>
   );
 

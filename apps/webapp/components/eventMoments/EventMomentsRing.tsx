@@ -20,7 +20,7 @@ interface EventMomentsRingProps {
   /** The event end date/time — used to enforce the posting window on the frontend. */
   eventEndAt?: string | null;
   onAddClick: () => void;
-  onMomentClick: (moments: Moment[], startIndex: number) => void;
+  onMomentClick: (groups: Moment[][], groupIndex: number) => void;
 }
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
@@ -78,7 +78,7 @@ export default function EventMomentsRing({
       (PENDING_MOMENT_STATES.has(m.state) && m.authorId === viewerUserId) ||
       (m.state === FAILED_MOMENT_STATE && m.authorId === viewerUserId),
   );
-  const authorGroups = groupByAuthor(moments);
+  const authorGroups = Array.from(groupByAuthor(moments).values());
   const canPost = myRsvpStatus !== null && ALLOWED_RSVP_STATUSES.includes(myRsvpStatus);
 
   // Posting window: open while event is running, and for POSTING_WINDOW_HOURS after it ends.
@@ -180,8 +180,9 @@ export default function EventMomentsRing({
       )}
 
       {/* One bubble per author */}
-      {Array.from(authorGroups.entries()).map(([authorId, authorMoments]) => {
+      {authorGroups.map((authorMoments, groupIndex) => {
         const first = authorMoments[0];
+        const authorId = first?.authorId ?? `author-${groupIndex}`;
         const author = first.author;
         const displayName = author?.given_name ?? author?.username ?? 'User';
         const avatarSrc = author?.profile_picture ?? undefined;
@@ -193,7 +194,7 @@ export default function EventMomentsRing({
         return (
           <Box
             key={authorId}
-            onClick={canOpenMoments ? () => onMomentClick(authorMoments, 0) : undefined}
+            onClick={canOpenMoments ? () => onMomentClick(authorGroups, groupIndex) : undefined}
             sx={{
               display: 'flex',
               flexDirection: 'column',

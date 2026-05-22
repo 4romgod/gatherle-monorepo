@@ -42,6 +42,21 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     borderRadius: 10,
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: (theme) => ({
+        body: {
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
+        },
+        '::selection': {
+          backgroundColor: theme.palette.primary.main,
+          color: theme.palette.primary.contrastText,
+        },
+        a: {
+          color: theme.palette.primary.main,
+        },
+      }),
+    },
     MuiAppBar: {
       styleOverrides: {
         colorPrimary: ({ theme }) => ({
@@ -88,6 +103,10 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     MuiInputBase: {
       styleOverrides: {
         root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.paper,
+          transition: theme.transitions.create(['background-color', 'border-color'], {
+            duration: theme.transitions.duration.shorter,
+          }),
           '& .MuiInputBase-input:focus': {
             outline: 'none',
             boxShadow: 'none',
@@ -102,7 +121,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
             WebkitTextFillColor: theme.palette.text.primary,
             backgroundColor: theme.palette.action.disabledBackground,
           },
-          '& .MuiInputBase-input::placeholder, & .MuiInputBase-input:-webkit-autofill': {
+          '& .MuiInputBase-input::placeholder': {
             color: theme.palette.text.secondary,
           },
           '&.Mui-disabled .MuiInputBase-input': {
@@ -112,13 +131,39 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           '& .MuiInputBase-input': {
             color: theme.palette.text.primary,
           },
+          '& .MuiInputBase-input:-webkit-autofill, & .MuiInputBase-input:-webkit-autofill:hover, & .MuiInputBase-input:-webkit-autofill:focus, & .MuiInputBase-input:-webkit-autofill:active':
+            {
+              WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset`,
+              WebkitTextFillColor: theme.palette.text.primary,
+              caretColor: theme.palette.text.primary,
+              borderRadius: 'inherit',
+              transition: 'background-color 9999s ease-out 0s',
+            },
         }),
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.paper,
+          borderRadius: 10,
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'dark'
+                ? alpha(theme.palette.common.white, 0.03)
+                : alpha(theme.palette.grey[900], 0.02),
+          },
+          '&.Mui-focused': {
+            backgroundColor: theme.palette.background.paper,
+          },
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: theme.palette.divider,
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: alpha(theme.palette.primary.main, 0.55),
+          },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: theme.palette.primary.main,
             borderWidth: 1,
           },
           '&.Mui-disabled .MuiOutlinedInput-notchedOutline': {

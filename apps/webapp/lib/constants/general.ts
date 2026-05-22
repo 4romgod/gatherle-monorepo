@@ -1,5 +1,5 @@
 import * as HeroIcons from '@heroicons/react/24/solid';
-import { Event, Business, Place, People, Category } from '@mui/icons-material';
+import { Event, Business, Place, People, Category, PlayCircle } from '@mui/icons-material';
 import { ROUTES } from './routes';
 
 // Re-export lightweight app-identity constants from their own bundle-safe module.
@@ -37,6 +37,7 @@ export const getEventCategoryIcon = (iconName: string) => {
 
 export const NAV_LINKS = [
   { label: 'Events', href: ROUTES.EVENTS.ROOT, icon: Event },
+  { label: 'Moments', href: ROUTES.MOMENTS.ROOT, icon: PlayCircle },
   { label: 'Categories', href: ROUTES.CATEGORIES.ROOT, icon: Category },
   { label: 'Organizations', href: ROUTES.ORGANIZATIONS.ROOT, icon: Business },
   { label: 'Venues', href: ROUTES.VENUES.ROOT, icon: Place },

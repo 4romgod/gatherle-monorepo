@@ -17,7 +17,7 @@ export default function CategoryBadge({ category }: { category: EventCategory })
         }
         label={category.name}
         variant="outlined"
-        size="medium"
+        size="small"
         clickable
         sx={{
           borderColor: category.color ?? 'secondary.main',

@@ -63,6 +63,42 @@ export const LoginUserDocument = graphql(`
   }
 `);
 
+export const LoginWithOAuthDocument = graphql(`
+  mutation LoginWithOAuth($input: ExchangeOAuthInput!) {
+    loginWithOAuth(input: $input) {
+      userId
+      email
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      userRole
+      token
+      location {
+        city
+        state
+        country
+        coordinates {
+          latitude
+          longitude
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
+
 export const RequestEmailVerificationDocument = graphql(`
   mutation RequestEmailVerification($email: String!) {
     requestEmailVerification(email: $email)

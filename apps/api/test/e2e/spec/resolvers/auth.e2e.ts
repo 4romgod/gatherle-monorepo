@@ -211,35 +211,35 @@ describe('Auth Resolver', () => {
     });
 
     it('clears prior failures after a successful login so the counter restarts from zero', async () => {
-      const input = newUserInput();
-      const createdUser = await createUserOnServer(url, input, createdUserIds);
+      const seededUsers = getSeededTestUsers();
+      const loginSubject = seededUsers.user2;
       const forwardedIp = nextForwardedIp();
 
       for (let attempt = 1; attempt <= 3; attempt++) {
-        const failedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+        const failedResponse = await attemptLogin(loginSubject.email, 'invalidPassword123', forwardedIp);
 
         expect(failedResponse.status).toBe(401);
         expect(failedResponse.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
       }
 
-      const successResponse = await attemptLogin(createdUser.email, testPassword, forwardedIp);
+      const successResponse = await attemptLogin(loginSubject.email, loginSubject.password, forwardedIp);
       expect(successResponse.status).toBe(200);
       expect(successResponse.body.errors).toBeUndefined();
-      expect(successResponse.body.data.loginUser.userId).toBe(createdUser.userId);
+      expect(successResponse.body.data.loginUser.email).toBe(loginSubject.email);
       expect(successResponse.body.data.loginUser.token).toBeTruthy();
 
       for (let attempt = 1; attempt <= 8; attempt++) {
-        const failedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
+        const failedResponse = await attemptLogin(loginSubject.email, 'invalidPassword123', forwardedIp);
 
         expect(failedResponse.status).toBe(401);
         expect(failedResponse.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
         expect(failedResponse.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
       }
 
-      const lockedResponse = await attemptLogin(createdUser.email, 'invalidPassword123', forwardedIp);
-      expect(lockedResponse.status).toBe(429);
-      expect(lockedResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
-      expect(lockedResponse.body.errors[0].message).toContain('Too many login attempts');
+      const finalSuccessResponse = await attemptLogin(loginSubject.email, loginSubject.password, forwardedIp);
+      expect(finalSuccessResponse.status).toBe(429);
+      expect(finalSuccessResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
+      expect(finalSuccessResponse.body.errors[0].message).toContain('Too many login attempts');
     });
   });
 });

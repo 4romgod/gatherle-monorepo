@@ -1,10 +1,10 @@
 'use client';
 
 import { useQuery } from '@apollo/client';
-import { alpha, Box, Container, Stack, Typography } from '@mui/material';
+import { Box, Container, Stack, Typography } from '@mui/material';
 import { GetEventCategoriesDocument, GetEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
-import { HeroSection, CategoryExplorer, ValuePropositionSection, NearbyEventsSection } from '@/components/home';
+import { HeroSection, CategoryExplorer, NearbyEventsSection } from '@/components/home';
 import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
@@ -77,21 +77,18 @@ export default function HomeClient() {
 
   return (
     <Box
-      sx={(theme) => ({
+      sx={{
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'background.default',
-        backgroundImage: `radial-gradient(circle at top, ${alpha(theme.palette.primary.main, 0.12)} 0%, transparent 32%)`,
-        backgroundRepeat: 'no-repeat',
-      })}
+      }}
     >
       <HeroSection heroEvent={heroEvent} isLoading={trendingEventsLoading} />
 
       <Box sx={{ py: { xs: 3, md: 5 } }}>
         <Container maxWidth="md">
           <Stack spacing={{ xs: 5, md: 6 }}>
-            <ValuePropositionSection />
             <NearbyEventsSection />
 
             <Box id="trending-events">

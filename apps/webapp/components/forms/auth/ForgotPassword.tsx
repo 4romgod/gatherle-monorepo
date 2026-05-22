@@ -42,7 +42,6 @@ export default function ForgotPasswordForm() {
           type="email"
           autoComplete="email"
           autoFocus={true}
-          color="secondary"
         />
         <FormErrors error={formState.zodErrors?.email} />
       </FormControl>

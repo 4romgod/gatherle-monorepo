@@ -13,6 +13,7 @@ import { AccountSectionCard } from '@/components/account/shared/AccountSectionCa
 import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
+import { DatePickerField } from '@/components/core/DatePickerField';
 import { PageContainer } from '@/components/core/PageContainer';
 import { StateNotice } from '@/components/core/StateNotice';
 import { useAccountProfile } from '@/hooks/account/useAccountProfile';
@@ -184,13 +185,13 @@ export function SettingsScreen() {
       </AccountSectionCard>
 
       <AccountSectionCard description="Personal information and discovery-relevant details." title="Personal">
-        <AccountTextField
-          autoCapitalize="none"
-          autoComplete="birthdate-full"
+        <DatePickerField
+          allowClear
+          helperText="Stored as YYYY-MM-DD."
           label="Birthdate"
-          onChangeText={(birthdate) => setForm((current) => ({ ...current, birthdate }))}
-          placeholder="YYYY-MM-DD"
-          textContentType="birthdate"
+          maximumDate={new Date()}
+          onChangeDate={(birthdate) => setForm((current) => ({ ...current, birthdate }))}
+          placeholder="Select birthdate"
           value={form.birthdate}
         />
         <AccountTextField

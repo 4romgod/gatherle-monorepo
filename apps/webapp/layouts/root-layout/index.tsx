@@ -30,6 +30,7 @@ type RootLayoutProps = { children: ReactNode; session: Session | null };
 export default function RootLayout({ children, session }: RootLayoutProps) {
   const pathname = usePathname();
   const isIndividualChatThreadRoute = isIndividualChatRoute(pathname);
+  const isMomentsRoute = pathname === '/moments' || pathname?.startsWith('/moments/');
 
   const isAuthN = Boolean(session?.user?.userId && session?.user?.token);
   useEffect(() => {
@@ -53,25 +54,30 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
                   </>
                   <ToastProvider />
                   <TopProgressBar />
-                  <MainNavigation isAuthN={isAuthN} />
+                  {!isMomentsRoute && <MainNavigation isAuthN={isAuthN} />}
                   <MobileBottomNav />
                   <Box
                     sx={{
-                      marginTop: `${NAV_HEIGHT}px`,
+                      marginTop: isMomentsRoute ? 0 : `${NAV_HEIGHT}px`,
                       ...(isIndividualChatThreadRoute
                         ? {
                             height: `calc(100dvh - ${NAV_HEIGHT}px)`,
                             overflow: 'hidden',
                           }
-                        : {
-                            minHeight: '100vh',
-                            pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },
-                          }),
+                        : isMomentsRoute
+                          ? {
+                              minHeight: '100dvh',
+                              pb: 0,
+                            }
+                          : {
+                              minHeight: '100vh',
+                              pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },
+                            }),
                     }}
                   >
                     {children}
                   </Box>
-                  {!isIndividualChatThreadRoute && (
+                  {!isIndividualChatThreadRoute && !isMomentsRoute && (
                     <Box sx={{ pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 } }}>
                       <Footer />
                     </Box>

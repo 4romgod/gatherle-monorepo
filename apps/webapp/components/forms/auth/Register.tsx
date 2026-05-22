@@ -74,15 +74,19 @@ export default function RegisterForm() {
     <Box component="form" action={formAction} noValidate>
       <Typography variant="body1" textAlign="center" paddingBottom={1}>
         <span>Already a member?&nbsp;</span>
-        <Link href={ROUTES.AUTH.LOGIN} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+        <Typography component={Link} href={ROUTES.AUTH.LOGIN} sx={{ color: 'primary.main', cursor: 'pointer' }}>
           Log in here
-        </Link>
+        </Typography>
       </Typography>
       <Typography variant="body2" textAlign="center" paddingBottom={3} color="text.secondary">
         <span>Need to verify your email?&nbsp;</span>
-        <Link href={ROUTES.AUTH.VERIFY_EMAIL_PENDING} style={{ color: '#1e88e5', cursor: 'pointer' }}>
+        <Typography
+          component={Link}
+          href={ROUTES.AUTH.VERIFY_EMAIL_PENDING}
+          sx={{ color: 'primary.main', cursor: 'pointer' }}
+        >
           Resend verification link
-        </Link>
+        </Typography>
       </Typography>
 
       <Grid container spacing={2}>
@@ -134,7 +138,6 @@ export default function RegisterForm() {
           name="password"
           type={showPassword ? 'text' : 'password'}
           autoComplete="current-password"
-          color="secondary"
           endAdornment={
             <InputAdornment position="end">
               <IconButton

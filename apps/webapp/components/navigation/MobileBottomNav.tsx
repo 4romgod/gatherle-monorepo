@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { BottomNavigation, BottomNavigationAction, Badge, Box, Paper, Avatar } from '@mui/material';
 import { useSession } from 'next-auth/react';
-import { FiBell, FiCalendar, FiHome, FiMessageCircle, FiUser } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiHome, FiMessageCircle, FiPlayCircle, FiUser } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { ROUTES, isIndividualChatRoute } from '@/lib/constants';
 import { useUnreadChatCount, useUnreadNotificationCount } from '@/hooks';
@@ -17,6 +17,7 @@ const MOBILE_BOTTOM_NAV_ICON_SIZE = 24;
 function resolveNavValue(pathname: string): string {
   if (pathname === '/' || pathname.startsWith('/home')) return 'home';
   if (pathname.startsWith('/events')) return 'events';
+  if (pathname.startsWith('/moments')) return 'moments';
   if (pathname.startsWith('/account/notifications')) return 'notifications';
   if (pathname.startsWith('/account/messages')) return 'messages';
   if (pathname.startsWith('/account')) return 'profile';
@@ -69,6 +70,12 @@ export default function MobileBottomNav() {
       value: 'events',
       href: ROUTES.EVENTS.ROOT,
       icon: <FeatherNavIcon icon={FiCalendar} />,
+    },
+    {
+      label: 'Moments',
+      value: 'moments',
+      href: ROUTES.MOMENTS.ROOT,
+      icon: <FeatherNavIcon icon={FiPlayCircle} />,
     },
     {
       label: 'Messages',
@@ -141,19 +148,31 @@ export default function MobileBottomNav() {
         borderTop: '1px solid',
         borderColor: 'divider',
         pb: 'env(safe-area-inset-bottom, 0px)',
-        bgcolor: 'background.default',
+        bgcolor: 'background.paper',
       }}
     >
       <BottomNavigation
         value={currentValue}
         sx={{
           height: MOBILE_BOTTOM_NAV_HEIGHT,
-          bgcolor: 'background.default',
+          bgcolor: 'background.paper',
           '& .MuiBottomNavigationAction-root': {
             minWidth: 0,
             color: 'text.secondary',
             padding: '6px 0',
             '&.Mui-selected': { color: 'primary.main' },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 4,
+              width: 14,
+              height: 3,
+              borderRadius: 999,
+              bgcolor: 'transparent',
+            },
+            '&.Mui-selected::after': {
+              bgcolor: 'primary.main',
+            },
           },
           '& .MuiBottomNavigationAction-label': { display: 'none' },
         }}

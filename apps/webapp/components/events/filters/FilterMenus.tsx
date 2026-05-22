@@ -36,6 +36,46 @@ import { logger } from '@/lib/utils';
 
 // Previously had dual-mode (controlled/uncontrolled) complexity. Simplified to always-uncontrolled.
 
+const filterButtonSx = {
+  borderRadius: '50px',
+  minHeight: 36,
+  minWidth: 'auto',
+  px: { xs: 1.25, sm: 1.5, md: 1.75 },
+  py: { xs: 0.5, sm: 0.625, md: 0.7 },
+  textTransform: 'none',
+  fontWeight: 600,
+  fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.8125rem' },
+  borderWidth: 1,
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  whiteSpace: 'nowrap',
+  '& .MuiButton-startIcon': {
+    mr: 0.75,
+  },
+  '& .MuiButton-endIcon': {
+    ml: 0.75,
+  },
+  '&:hover': {
+    color: 'text.primary',
+    bgcolor: 'action.hover',
+    borderColor: 'primary.main',
+  },
+};
+
+const activeFilterButtonSx = {
+  bgcolor: 'primary.main',
+  borderColor: 'primary.main',
+  color: 'primary.contrastText',
+  '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+    color: 'primary.contrastText',
+  },
+  '&:hover': {
+    bgcolor: 'primary.dark',
+    borderColor: 'primary.dark',
+    color: 'primary.contrastText',
+  },
+};
+
 export function CategoryMenu({
   categories,
   selectedCategories,
@@ -69,23 +109,9 @@ export function CategoryMenu({
         startIcon={<TuneIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
         className="glass-button"
         sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: 1,
-          borderColor: selectedCategories.length > 0 ? 'primary.light' : 'primary.light',
-          bgcolor: selectedCategories.length > 0 ? 'primary.light' : 'background.paper',
-          color: selectedCategories.length > 0 ? 'text.disabled' : 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            color: 'text.primary',
-            bgcolor: 'action.hover',
-            borderColor: 'primary.main',
-          },
+          ...filterButtonSx,
+          borderColor: selectedCategories.length > 0 ? 'primary.main' : 'primary.light',
+          ...(selectedCategories.length > 0 ? activeFilterButtonSx : {}),
         }}
       >
         {selectedCategories.length > 0 ? `Categories (${selectedCategories.length})` : 'Categories'}
@@ -155,23 +181,9 @@ export function StatusMenu({
         endIcon={<KeyboardArrowDownIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
         className="glass-button"
         sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: 1,
-          borderColor: selectedStatuses.length > 0 ? 'primary.light' : 'primary.light',
-          bgcolor: selectedStatuses.length > 0 ? 'primary.light' : 'background.paper',
-          color: selectedStatuses.length > 0 ? 'text.disabled' : 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            color: 'text.primary',
-            bgcolor: 'action.hover',
-            borderColor: 'primary.main',
-          },
+          ...filterButtonSx,
+          borderColor: selectedStatuses.length > 0 ? 'primary.main' : 'primary.light',
+          ...(selectedStatuses.length > 0 ? activeFilterButtonSx : {}),
         }}
       >
         {selectedStatuses.length > 0 ? `Status (${selectedStatuses.length})` : 'Status'}
@@ -275,23 +287,9 @@ export function DateMenu({
         className="glass-button"
         data-date-filter-button
         sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: 1,
-          borderColor: selectedOption ? 'primary.light' : 'primary.light',
-          bgcolor: selectedOption ? 'primary.light' : 'background.paper',
-          color: selectedOption ? 'text.disabled' : 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            color: 'text.primary',
-            bgcolor: 'action.hover',
-            borderColor: 'primary.main',
-          },
+          ...filterButtonSx,
+          borderColor: selectedOption ? 'primary.main' : 'primary.light',
+          ...(selectedOption ? activeFilterButtonSx : {}),
         }}
       >
         {buttonLabel}
@@ -506,23 +504,9 @@ export function LocationMenu({
         startIcon={<LocationOnIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
         className="glass-button"
         sx={{
-          borderRadius: '50px',
-          px: { xs: 1.5, sm: 2, md: 2.5 },
-          py: { xs: 0.75, sm: 1, md: 1.15 },
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-          borderWidth: 1,
-          borderColor: hasValues ? 'primary.light' : 'primary.light',
-          bgcolor: hasValues ? 'primary.light' : 'background.paper',
-          color: hasValues ? 'text.disabled' : 'text.primary',
-          whiteSpace: 'nowrap',
-          minWidth: 'auto',
-          '&:hover': {
-            color: 'text.primary',
-            bgcolor: 'action.hover',
-            borderColor: 'primary.main',
-          },
+          ...filterButtonSx,
+          borderColor: hasValues ? 'primary.main' : 'primary.light',
+          ...(hasValues ? activeFilterButtonSx : {}),
         }}
       >
         {buttonLabel}

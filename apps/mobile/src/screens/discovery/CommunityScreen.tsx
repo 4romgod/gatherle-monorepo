@@ -88,18 +88,6 @@ export function CommunityScreen() {
     );
   }
 
-  if (!authToken) {
-    return (
-      <PageContainer>
-        <StateNotice
-          actionLabel="Login"
-          message="Your session is not available. Log in again to view community members."
-          onPressAction={() => navigation.navigate('Login')}
-        />
-      </PageContainer>
-    );
-  }
-
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
       <SearchField onChangeText={setQuery} placeholder="Search people" value={query} />
