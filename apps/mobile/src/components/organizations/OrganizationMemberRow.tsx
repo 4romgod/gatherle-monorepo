@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { MobileOrganizationMember } from '@data/graphql/query/OrganizationMembership/types';
 import { OrganizationRole } from '@data/graphql/types/graphql';
@@ -14,6 +14,7 @@ type OrganizationMemberRowProps = {
   isExpanded: boolean;
   isOwnerMembership: boolean;
   membership: MobileOrganizationMember;
+  onPressAvatar?: () => void;
   onPressManage: () => void;
   onPressRemove: () => void;
   onSelectRole: (role: OrganizationRole) => void;
@@ -30,6 +31,7 @@ export function OrganizationMemberRow({
   isExpanded,
   isOwnerMembership,
   membership,
+  onPressAvatar,
   onPressManage,
   onPressRemove,
   onSelectRole,
@@ -38,12 +40,24 @@ export function OrganizationMemberRow({
   const { theme } = useAppTheme();
   const joinedLabel = `Joined ${new Date(membership.joinedAt).toLocaleDateString()}`;
   const titleLabel = membership.username ? `@${membership.username}` : membership.userId;
+  const avatar = <ProfileAvatar label={membership.username ?? null} size={52} />;
 
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.surfaceRaised }]}>
       <View style={styles.headerRow}>
         <View style={styles.identity}>
-          <ProfileAvatar label={membership.username ?? null} size={52} />
+          {onPressAvatar ? (
+            <Pressable
+              accessibilityLabel={`View ${titleLabel} moments`}
+              accessibilityRole="button"
+              onPress={onPressAvatar}
+              style={({ pressed }) => [styles.avatarButton, { opacity: pressed ? 0.78 : 1 }]}
+            >
+              {avatar}
+            </Pressable>
+          ) : (
+            avatar
+          )}
 
           <View style={styles.copy}>
             <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
@@ -107,6 +121,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
+  },
+  avatarButton: {
+    borderRadius: 999,
   },
   copy: {
     flex: 1,

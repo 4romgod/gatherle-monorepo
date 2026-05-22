@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -14,7 +14,10 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { StateNotice } from '@/components/core/StateNotice';
 import { SwipePagerTabs } from '@/components/core/SwipePagerTabs';
+import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
+import { MomentViewer } from '@/components/moments/MomentViewer';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { dedupeOccurrencesBySeries, getDisplayName } from '@/lib/events/formatters';
@@ -28,6 +31,7 @@ export function AccountScreen() {
   const { authToken, isAuthenticated, userId, username } = useAppShell();
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
+  const [momentsOpen, setMomentsOpen] = useState(false);
   const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const {
     error: profileError,
@@ -35,6 +39,8 @@ export function AccountScreen() {
     profile,
     refetch: refetchProfile,
   } = usePreviewProfile(username, isAuthenticated);
+  const profileUserId = profile?.userId ?? userId ?? undefined;
+  const { moments: userMoments } = useUserMoments(isAuthenticated ? profileUserId : undefined, authToken);
   const profileName = getDisplayName(profile);
   const profileEventsCount = useMemo(
     () => dedupeOccurrencesBySeries([...upcomingEvents, ...trendingEvents]).length,
@@ -144,7 +150,30 @@ export function AccountScreen() {
     <PageContainer>
       <View style={styles.profileHeaderSection}>
         <View style={styles.profileTopRow}>
-          <ProfileAvatar imageUrl={profile?.profile_picture} label={profileName} size={88} />
+          {userMoments.length > 0 ? (
+            <MomentAvatarTrigger author={profile} label={profileName} onPress={() => setMomentsOpen(true)} size={88} />
+          ) : (
+            <Pressable
+              accessibilityLabel="View your moments"
+              disabled={!profileUserId}
+              onPress={() => {
+                if (!profileUserId) {
+                  return;
+                }
+
+                navigation.navigate('UserProfile', {
+                  avatarUrl: profile?.profile_picture,
+                  displayName: profileName,
+                  openMoments: true,
+                  userId: profileUserId,
+                  username: profile?.username ?? username,
+                });
+              }}
+              style={styles.avatarButton}
+            >
+              <ProfileAvatar imageUrl={profile?.profile_picture} label={profileName} size={88} />
+            </Pressable>
+          )}
 
           <View style={styles.profileTopRail}>
             <View style={styles.profileIdentityRow}>
@@ -191,6 +220,10 @@ export function AccountScreen() {
       ) : (
         <SwipePagerTabs routes={accountRoutes} variant="icon" />
       )}
+
+      {momentsOpen ? (
+        <MomentViewer moments={userMoments} onClose={() => setMomentsOpen(false)} open startIndex={0} />
+      ) : null}
     </PageContainer>
   );
 }
@@ -231,6 +264,10 @@ function AccountTabPane({
 }
 
 const styles = StyleSheet.create({
+  avatarButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   profileBio: {
     ...typography.bodyRegular,
     fontSize: 14,

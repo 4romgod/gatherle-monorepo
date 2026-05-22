@@ -24,9 +24,10 @@ function groupMomentsByAuthor(moments: MobileFollowedMoment[]) {
 }
 
 export function FollowedMomentsStrip({ moments }: { moments: MobileFollowedMoment[] }) {
-  const [viewerMoments, setViewerMoments] = useState<MobileFollowedMoment[]>([]);
+  const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const groupedMoments = useMemo(() => groupMomentsByAuthor(moments), [moments]);
+  const viewerMoments = groupedMoments[viewerGroupIndex] ?? [];
 
   if (groupedMoments.length === 0) {
     return null;
@@ -36,19 +37,42 @@ export function FollowedMomentsStrip({ moments }: { moments: MobileFollowedMomen
     <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.row}>
-          {groupedMoments.map((authorMoments) => (
+          {groupedMoments.map((authorMoments, index) => (
             <MomentAvatarBubble
               author={authorMoments[0]?.author}
               key={authorMoments[0]?.authorId}
               onPress={() => {
-                setViewerMoments(authorMoments);
+                setViewerGroupIndex(index);
                 setViewerOpen(true);
               }}
             />
           ))}
         </View>
       </ScrollView>
-      <MomentViewer moments={viewerMoments} onClose={() => setViewerOpen(false)} open={viewerOpen} startIndex={0} />
+      <MomentViewer
+        hasNextGroup={viewerGroupIndex < groupedMoments.length - 1}
+        hasPreviousGroup={viewerGroupIndex > 0}
+        moments={viewerMoments}
+        onClose={() => setViewerOpen(false)}
+        onRequestNextGroup={() => {
+          if (viewerGroupIndex >= groupedMoments.length - 1) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current + 1);
+          return true;
+        }}
+        onRequestPreviousGroup={() => {
+          if (viewerGroupIndex <= 0) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current - 1);
+          return true;
+        }}
+        open={viewerOpen}
+        startIndex={0}
+      />
     </>
   );
 }

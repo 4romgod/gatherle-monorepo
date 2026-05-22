@@ -48,6 +48,17 @@ function navigateToTab(tabName: keyof MainTabParamList) {
   navigationRef.navigate('MainTabs', { screen: tabName });
 }
 
+function resetToHomeTab() {
+  if (!navigationRef.isReady()) {
+    return;
+  }
+
+  navigationRef.reset({
+    index: 0,
+    routes: [{ name: 'MainTabs', params: { screen: 'Home' } }],
+  });
+}
+
 function MenuItem({ icon, label, onPress }: DrawerItemConfig) {
   const { theme } = useAppTheme();
 
@@ -216,7 +227,7 @@ export function AppDrawer() {
         signOut();
         closeDrawer();
         requestAnimationFrame(() => {
-          handleNavigateTab('Home');
+          resetToHomeTab();
         });
       },
     },

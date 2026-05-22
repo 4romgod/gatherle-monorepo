@@ -22,6 +22,7 @@ import { AccountChoiceChip } from '@/components/account/shared/AccountChoiceChip
 import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimaryButton';
 import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
+import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
@@ -65,16 +66,18 @@ export function EditEventScreen() {
   const { showToast, withBlockingLoader } = useAppFeedback();
   const route = useRoute<EditEventRouteProps>();
   const { eventId } = route.params;
-  const { authToken } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const { theme } = useAppTheme();
 
   const eventQuery = useQuery(GetEventByIdDocument, {
     variables: { eventId },
     fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
     ...getApolloAuthContext(authToken),
   });
   const venuesQuery = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !isAuthenticated || !authToken,
     ...getApolloAuthContext(authToken),
   });
 
@@ -119,8 +122,12 @@ export function EditEventScreen() {
 
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
+      if (!isAuthenticated || !authToken) {
+        return;
+      }
+
       await Promise.all([eventQuery.refetch(), venuesQuery.refetch()]);
-    }, [eventQuery, venuesQuery]),
+    }, [authToken, eventQuery, isAuthenticated, venuesQuery]),
   );
 
   const [updateEvent, { loading: saving }] = useMutation(UpdateEventDocument, getApolloAuthContext(authToken));
@@ -215,6 +222,21 @@ export function EditEventScreen() {
   };
 
   const currentFeaturedImageUrl = event?.media?.featuredImageUrl;
+
+  if (!isAuthenticated) {
+    return (
+      <PageContainer contentContainerStyle={styles.pageContent}>
+        <AuthPromptCard
+          description="Sign in to edit events that you manage."
+          onPressPrimary={() => navigation.navigate('Login')}
+          onPressSecondary={() => navigation.navigate('Register')}
+          primaryLabel="Login"
+          secondaryLabel="Create account"
+          title="Sign in to continue"
+        />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>

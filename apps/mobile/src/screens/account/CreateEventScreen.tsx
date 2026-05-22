@@ -112,6 +112,7 @@ export function CreateEventScreen() {
   });
   const venuesQuery = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !authToken || !isAuthenticated,
     ...getApolloAuthContext(authToken),
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -119,8 +120,12 @@ export function CreateEventScreen() {
   const [selectedFeaturedImage, setSelectedFeaturedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
+      if (!authToken || !isAuthenticated) {
+        return;
+      }
+
       await Promise.all([refetchDiscovery(), organizationsQuery.refetch(), venuesQuery.refetch()]);
-    }, [organizationsQuery, refetchDiscovery, venuesQuery]),
+    }, [authToken, isAuthenticated, organizationsQuery, refetchDiscovery, venuesQuery]),
   );
 
   const [createEvent, { loading: creating }] = useMutation(CreateEventDocument, getApolloAuthContext(authToken));

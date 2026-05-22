@@ -33,9 +33,10 @@ export function EventMomentsRing({
   onPressAddMoment: () => void;
 }) {
   const { theme } = useAppTheme();
-  const [viewerMoments, setViewerMoments] = useState<MobileEventMoment[]>([]);
+  const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const groupedMoments = useMemo(() => groupMomentsByAuthor(moments), [moments]);
+  const viewerMoments = groupedMoments[viewerGroupIndex] ?? [];
   const canPost = myRsvpStatus !== null && ALLOWED_STATUSES.has(myRsvpStatus);
 
   if (!canPost && groupedMoments.length === 0) {
@@ -67,7 +68,7 @@ export function EventMomentsRing({
             </Pressable>
           ) : null}
 
-          {groupedMoments.map((authorMoments) => {
+          {groupedMoments.map((authorMoments, index) => {
             const hasPending = authorMoments.some((moment) =>
               [EventMomentState.UploadPending, EventMomentState.Transcoding].includes(moment.state),
             );
@@ -78,7 +79,7 @@ export function EventMomentsRing({
                 author={authorMoments[0]?.author}
                 key={authorMoments[0]?.authorId}
                 onPress={() => {
-                  setViewerMoments(authorMoments);
+                  setViewerGroupIndex(index);
                   setViewerOpen(true);
                 }}
                 variant={hasFailed ? 'failed' : hasPending ? 'pending' : 'active'}
@@ -88,7 +89,30 @@ export function EventMomentsRing({
         </View>
       </ScrollView>
 
-      <MomentViewer moments={viewerMoments} onClose={() => setViewerOpen(false)} open={viewerOpen} startIndex={0} />
+      <MomentViewer
+        hasNextGroup={viewerGroupIndex < groupedMoments.length - 1}
+        hasPreviousGroup={viewerGroupIndex > 0}
+        moments={viewerMoments}
+        onClose={() => setViewerOpen(false)}
+        onRequestNextGroup={() => {
+          if (viewerGroupIndex >= groupedMoments.length - 1) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current + 1);
+          return true;
+        }}
+        onRequestPreviousGroup={() => {
+          if (viewerGroupIndex <= 0) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current - 1);
+          return true;
+        }}
+        open={viewerOpen}
+        startIndex={0}
+      />
     </>
   );
 }

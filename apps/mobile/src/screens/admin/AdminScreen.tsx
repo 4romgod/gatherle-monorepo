@@ -31,29 +31,37 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 export function AdminScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated } = useAppShell();
+  const canLoadAdminMetrics = isAuthenticated && !!authToken;
   const { categories, refetch: refetchDiscovery } = useMobileHomeDiscovery(authToken);
   const organizationsQuery = useQuery(GetOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !canLoadAdminMetrics,
     ...getApolloAuthContext(authToken),
   });
   const usersQuery = useQuery(GetUsersDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !canLoadAdminMetrics,
     variables: { options: { pagination: { limit: 40 } } },
     ...getApolloAuthContext(authToken),
   });
   const venuesQuery = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
+    skip: !canLoadAdminMetrics,
     ...getApolloAuthContext(authToken),
   });
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
+      if (!canLoadAdminMetrics) {
+        return;
+      }
+
       await Promise.all([
         refetchDiscovery(),
         organizationsQuery.refetch(),
         usersQuery.refetch(),
         venuesQuery.refetch(),
       ]);
-    }, [organizationsQuery, refetchDiscovery, usersQuery, venuesQuery]),
+    }, [canLoadAdminMetrics, organizationsQuery, refetchDiscovery, usersQuery, venuesQuery]),
   );
 
   if (!isAuthenticated) {
