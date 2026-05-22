@@ -215,12 +215,16 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   type Moment = GetEventMomentsQuery['readEventMoments']['items'][number];
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerMoments, setViewerMoments] = useState<Moment[]>([]);
+  const [viewerMomentGroups, setViewerMomentGroups] = useState<Moment[][]>([]);
+  const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const openViewer = (moments: Moment[], startIndex: number) => {
-    setViewerMoments(moments);
-    setViewerIndex(startIndex);
+  const openViewer = (groups: Moment[][], groupIndex: number) => {
+    setViewerMomentGroups(groups);
+    setViewerGroupIndex(groupIndex);
+    setViewerMoments(groups[groupIndex] ?? []);
+    setViewerIndex(0);
     setViewerOpen(true);
   };
 
@@ -839,6 +843,28 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         startIndex={viewerIndex}
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
+        onRequestNextGroup={() => {
+          if (viewerGroupIndex >= viewerMomentGroups.length - 1) {
+            return false;
+          }
+
+          const nextIndex = viewerGroupIndex + 1;
+          setViewerGroupIndex(nextIndex);
+          setViewerMoments(viewerMomentGroups[nextIndex] ?? []);
+          setViewerIndex(0);
+          return true;
+        }}
+        onRequestPreviousGroup={() => {
+          if (viewerGroupIndex <= 0) {
+            return false;
+          }
+
+          const nextIndex = viewerGroupIndex - 1;
+          setViewerGroupIndex(nextIndex);
+          setViewerMoments(viewerMomentGroups[nextIndex] ?? []);
+          setViewerIndex(0);
+          return true;
+        }}
         organizerIds={organizerIds}
         eventContext={{ slug, title }}
         onDeleted={(momentId) => {

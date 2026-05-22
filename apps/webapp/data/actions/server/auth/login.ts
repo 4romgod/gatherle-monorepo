@@ -8,6 +8,16 @@ import { signIn } from '@/auth';
 import type { ActionState } from '@/data/actions/types';
 import { logger } from '@/lib/utils/logger';
 
+const EMAIL_NOT_VERIFIED_MESSAGE = 'Please verify your email address before logging in.';
+
+const getCredentialsSignInMessage = (error: AuthError): string => {
+  if (error.message.includes(EMAIL_NOT_VERIFIED_MESSAGE)) {
+    return EMAIL_NOT_VERIFIED_MESSAGE;
+  }
+
+  return 'Invalid credentials';
+};
+
 export async function loginUserAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const inputData: LoginUserInput = {
     email: formData.get('email')?.toString().toLowerCase() ?? '',
@@ -62,7 +72,7 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
           return {
             ...prevState,
             data: null,
-            apiError: 'Invalid credentials',
+            apiError: getCredentialsSignInMessage(error),
             zodErrors: null,
           };
         case 'CallbackRouteError':

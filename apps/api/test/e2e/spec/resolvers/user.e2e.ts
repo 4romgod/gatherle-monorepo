@@ -126,12 +126,10 @@ describe('User Resolver', () => {
 
     describe('loginUser Mutation', () => {
       it('should login a user when valid input is provided', async () => {
-        const input = newUserInput();
-        const createdUser = await createUserOnServer(url, input, createdUserIds);
-        const loggedInUser = await loginUserOnServer(url, input.email, testPassword);
+        const seededUsers = getSeededTestUsers();
+        const loggedInUser = await loginUserOnServer(url, seededUsers.user2.email, seededUsers.user2.password);
 
-        expect(loggedInUser.userId).toBe(createdUser.userId);
-        expect(loggedInUser.email).toBe(input.email);
+        expect(loggedInUser.email).toBe(seededUsers.user2.email);
         expect(loggedInUser.token).toBeTruthy();
       });
     });

@@ -1,5 +1,41 @@
 import { graphql } from '@/data/graphql/types';
 
+export const GetMomentsFeedDocument = graphql(`
+  query GetMomentsFeed($cursor: String, $limit: Float) {
+    readMomentsFeed(cursor: $cursor, limit: $limit) {
+      items {
+        momentId
+        eventId
+        occurrenceId
+        authorId
+        type
+        state
+        caption
+        mediaUrl
+        thumbnailUrl
+        background
+        durationSeconds
+        expiresAt
+        createdAt
+        author {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+        }
+        event {
+          eventId
+          slug
+          title
+        }
+      }
+      nextCursor
+      hasMore
+    }
+  }
+`);
+
 export const GetFollowedMomentsDocument = graphql(`
   query GetFollowedMoments($cursor: String, $limit: Float) {
     readFollowedMoments(cursor: $cursor, limit: $limit) {

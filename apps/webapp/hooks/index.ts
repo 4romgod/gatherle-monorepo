@@ -20,3 +20,4 @@ export type { ThreadRenderItem, ThreadMessage } from './useThreadMessages';
 export { useMessageScroll } from './useMessageScroll';
 export { useConversationData } from './useConversationData';
 export { useMarkConversationRead } from './useMarkConversationRead';
+export { useLogout } from './useLogout';

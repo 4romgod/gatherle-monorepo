@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
-    minHeight: 52,
-    paddingHorizontal: 16,
+    minHeight: 48,
+    paddingHorizontal: 12,
   },
   label: {
     ...typography.bodySemiBold,

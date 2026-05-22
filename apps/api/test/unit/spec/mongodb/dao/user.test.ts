@@ -111,22 +111,20 @@ describe('UserDAO', () => {
       jest.clearAllMocks();
     });
 
-    it('should create a user and return the user object with token', async () => {
-      (generateToken as jest.Mock).mockReturnValue('mockToken');
+    it('should create a user without issuing an auth token before email verification', async () => {
       const createdUser = mockConstructedUser({
         toObject: jest.fn().mockReturnValue(mockUser),
       });
 
       const result = await UserDAO.create(mockCreateUserInput);
 
-      expect(result).toEqual({ ...mockUser, token: 'mockToken' });
+      expect(result).toEqual({ ...mockUser, token: '' });
       expect(UserModelMock).toHaveBeenCalledWith(mockCreateUserInput);
       expect(createdUser.save).toHaveBeenCalled();
-      expect(generateToken).toHaveBeenCalledWith(mockUser);
+      expect(generateToken).not.toHaveBeenCalled();
     });
 
-    it('should create a user (with default username) and return the user object with token', async () => {
-      (generateToken as jest.Mock).mockReturnValue('mockToken');
+    it('should create a user with a default username without issuing an auth token', async () => {
       const createdUser = mockConstructedUser({
         toObject: jest.fn().mockReturnValue({
           ...mockUser,
@@ -136,10 +134,10 @@ describe('UserDAO', () => {
 
       const result = await UserDAO.create({ ...mockCreateUserInput, username: undefined });
 
-      expect(result).toEqual({ ...mockUser, username: 'test', token: 'mockToken' });
+      expect(result).toEqual({ ...mockUser, username: 'test', token: '' });
       expect(UserModelMock).toHaveBeenCalledWith({ ...mockCreateUserInput, username: undefined });
       expect(createdUser.save).toHaveBeenCalled();
-      expect(generateToken).toHaveBeenCalledWith({ ...mockUser, username: 'test' });
+      expect(generateToken).not.toHaveBeenCalled();
     });
 
     it('should throw INTERNAL_SERVER_ERROR GraphQLError when an unknown error occurs', async () => {
@@ -167,12 +165,14 @@ describe('UserDAO', () => {
       const mockUser = {
         _id: 'mockUserId',
         email: 'test@example.com',
+        emailVerified: true,
       };
 
       (User.findOne as jest.Mock).mockReturnValue(
         createMockSuccessMongooseQuery({
           toObject: () => mockUser,
           comparePassword: () => true,
+          emailVerified: true,
         }),
       );
       (generateToken as jest.Mock).mockReturnValue('mockToken');
@@ -193,6 +193,7 @@ describe('UserDAO', () => {
       const mockUser = {
         _id: 'mockUserId',
         email: 'test@example.com',
+        emailVerified: true,
       };
 
       (User.findOne as jest.Mock).mockReturnValue(
@@ -205,6 +206,26 @@ describe('UserDAO', () => {
       await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(
         CustomError(ERROR_MESSAGES.PASSWORD_MISMATCH, ErrorTypes.UNAUTHENTICATED),
       );
+    });
+
+    it('should throw UNAUTHENTICATED error when email is not verified', async () => {
+      const mockLoginUserInput = {
+        email: 'test@example.com',
+        password: 'password',
+      };
+
+      (User.findOne as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({
+          toObject: () => ({ _id: 'mockUserId', email: 'test@example.com', emailVerified: false }),
+          comparePassword: () => true,
+          emailVerified: false,
+        }),
+      );
+
+      await expect(UserDAO.login(mockLoginUserInput)).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.EMAIL_NOT_VERIFIED, ErrorTypes.UNAUTHENTICATED),
+      );
+      expect(generateToken).not.toHaveBeenCalled();
     });
 
     it('should throw UNAUTHENTICATED error when user not found', async () => {
@@ -448,7 +469,7 @@ describe('UserDAO', () => {
       );
     });
 
-    it('creates a new OAuth user for an unverified identity and derives fallback profile fields', async () => {
+    it('rejects first-time OAuth login when the provider email is unverified', async () => {
       const identity: OAuthIdentity = {
         provider: OAuthProvider.Apple,
         providerUserId: 'apple-user-2',
@@ -456,42 +477,13 @@ describe('UserDAO', () => {
         emailVerified: false,
       };
 
-      const createdUser = {
-        toObject: jest.fn().mockReturnValue({
-          userId: 'user-3',
-          email: 'appleperson@example.com',
-          given_name: 'appleperson',
-          family_name: 'User',
-          emailVerified: false,
-          appleSubject: 'apple-user-2',
-        }),
-      };
-
       (User.findOne as jest.Mock).mockReturnValueOnce(createMockSuccessMongooseQuery(null));
-      const createdUserDoc = mockConstructedUser(createdUser);
-      (generateToken as jest.Mock).mockResolvedValue('oauth-token');
 
-      const result = await UserDAO.loginWithOAuth(identity);
-
-      expect(UserModelMock).toHaveBeenCalledWith({
-        email: 'appleperson@example.com',
-        given_name: 'appleperson',
-        family_name: 'User',
-        password: expect.any(String),
-        emailVerified: false,
-        profile_picture: undefined,
-        appleSubject: 'apple-user-2',
-      });
-      expect(createdUserDoc.save).toHaveBeenCalled();
-      expect(result).toMatchObject({
-        userId: 'user-3',
-        email: 'appleperson@example.com',
-        given_name: 'appleperson',
-        family_name: 'User',
-        emailVerified: false,
-        appleSubject: 'apple-user-2',
-        token: 'oauth-token',
-      });
+      await expect(UserDAO.loginWithOAuth(identity)).rejects.toThrow(
+        CustomError('Apple sign-in requires a verified email address.', ErrorTypes.UNAUTHENTICATED),
+      );
+      expect(UserModelMock).not.toHaveBeenCalled();
+      expect(generateToken).not.toHaveBeenCalled();
     });
   });
 

@@ -32,7 +32,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
       elevation={0}
       sx={(theme) => ({
         p: { xs: 3, md: 4 },
-        borderRadius: 3,
+        borderRadius: 2,
         border: '1px solid',
         borderColor: 'hero.cardBorder',
         backgroundColor: 'hero.cardBg',
@@ -69,29 +69,21 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
         overflow: 'hidden',
         py: { xs: 7, md: 10 },
         px: { xs: 2, md: 3 },
-        background: `linear-gradient(180deg, ${theme.palette.hero.background} 0%, ${theme.palette.background.default} 100%)`,
-        color: 'hero.textSecondary',
+        backgroundColor: 'background.default',
+        color: 'text.secondary',
         '&::before': {
           content: '""',
           position: 'absolute',
-          top: -140,
-          left: '10%',
-          width: { xs: 220, md: 320 },
-          height: { xs: 220, md: 320 },
+          top: -120,
+          left: '8%',
+          width: { xs: 180, md: 260 },
+          height: { xs: 180, md: 260 },
           borderRadius: '50%',
-          backgroundColor: alpha(theme.palette.primary.main, 0.16),
-          filter: 'blur(120px)',
+          backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.1 : 0.08),
+          filter: 'blur(110px)',
         },
         '&::after': {
-          content: '""',
-          position: 'absolute',
-          right: '6%',
-          bottom: -180,
-          width: { xs: 240, md: 360 },
-          height: { xs: 240, md: 360 },
-          borderRadius: '50%',
-          backgroundColor: alpha(theme.palette.secondary.main, 0.14),
-          filter: 'blur(140px)',
+          display: 'none',
         },
       })}
     >
@@ -104,11 +96,11 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
               variant="outlined"
               sx={{
                 mb: 3,
-                borderColor: 'hero.cardBorder',
-                color: 'hero.text',
+                borderColor: 'divider',
+                color: 'text.primary',
                 fontWeight: 700,
                 letterSpacing: 0.6,
-                backgroundColor: 'hero.cardBg',
+                backgroundColor: 'background.paper',
               }}
             />
             <Typography
@@ -118,7 +110,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 fontSize: { xs: '2rem', md: '2.6rem' },
                 lineHeight: 1.1,
                 mb: 2,
-                color: 'hero.text',
+                color: 'text.primary',
               }}
             >
               Where unforgettable experiences find their people.
@@ -128,13 +120,13 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
               sx={{
                 fontWeight: 400,
                 fontSize: { xs: '1rem', md: '1.08rem' },
-                color: 'hero.textSecondary',
+                color: 'text.secondary',
                 mb: 3,
                 opacity: 0.85,
               }}
             >
-              {APP_NAME} is the modern layer for community-led events—discover inspiring gatherings or host your own
-              with gorgeous, human-first pages.
+              {APP_NAME} is the modern layer for community led events. Discover inspiring gatherings or host your own
+              with gorgeous, human first pages.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Button
@@ -158,9 +150,9 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                   ...BUTTON_STYLES,
                   px: 4,
                   py: 1.5,
-                  borderColor: 'hero.cardBorder',
-                  color: 'hero.text',
-                  '&:hover': { borderColor: 'hero.text', backgroundColor: 'hero.cardBg' },
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                  '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' },
                 }}
               >
                 Sign up
@@ -185,30 +177,29 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                     elevation={0}
                     sx={(theme) => ({
                       p: { xs: 3, md: 4 },
-                      borderRadius: 3,
-                      border: '1px solid',
-                      borderColor: 'hero.cardBorder',
-                      backgroundColor: 'hero.cardBg',
-                      color: 'hero.textSecondary',
-                      boxShadow: theme.shadows[4],
+                      borderRadius: 2,
+                      borderColor: 'divider',
+                      backgroundColor: 'background.paper',
+                      color: 'text.secondary',
+                      boxShadow: theme.palette.mode === 'dark' ? 'none' : theme.shadows[2],
                     })}
                   >
-                    <Typography variant="overline" sx={{ color: 'hero.textSecondary', opacity: 0.7, letterSpacing: 1 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1 }}>
                       Featured gathering
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'hero.text', mt: 1 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mt: 1 }}>
                       {heroTitle}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'hero.textSecondary', opacity: 0.75, mt: 1.5 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
                       {heroScheduleText}
                     </Typography>
                     <Box
                       sx={{
                         mt: 3,
-                        borderRadius: 3,
+                        borderRadius: 2,
                         overflow: 'hidden',
                         border: '1px solid',
-                        borderColor: 'hero.cardBorder',
+                        borderColor: 'divider',
                       }}
                     >
                       <Box
@@ -217,16 +208,16 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                           paddingTop: '60%',
                           backgroundImage: heroImageUrl
                             ? `url(${heroImageUrl})`
-                            : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
-                                theme.palette.secondary.light,
-                                0.35,
+                            : `linear-gradient(135deg, ${alpha(theme.palette.action.hover, 0.82)} 0%, ${alpha(
+                                theme.palette.primary.main,
+                                0.12,
                               )} 100%)`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: 'hero.textSecondary',
+                          color: 'text.secondary',
                         })}
                       >
                         {!heroImageUrl && <Explore sx={{ fontSize: 48, opacity: 0.6 }} />}
@@ -241,7 +232,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                         gap: 2,
                       }}
                     >
-                      <Typography variant="body1" sx={{ color: 'hero.text', fontWeight: 600 }}>
+                      <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
                         {heroEventRsvps} RSVPs
                       </Typography>
                       <Button

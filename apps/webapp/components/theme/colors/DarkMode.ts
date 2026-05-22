@@ -53,82 +53,100 @@ declare module '@mui/material/styles' {
 
 /**
  * Gatherle Dark Mode Color Palette
- *
- * Philosophy: Immersive, easy on the eyes, nightlife-ready
- * - Primary (Indigo): Professional blue, less saturated for dark mode
- * - Secondary (Coral): Maintains energy while being dark-mode friendly
- * - Deep neutral backgrounds with strategic color accents
- *
- * Optimized for evening/night use when users browse events
+ * Keep this aligned with the mobile palette in apps/mobile/src/app/theme/palette.ts.
  */
 const darkModeColors: PaletteOptions = {
+  common: {
+    black: '#000000',
+    white: '#ffffff',
+  },
   primary: {
-    light: '#a5b4fc', // Lighter indigo for dark mode visibility
-    main: '#6366f1', // Balanced indigo - vibrant but not overwhelming
-    dark: '#4f46e5', // Rich indigo for depth
+    light: '#a29bff',
+    main: '#7a73ff',
+    dark: '#5850ec',
     contrastText: '#ffffff',
   },
   secondary: {
-    light: '#fbbf24', // Warm amber-orange
-    main: '#f97316', // Vibrant coral (consistent with light mode)
-    dark: '#ea580c', // Slightly lighter dark variant for visibility
+    light: '#ffb27a',
+    main: '#ff8d3b',
+    dark: '#ff7a1a',
     contrastText: '#ffffff',
   },
   error: {
-    main: '#f87171', // Softer red for dark mode
-    light: '#fca5a5',
-    dark: '#dc2626',
+    main: '#f97066',
+    light: '#fda29b',
+    dark: '#f04438',
     contrastText: '#ffffff',
   },
   warning: {
-    main: '#fbbf24', // Bright amber
-    light: '#fde047',
-    dark: '#f59e0b',
+    main: '#fbbf24',
+    light: '#fde68a',
+    dark: '#f79009',
     contrastText: '#1f2937',
   },
   info: {
-    main: '#38bdf8', // Bright sky blue
+    main: '#38bdf8',
     light: '#7dd3fc',
     dark: '#0284c7',
     contrastText: '#ffffff',
   },
   success: {
-    main: '#34d399', // Bright emerald for dark mode
+    main: '#32d583',
     light: '#6ee7b7',
-    dark: '#059669',
+    dark: '#12b76a',
     contrastText: '#1f2937',
   },
   background: {
-    default: '#111827', // Gray 900 - deep neutral background
-    paper: '#1f2937', // Gray 800 - elevated surfaces
+    default: '#0C1014',
+    paper: '#0f151a',
+  },
+  action: {
+    active: '#cbd5e1',
+    hover: '#162338',
+    selected: '#2a2575',
+    disabled: '#94a3b8',
+    disabledBackground: '#171c1f',
+    focus: '#2a2575',
+  },
+  grey: {
+    50: '#f8fafc',
+    100: '#cbd5e1',
+    200: '#94a3b8',
+    300: '#667085',
+    400: '#475467',
+    500: '#344054',
+    600: '#1d2939',
+    700: '#171c1f',
+    800: '#162338',
+    900: '#0C1014',
   },
   surface: {
-    border: 'rgba(255, 255, 255, 0.18)',
+    border: 'rgba(203, 213, 225, 0.16)',
     shadow: '0 30px 75px rgba(0, 0, 0, 0.75)',
   },
   text: {
-    primary: '#f9fafb', // Gray 50 - crisp white for readability
-    secondary: '#9ca3af', // Gray 400 - clear secondary text
-    disabled: '#4b5563', // Gray 600 - disabled states
+    primary: '#f8fafc',
+    secondary: '#cbd5e1',
+    disabled: '#94a3b8',
   },
-  divider: 'rgba(156, 163, 175, 0.15)', // Subtle gray divider
+  divider: 'rgba(203, 213, 225, 0.16)',
   hero: {
-    background: '#0f172a', // Slate 900 - deep neutral
-    text: '#f8fafc', // Slate 50 - crisp white
-    textSecondary: '#e2e8f0', // Slate 200 - high contrast secondary
+    background: '#0f172a',
+    text: '#f8fafc',
+    textSecondary: '#cbd5e1',
     overlay: 'rgba(0, 0, 0, 0.6)',
-    cardBg: 'rgba(255, 255, 255, 0.05)', // Subtle white overlay
-    cardBorder: 'rgba(255, 255, 255, 0.1)', // Subtle border
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)', // Softer indigo for dark mode
+    cardBg: 'rgba(255, 255, 255, 0.06)',
+    cardBorder: 'rgba(255, 255, 255, 0.12)',
+    gradient: 'linear-gradient(135deg, #7a73ff 0%, #4338ca 100%)',
   },
   icon: {
-    primary: '#6366f1', // Indigo - less intense for dark mode
-    secondary: '#f97316', // Coral - maintains energy
-    muted: '#9ca3af', // Gray 400 - informational, good contrast
-    success: '#34d399', // Bright emerald - clear positive signal
-    warning: '#fbbf24', // Bright amber - attention grabbing
-    error: '#f87171', // Soft red - clear but not harsh
-    info: '#38bdf8', // Bright sky - helpful and visible
+    primary: '#7a73ff',
+    secondary: '#ff8d3b',
+    muted: '#94a3b8',
+    success: '#32d583',
+    warning: '#fbbf24',
+    error: '#f97066',
+    info: '#38bdf8',
   },
 };
 

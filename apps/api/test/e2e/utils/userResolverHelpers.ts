@@ -1,6 +1,9 @@
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
+import { UserRole } from '@gatherle/commons/types';
 import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
 import { cleanupTrackedEntities, trackCreatedId } from './eventSeriesResolverHelpers';
+import { generateToken } from '@/utils/auth';
+import { JWT_SECRET } from '@/constants';
 
 export const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -109,6 +112,21 @@ export const buildCreateUserInput = (
   password,
 });
 
+const withE2eAuthToken = async (user: UserWithToken, input: CreateUserInput): Promise<UserWithToken> => {
+  const token = await generateToken(
+    {
+      userId: user.userId,
+      email: user.email,
+      username: user.username,
+      userRole: input.userRole ?? UserRole.User,
+      isTestUser: true,
+    },
+    JWT_SECRET,
+  );
+
+  return { ...user, token };
+};
+
 const tryLoginExistingUser = async (
   url: string,
   input: CreateUserInput,
@@ -159,7 +177,7 @@ export const createUserOnServer = async (
     if (response.status === 200 && !response.body.errors && response.body.data?.createUser?.userId) {
       const createdUser = response.body.data.createUser as UserWithToken;
       trackCreatedId(createdUserIds, createdUser.userId);
-      return createdUser;
+      return withE2eAuthToken(createdUser, input);
     }
 
     const failure = JSON.stringify(response.body.errors ?? response.body);

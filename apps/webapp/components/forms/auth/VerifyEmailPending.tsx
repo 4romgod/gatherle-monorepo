@@ -68,9 +68,9 @@ export default function VerifyEmailPendingClient() {
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
           Don&apos;t have an account?{' '}
-          <Link href={ROUTES.AUTH.REGISTER} style={{ color: '#1e88e5' }}>
+          <Typography component={Link} href={ROUTES.AUTH.REGISTER} sx={{ color: 'primary.main' }}>
             Register here
-          </Link>
+          </Typography>
         </Typography>
       </Box>
     );

@@ -77,6 +77,11 @@ const TEST_ADMIN_EMAIL = testAdminSeedUser.email;
 const TEST_USER_EMAIL = testUserSeedUser.email;
 const TEST_USER2_EMAIL = testUser2SeedUser.email;
 
+async function markSeedUserVerified(userId: string, email: string) {
+  await UserDAO.setEmailVerified(userId);
+  logger.info(`   Marked seeded user ${email} as email verified.`);
+}
+
 async function seedTestAdminUser(eventCategoryIds: Array<string>) {
   logger.info('Seeding test admin user...');
 
@@ -91,6 +96,9 @@ async function seedTestAdminUser(eventCategoryIds: Array<string>) {
       logger.info(`   Updated existing user ${TEST_ADMIN_EMAIL} to test admin.`);
     } else {
       logger.info(`   Test admin ${TEST_ADMIN_EMAIL} already exists, skipping...`);
+    }
+    if (!existingUser.emailVerified) {
+      await markSeedUserVerified(existingUser.userId, TEST_ADMIN_EMAIL);
     }
     return;
   } catch (_error) {
@@ -108,6 +116,7 @@ async function seedTestAdminUser(eventCategoryIds: Array<string>) {
       userRole: UserRole.Admin,
       isTestUser: true,
     });
+    await markSeedUserVerified(createdUser.userId, TEST_ADMIN_EMAIL);
 
     logger.info(`   Created test admin ${TEST_ADMIN_EMAIL}.`);
   } catch (error) {
@@ -130,6 +139,9 @@ async function seedTestUser(eventCategoryIds: Array<string>) {
     } else {
       logger.info(`   Test user ${TEST_USER_EMAIL} already exists, skipping...`);
     }
+    if (!existingUser.emailVerified) {
+      await markSeedUserVerified(existingUser.userId, TEST_USER_EMAIL);
+    }
     return;
   } catch (_error) {
     // not found -> create below
@@ -146,6 +158,7 @@ async function seedTestUser(eventCategoryIds: Array<string>) {
       userRole: UserRole.User,
       isTestUser: true,
     });
+    await markSeedUserVerified(createdUser.userId, TEST_USER_EMAIL);
 
     logger.info(`   Created test user ${TEST_USER_EMAIL}.`);
   } catch (error) {
@@ -168,6 +181,9 @@ async function seedTestUser2(eventCategoryIds: Array<string>) {
     } else {
       logger.info(`   Test user ${TEST_USER2_EMAIL} already exists, skipping...`);
     }
+    if (!existingUser.emailVerified) {
+      await markSeedUserVerified(existingUser.userId, TEST_USER2_EMAIL);
+    }
     return;
   } catch (_error) {
     // not found -> create below
@@ -184,6 +200,7 @@ async function seedTestUser2(eventCategoryIds: Array<string>) {
       userRole: UserRole.User,
       isTestUser: true,
     });
+    await markSeedUserVerified(createdUser.userId, TEST_USER2_EMAIL);
 
     logger.info(`   Created test user ${TEST_USER2_EMAIL}.`);
   } catch (error) {

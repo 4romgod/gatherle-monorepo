@@ -1,12 +1,15 @@
 import request from 'supertest';
 import { testAdminSeedUser, testUserSeedUser, testUser2SeedUser } from '@/mongodb/mockData';
 import type { UserWithToken } from '@gatherle/commons/types';
+import type { UserRole } from '@gatherle/commons/types';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 import { readRuntimeContext } from '../runtimeContext';
 
 export type SeededUserCredentials = {
   email: string;
   password: string;
+  userRole: UserRole;
+  username: string;
 };
 
 export type SeededTestUsers = {
@@ -59,14 +62,20 @@ export const getSeededTestUsers = (): SeededTestUsers => ({
   admin: {
     email: testAdminSeedUser.email,
     password: requirePassword(testAdminSeedUser.email, testAdminSeedUser.password),
+    username: testAdminSeedUser.username!,
+    userRole: testAdminSeedUser.userRole!,
   },
   user: {
     email: testUserSeedUser.email,
     password: requirePassword(testUserSeedUser.email, testUserSeedUser.password),
+    username: testUserSeedUser.username!,
+    userRole: testUserSeedUser.userRole!,
   },
   user2: {
     email: testUser2SeedUser.email,
     password: requirePassword(testUser2SeedUser.email, testUser2SeedUser.password),
+    username: testUser2SeedUser.username!,
+    userRole: testUser2SeedUser.userRole!,
   },
 });
 

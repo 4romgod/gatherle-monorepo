@@ -19,7 +19,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Close, Language, LocationOn, People, PhotoLibrary } from '@mui/icons-material';
+import { ArrowBack, Close, Edit, Language, LocationOn, People, PhotoLibrary } from '@mui/icons-material';
 import { GetEventOccurrencesDocument, GetVenueBySlugDocument } from '@/data/graphql/query';
 import { SortOrderInput, type GetVenueBySlugQuery, type Location } from '@/data/graphql/types/graphql';
 import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
@@ -35,6 +35,7 @@ import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
+import { useVenueManagementAccess } from '@/hooks/useVenueManagementAccess';
 
 const DEFAULT_VENUE_IMAGE = '/images/placeholder-venue.svg';
 
@@ -70,6 +71,7 @@ interface VenueDetailPageClientProps {
 export default function VenueDetailPageClient({ slug }: VenueDetailPageClientProps) {
   const { data: session } = useSession();
   const authContext = { headers: getAuthHeader(session?.user?.token) };
+  const { canManageVenue } = useVenueManagementAccess();
 
   const { data, loading, error } = useQuery(GetVenueBySlugDocument, {
     variables: { slug },
@@ -178,6 +180,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
   }
 
   const venueLocation = buildVenueLocation(venue);
+  const canEditVenue = canManageVenue(venue.orgId);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -256,6 +259,18 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
                 onClick={() => handleGalleryOpen()}
               >
                 View gallery
+              </Button>
+            )}
+            {canEditVenue && (
+              <Button
+                component={Link}
+                href={ROUTES.VENUES.EDIT(venue.slug)}
+                variant="contained"
+                color="secondary"
+                startIcon={<Edit />}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+              >
+                Edit venue
               </Button>
             )}
           </Stack>

@@ -24,6 +24,7 @@ function groupByAuthor(moments: Moment[]): Map<string, Moment[]> {
 export default function FollowedMomentsBar() {
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const [deletedMomentIds, setDeletedMomentIds] = useState<Set<string>>(() => new Set());
 
   const { data, loading } = useQuery(GetFollowedMomentsDocument, {
     variables: { limit: 100 },
@@ -32,15 +33,18 @@ export default function FollowedMomentsBar() {
     skip: !token,
   });
 
-  const [viewerMoments, setViewerMoments] = useState<Moment[]>([]);
+  const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const moments = (data?.readFollowedMoments?.items ?? []).filter((m) => m.state === EventMomentState.Ready);
-  const authorGroups = groupByAuthor(moments);
+  const moments = (data?.readFollowedMoments?.items ?? []).filter(
+    (m) => m.state === EventMomentState.Ready && !deletedMomentIds.has(m.momentId),
+  );
+  const authorGroups = Array.from(groupByAuthor(moments).values());
+  const viewerMoments = authorGroups[viewerGroupIndex] ?? [];
 
-  const openViewer = (authorMoments: Moment[]) => {
-    setViewerMoments(authorMoments);
+  const openViewer = (groupIndex: number) => {
+    setViewerGroupIndex(groupIndex);
     setViewerIndex(0);
     setViewerOpen(true);
   };
@@ -74,7 +78,7 @@ export default function FollowedMomentsBar() {
     );
   }
 
-  if (authorGroups.size === 0) return null;
+  if (authorGroups.length === 0) return null;
 
   return (
     <>
@@ -91,8 +95,9 @@ export default function FollowedMomentsBar() {
               '&::-webkit-scrollbar': { display: 'none' },
             }}
           >
-            {Array.from(authorGroups.entries()).map(([authorId, authorMoments]) => {
+            {authorGroups.map((authorMoments, groupIndex) => {
               const first = authorMoments[0];
+              const authorId = first?.authorId ?? `author-${groupIndex}`;
               const author = first.author;
               const displayName = author?.given_name ?? author?.username ?? 'User';
               const avatarSrc = author?.profile_picture ?? undefined;
@@ -101,7 +106,7 @@ export default function FollowedMomentsBar() {
               return (
                 <ButtonBase
                   key={authorId}
-                  onClick={() => openViewer(authorMoments)}
+                  onClick={() => openViewer(groupIndex)}
                   sx={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -160,9 +165,31 @@ export default function FollowedMomentsBar() {
         startIndex={viewerIndex}
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
+        onRequestNextGroup={() => {
+          if (viewerGroupIndex >= authorGroups.length - 1) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current + 1);
+          setViewerIndex(0);
+          return true;
+        }}
+        onRequestPreviousGroup={() => {
+          if (viewerGroupIndex <= 0) {
+            return false;
+          }
+
+          setViewerGroupIndex((current) => current - 1);
+          setViewerIndex(0);
+          return true;
+        }}
         organizerIds={[]}
         onDeleted={(momentId) => {
-          setViewerMoments((prev) => prev.filter((m) => m.momentId !== momentId));
+          setDeletedMomentIds((current) => {
+            const next = new Set(current);
+            next.add(momentId);
+            return next;
+          });
         }}
       />
     </>

@@ -19,9 +19,7 @@ export default function LoginPage() {
           elevation={0}
           sx={{
             padding: 4,
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
+            borderRadius: 2,
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>

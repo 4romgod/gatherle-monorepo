@@ -70,8 +70,8 @@ class UserDAO {
       const savedUser = new UserModel(userData);
       await savedUser.save();
       const tokenPayload = savedUser.toObject();
-      const token = await generateToken(tokenPayload);
-      return { ...tokenPayload, token };
+      // Registration must not create an authenticated session before email verification.
+      return { ...tokenPayload, token: '' };
     } catch (error) {
       logDaoError('Error when creating a new user', { error });
       throw KnownCommonError(error);
@@ -97,6 +97,10 @@ class UserDAO {
       throw CustomError(ERROR_MESSAGES.PASSWORD_MISMATCH, ErrorTypes.UNAUTHENTICATED);
     }
 
+    if (user.emailVerified !== true) {
+      throw CustomError(ERROR_MESSAGES.EMAIL_NOT_VERIFIED, ErrorTypes.UNAUTHENTICATED);
+    }
+
     const jwtToken = await generateToken(user.toObject());
     return { token: jwtToken, ...user.toObject() };
   }
@@ -113,6 +117,10 @@ class UserDAO {
         if (identity.emailVerified && !existingProviderUser.emailVerified) {
           existingProviderUser.emailVerified = true;
           shouldSave = true;
+        }
+
+        if (existingProviderUser.emailVerified !== true) {
+          throw CustomError(ERROR_MESSAGES.EMAIL_NOT_VERIFIED, ErrorTypes.UNAUTHENTICATED);
         }
 
         if (!existingProviderUser.profile_picture && identity.profilePicture) {
@@ -157,6 +165,13 @@ class UserDAO {
         throw CustomError(
           `${identity.provider} sign-in did not return an email address for first-time account creation.`,
           ErrorTypes.BAD_USER_INPUT,
+        );
+      }
+
+      if (!identity.emailVerified) {
+        throw CustomError(
+          `${identity.provider} sign-in requires a verified email address.`,
+          ErrorTypes.UNAUTHENTICATED,
         );
       }
 

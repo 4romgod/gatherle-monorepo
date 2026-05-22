@@ -25,7 +25,67 @@
     "web": {
       "favicon": "./assets/favicon/orbit/light/favicon-32x32.png"
     },
-    "plugins": ["expo-font", "expo-secure-store", "expo-video"],
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      "expo-video",
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "android": {
+            "datePicker": {
+              "colorAccent": {
+                "light": "#5850ec",
+                "dark": "#7a73ff"
+              },
+              "colorControlActivated": {
+                "light": "#5850ec",
+                "dark": "#7a73ff"
+              },
+              "colorControlHighlight": {
+                "light": "#ede9fe",
+                "dark": "#2a2575"
+              },
+              "textColorPrimary": {
+                "light": "#0b1736",
+                "dark": "#f8fafc"
+              },
+              "textColorSecondary": {
+                "light": "#667085",
+                "dark": "#cbd5e1"
+              },
+              "windowBackground": {
+                "light": "#ffffff",
+                "dark": "#0f151a"
+              }
+            },
+            "timePicker": {
+              "background": {
+                "light": "#ffffff",
+                "dark": "#0f151a"
+              },
+              "headerBackground": {
+                "light": "#5850ec",
+                "dark": "#7a73ff"
+              },
+              "numbersBackgroundColor": {
+                "light": "#ffffff",
+                "dark": "#0f151a"
+              },
+              "numbersSelectorColor": {
+                "light": "#ede9fe",
+                "dark": "#2a2575"
+              },
+              "numbersTextColor": {
+                "light": "#0b1736",
+                "dark": "#f8fafc"
+              }
+            }
+          }
+        }
+      ],
+      "expo-web-browser"
+    ],
     "extra": {
       "eas": {
         "projectId": "7eee58bf-18f8-4b6d-a0a4-128a5d1f037b"

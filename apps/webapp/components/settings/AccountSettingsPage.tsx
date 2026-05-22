@@ -21,10 +21,10 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 import { User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
 import { useAppContext } from '@/hooks/useAppContext';
-import { logoutUserAction } from '@/data/actions/server/auth/logout';
 import { signIn, useSession } from 'next-auth/react';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { useFormStatus } from 'react-dom';
+import { useLogout } from '@/hooks/useLogout';
 
 interface AccountSettings {
   username: string;
@@ -57,6 +57,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
   const [deleteUserFormState, deleteUserAction] = useActionState(deleteUserProfileAction, {});
   const [isPending, startTransition] = useTransition();
   const { data: session } = useSession();
+  const { logout } = useLogout();
   const [settings, setSettings] = useState<AccountSettings>({
     username: user.username,
     email: user.email,
@@ -89,7 +90,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     startTransition(() => {
       deleteUserAction(new FormData());
     });
-    await logoutUserAction();
+    await logout();
   };
 
   useEffect(() => {

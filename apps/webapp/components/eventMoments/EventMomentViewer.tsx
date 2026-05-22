@@ -44,6 +44,7 @@ import { useChatRealtime } from '@/hooks';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
+import { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import Hls from 'hls.js';
 
 type MomentEventShape = { event?: { slug: string; title: string } | null };
@@ -54,6 +55,8 @@ interface EventMomentViewerProps {
   startIndex: number;
   open: boolean;
   onClose: () => void;
+  onRequestNextGroup?: () => boolean;
+  onRequestPreviousGroup?: () => boolean;
   /** IDs that may delete any moment (organizer IDs) */
   organizerIds: string[];
   onDeleted?: (momentId: string) => void;
@@ -90,6 +93,8 @@ export default function EventMomentViewer({
   startIndex,
   open,
   onClose,
+  onRequestNextGroup,
+  onRequestPreviousGroup,
   organizerIds,
   onDeleted,
   eventContext,
@@ -141,7 +146,31 @@ export default function EventMomentViewer({
 
   const goTo = useCallback(
     (index: number) => {
-      if (index < 0 || index >= moments.length) {
+      if (index < 0) {
+        if (onRequestPreviousGroup?.()) {
+          elapsedRef.current = 0;
+          setProgress(0);
+          setCurrentIndex(0);
+          mediaLoadedRef.current = false;
+          setMediaLoaded(false);
+          setMediaError(false);
+          return;
+        }
+
+        return;
+      }
+
+      if (index >= moments.length) {
+        if (onRequestNextGroup?.()) {
+          elapsedRef.current = 0;
+          setProgress(0);
+          setCurrentIndex(0);
+          mediaLoadedRef.current = false;
+          setMediaLoaded(false);
+          setMediaError(false);
+          return;
+        }
+
         onClose();
         return;
       }
@@ -152,7 +181,7 @@ export default function EventMomentViewer({
       setMediaLoaded(false);
       setMediaError(false);
     },
-    [moments.length, onClose],
+    [moments.length, onClose, onRequestNextGroup, onRequestPreviousGroup],
   );
 
   const handleReply = useCallback(
@@ -435,11 +464,13 @@ export default function EventMomentViewer({
       open={open}
       onClose={onClose}
       fullScreen
+      sx={{ zIndex: { xs: 1100, md: 1300 } }}
       slotProps={{
         paper: {
           sx: {
             bgcolor: 'common.black',
             m: 0,
+            height: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
             display: 'flex',
             flexDirection: 'column',
             transform: `translateY(${dragY}px)`,

@@ -25,6 +25,7 @@ import { AccountPrimaryButton } from '@/components/account/shared/AccountPrimary
 import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { PageContainer } from '@/components/core/PageContainer';
+import { DatePickerField } from '@/components/core/DatePickerField';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
@@ -372,10 +373,11 @@ export function CreateEventScreen() {
         <SectionHeading title="Schedule" />
         <View style={styles.row}>
           <View style={styles.fieldHalf}>
-            <AccountTextField
+            <DatePickerField
               label="Date"
-              onChangeText={(value) => updateField('date', value)}
-              placeholder="2026-05-20"
+              minimumDate={new Date()}
+              onChangeDate={(value) => updateField('date', value)}
+              placeholder="Select event date"
               value={formState.date}
             />
           </View>

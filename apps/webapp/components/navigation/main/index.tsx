@@ -7,7 +7,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
-import { MailOutline, NotificationsOutlined, ControlPointOutlined } from '@mui/icons-material';
+import { MailOutline, NotificationsOutlined, ControlPointOutlined, DarkMode, LightMode } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
@@ -19,6 +19,7 @@ import NavLinksList from '@/components/navigation/main/NavLinksList';
 import { getAvatarSrc } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { useUnreadChatCount, useUnreadNotificationCount } from '@/hooks';
+import { useAppContext } from '@/hooks/useAppContext';
 import Logo from '@/components/logo';
 
 type MainNavigationProps = {
@@ -30,6 +31,7 @@ type MainNavigationProps = {
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
+  const { themeMode, setThemeMode } = useAppContext();
 
   // Unread badges are primarily websocket-driven; queries provide initial/fallback state.
   const { unreadCount } = useUnreadNotificationCount();
@@ -51,6 +53,31 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   };
 
   const profilesMenuId = 'profiles-menu-id';
+  const toggleThemeMode = () => {
+    setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'));
+  };
+
+  const themeToggleButton = (
+    <IconButton
+      size="large"
+      aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      onClick={toggleThemeMode}
+      sx={{
+        display: { xs: 'none', md: 'inline-flex' },
+        border: '1px solid',
+        borderColor: 'divider',
+        color: 'text.secondary',
+        height: 40,
+        width: 40,
+        '&:hover': {
+          bgcolor: 'action.hover',
+          color: 'text.primary',
+        },
+      }}
+    >
+      {themeMode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+    </IconButton>
+  );
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -97,6 +124,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 gap: 1.5,
               }}
             >
+              {themeToggleButton}
+
               <Button
                 variant="text"
                 color="inherit"
@@ -131,6 +160,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 gap: 1,
               }}
             >
+              {themeToggleButton}
+
               <Button
                 variant="contained"
                 color="secondary"

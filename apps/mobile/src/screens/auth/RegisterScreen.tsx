@@ -8,6 +8,7 @@ import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthFormField } from '@/components/auth/AuthFormField';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
+import { DatePickerField } from '@/components/core/DatePickerField';
 import { getApolloErrorCode, getApolloErrorMessage } from '@/lib/auth/apolloErrors';
 import { type FieldErrors, registerSchema, toFieldErrors } from '@/lib/auth/validation';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -154,13 +155,12 @@ export function RegisterScreen() {
           textContentType="newPassword"
           value={values.password}
         />
-        <AuthFormField
-          autoComplete="birthdate-full"
+        <DatePickerField
           error={fieldErrors.birthdate?.[0]}
           label="Date of birth"
-          onChangeText={(value) => handleChange('birthdate', value)}
-          placeholder="YYYY-MM-DD"
-          textContentType="birthdate"
+          maximumDate={new Date()}
+          onChangeDate={(value) => handleChange('birthdate', value)}
+          placeholder="Select your date of birth"
           value={values.birthdate}
         />
 

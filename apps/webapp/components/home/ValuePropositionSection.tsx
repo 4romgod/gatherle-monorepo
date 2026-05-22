@@ -1,6 +1,6 @@
 'use client';
 
-import { alpha, Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import Link from 'next/link';
 import { ROUTES, APP_NAME } from '@/lib/constants';
 
@@ -8,41 +8,17 @@ export default function ValuePropositionSection() {
   return (
     <Box id="value-proposition" component="section">
       <Box
-        sx={(theme) => ({
+        sx={{
           position: 'relative',
           overflow: 'hidden',
           borderRadius: { xs: 3, md: 4 },
           border: '1px solid',
           borderColor: 'divider',
-          backgroundColor:
-            theme.palette.mode === 'dark'
-              ? alpha(theme.palette.background.paper, 0.42)
-              : alpha(theme.palette.background.paper, 0.96),
-          backdropFilter: 'blur(16px)',
+          backgroundColor: 'background.paper',
           px: { xs: 3, md: 5 },
           py: { xs: 3.5, md: 4.5 },
           textAlign: 'center',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 'auto auto -40% -8%',
-            width: 220,
-            height: 220,
-            borderRadius: '50%',
-            backgroundColor: alpha(theme.palette.primary.main, 0.18),
-            filter: 'blur(80px)',
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            inset: '-30% -8% auto auto',
-            width: 220,
-            height: 220,
-            borderRadius: '50%',
-            backgroundColor: alpha(theme.palette.secondary.main, 0.16),
-            filter: 'blur(90px)',
-          },
-        })}
+        }}
       >
         <Box
           sx={{

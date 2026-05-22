@@ -31,6 +31,9 @@ export const ROUTES = {
     ROOT: '/events',
     ATTENDEES: (slug: string) => `/events/${slug}/attendees`,
   },
+  MOMENTS: {
+    ROOT: '/moments',
+  },
   CATEGORIES: {
     ROOT: '/categories',
     CATEGORY: (slug: string) => `/categories/${slug}`,
@@ -48,6 +51,7 @@ export const ROUTES = {
   VENUES: {
     ROOT: '/venues',
     VENUE: (slug: string) => `/venues/${slug}`,
+    EDIT: (slug: string) => `/venues/${slug}/edit`,
     ADD: '/venues/add',
   },
   ADMIN: {

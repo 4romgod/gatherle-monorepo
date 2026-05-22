@@ -21,53 +21,6 @@ const Footer = () => {
       }}
     >
       <Container maxWidth="lg">
-        {/* CTA Card - Elevation Zero */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
-            gap: 3,
-            p: { xs: 3, md: 4 },
-            borderRadius: 2,
-            backgroundColor: 'background.paper',
-            mb: 6,
-          }}
-        >
-          <Box>
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                letterSpacing: '0.1em',
-              }}
-            >
-              GET STARTED
-            </Typography>
-            <Typography variant="h5" sx={{ ...SECTION_TITLE_STYLES, mt: 0.5 }}>
-              Bring people together with {APP_NAME}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 520, mt: 1, lineHeight: 1.6 }}>
-              Craft intimate gatherings, bold conferences, or community rituals with the platform built for modern
-              hosts.
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              href={ROUTES.ACCOUNT.EVENTS.CREATE}
-              sx={{ ...BUTTON_STYLES, px: 3 }}
-            >
-              Host an experience
-            </Button>
-            <Button variant="outlined" color="inherit" href={ROUTES.EVENTS.ROOT} sx={{ ...BUTTON_STYLES, px: 3 }}>
-              Browse events
-            </Button>
-          </Box>
-        </Box>
-
         {/* Footer Links */}
         <Grid container spacing={4}>
           {footerSections.map((section) => (

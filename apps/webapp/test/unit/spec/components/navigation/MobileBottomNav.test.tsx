@@ -66,6 +66,7 @@ describe('MobileBottomNav', () => {
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
       'Home',
       'Events',
+      'Moments',
       'Messages',
       'Notifications',
       'Profile',
@@ -73,6 +74,7 @@ describe('MobileBottomNav', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/events',
+      '/moments',
       '/auth/login',
       '/auth/login',
       '/auth/login',
@@ -99,6 +101,7 @@ describe('MobileBottomNav', () => {
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
       'Home',
       'Events',
+      'Moments',
       'Messages',
       'Notifications',
       'Profile',
@@ -106,6 +109,7 @@ describe('MobileBottomNav', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
       '/events',
+      '/moments',
       '/account/messages',
       '/account/notifications',
       '/users/alice',

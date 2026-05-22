@@ -67,6 +67,7 @@ export const ERROR_MESSAGES = {
   NOT_FOUND: (searchedItemType: string, searchParamType: string, searchParamValue: string) =>
     `${searchedItemType} with ${searchParamType} ${searchParamValue} does not exist`,
   PASSWORD_MISMATCH: 'Email and Password do not match',
+  EMAIL_NOT_VERIFIED: 'Please verify your email address before logging in.',
   REQUIRED: 'is required',
   TOO_SHORT: 'is too short',
   UNAUTHENTICATED: 'You must be logged in to access this resource.',
