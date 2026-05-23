@@ -1,0 +1,242 @@
+import {
+  buildDefaultOccurrenceDateRange,
+  dedupeOccurrencesBySeries,
+  formatCountLabel,
+  formatDateGroupLabel,
+  formatEventScheduleRange,
+  formatEventScheduleTwoLine,
+  formatLocationLabel,
+  formatRelativeTime,
+  formatShortDate,
+  formatShortDateTime,
+  getDisplayName,
+  getEventCategoryLabel,
+  getEventCityLabel,
+  getEventImageUrl,
+  getEventStatusLabel,
+  getEventSummary,
+  getEventTitle,
+  getInitials,
+  getOrganizerLabel,
+  getOccurrenceParticipantCount,
+  getOccurrenceParticipantPreview,
+  getParticipantKey,
+  sortCategoriesByInterest,
+  sortOrganizationsByFollowers,
+} from '@/lib/events/formatters';
+import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
+
+const baseOccurrence = {
+  endAt: '2026-05-23T12:30:00.000Z',
+  eventSeries: {
+    eventCategories: [{ name: 'Concerts' }],
+    location: { address: { city: 'Johannesburg', country: 'South Africa', state: 'Gauteng' } },
+  },
+  eventSeriesId: 'series-1',
+  participants: [
+    { participantId: 'p1', status: 'Going' },
+    { participantId: 'p2', status: 'Cancelled' },
+    { participantId: 'p3', status: 'Interested' },
+    { participantId: 'p4', status: 'Going' },
+  ],
+  startAt: '2026-05-23T10:00:00.000Z',
+} as any;
+
+describe('mobile event formatters', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-23T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('builds the default six-month occurrence query range from local day bounds', () => {
+    const range = buildDefaultOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
+    expect(range.startDate).toBe(new Date(2026, 0, 15, 0, 0, 0, 0).toISOString());
+    expect(range.endDate).toBe(new Date(2026, 6, 15, 23, 59, 59, 999).toISOString());
+  });
+
+  it('deduplicates occurrences by event series and respects a limit', () => {
+    const occurrences = [
+      { eventSeriesId: 'a', occurrenceId: 'a1' },
+      { eventSeriesId: 'a', occurrenceId: 'a2' },
+      { eventSeriesId: 'b', occurrenceId: 'b1' },
+      { eventSeriesId: 'c', occurrenceId: 'c1' },
+    ];
+
+    expect(dedupeOccurrencesBySeries(occurrences).map((item) => item.occurrenceId)).toEqual(['a1', 'b1', 'c1']);
+    expect(dedupeOccurrencesBySeries(occurrences, 2).map((item) => item.occurrenceId)).toEqual(['a1', 'b1']);
+  });
+
+  it('sorts categories and organizations without mutating inputs', () => {
+    const categories = [
+      { name: 'Low', interestedUsersCount: 1 },
+      { name: 'Missing', interestedUsersCount: null },
+      { name: 'High', interestedUsersCount: 12 },
+    ] as any;
+    const organizations = [
+      { name: 'Small', followersCount: 2 },
+      { name: 'Missing', followersCount: null },
+      { name: 'Large', followersCount: 99 },
+    ] as any;
+
+    expect(sortCategoriesByInterest(categories).map((item: any) => item.name)).toEqual(['High', 'Low', 'Missing']);
+    expect(categories.map((item: any) => item.name)).toEqual(['Low', 'Missing', 'High']);
+    expect(sortOrganizationsByFollowers(organizations).map((item: any) => item.name)).toEqual([
+      'Large',
+      'Small',
+      'Missing',
+    ]);
+    expect(organizations.map((item: any) => item.name)).toEqual(['Small', 'Missing', 'Large']);
+  });
+
+  it('formats display names, initials, locations, categories, and city labels with fallbacks', () => {
+    expect(getDisplayName({ given_name: 'Ada', family_name: 'Lovelace', username: 'ada' })).toBe('Ada Lovelace');
+    expect(getDisplayName({ username: 'fallback' })).toBe('fallback');
+    expect(getDisplayName(null)).toBe('');
+
+    expect(getInitials('Ada Lovelace')).toBe('AL');
+    expect(getInitials(' Prince ')).toBe('P');
+    expect(getInitials('   ')).toBe('?');
+
+    expect(formatLocationLabel(baseOccurrence)).toBe('Johannesburg, Gauteng, South Africa');
+    expect(formatLocationLabel(null)).toBe('Location to be announced');
+    expect(getEventCategoryLabel(baseOccurrence)).toBe('Concerts');
+    expect(getEventCategoryLabel(null)).toBe('Event');
+    expect(getEventCityLabel(baseOccurrence)).toBe('Johannesburg');
+    expect(getEventCityLabel({ eventSeries: { location: { address: { state: 'Western Cape' } } } } as any)).toBe(
+      'Western Cape',
+    );
+    expect(getEventCityLabel(null)).toBe('Featured');
+  });
+
+  it('formats dates, ranges, relative time, and day group labels', () => {
+    expect(formatShortDateTime('2026-05-23T10:05:00.000Z')).toContain('May');
+    expect(formatShortDateTime(null)).toBe('Date to be announced');
+    expect(formatEventScheduleRange(baseOccurrence)).toContain('Saturday');
+    expect(formatEventScheduleRange(baseOccurrence)).toContain(' - ');
+    expect(formatEventScheduleRange({ ...baseOccurrence, endAt: null })).not.toContain(' - ');
+    expect(formatEventScheduleRange(null)).toBe('Date to be announced');
+    expect(formatEventScheduleTwoLine(baseOccurrence)).toContain('\n');
+    expect(formatEventScheduleTwoLine({ ...baseOccurrence, endAt: null })).not.toContain(' - ');
+    expect(formatEventScheduleTwoLine(null)).toBe('Date to be announced');
+    expect(formatShortDate('2026-05-23T10:05:00.000Z')).toContain('May');
+    expect(formatShortDate(null)).toBe('Date to be announced');
+
+    expect(formatRelativeTime('2026-05-23T12:01:00.000Z')).toBe('in 1 min');
+    expect(formatRelativeTime('2026-05-23T11:59:00.000Z')).toBe('1 min ago');
+    expect(formatRelativeTime('2026-05-23T11:58:00.000Z')).toBe('2 min ago');
+    expect(formatRelativeTime('2026-05-23T13:00:00.000Z')).toBe('in 1 hr');
+    expect(formatRelativeTime('2026-05-23T14:00:00.000Z')).toBe('in 2 hr');
+    expect(formatRelativeTime('2026-05-23T11:00:00.000Z')).toBe('1 hr ago');
+    expect(formatRelativeTime('2026-05-23T10:00:00.000Z')).toBe('2 hr ago');
+    expect(formatRelativeTime('2026-05-24T12:00:00.000Z')).toBe('tomorrow');
+    expect(formatRelativeTime('2026-05-26T12:00:00.000Z')).toBe('in 3 days');
+    expect(formatRelativeTime('2026-05-22T12:00:00.000Z')).toBe('yesterday');
+    expect(formatRelativeTime('2026-05-20T12:00:00.000Z')).toBe('3 days ago');
+    expect(formatRelativeTime('2026-06-15T12:00:00.000Z')).toContain('Jun');
+    expect(formatRelativeTime(null)).toBe('');
+
+    expect(formatDateGroupLabel('2026-05-23T01:00:00.000Z')).toBe('Today');
+    expect(formatDateGroupLabel('2026-05-22T01:00:00.000Z')).toBe('Yesterday');
+    expect(formatDateGroupLabel('2026-05-20T01:00:00.000Z')).toContain('Wednesday');
+    expect(formatDateGroupLabel(null)).toBe('Earlier');
+  });
+
+  it('counts participant previews and pluralizes count labels', () => {
+    expect(getOccurrenceParticipantPreview(baseOccurrence).map((item: any) => item.participantId)).toEqual([
+      'p1',
+      'p3',
+      'p4',
+    ]);
+    expect(getOccurrenceParticipantPreview(baseOccurrence, 2)).toHaveLength(2);
+    expect(getOccurrenceParticipantPreview(null)).toEqual([]);
+    expect(getOccurrenceParticipantCount(baseOccurrence)).toBe(3);
+    expect(getOccurrenceParticipantCount(null)).toBe(0);
+
+    expect(formatCountLabel(1, 'guest')).toBe('1 guest');
+    expect(formatCountLabel(2, 'guest')).toBe('2 guests');
+    expect(formatCountLabel(null, 'person', 'people')).toBe('0 people');
+  });
+
+  it('formats event card data with fallback labels', () => {
+    expect(getEventStatusLabel(null)).toBe('Upcoming');
+    expect(getEventStatusLabel({ startAt: '2026-05-22T12:00:00.000Z' } as any)).toBe('Past');
+    expect(getEventStatusLabel({ startAt: '2026-05-23T18:00:00.000Z' } as any)).toBe('Today');
+    expect(getEventStatusLabel({ startAt: '2026-05-30T12:00:00.000Z' } as any)).toBe('Upcoming');
+
+    expect(
+      getEventImageUrl({ eventSeries: { media: { featuredImageUrl: 'https://img.example/event.jpg' } } } as any),
+    ).toBe('https://img.example/event.jpg');
+    expect(getEventImageUrl(null)).toBeNull();
+    expect(getEventTitle({ eventSeries: { title: 'Signal Night' } } as any)).toBe('Signal Night');
+    expect(getEventTitle(null)).toBe('Untitled Event');
+    expect(getEventSummary({ eventSeries: { summary: 'Summary', description: 'Description' } } as any)).toBe('Summary');
+    expect(getEventSummary({ eventSeries: { description: 'Description' } } as any)).toBe('Description');
+    expect(getEventSummary(null)).toBe('Details coming soon.');
+
+    expect(getOrganizerLabel({ eventSeries: { organization: { name: 'Signal Studios' } } } as any)).toBe(
+      'Signal Studios',
+    );
+    expect(
+      getOrganizerLabel({
+        eventSeries: { organizers: [{ user: { given_name: 'Ada', family_name: 'Lovelace', username: 'ada' } }] },
+      } as any),
+    ).toBe('Ada Lovelace');
+    expect(getOrganizerLabel(null)).toBe('');
+
+    expect(getParticipantKey({ participantId: 'participant-1', userId: 'user-1' } as any)).toBe('participant-1');
+    expect(getParticipantKey({ participantId: '', userId: 'user-1' } as any)).toBe('user-1');
+    expect(getParticipantKey({ participantId: '', userId: '' } as any)).toBe('guest');
+  });
+
+  it('maps event series list items into mobile occurrence cards and drops events without a representative occurrence', () => {
+    expect(mapEventSeriesToOccurrence({ representativeOccurrence: null } as any)).toBeNull();
+
+    const mapped = mapEventSeriesToOccurrence({
+      description: 'Description',
+      eventCategories: [{ name: 'Music' }],
+      eventId: 'event-1',
+      isSavedByMe: true,
+      location: { address: { city: 'Pretoria' } },
+      media: null,
+      myRsvp: null,
+      orgId: null,
+      organization: null,
+      organizers: [],
+      representativeOccurrence: {
+        endAt: null,
+        eventSeriesId: 'event-1',
+        isException: false,
+        myRsvp: null,
+        occurrenceId: 'occ-1',
+        occurrenceKey: '2026-05-23',
+        originalStartAt: null,
+        participants: null,
+        rsvpCount: null,
+        startAt: '2026-05-23T10:00:00.000Z',
+        status: 'Scheduled',
+        timezone: 'Africa/Johannesburg',
+      },
+      savedByCount: null,
+      slug: 'event-slug',
+      status: 'Published',
+      summary: null,
+      title: 'Event title',
+      venueId: null,
+      visibility: null,
+    } as any);
+
+    expect(mapped).toMatchObject({
+      eventSeriesId: 'event-1',
+      occurrenceId: 'occ-1',
+      eventSeries: {
+        eventId: 'event-1',
+        isSavedByMe: true,
+        slug: 'event-slug',
+        title: 'Event title',
+      },
+    });
+  });
+});

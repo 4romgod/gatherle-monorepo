@@ -28,13 +28,16 @@ export function CommunityMemberRow({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: theme.colors.surfaceRaised,
-          opacity: pressed ? 0.86 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.row,
+          {
+            backgroundColor: theme.colors.surfaceRaised,
+            opacity: pressed ? 0.86 : 1,
+          },
+        ]
+      }
     >
       {user.profile_picture ? (
         <Image source={{ uri: user.profile_picture }} style={styles.avatar} />

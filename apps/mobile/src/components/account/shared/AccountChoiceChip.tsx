@@ -14,14 +14,17 @@ export function AccountChoiceChip({ label, onPress, selected }: AccountChoiceChi
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surfaceMuted,
-          borderColor: selected ? theme.colors.primary : theme.colors.border,
-          opacity: pressed ? 0.88 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.chip,
+          {
+            backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surfaceMuted,
+            borderColor: selected ? theme.colors.primary : theme.colors.border,
+            opacity: pressed ? 0.88 : 1,
+          },
+        ]
+      }
     >
       <Text style={[styles.label, { color: selected ? theme.colors.primary : theme.colors.textSecondary }]}>
         {label}

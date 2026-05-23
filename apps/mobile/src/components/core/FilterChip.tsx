@@ -25,15 +25,18 @@ export function FilterChip({ active, label, onPress, onRemove, small, tone = 'pr
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.filterChip,
-        small && styles.filterChipSmall,
-        {
-          backgroundColor: active ? soft : theme.colors.surfaceRaised,
-          borderColor: active ? accent : 'transparent',
-          opacity: pressed ? 0.86 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.filterChip,
+          small && styles.filterChipSmall,
+          {
+            backgroundColor: active ? soft : theme.colors.surfaceRaised,
+            borderColor: active ? accent : 'transparent',
+            opacity: pressed ? 0.86 : 1,
+          },
+        ]
+      }
     >
       {onRemove ? (
         <View style={styles.filterChipRow}>

@@ -13,14 +13,14 @@ test.describe('Organizations Page', () => {
     await expect(page.getByRole('combobox', { name: 'Try a name, description, or tag' })).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create Organization' })).toBeVisible();
   });
 
   test('redirects unauthenticated users to /auth/login from create organization CTA', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/organizations', { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('link', { name: 'Create' }).click();
+    await page.getByRole('link', { name: 'Create Organization' }).click();
     await expectLoginPage(page);
   });
 });

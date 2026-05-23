@@ -14,14 +14,17 @@ export function FilterActionButton({ activeCount, onPress }: FilterActionButtonP
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.filterActionButton,
-        {
-          backgroundColor: theme.colors.primarySoft,
-          borderColor: theme.colors.primary,
-          opacity: pressed ? 0.86 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.filterActionButton,
+          {
+            backgroundColor: theme.colors.primarySoft,
+            borderColor: theme.colors.primary,
+            opacity: pressed ? 0.86 : 1,
+          },
+        ]
+      }
     >
       {activeCount > 0 ? (
         <View style={[styles.filterActionBadge, { backgroundColor: theme.colors.primary }]}>

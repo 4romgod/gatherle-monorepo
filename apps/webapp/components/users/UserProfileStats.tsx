@@ -243,7 +243,7 @@ export default function UserProfileStats({
       >
         {/* Followers - opens modal on own profile */}
         <Box
-          onClick={isOwnProfile ? () => setFollowersOpen(true) : undefined}
+          {...getInteractiveStatProps(isOwnProfile ? () => setFollowersOpen(true) : undefined)}
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
@@ -262,7 +262,7 @@ export default function UserProfileStats({
 
         {/* Following - opens modal on own profile */}
         <Box
-          onClick={isOwnProfile ? () => setFollowingOpen(true) : undefined}
+          {...getInteractiveStatProps(isOwnProfile ? () => setFollowingOpen(true) : undefined)}
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
@@ -281,7 +281,7 @@ export default function UserProfileStats({
 
         {/* Events Created - scrolls to section on own profile */}
         <Box
-          onClick={isOwnProfile ? () => scrollToSection('events-created') : undefined}
+          {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('events-created') : undefined)}
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
@@ -300,7 +300,7 @@ export default function UserProfileStats({
 
         {/* RSVPs / Events Attending - scrolls to section on own profile */}
         <Box
-          onClick={isOwnProfile ? () => scrollToSection('events-attending') : undefined}
+          {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('events-attending') : undefined)}
           sx={isOwnProfile ? clickableStatSx : staticStatSx}
         >
           <Typography
@@ -319,7 +319,7 @@ export default function UserProfileStats({
 
         {/* Saved Events - scrolls to section on own profile (hidden in compact mode) */}
         {isOwnProfile && !compact && (
-          <Box onClick={() => scrollToSection('saved-events')} sx={clickableStatSx}>
+          <Box {...getInteractiveStatProps(() => scrollToSection('saved-events'))} sx={clickableStatSx}>
             <Typography
               variant="subtitle1"
               fontWeight={700}
@@ -338,7 +338,7 @@ export default function UserProfileStats({
         {/* Interests - scrolls to section on own profile (hidden in compact mode) */}
         {!compact && (
           <Box
-            onClick={isOwnProfile ? () => scrollToSection('interests') : undefined}
+            {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('interests') : undefined)}
             sx={isOwnProfile ? clickableStatSx : staticStatSx}
           >
             <Typography

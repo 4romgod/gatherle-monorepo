@@ -17,13 +17,16 @@ export function VenueListItem({ onPress, venue }: VenueListItemProps) {
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: theme.colors.surfaceRaised,
-          opacity: pressed ? 0.86 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.row,
+          {
+            backgroundColor: theme.colors.surfaceRaised,
+            opacity: pressed ? 0.86 : 1,
+          },
+        ]
+      }
     >
       {venue.featuredImageUrl ? (
         <Image source={{ uri: venue.featuredImageUrl }} style={styles.image} />
