@@ -96,7 +96,7 @@ function getSubPageAction(pathname: string): SubPageAction | null {
   }
 
   if (pathname === ROUTES.ORGANIZATIONS.ROOT) {
-    return { href: ROUTES.ACCOUNT.ORGANIZATIONS.CREATE, label: 'Create' };
+    return { href: ROUTES.ACCOUNT.ORGANIZATIONS.CREATE, label: 'Create Organization' };
   }
 
   return null;
@@ -138,7 +138,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
     setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'));
   };
   const handleBack = () => {
-    if (window.history.length > 1) {
+    if (window.history.length > 2) {
       router.back();
       return;
     }

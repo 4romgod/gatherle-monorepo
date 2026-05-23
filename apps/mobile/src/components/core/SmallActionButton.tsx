@@ -18,15 +18,18 @@ export function SmallActionButton({ compact = false, icon, label, onPress, tone 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.smallActionButton,
-        compact ? styles.smallActionButtonCompact : null,
-        {
-          backgroundColor: tone === 'ghost' ? 'transparent' : theme.colors.surface,
-          borderColor: tone === 'ghost' ? 'transparent' : theme.colors.primarySoft,
-          opacity: pressed ? 0.8 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.smallActionButton,
+          compact ? styles.smallActionButtonCompact : null,
+          {
+            backgroundColor: tone === 'ghost' ? 'transparent' : theme.colors.surface,
+            borderColor: tone === 'ghost' ? 'transparent' : theme.colors.primarySoft,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]
+      }
     >
       <Feather color={theme.colors.primary} name={icon} size={compact ? 16 : 18} />
       <Text

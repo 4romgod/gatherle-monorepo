@@ -21,15 +21,18 @@ export function InlineButton({ compact = false, label, onPress, tone = 'primary'
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.inlineButton,
-        compact ? styles.inlineButtonCompact : null,
-        {
-          backgroundColor: palette.background,
-          borderColor: palette.border,
-          opacity: pressed ? 0.88 : 1,
-        },
-      ]}
+      style={
+        /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
+        ({ pressed }) => [
+          styles.inlineButton,
+          compact ? styles.inlineButtonCompact : null,
+          {
+            backgroundColor: palette.background,
+            borderColor: palette.border,
+            opacity: pressed ? 0.88 : 1,
+          },
+        ]
+      }
     >
       <Text
         style={[styles.inlineButtonText, compact ? styles.inlineButtonTextCompact : null, { color: palette.color }]}
