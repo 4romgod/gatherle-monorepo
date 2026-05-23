@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { alpha, Avatar, Box, CircularProgress, Container, Stack, Typography } from '@mui/material';
+import { alpha, Avatar, Box, Button, CircularProgress, Container, Stack, Typography } from '@mui/material';
 import { GetMomentsFeedDocument } from '@/data/graphql/query';
 import { EventMomentState, EventMomentType, type GetMomentsFeedQuery } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -78,9 +78,12 @@ export default function MomentsFeedPageClient() {
   if (error && moments.length === 0) {
     return (
       <Container maxWidth="sm" sx={{ alignItems: 'center', display: 'flex', minHeight: '70vh' }}>
-        <Typography color="text.secondary" textAlign="center">
-          Moments are unavailable right now.
-        </Typography>
+        <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', width: '100%' }}>
+          <Typography color="text.secondary">Moments are unavailable right now.</Typography>
+          <Button variant="outlined" onClick={() => router.push(ROUTES.HOME)} sx={{ borderRadius: 999 }}>
+            Back to home
+          </Button>
+        </Stack>
       </Container>
     );
   }
@@ -88,13 +91,16 @@ export default function MomentsFeedPageClient() {
   if (moments.length === 0) {
     return (
       <Container maxWidth="sm" sx={{ alignItems: 'center', display: 'flex', minHeight: '70vh' }}>
-        <Stack spacing={1} sx={{ textAlign: 'center' }}>
+        <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', width: '100%' }}>
           <Typography variant="h4" fontWeight={900}>
             No moments yet
           </Typography>
           <Typography color="text.secondary">
             When people start posting from live events, they’ll show up here.
           </Typography>
+          <Button variant="outlined" onClick={() => router.push(ROUTES.HOME)} sx={{ borderRadius: 999 }}>
+            Back to home
+          </Button>
         </Stack>
       </Container>
     );

@@ -7,7 +7,7 @@ test.describe('403 Page', () => {
   });
 
   test('renders /403 with an access denied message and home CTA', async ({ page }) => {
-    await page.goto('/403');
+    await page.goto('/403', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: 'Access denied' })).toBeVisible();
     await expect(page.getByText('403')).toBeVisible();

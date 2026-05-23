@@ -44,11 +44,9 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
 
-  // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(nextSavedState);
   const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(nextRsvpStatus);
 
-  // Sync state when props change (e.g., after refetch)
   useEffect(() => {
     setIsSaved(nextSavedState);
   }, [nextSavedState]);
@@ -151,7 +149,10 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
           sx={{
             position: 'absolute',
             inset: 0,
-            background: `linear-gradient(180deg, ${alpha(theme.palette.common.black, 0.1)} 0%, ${alpha(theme.palette.common.black, 0.5)} 100%)`,
+            background: `linear-gradient(180deg, ${alpha(theme.palette.common.black, 0.1)} 0%, ${alpha(
+              theme.palette.common.black,
+              0.5,
+            )} 100%)`,
             transition: 'background-color 0.3s ease',
           }}
         />

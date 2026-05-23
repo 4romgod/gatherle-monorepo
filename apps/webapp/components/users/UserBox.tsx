@@ -1,7 +1,6 @@
 'use client';
 
-import { Typography, Grid, Avatar, Box, Stack, Chip, Button, Card } from '@mui/material';
-import { LocationOn, People } from '@mui/icons-material';
+import { Typography, Grid, Avatar, Box, Stack, Button, Card } from '@mui/material';
 import { User, FollowTargetType } from '@/data/graphql/types/graphql';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
@@ -20,11 +19,11 @@ export default function UserBox({ user }: UserBoxProps) {
   const displayName = getDisplayName(user) !== 'Account' ? getDisplayName(user) : user.username;
   const isOwnProfile = session?.user?.userId === user.userId;
 
-  const location = [user.location?.city, user.location?.country].filter(Boolean).join(', ');
-  const interests = user.interests?.slice(0, 3) || [];
+  const location = [user.location?.city, user.location?.state, user.location?.country].filter(Boolean).join(', ');
+  const bioLine = user.bio || location || 'Gatherle community member';
 
   return (
-    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
+    <Grid size={{ xs: 12, sm: 6 }}>
       <Card
         elevation={0}
         sx={{
@@ -32,121 +31,76 @@ export default function UserBox({ user }: UserBoxProps) {
           borderRadius: 3,
           border: '1px solid',
           borderColor: 'divider',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          transition: 'transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease',
+          '&:hover': {
+            borderColor: 'primary.main',
+            transform: 'translateY(-2px)',
+          },
         }}
       >
-        {/* Card content sections: Avatar + identity, Bio, Location & interests, Action */}
-        <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Avatar + identity */}
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', p: 1.75 }}>
           <Link href={ROUTES.USERS.USER(user.username)} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Avatar
-                src={getAvatarSrc(user)}
-                alt={displayName}
-                sx={{
-                  width: 56,
-                  height: 56,
-                  border: '2px solid',
-                  borderColor: 'divider',
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                }}
-              >
-                {displayName?.[0]?.toUpperCase()}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2} noWrap color="text.primary">
-                  {displayName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  @{user.username}
-                </Typography>
-                {typeof user.followersCount === 'number' && (
-                  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.25 }}>
-                    <People sx={{ fontSize: 14, color: 'text.secondary' }} />
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                      {(user.followersCount || 0).toLocaleString()}{' '}
-                      {user.followersCount === 1 ? 'follower' : 'followers'}
-                    </Typography>
-                  </Stack>
-                )}
-              </Box>
-            </Stack>
-          </Link>
-
-          {/* Bio */}
-          {user.bio && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            <Avatar
+              src={getAvatarSrc(user)}
+              alt={displayName}
               sx={{
-                mt: 2,
-                display: '-webkit-box',
-                overflow: 'hidden',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                border: '2px solid',
+                borderColor: 'divider',
+                color: 'primary.main',
+                fontWeight: 900,
+                height: 58,
+                width: 58,
               }}
             >
-              {user.bio}
+              {displayName?.[0]?.toUpperCase()}
+            </Avatar>
+          </Link>
+
+          <Box
+            component={Link}
+            href={ROUTES.USERS.USER(user.username)}
+            sx={{ color: 'inherit', flex: 1, minWidth: 0, textDecoration: 'none' }}
+          >
+            <Typography color="text.primary" fontWeight={800} lineHeight={1.2} noWrap variant="subtitle1">
+              {displayName}
             </Typography>
-          )}
+            <Typography color="primary.main" fontWeight={700} noWrap variant="caption">
+              @{user.username}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                overflow: 'hidden',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+              }}
+              variant="body2"
+            >
+              {bioLine}
+            </Typography>
+          </Box>
 
-          {/* Location & interests */}
-          {(location || interests.length > 0) && (
-            <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
-              {location && (
-                <Chip
-                  icon={<LocationOn />}
-                  label={location}
-                  size="small"
-                  sx={{
-                    pl: 0.6,
-                    fontWeight: 600,
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    color: 'text.primary',
-                    border: 'none',
-                  }}
-                />
-              )}
-              {interests.map((interest) => (
-                <Chip
-                  key={interest.eventCategoryId || interest.name}
-                  label={interest.name}
-                  size="small"
-                  sx={{
-                    height: 26,
-                    fontSize: '0.75rem',
-                    bgcolor: alpha(theme.palette.secondary.main, 0.12),
-                    border: 'none',
-                    color: 'text.primary',
-                  }}
-                />
-              ))}
-            </Stack>
-          )}
-
-          {/* Action */}
-          <Box sx={{ mt: 'auto', pt: 3 }}>
+          <Box sx={{ flexShrink: 0 }}>
             {!isOwnProfile ? (
-              <FollowButton targetId={user.userId} targetType={FollowTargetType.User} size="small" fullWidth />
+              <FollowButton targetId={user.userId} targetType={FollowTargetType.User} size="small" />
             ) : (
               <Button
                 variant="outlined"
-                fullWidth
                 component={Link}
                 href={ROUTES.USERS.USER(user.username)}
                 sx={{
+                  borderRadius: 999,
                   textTransform: 'none',
-                  fontWeight: 600,
-                  borderRadius: 2,
+                  fontWeight: 800,
                 }}
               >
-                View profile
+                Profile
               </Button>
             )}
           </Box>
-        </Box>
+        </Stack>
       </Card>
     </Grid>
   );

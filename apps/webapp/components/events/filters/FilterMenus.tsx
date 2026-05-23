@@ -76,6 +76,20 @@ const activeFilterButtonSx = {
   },
 };
 
+const activeLocationButtonSx = {
+  bgcolor: 'action.selected',
+  borderColor: 'divider',
+  color: 'text.primary',
+  '& .MuiButton-startIcon, & .MuiButton-endIcon': {
+    color: 'text.primary',
+  },
+  '&:hover': {
+    bgcolor: 'action.hover',
+    borderColor: 'divider',
+    color: 'text.primary',
+  },
+};
+
 export function CategoryMenu({
   categories,
   selectedCategories,
@@ -505,8 +519,8 @@ export function LocationMenu({
         className="glass-button"
         sx={{
           ...filterButtonSx,
-          borderColor: hasValues ? 'primary.main' : 'primary.light',
-          ...(hasValues ? activeFilterButtonSx : {}),
+          borderColor: hasValues ? 'divider' : 'primary.light',
+          ...(hasValues ? activeLocationButtonSx : {}),
         }}
       >
         {buttonLabel}

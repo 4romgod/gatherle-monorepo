@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { navigationRef } from '@/app/navigation/navigationRef';
@@ -17,8 +17,20 @@ type DrawerItemConfig = {
   onPress: () => void;
 };
 
+type SocialLinkConfig = {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  url: string;
+};
+
 const MAX_DRAWER_WIDTH = 420;
 const MIN_DRAWER_WIDTH = 280;
+const SOCIAL_LINKS: SocialLinkConfig[] = [
+  { icon: 'instagram', label: 'Instagram', url: 'https://www.instagram.com/gatherleofficial' },
+  { icon: 'music', label: 'TikTok', url: 'https://www.tiktok.com/@gatherle' },
+  { icon: 'linkedin', label: 'LinkedIn', url: 'https://www.linkedin.com/company/gatherle' },
+  { icon: 'twitter', label: 'X', url: 'https://x.com/getgatherle' },
+];
 type DrawerRouteName = Exclude<
   DetailRouteName,
   | 'EditEvent'
@@ -104,6 +116,40 @@ function DrawerDivider() {
   const { theme } = useAppTheme();
 
   return <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />;
+}
+
+function SocialLinksRow() {
+  const { theme } = useAppTheme();
+
+  const openSocialLink = (url: string) => {
+    void Linking.openURL(url);
+  };
+
+  return (
+    <View style={styles.socialSection}>
+      <Text style={[styles.socialTitle, { color: theme.colors.textSecondary }]}>Follow Gatherle</Text>
+      <View style={styles.socialRow}>
+        {SOCIAL_LINKS.map((link) => (
+          <Pressable
+            accessibilityLabel={`Open Gatherle on ${link.label}`}
+            accessibilityRole="link"
+            key={link.label}
+            onPress={() => openSocialLink(link.url)}
+            style={({ pressed }) => [
+              styles.socialButton,
+              {
+                backgroundColor: theme.colors.surfaceMuted,
+                borderColor: theme.colors.border,
+                opacity: pressed ? 0.74 : 1,
+              },
+            ]}
+          >
+            <Feather color={theme.colors.textPrimary} name={link.icon} size={18} />
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export function AppDrawer() {
@@ -337,6 +383,9 @@ export function AppDrawer() {
           {[...(isAuthenticated ? authedItems : guestItems), ...sharedItems].map((item) => (
             <MenuItem icon={item.icon} key={item.label} label={item.label} onPress={item.onPress} />
           ))}
+
+          <DrawerDivider />
+          <SocialLinksRow />
         </ScrollView>
       </Animated.View>
     </View>
@@ -436,5 +485,26 @@ const styles = StyleSheet.create({
   menuLabel: {
     ...typography.bodyMedium,
     fontSize: fontSize.lg,
+  },
+  socialButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  socialSection: {
+    gap: 12,
+    paddingTop: 8,
+  },
+  socialTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.sm,
+    textTransform: 'uppercase',
   },
 });

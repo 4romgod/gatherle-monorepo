@@ -7,7 +7,7 @@ test.describe('Events Page', () => {
   });
 
   test('renders /events route', async ({ page }) => {
-    await page.goto('/events');
+    await page.goto('/events', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
 
     const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Box, Button, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import { Organization, OrganizationRole } from '@/data/graphql/types/graphql';
 import { Settings } from '@mui/icons-material';
@@ -18,86 +18,90 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
 
   const manageHref = slug ? ROUTES.ACCOUNT.ORGANIZATIONS.SETTINGS(slug) : ROUTES.ACCOUNT.ORGANIZATIONS.ROOT;
   const roleColor = userRole === OrganizationRole.Owner ? 'primary' : 'secondary';
+  const organizationHref = slug ? ROUTES.ORGANIZATIONS.ORG(slug) : ROUTES.ORGANIZATIONS.ROOT;
+  const initials = (name ?? 'Organization')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <Box
       sx={{
         borderRadius: 3,
-        minHeight: 220,
         display: 'flex',
-        flexDirection: 'column',
+        height: '100%',
+        p: 1.75,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        transition: 'transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          transform: 'translateY(-2px)',
+        },
       }}
     >
-      {logo ? (
-        <Box
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
+        <Avatar
+          component={Link}
+          href={organizationHref}
+          src={logo ?? undefined}
+          variant="rounded"
           sx={{
-            height: 140,
-            borderRadius: '18px 18px 0 0',
-            backgroundImage: `url(${logo})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            bgcolor: 'action.hover',
+            borderRadius: 2,
+            color: 'primary.main',
+            flexShrink: 0,
+            fontWeight: 900,
+            height: 58,
+            textDecoration: 'none',
+            width: 58,
           }}
-        />
-      ) : (
+        >
+          {initials}
+        </Avatar>
+
         <Box
-          sx={{
-            height: 140,
-            borderRadius: '18px 18px 0 0',
-            backgroundColor: 'divider',
-          }}
-        />
-      )}
-      <CardContent sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
-          {isFollowable ? 'Followable collective' : 'Private collective'}
-        </Typography>
-        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" sx={{ mb: 1 }}>
-          <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+          component={Link}
+          href={organizationHref}
+          sx={{ color: 'inherit', flex: 1, minWidth: 0, textDecoration: 'none' }}
+        >
+          <Typography fontWeight={800} noWrap variant="subtitle1">
             {name ?? 'Untitled organization'}
           </Typography>
+          <Typography
+            color="text.secondary"
+            sx={{ display: '-webkit-box', overflow: 'hidden', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2 }}
+            variant="body2"
+          >
+            {description || 'Community-led organizer on Gatherle.'}
+          </Typography>
+          <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: 'wrap', mt: 1 }}>
+            <Typography color="text.primary" fontWeight={800} variant="caption">
+              {(followersCount ?? 0).toLocaleString()} {(followersCount ?? 0) === 1 ? 'follower' : 'followers'}
+            </Typography>
+            <Typography color="text.secondary" variant="caption">
+              {isFollowable ? 'Followable' : 'Private'}
+            </Typography>
+            {tags?.slice(0, 2).map((tag) => (
+              <Typography key={tag} color="text.secondary" variant="caption">
+                #{tag}
+              </Typography>
+            ))}
+          </Stack>
+        </Box>
+
+        <Stack spacing={1} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
           {userRole && (
             <Chip
               label={userRole}
               size="small"
               color={roleColor}
-              sx={{ fontWeight: 600, fontSize: '0.75rem', height: 22 }}
+              sx={{ borderRadius: 999, fontWeight: 800, fontSize: '0.75rem', height: 26 }}
             />
           )}
-        </Stack>
-        {description && (
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-            {description}
-          </Typography>
-        )}
-        <Stack direction="row" spacing={1} flexWrap="wrap" mt={2} gap={1}>
-          {tags?.slice(0, 4).map((tag) => (
-            <Chip
-              key={tag}
-              label={`#${tag}`}
-              size="small"
-              sx={{
-                fontWeight: 500,
-                fontSize: '0.75rem',
-                textTransform: 'none',
-              }}
-            />
-          ))}
-        </Stack>
-      </CardContent>
-      <CardActions sx={{ justifyContent: 'space-between', px: 3, pb: 3, gap: 1, flexWrap: 'wrap' }}>
-        <Typography variant="body2" color="text.secondary" fontWeight={600}>
-          {followersCount ?? 0} followers
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            variant="contained"
-            component={Link}
-            href={slug ? ROUTES.ORGANIZATIONS.ORG(slug) : ROUTES.ORGANIZATIONS.ROOT}
-            sx={{ fontWeight: 600, textTransform: 'none' }}
-          >
-            View
-          </Button>
           {canManage && (
             <Button
               size="small"
@@ -112,7 +116,7 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
             </Button>
           )}
         </Stack>
-      </CardActions>
+      </Stack>
     </Box>
   );
 };

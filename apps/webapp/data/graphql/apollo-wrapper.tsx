@@ -25,6 +25,9 @@ const makeClient = () => {
         },
       },
     }),
+    devtools: {
+      enabled: process.env.NODE_ENV !== 'production',
+    },
     link: httpLink,
   });
 };

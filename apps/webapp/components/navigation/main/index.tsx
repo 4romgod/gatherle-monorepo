@@ -2,12 +2,21 @@
 
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
-import { MailOutline, NotificationsOutlined, ControlPointOutlined, DarkMode, LightMode } from '@mui/icons-material';
+import {
+  Add,
+  ArrowBack,
+  MailOutline,
+  NotificationsOutlined,
+  ControlPointOutlined,
+  DarkMode,
+  LightMode,
+} from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
@@ -26,12 +35,81 @@ type MainNavigationProps = {
   isAuthN: boolean;
 };
 
+type SubPageAction = {
+  href: string;
+  label: string;
+};
+
+// Keep this aligned with the mobile bottom-nav destinations only.
+const mainShellRoutes = new Set([
+  ROUTES.ROOT,
+  ROUTES.HOME,
+  ROUTES.EVENTS.ROOT,
+  ROUTES.MOMENTS.ROOT,
+  ROUTES.ACCOUNT.ROOT,
+  ROUTES.ACCOUNT.MESSAGES,
+  ROUTES.ACCOUNT.NOTIFICATIONS,
+]);
+
+function normalizePathname(pathname: string | null): string {
+  if (!pathname) return ROUTES.ROOT;
+  if (pathname.length > 1 && pathname.endsWith('/')) return pathname.slice(0, -1);
+  return pathname;
+}
+
+function isOwnProfileRoute(pathname: string, username?: string | null) {
+  return Boolean(username) && pathname === ROUTES.USERS.USER(username!);
+}
+
+function isMainShellRoute(pathname: string, username?: string | null) {
+  if (mainShellRoutes.has(pathname)) {
+    return true;
+  }
+
+  return isOwnProfileRoute(pathname, username);
+}
+
+function getBackFallback(pathname: string) {
+  if (pathname.startsWith('/account/messages/')) return ROUTES.ACCOUNT.MESSAGES;
+  if (pathname === ROUTES.VENUES.ROOT) return ROUTES.ROOT;
+  if (pathname === ROUTES.VENUES.ADD || pathname.startsWith('/venues/')) return ROUTES.VENUES.ROOT;
+  if (pathname === ROUTES.ORGANIZATIONS.ROOT) return ROUTES.ROOT;
+  if (pathname === ROUTES.ACCOUNT.ORGANIZATIONS.CREATE || pathname.startsWith('/organizations/')) {
+    return ROUTES.ORGANIZATIONS.ROOT;
+  }
+  if (pathname.startsWith('/account/organizations/')) return ROUTES.ACCOUNT.ORGANIZATIONS.ROOT;
+  if (pathname === ROUTES.ACCOUNT.EVENTS.CREATE || pathname.startsWith('/events/')) return ROUTES.EVENTS.ROOT;
+  if (pathname === ROUTES.CATEGORIES.ROOT) return ROUTES.ROOT;
+  if (pathname.startsWith('/categories/')) return ROUTES.CATEGORIES.ROOT;
+  if (pathname === ROUTES.USERS.ROOT) return ROUTES.ROOT;
+  if (pathname.startsWith('/users/')) return ROUTES.USERS.ROOT;
+  if (pathname.startsWith('/auth/')) return ROUTES.ROOT;
+  if (pathname.startsWith('/account/')) return ROUTES.ACCOUNT.ROOT;
+  if (pathname.startsWith('/admin')) return ROUTES.ACCOUNT.ROOT;
+
+  return ROUTES.ROOT;
+}
+
+function getSubPageAction(pathname: string): SubPageAction | null {
+  if (pathname === ROUTES.VENUES.ROOT) {
+    return { href: ROUTES.VENUES.ADD, label: 'Add Venue' };
+  }
+
+  if (pathname === ROUTES.ORGANIZATIONS.ROOT) {
+    return { href: ROUTES.ACCOUNT.ORGANIZATIONS.CREATE, label: 'Create' };
+  }
+
+  return null;
+}
+
 /**
  * Inspired by: https://arshadalisoomro.hashnode.dev/creating-a-navigation-bar-with-mui-appbar-component-in-nextjs
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
   const { themeMode, setThemeMode } = useAppContext();
+  const pathname = normalizePathname(usePathname());
+  const router = useRouter();
 
   // Unread badges are primarily websocket-driven; queries provide initial/fallback state.
   const { unreadCount } = useUnreadNotificationCount();
@@ -43,6 +121,9 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const isProfilesMenuOpen = Boolean(profilesMenuAnchorEl);
+  const isMainRoute = isMainShellRoute(pathname, session?.user?.username);
+  const backFallback = getBackFallback(pathname);
+  const subPageAction = !isMainRoute ? getSubPageAction(pathname) : null;
 
   const handleProfilesMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfilesMenuAnchorEl(event.currentTarget);
@@ -55,6 +136,14 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const profilesMenuId = 'profiles-menu-id';
   const toggleThemeMode = () => {
     setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'));
+  };
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push(backFallback);
   };
 
   const themeToggleButton = (
@@ -99,9 +188,24 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             gap: 1.25,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Logo />
-          </Box>
+          {isMainRoute ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Logo />
+            </Box>
+          ) : (
+            <IconButton
+              aria-label="Go back"
+              onClick={handleBack}
+              sx={{
+                color: 'text.primary',
+                height: 44,
+                width: 44,
+                '&:hover': { bgcolor: 'action.hover' },
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+          )}
 
           <Box
             sx={{
@@ -155,7 +259,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             <Box
               component="div"
               sx={{
-                display: 'flex',
+                display: { xs: 'none', md: 'flex' },
                 alignItems: 'center',
                 gap: 1,
               }}
@@ -263,9 +367,35 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </Box>
           )}
 
-          <Box component="div" sx={{ display: { xs: 'flex', md: 'none' }, ml: 'auto' }}>
-            <TemporaryDrawer isAuthN={isAuthN} />
-          </Box>
+          {subPageAction ? (
+            <IconButton
+              aria-label={subPageAction.label}
+              component={Link}
+              href={subPageAction.href}
+              sx={{
+                border: '2px solid',
+                borderColor: 'primary.main',
+                borderRadius: 999,
+                color: 'primary.main',
+                display: { xs: 'inline-flex', md: 'none' },
+                height: 28,
+                ml: 'auto',
+                width: 28,
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  borderColor: 'primary.light',
+                },
+              }}
+            >
+              <Add fontSize="small" />
+            </IconButton>
+          ) : null}
+
+          {isMainRoute ? (
+            <Box component="div" sx={{ display: { xs: 'flex', md: 'none' }, ml: 'auto' }}>
+              <TemporaryDrawer isAuthN={isAuthN} />
+            </Box>
+          ) : null}
         </Toolbar>
       </AppBar>
 
