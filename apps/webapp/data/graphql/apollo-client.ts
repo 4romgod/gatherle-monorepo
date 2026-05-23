@@ -27,6 +27,9 @@ export const { getClient, query, PreloadQuery } = registerApolloClient(() => {
         },
       },
     }),
+    devtools: {
+      enabled: process.env.NODE_ENV !== 'production',
+    },
     link: new HttpLink({
       uri: GRAPHQL_URL,
       fetchOptions: { next: { revalidate: 0 } },

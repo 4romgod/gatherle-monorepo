@@ -6,29 +6,21 @@ test.describe('Venues Page', () => {
     await holdForDebug(page);
   });
 
-  test('renders /venues hero section', async ({ page }) => {
-    await page.goto('/venues');
-    const heroHeading = page.getByRole('heading', { name: 'Discover event spaces' });
-    const heroSection = heroHeading.locator('xpath=..');
+  test('renders /venues list actions', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/venues', { waitUntil: 'domcontentloaded' });
 
-    await expect(heroHeading).toBeVisible({ timeout: 20_000 });
-    await expect(heroSection.getByRole('link', { name: /^Browse Events$/ })).toBeVisible();
-    await expect(heroSection.getByRole('link', { name: /^Add Venue$/ })).toBeVisible();
-  });
-
-  test('navigates to /events from venues page CTA', async ({ page }) => {
-    await page.goto('/venues');
-    const heroSection = page.getByRole('heading', { name: 'Discover event spaces' }).locator('xpath=..');
-
-    await heroSection.getByRole('link', { name: /^Browse Events$/ }).click();
-    await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
+    await expect(page.getByRole('combobox', { name: 'Try a name, city, or venue type' })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('link', { name: 'Add Venue' })).toBeVisible();
   });
 
   test('redirects unauthenticated users to /auth/login from add venue CTA', async ({ page }) => {
-    await page.goto('/venues');
-    const heroSection = page.getByRole('heading', { name: 'Discover event spaces' }).locator('xpath=..');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/venues', { waitUntil: 'domcontentloaded' });
 
-    await heroSection.getByRole('link', { name: /^Add Venue$/ }).click();
+    await page.getByRole('link', { name: 'Add Venue' }).click();
     await expectLoginPage(page);
   });
 });

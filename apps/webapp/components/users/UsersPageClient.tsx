@@ -53,16 +53,13 @@ export default function UsersPageClient() {
 
   if (status !== 'loading' && !token) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth="md" sx={{ pb: { xs: 3, md: 5 }, pt: { xs: 2, md: 5 } }}>
         <Paper
           elevation={0}
           sx={{
-            p: 8,
+            p: { xs: 4, md: 8 },
             textAlign: 'center',
             bgcolor: 'background.default',
-            border: '1px solid',
-            borderColor: 'divider',
-            mt: 4,
           }}
         >
           <People sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
@@ -90,8 +87,8 @@ export default function UsersPageClient() {
 
   return (
     <Container maxWidth="md">
-      <Box mb={8} mt={4}>
-        <Box mb={5}>
+      <Box mb={8} mt={{ xs: 2, md: 5 }}>
+        <Box mb={3}>
           <SearchBox
             itemList={searchItems}
             placeholder="Try a name or username"

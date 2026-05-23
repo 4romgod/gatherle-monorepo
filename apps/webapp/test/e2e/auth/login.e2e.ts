@@ -7,7 +7,7 @@ test.describe('Login Page', () => {
   });
 
   test('renders /auth/login form fields and actions', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { level: 1, name: 'Welcome back' })).toBeVisible();
     await expect(page.getByLabel('Email Address')).toBeVisible();
@@ -18,7 +18,7 @@ test.describe('Login Page', () => {
   });
 
   test('navigates to /auth/forgot-password from login page', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
     const forgotPasswordLink = page.getByRole('link', { name: 'Forgot password?' });
     await expect(forgotPasswordLink).toBeVisible();
     await Promise.all([
@@ -37,9 +37,10 @@ test.describe('Login Page', () => {
   });
 
   test('navigates to /auth/register from login page', async ({ page }) => {
-    await page.goto('/auth/login');
-    const registerLink = page.getByRole('link', { name: 'Sign Up', exact: true });
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+    const registerLink = page.locator('a[href="/auth/register"]').filter({ hasText: 'Sign Up' }).first();
     await expect(registerLink).toBeVisible();
+    await expect(registerLink).toHaveAttribute('href', '/auth/register');
     await Promise.all([page.waitForURL(/\/auth\/register\/?$/, { timeout: 20_000 }), registerLink.click()]);
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
   });

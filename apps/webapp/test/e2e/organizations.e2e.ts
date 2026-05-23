@@ -6,29 +6,21 @@ test.describe('Organizations Page', () => {
     await holdForDebug(page);
   });
 
-  test('renders /organizations hero section', async ({ page }) => {
-    await page.goto('/organizations');
-    const heroHeading = page.getByRole('heading', { name: 'Community spaces on Gatherle' });
-    const heroSection = heroHeading.locator('xpath=..');
+  test('renders /organizations list actions', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/organizations', { waitUntil: 'domcontentloaded' });
 
-    await expect(heroHeading).toBeVisible({ timeout: 20_000 });
-    await expect(heroSection.getByRole('link', { name: /^Browse Events$/ })).toBeVisible();
-    await expect(heroSection.getByRole('link', { name: /^Create Organization$/ })).toBeVisible();
-  });
-
-  test('navigates to /events from organizations page CTA', async ({ page }) => {
-    await page.goto('/organizations');
-    const heroSection = page.getByRole('heading', { name: 'Community spaces on Gatherle' }).locator('xpath=..');
-
-    await heroSection.getByRole('link', { name: /^Browse Events$/ }).click();
-    await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
+    await expect(page.getByRole('combobox', { name: 'Try a name, description, or tag' })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
   });
 
   test('redirects unauthenticated users to /auth/login from create organization CTA', async ({ page }) => {
-    await page.goto('/organizations');
-    const heroSection = page.getByRole('heading', { name: 'Community spaces on Gatherle' }).locator('xpath=..');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/organizations', { waitUntil: 'domcontentloaded' });
 
-    await heroSection.getByRole('link', { name: /^Create Organization$/ }).click();
+    await page.getByRole('link', { name: 'Create' }).click();
     await expectLoginPage(page);
   });
 });

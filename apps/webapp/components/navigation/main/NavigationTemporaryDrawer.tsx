@@ -35,6 +35,7 @@ import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 import { APP_NAME } from '@/lib/constants';
 import { useLogout } from '@/hooks/useLogout';
+import { socialLinks } from '@/components/footer/NavigationItems';
 
 const drawerItemSx = {
   borderRadius: 2.25,
@@ -194,6 +195,51 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           </ListItemButton>
         </ListItem>
       </List>
+
+      <Divider sx={{ my: 1.5 }} />
+
+      <Box sx={{ px: 1, py: 1 }}>
+        <Typography
+          variant="overline"
+          sx={{
+            color: 'text.secondary',
+            display: 'block',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            mb: 1.25,
+          }}
+        >
+          Follow Gatherle
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.25 }}>
+          {socialLinks.map((social) => (
+            <IconButton
+              aria-label={social.name}
+              component={Link}
+              href={social.href}
+              key={social.name}
+              rel="noopener noreferrer"
+              size="small"
+              target="_blank"
+              sx={{
+                bgcolor: 'action.hover',
+                border: '1px solid',
+                borderColor: 'divider',
+                color: 'text.primary',
+                height: 40,
+                width: 40,
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                  color: 'primary.main',
+                },
+              }}
+            >
+              {social.icon}
+            </IconButton>
+          ))}
+        </Box>
+      </Box>
     </Box>
   );
 
@@ -206,8 +252,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         edge="end"
         size="large"
         sx={{
-          mr: 2,
-          ml: 3,
+          ml: 0.5,
           ...(open && { display: 'none' }),
         }}
       >

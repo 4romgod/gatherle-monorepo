@@ -8,6 +8,7 @@ import { GetVenuesDocument } from '@/data/graphql/query';
 import VenueCard from '@/components/venue/VenueCard';
 import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton';
 import SearchBox from '@/components/search/SearchBox';
+import { ROUTES } from '@/lib/constants';
 
 export default function VenuesClient() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,8 +45,8 @@ export default function VenuesClient() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 6 }}>
-      <Box mb={5}>
+    <Container maxWidth="md" sx={{ pb: { xs: 3, md: 5 }, pt: { xs: 2, md: 5 } }}>
+      <Box mb={3}>
         <SearchBox
           itemList={searchItems}
           placeholder="Try a name, city, or venue type"
@@ -82,6 +83,7 @@ export default function VenuesClient() {
           </Typography>
           {!searchQuery && (
             <Button
+              href={ROUTES.VENUES.ADD}
               variant="contained"
               startIcon={<Add />}
               sx={{

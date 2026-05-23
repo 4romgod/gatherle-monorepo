@@ -7,7 +7,7 @@ test.describe('Home Route', () => {
   });
 
   test('redirects unauthenticated users from /home to /', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/home', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/$/);
     await expect(
       page.getByRole('heading', { name: 'Where unforgettable experiences find their people.' }),

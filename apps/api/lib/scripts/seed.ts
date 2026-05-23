@@ -281,6 +281,9 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
       const found = existingUsers.find((u) => u.email?.toLowerCase() === user.email?.toLowerCase());
       if (found) {
         logger.info(`   User with email "${user.email}" already exists, skipping...`);
+        if (!found.emailVerified) {
+          await markSeedUserVerified(found.userId, user.email);
+        }
         continue;
       }
 
@@ -288,6 +291,7 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
         ...user,
         interests: getRandomUniqueItems(eventCategoryIds, 5),
       });
+      await markSeedUserVerified(userResponse.userId, user.email);
       logger.info(`   Created User item with id: ${userResponse.userId}`);
     } catch (error) {
       logger.warn(`   Failed to create User "${user.email}":`, { error });

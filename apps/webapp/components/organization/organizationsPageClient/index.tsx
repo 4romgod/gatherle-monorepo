@@ -8,7 +8,7 @@ import { GetOrganizationsDocument } from '@/data/graphql/query';
 import OrganizationCard from '@/components/organization/organizationBox';
 import OrganizationBoxSkeleton from '@/components/organization/organizationBox/OrganizationBoxSkeleton';
 import SearchBox from '@/components/search/SearchBox';
-import { APP_NAME } from '@/lib/constants';
+import { APP_NAME, ROUTES } from '@/lib/constants';
 
 const SKELETON_COUNT = 8;
 
@@ -37,8 +37,8 @@ export default function OrganizationsClient() {
   }, [organizations, searchQuery]);
 
   return (
-    <Container maxWidth="md" sx={{ py: 6 }}>
-      <Box mb={5}>
+    <Container maxWidth="md" sx={{ pb: { xs: 3, md: 5 }, pt: { xs: 2, md: 5 } }}>
+      <Box mb={3}>
         <SearchBox
           itemList={searchItems}
           placeholder="Try a name, description, or tag"
@@ -79,6 +79,7 @@ export default function OrganizationsClient() {
           </Typography>
           {!searchQuery && (
             <Button
+              href={ROUTES.ACCOUNT.ORGANIZATIONS.CREATE}
               variant="contained"
               startIcon={<Add />}
               sx={{

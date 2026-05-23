@@ -83,6 +83,7 @@ const Footer = () => {
               {socialLinks.map((social, index) => (
                 <Link
                   key={index}
+                  aria-label={social.name}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"

@@ -63,20 +63,26 @@ export default function CategoryExplorer({
             '&::-webkit-scrollbar': { display: 'none' }, // Chrome/Safari
           }}
         >
-          <Stack direction="row" spacing={2} sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={{ xs: 1.25, sm: 1.5, md: 2 }} sx={{ minWidth: 0 }}>
             {isLoading
               ? Array.from({ length: skeletonCount }).map((_, index) => (
-                  <Box key={`category-skeleton-${index}`} sx={{ minWidth: 120, flex: '0 0 auto' }}>
+                  <Box
+                    key={`category-skeleton-${index}`}
+                    sx={{ minWidth: { xs: 92, sm: 104, md: 120 }, flex: '0 0 auto' }}
+                  >
                     <Skeleton
                       variant="rounded"
                       width="100%"
-                      height={110}
-                      sx={{ borderRadius: 3, bgcolor: 'action.selected' }}
+                      sx={{
+                        borderRadius: { xs: 2.25, md: 3 },
+                        bgcolor: 'action.selected',
+                        height: { xs: 86, sm: 96, md: 110 },
+                      }}
                     />
                   </Box>
                 ))
               : categories.map((category, index) => (
-                  <Box key={index} sx={{ minWidth: 120, flex: '0 0 auto' }}>
+                  <Box key={index} sx={{ minWidth: { xs: 92, sm: 104, md: 120 }, flex: '0 0 auto' }}>
                     <EventCategoryCard eventCategory={category} />
                   </Box>
                 ))}

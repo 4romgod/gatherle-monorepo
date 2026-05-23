@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { alpha, Box, Button, Card, CardActions, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Card, Chip, Stack, Typography } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PeopleIcon from '@mui/icons-material/People';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ROUTES } from '@/lib/constants';
 import Surface from '@/components/core/Surface';
 
@@ -23,17 +24,7 @@ export type VenueCardProps = {
   featuredImageUrl?: string | null;
 };
 
-const VenueCard = ({
-  venueId,
-  name,
-  type,
-  capacity,
-  address,
-  amenities,
-  slug,
-  images,
-  featuredImageUrl,
-}: VenueCardProps) => {
+const VenueCard = ({ venueId, name, type, capacity, address, slug, images, featuredImageUrl }: VenueCardProps) => {
   const addressLabel = [address?.city, address?.region, address?.country].filter(Boolean).join(', ');
   const heroImageUrl = featuredImageUrl ?? images?.[0];
   const detailsHref = slug
@@ -44,166 +35,89 @@ const VenueCard = ({
 
   return (
     <Surface
-      component={Card}
-      sx={(theme) => ({
-        borderRadius: 3,
-        minHeight: 280,
+      disableShadow
+      sx={{
+        borderRadius: 2,
         display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.2s ease',
+        height: '100%',
         overflow: 'hidden',
-      })}
+        transition: 'transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+        },
+      }}
     >
-      {heroImageUrl && (
-        <Box
-          sx={{
-            width: '100%',
-            height: 160,
-            position: 'relative',
-          }}
-        >
+      <Box
+        component={Link}
+        href={detailsHref}
+        sx={{
+          alignItems: 'center',
+          color: 'inherit',
+          display: 'flex',
+          gap: 1.5,
+          minWidth: 0,
+          p: 1.75,
+          textDecoration: 'none',
+          width: '100%',
+        }}
+      >
+        {heroImageUrl ? (
           <Box
             component="img"
             src={heroImageUrl}
             alt={name ?? 'Venue image'}
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
-          />
-          <Box
-            sx={(theme) => ({
-              position: 'absolute',
-              inset: 0,
-              background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.7)} 0%, transparent 60%)`,
-            })}
-          />
-        </Box>
-      )}
-
-      <CardContent sx={{ flexGrow: 1, p: 3, pt: heroImageUrl ? 2 : 3 }}>
-        <Box sx={{ mb: 2 }}>
-          <Chip
-            label={type ?? 'Venue'}
-            size="small"
             sx={{
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              fontSize: '0.7rem',
-              letterSpacing: '0.5px',
-              bgcolor: 'primary.50',
-              color: 'primary.main',
-              border: '1px solid',
-              borderColor: 'primary.200',
+              borderRadius: 1.25,
+              flexShrink: 0,
+              height: 72,
+              objectFit: 'cover',
+              width: 72,
             }}
           />
-        </Box>
-
-        <Typography
-          variant="h5"
-          fontWeight={700}
-          sx={{
-            mb: 2,
-            fontSize: '1.5rem',
-            lineHeight: 1.2,
-            color: 'text.primary',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {name ?? 'Unnamed space'}
-        </Typography>
-
-        <Stack spacing={1.5} sx={{ mb: 2 }}>
-          {addressLabel && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <LocationOnIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                {addressLabel}
-              </Typography>
-            </Box>
-          )}
-          {capacity && (
-            <Box display="flex" alignItems="center" gap={1}>
-              <PeopleIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                Capacity: <strong>{capacity.toLocaleString()}</strong>
-              </Typography>
-            </Box>
-          )}
-        </Stack>
-
-        {amenities && amenities.length > 0 && (
-          <>
-            <Divider sx={{ my: 2 }} />
-            <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-              {amenities.slice(0, 3).map((amenity) => (
-                <Chip
-                  key={amenity}
-                  label={amenity}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 2,
-                    fontWeight: 500,
-                    fontSize: '0.75rem',
-                  }}
-                />
-              ))}
-              {amenities.length > 3 && (
-                <Chip
-                  label={`+${amenities.length - 3} more`}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 2,
-                    fontWeight: 500,
-                    fontSize: '0.75rem',
-                    color: 'primary.main',
-                    borderColor: 'primary.main',
-                  }}
-                />
-              )}
-            </Stack>
-          </>
-        )}
-      </CardContent>
-
-      <Divider />
-
-      <CardActions sx={{ justifyContent: 'space-between', px: 3, py: 2.5 }}>
-        {venueId ? (
-          <Button
-            variant="contained"
-            size="medium"
-            component={Link}
-            href={detailsHref}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-            }}
-          >
-            View Details
-          </Button>
         ) : (
-          <Button
-            variant="outlined"
-            size="medium"
-            component={Link}
-            href={ROUTES.VENUES.ROOT}
+          <Avatar
+            variant="rounded"
             sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
+              bgcolor: 'action.hover',
+              borderRadius: 2.25,
+              color: 'primary.main',
+              flexShrink: 0,
+              height: 72,
+              width: 72,
             }}
           >
-            Browse Venues
-          </Button>
+            <LocationOnIcon fontSize="small" />
+          </Avatar>
         )}
-      </CardActions>
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography fontWeight={800} noWrap variant="subtitle1">
+            {name ?? 'Unnamed space'}
+          </Typography>
+          <Typography color="text.secondary" fontWeight={700} noWrap variant="caption">
+            {type ?? 'Venue'}
+          </Typography>
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', mt: 0.5, minWidth: 0 }}>
+            <LocationOnIcon sx={{ color: 'text.secondary', flexShrink: 0, fontSize: 16 }} />
+            <Typography color="text.secondary" noWrap variant="body2">
+              {addressLabel || 'Address details coming soon'}
+            </Typography>
+          </Stack>
+        </Box>
+
+        <Stack spacing={1} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
+          {capacity && (
+            <Chip
+              icon={<PeopleIcon />}
+              label={`${capacity.toLocaleString()} cap`}
+              size="small"
+              sx={{ bgcolor: 'action.hover', color: 'primary.main', fontWeight: 800 }}
+            />
+          )}
+          <ChevronRightIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+        </Stack>
+      </Box>
     </Surface>
   );
 };
