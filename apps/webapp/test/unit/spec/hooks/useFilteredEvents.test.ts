@@ -97,11 +97,11 @@ describe('useFilteredEvents', () => {
           pagination: { limit: 10, skip: 0 },
         },
       },
-      fetchPolicy: 'network-only',
       context: {
         headers: expect.any(Object),
       },
     });
+    expect(mockUseLazyQuery).toHaveBeenCalledWith(expect.anything(), { fetchPolicy: 'network-only' });
     expect(result.current.events).toEqual(nextEvents);
     expect(result.current.error).toBeNull();
   });

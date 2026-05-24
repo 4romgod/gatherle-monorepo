@@ -4,6 +4,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import type { SxProps, Theme } from '@mui/material/styles';
+import type { SystemStyleObject } from '@mui/system';
+
+type SxEntry = boolean | SystemStyleObject<Theme> | ((theme: Theme) => SystemStyleObject<Theme>);
+type SxArray = ReadonlyArray<SxEntry>;
 
 type RemoteImageProps = {
   alt: string;
@@ -28,6 +32,8 @@ export default function RemoteImage({
 }: RemoteImageProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const containerSx = normalizeSx(sx);
+  const imgSx = normalizeSx(imageSx);
 
   useEffect(() => {
     setFailed(false);
@@ -36,14 +42,14 @@ export default function RemoteImage({
 
   if (!src || failed) {
     return (
-      <Box className={className} sx={[baseSx, ...(Array.isArray(sx) ? sx : [sx])]}>
+      <Box className={className} sx={[baseSx, ...containerSx]}>
         {fallback}
       </Box>
     );
   }
 
   return (
-    <Box className={className} sx={[baseSx, ...(Array.isArray(sx) ? sx : [sx])]}>
+    <Box className={className} sx={[baseSx, ...containerSx]}>
       {loaded ? null : fallback}
       <Box
         alt={alt}
@@ -62,7 +68,7 @@ export default function RemoteImage({
             transition: 'opacity 0.18s ease',
             width: '100%',
           },
-          ...(Array.isArray(imageSx) ? imageSx : [imageSx]),
+          ...imgSx,
         ]}
       />
       {showLoader && !loaded ? (
@@ -82,7 +88,19 @@ export default function RemoteImage({
   );
 }
 
-const baseSx: SxProps<Theme> = {
+const baseSx: SxEntry = {
   overflow: 'hidden',
   position: 'relative',
 };
+
+function normalizeSx(sx: SxProps<Theme> | undefined): SxArray {
+  if (!sx) {
+    return [];
+  }
+
+  return isSxArray(sx) ? sx : [sx];
+}
+
+function isSxArray(sx: SxProps<Theme>): sx is SxArray {
+  return Array.isArray(sx);
+}

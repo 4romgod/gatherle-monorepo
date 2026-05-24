@@ -120,6 +120,9 @@ export const useFilteredEvents = (
   const locationFilter = useMemo(() => buildLocationFilter(filters.location), [filters.location]);
   const [loadEvents, { loading }] = useLazyQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
     GetEventOccurrencesDocument,
+    {
+      fetchPolicy: 'network-only',
+    },
   );
 
   const hasActiveBackendFilters =
@@ -161,7 +164,6 @@ export const useFilteredEvents = (
 
     loadEvents({
       variables: { options: buildQueryOptions(0) },
-      fetchPolicy: 'network-only',
       context: { headers: getAuthHeader(token) },
     })
       .then((response) => {
@@ -204,7 +206,6 @@ export const useFilteredEvents = (
     try {
       const response = await loadEvents({
         variables: { options: buildQueryOptions(skip) },
-        fetchPolicy: 'no-cache',
         context: { headers: getAuthHeader(token) },
       });
 

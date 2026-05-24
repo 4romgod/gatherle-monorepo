@@ -128,6 +128,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
   reads come back from the API as stable CloudFront URLs in deployed environments.
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
+
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in
   Vercel + Route53 DNS records in the DNS account. Follow `docs/aws-account-setup.md` section
   `D. Connect webapp domain in Vercel`.
@@ -143,6 +144,23 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
     `1500`).
 - Prerequisite: Playwright browsers installed (for example `npx playwright install chromium`; on Linux CI use
   `npx playwright install --with-deps chromium`).
+
+## Mobile (`apps/mobile`)
+
+### Local development
+
+- Source: `apps/mobile/.env`.
+- Keys:
+  - `EXPO_PUBLIC_GRAPHQL_URL` (e.g., `http://10.0.2.2:9000/v1/graphql` for Android emulator or
+    `http://localhost:9000/v1/graphql` when using `adb reverse`).
+  - `EXPO_PUBLIC_WEBSOCKET_URL` (local or deployed websocket endpoint for realtime notifications and chat).
+  - `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
+    follow-request review flows. Defaults to disabled, so frontend users are treated as public).
+
+### Production & Staging
+
+- Inject `EXPO_PUBLIC_GRAPHQL_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` from the deployed API/WebSocket outputs.
+- Set `EXPO_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 
 ## CI/CD (`.github/workflows/deploy-trigger.yaml` + reusable deploy workflows)
 

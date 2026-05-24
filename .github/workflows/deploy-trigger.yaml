@@ -9,7 +9,53 @@ permissions:
   contents: read
 
 jobs:
+  detect_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      dns: ${{ steps.filter.outputs.dns }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      run_deploy: ${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.mobile == 'true' || steps.filter.outputs.webapp == 'true' }}
+      webapp: ${{ steps.filter.outputs.webapp }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Detect Changed Surfaces
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/commons/**'
+              - 'infrastructure/cdk/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/deploy.yaml'
+              - '.github/workflows/deploy-trigger.yaml'
+            dns:
+              - 'infrastructure/cdk/**'
+              - '.github/workflows/deploy-dns.yaml'
+              - '.github/workflows/deploy-trigger.yaml'
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/commons/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/deploy.yaml'
+              - '.github/workflows/deploy-trigger.yaml'
+            webapp:
+              - 'apps/webapp/**'
+              - 'packages/commons/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/deploy.yaml'
+              - '.github/workflows/deploy-trigger.yaml'
+
   deploy_dns:
+    needs: detect_changes
+    if: ${{ needs.detect_changes.outputs.dns == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -20,13 +66,20 @@ jobs:
     secrets: inherit
 
   deploy_beta:
-    needs: deploy_dns
+    needs: [detect_changes, deploy_dns]
+    if: ${{ always() && needs.detect_changes.outputs.run_deploy == 'true' && (needs.deploy_dns.result == 'success' || needs.deploy_dns.result == 'skipped') }}
+    permissions:
+      contents: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         region: [af-south-1]
     uses: ./.github/workflows/deploy.yaml
     with:
+      build_mobile: ${{ needs.detect_changes.outputs.mobile == 'true' }}
+      deploy_api: ${{ needs.detect_changes.outputs.api == 'true' }}
+      deploy_webapp: ${{ needs.detect_changes.outputs.webapp == 'true' }}
       stage: Beta
       region: ${{ matrix.region }}
       web_domain_alias: beta.gatherle.com
