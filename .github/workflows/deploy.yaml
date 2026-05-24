@@ -3,6 +3,21 @@ name: Deploy
 on:
   workflow_call:
     inputs:
+      build_mobile:
+        description: 'Whether to build and publish the Android APK'
+        required: false
+        default: true
+        type: boolean
+      deploy_api:
+        description: 'Whether to deploy API infrastructure/runtime and run API e2e tests'
+        required: false
+        default: true
+        type: boolean
+      deploy_webapp:
+        description: 'Whether to deploy the webapp and run webapp e2e tests'
+        required: false
+        default: true
+        type: boolean
       stage:
         description: 'Application stage (example: Beta, Prod)'
         required: true
@@ -22,7 +37,81 @@ permissions:
   contents: read
 
 jobs:
+  resolve-deploy-context:
+    if: ${{ !inputs.deploy_api && (inputs.deploy_webapp || inputs.build_mobile) }}
+    runs-on: ubuntu-latest
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+    outputs:
+      graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
+      websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
+      s3_media_url: ${{ steps.get_s3_bucket_url.outputs.s3_media_url }}
+      media_cdn_url: ${{ steps.get_s3_bucket_url.outputs.media_cdn_url }}
+      stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
+    steps:
+      - name: Validate Deployment Configuration
+        env:
+          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
+        run: |
+          test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
+          test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
+          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
+
+      - name: Derive Deployment Suffix
+        id: derive_suffix
+        run: |
+          STAGE_SEGMENT=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
+          STACK_SUFFIX="${STAGE_SEGMENT}-${AWS_REGION}"
+          echo "STACK_SUFFIX=$STACK_SUFFIX" >> "$GITHUB_ENV"
+          echo "stack_suffix=$STACK_SUFFIX" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get API Gateway endpoint
+        id: get_graphql_endpoint
+        run: |
+          ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-graphql-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='apiPath'].OutputValue" --output text)
+          if [ -z "$ENDPOINT" ] || [ "$ENDPOINT" = "None" ]; then
+            echo "Failed to retrieve GraphQL endpoint from gatherle-graphql-${STACK_SUFFIX} output apiPath."
+            exit 1
+          fi
+          echo "graphql_url=$ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Get WebSocket API endpoint
+        id: get_websocket_endpoint
+        run: |
+          WS_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "gatherle-websocket-api-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='websocketApiUrl'].OutputValue" --output text)
+          if [ -z "$WS_ENDPOINT" ] || [ "$WS_ENDPOINT" = "None" ]; then
+            echo "Failed to retrieve WebSocket endpoint from gatherle-websocket-api-${STACK_SUFFIX} output websocketApiUrl."
+            exit 1
+          fi
+          echo "websocket_url=$WS_ENDPOINT" >> "$GITHUB_OUTPUT"
+
+      - name: Get S3 Media Bucket URL
+        id: get_s3_bucket_url
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaBucketName'].OutputValue" --output text)
+          if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
+            echo "Failed to retrieve MediaBucketName from gatherle-s3-bucket-${STACK_SUFFIX}."
+            exit 1
+          fi
+          S3_URL="https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com"
+          echo "s3_media_url=$S3_URL" >> "$GITHUB_OUTPUT"
+          CDN_DOMAIN=$(aws cloudformation describe-stacks --stack-name "gatherle-s3-bucket-${STACK_SUFFIX}" --query "Stacks[0].Outputs[?OutputKey=='MediaCdnDomain'].OutputValue" --output text)
+          if [ -z "$CDN_DOMAIN" ] || [ "$CDN_DOMAIN" = "None" ]; then
+            echo "Failed to retrieve MediaCdnDomain from gatherle-s3-bucket-${STACK_SUFFIX}."
+            exit 1
+          fi
+          echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
+
   deploy-api:
+    if: ${{ inputs.deploy_api }}
     runs-on: ubuntu-latest
     # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -115,9 +204,17 @@ jobs:
 
       - name: Deploy AWS CDK
         run: |
-          CDK_DEPLOY_STACKS="SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack MediaStack"
+          CDK_DEPLOY_STACKS=(
+            SesStack
+            StageInfraStack
+            S3BucketStack
+            GraphQLStack
+            WebSocketApiStack
+            MonitoringDashboardStack
+            MediaStack
+          )
           # Intentionally excludes SecretsManagementStack to avoid overwriting existing secrets.
-          npm run cdk -w @gatherle/cdk -- deploy $CDK_DEPLOY_STACKS --require-approval never --exclusively
+          npm run cdk -w @gatherle/cdk -- deploy "${CDK_DEPLOY_STACKS[@]}" --require-approval never --exclusively
 
       - name: Get API Gateway endpoint
         id: get_graphql_endpoint
@@ -211,6 +308,7 @@ jobs:
           echo "media_cdn_url=https://${CDN_DOMAIN}" >> "$GITHUB_OUTPUT"
 
   e2e-api-events:
+    if: ${{ inputs.deploy_api }}
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -248,6 +346,7 @@ jobs:
         run: npm run test:e2e:api -- --shard=1/3 --maxWorkers=1
 
   e2e-api-discovery:
+    if: ${{ inputs.deploy_api }}
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -285,6 +384,7 @@ jobs:
         run: npm run test:e2e:api -- --shard=2/3 --maxWorkers=1
 
   e2e-api-user-org:
+    if: ${{ inputs.deploy_api }}
     needs: [deploy-api]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -322,7 +422,8 @@ jobs:
         run: npm run test:e2e:api -- --shard=3/3 --maxWorkers=1
 
   deploy-webapp:
-    needs: [deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
+    if: ${{ always() && inputs.deploy_webapp && (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') && (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') && (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') && (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped') }}
+    needs: [resolve-deploy-context, deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
@@ -359,10 +460,10 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
-          NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url }}
-          NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url }}
-          NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url }}
+          NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
+          NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
+          NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url || needs.resolve-deploy-context.outputs.s3_media_url }}
+          NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url || needs.resolve-deploy-context.outputs.media_cdn_url }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
@@ -417,6 +518,7 @@ jobs:
           curl -fsSIL "$DEPLOYMENT_URL" | head -n 1
 
   e2e-webapp:
+    if: ${{ inputs.deploy_webapp }}
     needs: [deploy-webapp]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
@@ -457,3 +559,67 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: ${{ needs.deploy-webapp.outputs.deployment_url }}
         run: npm run test:e2e:web
+
+  build-android-apk:
+    if: ${{ always() && inputs.build_mobile && (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') && (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') && (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') && (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped') }}
+    needs: [resolve-deploy-context, deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
+    env:
+      STAGE: ${{ inputs.stage }}
+      AWS_REGION: ${{ inputs.region }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Mobile GraphQL Artifacts
+        working-directory: ./apps/mobile
+        env:
+          EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
+        run: npm run codegen
+
+      - name: Expo Prebuild (Android)
+        working-directory: ./apps/mobile
+        run: npx expo prebuild --no-install --platform android
+
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/package.json', 'package-lock.json', 'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Build Android Release APK
+        working-directory: ./apps/mobile
+        env:
+          EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
+          EXPO_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
+        run: ./android/gradlew -p android app:assembleRelease
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-${{ inputs.stage }}-${{ github.sha }}
+          name: Android ${{ inputs.stage }} — ${{ github.sha }}
+          files: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: false
