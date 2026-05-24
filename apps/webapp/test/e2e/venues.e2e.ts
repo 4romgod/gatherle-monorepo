@@ -8,7 +8,7 @@ test.describe('Venues Page', () => {
 
   test('renders /venues list actions', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/venues', { waitUntil: 'domcontentloaded' });
+    await page.goto('/venues', { waitUntil: 'commit' });
 
     await expect(page.getByRole('combobox', { name: 'Try a name, city, or venue type' })).toBeVisible({
       timeout: 20_000,
@@ -18,7 +18,7 @@ test.describe('Venues Page', () => {
 
   test('redirects unauthenticated users to /auth/login from add venue CTA', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/venues', { waitUntil: 'domcontentloaded' });
+    await page.goto('/venues', { waitUntil: 'commit' });
 
     await page.getByRole('link', { name: 'Add Venue' }).click();
     await expectLoginPage(page);

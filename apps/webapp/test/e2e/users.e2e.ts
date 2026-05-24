@@ -7,7 +7,7 @@ test.describe('Users Page', () => {
   });
 
   test('renders /users route', async ({ page }) => {
-    await page.goto('/users', { waitUntil: 'domcontentloaded' });
+    await page.goto('/users', { waitUntil: 'commit' });
     await expect(page).toHaveURL(/\/users\/?$/, { timeout: 20_000 });
 
     const communityGate = page.getByRole('heading', { name: 'Sign in to browse community members' });
@@ -16,7 +16,7 @@ test.describe('Users Page', () => {
   });
 
   test('shows sign-in gate for unauthenticated community browsing', async ({ page }) => {
-    await page.goto('/users', { waitUntil: 'domcontentloaded' });
+    await page.goto('/users', { waitUntil: 'commit' });
 
     const signInHeading = page.getByRole('heading', { name: 'Sign in to browse community members' });
     const signInButton = page.getByRole('link', { name: /^Sign in$/ });

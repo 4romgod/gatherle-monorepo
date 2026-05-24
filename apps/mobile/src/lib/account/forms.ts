@@ -2,6 +2,7 @@ import type { MobileAccountProfile } from '@data/graphql/query/User/types';
 import type { UpdateUserMutation } from '@data/graphql/types/graphql';
 import { FollowPolicy, Gender, SocialVisibility, type UpdateUserInput } from '@data/graphql/types/graphql';
 import type { ThemePreference } from '@/app/theme/palette';
+import { featureFlags } from '@/lib/featureFlags';
 
 export type EditProfileFormState = {
   bio: string;
@@ -47,15 +48,23 @@ export function createSettingsForm(
   profile: MutableAccountUser | null,
   themePreference: ThemePreference,
 ): SettingsFormState {
+  const privateUsersEnabled = featureFlags.enablePrivateUsers;
+
   return {
     birthdate: profile?.birthdate ?? '',
     communicationEmailEnabled: profile?.preferences?.communicationPrefs?.emailEnabled ?? true,
     communicationPushEnabled: profile?.preferences?.communicationPrefs?.pushEnabled ?? true,
-    defaultVisibility: profile?.defaultVisibility ?? SocialVisibility.Public,
+    defaultVisibility: privateUsersEnabled
+      ? (profile?.defaultVisibility ?? SocialVisibility.Public)
+      : SocialVisibility.Public,
     email: profile?.email ?? '',
-    followPolicy: profile?.followPolicy ?? FollowPolicy.Public,
-    followersListVisibility: profile?.followersListVisibility ?? SocialVisibility.Public,
-    followingListVisibility: profile?.followingListVisibility ?? SocialVisibility.Public,
+    followPolicy: privateUsersEnabled ? (profile?.followPolicy ?? FollowPolicy.Public) : FollowPolicy.Public,
+    followersListVisibility: privateUsersEnabled
+      ? (profile?.followersListVisibility ?? SocialVisibility.Public)
+      : SocialVisibility.Public,
+    followingListVisibility: privateUsersEnabled
+      ? (profile?.followingListVisibility ?? SocialVisibility.Public)
+      : SocialVisibility.Public,
     gender: profile?.gender ?? null,
     phoneNumber: profile?.phone_number ?? '',
     shareCheckinsByDefault: profile?.shareCheckinsByDefault ?? true,
@@ -87,13 +96,15 @@ export function buildEditProfileInput(profile: MobileAccountProfile, form: EditP
 }
 
 export function buildSettingsInput(profile: MobileAccountProfile, form: SettingsFormState): UpdateUserInput {
+  const privateUsersEnabled = featureFlags.enablePrivateUsers;
+
   return {
     birthdate: form.birthdate.trim() || undefined,
-    defaultVisibility: form.defaultVisibility,
+    defaultVisibility: privateUsersEnabled ? form.defaultVisibility : SocialVisibility.Public,
     email: form.email.trim(),
-    followersListVisibility: form.followersListVisibility,
-    followingListVisibility: form.followingListVisibility,
-    followPolicy: form.followPolicy,
+    followersListVisibility: privateUsersEnabled ? form.followersListVisibility : SocialVisibility.Public,
+    followingListVisibility: privateUsersEnabled ? form.followingListVisibility : SocialVisibility.Public,
+    followPolicy: privateUsersEnabled ? form.followPolicy : FollowPolicy.Public,
     gender: form.gender ?? undefined,
     phone_number: form.phoneNumber.trim() || undefined,
     preferences: {

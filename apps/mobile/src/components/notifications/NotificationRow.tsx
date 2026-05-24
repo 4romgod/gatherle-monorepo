@@ -1,9 +1,10 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 import { InlineButton } from '@/components/core/InlineButton';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type NotificationRowProps = {
   actionButtons?: Array<{
@@ -31,6 +32,15 @@ export function NotificationRow({
   title,
 }: NotificationRowProps) {
   const { theme } = useAppTheme();
+  const avatarFallback = actorLabel ? (
+    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+      <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(actorLabel)}</Text>
+    </View>
+  ) : (
+    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.surfaceMuted }]}>
+      <Feather color={theme.colors.textMuted} name="user" size={18} />
+    </View>
+  );
 
   return (
     <Pressable
@@ -46,17 +56,7 @@ export function NotificationRow({
     >
       <View style={styles.leading}>
         {!isRead ? <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} /> : null}
-        {actorImageUrl ? (
-          <Image source={{ uri: actorImageUrl }} style={styles.avatar} />
-        ) : actorLabel ? (
-          <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-            <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(actorLabel)}</Text>
-          </View>
-        ) : (
-          <View style={[styles.avatarFallback, { backgroundColor: theme.colors.surfaceMuted }]}>
-            <Feather color={theme.colors.textMuted} name="user" size={18} />
-          </View>
-        )}
+        <RemoteImage fallback={avatarFallback} uri={actorImageUrl} style={styles.avatar} />
       </View>
 
       <View style={styles.bodyRow}>

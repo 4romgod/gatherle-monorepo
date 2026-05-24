@@ -1,8 +1,9 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type ProfileAvatarProps = {
   active?: boolean;
@@ -14,47 +15,37 @@ type ProfileAvatarProps = {
 export function ProfileAvatar({ active = false, imageUrl, label, size = 30 }: ProfileAvatarProps) {
   const { theme } = useAppTheme();
   const borderColor = active ? theme.colors.primary : theme.colors.border;
-
-  if (imageUrl) {
-    return (
-      <View
-        style={[
-          styles.frame,
-          {
-            borderColor,
-            borderRadius: size / 2,
-            height: size,
-            width: size,
-          },
-        ]}
-      >
-        <Image source={{ uri: imageUrl }} style={{ borderRadius: size / 2 - 2, height: size - 4, width: size - 4 }} />
-      </View>
-    );
-  }
-
   const bg = active ? theme.colors.primarySoft : theme.colors.surfaceMuted;
 
-  if (!label) {
-    return (
-      <View
-        style={[
-          styles.fallback,
-          { backgroundColor: bg, borderColor, borderRadius: size / 2, height: size, width: size },
-        ]}
-      >
+  const initials = getInitials(label ?? '');
+  const fallback = (
+    <View
+      style={[
+        styles.innerFallback,
+        {
+          backgroundColor: bg,
+          borderRadius: Math.max(size / 2 - 2, 0),
+          height: size - 4,
+          width: size - 4,
+        },
+      ]}
+    >
+      {label ? (
+        <Text style={[styles.initials, { color: theme.colors.textPrimary, fontSize: size * 0.36 }]}>{initials}</Text>
+      ) : (
         <Feather color={active ? theme.colors.primary : theme.colors.textMuted} name="user" size={size * 0.45} />
-      </View>
-    );
-  }
-
-  const initials = getInitials(label);
+      )}
+    </View>
+  );
 
   return (
-    <View
-      style={[styles.fallback, { backgroundColor: bg, borderColor, borderRadius: size / 2, height: size, width: size }]}
-    >
-      <Text style={[styles.initials, { color: theme.colors.textPrimary, fontSize: size * 0.36 }]}>{initials}</Text>
+    <View style={[styles.frame, { borderColor, borderRadius: size / 2, height: size, width: size }]}>
+      <RemoteImage
+        imageStyle={{ borderRadius: Math.max(size / 2 - 2, 0) }}
+        uri={imageUrl}
+        style={{ borderRadius: Math.max(size / 2 - 2, 0), height: size - 4, width: size - 4 }}
+        fallback={fallback}
+      />
     </View>
   );
 }
@@ -66,9 +57,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  fallback: {
+  innerFallback: {
     alignItems: 'center',
-    borderWidth: 2,
     justifyContent: 'center',
   },
   initials: {

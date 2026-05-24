@@ -3,7 +3,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +18,7 @@ import { useEventSearch } from '@/hooks/search/useEventSearch';
 import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type EventSearchBarProps = {
   onSelectEvent: (event: MobileSearchResult) => void;
@@ -30,6 +30,11 @@ function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPres
   const title = event.title ?? '';
   const city = event.location?.address?.city ?? '';
   const categories: NonNullable<MobileSearchResult['eventCategories']> = event.eventCategories?.slice(0, 2) ?? [];
+  const imageFallback = (
+    <View style={styles.resultImageFallback}>
+      <Feather color={theme.colors.textMuted} name="calendar" size={20} />
+    </View>
+  );
 
   return (
     <Pressable
@@ -40,11 +45,7 @@ function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPres
       ]}
     >
       <View style={[styles.resultThumb, { backgroundColor: theme.colors.surfaceRaised }]}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.resultImage} resizeMode="cover" />
-        ) : (
-          <Feather color={theme.colors.textMuted} name="calendar" size={20} />
-        )}
+        <RemoteImage fallback={imageFallback} uri={imageUrl} style={styles.resultImage} />
       </View>
 
       <View style={styles.resultInfo}>
@@ -290,6 +291,12 @@ const styles = StyleSheet.create({
   resultImage: {
     borderRadius: 6,
     height: '100%',
+    width: '100%',
+  },
+  resultImageFallback: {
+    alignItems: 'center',
+    height: '100%',
+    justifyContent: 'center',
     width: '100%',
   },
   resultInfo: {

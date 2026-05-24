@@ -12,6 +12,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ApolloProvider } from '@apollo/client';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { apolloClient } from '@data/graphql/apollo-client';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -65,13 +66,15 @@ export default function App() {
       <ApolloProvider client={apolloClient}>
         <SafeAreaProvider>
           <AppThemeProvider>
-            <AppShellProvider>
-              <AppFeedbackProvider>
-                <BottomSheetModalProvider>
-                  <AppContent />
-                </BottomSheetModalProvider>
-              </AppFeedbackProvider>
-            </AppShellProvider>
+            <KeyboardProvider>
+              <AppShellProvider>
+                <AppFeedbackProvider>
+                  <BottomSheetModalProvider>
+                    <AppContent />
+                  </BottomSheetModalProvider>
+                </AppFeedbackProvider>
+              </AppShellProvider>
+            </KeyboardProvider>
           </AppThemeProvider>
         </SafeAreaProvider>
       </ApolloProvider>

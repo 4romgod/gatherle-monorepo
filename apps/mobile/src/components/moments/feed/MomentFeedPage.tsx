@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import type { VideoPlayer } from 'expo-video';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetEventsDocument } from '@data/graphql/query/Event/query';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { RemoteImage } from '@/components/core/RemoteImage';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
 import { useDeleteEventMoment } from '@/hooks/moments/useDeleteEventMoment';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
+import { STICKY_COMPOSER_KEYBOARD_OFFSET } from '@/lib/constants/layout';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
 import { formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { MOMENT_BACKGROUND_SWATCHES } from '@/lib/moments/constants';
@@ -303,7 +307,7 @@ export function MomentFeedPage({
     <View style={[styles.page, { backgroundColor, height: pageHeight }]}>
       {isMenuOpen ? <Pressable onPress={() => setMenuOpen(false)} style={styles.menuBackdrop} /> : null}
 
-      <View style={styles.topGradient} pointerEvents="none" />
+      <LinearGradient colors={['rgba(3,7,18,0.18)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
       <View style={styles.bottomGradient} pointerEvents="none" />
 
       <View style={styles.progressRow} pointerEvents="none">
@@ -369,14 +373,19 @@ export function MomentFeedPage({
       <View style={styles.content}>
         {moment.type === EventMomentType.Image && moment.mediaUrl ? (
           <>
-            <Image
+            <RemoteImage
+              fallback={
+                <View style={[styles.mediaFallback, { backgroundColor: resolveBackgroundColor(moment.background) }]}>
+                  <Feather color={theme.colors.heroText} name="image" size={42} />
+                </View>
+              }
               onError={() => {
                 setMediaError(true);
                 setMediaReady(true);
               }}
-              onLoadEnd={() => setMediaReady(true)}
+              onLoad={() => setMediaReady(true)}
               resizeMode="cover"
-              source={{ uri: moment.mediaUrl }}
+              uri={moment.mediaUrl}
               style={styles.media}
             />
             {moment.caption ? (
@@ -424,7 +433,7 @@ export function MomentFeedPage({
         ) : null}
       </View>
 
-      <View style={styles.footer}>
+      <KeyboardStickyView offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }} style={styles.footer}>
         <ChatComposer
           isConnected={isConnected}
           onSend={handleReply}
@@ -433,7 +442,7 @@ export function MomentFeedPage({
           targetUserId={targetUserId}
           variant="overlay"
         />
-      </View>
+      </KeyboardStickyView>
     </View>
   );
 }
@@ -520,6 +529,13 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
   },
+  mediaFallback: {
+    alignItems: 'center',
+    flex: 1,
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%',
+  },
   menuBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,
@@ -578,8 +594,7 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     textAlign: 'center',
   },
-  topGradient: {
-    backgroundColor: 'rgba(2,6,23,0.58)',
+  topFade: {
     height: 140,
     left: 0,
     position: 'absolute',

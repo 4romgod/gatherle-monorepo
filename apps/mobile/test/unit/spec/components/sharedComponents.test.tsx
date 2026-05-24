@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Image } from 'react-native';
 import { AccountChoiceChip } from '@/components/account/shared/AccountChoiceChip';
 import { CommunityMemberRow } from '@/components/community/CommunityMemberRow';
 import { FilterActionButton } from '@/components/core/FilterActionButton';
@@ -145,11 +146,16 @@ describe('mobile shared components', () => {
   });
 
   it('renders community rows with profile images and without an action', () => {
-    render(<CommunityMemberRow user={{ ...directoryUser, profile_picture: 'https://example.com/avatar.png' }} />);
+    const view = render(
+      <CommunityMemberRow user={{ ...directoryUser, profile_picture: 'https://example.com/avatar.png' }} />,
+    );
 
     expect(screen.getByText('Jack Baur')).toBeTruthy();
-    expect(screen.queryByText('JB')).toBeNull();
+    expect(screen.getByText('JB')).toBeTruthy();
     expect(screen.queryByText('Message')).toBeNull();
+
+    fireEvent(view.UNSAFE_getByType(Image), 'load');
+    expect(screen.queryByText('JB')).toBeNull();
   });
 
   it('renders venue rows with fallback image, capacity, and location', () => {
@@ -167,10 +173,15 @@ describe('mobile shared components', () => {
   });
 
   it('renders venue rows with featured images and without capacity', () => {
-    render(<VenueListItem venue={{ ...venue, capacity: null, featuredImageUrl: 'https://example.com/venue.png' }} />);
+    const view = render(
+      <VenueListItem venue={{ ...venue, capacity: null, featuredImageUrl: 'https://example.com/venue.png' }} />,
+    );
 
     expect(screen.getByText('Signal Loft')).toBeTruthy();
     expect(screen.queryByText('400 cap')).toBeNull();
+    expect(screen.getByText('map-pin')).toBeTruthy();
+
+    fireEvent(view.UNSAFE_getByType(Image), 'load');
     expect(screen.queryByText('map-pin')).toBeNull();
   });
 

@@ -105,6 +105,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `NEXT_PUBLIC_GRAPHQL_URL` (e.g., `http://localhost:9000/v1/graphql`).
   - `NEXT_PUBLIC_WEBSOCKET_URL` (e.g., `ws://localhost:3001` or deployed `wss://.../<stage>` endpoint for realtime
     notifications).
+  - `NEXT_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
+    follow-request review flows. Defaults to disabled, so frontend users are treated as public).
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (required for Google OAuth in NextAuth).
   - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
     credential used by NextAuth).
@@ -119,6 +121,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 - Host or CI (e.g., Vercel) should inject `NEXTAUTH_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
 - Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
+- Set `NEXT_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 - Inject `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` when Google sign-in is enabled.
 - Inject `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).

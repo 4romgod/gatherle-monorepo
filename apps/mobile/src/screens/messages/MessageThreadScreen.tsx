@@ -3,6 +3,7 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-nativ
 import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetMomentByIdDocument } from '@data/graphql/query/EventMoment/query';
 import type { MobileEventMoment } from '@data/graphql/query/EventMoment/types';
@@ -18,9 +19,9 @@ import { ChatThreadHeader } from '@/components/messages/thread/ChatThreadHeader'
 import { MomentViewer } from '@/components/moments/MomentViewer';
 import { ChatThreadSkeleton } from '@/components/skeleton/ChatThreadSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { useKeyboardBottomInset } from '@/hooks/core/useKeyboardBottomInset';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
+import { STICKY_COMPOSER_KEYBOARD_OFFSET } from '@/lib/constants/layout';
 import { DEVICE_STORAGE_KEYS, writeStoredString } from '@/lib/deviceStorage';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
@@ -45,7 +46,6 @@ export function MessageThreadScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const route = useRoute<MessageThreadRoute>();
   const { theme } = useAppTheme();
-  const keyboardInset = useKeyboardBottomInset();
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { avatarUrl, displayName, username, withUserId } = route.params;
   const scrollRef = useRef<ScrollView | null>(null);
@@ -171,7 +171,7 @@ export function MessageThreadScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.inner, { paddingBottom: keyboardInset > 0 ? keyboardInset + 8 : 0 }]}>
+      <View style={styles.inner}>
         <ChatThreadHeader
           avatarUrl={avatarUrl}
           displayName={displayName}
@@ -237,7 +237,9 @@ export function MessageThreadScreen() {
           </View>
         )}
 
-        <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
+        <KeyboardStickyView offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }} style={styles.composerSticky}>
+          <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
+        </KeyboardStickyView>
       </View>
       <MomentViewer
         moments={replyMomentViewerItems}
@@ -261,6 +263,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingTop: 14,
+  },
+  composerSticky: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   screen: {
     flex: 1,

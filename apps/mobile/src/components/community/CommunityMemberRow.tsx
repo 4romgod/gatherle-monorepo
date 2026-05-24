@@ -1,9 +1,10 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileDirectoryUser } from '@data/graphql/query/User/types';
 import { getDisplayName, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 import { InlineButton } from '@/components/core/InlineButton';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type CommunityMemberRowProps = {
   actionTone?: 'neutral' | 'primary';
@@ -23,6 +24,11 @@ export function CommunityMemberRow({
   const { theme } = useAppTheme();
   const displayName = getDisplayName(user);
   const location = [user.location?.city, user.location?.state, user.location?.country].filter(Boolean).join(', ');
+  const avatarFallback = (
+    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+      <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(displayName)}</Text>
+    </View>
+  );
 
   return (
     <Pressable
@@ -39,13 +45,7 @@ export function CommunityMemberRow({
         ]
       }
     >
-      {user.profile_picture ? (
-        <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-          <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(displayName)}</Text>
-        </View>
-      )}
+      <RemoteImage fallback={avatarFallback} uri={user.profile_picture} style={styles.avatar} />
 
       <View style={styles.copy}>
         <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>

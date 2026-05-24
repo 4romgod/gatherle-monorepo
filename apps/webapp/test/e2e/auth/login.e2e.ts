@@ -21,10 +21,8 @@ test.describe('Login Page', () => {
     await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
     const forgotPasswordLink = page.getByRole('link', { name: 'Forgot password?' });
     await expect(forgotPasswordLink).toBeVisible();
-    await Promise.all([
-      page.waitForURL(/\/auth\/forgot-password\/?$/, { timeout: 20_000 }),
-      forgotPasswordLink.click(),
-    ]);
+    await forgotPasswordLink.click();
+    await expect(page).toHaveURL(/\/auth\/forgot-password\/?$/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { level: 1, name: 'Reset your password' })).toBeVisible();
   });
 
@@ -41,7 +39,8 @@ test.describe('Login Page', () => {
     const registerLink = page.locator('a[href="/auth/register"]').filter({ hasText: 'Sign Up' }).first();
     await expect(registerLink).toBeVisible();
     await expect(registerLink).toHaveAttribute('href', '/auth/register');
-    await Promise.all([page.waitForURL(/\/auth\/register\/?$/, { timeout: 20_000 }), registerLink.click()]);
+    await registerLink.click();
+    await expect(page).toHaveURL(/\/auth\/register\/?$/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
   });
 });

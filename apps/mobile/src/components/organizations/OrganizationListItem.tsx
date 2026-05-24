@@ -1,8 +1,9 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileOrganization } from '@data/graphql/query/Discovery/types';
 import { formatCountLabel, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type OrganizationListItemProps = {
   onPress?: () => void;
@@ -21,6 +22,11 @@ export function OrganizationListItem({
 }: OrganizationListItemProps) {
   const { theme } = useAppTheme();
   const label = organization.name ?? 'Organization';
+  const logoFallback = (
+    <View style={[styles.logoFallback, { backgroundColor: theme.colors.primarySoft }]}>
+      <Text style={[styles.logoFallbackText, { color: theme.colors.primary }]}>{getInitials(label)}</Text>
+    </View>
+  );
 
   return (
     <Pressable
@@ -34,13 +40,7 @@ export function OrganizationListItem({
         },
       ]}
     >
-      {organization.logo ? (
-        <Image source={{ uri: organization.logo }} style={styles.logo} />
-      ) : (
-        <View style={[styles.logoFallback, { backgroundColor: theme.colors.primarySoft }]}>
-          <Text style={[styles.logoFallbackText, { color: theme.colors.primary }]}>{getInitials(label)}</Text>
-        </View>
-      )}
+      <RemoteImage fallback={logoFallback} uri={organization.logo} style={styles.logo} />
 
       <View style={styles.copy}>
         <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>

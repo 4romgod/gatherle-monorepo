@@ -17,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEventListener } from 'expo';
 import { useNavigation } from '@react-navigation/native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import type { VideoPlayer } from 'expo-video';
@@ -30,6 +31,7 @@ import { ChatComposer } from '@/components/messages/thread/ChatComposer';
 import { useDeleteEventMoment } from '@/hooks/moments/useDeleteEventMoment';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
+import { STICKY_COMPOSER_KEYBOARD_OFFSET } from '@/lib/constants/layout';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
 import { formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { MOMENT_BACKGROUND_SWATCHES } from '@/lib/moments/constants';
@@ -782,7 +784,7 @@ export function MomentViewer({
       ]}
     >
       <View style={styles.storyArea}>
-        <LinearGradient colors={['rgba(3,7,18,0.62)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
+        <LinearGradient colors={['rgba(3,7,18,0.18)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
         <View style={styles.bottomFade} pointerEvents="none" />
 
         <View style={styles.progressRow} pointerEvents="none">
@@ -974,7 +976,7 @@ export function MomentViewer({
       </View>
 
       {showReplyComposer ? (
-        <View style={styles.composerShell}>
+        <KeyboardStickyView offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }} style={styles.composerShell}>
           <ChatComposer
             isConnected={isConnected}
             onAfterSend={() => {
@@ -997,7 +999,7 @@ export function MomentViewer({
           {replySent ? (
             <Text style={[styles.replySentLabel, { color: theme.colors.heroSubtle }]}>Reply sent</Text>
           ) : null}
-        </View>
+        </KeyboardStickyView>
       ) : null}
     </Animated.View>
   );
@@ -1058,12 +1060,8 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   composerShell: {
-    backgroundColor: '#030712',
-    borderTopColor: 'rgba(255,255,255,0.12)',
-    borderTopWidth: 1,
-    minHeight: FOOTER_HEIGHT,
     paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingTop: 2,
   },
   embeddedContainer: {
     backgroundColor: '#030712',
