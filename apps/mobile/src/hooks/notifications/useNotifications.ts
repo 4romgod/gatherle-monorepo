@@ -16,6 +16,7 @@ import { getApolloAuthContext } from '@/lib/auth';
 
 export function useNotifications(authToken: string | null, enabled = true) {
   const queryOptions = getApolloAuthContext(authToken);
+  const shouldLoadFollowRequests = enabled && Boolean(authToken);
   const { data, error, loading, refetch } = useQuery(GetNotificationsDocument, {
     fetchPolicy: 'cache-and-network',
     skip: !enabled || !authToken,
@@ -32,7 +33,7 @@ export function useNotifications(authToken: string | null, enabled = true) {
     refetch: refetchFollowRequests,
   } = useQuery(GetPendingFollowRequestsDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !enabled || !authToken,
+    skip: !shouldLoadFollowRequests,
     variables: {
       targetType: FollowTargetType.User,
     },
@@ -47,7 +48,12 @@ export function useNotifications(authToken: string | null, enabled = true) {
   const [followMutation] = useMutation(FollowDocument, queryOptions);
 
   const refreshAll = async () => {
-    await Promise.all([refetch(), refetchFollowRequests()]);
+    const refreshes: Array<Promise<unknown>> = [refetch()];
+    if (shouldLoadFollowRequests) {
+      refreshes.push(refetchFollowRequests());
+    }
+
+    await Promise.all(refreshes);
   };
 
   const markNotificationRead = async (notificationId: string) => {

@@ -1,12 +1,13 @@
 import type { ApolloError } from '@apollo/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
+import { RemoteImage } from '@/components/core/RemoteImage';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { ConversationRow } from '@/components/messages/ConversationRow';
@@ -134,6 +135,13 @@ export function MessagesScreen() {
           <View style={styles.messageList}>
             {userSearchResults.map((user) => {
               const displayName = getDisplayName(user);
+              const avatarFallback = (
+                <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+                  <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
+                    {getInitials(displayName)}
+                  </Text>
+                </View>
+              );
               return (
                 <Pressable
                   accessibilityRole="button"
@@ -151,15 +159,7 @@ export function MessagesScreen() {
                     { borderBottomColor: theme.colors.border, opacity: pressed ? 0.82 : 1 },
                   ]}
                 >
-                  {user.profile_picture ? (
-                    <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
-                  ) : (
-                    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-                      <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
-                        {getInitials(displayName)}
-                      </Text>
-                    </View>
-                  )}
+                  <RemoteImage fallback={avatarFallback} uri={user.profile_picture} style={styles.avatar} />
                   <View style={styles.userInfo}>
                     <Text numberOfLines={1} style={[styles.userDisplayName, { color: theme.colors.textPrimary }]}>
                       {displayName}

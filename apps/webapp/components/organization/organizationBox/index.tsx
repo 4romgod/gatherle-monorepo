@@ -5,6 +5,7 @@ import { Avatar, Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { ROUTES } from '@/lib/constants';
 import { Organization, OrganizationRole } from '@/data/graphql/types/graphql';
 import { Settings } from '@mui/icons-material';
+import RemoteImage from '@/components/core/RemoteImage';
 
 export type OrganizationCardProps = {
   organization: Organization;
@@ -44,24 +45,33 @@ const OrganizationCard = ({ organization, userRole }: OrganizationCardProps) => 
       }}
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
-        <Avatar
-          component={Link}
-          href={organizationHref}
-          src={logo ?? undefined}
-          variant="rounded"
-          sx={{
-            bgcolor: 'action.hover',
-            borderRadius: 2,
-            color: 'primary.main',
-            flexShrink: 0,
-            fontWeight: 900,
-            height: 58,
-            textDecoration: 'none',
-            width: 58,
-          }}
-        >
-          {initials}
-        </Avatar>
+        <Box component={Link} href={organizationHref} sx={{ flexShrink: 0, textDecoration: 'none' }}>
+          <RemoteImage
+            alt={name ?? 'Organization logo'}
+            fallback={
+              <Avatar
+                variant="rounded"
+                sx={{
+                  bgcolor: 'action.hover',
+                  borderRadius: 2,
+                  color: 'primary.main',
+                  fontWeight: 900,
+                  height: 58,
+                  width: 58,
+                }}
+              >
+                {initials}
+              </Avatar>
+            }
+            src={logo}
+            sx={{
+              bgcolor: 'action.hover',
+              borderRadius: 2,
+              height: 58,
+              width: 58,
+            }}
+          />
+        </Box>
 
         <Box
           component={Link}

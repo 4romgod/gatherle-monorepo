@@ -1,6 +1,5 @@
 'use client';
 
-import CardMedia from '@mui/material/CardMedia';
 import { Avatar, AvatarGroup, Tooltip, Typography, Chip, Stack, useTheme, alpha } from '@mui/material';
 import { Box } from '@mui/material';
 import { CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
@@ -9,6 +8,7 @@ import { SaveEventButton, RsvpButton } from '@/components/events';
 import { useState, useEffect } from 'react';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import Surface from '@/components/core/Surface';
+import RemoteImage from '@/components/core/RemoteImage';
 import EventShareButton from '@/components/events/share/EventShareButton';
 import {
   AnyEventPreview,
@@ -111,39 +111,32 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
           overflow: 'hidden',
         }}
       >
-        {imageUrl ? (
-          <CardMedia
-            component="img"
-            image={imageUrl}
-            alt={title}
-            className="event-image"
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'transform 0.3s ease',
-            }}
-          />
-        ) : (
-          <Box
-            className="event-image"
-            sx={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
-                theme.palette.secondary.light,
-                0.35,
-              )} 100%)`,
-              color: 'text.secondary',
-              transition: 'transform 0.3s ease',
-            }}
-          >
-            <PeopleOutline sx={{ fontSize: 40, opacity: 0.7 }} />
-          </Box>
-        )}
+        <RemoteImage
+          alt={title}
+          className="event-image"
+          fallback={
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
+                  theme.palette.secondary.light,
+                  0.35,
+                )} 100%)`,
+                color: 'text.secondary',
+              }}
+            >
+              <PeopleOutline sx={{ fontSize: 40, opacity: 0.7 }} />
+            </Box>
+          }
+          imageSx={{ transition: 'transform 0.3s ease' }}
+          showLoader
+          src={imageUrl}
+          sx={{ width: '100%', height: '100%', transition: 'transform 0.3s ease' }}
+        />
         <Box
           className="event-overlay"
           sx={{

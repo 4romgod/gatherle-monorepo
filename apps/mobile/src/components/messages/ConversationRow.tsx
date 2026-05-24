@@ -1,8 +1,9 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileChatConversation } from '@data/graphql/query/Chat/types';
 import { formatRelativeTime, getDisplayName, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type ConversationRowProps = {
   conversation: MobileChatConversation;
@@ -14,6 +15,11 @@ export function ConversationRow({ conversation, onPress }: ConversationRowProps)
   const user = conversation.conversationWithUser;
   const displayName = getDisplayName(user);
   const handle = user?.username ? `@${user.username}` : displayName;
+  const avatarFallback = (
+    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+      <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(displayName)}</Text>
+    </View>
+  );
 
   return (
     <Pressable
@@ -27,13 +33,7 @@ export function ConversationRow({ conversation, onPress }: ConversationRowProps)
         },
       ]}
     >
-      {user?.profile_picture ? (
-        <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-          <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>{getInitials(displayName)}</Text>
-        </View>
-      )}
+      <RemoteImage fallback={avatarFallback} uri={user?.profile_picture} style={styles.avatar} />
 
       <View style={styles.content}>
         <View style={styles.headerRow}>

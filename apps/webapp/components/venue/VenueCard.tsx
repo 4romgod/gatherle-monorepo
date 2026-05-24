@@ -5,6 +5,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ROUTES } from '@/lib/constants';
 import Surface from '@/components/core/Surface';
+import RemoteImage from '@/components/core/RemoteImage';
 
 export type VenueCardProps = {
   venueId?: string;
@@ -61,35 +62,31 @@ const VenueCard = ({ venueId, name, type, capacity, address, slug, images, featu
           width: '100%',
         }}
       >
-        {heroImageUrl ? (
-          <Box
-            component="img"
-            src={heroImageUrl}
-            alt={name ?? 'Venue image'}
-            loading="lazy"
-            sx={{
-              borderRadius: 1.25,
-              flexShrink: 0,
-              height: 72,
-              objectFit: 'cover',
-              width: 72,
-            }}
-          />
-        ) : (
-          <Avatar
-            variant="rounded"
-            sx={{
-              bgcolor: 'action.hover',
-              borderRadius: 2.25,
-              color: 'primary.main',
-              flexShrink: 0,
-              height: 72,
-              width: 72,
-            }}
-          >
-            <LocationOnIcon fontSize="small" />
-          </Avatar>
-        )}
+        <RemoteImage
+          alt={name ?? 'Venue image'}
+          fallback={
+            <Avatar
+              variant="rounded"
+              sx={{
+                bgcolor: 'action.hover',
+                borderRadius: 2.25,
+                color: 'primary.main',
+                height: 72,
+                width: 72,
+              }}
+            >
+              <LocationOnIcon fontSize="small" />
+            </Avatar>
+          }
+          src={heroImageUrl}
+          sx={{
+            bgcolor: 'action.hover',
+            borderRadius: 1.25,
+            flexShrink: 0,
+            height: 72,
+            width: 72,
+          }}
+        />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography fontWeight={800} noWrap variant="subtitle1">

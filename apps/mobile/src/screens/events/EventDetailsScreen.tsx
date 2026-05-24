@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { RemoteImage } from '@/components/core/RemoteImage';
 import { EventDetailActionButton } from '@/components/events/detail/EventDetailActionButton';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
 import { EventDetailSection } from '@/components/events/detail/EventDetailSection';
@@ -75,6 +76,13 @@ export function EventDetailsScreen() {
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
   const heroPillLabel = useMemo(() => formatCountLabel(localParticipantCount, 'going'), [localParticipantCount]);
+  const heroFallback = (
+    <LinearGradient colors={theme.colors.heroGradient} style={styles.heroPlaceholder}>
+      <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
+        {title.charAt(0).toUpperCase()}
+      </Text>
+    </LinearGradient>
+  );
 
   const applyParticipantCountDelta = (nextStatus: ParticipantStatus | null) => {
     setLocalParticipantCount((currentCount) => {
@@ -211,15 +219,7 @@ export function EventDetailsScreen() {
         style={{ backgroundColor: theme.colors.background }}
       >
         <View style={styles.heroFrame}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.heroImage} />
-          ) : (
-            <LinearGradient colors={theme.colors.heroGradient} style={styles.heroPlaceholder}>
-              <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
-                {title.charAt(0).toUpperCase()}
-              </Text>
-            </LinearGradient>
-          )}
+          <RemoteImage fallback={heroFallback} showLoader uri={imageUrl} style={styles.heroImage} />
 
           <LinearGradient
             colors={['rgba(15, 23, 42, 0.04)', 'rgba(15, 23, 42, 0.2)', 'rgba(15, 23, 42, 0.86)']}

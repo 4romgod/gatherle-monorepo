@@ -1,9 +1,10 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { formatShortDate, getEventImageUrl, getEventStatusLabel, getEventTitle } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type ProfileEventTileProps = {
   occurrence: MobileEventOccurrence;
@@ -14,6 +15,13 @@ type ProfileEventTileProps = {
 export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTileProps) {
   const { theme } = useAppTheme();
   const imageUrl = getEventImageUrl(occurrence);
+  const imageFallback = (
+    <LinearGradient colors={theme.colors.heroGradient} style={styles.profileEventPlaceholder}>
+      <Text style={[styles.profileEventPlaceholderText, { color: theme.colors.heroText }]}>
+        {getEventTitle(occurrence).charAt(0).toUpperCase()}
+      </Text>
+    </LinearGradient>
+  );
 
   return (
     <Pressable
@@ -28,15 +36,7 @@ export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTile
         },
       ]}
     >
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.profileEventImage} />
-      ) : (
-        <LinearGradient colors={theme.colors.heroGradient} style={styles.profileEventPlaceholder}>
-          <Text style={[styles.profileEventPlaceholderText, { color: theme.colors.heroText }]}>
-            {getEventTitle(occurrence).charAt(0).toUpperCase()}
-          </Text>
-        </LinearGradient>
-      )}
+      <RemoteImage fallback={imageFallback} uri={imageUrl} style={styles.profileEventImage} />
 
       <View style={styles.profileEventOverlay} />
       <LinearGradient

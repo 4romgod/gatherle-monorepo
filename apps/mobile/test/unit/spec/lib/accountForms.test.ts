@@ -57,11 +57,11 @@ describe('mobile account form helpers', () => {
       birthdate: '1990-01-02',
       communicationEmailEnabled: false,
       communicationPushEnabled: true,
-      defaultVisibility: SocialVisibility.Followers,
+      defaultVisibility: SocialVisibility.Public,
       email: 'user@example.com',
-      followPolicy: FollowPolicy.RequireApproval,
-      followersListVisibility: SocialVisibility.Private,
-      followingListVisibility: SocialVisibility.Followers,
+      followPolicy: FollowPolicy.Public,
+      followersListVisibility: SocialVisibility.Public,
+      followingListVisibility: SocialVisibility.Public,
       gender: Gender.Other,
       phoneNumber: '+27123456789',
       shareCheckinsByDefault: false,
@@ -119,11 +119,48 @@ describe('mobile account form helpers', () => {
 
     expect(buildSettingsInput(profile, settingsForm)).toMatchObject({
       birthdate: undefined,
+      defaultVisibility: SocialVisibility.Public,
       email: 'new@example.com',
+      followersListVisibility: SocialVisibility.Public,
+      followingListVisibility: SocialVisibility.Public,
+      followPolicy: FollowPolicy.Public,
       gender: undefined,
       phone_number: undefined,
       userId: 'user-1',
     });
+  });
+
+  it('preserves privacy settings when private users are enabled', () => {
+    const previousFlag = process.env.EXPO_PUBLIC_ENABLE_PRIVATE_USERS;
+    process.env.EXPO_PUBLIC_ENABLE_PRIVATE_USERS = 'true';
+
+    try {
+      jest.isolateModules(() => {
+        const { buildSettingsInput: buildEnabledSettingsInput, createSettingsForm: createEnabledSettingsForm } =
+          require('@/lib/account/forms') as typeof import('@/lib/account/forms');
+
+        const settingsForm = createEnabledSettingsForm(profile, 'dark');
+
+        expect(settingsForm).toMatchObject({
+          defaultVisibility: SocialVisibility.Followers,
+          followPolicy: FollowPolicy.RequireApproval,
+          followersListVisibility: SocialVisibility.Private,
+          followingListVisibility: SocialVisibility.Followers,
+        });
+        expect(buildEnabledSettingsInput(profile, settingsForm)).toMatchObject({
+          defaultVisibility: SocialVisibility.Followers,
+          followPolicy: FollowPolicy.RequireApproval,
+          followersListVisibility: SocialVisibility.Private,
+          followingListVisibility: SocialVisibility.Followers,
+        });
+      });
+    } finally {
+      if (previousFlag === undefined) {
+        delete process.env.EXPO_PUBLIC_ENABLE_PRIVATE_USERS;
+      } else {
+        process.env.EXPO_PUBLIC_ENABLE_PRIVATE_USERS = previousFlag;
+      }
+    }
   });
 
   it('validates required profile fields, location pairing, email, and birthdate', () => {

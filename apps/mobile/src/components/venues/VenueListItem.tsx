@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileVenue } from '@data/graphql/query/Venue/types';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import { RemoteImage } from '@/components/core/RemoteImage';
 
 type VenueListItemProps = {
   onPress?: () => void;
@@ -12,6 +13,11 @@ type VenueListItemProps = {
 export function VenueListItem({ onPress, venue }: VenueListItemProps) {
   const { theme } = useAppTheme();
   const location = [venue.address?.city, venue.address?.region, venue.address?.country].filter(Boolean).join(', ');
+  const imageFallback = (
+    <View style={[styles.imageFallback, { backgroundColor: theme.colors.primarySoft }]}>
+      <Feather color={theme.colors.primary} name="map-pin" size={18} />
+    </View>
+  );
 
   return (
     <Pressable
@@ -28,13 +34,7 @@ export function VenueListItem({ onPress, venue }: VenueListItemProps) {
         ]
       }
     >
-      {venue.featuredImageUrl ? (
-        <Image source={{ uri: venue.featuredImageUrl }} style={styles.image} />
-      ) : (
-        <View style={[styles.imageFallback, { backgroundColor: theme.colors.primarySoft }]}>
-          <Feather color={theme.colors.primary} name="map-pin" size={18} />
-        </View>
-      )}
+      <RemoteImage fallback={imageFallback} uri={venue.featuredImageUrl} style={styles.image} />
 
       <View style={styles.copy}>
         <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>

@@ -20,6 +20,7 @@ import { useAccountProfile } from '@/hooks/account/useAccountProfile';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildSettingsInput, createSettingsForm, validateSettingsForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
+import { featureFlags } from '@/lib/featureFlags';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
@@ -219,61 +220,65 @@ export function SettingsScreen() {
         </View>
       </AccountSectionCard>
 
-      <AccountSectionCard description="Decide how visible your activity and graph should be." title="Privacy">
-        <AccountSwitchRow
-          description="Require your approval before someone can follow you."
-          onValueChange={(value) =>
-            setForm((current) => ({
-              ...current,
-              followPolicy: value ? FollowPolicy.RequireApproval : FollowPolicy.Public,
-            }))
-          }
-          title="Private account"
-          value={form.followPolicy === FollowPolicy.RequireApproval}
-        />
+      {featureFlags.enablePrivateUsers ? (
+        <AccountSectionCard description="Decide how visible your activity and graph should be." title="Privacy">
+          <AccountSwitchRow
+            description="Require your approval before someone can follow you."
+            onValueChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                followPolicy: value ? FollowPolicy.RequireApproval : FollowPolicy.Public,
+              }))
+            }
+            title="Private account"
+            value={form.followPolicy === FollowPolicy.RequireApproval}
+          />
 
-        <View style={styles.choiceBlock}>
-          <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Default activity visibility</Text>
-          <View style={styles.choiceRow}>
-            {VISIBILITY_OPTIONS.map((option) => (
-              <AccountChoiceChip
-                key={option}
-                label={visibilityCopy[option]}
-                onPress={() => setForm((current) => ({ ...current, defaultVisibility: option }))}
-                selected={form.defaultVisibility === option}
-              />
-            ))}
+          <View style={styles.choiceBlock}>
+            <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Default activity visibility</Text>
+            <View style={styles.choiceRow}>
+              {VISIBILITY_OPTIONS.map((option) => (
+                <AccountChoiceChip
+                  key={option}
+                  label={visibilityCopy[option]}
+                  onPress={() => setForm((current) => ({ ...current, defaultVisibility: option }))}
+                  selected={form.defaultVisibility === option}
+                />
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.choiceBlock}>
-          <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Followers list visibility</Text>
-          <View style={styles.choiceRow}>
-            {VISIBILITY_OPTIONS.map((option) => (
-              <AccountChoiceChip
-                key={`followers-${option}`}
-                label={visibilityCopy[option]}
-                onPress={() => setForm((current) => ({ ...current, followersListVisibility: option }))}
-                selected={form.followersListVisibility === option}
-              />
-            ))}
+          <View style={styles.choiceBlock}>
+            <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Followers list visibility</Text>
+            <View style={styles.choiceRow}>
+              {VISIBILITY_OPTIONS.map((option) => (
+                <AccountChoiceChip
+                  key={`followers-${option}`}
+                  label={visibilityCopy[option]}
+                  onPress={() => setForm((current) => ({ ...current, followersListVisibility: option }))}
+                  selected={form.followersListVisibility === option}
+                />
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.choiceBlock}>
-          <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Following list visibility</Text>
-          <View style={styles.choiceRow}>
-            {VISIBILITY_OPTIONS.map((option) => (
-              <AccountChoiceChip
-                key={`following-${option}`}
-                label={visibilityCopy[option]}
-                onPress={() => setForm((current) => ({ ...current, followingListVisibility: option }))}
-                selected={form.followingListVisibility === option}
-              />
-            ))}
+          <View style={styles.choiceBlock}>
+            <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Following list visibility</Text>
+            <View style={styles.choiceRow}>
+              {VISIBILITY_OPTIONS.map((option) => (
+                <AccountChoiceChip
+                  key={`following-${option}`}
+                  label={visibilityCopy[option]}
+                  onPress={() => setForm((current) => ({ ...current, followingListVisibility: option }))}
+                  selected={form.followingListVisibility === option}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        </AccountSectionCard>
+      ) : null}
 
+      <AccountSectionCard description="Decide which activity defaults should apply to your account." title="Activity">
         <AccountSwitchRow
           description="Keep your RSVP activity public by default."
           onValueChange={(shareRsvpByDefault) => setForm((current) => ({ ...current, shareRsvpByDefault }))}

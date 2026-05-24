@@ -85,6 +85,7 @@ The mobile app primarily uses:
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=
 EXPO_PUBLIC_WEBSOCKET_URL=
+EXPO_PUBLIC_ENABLE_PRIVATE_USERS=
 ```
 
 For local development, create `apps/mobile/.env`:
@@ -93,6 +94,9 @@ For local development, create `apps/mobile/.env`:
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
 EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
 ```
+
+`EXPO_PUBLIC_ENABLE_PRIVATE_USERS` is optional and defaults to disabled. Set it to `true` only when testing the
+private-user privacy controls and follow-request review flow.
 
 Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
 Android `adb reverse` flow documented below.

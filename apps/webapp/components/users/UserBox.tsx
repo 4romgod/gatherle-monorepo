@@ -8,6 +8,7 @@ import { getAvatarSrc, getDisplayName } from '@/lib/utils';
 import FollowButton from './FollowButton';
 import { useSession } from 'next-auth/react';
 import { alpha, useTheme } from '@mui/material/styles';
+import RemoteImage from '@/components/core/RemoteImage';
 
 interface UserBoxProps {
   user: User;
@@ -39,23 +40,39 @@ export default function UserBox({ user }: UserBoxProps) {
         }}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', p: 1.75 }}>
-          <Link href={ROUTES.USERS.USER(user.username)} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Avatar
-              src={getAvatarSrc(user)}
+          <Box
+            component={Link}
+            href={ROUTES.USERS.USER(user.username)}
+            sx={{ color: 'inherit', textDecoration: 'none' }}
+          >
+            <RemoteImage
               alt={displayName}
+              fallback={
+                <Avatar
+                  sx={{
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    border: '2px solid',
+                    borderColor: 'divider',
+                    color: 'primary.main',
+                    fontWeight: 900,
+                    height: 58,
+                    width: 58,
+                  }}
+                >
+                  {displayName?.[0]?.toUpperCase()}
+                </Avatar>
+              }
+              src={getAvatarSrc(user)}
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 border: '2px solid',
                 borderColor: 'divider',
-                color: 'primary.main',
-                fontWeight: 900,
+                borderRadius: '50%',
                 height: 58,
                 width: 58,
               }}
-            >
-              {displayName?.[0]?.toUpperCase()}
-            </Avatar>
-          </Link>
+            />
+          </Box>
 
           <Box
             component={Link}

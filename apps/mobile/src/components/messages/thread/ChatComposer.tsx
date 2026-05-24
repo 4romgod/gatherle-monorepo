@@ -122,7 +122,7 @@ export function ChatComposer({
           />
         </View>
         <TextInput
-          blurOnSubmit={false}
+          multiline
           onChangeText={(nextValue) => {
             setDraft(nextValue);
             if (sendError) {
@@ -144,6 +144,8 @@ export function ChatComposer({
               color: variant === 'overlay' ? theme.colors.heroText : theme.colors.textPrimary,
             },
           ]}
+          submitBehavior="newline"
+          textAlignVertical="center"
           value={draft}
         />
         <View style={styles.sendWrap}>
@@ -190,6 +192,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.xl,
     lineHeight: 18,
+    maxHeight: 76,
     minHeight: 18,
     minWidth: 0,
     paddingBottom: 0,
@@ -214,8 +217,8 @@ const styles = StyleSheet.create({
   },
   shell: {
     gap: 8,
-    paddingBottom: 18,
-    paddingTop: 12,
+    paddingBottom: 8,
+    paddingTop: 8,
     position: 'relative',
   },
   status: {

@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { DimensionValue } from 'react-native';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventOccurrence, MobileParticipant } from '@data/graphql/query/Discovery/types';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { navigationRef } from '@/app/navigation/navigationRef';
+import { RemoteImage } from '@/components/core/RemoteImage';
 import { EventCardActionButton } from '@/components/events/card/EventCardActionButton';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
 import { useEventCardActions } from '@/hooks/events/useEventCardActions';
@@ -38,6 +39,11 @@ function ParticipantBubble({ participant, index }: { participant: MobileParticip
   const { theme } = useAppTheme();
   const label = getDisplayName(participant.user);
   const avatarUrl = participant.user?.profile_picture;
+  const fallback = (
+    <View style={[styles.participantFallback, { backgroundColor: theme.colors.surfaceRaised }]}>
+      <Text style={[styles.participantFallbackText, { color: theme.colors.textPrimary }]}>{getInitials(label)}</Text>
+    </View>
+  );
 
   return (
     <View
@@ -49,15 +55,7 @@ function ParticipantBubble({ participant, index }: { participant: MobileParticip
         },
       ]}
     >
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} style={styles.participantImage} />
-      ) : (
-        <View style={[styles.participantFallback, { backgroundColor: theme.colors.surfaceRaised }]}>
-          <Text style={[styles.participantFallbackText, { color: theme.colors.textPrimary }]}>
-            {getInitials(label)}
-          </Text>
-        </View>
-      )}
+      <RemoteImage fallback={fallback} uri={avatarUrl} style={styles.participantImage} />
     </View>
   );
 }
@@ -72,6 +70,13 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
   const participants = getOccurrenceParticipantPreview(occurrence);
   const isFeatured = variant === 'featured';
   const overlayLabel = isFeatured ? getEventCityLabel(occurrence).toUpperCase() : getEventStatusLabel(occurrence);
+  const imageFallback = (
+    <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
+      <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
+        {getEventTitle(occurrence).charAt(0).toUpperCase()}
+      </Text>
+    </LinearGradient>
+  );
   const shadowStyle =
     theme.mode === 'light'
       ? {
@@ -142,15 +147,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
         ]}
       >
         <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.image} />
-          ) : (
-            <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
-              <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
-                {getEventTitle(occurrence).charAt(0).toUpperCase()}
-              </Text>
-            </LinearGradient>
-          )}
+          <RemoteImage fallback={imageFallback} showLoader uri={imageUrl} style={styles.image} />
           <View style={[styles.imageOverlay, { backgroundColor: theme.colors.heroBackground + '24' }]} />
           <View
             style={[

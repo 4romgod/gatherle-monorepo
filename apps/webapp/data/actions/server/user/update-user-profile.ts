@@ -15,6 +15,7 @@ import { extractApolloErrorMessage } from '@/lib/utils/apollo-error';
 import { safeJsonParse } from '@/lib/utils/json-parse';
 import { logger } from '@/lib/utils/logger';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { featureFlags } from '@/lib/constants/feature-flags';
 import type { ActionState } from '@/data/actions/types';
 
 // Zod schemas for validating JSON-parsed fields (matches UserLocationInput GraphQL type)
@@ -103,6 +104,14 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
   const defaultVisibility = Object.values(SocialVisibility).includes(defaultVisibilityStr as SocialVisibility)
     ? (defaultVisibilityStr as SocialVisibility)
     : undefined;
+  const resolvedFollowPolicy = featureFlags.enablePrivateUsers ? followPolicy : FollowPolicy.Public;
+  const resolvedFollowersListVisibility = featureFlags.enablePrivateUsers
+    ? followersListVisibility
+    : SocialVisibility.Public;
+  const resolvedFollowingListVisibility = featureFlags.enablePrivateUsers
+    ? followingListVisibility
+    : SocialVisibility.Public;
+  const resolvedDefaultVisibility = featureFlags.enablePrivateUsers ? defaultVisibility : SocialVisibility.Public;
 
   // Parse boolean fields (from hidden inputs, they come as strings)
   const shareRSVPStr = formData.get('shareRSVPByDefault')?.toString();
@@ -132,10 +141,10 @@ export async function updateUserProfileAction(prevState: ActionState, formData: 
     location: location,
     interests: interests,
     // Privacy fields
-    followPolicy: followPolicy,
-    followersListVisibility: followersListVisibility,
-    followingListVisibility: followingListVisibility,
-    defaultVisibility: defaultVisibility,
+    followPolicy: resolvedFollowPolicy,
+    followersListVisibility: resolvedFollowersListVisibility,
+    followingListVisibility: resolvedFollowingListVisibility,
+    defaultVisibility: resolvedDefaultVisibility,
     shareRSVPByDefault: shareRSVPByDefault,
     shareCheckinsByDefault: shareCheckinsByDefault,
     primaryTimezone: primaryTimezone,

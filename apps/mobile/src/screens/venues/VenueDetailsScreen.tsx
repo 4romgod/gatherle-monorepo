@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { InlineButton } from '@/components/core/InlineButton';
 import { PageContainer } from '@/components/core/PageContainer';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { RemoteImage } from '@/components/core/RemoteImage';
 import { StateNotice } from '@/components/core/StateNotice';
 import { DetailSection } from '@/components/details/DetailSection';
 import { DetailStatChip } from '@/components/details/DetailStatChip';
@@ -69,6 +70,7 @@ export function VenueDetailsScreen() {
   );
   const amenityList = useMemo(() => venue?.amenities?.filter(Boolean) ?? [], [venue?.amenities]);
   const canEditVenue = canManageVenue(venue?.orgId);
+  const heroFallback = venue ? <ProfileAvatar label={venue.name} size={74} /> : null;
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -144,11 +146,7 @@ export function VenueDetailsScreen() {
         ]}
       >
         <View style={styles.heroTopRow}>
-          {venue.featuredImageUrl ? (
-            <Image source={{ uri: venue.featuredImageUrl }} style={styles.heroImage} />
-          ) : (
-            <ProfileAvatar label={venue.name} size={74} />
-          )}
+          <RemoteImage fallback={heroFallback} uri={venue.featuredImageUrl} style={styles.heroImage} />
 
           <View style={styles.heroCopy}>
             <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{venue.name}</Text>

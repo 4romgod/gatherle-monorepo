@@ -24,6 +24,7 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { BlockedUsersList } from '@/components/users/BlockedUsersList';
 import dayjs from 'dayjs';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { featureFlags } from '@/lib/constants/feature-flags';
 import { signIn, useSession } from 'next-auth/react';
 
 interface PersonalSettings {
@@ -38,6 +39,33 @@ interface PersonalSettings {
   shareCheckinsByDefault: boolean;
 }
 
+type PrivacySettingsSource = Partial<
+  Pick<User, 'defaultVisibility' | 'followPolicy' | 'followersListVisibility' | 'followingListVisibility'>
+>;
+
+function getPrivacySettings(
+  user: PrivacySettingsSource,
+): Pick<
+  PersonalSettings,
+  'defaultVisibility' | 'followPolicy' | 'followersListVisibility' | 'followingListVisibility'
+> {
+  if (!featureFlags.enablePrivateUsers) {
+    return {
+      defaultVisibility: SocialVisibility.Public,
+      followPolicy: FollowPolicy.Public,
+      followersListVisibility: SocialVisibility.Public,
+      followingListVisibility: SocialVisibility.Public,
+    };
+  }
+
+  return {
+    defaultVisibility: user.defaultVisibility || SocialVisibility.Public,
+    followPolicy: user.followPolicy || FollowPolicy.Public,
+    followersListVisibility: user.followersListVisibility || SocialVisibility.Public,
+    followingListVisibility: user.followingListVisibility || SocialVisibility.Public,
+  };
+}
+
 export default function PersonalSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useAppContext();
   const [loading, setLoading] = useState(false);
@@ -48,10 +76,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
     birthdate: user.birthdate || '',
     gender: user.gender || null,
     phone_number: user.phone_number || '',
-    followPolicy: user.followPolicy || FollowPolicy.Public,
-    followersListVisibility: user.followersListVisibility || SocialVisibility.Public,
-    followingListVisibility: user.followingListVisibility || SocialVisibility.Public,
-    defaultVisibility: user.defaultVisibility || SocialVisibility.Public,
+    ...getPrivacySettings(user),
     shareRSVPByDefault: user.shareRSVPByDefault ?? true,
     shareCheckinsByDefault: user.shareCheckinsByDefault ?? true,
   });
@@ -63,10 +88,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         birthdate: session.user.birthdate || '',
         gender: session.user.gender || null,
         phone_number: session.user.phone_number || '',
-        followPolicy: session.user.followPolicy || FollowPolicy.Public,
-        followersListVisibility: session.user.followersListVisibility || SocialVisibility.Public,
-        followingListVisibility: session.user.followingListVisibility || SocialVisibility.Public,
-        defaultVisibility: session.user.defaultVisibility || SocialVisibility.Public,
+        ...getPrivacySettings(session.user),
         shareRSVPByDefault: session.user.shareRSVPByDefault ?? true,
         shareCheckinsByDefault: session.user.shareCheckinsByDefault ?? true,
       });
@@ -108,10 +130,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         birthdate: updatedUser.birthdate || '',
         gender: updatedUser.gender || null,
         phone_number: updatedUser.phone_number || '',
-        followPolicy: updatedUser.followPolicy || FollowPolicy.Public,
-        followersListVisibility: updatedUser.followersListVisibility || SocialVisibility.Public,
-        followingListVisibility: updatedUser.followingListVisibility || SocialVisibility.Public,
-        defaultVisibility: updatedUser.defaultVisibility || SocialVisibility.Public,
+        ...getPrivacySettings(updatedUser),
         shareRSVPByDefault: updatedUser.shareRSVPByDefault ?? true,
         shareCheckinsByDefault: updatedUser.shareCheckinsByDefault ?? true,
       });
@@ -141,7 +160,7 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
             Personal Settings
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-            Manage your personal information and privacy preferences
+            Manage your personal information and account preferences
           </Typography>
         </Box>
 
@@ -149,10 +168,26 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
           {/* Hidden fields to submit privacy values with form data */}
           <input type="hidden" name="birthdate" value={settings.birthdate} />
           <input type="hidden" name="gender" value={settings.gender || ''} />
-          <input type="hidden" name="followPolicy" value={settings.followPolicy} />
-          <input type="hidden" name="followersListVisibility" value={settings.followersListVisibility} />
-          <input type="hidden" name="followingListVisibility" value={settings.followingListVisibility} />
-          <input type="hidden" name="defaultVisibility" value={settings.defaultVisibility} />
+          <input
+            type="hidden"
+            name="followPolicy"
+            value={featureFlags.enablePrivateUsers ? settings.followPolicy : FollowPolicy.Public}
+          />
+          <input
+            type="hidden"
+            name="followersListVisibility"
+            value={featureFlags.enablePrivateUsers ? settings.followersListVisibility : SocialVisibility.Public}
+          />
+          <input
+            type="hidden"
+            name="followingListVisibility"
+            value={featureFlags.enablePrivateUsers ? settings.followingListVisibility : SocialVisibility.Public}
+          />
+          <input
+            type="hidden"
+            name="defaultVisibility"
+            value={featureFlags.enablePrivateUsers ? settings.defaultVisibility : SocialVisibility.Public}
+          />
           <input type="hidden" name="shareRSVPByDefault" value={String(settings.shareRSVPByDefault)} />
           <input type="hidden" name="shareCheckinsByDefault" value={String(settings.shareCheckinsByDefault)} />
           <input type="hidden" name="phone_number" value={settings.phone_number} />
@@ -226,189 +261,190 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
             </Grid>
           </Box>
 
-          {/* Privacy Settings */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Privacy Settings
-            </Typography>
+          {featureFlags.enablePrivateUsers ? (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
+                Privacy Settings
+              </Typography>
 
-            <Stack spacing={2}>
-              <Box sx={{ py: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.followPolicy === FollowPolicy.RequireApproval}
-                      onChange={() =>
+              <Stack spacing={2}>
+                <Box sx={{ py: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.followPolicy === FollowPolicy.RequireApproval}
+                        onChange={() =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            followPolicy:
+                              prev.followPolicy === FollowPolicy.Public
+                                ? FollowPolicy.RequireApproval
+                                : FollowPolicy.Public,
+                          }))
+                        }
+                        color="secondary"
+                        name="followPolicy"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>
+                          Private Account
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Require your approval before someone can follow you
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                {/* Default Activity Visibility */}
+                <Box sx={{ py: 1 }}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="default-visibility-label" color="secondary">
+                      Default Activity Visibility
+                    </InputLabel>
+                    <Select
+                      id="default-visibility"
+                      labelId="default-visibility-label"
+                      name="defaultVisibility"
+                      value={settings.defaultVisibility}
+                      onChange={(e) =>
                         setSettings((prev) => ({
                           ...prev,
-                          followPolicy:
-                            prev.followPolicy === FollowPolicy.Public
-                              ? FollowPolicy.RequireApproval
-                              : FollowPolicy.Public,
+                          defaultVisibility: e.target.value as SocialVisibility,
                         }))
                       }
+                      label="Default Activity Visibility"
                       color="secondary"
-                      name="followPolicy"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        Private Account
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Require your approval before someone can follow you
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
+                    >
+                      <MenuItem value={SocialVisibility.Public}>
+                        <Box>
+                          <Typography variant="body1">Everyone</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Your activity is visible to anyone
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>
+                        <Box>
+                          <Typography variant="body1">Followers Only</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Only people who follow you can see your activity
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>
+                        <Box>
+                          <Typography variant="body1">Only Me</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Your activity is hidden from everyone
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
 
-              {/* Default Activity Visibility */}
-              <Box sx={{ py: 1 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="default-visibility-label" color="secondary">
-                    Default Activity Visibility
-                  </InputLabel>
-                  <Select
-                    id="default-visibility"
-                    labelId="default-visibility-label"
-                    name="defaultVisibility"
-                    value={settings.defaultVisibility}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        defaultVisibility: e.target.value as SocialVisibility,
-                      }))
-                    }
-                    label="Default Activity Visibility"
-                    color="secondary"
-                  >
-                    <MenuItem value={SocialVisibility.Public}>
-                      <Box>
-                        <Typography variant="body1">Everyone</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Your activity is visible to anyone
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Followers}>
-                      <Box>
-                        <Typography variant="body1">Followers Only</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Only people who follow you can see your activity
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Private}>
-                      <Box>
-                        <Typography variant="body1">Only Me</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Your activity is hidden from everyone
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
+                {/* Followers List Visibility */}
+                <Box sx={{ py: 1 }}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="followers-visibility-label" color="secondary">
+                      Who can see your followers
+                    </InputLabel>
+                    <Select
+                      id="followers-visibility"
+                      labelId="followers-visibility-label"
+                      name="followersListVisibility"
+                      value={settings.followersListVisibility}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          followersListVisibility: e.target.value as SocialVisibility,
+                        }))
+                      }
+                      label="Who can see your followers"
+                      color="secondary"
+                    >
+                      <MenuItem value={SocialVisibility.Public}>
+                        <Box>
+                          <Typography variant="body1">Everyone</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Anyone can see who follows you
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>
+                        <Box>
+                          <Typography variant="body1">Followers Only</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Only people who follow you can see your followers
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>
+                        <Box>
+                          <Typography variant="body1">Only Me</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Only you can see who follows you
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
 
-              {/* Followers List Visibility */}
-              <Box sx={{ py: 1 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="followers-visibility-label" color="secondary">
-                    Who can see your followers
-                  </InputLabel>
-                  <Select
-                    id="followers-visibility"
-                    labelId="followers-visibility-label"
-                    name="followersListVisibility"
-                    value={settings.followersListVisibility}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        followersListVisibility: e.target.value as SocialVisibility,
-                      }))
-                    }
-                    label="Who can see your followers"
-                    color="secondary"
-                  >
-                    <MenuItem value={SocialVisibility.Public}>
-                      <Box>
-                        <Typography variant="body1">Everyone</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Anyone can see who follows you
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Followers}>
-                      <Box>
-                        <Typography variant="body1">Followers Only</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Only people who follow you can see your followers
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Private}>
-                      <Box>
-                        <Typography variant="body1">Only Me</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Only you can see who follows you
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* Following List Visibility */}
-              <Box sx={{ py: 1 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="following-visibility-label" color="secondary">
-                    Who can see who you follow
-                  </InputLabel>
-                  <Select
-                    id="following-visibility"
-                    labelId="following-visibility-label"
-                    name="followingListVisibility"
-                    value={settings.followingListVisibility}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        followingListVisibility: e.target.value as SocialVisibility,
-                      }))
-                    }
-                    label="Who can see who you follow"
-                    color="secondary"
-                  >
-                    <MenuItem value={SocialVisibility.Public}>
-                      <Box>
-                        <Typography variant="body1">Everyone</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Anyone can see who you follow
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Followers}>
-                      <Box>
-                        <Typography variant="body1">Followers Only</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Only your followers can see who you follow
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value={SocialVisibility.Private}>
-                      <Box>
-                        <Typography variant="body1">Only Me</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Only you can see who you follow
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Stack>
-          </Box>
+                {/* Following List Visibility */}
+                <Box sx={{ py: 1 }}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="following-visibility-label" color="secondary">
+                      Who can see who you follow
+                    </InputLabel>
+                    <Select
+                      id="following-visibility"
+                      labelId="following-visibility-label"
+                      name="followingListVisibility"
+                      value={settings.followingListVisibility}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          followingListVisibility: e.target.value as SocialVisibility,
+                        }))
+                      }
+                      label="Who can see who you follow"
+                      color="secondary"
+                    >
+                      <MenuItem value={SocialVisibility.Public}>
+                        <Box>
+                          <Typography variant="body1">Everyone</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Anyone can see who you follow
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>
+                        <Box>
+                          <Typography variant="body1">Followers Only</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Only your followers can see who you follow
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>
+                        <Box>
+                          <Typography variant="body1">Only Me</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Only you can see who you follow
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Stack>
+            </Box>
+          ) : null}
 
           {/* Activity Sharing */}
           <Box sx={{ mb: 4 }}>
