@@ -4,6 +4,7 @@ import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 
 type EventDetailActionButtonProps = {
+  compact?: boolean;
   disabled?: boolean;
   icon: keyof typeof Feather.glyphMap;
   label: string;
@@ -12,6 +13,7 @@ type EventDetailActionButtonProps = {
 };
 
 export function EventDetailActionButton({
+  compact = false,
   disabled = false,
   icon,
   label,
@@ -50,6 +52,7 @@ export function EventDetailActionButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,
+        compact ? styles.actionButtonCompact : null,
         {
           backgroundColor: palette.backgroundColor,
           borderColor: palette.borderColor,
@@ -57,8 +60,12 @@ export function EventDetailActionButton({
         },
       ]}
     >
-      <Feather color={palette.textColor} name={icon} size={18} />
-      <Text style={[styles.actionButtonText, { color: palette.textColor }]}>{label}</Text>
+      <Feather color={palette.textColor} name={icon} size={compact ? 16 : 18} />
+      <Text
+        style={[styles.actionButtonText, compact ? styles.actionButtonTextCompact : null, { color: palette.textColor }]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -75,8 +82,17 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 12,
   },
+  actionButtonCompact: {
+    borderRadius: 12,
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 10,
+  },
   actionButtonText: {
     ...typography.bodySemiBold,
     fontSize: 13,
+  },
+  actionButtonTextCompact: {
+    fontSize: 12,
   },
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import type { SxProps, Theme } from '@mui/material/styles';
 import { Button, IconButton, Tooltip, CircularProgress, Menu, MenuItem } from '@mui/material';
 import { EventAvailable, EventAvailableOutlined, Star, Check, Cancel } from '@mui/icons-material';
 import { useRsvp } from '@/hooks';
@@ -21,6 +22,7 @@ interface RsvpButtonProps {
   onRsvpChange?: (status: ParticipantStatus | null) => void;
   label?: string;
   fullWidth?: boolean;
+  sx?: SxProps<Theme>;
 }
 
 /**
@@ -36,6 +38,7 @@ export default function RsvpButton({
   onRsvpChange,
   label,
   fullWidth = false,
+  sx,
 }: RsvpButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -152,6 +155,7 @@ export default function RsvpButton({
           bgcolor: hasRsvpd ? 'success.dark' : 'action.hover',
           borderColor: hasRsvpd ? 'success.dark' : 'success.main',
         },
+        ...sx,
       }}
     >
       {label}
@@ -169,6 +173,7 @@ export default function RsvpButton({
           color: hasRsvpd ? 'success.dark' : 'success.main',
           bgcolor: hasRsvpd ? 'success.light' : 'action.hover',
         },
+        ...sx,
       }}
       aria-label={tooltipText}
     >

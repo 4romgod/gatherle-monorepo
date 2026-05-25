@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
@@ -43,6 +44,7 @@ export function EventDetailsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<EventDetailsRoute>();
   const { authToken, isAuthenticated } = useAppShell();
+  const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
   const occurrence = route.params.occurrence;
   const imageUrl = getEventImageUrl(occurrence);
@@ -77,6 +79,7 @@ export function EventDetailsScreen() {
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
   const heroPillLabel = useMemo(() => formatCountLabel(localParticipantCount, 'going'), [localParticipantCount]);
+  const stickyBarBottom = Math.max(insets.bottom + 2, 18);
   const heroFallback = (
     <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
       <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
@@ -221,7 +224,12 @@ export function EventDetailsScreen() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={styles.pageContent}
+        contentContainerStyle={[
+          styles.pageContent,
+          {
+            paddingBottom: stickyBarBottom + 74,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         style={{ backgroundColor: theme.colors.background }}
       >
@@ -236,39 +244,11 @@ export function EventDetailsScreen() {
             },
           ]}
         >
-          <RemoteImage
-            fallback={heroFallback}
-            resizeMode="contain"
-            showLoader
-            style={styles.heroImage}
-            uri={imageUrl}
-          />
+          <RemoteImage fallback={heroFallback} resizeMode="cover" showLoader style={styles.heroImage} uri={imageUrl} />
         </Pressable>
 
         <View style={styles.heroSummary}>
-          <View style={[styles.heroPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Text style={[styles.heroPillText, { color: theme.colors.primary }]}>{heroPillLabel}</Text>
-          </View>
           <Text style={[styles.heroTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>{hostLabel}</Text>
-        </View>
-
-        <View style={styles.actionsRow}>
-          <EventDetailActionButton
-            icon={rsvpIcon}
-            disabled={loading}
-            label={rsvpLabel}
-            onPress={handleRsvpPress}
-            tone={rsvpTone}
-          />
-          <EventDetailActionButton
-            disabled={loading}
-            icon="bookmark"
-            label={isSaved ? 'Saved' : 'Save'}
-            onPress={handleToggleSave}
-            tone={saveTone}
-          />
-          <EventDetailActionButton icon="share-2" label="Share" onPress={handleShare} tone="secondary" />
         </View>
 
         <View style={styles.actionsRow}>
@@ -420,6 +400,44 @@ export function EventDetailsScreen() {
         />
       </ScrollView>
 
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.bottomBarWrap,
+          {
+            bottom: stickyBarBottom,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <EventDetailActionButton
+            compact
+            disabled={loading}
+            icon={rsvpIcon}
+            label={rsvpLabel}
+            onPress={handleRsvpPress}
+            tone={rsvpTone}
+          />
+          <EventDetailActionButton
+            compact
+            disabled={loading}
+            icon="bookmark"
+            label={isSaved ? 'Saved' : 'Save'}
+            onPress={handleToggleSave}
+            tone={saveTone}
+          />
+          <EventDetailActionButton compact icon="share-2" label="Share" onPress={handleShare} tone="secondary" />
+        </View>
+      </View>
+
       <EventImageViewerModal
         imageUrl={imageUrl}
         onClose={() => setImageViewerVisible(false)}
@@ -446,7 +464,25 @@ export function EventDetailsScreen() {
 const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+  },
+  bottomBar: {
+    alignItems: 'center',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+  },
+  bottomBarWrap: {
+    left: 20,
+    position: 'absolute',
+    right: 20,
   },
   attendeeSummary: {
     ...typography.bodyMedium,
@@ -481,10 +517,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   heroFrame: {
+    aspectRatio: 16 / 9,
     borderColor: 'transparent',
     borderRadius: 28,
     borderWidth: 1,
-    height: 320,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -521,7 +557,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     ...typography.displayBold,
-    fontSize: 22,
+    fontSize: 18,
     letterSpacing: -0.6,
     lineHeight: 26,
   },
@@ -552,8 +588,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   pageContent: {
-    gap: 22,
-    paddingBottom: 108,
+    gap: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
   },

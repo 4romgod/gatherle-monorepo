@@ -111,7 +111,18 @@ export default function EventMomentsRing({
   }
 
   if (!canPost && moments.length === 0) {
-    return null;
+    return (
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{
+          fontSize: '0.9375rem',
+          lineHeight: '24px',
+        }}
+      >
+        Moments from this event will appear here. RSVP as going to post your own.
+      </Typography>
+    );
   }
 
   return (

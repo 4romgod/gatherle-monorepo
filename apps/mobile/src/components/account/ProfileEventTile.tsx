@@ -94,7 +94,11 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   profileEventBottomFade: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   profileEventImage: {
     height: '100%',
@@ -107,8 +111,12 @@ const styles = StyleSheet.create({
     right: 8,
   },
   profileEventOverlay: {
-    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15, 23, 42, 0.34)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   profileEventPlaceholder: {
     alignItems: 'center',

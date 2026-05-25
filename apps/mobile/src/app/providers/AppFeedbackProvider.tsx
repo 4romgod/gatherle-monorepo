@@ -303,10 +303,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loaderOverlay: {
-    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     backgroundColor: 'rgba(8, 17, 32, 0.42)',
+    bottom: 0,
     justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     zIndex: 1200,
   },
   loaderTitle: {
@@ -340,7 +344,11 @@ const styles = StyleSheet.create({
     width: 28,
   },
   toastLayer: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     zIndex: 1100,
   },
   toastMessage: {

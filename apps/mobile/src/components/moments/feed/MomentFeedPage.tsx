@@ -521,8 +521,12 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     alignItems: 'center',
+    bottom: 0,
     justifyContent: 'center',
-    ...StyleSheet.absoluteFillObject,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   media: {
     flex: 1,
@@ -537,7 +541,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   menuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     zIndex: 2,
   },
   menuCard: {
