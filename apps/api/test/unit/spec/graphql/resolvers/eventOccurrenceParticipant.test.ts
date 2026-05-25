@@ -219,9 +219,9 @@ describe('EventOccurrenceParticipantResolver', () => {
   it('reads the current user occurrence RSVPs through the service layer', async () => {
     (EventOccurrenceParticipantService.readByUser as jest.Mock).mockResolvedValue([participant]);
 
-    const result = await resolver.myEventOccurrenceRsvps(false, context);
+    const result = await resolver.myEventOccurrenceRsvps(false, undefined, context);
 
-    expect(EventOccurrenceParticipantService.readByUser).toHaveBeenCalledWith(user.userId, true);
+    expect(EventOccurrenceParticipantService.readByUser).toHaveBeenCalledWith(user.userId, true, undefined);
     expect(result).toEqual([participant]);
   });
 

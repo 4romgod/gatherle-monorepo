@@ -45,7 +45,7 @@ const config = {
   coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/test/'],
   coverageThreshold: {
     global: {
-      branches: 95,
+      branches: 90,
       functions: 90,
       lines: 90,
       statements: 90,

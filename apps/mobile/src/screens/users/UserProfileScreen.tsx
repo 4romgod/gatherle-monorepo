@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApolloError, useApolloClient, useQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { FollowTargetType, SortOrderInput } from '@data/graphql/types/graphql';
+import { FollowTargetType } from '@data/graphql/types/graphql';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { GetUserEventMomentsDocument } from '@data/graphql/query/EventMoment/query';
 import type { MobileUserEventMoment } from '@data/graphql/query/EventMoment/types';
@@ -25,7 +25,7 @@ import { MomentViewer } from '@/components/moments/MomentViewer';
 import { AccountScreenSkeleton } from '@/components/skeleton/AccountScreenSkeleton';
 import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { usePublicEvents } from '@/hooks/events/usePublicEvents';
+import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
 import { useUserEventOccurrences } from '@/hooks/events/useUserEventOccurrences';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
 import { useUserMoments } from '@/hooks/moments/useUserMoments';
@@ -96,23 +96,21 @@ export function UserProfileScreen() {
     targetType: FollowTargetType.User,
   });
   const {
-    error: eventsError,
-    loading: eventsLoading,
-    occurrences,
-    refetch: refetchEvents,
-  } = usePublicEvents(
-    {
-      filters: [{ field: 'organizers.user.userId', value: userId }],
-      pagination: { limit: 18 },
-      sort: [{ field: 'createdAt', order: SortOrderInput.Desc }],
-    },
-    authToken,
-  );
+    error: hostedEventsError,
+    hostedEvents,
+    hasMore: hostedEventsHasMore,
+    loading: hostedEventsLoading,
+    loadingMore: hostedEventsLoadingMore,
+    loadMore: loadMoreHostedEvents,
+    refetch: refetchHostedEvents,
+  } = useHostedEventsByUser(userId, authToken);
   const {
     error: participantEventsError,
     loading: participantEventsLoading,
     occurrences: participantOccurrences,
+    pastEvents,
     refetch: refetchParticipantOccurrences,
+    upcomingEvents,
   } = useUserEventOccurrences(userId, authToken);
   const {
     loading: userMomentsLoading,
@@ -121,59 +119,35 @@ export function UserProfileScreen() {
   } = useUserMoments(userId, authToken);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await Promise.all([refetch(), refetchEvents(), refetchParticipantOccurrences(), refetchUserMoments()]);
-    }, [refetch, refetchEvents, refetchParticipantOccurrences, refetchUserMoments]),
+      await Promise.all([refetch(), refetchHostedEvents(), refetchParticipantOccurrences(), refetchUserMoments()]);
+    }, [refetch, refetchHostedEvents, refetchParticipantOccurrences, refetchUserMoments]),
   );
 
   const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || '';
   const badges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
   const followerPreview = followers.slice(0, 3);
-  const hostedEventsCount = occurrences.length;
+  const hostedEventsCount = hostedEvents.length;
   const participantActivityUnsupported = isUnsupportedUserEventOccurrencesError(participantEventsError);
   const shouldShowParticipantTabs = !participantActivityUnsupported;
-  const upcomingRsvpEvents = useMemo(
-    () =>
-      participantOccurrences
-        .filter((occurrence) => {
-          const endAt = occurrence.endAt
-            ? new Date(occurrence.endAt).getTime()
-            : new Date(occurrence.startAt).getTime();
-          return endAt >= Date.now();
-        })
-        .sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime()),
-    [participantOccurrences],
-  );
-  const pastEvents = useMemo(
-    () =>
-      participantOccurrences
-        .filter((occurrence) => {
-          const endAt = occurrence.endAt
-            ? new Date(occurrence.endAt).getTime()
-            : new Date(occurrence.startAt).getTime();
-          return endAt < Date.now();
-        })
-        .sort((left, right) => new Date(right.startAt).getTime() - new Date(left.startAt).getTime()),
-    [participantOccurrences],
-  );
   const profileTabs = useMemo<Record<PublicProfileTab, MobileEventOccurrence[]>>(
     () => ({
-      going: upcomingRsvpEvents,
+      going: upcomingEvents,
       past: pastEvents,
-      hosting: occurrences,
+      hosting: hostedEvents,
     }),
-    [occurrences, pastEvents, upcomingRsvpEvents],
+    [hostedEvents, pastEvents, upcomingEvents],
   );
   const candidateMomentEventIds = useMemo(
     () =>
       [
         ...new Set(
-          [...occurrences, ...participantOccurrences]
+          [...hostedEvents, ...participantOccurrences]
             .map((occurrence) => occurrence.eventSeries?.eventId ?? occurrence.eventSeriesId)
             .filter((eventId): eventId is string => Boolean(eventId)),
         ),
       ].slice(0, 8),
-    [occurrences, participantOccurrences],
+    [hostedEvents, participantOccurrences],
   );
   const profileRoutes = useMemo(
     () =>
@@ -198,16 +172,28 @@ export function UserProfileScreen() {
                   ? 'No past event activity is visible for this member right now.'
                   : 'This member has no visible hosted events right now.'
             }
-            loading={route.key === 'hosting' ? eventsLoading : participantEventsLoading}
+            hasMore={route.key === 'hosting' ? hostedEventsHasMore : false}
+            loading={route.key === 'hosting' ? hostedEventsLoading : participantEventsLoading}
+            loadingMore={route.key === 'hosting' ? hostedEventsLoadingMore : false}
+            onLoadMore={route.key === 'hosting' ? loadMoreHostedEvents : undefined}
             occurrences={profileTabs[route.key]}
             onPressEvent={(occurrence) => navigation.navigate('EventDetails', { occurrence })}
           />
         ),
       })),
-    [eventsLoading, navigation, participantEventsLoading, profileTabs, shouldShowParticipantTabs],
+    [
+      hostedEventsHasMore,
+      hostedEventsLoading,
+      hostedEventsLoadingMore,
+      loadMoreHostedEvents,
+      navigation,
+      participantEventsLoading,
+      profileTabs,
+      shouldShowParticipantTabs,
+    ],
   );
   const shouldShowEventActivityError =
-    Boolean(eventsError) || (Boolean(participantEventsError) && !participantActivityUnsupported);
+    Boolean(hostedEventsError) || (Boolean(participantEventsError) && !participantActivityUnsupported);
   const visibleUserMoments = userMoments.length > 0 ? userMoments : fallbackMoments;
 
   useEffect(() => {
@@ -446,7 +432,7 @@ export function UserProfileScreen() {
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load this member’s event activity."
-          onPressAction={() => void Promise.all([refetchEvents(), refetchParticipantOccurrences()])}
+          onPressAction={() => void Promise.all([refetchHostedEvents(), refetchParticipantOccurrences()])}
         />
       ) : (
         <SwipePagerTabs routes={profileRoutes} variant="icon" />
@@ -461,15 +447,23 @@ export function UserProfileScreen() {
 
 function PublicProfileTabPane({
   emptyMessage,
+  hasMore = false,
   loading,
+  loadingMore = false,
+  onLoadMore,
   occurrences,
   onPressEvent,
 }: {
   emptyMessage: string;
+  hasMore?: boolean;
   loading: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   occurrences: MobileEventOccurrence[];
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
 }) {
+  const { theme } = useAppTheme();
+
   if (loading && occurrences.length === 0) {
     return <EventTileGridSkeleton count={6} />;
   }
@@ -478,7 +472,29 @@ function PublicProfileTabPane({
     return <StateNotice message={emptyMessage} />;
   }
 
-  return <EventTileGrid occurrences={occurrences} onPressEvent={onPressEvent} />;
+  return (
+    <View style={styles.profileEventsSection}>
+      <EventTileGrid occurrences={occurrences} onPressEvent={onPressEvent} />
+      {hasMore ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onLoadMore}
+          style={({ pressed }) => [
+            styles.loadMoreButton,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              opacity: pressed ? 0.84 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.loadMoreButtonText, { color: theme.colors.textPrimary }]}>
+            {loadingMore ? 'Loading more…' : 'Show more events'}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -515,6 +531,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  loadMoreButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  loadMoreButtonText: {
+    ...typography.bodySemiBold,
+    fontSize: 14,
+  },
   profileBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -538,6 +566,9 @@ const styles = StyleSheet.create({
     ...typography.displayBold,
     fontSize: 18,
     letterSpacing: -0.5,
+  },
+  profileEventsSection: {
+    gap: 4,
   },
   profileStatsRow: {
     flexDirection: 'row',

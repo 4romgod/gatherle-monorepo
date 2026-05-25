@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
-import { GetUserEventOccurrencesDocument } from '@data/graphql/query/EventOccurrenceParticipant/query';
-import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import { GetMyEventOccurrenceRsvpsDocument } from '@data/graphql/query/EventOccurrenceParticipant/query';
+import type { MobileRsvpOccurrence } from '@data/graphql/query/EventOccurrenceParticipant/types';
 import { getApolloAuthContext } from '@/lib/auth';
 import {
   buildCollectionPagination,
@@ -9,37 +9,44 @@ import {
   type CollectionQueryPaginationOptions,
 } from '@/lib/events/eventCollections';
 
-export function useUserEventOccurrences(
-  userId: string | undefined,
-  authToken: string | null,
+export function useMyEventOccurrenceRsvps(
+  authToken?: string | null,
+  includeCancelled = false,
   options: CollectionQueryPaginationOptions = {},
 ) {
   const { enabled = true, limit, skip } = options;
-  const { data, error, loading, refetch } = useQuery(GetUserEventOccurrencesDocument, {
+  const { data, error, loading, refetch } = useQuery(GetMyEventOccurrenceRsvpsDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !enabled || !userId,
     variables: {
-      userId: userId ?? '',
+      includeCancelled,
       options: buildCollectionPagination(limit, skip),
     },
+    skip: !enabled || !authToken,
     ...getApolloAuthContext(authToken),
   });
 
-  const occurrences = useMemo<MobileEventOccurrence[]>(() => data?.readUserEventOccurrences ?? [], [data]);
+  const events = useMemo(
+    () =>
+      (data?.myEventOccurrenceRsvps ?? [])
+        .map((rsvp) => rsvp.occurrence)
+        .filter((occurrence): occurrence is MobileRsvpOccurrence => Boolean(occurrence)),
+    [data],
+  );
+
   const { past, upcoming } = useMemo(
     () =>
       splitItemsByEventTime(
-        occurrences,
+        events,
         (occurrence) => occurrence.startAt,
         (occurrence) => occurrence.endAt,
       ),
-    [occurrences],
+    [events],
   );
 
   return {
     error,
+    events,
     loading,
-    occurrences,
     pastEvents: past,
     refetch,
     upcomingEvents: upcoming,

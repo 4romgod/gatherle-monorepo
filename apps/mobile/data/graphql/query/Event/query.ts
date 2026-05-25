@@ -31,6 +31,12 @@ export const GetEventsDocument = graphql(`
       media {
         featuredImageUrl
       }
+      primarySchedule {
+        anchorStartAt
+        occurrenceDurationMinutes
+        timezone
+        recurrenceRule
+      }
       eventCategories {
         eventCategoryId
         slug

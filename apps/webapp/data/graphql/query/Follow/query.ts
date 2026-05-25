@@ -97,8 +97,8 @@ export const GetFollowRequestsDocument = graphql(`
 `);
 
 export const GetSavedEventsDocument = graphql(`
-  query GetSavedEvents {
-    readSavedEvents {
+  query GetSavedEvents($options: QueryOptionsInput) {
+    readSavedEvents(options: $options) {
       followId
       followerUserId
       targetType

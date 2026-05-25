@@ -1,6 +1,7 @@
 import type {
   EventOccurrence,
   EventOccurrenceParticipant,
+  QueryOptionsInput,
   EventSeries,
   UpsertEventOccurrenceParticipantInput,
   User,
@@ -417,8 +418,12 @@ class EventOccurrenceParticipantService {
     return participant;
   }
 
-  static async readByUser(userId: string, activeOnly = true): Promise<EventOccurrenceParticipant[]> {
-    return EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
+  static async readByUser(
+    userId: string,
+    activeOnly = true,
+    options?: QueryOptionsInput,
+  ): Promise<EventOccurrenceParticipant[]> {
+    return EventOccurrenceParticipantDAO.readByUser(userId, activeOnly, options);
   }
 }
 

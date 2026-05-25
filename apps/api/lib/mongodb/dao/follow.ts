@@ -1,7 +1,7 @@
-import type { Follow as FollowEntity, CreateFollowInput } from '@gatherle/commons/types';
-import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
+import type { Follow as FollowEntity, CreateFollowInput, QueryOptionsInput } from '@gatherle/commons/types';
+import { FollowApprovalStatus, FollowTargetType, SortOrderInput } from '@gatherle/commons/types';
 import { Follow as FollowModel } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, logDaoError, transformOptionsToQuery } from '@/utils';
 
 class FollowDAO {
   static async upsert(
@@ -229,15 +229,25 @@ class FollowDAO {
    * @param userId - The user who saved the events
    * @returns Array of Follow entities where targetType is EventSeries
    */
-  static async readSavedEventsForUser(userId: string): Promise<FollowEntity[]> {
+  static async readSavedEventsForUser(userId: string, options?: QueryOptionsInput): Promise<FollowEntity[]> {
     try {
-      const follows = await FollowModel.find({
-        followerUserId: userId,
-        targetType: FollowTargetType.EventSeries,
-        approvalStatus: FollowApprovalStatus.Accepted,
-      })
-        .sort({ createdAt: -1 })
-        .exec();
+      const follows = await transformOptionsToQuery(FollowModel, {
+        ...options,
+        filters: [
+          { field: 'followerUserId', value: userId },
+          { field: 'targetType', value: FollowTargetType.EventSeries },
+          { field: 'approvalStatus', value: FollowApprovalStatus.Accepted },
+          ...(options?.filters ?? []),
+        ],
+        sort: options?.sort?.length
+          ? options.sort
+          : [
+              {
+                field: 'createdAt',
+                order: SortOrderInput.desc,
+              },
+            ],
+      }).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
       logDaoError('Error reading saved events for user', { error });

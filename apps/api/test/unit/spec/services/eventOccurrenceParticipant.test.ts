@@ -376,7 +376,7 @@ describe('EventOccurrenceParticipantService', () => {
 
     const result = await EventOccurrenceParticipantService.readByUser(actor.userId, false);
 
-    expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenCalledWith(actor.userId, false);
+    expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenCalledWith(actor.userId, false, undefined);
     expect(result).toEqual([goingParticipant]);
   });
 });

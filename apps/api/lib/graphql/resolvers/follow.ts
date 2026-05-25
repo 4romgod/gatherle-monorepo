@@ -4,6 +4,7 @@ import {
   CreateFollowInput,
   Follow,
   FollowTargetType,
+  QueryOptionsInput,
   User,
   UserRole,
   Organization,
@@ -189,9 +190,12 @@ export class FollowResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Query(() => [Follow], { description: 'Get all saved events for the authenticated user' })
-  async readSavedEvents(@Ctx() context: ServerContext): Promise<Follow[]> {
+  async readSavedEvents(
+    @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
+    @Ctx() context: ServerContext,
+  ): Promise<Follow[]> {
     const user = getAuthenticatedUser(context);
-    return FollowDAO.readSavedEventsForUser(user.userId);
+    return FollowDAO.readSavedEventsForUser(user.userId, options);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])

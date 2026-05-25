@@ -5,6 +5,7 @@ import {
   EventOccurrenceParticipant,
   EventSeries,
   EventsQueryOptionsInput,
+  QueryOptionsInput,
 } from '@gatherle/commons/types';
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';
@@ -24,9 +25,12 @@ export class EventOccurrenceResolver {
   }
 
   @Query(() => [EventOccurrence], { description: 'Read event occurrences linked to a specific user participant' })
-  async readUserEventOccurrences(@Arg('userId', () => String) userId: string): Promise<EventOccurrence[]> {
+  async readUserEventOccurrences(
+    @Arg('userId', () => String) userId: string,
+    @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
+  ): Promise<EventOccurrence[]> {
     validateMongodbId(userId);
-    return EventOccurrenceService.readUserEventOccurrences(userId);
+    return EventOccurrenceService.readUserEventOccurrences(userId, true, options);
   }
 
   @FieldResolver(() => EventSeries, {

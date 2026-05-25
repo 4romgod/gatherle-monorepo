@@ -1,6 +1,12 @@
 import EventOccurrenceService from '@/services/eventOccurrence';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
-import { EventOccurrenceStatus, EventStatus, type EventOccurrence, type EventSeries } from '@gatherle/commons/types';
+import {
+  EventOccurrenceStatus,
+  EventStatus,
+  SortOrderInput,
+  type EventOccurrence,
+  type EventSeries,
+} from '@gatherle/commons/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 
@@ -702,7 +708,7 @@ describe('EventOccurrenceService', () => {
           startDate: new Date('2026-05-01T00:00:00.000Z'),
           endDate: new Date('2026-05-31T23:59:59.999Z'),
         },
-        sort: [{ field: 'rsvpCount', order: 'desc' as const }],
+        sort: [{ field: 'rsvpCount', order: SortOrderInput.desc }],
       });
 
       expect(EventOccurrenceParticipantDAO.readActiveCountsByOccurrences).toHaveBeenCalledWith([

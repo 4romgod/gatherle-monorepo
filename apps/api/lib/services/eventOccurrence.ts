@@ -17,6 +17,7 @@ import type {
   EventOccurrence,
   EventSeries,
   EventsQueryOptionsInput,
+  QueryOptionsInput,
   UpdateEventOccurrenceInput,
   SortInput,
 } from '@gatherle/commons/types';
@@ -55,6 +56,7 @@ const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
   'timezone',
   'updatedAt',
 ]);
+const SUPPORTED_USER_OCCURRENCE_SORT_FIELDS = new Set(['startAt']);
 
 function parseRule(rruleString: string): RRule | null {
   try {
@@ -231,6 +233,24 @@ function paginateOccurrences(occurrences: EventOccurrence[], options?: EventsQue
   return occurrences.slice(skip ?? 0, (skip ?? 0) + limit);
 }
 
+function getUserOccurrenceSortInput(sort?: QueryOptionsInput['sort']): { field: string; order: SortOrderInput }[] {
+  const sortInput = sort && sort.length > 0 ? sort : [{ field: 'startAt', order: SortOrderInput.desc }];
+
+  for (const sortEntry of sortInput) {
+    if (!SUPPORTED_USER_OCCURRENCE_SORT_FIELDS.has(sortEntry.field)) {
+      throw CustomError(
+        `User occurrence sorting only supports: ${Array.from(SUPPORTED_USER_OCCURRENCE_SORT_FIELDS).sort().join(', ')}.`,
+        ErrorTypes.BAD_REQUEST,
+      );
+    }
+  }
+
+  return sortInput.map((sortEntry) => ({
+    field: sortEntry.field,
+    order: sortEntry.order as SortOrderInput,
+  }));
+}
+
 function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): EventOccurrence {
   const anchorStartAt = getScheduleAnchorStartAt(eventSeries.primarySchedule);
   const durationMs = getScheduleDurationMinutes(eventSeries.primarySchedule) * 60 * 1000;
@@ -311,21 +331,39 @@ class EventOccurrenceService {
     return EventOccurrenceDAO.readFirstByEventSeriesId(eventSeriesId);
   }
 
-  static async readUserEventOccurrences(userId: string, activeOnly = true): Promise<EventOccurrence[]> {
-    const participants = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
-    if (participants.length === 0) {
+  static async readUserEventOccurrences(
+    userId: string,
+    activeOnly = true,
+    options?: QueryOptionsInput,
+  ): Promise<EventOccurrence[]> {
+    if (options?.search) {
+      throw CustomError('User occurrence queries do not support text search.', ErrorTypes.BAD_REQUEST);
+    }
+
+    if (options?.filters?.length) {
+      throw CustomError('User occurrence queries do not support generic filters yet.', ErrorTypes.BAD_REQUEST);
+    }
+
+    const [{ order: startAtOrder }] = getUserOccurrenceSortInput(options?.sort);
+    const pagination = options?.pagination ? validatePaginationInput(options.pagination) : undefined;
+    const orderedOccurrenceIds = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(
+      userId,
+      activeOnly,
+      startAtOrder === SortOrderInput.asc ? 1 : -1,
+      pagination?.skip ?? 0,
+      pagination?.limit,
+    );
+
+    if (orderedOccurrenceIds.length === 0) {
       return [];
     }
 
-    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds(
-      participants.map((participant) => participant.occurrenceId),
-    );
+    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds(orderedOccurrenceIds);
     const occurrenceMap = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
 
-    return participants
-      .map((participant) => occurrenceMap.get(participant.occurrenceId))
-      .filter((occurrence): occurrence is EventOccurrence => Boolean(occurrence))
-      .sort((left, right) => new Date(right.startAt).getTime() - new Date(left.startAt).getTime());
+    return orderedOccurrenceIds
+      .map((occurrenceId) => occurrenceMap.get(occurrenceId))
+      .filter((occurrence): occurrence is EventOccurrence => Boolean(occurrence));
   }
 
   static async readOccurrenceForSeries(eventSeriesId: string, occurrenceId?: string): Promise<EventOccurrence | null> {

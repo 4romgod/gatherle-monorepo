@@ -21,6 +21,10 @@ export const apolloClient = new ApolloClient({
           readEventCategories: {
             merge: false,
           },
+          readEvents: {
+            keyArgs: ['options', ['filters', 'dateFilterOption', 'customDate', 'location', 'sort', 'pagination']],
+            merge: false,
+          },
           readEventOccurrences: {
             merge: false,
           },

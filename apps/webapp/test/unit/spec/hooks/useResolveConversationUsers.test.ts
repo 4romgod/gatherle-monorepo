@@ -247,4 +247,62 @@ describe('useResolveConversationUsers', () => {
       avatarSrc: 'https://cdn.example.com/ghost.jpg',
     });
   });
+
+  it('keeps the full-name branch stable when username and avatar are missing', async () => {
+    const conversations: Conversation[] = [{ conversationWithUserId: 'user-8', conversationWithUser: null }];
+
+    mockApolloClient.query.mockResolvedValueOnce({
+      data: {
+        readUserById: {
+          userId: 'user-8',
+          given_name: 'Only',
+          family_name: 'Name',
+          username: null,
+          profile_picture: null,
+        },
+      },
+    });
+
+    const { result } = renderHook(() => useResolveConversationUsers(conversations));
+
+    await act(async () => {});
+
+    expect(result.current['user-8']).toEqual({
+      displayName: 'Only Name',
+      username: undefined,
+      avatarSrc: undefined,
+    });
+  });
+
+  it('does not update state after unmounting', async () => {
+    const conversations: Conversation[] = [{ conversationWithUserId: 'user-9', conversationWithUser: null }];
+    let resolveQuery: ((value: any) => void) | undefined;
+
+    mockApolloClient.query.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveQuery = resolve;
+        }),
+    );
+
+    const { result, unmount } = renderHook(() => useResolveConversationUsers(conversations));
+    unmount();
+
+    await act(async () => {
+      resolveQuery?.({
+        data: {
+          readUserById: {
+            userId: 'user-9',
+            given_name: 'Unmounted',
+            family_name: 'User',
+            username: 'unmounted',
+            profile_picture: null,
+          },
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(result.current).toEqual({});
+  });
 });

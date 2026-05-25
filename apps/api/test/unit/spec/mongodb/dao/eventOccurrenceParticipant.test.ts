@@ -17,7 +17,7 @@ jest.mock('@/mongodb/models', () => ({
   },
 }));
 
-const FIND_CHAIN_METHODS: MockQueryOptions = { chainMethods: ['sort'] };
+const FIND_CHAIN_METHODS: MockQueryOptions = { chainMethods: ['and', 'sort'] };
 
 describe('EventOccurrenceParticipantDAO', () => {
   const participant: EventOccurrenceParticipant = {
@@ -492,10 +492,7 @@ describe('EventOccurrenceParticipantDAO', () => {
 
       const result = await EventOccurrenceParticipantDAO.readByUser(participant.userId);
 
-      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
-        userId: participant.userId,
-        status: { $ne: ParticipantStatus.Cancelled },
-      });
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith();
       expect(result).toEqual([participant]);
     });
 
@@ -506,9 +503,7 @@ describe('EventOccurrenceParticipantDAO', () => {
 
       await EventOccurrenceParticipantDAO.readByUser(participant.userId, false);
 
-      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith({
-        userId: participant.userId,
-      });
+      expect(EventOccurrenceParticipantModel.find).toHaveBeenCalledWith();
     });
 
     it('wraps readByUser failures', async () => {
@@ -517,6 +512,71 @@ describe('EventOccurrenceParticipantDAO', () => {
       );
 
       await expect(EventOccurrenceParticipantDAO.readByUser(participant.userId)).rejects.toThrow(GraphQLError);
+    });
+  });
+
+  describe('readOccurrenceIdsByUser', () => {
+    it('reads ordered occurrence IDs with the default active-only descending sort', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ occurrenceId: 'occ-2' }, { occurrenceId: 'occ-1' }]),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(participant.userId);
+
+      expect(EventOccurrenceParticipantModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: {
+              userId: participant.userId,
+              status: { $ne: ParticipantStatus.Cancelled },
+            },
+          }),
+          expect.objectContaining({
+            $sort: {
+              'occurrence.startAt': -1,
+              occurrenceId: 1,
+            },
+          }),
+        ]),
+      );
+      expect(result).toEqual(['occ-2', 'occ-1']);
+    });
+
+    it('includes cancelled participants and applies skip/limit when requested', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery([{ occurrenceId: 'occ-3' }]),
+      );
+
+      const result = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(participant.userId, false, 1, 3, 5);
+
+      expect(EventOccurrenceParticipantModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: {
+              userId: participant.userId,
+            },
+          }),
+          { $skip: 3 },
+          { $limit: 5 },
+          expect.objectContaining({
+            $sort: {
+              'occurrence.startAt': 1,
+              occurrenceId: 1,
+            },
+          }),
+        ]),
+      );
+      expect(result).toEqual(['occ-3']);
+    });
+
+    it('wraps ordered occurrence ID lookup failures', async () => {
+      (EventOccurrenceParticipantModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(participant.userId)).rejects.toThrow(
+        GraphQLError,
+      );
     });
   });
 

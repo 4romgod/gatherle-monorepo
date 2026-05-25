@@ -373,9 +373,9 @@ describe('FollowResolver', () => {
       ];
       (FollowDAO.readSavedEventsForUser as jest.Mock).mockResolvedValue(mockSavedEvents);
 
-      const result = await resolver.readSavedEvents(mockContext as ServerContext);
+      const result = await resolver.readSavedEvents(undefined, mockContext as ServerContext);
 
-      expect(FollowDAO.readSavedEventsForUser).toHaveBeenCalledWith(mockUser.userId);
+      expect(FollowDAO.readSavedEventsForUser).toHaveBeenCalledWith(mockUser.userId, undefined);
       expect(result).toEqual(mockSavedEvents);
     });
 

@@ -1,11 +1,13 @@
 import type {
   EventOccurrenceParticipant,
   ParticipantVisibility,
+  QueryOptionsInput,
   UpsertEventOccurrenceParticipantInput,
 } from '@gatherle/commons/types';
-import { ParticipantStatus } from '@gatherle/commons/types';
+import { FilterOperatorInput, ParticipantStatus, SortOrderInput } from '@gatherle/commons/types';
 import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
-import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
+import { CustomError, ErrorTypes, KnownCommonError, logDaoError, transformOptionsToQuery } from '@/utils';
+import type { PipelineStage } from 'mongoose';
 
 type UpsertOccurrenceParticipantPayload = UpsertEventOccurrenceParticipantInput & {
   userId: string;
@@ -244,17 +246,95 @@ class EventOccurrenceParticipantDAO {
     }
   }
 
-  static async readByUser(userId: string, activeOnly = true): Promise<EventOccurrenceParticipant[]> {
+  static async readByUser(
+    userId: string,
+    activeOnly = true,
+    options?: QueryOptionsInput,
+  ): Promise<EventOccurrenceParticipant[]> {
     try {
-      const query: Record<string, unknown> = { userId };
-      if (activeOnly) {
-        query.status = { $ne: ParticipantStatus.Cancelled };
-      }
-
-      const participants = await EventOccurrenceParticipantModel.find(query).sort({ rsvpAt: -1, createdAt: -1 }).exec();
+      const participants = await transformOptionsToQuery(EventOccurrenceParticipantModel, {
+        ...options,
+        filters: [
+          { field: 'userId', value: userId },
+          ...(activeOnly
+            ? [{ field: 'status', operator: FilterOperatorInput.ne, value: ParticipantStatus.Cancelled }]
+            : []),
+          ...(options?.filters ?? []),
+        ],
+        sort: options?.sort?.length
+          ? options.sort
+          : [
+              { field: 'rsvpAt', order: SortOrderInput.desc },
+              { field: 'createdAt', order: SortOrderInput.desc },
+            ],
+      }).exec();
       return participants.map((participant) => participant.toObject());
     } catch (error) {
       logDaoError('Error reading occurrence participants by user', { error, userId, activeOnly });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readOccurrenceIdsByUser(
+    userId: string,
+    activeOnly = true,
+    startAtOrder: 1 | -1 = -1,
+    skip = 0,
+    limit?: number,
+  ): Promise<string[]> {
+    try {
+      const pipeline: PipelineStage[] = [
+        {
+          $match: {
+            userId,
+            ...(activeOnly ? { status: { $ne: ParticipantStatus.Cancelled } } : {}),
+          },
+        },
+        {
+          $lookup: {
+            from: 'eventoccurrences',
+            localField: 'occurrenceId',
+            foreignField: 'occurrenceId',
+            as: 'occurrence',
+          },
+        },
+        {
+          $unwind: '$occurrence',
+        },
+        {
+          $sort: {
+            'occurrence.startAt': startAtOrder,
+            occurrenceId: 1,
+          },
+        },
+      ];
+
+      if (skip > 0) {
+        pipeline.push({ $skip: skip });
+      }
+
+      if (typeof limit === 'number') {
+        pipeline.push({ $limit: limit });
+      }
+
+      pipeline.push({
+        $project: {
+          _id: 0,
+          occurrenceId: '$occurrenceId',
+        },
+      });
+
+      const rows = await EventOccurrenceParticipantModel.aggregate<{ occurrenceId: string }>(pipeline).exec();
+      return rows.map((row) => row.occurrenceId);
+    } catch (error) {
+      logDaoError('Error reading ordered occurrence IDs by user', {
+        error,
+        userId,
+        activeOnly,
+        startAtOrder,
+        skip,
+        limit,
+      });
       throw KnownCommonError(error);
     }
   }

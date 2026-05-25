@@ -122,7 +122,7 @@ export function SwipePagerTabs({ initialKey, routes, variant = 'icon' }: SwipePa
         ref={pagerRef}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
-        style={[styles.pager, pagerHeight > 0 ? { height: pagerHeight } : null]}
+        style={[styles.pager, pagerHeight > 0 ? { minHeight: pagerHeight } : null]}
       >
         {routes.map((route) => (
           <View key={route.key} onLayout={handleLayout(route.key)} style={[styles.page, { width: pageWidth }]}>

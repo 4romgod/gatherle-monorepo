@@ -2,14 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Box, Button, Card, Grid, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import {
   EventAvailable as GoingIcon,
   Event as EventIcon,
   History as PastIcon,
   Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
-import EventBoxSm from '@/components/events/eventBoxSm';
 import {
   ROUTES,
   BUTTON_STYLES,
@@ -18,11 +17,15 @@ import {
   EMPTY_STATE_ICON_STYLES,
 } from '@/lib/constants';
 import { AnyEventPreview, getEventPreviewKey } from '@/components/events/event-preview-utils';
+import ProfileEventTile from './ProfileEventTile';
 
 interface ProfileEventsTabsProps {
   upcomingRsvpdEvents: AnyEventPreview[];
   pastRsvpdEvents: AnyEventPreview[];
   organizedEvents: AnyEventPreview[];
+  organizedEventsHasMore?: boolean;
+  organizedEventsLoadingMore?: boolean;
+  onLoadMoreOrganized?: () => void;
   savedEvents?: AnyEventPreview[];
   isOwnProfile: boolean;
   emptyCreatedCta?: React.ReactNode;
@@ -32,6 +35,9 @@ export default function ProfileEventsTabs({
   upcomingRsvpdEvents,
   pastRsvpdEvents,
   organizedEvents,
+  organizedEventsHasMore = false,
+  organizedEventsLoadingMore = false,
+  onLoadMoreOrganized,
   savedEvents = [],
   isOwnProfile,
   emptyCreatedCta,
@@ -154,6 +160,9 @@ export default function ProfileEventsTabs({
             emptyTitle="No events hosted yet"
             emptyDescription="Start hosting events and they'll appear here"
             emptyCta={defaultEmptyCreatedCta}
+            hasMore={organizedEventsHasMore}
+            loadingMore={organizedEventsLoadingMore}
+            onLoadMore={onLoadMoreOrganized}
           />
         )}
 
@@ -187,12 +196,18 @@ function EventTabPanel({
   emptyTitle,
   emptyDescription,
   emptyCta,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: {
   events: AnyEventPreview[];
   emptyIcon: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
   emptyCta?: React.ReactNode;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   if (events.length === 0) {
     return (
@@ -210,12 +225,38 @@ function EventTabPanel({
   }
 
   return (
-    <Grid container spacing={3}>
-      {events.map((event) => (
-        <Grid key={getEventPreviewKey(event)} size={{ xs: 12, sm: 4 }}>
-          <EventBoxSm event={event} />
-        </Grid>
-      ))}
-    </Grid>
+    <Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(3, minmax(0, 1fr))',
+            md: 'repeat(4, minmax(0, 1fr))',
+            xl: 'repeat(5, minmax(0, 1fr))',
+          },
+          gap: { xs: 0.75, md: 1 },
+        }}
+      >
+        {events.map((event) => (
+          <ProfileEventTile key={getEventPreviewKey(event)} event={event} />
+        ))}
+      </Box>
+      {hasMore ? (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            onClick={onLoadMore}
+            variant="outlined"
+            disabled={loadingMore}
+            sx={{
+              ...BUTTON_STYLES,
+              borderColor: 'divider',
+              minWidth: 180,
+            }}
+          >
+            {loadingMore ? 'Loading more…' : 'Show more events'}
+          </Button>
+        </Box>
+      ) : null}
+    </Box>
   );
 }

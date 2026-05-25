@@ -56,6 +56,126 @@ export const IsEventSavedDocument = graphql(`
   }
 `);
 
+export const GetSavedEventsDocument = graphql(`
+  query GetSavedEvents($options: QueryOptionsInput) {
+    readSavedEvents(options: $options) {
+      followId
+      followerUserId
+      targetType
+      targetId
+      targetEvent {
+        eventId
+        orgId
+        venueId
+        slug
+        title
+        summary
+        description
+        visibility
+        representativeOccurrence {
+          occurrenceId
+          occurrenceKey
+          eventSeriesId
+          originalStartAt
+          startAt
+          endAt
+          timezone
+          status
+          isException
+          rsvpCount
+          participants {
+            participantId
+            occurrenceId
+            userId
+            status
+            quantity
+            sharedVisibility
+            user {
+              userId
+              username
+              given_name
+              family_name
+              profile_picture
+              defaultVisibility
+            }
+          }
+          myRsvp {
+            participantId
+            occurrenceId
+            status
+            quantity
+          }
+        }
+        primarySchedule {
+          anchorStartAt
+          occurrenceDurationMinutes
+          timezone
+          recurrenceRule
+        }
+        location {
+          locationType
+          address {
+            street
+            city
+            state
+            country
+          }
+          details
+        }
+        media {
+          featuredImageUrl
+        }
+        status
+        eventCategories {
+          eventCategoryId
+          slug
+          name
+          iconName
+          description
+          color
+          interestedUsersCount
+        }
+        organizers {
+          role
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        participants {
+          participantId
+          eventId
+          userId
+          status
+          sharedVisibility
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        savedByCount
+        isSavedByMe
+        rsvpCount
+        myRsvp {
+          participantId
+          status
+          quantity
+        }
+      }
+      createdAt
+    }
+  }
+`);
+
 export const GetPendingFollowRequestsDocument = graphql(`
   query GetPendingFollowRequests($targetType: FollowTargetType!) {
     readPendingFollowRequests(targetType: $targetType) {

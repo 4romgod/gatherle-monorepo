@@ -112,6 +112,29 @@ describe('useNotifications', () => {
 
     expect(fetchMore).not.toHaveBeenCalled();
   });
+
+  it('defaults to empty values and skips when the user is unauthenticated', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+      fetchMore: jest.fn(),
+    });
+
+    const { result } = renderHook(() => useNotifications());
+
+    expect(result.current.notifications).toEqual([]);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.unreadCount).toBe(0);
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        skip: true,
+      }),
+    );
+  });
 });
 
 describe('useUnreadNotificationCount', () => {
@@ -153,6 +176,19 @@ describe('useUnreadNotificationCount', () => {
         skip: true,
       }),
     );
+  });
+
+  it('defaults unread count to zero when the query has not returned data yet', () => {
+    mockUseSession.mockReturnValue({ data: { user: { token: 'token' } } });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    const { result } = renderHook(() => useUnreadNotificationCount());
+    expect(result.current.unreadCount).toBe(0);
   });
 });
 
