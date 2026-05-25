@@ -9,6 +9,8 @@ export interface EventShareButtonProps {
   ariaLabel?: string;
   stopPropagation?: boolean;
   sx?: import('@mui/material').SxProps<import('@mui/material').Theme>;
+  label?: string;
+  fullWidth?: boolean;
 }
 
 export type ShareUser = {

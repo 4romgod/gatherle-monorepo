@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { Button, IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { Bookmark, BookmarkBorder } from '@mui/icons-material';
 import { useSaveEvent } from '@/hooks';
 import { useSession } from 'next-auth/react';
@@ -16,6 +16,8 @@ interface SaveEventButtonProps {
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
   onSaveChange?: (isSaved: boolean) => void;
+  label?: string;
+  fullWidth?: boolean;
 }
 
 /**
@@ -28,6 +30,8 @@ export default function SaveEventButton({
   size = 'medium',
   showTooltip = true,
   onSaveChange,
+  label,
+  fullWidth = false,
 }: SaveEventButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -73,7 +77,40 @@ export default function SaveEventButton({
     }
   };
 
-  const button = (
+  const icon = isLoading ? (
+    <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
+  ) : isSaved ? (
+    <Bookmark />
+  ) : (
+    <BookmarkBorder />
+  );
+
+  const button = label ? (
+    <Button
+      disabled={isLoading}
+      fullWidth={fullWidth}
+      onClick={handleToggleSave}
+      size={size}
+      startIcon={icon}
+      variant={isSaved ? 'contained' : 'outlined'}
+      sx={{
+        minHeight: 52,
+        borderRadius: 3,
+        justifyContent: 'center',
+        textTransform: 'none',
+        fontWeight: 700,
+        bgcolor: isSaved ? 'primary.main' : 'transparent',
+        borderColor: isSaved ? 'primary.main' : 'divider',
+        color: isSaved ? 'common.white' : 'text.primary',
+        '&:hover': {
+          bgcolor: isSaved ? 'primary.dark' : 'action.hover',
+          borderColor: isSaved ? 'primary.dark' : 'primary.main',
+        },
+      }}
+    >
+      {label}
+    </Button>
+  ) : (
     <IconButton
       onClick={handleToggleSave}
       disabled={isLoading}
@@ -87,13 +124,7 @@ export default function SaveEventButton({
         },
       }}
     >
-      {isLoading ? (
-        <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
-      ) : isSaved ? (
-        <Bookmark />
-      ) : (
-        <BookmarkBorder />
-      )}
+      {icon}
     </IconButton>
   );
 

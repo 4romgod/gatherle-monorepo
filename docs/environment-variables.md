@@ -186,6 +186,12 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 ### GitHub Environment Secrets (sensitive)
 
 - `ASSUME_ROLE_ARN` (required): IAM role for `configure-aws-credentials` in the matching environment target.
+- `GATHERLE_TEST_ADMIN_PASSWORD` (required for API e2e jobs; must match the password used when seeding
+  `test-admin@gatherle.com`).
+- `GATHERLE_TEST_USER_PASSWORD` (required for API e2e jobs; must match the password used when seeding
+  `test-user@gatherle.com`).
+- `GATHERLE_TEST_USER2_PASSWORD` (required for API e2e jobs; must match the password used when seeding
+  `test-user2@gatherle.com`).
 - `VERCEL_TOKEN` (required if web deploy is enabled).
 - `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
 - `NEXTAUTH_SECRET` (used by NextAuth session signing in the webapp deployment environment).
@@ -230,6 +236,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Capture `STAGE_HOSTED_ZONE_NAME_SERVERS` from `gatherle-graphql-<stage-lower>-<region>` output
   `stageHostedZoneNameServers` when preparing DNS delegation.
 - Run API e2e tests with `STAGE`, `AWS_REGION`, `GRAPHQL_URL`, and `SECRET_ARN`.
+- API e2e jobs also require the seeded test-user passwords to be present as GitHub Environment secrets:
+  `GATHERLE_TEST_ADMIN_PASSWORD`, `GATHERLE_TEST_USER_PASSWORD`, and `GATHERLE_TEST_USER2_PASSWORD`.
 - Pass `NEXT_PUBLIC_GRAPHQL_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` to frontend deployment.
 - For first custom-domain rollout:
   1. Deploy runtime with `ENABLE_CUSTOM_DOMAINS=false` to create stage hosted zone.

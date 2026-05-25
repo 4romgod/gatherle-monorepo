@@ -27,7 +27,6 @@ yarn-error.log*
 *.tsbuildinfo
 test-results.txt
 **/test/**/reports/
-.github/prompts/
 .local/
 packages/commons/schema.graphql
 .secrets

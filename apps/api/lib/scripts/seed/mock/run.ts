@@ -1,8 +1,5 @@
-import { getConfigValue, MongoDbClient } from '@/clients';
 import {
   ActivityDAO,
-  EventCategoryDAO,
-  EventCategoryGroupDAO,
   EventOccurrenceDAO,
   EventOccurrenceParticipantDAO,
   EventSeriesDAO,
@@ -14,264 +11,55 @@ import {
 } from '@/mongodb/dao';
 import {
   usersMockData,
-  testAdminSeedUser,
-  testUserSeedUser,
-  testUser2SeedUser,
   eventSeriesMockData,
-  eventCategoryMockData,
-  eventCategoryGroupMockData,
   followSeedData,
   activitySeedData,
-} from '@/mongodb/mockData';
-import type { FollowSeed, ActivitySeed } from '@/mongodb/mockData/social';
-import type { EventSeriesSeedData } from '@/mongodb/mockData';
-import type { OrganizationSeedData } from '@/mongodb/mockData/organizations';
-import organizationsData from '@/mongodb/mockData/organizations';
-import type { VenueSeedData } from '@/mongodb/mockData/venues';
-import venuesData from '@/mongodb/mockData/venues';
-import type { OrganizationMembershipSeed } from '@/mongodb/mockData/organizationMemberships';
-import organizationMembershipsData from '@/mongodb/mockData/organizationMemberships';
+  MOCK_USERS_PASSWORD_PROMPT_LABEL,
+  readMockUsersPasswordFromEnv,
+} from '@/mongodb/data/mock';
+import type { FollowSeed, ActivitySeed } from '@/mongodb/data/mock/social';
+import type { EventSeriesSeedData, MockUserSeedData } from '@/mongodb/data/mock';
+import type { OrganizationSeedData } from '@/mongodb/data/mock/organizations';
+import organizationsData from '@/mongodb/data/mock/organizations';
+import type { VenueSeedData } from '@/mongodb/data/mock/venues';
+import venuesData from '@/mongodb/data/mock/venues';
+import type { OrganizationMembershipSeed } from '@/mongodb/data/mock/organizationMemberships';
+import organizationMembershipsData from '@/mongodb/data/mock/organizationMemberships';
 import type {
-  CreateEventCategoryGroupInput,
-  CreateEventCategoryInput,
   CreateEventInput,
   CreateOrganizationInput,
-  CreateUserInput,
   CreateVenueInput,
   EventSeries,
-  EventCategory,
   Organization,
   UpdateVenueInput,
   User,
   Venue,
 } from '@gatherle/commons/types';
-import { SECRET_KEYS, validateEnv } from '@/constants';
-import { OrganizationRole, ParticipantStatus, ParticipantVisibility, UserRole } from '@gatherle/commons/types';
+import { ParticipantStatus, ParticipantVisibility } from '@gatherle/commons/types';
 import { EventVisibility } from '@gatherle/commons/types/eventSeries';
 import { logger } from '@/utils/logger';
 import EventSeriesService from '@/services/eventSeries';
+import { runCatalogSeed } from '../catalog/run';
+import { ensureOwnerMembershipForOrganization } from '../shared/organizations';
+import { promptForHiddenValue } from '../shared/prompt';
+import { getRandomInt, getRandomUniqueItems } from '../shared/random';
+import { markSeedUserVerified } from '../shared/users';
 
-function getRandomUniqueItems(array: Array<string>, count: number) {
-  const copyArray = [...array];
-  for (let i = copyArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copyArray[i], copyArray[j]] = [copyArray[j], copyArray[i]];
+async function resolveMockUsersPassword(): Promise<string> {
+  const envPassword = readMockUsersPasswordFromEnv();
+  if (envPassword) {
+    return envPassword;
   }
 
-  const randomItems: Array<string> = [];
-  let index = 0;
-  while (randomItems.length < count && index < copyArray.length) {
-    if (!randomItems.includes(copyArray[index])) {
-      randomItems.push(copyArray[index]);
-    }
-    index++;
+  const password = await promptForHiddenValue(`${MOCK_USERS_PASSWORD_PROMPT_LABEL}: `);
+  if (!password.trim()) {
+    throw new Error('Password is required for mock users.');
   }
-  return randomItems;
+
+  return password;
 }
 
-function getRandomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-const TEST_ADMIN_EMAIL = testAdminSeedUser.email;
-const TEST_USER_EMAIL = testUserSeedUser.email;
-const TEST_USER2_EMAIL = testUser2SeedUser.email;
-
-async function markSeedUserVerified(userId: string, email: string) {
-  await UserDAO.setEmailVerified(userId);
-  logger.info(`   Marked seeded user ${email} as email verified.`);
-}
-
-async function seedTestAdminUser(eventCategoryIds: Array<string>) {
-  logger.info('Seeding test admin user...');
-
-  try {
-    const existingUser = await UserDAO.readUserByEmail(TEST_ADMIN_EMAIL);
-    if (!existingUser.isTestUser) {
-      await UserDAO.updateUser({
-        userId: existingUser.userId,
-        isTestUser: true,
-        userRole: UserRole.Admin,
-      });
-      logger.info(`   Updated existing user ${TEST_ADMIN_EMAIL} to test admin.`);
-    } else {
-      logger.info(`   Test admin ${TEST_ADMIN_EMAIL} already exists, skipping...`);
-    }
-    if (!existingUser.emailVerified) {
-      await markSeedUserVerified(existingUser.userId, TEST_ADMIN_EMAIL);
-    }
-    return;
-  } catch (_error) {
-    // not found -> create below
-  }
-
-  try {
-    const createdUser = await UserDAO.create({
-      ...testAdminSeedUser,
-      interests: getRandomUniqueItems(eventCategoryIds, 5),
-    });
-
-    await UserDAO.updateUser({
-      userId: createdUser.userId,
-      userRole: UserRole.Admin,
-      isTestUser: true,
-    });
-    await markSeedUserVerified(createdUser.userId, TEST_ADMIN_EMAIL);
-
-    logger.info(`   Created test admin ${TEST_ADMIN_EMAIL}.`);
-  } catch (error) {
-    logger.warn(`   Failed to seed test admin ${TEST_ADMIN_EMAIL}:`, { error });
-  }
-}
-
-async function seedTestUser(eventCategoryIds: Array<string>) {
-  logger.info('Seeding test normal user...');
-
-  try {
-    const existingUser = await UserDAO.readUserByEmail(TEST_USER_EMAIL);
-    if (!existingUser.isTestUser || existingUser.userRole !== UserRole.User) {
-      await UserDAO.updateUser({
-        userId: existingUser.userId,
-        isTestUser: true,
-        userRole: UserRole.User,
-      });
-      logger.info(`   Updated existing user ${TEST_USER_EMAIL} to test user.`);
-    } else {
-      logger.info(`   Test user ${TEST_USER_EMAIL} already exists, skipping...`);
-    }
-    if (!existingUser.emailVerified) {
-      await markSeedUserVerified(existingUser.userId, TEST_USER_EMAIL);
-    }
-    return;
-  } catch (_error) {
-    // not found -> create below
-  }
-
-  try {
-    const createdUser = await UserDAO.create({
-      ...testUserSeedUser,
-      interests: getRandomUniqueItems(eventCategoryIds, 5),
-    });
-
-    await UserDAO.updateUser({
-      userId: createdUser.userId,
-      userRole: UserRole.User,
-      isTestUser: true,
-    });
-    await markSeedUserVerified(createdUser.userId, TEST_USER_EMAIL);
-
-    logger.info(`   Created test user ${TEST_USER_EMAIL}.`);
-  } catch (error) {
-    logger.warn(`   Failed to seed test user ${TEST_USER_EMAIL}:`, { error });
-  }
-}
-
-async function seedTestUser2(eventCategoryIds: Array<string>) {
-  logger.info('Seeding test user2...');
-
-  try {
-    const existingUser = await UserDAO.readUserByEmail(TEST_USER2_EMAIL);
-    if (!existingUser.isTestUser || existingUser.userRole !== UserRole.User) {
-      await UserDAO.updateUser({
-        userId: existingUser.userId,
-        isTestUser: true,
-        userRole: UserRole.User,
-      });
-      logger.info(`   Updated existing user ${TEST_USER2_EMAIL} to test user2.`);
-    } else {
-      logger.info(`   Test user ${TEST_USER2_EMAIL} already exists, skipping...`);
-    }
-    if (!existingUser.emailVerified) {
-      await markSeedUserVerified(existingUser.userId, TEST_USER2_EMAIL);
-    }
-    return;
-  } catch (_error) {
-    // not found -> create below
-  }
-
-  try {
-    const createdUser = await UserDAO.create({
-      ...testUser2SeedUser,
-      interests: getRandomUniqueItems(eventCategoryIds, 5),
-    });
-
-    await UserDAO.updateUser({
-      userId: createdUser.userId,
-      userRole: UserRole.User,
-      isTestUser: true,
-    });
-    await markSeedUserVerified(createdUser.userId, TEST_USER2_EMAIL);
-
-    logger.info(`   Created test user ${TEST_USER2_EMAIL}.`);
-  } catch (error) {
-    logger.warn(`   Failed to seed test user ${TEST_USER2_EMAIL}:`, { error });
-  }
-}
-
-async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
-  logger.info('Starting to seed event category data...');
-
-  const existing = await EventCategoryDAO.readEventCategories();
-
-  for (const category of categories) {
-    try {
-      const found = existing.find((c) => c.name === category.name);
-
-      if (found) {
-        logger.info(`   Event Category "${category.name}" already exists, skipping...`);
-        continue;
-      }
-
-      const eventCategoryResponse = await EventCategoryDAO.create(category);
-      logger.info(`   Created Event Category item with id: ${eventCategoryResponse.eventCategoryId}`);
-    } catch (error) {
-      logger.warn(`   Failed to create Event Category "${category.name}":`, { error });
-    }
-  }
-  logger.info('Completed seeding event category data.');
-}
-
-async function seedEventCategoryGroups(
-  eventCategoryGroupsInputList: Array<CreateEventCategoryGroupInput>,
-  eventCategoryList: Array<EventCategory>,
-) {
-  logger.info('Starting to seed event category groups data...');
-
-  const existingGroups = await EventCategoryGroupDAO.readEventCategoryGroups();
-
-  for (const groupInput of eventCategoryGroupsInputList) {
-    try {
-      const found = existingGroups.find((g) => g.name === groupInput.name);
-      if (found) {
-        logger.info(`   Event Category Group "${groupInput.name}" already exists, skipping...`);
-        continue;
-      }
-
-      const resolvedCategoryIds = groupInput.eventCategories.map((categoryName) => {
-        const match = eventCategoryList.find((category) => category.name === categoryName);
-        if (!match) {
-          throw new Error(`Event category not found: ${categoryName}`);
-        }
-        return match.eventCategoryId;
-      });
-
-      const categoryGroupWithIds = {
-        ...groupInput,
-        eventCategories: resolvedCategoryIds,
-      };
-
-      await EventCategoryGroupDAO.create(categoryGroupWithIds);
-
-      logger.info(`   Seeded group: ${groupInput.name}`);
-    } catch (error) {
-      logger.warn(`   Failed to create Event Category Group "${groupInput.name}":`, { error });
-    }
-  }
-
-  logger.info('Completed seeding event category group data.');
-}
-
-async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<string>) {
+async function seedUsers(users: Array<MockUserSeedData>, eventCategoryIds: Array<string>, password: string) {
   logger.info('Starting to seed user data...');
   const existingUsers = await UserDAO.readUsers();
 
@@ -280,15 +68,16 @@ async function seedUsers(users: Array<CreateUserInput>, eventCategoryIds: Array<
       // Check if user with this email already exists (case-insensitive)
       const found = existingUsers.find((u) => u.email?.toLowerCase() === user.email?.toLowerCase());
       if (found) {
-        logger.info(`   User with email "${user.email}" already exists, skipping...`);
         if (!found.emailVerified) {
           await markSeedUserVerified(found.userId, user.email);
         }
+        logger.info(`   User with email "${user.email}" already exists, skipping...`);
         continue;
       }
 
       const userResponse = await UserDAO.create({
         ...user,
+        password,
         interests: getRandomUniqueItems(eventCategoryIds, 5),
       });
       await markSeedUserVerified(userResponse.userId, user.email);
@@ -341,30 +130,6 @@ async function seedOrganizations(seedData: OrganizationSeedData[], usersByEmail:
   }
   logger.info('Completed seeding organization data.');
   return created;
-}
-
-async function ensureOwnerMembershipForOrganization(organization: Organization) {
-  try {
-    const membershipExists = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser(
-      organization.orgId,
-      organization.ownerId,
-    );
-    if (membershipExists) {
-      return;
-    }
-
-    await OrganizationMembershipDAO.create({
-      orgId: organization.orgId,
-      userId: organization.ownerId,
-      role: OrganizationRole.Owner,
-    });
-    logger.info(`   Ensured owner membership for organization "${organization.name}" (${organization.orgId})`);
-  } catch (error) {
-    logger.warn(
-      `   Failed to ensure owner membership for organization "${organization.name}" (${organization.orgId})`,
-      { error },
-    );
-  }
 }
 
 function buildLocationFromVenue(venue: Venue): CreateEventInput['location'] {
@@ -611,14 +376,8 @@ async function seedActivities(seedData: ActivitySeed[], usersByEmail: Map<string
   logger.info('Completed seeding activity feed.');
 }
 
-async function main() {
-  // Validate environment configuration
-  validateEnv();
-
+export async function runMockDataSeed() {
   logger.info('Starting to seed data into the database...');
-
-  const secret = await getConfigValue(SECRET_KEYS.MONGO_DB_URL);
-  await MongoDbClient.connectToDatabase(secret);
 
   async function seedEventParticipants(events: EventSeries[], userIds: string[]) {
     if (events.length === 0 || userIds.length === 0) {
@@ -686,16 +445,11 @@ async function main() {
 
     logger.info('Completed seeding event participants.');
   }
-  await seedEventCategories(eventCategoryMockData);
-  const allEventCategories = await EventCategoryDAO.readEventCategories();
+  const allEventCategories = await runCatalogSeed();
   const allEventCategoriesIds = allEventCategories.map((category) => category.eventCategoryId!);
+  const mockUsersPassword = await resolveMockUsersPassword();
 
-  await seedEventCategoryGroups(eventCategoryGroupMockData, allEventCategories);
-
-  await seedTestAdminUser(allEventCategoriesIds);
-  await seedTestUser(allEventCategoriesIds);
-  await seedTestUser2(allEventCategoriesIds);
-  await seedUsers(usersMockData, allEventCategoriesIds);
+  await seedUsers(usersMockData, allEventCategoriesIds, mockUsersPassword);
   const allUsers = await UserDAO.readUsers();
   const userByEmail = new Map<string, User>();
   allUsers.forEach((user) => {
@@ -722,9 +476,4 @@ async function main() {
   await seedFollows(followSeedData, userByEmail, createdOrganizations);
   await seedActivities(activitySeedData, userByEmail, createdEvents);
   logger.info('Completed seeding data into the database.');
-  await MongoDbClient.disconnectFromDatabase();
 }
-
-main().catch((err) => {
-  logger.error('An error occurred while attempting to seed the database:', err);
-});

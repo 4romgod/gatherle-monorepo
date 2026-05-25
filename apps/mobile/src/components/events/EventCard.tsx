@@ -147,13 +147,21 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
         ]}
       >
         <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
-          <RemoteImage fallback={imageFallback} showLoader uri={imageUrl} style={styles.image} />
-          <View style={[styles.imageOverlay, { backgroundColor: theme.colors.heroBackground + '24' }]} />
+          <RemoteImage
+            fallback={imageFallback}
+            resizeMode="contain"
+            showLoader
+            style={[styles.image, { backgroundColor: theme.colors.surfaceRaised }]}
+            uri={imageUrl}
+          />
+        </View>
+
+        <View style={styles.body}>
           <View
             style={[
               styles.overlayPill,
               isFeatured
-                ? { backgroundColor: theme.colors.surface, borderWidth: 0 }
+                ? { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }
                 : { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.primarySoft },
             ]}
           >
@@ -168,9 +176,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
               {overlayLabel}
             </Text>
           </View>
-        </View>
 
-        <View style={styles.body}>
           {!isFeatured ? (
             <View style={[styles.attendancePill, { borderColor: theme.colors.border }]}>
               <Feather color={theme.colors.textSecondary} name="users" size={14} />
@@ -321,9 +327,6 @@ const styles = StyleSheet.create({
   imageFeed: {
     height: 190,
   },
-  imageOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
   imagePlaceholder: {
     alignItems: 'center',
     height: '100%',
@@ -352,13 +355,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   overlayPill: {
+    alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
-    left: 12,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    position: 'absolute',
-    top: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   overlayPillText: {
     ...typography.bodyBold,

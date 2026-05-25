@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import request from 'supertest';
 import { SortOrderInput } from '@gatherle/commons/types';
-import { testUserSeedUser } from '@/mongodb/mockData';
+import { testUserSystemUser } from '@/mongodb/data/system';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 
@@ -149,7 +149,7 @@ describe('GraphQL API hardening', () => {
       .send({
         query: `
         query TooComplex {
-          readUserByUsername(username: "${testUserSeedUser.username}") {
+          readUserByUsername(username: "${testUserSystemUser.username}") {
             ${aliasedFields}
           }
         }

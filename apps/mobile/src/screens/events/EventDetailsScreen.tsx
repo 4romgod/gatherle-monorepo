@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { RemoteImage } from '@/components/core/RemoteImage';
 import { EventDetailActionButton } from '@/components/events/detail/EventDetailActionButton';
+import { EventImageViewerModal } from '@/components/events/detail/EventImageViewerModal';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
 import { EventDetailSection } from '@/components/events/detail/EventDetailSection';
 import { EventDetailStat } from '@/components/events/detail/EventDetailStat';
@@ -27,7 +27,12 @@ import {
   getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
-import { addEventToCalendar, openEventLocationInMaps, shareEvent } from '@/lib/events/deviceActions';
+import {
+  addEventToCalendar,
+  openEventLocationInMaps,
+  openEventSourceLink,
+  shareEvent,
+} from '@/lib/events/deviceActions';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -49,6 +54,7 @@ export function EventDetailsScreen() {
   const hostLabel = occurrence.eventSeries?.organization?.name ?? getDisplayName(hostUser);
   const categories = occurrence.eventSeries?.eventCategories ?? [];
   const eventId = occurrence.eventSeries?.eventId;
+  const eventSourceLink = occurrence.eventSeries?.eventLink ?? null;
   const description =
     occurrence.eventSeries?.description?.trim() ||
     occurrence.eventSeries?.summary?.trim() ||
@@ -58,6 +64,7 @@ export function EventDetailsScreen() {
   const { error: momentsError, moments, refetch: refetchMoments } = useEventMoments(eventId, authToken);
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [localParticipantCount, setLocalParticipantCount] = useState(participantCount);
 
   useEffect(() => {
@@ -71,11 +78,11 @@ export function EventDetailsScreen() {
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
   const heroPillLabel = useMemo(() => formatCountLabel(localParticipantCount, 'going'), [localParticipantCount]);
   const heroFallback = (
-    <LinearGradient colors={theme.colors.heroGradient} style={styles.heroPlaceholder}>
+    <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
       <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
         {title.charAt(0).toUpperCase()}
       </Text>
-    </LinearGradient>
+    </View>
   );
 
   const applyParticipantCountDelta = (nextStatus: ParticipantStatus | null) => {
@@ -173,6 +180,12 @@ export function EventDetailsScreen() {
     });
   };
 
+  const handleOpenEventSource = () => {
+    void openEventSourceLink(eventSourceLink).catch((error: unknown) => {
+      Alert.alert('Source unavailable', error instanceof Error ? error.message : 'We could not open the source link.');
+    });
+  };
+
   const handleOpenHostProfile = () => {
     if (hostOrganization?.orgId) {
       navigation.navigate('OrganizationDetails', {
@@ -212,26 +225,32 @@ export function EventDetailsScreen() {
         showsVerticalScrollIndicator={false}
         style={{ backgroundColor: theme.colors.background }}
       >
-        <View style={styles.heroFrame}>
-          <RemoteImage fallback={heroFallback} showLoader uri={imageUrl} style={styles.heroImage} />
-
-          <LinearGradient
-            colors={['rgba(15, 23, 42, 0.04)', 'rgba(15, 23, 42, 0.2)', 'rgba(15, 23, 42, 0.86)']}
-            style={styles.heroGradient}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setImageViewerVisible(true)}
+          style={[
+            styles.heroFrame,
+            {
+              backgroundColor: theme.colors.surfaceRaised,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <RemoteImage
+            fallback={heroFallback}
+            resizeMode="contain"
+            showLoader
+            style={styles.heroImage}
+            uri={imageUrl}
           />
+        </Pressable>
 
-          <View style={styles.heroTopRow}>
-            <View
-              style={[styles.heroPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            >
-              <Text style={[styles.heroPillText, { color: theme.colors.primary }]}>{heroPillLabel}</Text>
-            </View>
+        <View style={styles.heroSummary}>
+          <View style={[styles.heroPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <Text style={[styles.heroPillText, { color: theme.colors.primary }]}>{heroPillLabel}</Text>
           </View>
-
-          <View style={styles.heroContent}>
-            <Text style={[styles.heroTitle, { color: theme.colors.heroText }]}>{title}</Text>
-            <Text style={[styles.heroSubtitle, { color: theme.colors.heroText }]}>{hostLabel}</Text>
-          </View>
+          <Text style={[styles.heroTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>{hostLabel}</Text>
         </View>
 
         <View style={styles.actionsRow}>
@@ -261,6 +280,17 @@ export function EventDetailsScreen() {
             tone="secondary"
           />
         </View>
+
+        {eventSourceLink ? (
+          <View style={styles.actionsRow}>
+            <EventDetailActionButton
+              icon="external-link"
+              label="View event source"
+              onPress={handleOpenEventSource}
+              tone="secondary"
+            />
+          </View>
+        ) : null}
 
         {eventId ? (
           <EventDetailSection title="Moments">
@@ -390,6 +420,13 @@ export function EventDetailsScreen() {
         />
       </ScrollView>
 
+      <EventImageViewerModal
+        imageUrl={imageUrl}
+        onClose={() => setImageViewerVisible(false)}
+        title={title}
+        visible={imageViewerVisible}
+      />
+
       {eventId ? (
         <MomentComposerModal
           authToken={authToken}
@@ -443,21 +480,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  heroContent: {
-    bottom: 20,
-    gap: 6,
-    left: 18,
-    position: 'absolute',
-    right: 18,
-  },
   heroFrame: {
+    borderColor: 'transparent',
     borderRadius: 28,
+    borderWidth: 1,
     height: 320,
     overflow: 'hidden',
     position: 'relative',
-  },
-  heroGradient: {
-    ...StyleSheet.absoluteFillObject,
   },
   heroImage: {
     height: '100%',
@@ -486,18 +515,15 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     ...typography.bodyMedium,
     fontSize: 14,
-    opacity: 0.92,
+  },
+  heroSummary: {
+    gap: 10,
   },
   heroTitle: {
     ...typography.displayBold,
     fontSize: 22,
     letterSpacing: -0.6,
     lineHeight: 26,
-  },
-  heroTopRow: {
-    left: 18,
-    position: 'absolute',
-    top: 18,
   },
   hostCard: {
     alignItems: 'center',

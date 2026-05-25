@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventCategoryMockData } from '@/mongodb/mockData';
+import { eventCategoryCatalogData } from '@/mongodb/data/catalog';
 import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import {
   getCreateEventCategoryGroupMutation,
@@ -20,7 +20,7 @@ import { assertNoCleanupFailures, cleanupTrackedEntities } from '@/test/e2e/util
 
 describe('EventCategoryGroup Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
-  const STABLE_CATEGORY_NAMES = eventCategoryMockData.slice(0, 6).map((category) => category.name);
+  const STABLE_CATEGORY_NAMES = eventCategoryCatalogData.slice(0, 6).map((category) => category.name);
   let adminUser: UserWithToken;
   let categories: EventCategoryRef[] = [];
   const createdGroupSlugs: string[] = [];

@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import {
   Alert,
   alpha,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -25,8 +26,8 @@ import {
   ConfirmationNumber,
   Groups,
   Language,
-  ArrowBack,
   Business,
+  OpenInNew,
 } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
@@ -37,12 +38,13 @@ import {
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import EventDetailActions from '@/components/events/EventDetailActions';
 import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
 import EventLocationMap from '@/components/events/EventLocationMap';
-import { formatLocationText } from '@/components/events/location-utils';
+import EventImageLightbox from '@/components/events/EventImageLightbox';
+import { EventShareButton, RsvpButton, SaveEventButton } from '@/components/events';
+import { formatLocationText, getLocationNavigationUrl } from '@/components/events/location-utils';
 import {
   EventParticipantRecord,
   EventSeriesParticipantRecord,
@@ -68,6 +70,7 @@ import { useFollowing } from '@/hooks/useFollow';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
+import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
 import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
 import EventMomentsRing from '@/components/eventMoments/EventMomentsRing';
 import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
@@ -76,6 +79,76 @@ import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 
 interface EventDetailPageClientProps {
   slug: string;
+}
+
+function normalizeExternalUrl(url?: string | null) {
+  const normalizedUrl = url?.trim();
+
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  return /^https?:\/\//i.test(normalizedUrl) ? normalizedUrl : `https://${normalizedUrl}`;
+}
+
+function formatCalendarDate(date: Date) {
+  return date
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
+}
+
+function formatCalendarDateInTimeZone(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    minute: '2-digit',
+    second: '2-digit',
+    month: '2-digit',
+    timeZone,
+    year: 'numeric',
+  });
+
+  const parts = formatter.formatToParts(date);
+  const getPart = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+
+  return `${getPart('year')}${getPart('month')}${getPart('day')}T${getPart('hour')}${getPart('minute')}${getPart('second')}`;
+}
+
+function buildGoogleCalendarUrl({
+  description,
+  endAt,
+  locationText,
+  startAt,
+  timeZone,
+  title,
+  webUrl,
+}: {
+  description: string;
+  endAt?: string | null;
+  locationText: string;
+  startAt?: string | null;
+  timeZone?: string | null;
+  title: string;
+  webUrl: string;
+}) {
+  if (!startAt) {
+    return null;
+  }
+
+  const startDate = new Date(startAt);
+  const endDate = endAt ? new Date(endAt) : new Date(startDate.getTime() + 60 * 60 * 1000);
+  const details = encodeURIComponent(`${description}\n\n${webUrl}`.trim());
+  const encodedTitle = encodeURIComponent(title);
+  const encodedLocation = encodeURIComponent(locationText);
+  const trimmedTimeZone = timeZone?.trim();
+  const dates = trimmedTimeZone
+    ? `${formatCalendarDateInTimeZone(startDate, trimmedTimeZone)}/${formatCalendarDateInTimeZone(endDate, trimmedTimeZone)}`
+    : `${formatCalendarDate(startDate)}/${formatCalendarDate(endDate)}`;
+  const ctz = trimmedTimeZone ? `&ctz=${encodeURIComponent(trimmedTimeZone)}` : '';
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&dates=${dates}&details=${details}&location=${encodedLocation}${ctz}`;
 }
 
 export default function EventDetailPageClient({ slug }: EventDetailPageClientProps) {
@@ -219,6 +292,14 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const [viewerGroupIndex, setViewerGroupIndex] = useState(0);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const derivedCurrentRsvpStatus =
+    selectedOccurrence &&
+    (hasExplicitOccurrenceSelection || selectedOccurrence.myRsvp?.status != null || !event?.myRsvp)
+      ? (selectedOccurrence.myRsvp?.status ?? null)
+      : (event?.myRsvp?.status ?? null);
+  const [mobileRsvpStatus, setMobileRsvpStatus] = useState<ParticipantStatus | null>(derivedCurrentRsvpStatus);
+  const [mobileSavedState, setMobileSavedState] = useState(event?.isSavedByMe ?? false);
 
   const openViewer = (groups: Moment[][], groupIndex: number) => {
     setViewerMomentGroups(groups);
@@ -227,6 +308,14 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     setViewerIndex(0);
     setViewerOpen(true);
   };
+
+  useEffect(() => {
+    setMobileRsvpStatus(derivedCurrentRsvpStatus);
+  }, [derivedCurrentRsvpStatus]);
+
+  useEffect(() => {
+    setMobileSavedState(event?.isSavedByMe ?? false);
+  }, [event?.isSavedByMe]);
 
   if (notFoundError) {
     return (
@@ -285,174 +374,161 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   );
 
   const organizerIds = (event?.organizers ?? []).filter((o) => o.user?.userId).map((o) => o.user!.userId);
+  const hasImportedSystemOrganizer = organizerData.some(
+    (organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME,
+  );
+  const visibleOrganizers =
+    event.organization && hasImportedSystemOrganizer
+      ? organizerData.filter((organizer) => organizer.user?.username !== IMPORTED_EVENT_SYSTEM_USERNAME)
+      : organizerData;
+  const primaryOrganizer = visibleOrganizers.find((organizer) => organizer.user)?.user ?? null;
+  const hostLabel =
+    event.organization?.name ??
+    (primaryOrganizer
+      ? [primaryOrganizer.given_name, primaryOrganizer.family_name].filter(Boolean).join(' ') ||
+        primaryOrganizer.username
+      : null);
+  const featuredImageUrl =
+    media?.featuredImageUrl ||
+    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2000&q=80';
+  const directionsUrl = location.locationType === 'online' ? null : getLocationNavigationUrl(location);
+  const eventSourceUrl = normalizeExternalUrl(event.eventLink);
+  const calendarUrl = buildGoogleCalendarUrl({
+    description: description || '',
+    endAt: selectedOccurrence?.endAt ?? scheduleFallbackEndAt,
+    locationText: location.locationType === 'online' ? 'Online event' : formatLocationText(location),
+    startAt: selectedOccurrence?.startAt ?? event.primarySchedule.anchorStartAt,
+    timeZone: selectedOccurrence?.timezone ?? event.primarySchedule.timezone,
+    title,
+    webUrl: eventUrl,
+  });
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '140px', md: 0 } }}>
-      {/* Hero Section with Cover Image */}
-      <Box
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: 8, md: 0 } }}>
+      <Container
+        maxWidth="lg"
         sx={{
-          position: 'relative',
-          height: { xs: 320, sm: 400, md: 460 },
-          width: '100%',
-          overflow: 'hidden',
-          bgcolor: 'grey.900',
-          '&::after': (theme) => ({
-            content: '""',
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '75%',
-            background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.85)} 0%, ${alpha(
-              theme.palette.common.black,
-              0.4,
-            )} 50%, transparent 100%)`,
-          }),
+          pt: { xs: 2, md: 3 },
+          px: { xs: 1.5, sm: 2, md: 3 },
         }}
       >
-        <Box
-          component="img"
-          src={
-            media?.featuredImageUrl ||
-            'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2000&q=80'
-          }
-          alt={title}
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center 35%',
-          }}
-        />
-
-        {/* Back Button */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: { xs: 16, md: 24 },
-            left: { xs: 16, md: 24 },
-            zIndex: 2,
-          }}
-        >
-          <Button
-            component={Link}
-            href="/events"
-            startIcon={<ArrowBack />}
-            size="small"
+        <Stack spacing={{ xs: 2, md: 2.5 }}>
+          <Box
+            component="button"
+            onClick={() => setImageViewerOpen(true)}
             sx={{
-              bgcolor: 'background.paper',
-              backdropFilter: 'blur(10px)',
-              color: 'text.primary',
-              fontWeight: 400,
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              opacity: 0.95,
-              boxShadow: 1,
-              '&:hover': {
-                opacity: 1,
-                transform: 'translateX(-2px)',
-                transition: 'all 0.2s ease',
-              },
+              width: '100%',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: { xs: 1, md: 1.5 },
+              overflow: 'hidden',
+              backgroundColor: 'grey.950',
+              p: 0,
+              cursor: 'zoom-in',
             }}
           >
-            Back to Events
-          </Button>
-        </Box>
-
-        {event.organization && (
-          <Box sx={{ position: 'absolute', top: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: 2 }}>
-            <Button
-              component={Link}
-              href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
-              variant="contained"
-              size="small"
-              startIcon={<Business />}
+            <Box
+              component="img"
+              src={featuredImageUrl}
+              alt={title}
               sx={{
-                textTransform: 'none',
-                borderRadius: 2,
-                fontWeight: 400,
-                bgcolor: 'background.paper',
-                color: 'text.primary',
-                boxShadow: 1,
-                '&:hover': { bgcolor: 'background.paper' },
+                display: 'block',
+                width: '100%',
+                height: 'auto',
               }}
-            >
-              {event.organization.name}
-            </Button>
+            />
           </Box>
-        )}
 
-        {/* Title & meta overlay — rendered over the gradient */}
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 2,
-            px: { xs: 2, md: 3 },
-            pb: { xs: 2, md: 3 },
-          }}
-        >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: '1.4rem', sm: '1.9rem', md: '2.3rem' },
-              color: 'common.white',
-              textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-              mb: 1.5,
-              lineHeight: 1.15,
-            }}
-          >
-            {title}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={{ xs: 1.5, md: 2.5 }}>
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <CalendarMonth sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.3 }}>
-                {formatRecurrenceRule(recurrenceRule)}
-              </Typography>
-            </Stack>
-            {location.locationType !== 'online' && (
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <LocationOn sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.3 }}>
-                  {formatLocationText(location)}
-                </Typography>
-              </Stack>
-            )}
-            {location.locationType === 'online' && (
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <Language sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)' }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                  Online Event
-                </Typography>
-              </Stack>
-            )}
-            {selectedOccurrence && (
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <ConfirmationNumber sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {selectedOccurrenceDateLabel}
-                </Typography>
-              </Stack>
-            )}
+          <Stack spacing={1.5} sx={{ px: { xs: 0.5, md: 0 } }}>
             {goingCount > 0 && (
+              <Chip
+                label={`${goingCount} going${interestedCount > 0 ? ` · ${interestedCount} interested` : ''}`}
+                color="primary"
+                variant="outlined"
+                sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
+              />
+            )}
+
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+              justifyContent="space-between"
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '2rem', md: '2.6rem' },
+                    lineHeight: 1.08,
+                    letterSpacing: -1,
+                  }}
+                >
+                  {title}
+                </Typography>
+                {hostLabel ? (
+                  <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75 }}>
+                    {hostLabel}
+                  </Typography>
+                ) : null}
+              </Box>
+
+              {event.organization && (
+                <Button
+                  component={Link}
+                  href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
+                  startIcon={<Business />}
+                  sx={{
+                    alignSelf: { xs: 'flex-start', md: 'center' },
+                    display: { xs: 'none', md: 'inline-flex' },
+                    textTransform: 'none',
+                    borderRadius: 999,
+                    px: 2,
+                    py: 1,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': { bgcolor: 'background.paper' },
+                  }}
+                >
+                  {event.organization.name}
+                </Button>
+              )}
+            </Stack>
+
+            <Stack direction="row" flexWrap="wrap" gap={{ xs: 1.25, md: 2 }}>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <Groups sx={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {goingCount} going{interestedCount > 0 ? ` · ${interestedCount} interested` : ''}
+                <CalendarMonth sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                  {formatRecurrenceRule(recurrenceRule)}
                 </Typography>
               </Stack>
-            )}
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                {location.locationType === 'online' ? (
+                  <Language sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
+                ) : (
+                  <LocationOn sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
+                )}
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                  {location.locationType === 'online' ? 'Online event' : formatLocationText(location)}
+                </Typography>
+              </Stack>
+              {selectedOccurrence ? (
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <ConfirmationNumber sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                    {selectedOccurrenceDateLabel}
+                  </Typography>
+                </Stack>
+              ) : null}
+            </Stack>
           </Stack>
-        </Box>
-      </Box>
+        </Stack>
+      </Container>
 
-      {/* Main Content */}
       <Container
         maxWidth="lg"
         sx={{
@@ -460,7 +536,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           mb: 8,
           position: 'relative',
           zIndex: 1,
-          px: { xs: 0.5, sm: 1.5, md: 2 },
+          px: { xs: 1.5, sm: 2, md: 3 },
         }}
       >
         <Grid container spacing={4}>
@@ -476,60 +552,161 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
             {/* Actions */}
             <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
-              {/* Desktop actions */}
-              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                <EventDetailActions
-                  eventId={eventId}
-                  occurrenceId={activeOccurrenceId ?? undefined}
-                  eventTitle={title}
-                  eventSlug={slug}
-                  eventUrl={eventUrl}
-                  isSavedByMe={isSavedByMe ?? false}
-                  myRsvpStatus={currentRsvpStatus}
-                  trailing={
-                    canEditEvent ? (
-                      <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                    ) : undefined
-                  }
-                />
-              </Box>
-            </Box>
+              <Stack spacing={1.25}>
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                  <EventDetailActions
+                    eventId={eventId}
+                    occurrenceId={activeOccurrenceId ?? undefined}
+                    eventTitle={title}
+                    eventSlug={slug}
+                    eventUrl={eventUrl}
+                    isSavedByMe={isSavedByMe ?? false}
+                    myRsvpStatus={currentRsvpStatus}
+                    trailing={
+                      canEditEvent ? (
+                        <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
+                      ) : undefined
+                    }
+                  />
+                </Box>
 
-            {/* Mobile sticky action bar */}
-            <Paper
-              elevation={0}
-              sx={{
-                display: { xs: 'block', md: 'none' },
-                position: 'fixed',
-                bottom: MOBILE_BOTTOM_NAV_HEIGHT, // above the mobile bottom nav
-                left: 0,
-                right: 0,
-                zIndex: 1100,
-                borderTop: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                px: 2,
-                py: 0.5,
-              }}
-            >
-              <Stack spacing={1.5}>
-                <EventDetailActions
-                  eventId={eventId}
-                  occurrenceId={activeOccurrenceId ?? undefined}
-                  eventTitle={title}
-                  eventSlug={slug}
-                  eventUrl={eventUrl}
-                  isSavedByMe={isSavedByMe ?? false}
-                  myRsvpStatus={currentRsvpStatus}
-                  compact
-                  trailing={
-                    canEditEvent ? (
-                      <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                    ) : undefined
-                  }
-                />
+                <Paper
+                  elevation={0}
+                  sx={{
+                    display: { xs: 'block', md: 'none' },
+                    bgcolor: 'transparent',
+                    p: 0,
+                    border: 'none',
+                    boxShadow: 'none',
+                  }}
+                >
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" spacing={1.25}>
+                      <RsvpButton
+                        currentStatus={mobileRsvpStatus}
+                        eventId={eventId}
+                        fullWidth
+                        label={
+                          mobileRsvpStatus === ParticipantStatus.Going
+                            ? 'Going'
+                            : mobileRsvpStatus === ParticipantStatus.Interested
+                              ? 'Interested'
+                              : 'RSVP'
+                        }
+                        occurrenceId={activeOccurrenceId ?? undefined}
+                        onRsvpChange={setMobileRsvpStatus}
+                        showTooltip={false}
+                        size="large"
+                      />
+                      <SaveEventButton
+                        eventId={eventId}
+                        fullWidth
+                        isSaved={mobileSavedState}
+                        label={mobileSavedState ? 'Saved' : 'Save'}
+                        onSaveChange={setMobileSavedState}
+                        showTooltip={false}
+                        size="large"
+                      />
+                      <EventShareButton
+                        eventSlug={slug}
+                        eventTitle={title}
+                        eventUrl={eventUrl}
+                        fullWidth
+                        label="Share"
+                        size="large"
+                        stopPropagation
+                      />
+                    </Stack>
+
+                    <Stack direction="row" spacing={1.25}>
+                      {directionsUrl ? (
+                        <Button
+                          component="a"
+                          href={directionsUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                          startIcon={<LocationOn />}
+                          variant="outlined"
+                          sx={{ flex: 1, minHeight: 52, borderRadius: 3, textTransform: 'none', fontWeight: 700 }}
+                        >
+                          Directions
+                        </Button>
+                      ) : null}
+                      {calendarUrl ? (
+                        <Button
+                          component="a"
+                          href={calendarUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                          startIcon={<CalendarMonth />}
+                          variant="outlined"
+                          sx={{ flex: 1, minHeight: 52, borderRadius: 3, textTransform: 'none', fontWeight: 700 }}
+                        >
+                          Add to calendar
+                        </Button>
+                      ) : null}
+                    </Stack>
+
+                    {eventSourceUrl ? (
+                      <Button
+                        component="a"
+                        href={eventSourceUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                        startIcon={<OpenInNew />}
+                        variant="outlined"
+                        sx={{ minHeight: 52, borderRadius: 3, textTransform: 'none', fontWeight: 700 }}
+                      >
+                        View event source
+                      </Button>
+                    ) : null}
+                  </Stack>
+                </Paper>
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                  {directionsUrl ? (
+                    <Button
+                      component="a"
+                      href={directionsUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                      startIcon={<LocationOn />}
+                      variant="outlined"
+                      sx={{ flex: 1, minHeight: 48, borderRadius: 3, justifyContent: 'flex-start' }}
+                    >
+                      Directions
+                    </Button>
+                  ) : null}
+                  {calendarUrl ? (
+                    <Button
+                      component="a"
+                      href={calendarUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                      startIcon={<CalendarMonth />}
+                      variant="outlined"
+                      sx={{ flex: 1, minHeight: 48, borderRadius: 3, justifyContent: 'flex-start' }}
+                    >
+                      Add to calendar
+                    </Button>
+                  ) : null}
+                </Stack>
+
+                {eventSourceUrl ? (
+                  <Button
+                    component="a"
+                    href={eventSourceUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                    startIcon={<OpenInNew />}
+                    variant="outlined"
+                    sx={{ minHeight: 48, borderRadius: 3, justifyContent: 'flex-start' }}
+                  >
+                    View event source
+                  </Button>
+                ) : null}
               </Stack>
-            </Paper>
+            </Box>
 
             {/* Event Moments */}
             <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
@@ -545,26 +722,154 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               />
             </Box>
 
+            <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 4, px: 1 }}>
+              <Stack direction="row" flexWrap="wrap" gap={1.5}>
+                <Paper
+                  elevation={0}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2, flexBasis: '48%' }}
+                >
+                  <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 1 }}>
+                    Schedule
+                  </Typography>
+                  <Typography variant="body1" fontWeight={700} sx={{ mt: 0.75 }}>
+                    {selectedOccurrenceDateLabel}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                    {formatRecurrenceRule(recurrenceRule)}
+                  </Typography>
+                </Paper>
+                <Paper
+                  elevation={0}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2, flexBasis: '48%' }}
+                >
+                  <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 1 }}>
+                    Location
+                  </Typography>
+                  <Typography variant="body1" fontWeight={700} sx={{ mt: 0.75 }}>
+                    {location.locationType === 'online' ? 'Online event' : formatLocationText(location)}
+                  </Typography>
+                </Paper>
+                <Paper
+                  elevation={0}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2, flexBasis: '48%' }}
+                >
+                  <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 1 }}>
+                    Attendance
+                  </Typography>
+                  <Typography variant="body1" fontWeight={700} sx={{ mt: 0.75 }}>
+                    {goingCount} going
+                    {interestedCount > 0 ? ` · ${interestedCount} interested` : ''}
+                    {waitlistedCount > 0 ? ` · ${waitlistedCount} waitlisted` : ''}
+                  </Typography>
+                </Paper>
+              </Stack>
+            </Box>
+
             {/* About */}
             <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
               <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
-                About This Event
+                About this event
               </Typography>
               <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '1rem', whiteSpace: 'pre-line' }}>
                 {description}
               </Typography>
             </Box>
 
+            {eventCategories.length > 0 && (
+              <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 4, px: 1 }}>
+                <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
+                  Categories
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {eventCategories.map((category, index) => (
+                    <EventCategoryBadge key={`${category.name}.${index}`} category={category} />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+
             {/* Organizers */}
             <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
               <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
-                Organized By
+                <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+                  Hosted by
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  Organized By
+                </Box>
               </Typography>
-              {organizerData.length === 0 ? (
+              {!event.organization && visibleOrganizers.length === 0 ? (
                 <Typography color="text.secondary">No organizers listed.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {organizerData
+                  {event.organization && hasImportedSystemOrganizer && (
+                    <>
+                      <Paper
+                        component={Link}
+                        href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
+                        elevation={0}
+                        sx={{
+                          display: { xs: 'block', md: 'none' },
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 3,
+                          p: 2,
+                        }}
+                      >
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar
+                            src={event.organization.logo || undefined}
+                            alt={event.organization.name}
+                            variant="rounded"
+                            sx={{ width: 48, height: 48, bgcolor: 'secondary.light', color: 'secondary.contrastText' }}
+                          >
+                            <Business fontSize="small" />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                              {event.organization.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Organizer
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Paper>
+                      <Paper
+                        component={Link}
+                        href={ROUTES.ORGANIZATIONS.ORG(event.organization.slug)}
+                        elevation={0}
+                        sx={(theme) => ({
+                          ...previewPaperSx(theme),
+                          display: { xs: 'none', md: 'block' },
+                          textDecoration: 'none',
+                          color: 'inherit',
+                        })}
+                      >
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Avatar
+                            src={event.organization.logo || undefined}
+                            alt={event.organization.name}
+                            variant="rounded"
+                            sx={{ width: 52, height: 52, bgcolor: 'secondary.light', color: 'secondary.contrastText' }}
+                          >
+                            <Business fontSize="small" />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                              {event.organization.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Organization
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Paper>
+                    </>
+                  )}
+                  {visibleOrganizers
                     .filter((organizer) => organizer.user)
                     .map((organizer) => {
                       const user = organizer.user!;
@@ -574,16 +879,47 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                           : user.username || 'Unknown User';
 
                       return (
-                        <UserPreviewItem
-                          key={user.userId}
-                          paperProps={previewPaperProps}
-                          name={displayName}
-                          username={user.username}
-                          avatarUrl={user.profile_picture || undefined}
-                          chipLabel={organizer.role}
-                          chipColor="secondary"
-                          chipVariant="filled"
-                        />
+                        <Box key={user.userId}>
+                          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                            <UserPreviewItem
+                              paperProps={previewPaperProps}
+                              name={displayName}
+                              username={user.username}
+                              avatarUrl={user.profile_picture || undefined}
+                              chipLabel={organizer.role}
+                              chipColor="secondary"
+                              chipVariant="filled"
+                            />
+                          </Box>
+                          <Paper
+                            component={Link}
+                            href={ROUTES.USERS.USER(user.username ?? '')}
+                            elevation={0}
+                            sx={{
+                              display: { xs: user.username ? 'block' : 'none', md: 'none' },
+                              textDecoration: 'none',
+                              color: 'inherit',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 3,
+                              p: 2,
+                            }}
+                          >
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar src={user.profile_picture || undefined} sx={{ width: 48, height: 48 }}>
+                                {(displayName || user.username || '?').charAt(0).toUpperCase()}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight={600}>
+                                  {displayName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Event host
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </Paper>
+                        </Box>
                       );
                     })}
                 </Stack>
@@ -593,13 +929,24 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* Participants */}
             <Box sx={{ mb: 4, px: { xs: 1, md: 0 } }}>
               <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 2 }}>
-                Who&apos;s Attending
+                <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+                  People going
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  Who&apos;s Attending
+                </Box>
                 {participantList.length > 0 && (
                   <Chip
                     label={participantList.length}
                     size="small"
                     color="primary"
-                    sx={{ fontWeight: 700, minWidth: 32, ml: 1, verticalAlign: 'middle' }}
+                    sx={{
+                      display: { xs: 'none', md: 'inline-flex' },
+                      fontWeight: 700,
+                      minWidth: 32,
+                      ml: 1,
+                      verticalAlign: 'middle',
+                    }}
                   />
                 )}
               </Typography>
@@ -611,7 +958,40 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </Box>
               ) : (
                 <>
-                  <Stack spacing={2} sx={{ mb: 3 }}>
+                  <Stack
+                    direction="row"
+                    spacing={0}
+                    alignItems="center"
+                    sx={{ display: { xs: 'flex', md: 'none' }, mb: 1 }}
+                  >
+                    {attendeePreview
+                      .filter(
+                        (
+                          participant,
+                        ): participant is EventParticipantRecord & {
+                          user: NonNullable<EventParticipantRecord['user']>;
+                        } => Boolean(participant.user),
+                      )
+                      .map((participant, index) => (
+                        <Avatar
+                          key={participant.participantId}
+                          src={participant.user.profile_picture || undefined}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            ml: index === 0 ? 0 : -1.25,
+                            border: '2px solid',
+                            borderColor: 'background.paper',
+                          }}
+                        >
+                          {getParticipantDisplayName(participant).charAt(0).toUpperCase()}
+                        </Avatar>
+                      ))}
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1.5 }}>
+                      {participantList.length} people
+                    </Typography>
+                  </Stack>
+                  <Stack spacing={2} sx={{ display: { xs: 'none', md: 'flex' }, mb: 3 }}>
                     {attendeePreview
                       .filter(
                         (
@@ -624,23 +1004,29 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                         const isVisible = canViewAttendee(participant.user);
                         const visibilityLabel = getVisibilityLabel(participant.user.defaultVisibility);
                         return (
-                          <UserPreviewItem
-                            key={participant.participantId}
-                            paperProps={previewPaperProps}
-                            name={getParticipantDisplayName(participant)}
-                            username={participant.user.username}
-                            avatarUrl={participant.user.profile_picture || undefined}
-                            chipLabel={getParticipantStatusLabel(participant)}
-                            chipColor={getParticipantChipColor(participant.status)}
-                            chipVariant="outlined"
-                            masked={!isVisible}
-                            maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
-                          />
+                          <Box key={participant.participantId} sx={{ display: { xs: 'none', md: 'block' } }}>
+                            <UserPreviewItem
+                              paperProps={previewPaperProps}
+                              name={getParticipantDisplayName(participant)}
+                              username={participant.user.username}
+                              avatarUrl={participant.user.profile_picture || undefined}
+                              chipLabel={getParticipantStatusLabel(participant)}
+                              chipColor={getParticipantChipColor(participant.status)}
+                              chipVariant="outlined"
+                              masked={!isVisible}
+                              maskLabel={isVisible ? undefined : `${visibilityLabel} • Follow to view`}
+                            />
+                          </Box>
                         );
                       })}
                   </Stack>
                   {participantList.length > attendeePreview.length && (
-                    <Button component={Link} href={attendeeRoute} variant="text" sx={{ fontWeight: 600 }}>
+                    <Button
+                      component={Link}
+                      href={attendeeRoute}
+                      variant="text"
+                      sx={{ display: { xs: 'none', md: 'inline-flex' }, fontWeight: 600 }}
+                    >
                       View all {participantList.length} attendees
                     </Button>
                   )}
@@ -648,7 +1034,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               )}
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: { xs: 'none', md: 'block' } }}>
             <Box sx={{ position: 'sticky', top: 24 }}>
               <Box sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
                 <Stack spacing={2.5}>
@@ -836,6 +1222,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           </Grid>
         </Grid>
       </Container>
+
+      <EventImageLightbox
+        alt={title}
+        onClose={() => setImageViewerOpen(false)}
+        open={imageViewerOpen}
+        src={featuredImageUrl}
+      />
 
       {/* Event Moments Viewer */}
       <EventMomentViewer

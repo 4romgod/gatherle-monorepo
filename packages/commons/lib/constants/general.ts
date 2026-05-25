@@ -85,3 +85,5 @@ export enum HttpStatusCode {
   CONFLICT = 409,
   INTERNAL_SERVER_ERROR = 500,
 }
+
+export const IMPORTED_EVENT_SYSTEM_USERNAME = 'gatherle-imports';

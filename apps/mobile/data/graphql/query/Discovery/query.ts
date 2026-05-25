@@ -42,6 +42,7 @@ export const GetHomeDiscoveryDocument = graphql(`
         description
         status
         visibility
+        eventLink
         eventCategories {
           eventCategoryId
           slug
@@ -123,6 +124,7 @@ export const GetHomeDiscoveryDocument = graphql(`
         description
         status
         visibility
+        eventLink
         eventCategories {
           eventCategoryId
           slug
@@ -229,6 +231,7 @@ export const GetEventsFeedDocument = graphql(`
         description
         status
         visibility
+        eventLink
         eventCategories {
           eventCategoryId
           slug

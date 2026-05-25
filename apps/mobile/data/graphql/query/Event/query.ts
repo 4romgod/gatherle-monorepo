@@ -10,6 +10,7 @@ export const GetEventsDocument = graphql(`
       description
       status
       visibility
+      eventLink
       orgId
       venueId
       location {

@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { eventSeriesMockData } from '@/mongodb/mockData';
+import { eventSeriesMockData } from '@/mongodb/data/mock';
 import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
 import { SortOrderInput, OrganizationRole } from '@gatherle/commons/types';
 import {

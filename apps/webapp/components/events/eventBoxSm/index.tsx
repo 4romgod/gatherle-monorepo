@@ -1,6 +1,5 @@
 'use client';
 
-import Card from '@mui/material/Card';
 import CardMedia from '@mui/material/CardMedia';
 import { alpha, Avatar, AvatarGroup, Box, CardContent, Typography, Tooltip, Stack } from '@mui/material';
 import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
@@ -99,7 +98,14 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
           },
         })}
       >
-        <Box sx={{ position: 'relative', paddingTop: '52%', overflow: 'hidden' }}>
+        <Box
+          sx={(theme) => ({
+            position: 'relative',
+            paddingTop: '52%',
+            overflow: 'hidden',
+            backgroundColor: alpha(theme.palette.primary.light, 0.08),
+          })}
+        >
           {imageUrl ? (
             <CardMedia
               component="img"
@@ -111,7 +117,7 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
                 left: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
               }}
             />
           ) : (
@@ -132,33 +138,25 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
               <CalendarToday sx={{ fontSize: 36, opacity: 0.7 }} />
             </Box>
           )}
+        </Box>
+        <CardContent sx={{ flexGrow: 1, p: 1.25 }}>
           <Box
             sx={(theme) => ({
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: alpha(theme.palette.common.black, 0.4),
-            })}
-          />
-          <Box
-            sx={(theme) => ({
-              position: 'absolute',
-              top: 8,
-              left: 8,
+              alignSelf: 'flex-start',
               px: 1,
               py: 0.5,
               borderRadius: 2,
-              backgroundColor: alpha(theme.palette.common.white, 0.92),
-              color: 'primary.dark',
+              backgroundColor: alpha(theme.palette.primary.light, 0.16),
+              color: 'primary.main',
               fontWeight: 700,
               fontSize: '0.7rem',
               letterSpacing: 0.4,
               textTransform: 'uppercase',
+              mb: 1,
             })}
           >
             {cityLabel}
           </Box>
-        </Box>
-        <CardContent sx={{ flexGrow: 1, p: 1.25 }}>
           <Typography gutterBottom variant="subtitle2" component="h2" fontWeight="bold" sx={{ mb: 0.4 }}>
             {title}
           </Typography>

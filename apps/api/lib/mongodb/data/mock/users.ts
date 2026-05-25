@@ -1,45 +1,17 @@
 import type { CreateUserInput } from '@gatherle/commons/types';
 import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@gatherle/commons/types/user';
 
-// TODO:Consider using environment variables for test user passwords
+export type MockUserSeedData = Omit<CreateUserInput, 'password'>;
 
-export const testAdminSeedUser: CreateUserInput = {
-  email: 'test-admin@gatherle.local',
-  username: 'gatherle-test-admin',
-  birthdate: '1990-01-01',
-  family_name: 'Admin',
-  given_name: 'Test',
-  password: 'TestAdmin123!',
-  gender: Gender.Other,
-  phone_number: '+27820000000',
-  userRole: UserRole.Admin,
+export const MOCK_USERS_PASSWORD_ENV_VAR = 'GATHERLE_MOCK_USERS_PASSWORD';
+export const MOCK_USERS_PASSWORD_PROMPT_LABEL = 'Password for mock users';
+
+export const readMockUsersPasswordFromEnv = (): string | undefined => {
+  const value = process.env[MOCK_USERS_PASSWORD_ENV_VAR];
+  return typeof value === 'string' && value.trim() ? value : undefined;
 };
 
-export const testUserSeedUser: CreateUserInput = {
-  email: 'test-user@gatherle.local',
-  username: 'gatherle-test-user',
-  birthdate: '1992-05-15',
-  family_name: 'User',
-  given_name: 'Test',
-  password: 'TestUser123!',
-  gender: Gender.Other,
-  phone_number: '+27820000001',
-  userRole: UserRole.User,
-};
-
-export const testUser2SeedUser: CreateUserInput = {
-  email: 'test-user2@gatherle.local',
-  username: 'gatherle-test-user2',
-  birthdate: '1991-08-21',
-  family_name: 'Other',
-  given_name: 'Test',
-  password: 'TestOtherUser123!',
-  gender: Gender.Other,
-  phone_number: '+27820000002',
-  userRole: UserRole.User,
-};
-
-const users: CreateUserInput[] = [
+const users: MockUserSeedData[] = [
   {
     // id: 'user001',
     email: 'user001@gmail.com',
@@ -54,7 +26,6 @@ const users: CreateUserInput[] = [
     family_name: 'Baur',
     gender: Gender.Male,
     given_name: 'Jack',
-    password: '123456789',
     phone_number: '+12345678990',
     profile_picture: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
     bio: 'Trail runner and live music addict based in Durban.',
@@ -78,14 +49,13 @@ const users: CreateUserInput[] = [
     family_name: 'Carter',
     gender: Gender.Male,
     given_name: 'Sean',
-    password: '123456789',
     phone_number: '+12345678990',
     profile_picture: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
     bio: 'Festival promoter bringing global acts to local stages.',
     primaryTimezone: 'Africa/Johannesburg',
-    defaultVisibility: SocialVisibility.Followers,
-    socialVisibility: SocialVisibility.Followers,
-    followPolicy: FollowPolicy.RequireApproval,
+    defaultVisibility: SocialVisibility.Public,
+    socialVisibility: SocialVisibility.Public,
+    followPolicy: FollowPolicy.Public,
     userRole: UserRole.Host,
     shareRSVPByDefault: true,
   },
@@ -103,7 +73,6 @@ const users: CreateUserInput[] = [
     family_name: 'Maluleke',
     gender: Gender.Female,
     given_name: 'Celin',
-    password: '123456789',
     phone_number: '+12345678990',
     profile_picture: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80',
     bio: 'Food market explorer and night-run organizer.',
@@ -128,14 +97,13 @@ const users: CreateUserInput[] = [
     family_name: 'Bezos',
     gender: Gender.Male,
     given_name: 'Jeff',
-    password: '123456789',
     phone_number: '+12345678990',
     profile_picture: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80',
     bio: 'Investor by day, rooftop party host by night.',
     primaryTimezone: 'Africa/Johannesburg',
-    defaultVisibility: SocialVisibility.Followers,
-    socialVisibility: SocialVisibility.Followers,
-    followPolicy: FollowPolicy.RequireApproval,
+    defaultVisibility: SocialVisibility.Public,
+    socialVisibility: SocialVisibility.Public,
+    followPolicy: FollowPolicy.Public,
     userRole: UserRole.Admin,
     shareRSVPByDefault: false,
   },
@@ -153,7 +121,6 @@ const users: CreateUserInput[] = [
     family_name: 'Mvubu',
     gender: Gender.Female,
     given_name: 'Thandi',
-    password: '123456789',
     phone_number: '+27823456789',
     profile_picture: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
     bio: 'Yoga instructor and wellness advocate. Love connecting people.',
@@ -178,13 +145,12 @@ const users: CreateUserInput[] = [
     family_name: 'Ndlovu',
     gender: Gender.Male,
     given_name: 'Sipho',
-    password: '123456789',
     phone_number: '+27811234567',
     profile_picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
     bio: 'Software developer and tech meetup regular.',
     primaryTimezone: 'Africa/Johannesburg',
-    defaultVisibility: SocialVisibility.Followers,
-    socialVisibility: SocialVisibility.Followers,
+    defaultVisibility: SocialVisibility.Public,
+    socialVisibility: SocialVisibility.Public,
     followPolicy: FollowPolicy.Public,
     userRole: UserRole.User,
     shareRSVPByDefault: false,
@@ -203,14 +169,13 @@ const users: CreateUserInput[] = [
     family_name: 'Johnson',
     gender: Gender.Female,
     given_name: 'Amara',
-    password: '123456789',
     phone_number: '+27835551234',
     profile_picture: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=300&q=80',
     bio: 'Photographer capturing urban moments and street culture.',
     primaryTimezone: 'Africa/Johannesburg',
     defaultVisibility: SocialVisibility.Public,
     socialVisibility: SocialVisibility.Public,
-    followPolicy: FollowPolicy.RequireApproval,
+    followPolicy: FollowPolicy.Public,
     userRole: UserRole.User,
     shareRSVPByDefault: true,
   },

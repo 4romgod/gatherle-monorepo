@@ -318,6 +318,9 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
+      GATHERLE_TEST_ADMIN_PASSWORD: ${{ secrets.GATHERLE_TEST_ADMIN_PASSWORD }}
+      GATHERLE_TEST_USER_PASSWORD: ${{ secrets.GATHERLE_TEST_USER_PASSWORD }}
+      GATHERLE_TEST_USER2_PASSWORD: ${{ secrets.GATHERLE_TEST_USER2_PASSWORD }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -356,6 +359,9 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
+      GATHERLE_TEST_ADMIN_PASSWORD: ${{ secrets.GATHERLE_TEST_ADMIN_PASSWORD }}
+      GATHERLE_TEST_USER_PASSWORD: ${{ secrets.GATHERLE_TEST_USER_PASSWORD }}
+      GATHERLE_TEST_USER2_PASSWORD: ${{ secrets.GATHERLE_TEST_USER2_PASSWORD }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -394,6 +400,9 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
+      GATHERLE_TEST_ADMIN_PASSWORD: ${{ secrets.GATHERLE_TEST_ADMIN_PASSWORD }}
+      GATHERLE_TEST_USER_PASSWORD: ${{ secrets.GATHERLE_TEST_USER_PASSWORD }}
+      GATHERLE_TEST_USER2_PASSWORD: ${{ secrets.GATHERLE_TEST_USER2_PASSWORD }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6

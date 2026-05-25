@@ -36,7 +36,7 @@ export function useMobileHomeDiscovery(authToken?: string | null) {
 
   const upcomingEvents = useMemo(() => dedupeOccurrencesBySeries(upcomingSource, 6), [upcomingSource]);
   const trendingEvents = useMemo(() => dedupeOccurrencesBySeries(trendingSource, 6), [trendingSource]);
-  const categories = useMemo(() => sortCategoriesByInterest(categorySource).slice(0, 8), [categorySource]);
+  const categories = useMemo(() => sortCategoriesByInterest(categorySource), [categorySource]);
   const organizations = useMemo(
     () => sortOrganizationsByFollowers(organizationSource).slice(0, 5),
     [organizationSource],

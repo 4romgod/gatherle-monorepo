@@ -1,5 +1,10 @@
 import request from 'supertest';
-import { testAdminSeedUser, testUserSeedUser, testUser2SeedUser } from '@/mongodb/mockData';
+import {
+  requireSystemUserPasswordFromEnv,
+  testAdminSystemUser,
+  testUserSystemUser,
+  testUser2SystemUser,
+} from '@/mongodb/data/system';
 import type { UserWithToken } from '@gatherle/commons/types';
 import type { UserRole } from '@gatherle/commons/types';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
@@ -51,31 +56,24 @@ const isRetryableFailure = (status: number, body: unknown): boolean => {
   return Array.isArray(payload.errors) && payload.errors.some((error) => hasRetryableMessage(error.message));
 };
 
-export const requirePassword = (email: string, password?: string): string => {
-  if (!password) {
-    throw new Error(`Seeded user ${email} is missing a password in mockData.`);
-  }
-  return password;
-};
-
 export const getSeededTestUsers = (): SeededTestUsers => ({
   admin: {
-    email: testAdminSeedUser.email,
-    password: requirePassword(testAdminSeedUser.email, testAdminSeedUser.password),
-    username: testAdminSeedUser.username!,
-    userRole: testAdminSeedUser.userRole!,
+    email: testAdminSystemUser.email,
+    password: requireSystemUserPasswordFromEnv(testAdminSystemUser),
+    username: testAdminSystemUser.username!,
+    userRole: testAdminSystemUser.userRole!,
   },
   user: {
-    email: testUserSeedUser.email,
-    password: requirePassword(testUserSeedUser.email, testUserSeedUser.password),
-    username: testUserSeedUser.username!,
-    userRole: testUserSeedUser.userRole!,
+    email: testUserSystemUser.email,
+    password: requireSystemUserPasswordFromEnv(testUserSystemUser),
+    username: testUserSystemUser.username!,
+    userRole: testUserSystemUser.userRole!,
   },
   user2: {
-    email: testUser2SeedUser.email,
-    password: requirePassword(testUser2SeedUser.email, testUser2SeedUser.password),
-    username: testUser2SeedUser.username!,
-    userRole: testUser2SeedUser.userRole!,
+    email: testUser2SystemUser.email,
+    password: requireSystemUserPasswordFromEnv(testUser2SystemUser),
+    username: testUser2SystemUser.username!,
+    userRole: testUser2SystemUser.userRole!,
   },
 });
 
