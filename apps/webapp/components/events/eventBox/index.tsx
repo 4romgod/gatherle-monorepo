@@ -81,10 +81,10 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
         backgroundColor: 'background.default',
         backgroundImage: 'none',
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '180px 1fr' },
-        gridTemplateRows: { xs: 'auto auto', sm: '180px' },
+        gridTemplateColumns: { xs: '1fr', sm: '240px minmax(0, 1fr)' },
+        gridTemplateRows: { xs: 'auto auto', sm: 'auto' },
         gap: 0,
-        height: { xs: 'auto', sm: 180 },
+        height: 'auto',
         borderRadius: { xs: 1, sm: 2 },
         position: 'relative',
         overflow: 'hidden',
@@ -99,12 +99,10 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
     >
       <Box
         sx={{
-          alignItems: 'center',
           backgroundColor: alpha(theme.palette.primary.light, 0.08),
-          display: 'flex',
-          justifyContent: 'center',
+          alignSelf: 'start',
           position: 'relative',
-          height: { xs: 140, sm: 180 },
+          aspectRatio: '16 / 9',
           width: '100%',
           overflow: 'hidden',
         }}
@@ -131,7 +129,7 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
             </Box>
           }
           imageSx={{
-            objectFit: 'contain',
+            objectFit: 'cover',
             position: 'relative',
             transition: 'none',
           }}
@@ -139,6 +137,20 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
           src={imageUrl}
           sx={{ width: '100%', height: '100%' }}
         />
+        {statusLabel && (
+          <Chip
+            label={statusLabel}
+            size="small"
+            color="success"
+            sx={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 1,
+              fontWeight: 700,
+            }}
+          />
+        )}
       </Box>
       <Box
         component="div"
@@ -153,7 +165,6 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
       >
         <Box sx={{ flex: '1 1 auto', overflow: 'hidden' }}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.75 }}>
-            {statusLabel && <Chip label={statusLabel} size="small" color="success" sx={{ fontWeight: 600 }} />}
             {participantCount > 0 && (
               <Chip
                 icon={<PeopleOutline sx={{ fontSize: 14 }} />}

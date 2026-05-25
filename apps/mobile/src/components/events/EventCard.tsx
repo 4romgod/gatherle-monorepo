@@ -149,17 +149,15 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
         <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
           <RemoteImage
             fallback={imageFallback}
-            resizeMode="contain"
+            resizeMode="cover"
             showLoader
             style={[styles.image, { backgroundColor: theme.colors.surfaceRaised }]}
             uri={imageUrl}
           />
-        </View>
-
-        <View style={styles.body}>
           <View
             style={[
               styles.overlayPill,
+              styles.imageOverlayPill,
               isFeatured
                 ? { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }
                 : { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.primarySoft },
@@ -176,7 +174,9 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
               {overlayLabel}
             </Text>
           </View>
+        </View>
 
+        <View style={styles.body}>
           {!isFeatured ? (
             <View style={[styles.attendancePill, { borderColor: theme.colors.border }]}>
               <Feather color={theme.colors.textSecondary} name="users" size={14} />
@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   imageFeatured: {
-    height: 200,
+    aspectRatio: 16 / 9,
   },
   imageFeed: {
-    height: 190,
+    aspectRatio: 16 / 9,
   },
   imagePlaceholder: {
     alignItems: 'center',
@@ -336,6 +336,11 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     ...typography.displayBold,
     fontSize: fontSize.display,
+  },
+  imageOverlayPill: {
+    left: 12,
+    position: 'absolute',
+    top: 12,
   },
   imageShell: {
     position: 'relative',

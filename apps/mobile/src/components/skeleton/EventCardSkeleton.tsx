@@ -24,7 +24,7 @@ export function EventCardSkeleton({ cardWidth = '100%', variant = 'feed' }: Even
       ]}
     >
       <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
-        <SkeletonBlock style={StyleSheet.absoluteFillObject} />
+        <SkeletonBlock style={StyleSheet.absoluteFill} />
         <SkeletonBlock style={isFeatured ? styles.cityPill : styles.statusPill} />
       </View>
 

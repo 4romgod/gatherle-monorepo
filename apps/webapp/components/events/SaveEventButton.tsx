@@ -1,5 +1,6 @@
 'use client';
 
+import type { SxProps, Theme } from '@mui/material/styles';
 import { Button, IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { Bookmark, BookmarkBorder } from '@mui/icons-material';
 import { useSaveEvent } from '@/hooks';
@@ -18,6 +19,7 @@ interface SaveEventButtonProps {
   onSaveChange?: (isSaved: boolean) => void;
   label?: string;
   fullWidth?: boolean;
+  sx?: SxProps<Theme>;
 }
 
 /**
@@ -32,6 +34,7 @@ export default function SaveEventButton({
   onSaveChange,
   label,
   fullWidth = false,
+  sx,
 }: SaveEventButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -106,6 +109,7 @@ export default function SaveEventButton({
           bgcolor: isSaved ? 'primary.dark' : 'action.hover',
           borderColor: isSaved ? 'primary.dark' : 'primary.main',
         },
+        ...sx,
       }}
     >
       {label}

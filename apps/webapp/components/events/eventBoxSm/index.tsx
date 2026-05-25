@@ -101,7 +101,7 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
         <Box
           sx={(theme) => ({
             position: 'relative',
-            paddingTop: '52%',
+            paddingTop: '56.25%',
             overflow: 'hidden',
             backgroundColor: alpha(theme.palette.primary.light, 0.08),
           })}
@@ -117,7 +117,7 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
                 left: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain',
+                objectFit: 'cover',
               }}
             />
           ) : (
@@ -138,11 +138,12 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
               <CalendarToday sx={{ fontSize: 36, opacity: 0.7 }} />
             </Box>
           )}
-        </Box>
-        <CardContent sx={{ flexGrow: 1, p: 1.25 }}>
           <Box
             sx={(theme) => ({
-              alignSelf: 'flex-start',
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 1,
               px: 1,
               py: 0.5,
               borderRadius: 2,
@@ -152,11 +153,12 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
               fontSize: '0.7rem',
               letterSpacing: 0.4,
               textTransform: 'uppercase',
-              mb: 1,
             })}
           >
             {cityLabel}
           </Box>
+        </Box>
+        <CardContent sx={{ flexGrow: 1, p: 1.25 }}>
           <Typography gutterBottom variant="subtitle2" component="h2" fontWeight="bold" sx={{ mb: 0.4 }}>
             {title}
           </Typography>
