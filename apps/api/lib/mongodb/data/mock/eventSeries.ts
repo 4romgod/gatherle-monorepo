@@ -5,7 +5,7 @@ import {
   EventStatus,
   EventVisibility,
 } from '@gatherle/commons/types/eventSeries';
-import { addDays, buildPrimarySchedule, nextWeekday, withTime } from './utils';
+import { addDays, buildPrimarySchedule, nextWeekday, withTime } from '../utils';
 
 export type EventSeriesSeedData = CreateEventInput & {
   orgSlug?: string;

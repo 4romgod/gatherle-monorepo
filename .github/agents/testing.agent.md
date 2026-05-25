@@ -137,7 +137,7 @@ apps/api/test/
     setup.ts        ← Jest globalSetup: validates GRAPHQL_URL and checks API readiness
     jest.config.ts
   utils/            ← Shared across unit + e2e
-    mockData/       ← Seeded test data
+    data/mock/      ← Seeded mock data
     queries/        ← GraphQL query/mutation string builders
     mockContext.ts  ← createMockContext() for resolver unit tests
     summaryReporter.ts

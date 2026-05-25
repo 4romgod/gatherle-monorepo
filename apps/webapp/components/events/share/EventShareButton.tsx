@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, type MouseEvent } from 'react';
-import { IconButton, Snackbar, Tooltip } from '@mui/material';
+import { Button, IconButton, Snackbar, Tooltip } from '@mui/material';
 import { ShareRounded } from '@mui/icons-material';
 import type { EventShareButtonProps } from '.';
 import { useShareDialog } from '@/hooks/useShareDialog';
@@ -15,6 +15,8 @@ export default function EventShareButton({
   ariaLabel,
   stopPropagation = false,
   sx,
+  label,
+  fullWidth = false,
 }: EventShareButtonProps) {
   const isLarge = size === 'large';
 
@@ -39,28 +41,59 @@ export default function EventShareButton({
     share.openDialog();
   };
 
+  const icon = <ShareRounded sx={{ fontSize: isLarge ? 22 : 16 }} />;
+
   return (
     <>
       <Tooltip title="Share event" arrow>
-        <IconButton
-          size={size}
-          data-card-interactive="true"
-          onClick={handleOpen}
-          aria-label={ariaLabel ?? `Share ${eventTitle}`}
-          sx={{
-            width: isLarge ? 48 : 28,
-            height: isLarge ? 48 : 28,
-            color: 'text.secondary',
-            '&:hover': {
-              borderColor: 'secondary.main',
-              color: 'secondary.main',
-              backgroundColor: 'secondary.lighter',
-            },
-            ...sx,
-          }}
-        >
-          <ShareRounded sx={{ fontSize: isLarge ? 22 : 16 }} />
-        </IconButton>
+        {label ? (
+          <Button
+            aria-label={ariaLabel ?? `Share ${eventTitle}`}
+            data-card-interactive="true"
+            fullWidth={fullWidth}
+            onClick={handleOpen}
+            size={size}
+            startIcon={icon}
+            variant="outlined"
+            sx={{
+              minHeight: 52,
+              borderRadius: 3,
+              justifyContent: 'center',
+              textTransform: 'none',
+              fontWeight: 700,
+              borderColor: 'divider',
+              color: 'text.primary',
+              '&:hover': {
+                borderColor: 'secondary.main',
+                color: 'secondary.main',
+                backgroundColor: 'secondary.lighter',
+              },
+              ...sx,
+            }}
+          >
+            {label}
+          </Button>
+        ) : (
+          <IconButton
+            size={size}
+            data-card-interactive="true"
+            onClick={handleOpen}
+            aria-label={ariaLabel ?? `Share ${eventTitle}`}
+            sx={{
+              width: isLarge ? 48 : 28,
+              height: isLarge ? 48 : 28,
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'secondary.main',
+                color: 'secondary.main',
+                backgroundColor: 'secondary.lighter',
+              },
+              ...sx,
+            }}
+          >
+            {icon}
+          </IconButton>
+        )}
       </Tooltip>
 
       <ShareDialog

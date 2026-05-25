@@ -94,17 +94,15 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
         '&:hover': {
           boxShadow: theme.shadows[4],
           transform: 'translateY(-2px)',
-          '& .event-image': {
-            transform: 'scale(1.05)',
-          },
-          '& .event-overlay': {
-            backgroundColor: alpha(theme.palette.common.black, 0.35),
-          },
         },
       }}
     >
       <Box
         sx={{
+          alignItems: 'center',
+          backgroundColor: alpha(theme.palette.primary.light, 0.08),
+          display: 'flex',
+          justifyContent: 'center',
           position: 'relative',
           height: { xs: 140, sm: 180 },
           width: '100%',
@@ -132,37 +130,15 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
               <PeopleOutline sx={{ fontSize: 40, opacity: 0.7 }} />
             </Box>
           }
-          imageSx={{ transition: 'transform 0.3s ease' }}
+          imageSx={{
+            objectFit: 'contain',
+            position: 'relative',
+            transition: 'none',
+          }}
           showLoader
           src={imageUrl}
-          sx={{ width: '100%', height: '100%', transition: 'transform 0.3s ease' }}
+          sx={{ width: '100%', height: '100%' }}
         />
-        <Box
-          className="event-overlay"
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background: `linear-gradient(180deg, ${alpha(theme.palette.common.black, 0.1)} 0%, ${alpha(
-              theme.palette.common.black,
-              0.5,
-            )} 100%)`,
-            transition: 'background-color 0.3s ease',
-          }}
-        />
-        {statusLabel && (
-          <Chip
-            label={statusLabel}
-            size="small"
-            color="success"
-            sx={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              fontWeight: 600,
-              backdropFilter: 'blur(8px)',
-            }}
-          />
-        )}
       </Box>
       <Box
         component="div"
@@ -176,7 +152,8 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
         }}
       >
         <Box sx={{ flex: '1 1 auto', overflow: 'hidden' }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.75 }}>
+            {statusLabel && <Chip label={statusLabel} size="small" color="success" sx={{ fontWeight: 600 }} />}
             {participantCount > 0 && (
               <Chip
                 icon={<PeopleOutline sx={{ fontSize: 14 }} />}

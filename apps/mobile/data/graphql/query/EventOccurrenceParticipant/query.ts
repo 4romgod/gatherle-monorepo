@@ -51,6 +51,7 @@ export const GetMyEventOccurrenceRsvpsDocument = graphql(`
           description
           status
           visibility
+          eventLink
           eventCategories {
             eventCategoryId
             slug
@@ -138,6 +139,7 @@ export const GetUserEventOccurrencesDocument = graphql(`
         description
         status
         visibility
+        eventLink
         eventCategories {
           eventCategoryId
           slug

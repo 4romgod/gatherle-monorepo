@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { usersMockData } from '@/mongodb/mockData';
+import { usersMockData } from '@/mongodb/data/mock';
 import {
   getCreateUserMutation,
   getDeleteUserByEmailMutation,

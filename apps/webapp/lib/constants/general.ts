@@ -13,17 +13,25 @@ export {
   APP_NAMESPACE,
 } from './app';
 
+// Synced from @gatherle/commons/lib/constants/general.ts
+export const IMPORTED_EVENT_SYSTEM_USERNAME = 'gatherle-imports';
+
 export type EventCategoryIconComponents = {
   [key: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement> & React.RefAttributes<SVGSVGElement>>;
 };
 
 export const EVENT_CATEGORY_ICON_MAPPING: EventCategoryIconComponents = {
+  AcademicCapIcon: HeroIcons.AcademicCapIcon,
+  BriefcaseIcon: HeroIcons.BriefcaseIcon,
   PaintBrushIcon: HeroIcons.PaintBrushIcon,
   MusicalNoteIcon: HeroIcons.MusicalNoteIcon,
   CpuChipIcon: HeroIcons.CpuChipIcon,
   HeartIcon: HeroIcons.HeartIcon,
   DumbbellIcon: HeroIcons.PlusCircleIcon,
   CakeIcon: HeroIcons.CakeIcon,
+  HandRaisedIcon: HeroIcons.HandRaisedIcon,
+  SparklesIcon: HeroIcons.SparklesIcon,
+  TrophyIcon: HeroIcons.TrophyIcon,
   WineGlassIcon: HeroIcons.AdjustmentsVerticalIcon,
   GlobeAmericasIcon: HeroIcons.GlobeAmericasIcon,
   MusicIcon: HeroIcons.MusicalNoteIcon,

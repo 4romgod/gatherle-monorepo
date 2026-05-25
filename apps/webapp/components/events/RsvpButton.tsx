@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton, Tooltip, CircularProgress, Menu, MenuItem } from '@mui/material';
+import { Button, IconButton, Tooltip, CircularProgress, Menu, MenuItem } from '@mui/material';
 import { EventAvailable, EventAvailableOutlined, Star, Check, Cancel } from '@mui/icons-material';
 import { useRsvp } from '@/hooks';
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
@@ -19,6 +19,8 @@ interface RsvpButtonProps {
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
   onRsvpChange?: (status: ParticipantStatus | null) => void;
+  label?: string;
+  fullWidth?: boolean;
 }
 
 /**
@@ -32,6 +34,8 @@ export default function RsvpButton({
   size = 'medium',
   showTooltip = true,
   onRsvpChange,
+  label,
+  fullWidth = false,
 }: RsvpButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -118,8 +122,41 @@ export default function RsvpButton({
   };
 
   const tooltipText = hasRsvpd ? (isGoing ? 'Going' : 'Interested') : 'RSVP to this event';
+  const icon = isLoading ? (
+    <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
+  ) : hasRsvpd ? (
+    <EventAvailable />
+  ) : (
+    <EventAvailableOutlined />
+  );
 
-  const button = (
+  const button = label ? (
+    <Button
+      ref={anchorRef}
+      disabled={isLoading}
+      fullWidth={fullWidth}
+      onClick={handleButtonClick}
+      size={size}
+      startIcon={icon}
+      variant={hasRsvpd ? 'contained' : 'outlined'}
+      sx={{
+        minHeight: 52,
+        borderRadius: 3,
+        justifyContent: 'center',
+        textTransform: 'none',
+        fontWeight: 700,
+        bgcolor: hasRsvpd ? 'success.main' : 'transparent',
+        borderColor: hasRsvpd ? 'success.main' : 'divider',
+        color: hasRsvpd ? 'common.white' : 'text.primary',
+        '&:hover': {
+          bgcolor: hasRsvpd ? 'success.dark' : 'action.hover',
+          borderColor: hasRsvpd ? 'success.dark' : 'success.main',
+        },
+      }}
+    >
+      {label}
+    </Button>
+  ) : (
     <IconButton
       ref={anchorRef}
       onClick={handleButtonClick}
@@ -135,13 +172,7 @@ export default function RsvpButton({
       }}
       aria-label={tooltipText}
     >
-      {isLoading ? (
-        <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
-      ) : hasRsvpd ? (
-        <EventAvailable />
-      ) : (
-        <EventAvailableOutlined />
-      )}
+      {icon}
     </IconButton>
   );
 

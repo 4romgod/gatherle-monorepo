@@ -16,6 +16,7 @@ export function mapEventSeriesToOccurrence(event: MobileEventSeriesListItem): Mo
       description: event.description,
       eventCategories: event.eventCategories,
       eventId: event.eventId,
+      eventLink: event.eventLink ?? null,
       isSavedByMe: event.isSavedByMe,
       location: event.location,
       media: event.media ?? null,

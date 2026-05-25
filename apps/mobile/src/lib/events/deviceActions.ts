@@ -64,6 +64,23 @@ export async function openEventLocationInMaps(occurrence: MobileEventOccurrence)
   await openLocationQueryInMaps(getAddressQuery(occurrence));
 }
 
+export async function openEventSourceLink(eventLink?: string | null) {
+  const normalizedLink = eventLink?.trim();
+
+  if (!normalizedLink) {
+    throw new Error('This event does not have a source link yet.');
+  }
+
+  const hasProtocol = /^https?:\/\//i.test(normalizedLink);
+  const resolvedUrl = hasProtocol ? normalizedLink : `https://${normalizedLink}`;
+
+  if (!(await Linking.canOpenURL(resolvedUrl))) {
+    throw new Error('We could not open the event source link.');
+  }
+
+  await Linking.openURL(resolvedUrl);
+}
+
 function formatCalendarDate(date: Date) {
   return date
     .toISOString()

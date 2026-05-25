@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { usersMockData } from '@/mongodb/mockData';
+import { usersMockData } from '@/mongodb/data/mock';
 import {
   getForgotPasswordMutation,
   getLoginUserMutation,
