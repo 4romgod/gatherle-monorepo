@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { useMutation } from '@apollo/client';
 import { usePersistentState } from '@/hooks';
 import EventMutationForm from '@/components/forms/eventMutation';
@@ -8,13 +8,6 @@ const mockPush = jest.fn();
 const mockClearStorage = jest.fn();
 const mockCreateEvent = jest.fn();
 const mockUpdateEvent = jest.fn();
-
-type MutationOptions = {
-  onCompleted?: (data: unknown) => void;
-  onError?: (err: { message: string }) => void;
-};
-let capturedCreateOptions: MutationOptions = {};
-let capturedUpdateOptions: MutationOptions = {};
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -166,26 +159,27 @@ const mockEventProp: any = {
 };
 
 function setupMutationMocks() {
-  (useMutation as jest.Mock).mockImplementation((doc: unknown, options: MutationOptions) => {
+  (useMutation as jest.Mock).mockImplementation((doc: unknown) => {
     if (doc === 'CreateEventDocument') {
-      capturedCreateOptions = options;
       return [mockCreateEvent, { loading: false }];
     }
-    capturedUpdateOptions = options;
     return [mockUpdateEvent, { loading: false }];
   });
 }
 
-function submitForm(container: HTMLElement) {
+async function submitForm(container: HTMLElement) {
   // Directly submit the <form> element — the most reliable approach in jsdom
-  fireEvent.submit(container.querySelector('form')!);
+  await act(async () => {
+    fireEvent.submit(container.querySelector('form')!);
+    await Promise.resolve();
+  });
 }
 
 describe('EventMutationForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    capturedCreateOptions = {};
-    capturedUpdateOptions = {};
+    mockCreateEvent.mockResolvedValue({ data: {} });
+    mockUpdateEvent.mockResolvedValue({ data: {} });
     setupMutationMocks();
 
     // Default: empty form data (validation will fail)
@@ -198,33 +192,33 @@ describe('EventMutationForm', () => {
   });
 
   describe('form validation', () => {
-    it('shows required-field errors when submitting an empty form', () => {
+    it('shows required-field errors when submitting an empty form', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(screen.getByText('Title is required')).toBeTruthy();
       expect(screen.getByText('Summary is required')).toBeTruthy();
       expect(screen.getByText('Description is required')).toBeTruthy();
     });
 
-    it('shows recurrenceRule and categories errors when those fields are empty', () => {
+    it('shows recurrenceRule and categories errors when those fields are empty', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(screen.getByText('Event date is required')).toBeTruthy();
       expect(screen.getByText('Select at least one category')).toBeTruthy();
     });
 
-    it('does not call createEvent when validation fails', () => {
+    it('does not call createEvent when validation fails', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(mockCreateEvent).not.toHaveBeenCalled();
     });
 
-    it('shows a summary error banner when any field is invalid', () => {
+    it('shows a summary error banner when any field is invalid', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(screen.getByText('Please fix the errors below before submitting')).toBeTruthy();
     });
@@ -245,63 +239,62 @@ describe('EventMutationForm', () => {
       expect(screen.getByRole('button', { name: /create event/i })).toBeTruthy();
     });
 
-    it('calls createEvent with the full event data on valid submit', () => {
+    it('calls createEvent with the full event data on valid submit', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(mockCreateEvent).toHaveBeenCalledWith({
         variables: { input: validEventData },
       });
     });
 
-    it('does not call updateEvent in create mode', () => {
+    it('does not call updateEvent in create mode', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(mockUpdateEvent).not.toHaveBeenCalled();
     });
 
-    it('clears storage and navigates to the event page on success', () => {
+    it('clears storage and navigates to the event page on success', async () => {
+      mockCreateEvent.mockResolvedValueOnce({ data: { createEvent: { slug: 'new-event-slug' } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
-
-      act(() => {
-        capturedCreateOptions.onCompleted?.({ createEvent: { slug: 'new-event-slug' } });
-      });
+      await submitForm(container);
 
       expect(mockClearStorage).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/events/new-event-slug');
     });
 
-    it('shows a success snackbar message on success', () => {
+    it('shows a success snackbar message on success', async () => {
+      mockCreateEvent.mockResolvedValueOnce({ data: { createEvent: { slug: 'new-event-slug' } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedCreateOptions.onCompleted?.({ createEvent: { slug: 'new-event-slug' } });
-      });
-
-      expect(screen.getByText('Event created successfully!')).toBeTruthy();
+      await waitFor(() => expect(screen.getByText('Event created successfully!')).toBeTruthy());
     });
 
-    it('shows an error alert when createEvent fails', () => {
+    it('shows an error alert when createEvent fails', async () => {
+      mockCreateEvent.mockRejectedValueOnce(new Error('Server error occurred'));
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedCreateOptions.onError?.({ message: 'Server error occurred' });
-      });
-
-      expect(screen.getByText('Server error occurred')).toBeTruthy();
+      await waitFor(() => expect(screen.getByText('Server error occurred')).toBeTruthy());
     });
 
-    it('does not navigate on error', () => {
+    it('shows an error alert when createEvent returns no slug', async () => {
+      mockCreateEvent.mockResolvedValueOnce({ data: { createEvent: { slug: null } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedCreateOptions.onError?.({ message: 'Server error occurred' });
-      });
+      await waitFor(() =>
+        expect(screen.getByText('Event created, but the server did not return a destination event.')).toBeTruthy(),
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate on error', async () => {
+      mockCreateEvent.mockRejectedValueOnce(new Error('Server error occurred'));
+      const { container } = render(<EventMutationForm categoryList={mockCategories} />);
+      await submitForm(container);
 
       expect(mockPush).not.toHaveBeenCalled();
     });
@@ -322,63 +315,62 @@ describe('EventMutationForm', () => {
       expect(screen.getByRole('button', { name: /save changes/i })).toBeTruthy();
     });
 
-    it('calls updateEvent (not createEvent) in edit mode', () => {
+    it('calls updateEvent (not createEvent) in edit mode', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
+      await submitForm(container);
 
       expect(mockUpdateEvent).toHaveBeenCalled();
       expect(mockCreateEvent).not.toHaveBeenCalled();
     });
 
-    it('includes the eventId in the updateEvent variables', () => {
+    it('includes the eventId in the updateEvent variables', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
+      await submitForm(container);
 
       const callArgs = mockUpdateEvent.mock.calls[0][0];
       expect(callArgs.variables.input.eventId).toBe('event-abc');
     });
 
-    it('clears storage and navigates to the event page on success', () => {
+    it('clears storage and navigates to the event page on success', async () => {
+      mockUpdateEvent.mockResolvedValueOnce({ data: { updateEvent: { slug: 'existing-event' } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
-
-      act(() => {
-        capturedUpdateOptions.onCompleted?.({ updateEvent: { slug: 'existing-event' } });
-      });
+      await submitForm(container);
 
       expect(mockClearStorage).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/events/existing-event');
     });
 
-    it('shows a success snackbar message on success', () => {
+    it('shows a success snackbar message on success', async () => {
+      mockUpdateEvent.mockResolvedValueOnce({ data: { updateEvent: { slug: 'existing-event' } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedUpdateOptions.onCompleted?.({ updateEvent: { slug: 'existing-event' } });
-      });
-
-      expect(screen.getByText('Event updated successfully!')).toBeTruthy();
+      await waitFor(() => expect(screen.getByText('Event updated successfully!')).toBeTruthy());
     });
 
-    it('shows an error alert when updateEvent fails', () => {
+    it('shows an error alert when updateEvent fails', async () => {
+      mockUpdateEvent.mockRejectedValueOnce(new Error('Update failed'));
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedUpdateOptions.onError?.({ message: 'Update failed' });
-      });
-
-      expect(screen.getByText('Update failed')).toBeTruthy();
+      await waitFor(() => expect(screen.getByText('Update failed')).toBeTruthy());
     });
 
-    it('does not navigate on error', () => {
+    it('shows an error alert when updateEvent returns no slug', async () => {
+      mockUpdateEvent.mockResolvedValueOnce({ data: { updateEvent: { slug: null } } });
       const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
-      submitForm(container);
+      await submitForm(container);
 
-      act(() => {
-        capturedUpdateOptions.onError?.({ message: 'Update failed' });
-      });
+      await waitFor(() =>
+        expect(screen.getByText('Event updated, but the server did not return a destination event.')).toBeTruthy(),
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate on error', async () => {
+      mockUpdateEvent.mockRejectedValueOnce(new Error('Update failed'));
+      const { container } = render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
+      await submitForm(container);
 
       expect(mockPush).not.toHaveBeenCalled();
     });

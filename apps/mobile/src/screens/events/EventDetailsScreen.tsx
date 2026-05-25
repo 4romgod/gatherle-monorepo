@@ -64,13 +64,7 @@ export function EventDetailsScreen() {
     setLocalParticipantCount(participantCount);
   }, [participantCount]);
 
-  const rsvpLabel = !isAuthenticated
-    ? 'Login to RSVP'
-    : rsvpStatus === 'Going'
-      ? 'Going'
-      : rsvpStatus === 'Interested'
-        ? 'Interested'
-        : 'RSVP';
+  const rsvpLabel = rsvpStatus === 'Going' ? 'Going' : rsvpStatus === 'Interested' ? 'Interested' : 'RSVP';
   const rsvpTone = !isAuthenticated || !rsvpStatus ? 'primary' : 'successSoft';
   const saveTone = isSaved ? 'primarySoft' : 'secondary';
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';

@@ -179,22 +179,10 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
   const [createEvent, { loading: createLoading }] = useMutation(CreateEventDocument, {
     context: { headers: getAuthHeader(sessionData?.user?.token) },
-    onCompleted: (data) => {
-      clearStorage();
-      setSuccessMessage('Event created successfully!');
-      router.push(ROUTES.EVENTS.EVENT(data.createEvent.slug));
-    },
-    onError: (err) => setSubmitError(err.message),
   });
 
   const [updateEvent, { loading: updateLoading }] = useMutation(UpdateEventDocument, {
     context: { headers: getAuthHeader(sessionData?.user?.token) },
-    onCompleted: (data) => {
-      clearStorage();
-      setSuccessMessage('Event updated successfully!');
-      router.push(ROUTES.EVENTS.EVENT(data.updateEvent.slug));
-    },
-    onError: (err) => setSubmitError(err.message),
   });
 
   const submitting = createLoading || updateLoading;
@@ -269,7 +257,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -278,37 +266,59 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
     setSubmitError(null);
 
-    if (isEditMode && event?.eventId) {
-      updateEvent({
-        variables: {
-          input: {
-            eventId: event.eventId,
-            title: eventData.title,
-            summary: eventData.summary,
-            description: eventData.description,
-            primarySchedule: eventData.primarySchedule,
-            location: eventData.location,
-            venueId: eventData.venueId,
-            status: eventData.status,
-            lifecycleStatus: eventData.lifecycleStatus,
-            visibility: eventData.visibility,
-            capacity: eventData.capacity,
-            rsvpLimit: eventData.rsvpLimit,
-            waitlistEnabled: eventData.waitlistEnabled,
-            allowGuestPlusOnes: eventData.allowGuestPlusOnes,
-            remindersEnabled: eventData.remindersEnabled,
-            showAttendees: eventData.showAttendees,
-            eventCategories: eventData.eventCategories,
-            media: eventData.media,
-            privacySetting: eventData.privacySetting,
-            eventLink: eventData.eventLink,
-            orgId: eventData.orgId,
-            tags: eventData.tags,
+    try {
+      if (isEditMode && event?.eventId) {
+        const { data } = await updateEvent({
+          variables: {
+            input: {
+              eventId: event.eventId,
+              title: eventData.title,
+              summary: eventData.summary,
+              description: eventData.description,
+              primarySchedule: eventData.primarySchedule,
+              location: eventData.location,
+              venueId: eventData.venueId,
+              status: eventData.status,
+              lifecycleStatus: eventData.lifecycleStatus,
+              visibility: eventData.visibility,
+              capacity: eventData.capacity,
+              rsvpLimit: eventData.rsvpLimit,
+              waitlistEnabled: eventData.waitlistEnabled,
+              allowGuestPlusOnes: eventData.allowGuestPlusOnes,
+              remindersEnabled: eventData.remindersEnabled,
+              showAttendees: eventData.showAttendees,
+              eventCategories: eventData.eventCategories,
+              media: eventData.media,
+              privacySetting: eventData.privacySetting,
+              eventLink: eventData.eventLink,
+              orgId: eventData.orgId,
+              tags: eventData.tags,
+            },
           },
-        },
-      });
-    } else {
-      createEvent({ variables: { input: eventData } });
+        });
+
+        const slug = data?.updateEvent.slug;
+        if (slug) {
+          clearStorage();
+          setSuccessMessage('Event updated successfully!');
+          router.push(ROUTES.EVENTS.EVENT(slug));
+        } else {
+          setSubmitError('Event updated, but the server did not return a destination event.');
+        }
+        return;
+      }
+
+      const { data } = await createEvent({ variables: { input: eventData } });
+      const slug = data?.createEvent.slug;
+      if (slug) {
+        clearStorage();
+        setSuccessMessage('Event created successfully!');
+        router.push(ROUTES.EVENTS.EVENT(slug));
+      } else {
+        setSubmitError('Event created, but the server did not return a destination event.');
+      }
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Unable to save event.');
     }
   };
 

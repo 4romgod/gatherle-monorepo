@@ -518,8 +518,8 @@ jobs:
           curl -fsSIL "$DEPLOYMENT_URL" | head -n 1
 
   e2e-webapp:
-    if: ${{ inputs.deploy_webapp }}
     needs: [deploy-webapp]
+    if: ${{ always() && inputs.deploy_webapp && needs.deploy-webapp.result == 'success' }}
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
@@ -605,6 +605,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            apps/mobile/android/.gradle
           key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/package.json', 'package-lock.json', 'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-${{ runner.os }}-
@@ -614,7 +615,7 @@ jobs:
         env:
           EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
           EXPO_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
-        run: ./android/gradlew -p android app:assembleRelease
+        run: ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

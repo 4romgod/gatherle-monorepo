@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "apk:release": "expo prebuild --no-install && ./android/gradlew -p android app:assembleRelease",
+    "apk:release": "expo prebuild --no-install && ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true",
     "apk:install": "sh -c 'if [ -n \"$ANDROID_SERIAL\" ]; then adb -s \"$ANDROID_SERIAL\" install -r android/app/build/outputs/apk/release/app-release.apk; else adb install -r android/app/build/outputs/apk/release/app-release.apk; fi'",
     "build": "npm-run-all codegen typecheck export",
     "build:android": "expo export --platform android --output-dir dist/android",

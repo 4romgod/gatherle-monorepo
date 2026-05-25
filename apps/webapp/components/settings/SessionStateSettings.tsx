@@ -15,10 +15,21 @@ interface SessionStateSettingsProps {
 export default function SessionStateSettings({ token }: SessionStateSettingsProps) {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
 
-  const [clearAllSessionStates, { loading, error }] = useMutation(ClearAllSessionStatesDocument, {
+  const [clearAllSessionStates, { loading, reset }] = useMutation(ClearAllSessionStatesDocument, {
     context: { headers: getAuthHeader(token) },
-    onCompleted: () => {
+  });
+
+  const handleClearAll = () => {
+    setClearError(null);
+    reset();
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmClear = async () => {
+    try {
+      await clearAllSessionStates();
       setSuccessMessage(
         'All session states have been cleared. Your tabs, filters, and drafts will reset on next reload.',
       );
@@ -26,15 +37,9 @@ export default function SessionStateSettings({ token }: SessionStateSettingsProp
 
       // Auto-dismiss success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
-    },
-  });
-
-  const handleClearAll = () => {
-    setConfirmDialogOpen(true);
-  };
-
-  const confirmClear = () => {
-    clearAllSessionStates();
+    } catch (err) {
+      setClearError(err instanceof Error ? err.message : 'Failed to clear session states.');
+    }
   };
 
   return (
@@ -56,7 +61,17 @@ export default function SessionStateSettings({ token }: SessionStateSettingsProp
             </Alert>
           )}
 
-          {error && <Alert severity="error">Failed to clear session states: {error.message}</Alert>}
+          {clearError && (
+            <Alert
+              severity="error"
+              onClose={() => {
+                setClearError(null);
+                reset();
+              }}
+            >
+              Failed to clear session states: {clearError}
+            </Alert>
+          )}
 
           <Stack spacing={2}>
             <Box

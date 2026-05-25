@@ -50,6 +50,7 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const { data, loading, error, refetch } = useQuery(GetSessionStatesDocument, {
     context: { headers: getAuthHeader(token) },
@@ -59,19 +60,10 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
 
   const [clearSessionState, { loading: clearLoading }] = useMutation(ClearSessionStateDocument, {
     context: { headers: getAuthHeader(token) },
-    onCompleted: () => {
-      refetch();
-      setDeleteDialogOpen(false);
-      setSelectedKey(null);
-    },
   });
 
   const [clearAllSessionStates, { loading: clearAllLoading }] = useMutation(ClearAllSessionStatesDocument, {
     context: { headers: getAuthHeader(token) },
-    onCompleted: () => {
-      refetch();
-      setClearAllDialogOpen(false);
-    },
   });
 
   const sessionStates = data?.readAllSessionStates ?? [];
@@ -80,22 +72,37 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
   );
 
   const handleDelete = (key: string) => {
+    setMutationError(null);
     setSelectedKey(key);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedKey) {
-      clearSessionState({ variables: { key: selectedKey } });
+      try {
+        await clearSessionState({ variables: { key: selectedKey } });
+        await refetch();
+        setDeleteDialogOpen(false);
+        setSelectedKey(null);
+      } catch (err) {
+        setMutationError(err instanceof Error ? err.message : 'Failed to clear session state.');
+      }
     }
   };
 
   const handleClearAll = () => {
+    setMutationError(null);
     setClearAllDialogOpen(true);
   };
 
-  const confirmClearAll = () => {
-    clearAllSessionStates();
+  const confirmClearAll = async () => {
+    try {
+      await clearAllSessionStates();
+      await refetch();
+      setClearAllDialogOpen(false);
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to clear session states.');
+    }
   };
 
   const handleCopyKey = (key: string) => {
@@ -159,6 +166,11 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
       />
 
       {error && <Alert severity="error">Failed to load session states: {error.message}</Alert>}
+      {mutationError && (
+        <Alert severity="error" onClose={() => setMutationError(null)}>
+          {mutationError}
+        </Alert>
+      )}
 
       {loading ? (
         <Box display="flex" justifyContent="center" py={4}>
