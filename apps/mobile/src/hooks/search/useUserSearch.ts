@@ -12,17 +12,18 @@ export function useUserSearch(authToken: string | null) {
   const isMountedRef = useRef(true);
   const [results, setResults] = useState<MobileDirectoryUser[]>([]);
 
-  const [executeSearch, { loading }] = useLazyQuery(GetUsersDocument, {
+  const [executeSearch, { data, loading }] = useLazyQuery(GetUsersDocument, {
     fetchPolicy: 'network-only',
-    onCompleted: (data) => {
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      setResults(data?.readUsers ?? []);
-    },
     ...getApolloAuthContext(authToken),
   });
+
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setResults(data?.readUsers ?? []);
+  }, [data]);
 
   useEffect(() => {
     return () => {

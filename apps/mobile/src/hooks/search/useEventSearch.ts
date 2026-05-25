@@ -22,12 +22,13 @@ export function useEventSearch() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [results, setResults] = useState<MobileSearchResult[]>([]);
 
-  const [executeSearch, { loading }] = useLazyQuery(SearchEventsDocument, {
+  const [executeSearch, { data, loading }] = useLazyQuery(SearchEventsDocument, {
     fetchPolicy: 'network-only',
-    onCompleted: (data) => {
-      setResults(data?.readEvents ?? []);
-    },
   });
+
+  useEffect(() => {
+    setResults(data?.readEvents ?? []);
+  }, [data]);
 
   const search = useCallback(
     (query: string) => {
