@@ -261,6 +261,7 @@ Featured, Avatar, Gallery.
 
 | Document                                                                              | Contents                                                    |
 | ------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [docs/features/moments-platform.md](features/moments-platform.md)                     | Event moments foundation and dedicated moments feed design  |
 | [docs/features/notifications.md](features/notifications.md)                           | Notification types, delivery channels, data model           |
 | [docs/features/recommendation-feed.md](features/recommendation-feed.md)               | Scoring engine, feed lifecycle, file map                    |
 | [docs/features/social-features-assessment.md](features/social-features-assessment.md) | Follow system, muting, blocking, GraphQL API surface        |
@@ -273,21 +274,28 @@ Featured, Avatar, Gallery.
 | ------------------------------------------------------------------------------------------- | --------------------------------------- |
 | [docs/api/data-model.md](api/data-model.md)                                                 | MongoDB collections, field descriptions |
 | [docs/api/services-architecture.md](api/services-architecture.md)                           | Service layer overview                  |
-| [docs/api/cloudwatch-monitoring.md](api/cloudwatch-monitoring.md)                           | CloudWatch metrics and alarms           |
-| [docs/api/logging.md](api/logging.md)                                                       | Logging strategy                        |
+| [docs/api/observability.md](api/observability.md)                                           | Logging, dashboards, metrics, alerts    |
 | [docs/api/mongodb-knowledge-and-optimization.md](api/mongodb-knowledge-and-optimization.md) | MongoDB patterns and query optimization |
 | [docs/api/websocket-adoption-plan.md](api/websocket-adoption-plan.md)                       | WebSocket integration plan              |
 
+### Security Docs
+
+| Document                                                                                                      | Contents                                            |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [docs/security/abuse-controls-and-hardening.md](security/abuse-controls-and-hardening.md)                     | Edge protection, runtime guards, identity hardening |
+| [docs/security/auth-architecture-and-provider-roadmap.md](security/auth-architecture-and-provider-roadmap.md) | Auth model, provider roadmap, migration plan        |
+| [docs/security/threat-model-risk-register.md](security/threat-model-risk-register.md)                         | Risk register and mitigation priorities             |
+
 ### Webapp Docs
 
-| Document                                                                        | Contents                                 |
-| ------------------------------------------------------------------------------- | ---------------------------------------- |
-| [docs/webapp/design-system.md](webapp/design-system.md)                         | Design tokens, color palette, typography |
-| [docs/webapp/form-patterns.md](webapp/form-patterns.md)                         | Form conventions, validation patterns    |
-| [docs/webapp/webapp-pages.md](webapp/webapp-pages.md)                           | Page inventory and route structure       |
-| [docs/webapp/performance-optimization.md](webapp/performance-optimization.md)   | Next.js performance strategies           |
-| [docs/webapp/media-upload-architecture.md](webapp/media-upload-architecture.md) | Media upload flow and S3 integration     |
-| [docs/webapp/useLazyQuery-pattern.md](webapp/useLazyQuery-pattern.md)           | useLazyQuery usage patterns              |
+| Document                                                                            | Contents                                 |
+| ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| [docs/frontend/design-system.md](frontend/design-system.md)                         | Design tokens, color palette, typography |
+| [docs/frontend/form-patterns.md](frontend/form-patterns.md)                         | Form conventions, validation patterns    |
+| [docs/frontend/webapp-pages.md](frontend/webapp-pages.md)                           | Page inventory and route structure       |
+| [docs/frontend/performance-optimization.md](frontend/performance-optimization.md)   | Next.js performance and streaming        |
+| [docs/frontend/media-upload-architecture.md](frontend/media-upload-architecture.md) | Media upload flow and S3 integration     |
+| [docs/frontend/useLazyQuery-pattern.md](frontend/useLazyQuery-pattern.md)           | useLazyQuery usage patterns              |
 
 ### Bug Log
 
@@ -297,8 +305,8 @@ Featured, Avatar, Gallery.
 
 ### Other
 
-| Document                                                  | Contents                                         |
-| --------------------------------------------------------- | ------------------------------------------------ |
-| [docs/project-brief.md](project-brief.md)                 | Product vision, MVP scope, competitive landscape |
-| [docs/environment-variables.md](environment-variables.md) | Required env vars per workspace                  |
-| [docs/aws-account-setup.md](aws-account-setup.md)         | AWS bootstrap and deployment runbook             |
+| Document                                                            | Contents                                         |
+| ------------------------------------------------------------------- | ------------------------------------------------ |
+| [docs/project-brief.md](project-brief.md)                           | Product vision, MVP scope, competitive landscape |
+| [docs/environment-variables.md](environment-variables.md)           | Required env vars per workspace                  |
+| [docs/runbooks/aws-account-setup.md](runbooks/aws-account-setup.md) | AWS bootstrap and deployment runbook             |

@@ -24,6 +24,9 @@ jest.mock('@/websocket/event', () => ({
 }));
 
 jest.mock('@/mongodb/dao', () => ({
+  ChatConversationUnreadStateDAO: {
+    clearConversationUnread: jest.fn(),
+  },
   ChatMessageDAO: {
     markConversationRead: jest.fn(),
     countUnreadForConversation: jest.fn(),
@@ -68,6 +71,8 @@ describe('websocket route: chat.read', () => {
       stage: 'beta',
     });
     (touchConnection as jest.Mock).mockResolvedValue('conn-reader');
+    const { ChatConversationUnreadStateDAO } = require('@/mongodb/dao');
+    (ChatConversationUnreadStateDAO.clearConversationUnread as jest.Mock).mockResolvedValue(false);
   });
 
   it('returns 400 when payload is invalid', async () => {

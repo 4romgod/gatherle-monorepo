@@ -132,6 +132,24 @@ class NotificationDAO {
   }
 
   /**
+   * Mark a single notification as unread
+   */
+  static async markAsUnread(notificationId: string, userId: string): Promise<NotificationEntity | null> {
+    try {
+      const notification = await NotificationModel.findOneAndUpdate(
+        { notificationId, recipientUserId: userId },
+        { isRead: false, $unset: { readAt: 1 } },
+        { new: true },
+      ).exec();
+
+      return notification ? notification.toObject() : null;
+    } catch (error) {
+      logDaoError('Error marking notification as unread', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
    * Mark all notifications as read for a user
    */
   static async markAllAsRead(userId: string): Promise<number> {

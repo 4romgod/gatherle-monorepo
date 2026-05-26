@@ -56,6 +56,17 @@ export const GetOrganizationByIdDocument = graphql(`
   }
 `);
 
+export const GetOrganizationBySlugDocument = graphql(`
+  query GetOrganizationBySlug($slug: String!) {
+    readOrganizationBySlug(slug: $slug) {
+      orgId
+      slug
+      name
+      logo
+    }
+  }
+`);
+
 export const GetMyOrganizationsDocument = graphql(`
   query GetMyOrganizations {
     readMyOrganizations {

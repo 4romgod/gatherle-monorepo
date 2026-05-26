@@ -102,3 +102,23 @@ export class ChatConversation {
   @Field(() => Date, { description: 'Timestamp of the latest message in this conversation.' })
   updatedAt: Date;
 }
+
+@modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
+@index({ userId: 1, conversationWithUserId: 1 }, { unique: true })
+@index({ userId: 1, conversationKey: 1 })
+export class ChatConversationUnreadState {
+  @prop({ required: true, index: true, type: () => String })
+  userId: string;
+
+  @prop({ required: true, index: true, type: () => String })
+  conversationWithUserId: string;
+
+  @prop({ required: true, index: true, type: () => String })
+  conversationKey: string;
+
+  @prop({ type: () => Date, default: () => new Date() })
+  markedUnreadAt: Date;
+
+  createdAt?: Date;
+  updatedAt?: Date;
+}

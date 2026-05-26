@@ -250,6 +250,32 @@ describe('NotificationDAO', () => {
     });
   });
 
+  describe('markAsUnread', () => {
+    it('marks a notification as unread and returns it', async () => {
+      const unreadNotification = { ...mockNotification, isRead: false, readAt: undefined };
+      (NotificationModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+        createMockSuccessMongooseQuery({ toObject: () => unreadNotification }),
+      );
+
+      const result = await NotificationDAO.markAsUnread('notif-1', 'user-1');
+
+      expect(NotificationModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { notificationId: 'notif-1', recipientUserId: 'user-1' },
+        { isRead: false, $unset: { readAt: 1 } },
+        { new: true },
+      );
+      expect(result?.isRead).toBe(false);
+    });
+
+    it('returns null when notification to mark unread is not found', async () => {
+      (NotificationModel.findOneAndUpdate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      const result = await NotificationDAO.markAsUnread('notif-404', 'user-1');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('markAllAsRead', () => {
     it('marks all notifications as read and returns count', async () => {
       (NotificationModel.updateMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ modifiedCount: 5 }));

@@ -1,7 +1,10 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client';
 import { useEffect, useMemo, useState } from 'react';
-import { MarkChatConversationReadDocument } from '@data/graphql/mutation/Chat/mutation';
-import { GetChatConversationsDocument } from '@data/graphql/query/Chat/query';
+import {
+  MarkChatConversationReadDocument,
+  MarkChatConversationUnreadDocument,
+} from '@data/graphql/mutation/Chat/mutation';
+import { GetChatConversationsDocument, GetUnreadChatCountDocument } from '@data/graphql/query/Chat/query';
 import type { MobileChatConversation } from '@data/graphql/query/Chat/types';
 import { GetUserByIdDocument, type GetUserByIdQuery } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
@@ -21,6 +24,10 @@ export function useMessages(authToken: string | null, enabled = true) {
   >({});
 
   const [markConversationReadMutation] = useMutation(MarkChatConversationReadDocument, getApolloAuthContext(authToken));
+  const [markConversationUnreadMutation] = useMutation(
+    MarkChatConversationUnreadDocument,
+    getApolloAuthContext(authToken),
+  );
 
   const conversations = data?.readChatConversations ?? [];
 
@@ -101,6 +108,20 @@ export function useMessages(authToken: string | null, enabled = true) {
     await refetch();
   };
 
+  const markConversationUnread = async (withUserId: string) => {
+    if (!authToken) {
+      return;
+    }
+
+    await markConversationUnreadMutation({
+      variables: {
+        withUserId,
+      },
+    });
+
+    await refetch();
+  };
+
   const hydratedConversations = useMemo(
     (): MobileChatConversation[] =>
       conversations.map((conversation) => {
@@ -131,6 +152,22 @@ export function useMessages(authToken: string | null, enabled = true) {
     error,
     loading,
     markConversationRead,
+    markConversationUnread,
     refetch,
+  };
+}
+
+export function useUnreadChatCount(authToken: string | null, enabled = true) {
+  const { data, error, loading, refetch } = useQuery(GetUnreadChatCountDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip: !enabled || !authToken,
+    ...getApolloAuthContext(authToken),
+  });
+
+  return {
+    error,
+    loading,
+    refetch,
+    unreadCount: data?.unreadChatCount ?? 0,
   };
 }

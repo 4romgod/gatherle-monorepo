@@ -1,399 +1,276 @@
-# The useLazyQuery Pattern: Scalable Data Fetching in Gatherle
+# useLazyQuery Pattern
 
-## Overview
+This document consolidates the Gatherle guidance for `useLazyQuery` into one reference:
 
-The `useLazyQuery` pattern is a powerful approach for building scalable, performant search and autocomplete features
-that can handle millions of records without degrading user experience. Unlike `useQuery` which executes immediately on
-component mount, `useLazyQuery` gives you **manual control** over when queries execute.
+- the core pattern
+- the implementation checklist
+- current Gatherle usage
+- migration guidance
+- backend follow-up work
 
-## The Problem
+Use this when building user-initiated search, autocomplete, and on-demand lookup flows in the webapp.
 
-Traditional approaches to search and autocomplete often fail at scale:
+---
 
-### ❌ Anti-Pattern: Eager Loading with useQuery
+## Why this pattern exists
+
+`useLazyQuery` is the right default when the user should decide **when** a query runs.
+
+Good examples:
+
+- search bars
+- autocomplete
+- "load more" flows
+- modal detail loading
+- conditional expansion of extra data
+
+Bad fit:
+
+- critical page data that should load immediately
+- small static lookup tables
+- data that must always be available on first render
+
+### The anti-pattern we want to avoid
+
+Do not eagerly load large datasets on mount and then filter them in the browser.
 
 ```tsx
-// BAD: Loads ALL users/events on page load
 const { data } = useQuery(GET_ALL_USERS);
-const users = data?.users || []; // Could be millions!
+const users = data?.users ?? [];
 
-// Then filter client-side
-<Autocomplete options={users.filter((u) => u.name.includes(search))} />;
+<Autocomplete options={users.filter((user) => user.name.includes(search))} />;
 ```
 
-**Problems:**
+Why this fails at scale:
 
-- 🔴 Loads millions of records on page load
-- 🔴 Huge network payload (100s of MBs)
-- 🔴 Freezes browser with large datasets
-- 🔴 Wastes bandwidth and memory
-- 🔴 Poor user experience (slow initial load)
+- huge payloads
+- slow initial render
+- wasted bandwidth
+- unnecessary memory pressure
+- poor UX on slower devices
 
-## The Solution: useLazyQuery Pattern
+---
 
-### ✅ Best Practice: Lazy Loading with Debouncing
+## Quick Checklist
+
+When implementing a `useLazyQuery` search flow, the default checklist is:
+
+- use `useState` for the input value
+- use `useState` for the rendered results
+- use `useLazyQuery` with `fetchPolicy: 'network-only'`
+- debounce the request, usually `300ms`
+- require at least `2` characters
+- limit results, usually `20-50`
+- clear timeouts on cleanup
+- show loading and empty states
+- keep client-side filtering disabled in the UI component once the backend response is already scoped
+
+---
+
+## Canonical Pattern
 
 ```tsx
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
 
 function SearchComponent() {
   const [searchInput, setSearchInput] = useState('');
-  const [options, setOptions] = useState([]);
+  const [results, setResults] = useState([]);
 
-  // Query is NOT executed on mount
-  const [search, { loading }] = useLazyQuery(SEARCH_QUERY, {
+  const [runSearch, { loading }] = useLazyQuery(SEARCH_QUERY, {
     fetchPolicy: 'network-only',
   });
 
-  // Debounced search with lazy loading
   useEffect(() => {
     const searchTerm = searchInput.trim();
 
-    // Minimum character requirement
     if (searchTerm.length < 2) {
-      setOptions([]);
+      setResults([]);
       return;
     }
 
-    // Debounce: Wait for user to stop typing
-    const timeoutId = setTimeout(async () => {
-      const { data } = await search({
+    const timeoutId = window.setTimeout(async () => {
+      const { data } = await runSearch({
         variables: {
           query: searchTerm,
-          limit: 50, // Limit results
+          limit: 20,
         },
       });
 
-      setOptions(data?.results || []);
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [searchInput, search]);
-
-  return <Autocomplete options={options} onInputChange={(_, value) => setSearchInput(value)} loading={loading} />;
-}
-```
-
-**Benefits:**
-
-- ✅ Zero data loaded on mount
-- ✅ Queries only when user types
-- ✅ Debouncing reduces API calls
-- ✅ Limited result sets (e.g., 20-50 items)
-- ✅ Fresh data every search
-- ✅ Scales to millions of records
-
-## Core Implementation Patterns
-
-### 1. Basic useLazyQuery Pattern
-
-```tsx
-const [executeQuery, { data, loading, error }] = useLazyQuery(QUERY, {
-  fetchPolicy: 'network-only', // Skip cache, always fetch fresh
-});
-
-// Execute manually when needed
-const handleSearch = async () => {
-  const result = await executeQuery({ variables: { query: 'search term' } });
-  // Process result
-};
-```
-
-### 2. Debounced Search Pattern
-
-```tsx
-useEffect(() => {
-  const searchTerm = input.trim();
-
-  if (searchTerm.length < MIN_CHARS) {
-    setResults([]);
-    return;
-  }
-
-  const timeoutId = setTimeout(async () => {
-    const { data } = await search({ variables: { query: searchTerm } });
-    setResults(data?.results || []);
-  }, DEBOUNCE_MS);
-
-  return () => clearTimeout(timeoutId); // Cleanup
-}, [input, search]);
-```
-
-### 3. Pagination Pattern
-
-```tsx
-const [loadMore] = useLazyQuery(GET_MORE_ITEMS);
-
-const handleLoadMore = async () => {
-  const { data } = await loadMore({
-    variables: {
-      offset: items.length,
-      limit: 20,
-    },
-  });
-
-  setItems([...items, ...data.items]);
-};
-```
-
-### 4. Conditional Loading Pattern
-
-```tsx
-const [loadDetails] = useLazyQuery(GET_DETAILS);
-
-const handleExpand = async (id: string) => {
-  if (!expandedItems.has(id)) {
-    const { data } = await loadDetails({ variables: { id } });
-    setDetails((prev) => ({ ...prev, [id]: data }));
-  }
-};
-```
-
-## Real-World Examples in Gatherle
-
-### Example 1: User Search in Organization Settings
-
-**File:** `apps/webapp/components/organization/OrganizationSettingsClient.tsx`
-
-```tsx
-const [searchInput, setSearchInput] = useState('');
-const [userOptions, setUserOptions] = useState<User[]>([]);
-
-const [searchUsers, { loading }] = useLazyQuery<{ readUsers: User[] }>(GetAllUsersDocument, {
-  fetchPolicy: 'network-only',
-});
-
-useEffect(() => {
-  const searchTerm = searchInput.trim();
-
-  if (searchTerm.length < 2) {
-    setUserOptions([]);
-    return;
-  }
-
-  const timeoutId = setTimeout(async () => {
-    const { data } = await searchUsers({
-      variables: {
-        options: {
-          pagination: { limit: 50 },
-        },
-      },
-    });
-
-    if (data?.readUsers) {
-      const searchLower = searchTerm.toLowerCase();
-      const filtered = data.readUsers.filter(
-        (user) =>
-          user.username?.toLowerCase().includes(searchLower) ||
-          user.email?.toLowerCase().includes(searchLower) ||
-          user.given_name?.toLowerCase().includes(searchLower) ||
-          user.family_name?.toLowerCase().includes(searchLower),
-      );
-      setUserOptions(filtered);
-    }
-  }, 300);
-
-  return () => clearTimeout(timeoutId);
-}, [searchInput, searchUsers]);
-```
-
-**Result:** Can handle millions of users, only loads 50 at a time based on search.
-
-### Example 2: Event Search Bar
-
-**File:** `apps/webapp/components/search/EventSearchBar.tsx`
-
-```tsx
-const [searchEvents, { loading }] = useLazyQuery<{ readEvents: Event[] }>(GetAllEventsDocument, {
-  fetchPolicy: 'network-only',
-});
-
-useEffect(() => {
-  const searchTerm = searchInput.trim();
-
-  if (searchTerm.length < 2) {
-    setEventOptions([]);
-    return;
-  }
-
-  const timeoutId = setTimeout(async () => {
-    const { data } = await searchEvents({
-      variables: {
-        options: {
-          pagination: { limit: 20 },
-        },
-      },
-    });
-
-    // Client-side filtering (temporary)
-    // TODO: Implement backend text search
-    if (data?.readEvents) {
-      const filtered = data.readEvents.filter((event) => event.title?.toLowerCase().includes(searchTerm.toLowerCase()));
-      setEventOptions(filtered);
-    }
-  }, 300);
-
-  return () => clearTimeout(timeoutId);
-}, [searchInput, searchEvents]);
-```
-
-## Performance Comparison
-
-### Traditional Approach (useQuery)
-
-```
-Page Load:
-  ├─ Load all 1,000,000 events (500 MB) ❌
-  ├─ Parse JSON (5 seconds) ❌
-  ├─ Render 1,000,000 options ❌
-  └─ Browser freezes ❌
-
-First Interaction: 10+ seconds ⏱️
-```
-
-### useLazyQuery Approach
-
-```
-Page Load:
-  └─ Zero queries executed ✅
-
-User Types "music":
-  ├─ Wait 300ms (debounce) ✅
-  ├─ Query with limit: 20 (50 KB) ✅
-  ├─ Parse JSON (10ms) ✅
-  └─ Render 20 options ✅
-
-First Interaction: 300ms ⏱️
-```
-
-**Performance Improvement: 30x faster** 🚀
-
-## Best Practices
-
-### 1. Always Use Debouncing
-
-```tsx
-// ✅ Good: Debounced
-const timeoutId = setTimeout(() => {
-  executeQuery();
-}, 300);
-
-// ❌ Bad: No debouncing (fires on every keystroke)
-executeQuery(); // Don't do this in onChange
-```
-
-### 2. Set Minimum Search Length
-
-```tsx
-// ✅ Good: Require 2+ characters
-if (searchTerm.length < 2) {
-  setResults([]);
-  return;
-}
-
-// ❌ Bad: Search on 1 character
-// Single letter searches return too many results
-```
-
-### 3. Limit Result Count
-
-```tsx
-// ✅ Good: Reasonable limit
-variables: {
-  limit: 20;
-} // or 50, depending on use case
-
-// ❌ Bad: No limit
-variables: {
-} // Could return millions!
-```
-
-### 4. Use network-only Fetch Policy
-
-```tsx
-// ✅ Good: Fresh results every time
-useLazyQuery(QUERY, { fetchPolicy: 'network-only' });
-
-// ⚠️ Caution: May show stale data
-useLazyQuery(QUERY, { fetchPolicy: 'cache-first' });
-```
-
-### 5. Show Loading States
-
-```tsx
-// ✅ Good: User feedback
-<Autocomplete loading={searchLoading} noOptionsText={loading ? 'Searching...' : 'No results'} />
-
-// ❌ Bad: No feedback
-// User doesn't know if search is happening
-```
-
-### 6. Handle Empty States
-
-```tsx
-// ✅ Good: Different messages
-noOptionsText={
-  searchInput.length < 2
-    ? 'Type at least 2 characters'
-    : loading
-      ? 'Searching...'
-      : 'No results found'
-}
-```
-
-### 7. Clean Up Timeouts
-
-```tsx
-// ✅ Good: Cleanup prevents memory leaks
-useEffect(() => {
-  const timeoutId = setTimeout(() => {
-    /* ... */
-  }, 300);
-  return () => clearTimeout(timeoutId); // Cleanup
-}, [input]);
-```
-
-## When to Use useLazyQuery
-
-### ✅ Perfect Use Cases
-
-- **Search bars** - User-initiated searches
-- **Autocomplete** - Type-ahead suggestions
-- **Filters** - Apply filters on demand
-- **Load more** - Pagination/infinite scroll
-- **Modal data** - Load when modal opens
-- **Conditional details** - Expand to load more info
-- **Export/Download** - Trigger data export
-
-### ⚠️ Not Ideal For
-
-- **Initial page data** - Use `useQuery` instead
-- **Critical above-fold content** - Load immediately
-- **Simple lookups** - If dataset is tiny (<100 items)
-- **Real-time updates** - Use subscriptions instead
-
-## Migration Guide
-
-### Converting useQuery to useLazyQuery
-
-**Before (Eager Loading):**
-
-```tsx
-function MyComponent() {
-  const { data, loading } = useQuery(GET_ALL_USERS);
-  const users = data?.users || [];
+      setResults(data?.items ?? []);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput, runSearch]);
 
   return (
     <Autocomplete
-      options={users}
-      filterOptions={(options, { inputValue }) => options.filter((u) => u.name.includes(inputValue))}
+      options={results}
+      onInputChange={(_, value) => setSearchInput(value)}
+      loading={loading}
+      filterOptions={(options) => options}
+      noOptionsText={
+        searchInput.trim().length < 2 ? 'Type at least 2 characters' : loading ? 'Searching...' : 'No results found'
+      }
     />
   );
 }
 ```
 
-**After (Lazy Loading):**
+### Why these defaults are recommended
+
+- `network-only`: searches should be fresh
+- `300ms`: good balance between responsiveness and request count
+- `2` characters: reduces noisy or overly broad searches
+- `20-50` results: enough for UX, small enough for performance
+
+---
+
+## Gatherle Implementations
+
+These are the main places where the pattern is already established.
+
+### 1. Organization member search
+
+Reference file:
+
+- `apps/webapp/components/organization/OrganizationSettingsClient.tsx`
+
+Why it fits:
+
+- user-initiated search
+- potentially large dataset
+- only needs a small result window at a time
+
+### 2. Event search bar
+
+Reference file:
+
+- `apps/webapp/components/search/EventSearchBar.tsx`
+
+Current behavior:
+
+- no initial query on mount
+- debounced event search
+- result limit
+- loading and empty states
+- reusable across multiple routes
+
+### 3. Home and events surfaces
+
+Current integrations:
+
+- `apps/webapp/components/home/HomeSearchBar.tsx`
+- `apps/webapp/components/events/filters/EventsHeader.tsx`
+- `apps/webapp/components/events/EventsPageClient.tsx`
+
+The important point is architectural, not just UI-level:
+
+- the reusable search component owns the query behavior
+- parent pages only respond to selection events
+
+---
+
+## Implementation Rules
+
+### 1. Always debounce
+
+Do not fire a new request on every keystroke.
+
+```tsx
+const timeoutId = window.setTimeout(() => {
+  executeQuery();
+}, 300);
+
+return () => window.clearTimeout(timeoutId);
+```
+
+### 2. Require a minimum input length
+
+For Gatherle search UIs, `2` characters is the standard default.
+
+### 3. Limit the result set
+
+Do not leave result counts unbounded.
+
+Good default:
+
+- `20` for richer cards or previews
+- `50` for simpler list-style results
+
+### 4. Disable duplicate client-side filtering
+
+If the server already narrowed the result set, the UI should not silently apply a second filter unless that is
+deliberate.
+
+For MUI `Autocomplete`, that usually means:
+
+```tsx
+filterOptions={(options) => options}
+```
+
+### 5. Show useful empty states
+
+Prefer distinct messages for:
+
+- "type more"
+- "searching"
+- "no results"
+
+### 6. Clean up in-flight work
+
+Always clear timeouts. For more advanced flows, consider aborting stale requests as well.
+
+---
+
+## Common Mistakes
+
+### Mistake: using `useQuery` for user-initiated search
+
+This loads too early and usually loads too much.
+
+### Mistake: searching on one character
+
+One-character searches are typically too broad to be useful.
+
+### Mistake: forgetting result limits
+
+Large result sets defeat the point of the pattern.
+
+### Mistake: no loading feedback
+
+The user needs to know that work is happening.
+
+### Mistake: forgetting cleanup
+
+Debounce timers and stale requests should not survive input changes or unmounts.
+
+---
+
+## Migration Guide
+
+When converting an eager search flow to `useLazyQuery`, use this sequence:
+
+1. Remove the eager `useQuery`.
+2. Introduce `searchInput` and result state.
+3. Replace the query hook with `useLazyQuery`.
+4. Add a debounced `useEffect`.
+5. Add a minimum input length guard.
+6. Limit the server request.
+7. Add loading and empty-state UI.
+
+### Before
+
+```tsx
+function MyComponent() {
+  const { data, loading } = useQuery(GET_ALL_USERS);
+  const users = data?.users ?? [];
+
+  return <Autocomplete options={users} loading={loading} />;
+}
+```
+
+### After
 
 ```tsx
 function MyComponent() {
@@ -405,22 +282,25 @@ function MyComponent() {
   });
 
   useEffect(() => {
-    if (searchInput.length < 2) {
+    const trimmed = searchInput.trim();
+
+    if (trimmed.length < 2) {
       setUsers([]);
       return;
     }
 
-    const timeoutId = setTimeout(async () => {
+    const timeoutId = window.setTimeout(async () => {
       const { data } = await searchUsers({
         variables: {
-          query: searchInput,
+          query: trimmed,
           limit: 50,
         },
       });
-      setUsers(data?.users || []);
+
+      setUsers(data?.users ?? []);
     }, 300);
 
-    return () => clearTimeout(timeoutId);
+    return () => window.clearTimeout(timeoutId);
   }, [searchInput, searchUsers]);
 
   return (
@@ -428,157 +308,41 @@ function MyComponent() {
       options={users}
       onInputChange={(_, value) => setSearchInput(value)}
       loading={loading}
-      filterOptions={(x) => x} // Disable - already filtered
+      filterOptions={(options) => options}
     />
   );
 }
 ```
 
-## Common Pitfalls
+---
 
-### ❌ Mistake 1: Not Debouncing
+## Performance Expectations
 
-```tsx
-// BAD: Query fires on every keystroke
-const handleInputChange = async (value) => {
-  const { data } = await search({ variables: { query: value } });
-};
-```
+What we want:
 
-**Fix:** Add debouncing with setTimeout + useEffect
+- no search query on initial page load
+- sub-500ms search response in normal cases
+- small payloads per interaction
+- smooth typing with minimal browser work
 
-### ❌ Mistake 2: No Minimum Length
+Directional improvement versus eager loading:
 
-```tsx
-// BAD: Searches with 1 character
-if (input.length > 0) {
-  executeQuery();
-}
-```
+- page load cost drops to near zero for the search feature
+- search work happens only when the user asks for it
+- memory usage stays bounded by the current result set
 
-**Fix:** Require 2-3 minimum characters
+---
 
-### ❌ Mistake 3: Unlimited Results
+## Backend Follow-Up
 
-```tsx
-// BAD: No limit, could return millions
-await search({ variables: { query: input } });
-```
+`useLazyQuery` is the frontend half of the solution. For large datasets, the backend still needs dedicated search
+support.
 
-**Fix:** Always set a limit (20-50 items)
+### Recommended next step
 
-### ❌ Mistake 4: Not Cleaning Up
+Move from broad list reads plus temporary client filtering to dedicated backend search queries.
 
-```tsx
-// BAD: Timeout not cleared
-useEffect(() => {
-  setTimeout(() => executeQuery(), 300);
-  // Missing cleanup!
-}, [input]);
-```
-
-**Fix:** Return cleanup function
-
-### ❌ Mistake 5: Forgetting Loading States
-
-```tsx
-// BAD: No visual feedback
-<Autocomplete options={results} />
-```
-
-**Fix:** Show loading spinner and states
-
-## Advanced Patterns
-
-### Pattern: Smart Caching Strategy
-
-```tsx
-const [searchCache, setSearchCache] = useState<Map<string, any>>(new Map());
-
-const search = async (term: string) => {
-  // Check cache first
-  if (searchCache.has(term)) {
-    return searchCache.get(term);
-  }
-
-  // Execute query
-  const { data } = await executeQuery({ variables: { query: term } });
-
-  // Cache result
-  setSearchCache((prev) => new Map(prev).set(term, data));
-
-  return data;
-};
-```
-
-### Pattern: Abort Previous Requests
-
-```tsx
-useEffect(() => {
-  const controller = new AbortController();
-
-  const timeoutId = setTimeout(async () => {
-    try {
-      await search({
-        variables: { query: input },
-        context: { fetchOptions: { signal: controller.signal } },
-      });
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      console.error(err);
-    }
-  }, 300);
-
-  return () => {
-    clearTimeout(timeoutId);
-    controller.abort(); // Cancel in-flight requests
-  };
-}, [input]);
-```
-
-### Pattern: Optimistic UI Updates
-
-```tsx
-const handleSelect = async (item) => {
-  // Optimistic update
-  setSelected(item);
-
-  try {
-    const { data } = await loadDetails({ variables: { id: item.id } });
-    setDetails(data);
-  } catch (err) {
-    // Rollback on error
-    setSelected(null);
-  }
-};
-```
-
-## Backend Recommendations
-
-While client-side filtering works for small datasets, **production systems with millions of records need backend text
-search**.
-
-### Recommended: MongoDB Text Indexes
-
-```javascript
-// Create text index on multiple fields
-db.events.createIndex({
-  title: 'text',
-  description: 'text',
-  summary: 'text',
-  tags: 'text',
-});
-
-// Search with text index
-db.events
-  .find({ $text: { $search: 'music festival' } }, { score: { $meta: 'textScore' } })
-  .sort({ score: { $meta: 'textScore' } })
-  .limit(20);
-```
-
-### Recommended: Dedicated Search GraphQL Query
-
-Instead of using `QueryOptionsInput`, create a dedicated search query:
+Example shape:
 
 ```graphql
 type Query {
@@ -586,94 +350,46 @@ type Query {
 }
 ```
 
-This allows:
+### Why this matters
 
-- Backend text search with indexes
-- Relevance scoring
-- Fuzzy matching
-- Better performance
+- proper text indexes
+- better relevance
+- smaller payloads
+- simpler frontend logic
 
-## Where to Use This Pattern in Gatherle
+### Current repo follow-up worth keeping in mind
 
-### High-Priority Candidates
-
-1. ✅ **Organization Member Search** (Already implemented)
-   - File: `apps/webapp/components/organization/OrganizationSettingsClient.tsx`
-2. ✅ **Event Search Bar** (Already implemented)
-   - File: `apps/webapp/components/search/EventSearchBar.tsx`
-
-3. 🔲 **Home Search Bar** (Replace placeholder)
-   - File: `apps/webapp/components/home/HomeSearchBar.tsx`
-   - Currently: Static placeholder
-   - Should be: Actual lazy search
-
-4. 🔲 **Venue Search** (When adding venues)
-   - Any venue autocomplete fields
-5. 🔲 **User Mentions/Tagging** (Future feature)
-   - Comment mentions: @username
-   - Event invitations
-
-6. 🔲 **Category Search** (Interests page)
-   - File: `apps/webapp/components/settings/InterestsSettingsPage.tsx`
-   - Currently: Client-side filter of all categories
-   - Should be: Lazy search if categories grow large
-
-### When to Keep useQuery
-
-- **Navigation menus** - Small, static data
-- **User profile** - Current user's data
-- **Event details page** - Specific event data
-- **Settings data** - User preferences
-- **Small lookup tables** - Countries, timezones (< 100 items)
-
-## Monitoring and Metrics
-
-Track these metrics to ensure the pattern is working:
-
-```typescript
-// Add timing metrics
-const startTime = performance.now();
-const { data } = await search({ variables: { query: input } });
-const duration = performance.now() - startTime;
-
-console.log('Search completed in', duration, 'ms');
-
-// Track in analytics
-analytics.track('search_completed', {
-  query: input,
-  resultsCount: data?.results.length,
-  durationMs: duration,
-});
-```
-
-**Target Metrics:**
-
-- Search latency: < 500ms
-- Debounce delay: 300ms
-- Results per query: 20-50
-- Min search length: 2 characters
-
-## Conclusion
-
-The `useLazyQuery` pattern is **essential for building scalable applications**. It transforms slow, memory-intensive
-features into fast, responsive experiences that work with millions of records.
-
-**Key Takeaways:**
-
-- ✅ Use `useLazyQuery` for user-initiated searches
-- ✅ Always debounce with 300ms delay
-- ✅ Require minimum 2 characters
-- ✅ Limit results to 20-50 items
-- ✅ Use `fetchPolicy: 'network-only'`
-- ✅ Show loading states
-- ✅ Clean up timeouts
-- ✅ Plan for backend text search
-
-By following this pattern, Gatherle can scale to millions of users, events, and organizations without sacrificing
-performance or user experience.
+The event search bar still benefits from a dedicated backend text-search query rather than relying on broad list reads
+plus post-filtering.
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** February 2, 2026  
-**Author:** Gatherle Engineering Team
+## Future Candidates In Gatherle
+
+- venue search
+- organization search
+- mention and tagging search
+- admin user/event lookups
+- category search if the taxonomy becomes large
+
+Keep `useQuery` for:
+
+- current-user data
+- event detail pages
+- settings payloads
+- small lookup tables
+
+---
+
+## Summary
+
+For Gatherle, `useLazyQuery` is the default pattern for user-driven search and autocomplete.
+
+The rules are straightforward:
+
+- do not fetch on mount
+- debounce
+- require 2+ characters
+- limit results
+- show loading states
+- move real search logic into the backend as datasets grow

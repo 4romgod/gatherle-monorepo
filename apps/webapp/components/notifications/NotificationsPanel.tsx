@@ -58,7 +58,13 @@ export default function NotificationsPage() {
   const { notifications, loading, error, hasMore, loadMore, loadingMore, refetch, unreadCount } = useNotifications({
     limit: 20,
   });
-  const { markAsRead, markAllAsRead, deleteNotification, isLoading: actionsLoading } = useNotificationActions();
+  const {
+    markAsRead,
+    markAsUnread,
+    markAllAsRead,
+    deleteNotification,
+    isLoading: actionsLoading,
+  } = useNotificationActions();
   const loadMoreTriggerRef = useInfiniteScroll({
     enabled: tabValue === 0 && hasMore,
     loading: loading || loadingMore || isRefreshing,
@@ -99,6 +105,14 @@ export default function NotificationsPage() {
       await deleteNotification(notificationId);
     } catch (error) {
       logger.error('Failed to delete notification:', error);
+    }
+  };
+
+  const handleMarkAsUnread = async (notificationId: string) => {
+    try {
+      await markAsUnread(notificationId);
+    } catch (error) {
+      logger.error('Failed to mark notification as unread:', error);
     }
   };
 
@@ -191,6 +205,7 @@ export default function NotificationsPage() {
                       <NotificationItem
                         notification={notification}
                         onMarkRead={handleMarkAsRead}
+                        onMarkUnread={handleMarkAsUnread}
                         onDelete={handleDelete}
                         isLoading={actionsLoading}
                       />

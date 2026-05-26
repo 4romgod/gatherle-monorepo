@@ -4,7 +4,9 @@ import type {
   ChatMessageConnection,
 } from '@gatherle/commons/types';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
+import ChatConversationUnreadStateDAO from '@/mongodb/dao/chatConversationUnreadState';
 import { KnownCommonError, logDaoError } from '@/utils';
+import { buildChatConversationKey } from './chatConversationUtils';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -30,7 +32,7 @@ const toChatMessageEntity = (message: ChatMessageEntity): ChatMessageEntity => (
 
 class ChatMessageDAO {
   static buildConversationKey(userIdA: string, userIdB: string): string {
-    return [userIdA.trim(), userIdB.trim()].sort((a, b) => a.localeCompare(b)).join(':');
+    return buildChatConversationKey(userIdA, userIdB);
   }
 
   static async create(input: CreateChatMessageInput): Promise<ChatMessageEntity> {
@@ -118,10 +120,15 @@ class ChatMessageDAO {
 
   static async countUnreadTotal(currentUserId: string): Promise<number> {
     try {
-      return await ChatMessageModel.countDocuments({
+      const actualUnreadCount = await ChatMessageModel.countDocuments({
         recipientUserId: currentUserId,
         isRead: { $ne: true },
       }).exec();
+
+      const markedUnreadConversationCount =
+        await ChatConversationUnreadStateDAO.countMarkedUnreadConversationsWithoutUnreadMessages(currentUserId);
+
+      return actualUnreadCount + markedUnreadConversationCount;
     } catch (error) {
       logDaoError('Error counting total unread chat messages', {
         error,
@@ -197,10 +204,15 @@ class ChatMessageDAO {
         { $limit: boundedLimit },
       ]).exec();
 
+      const markedUnreadConversationIds = await ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds(
+        currentUserId,
+        rows.map((row) => row._id),
+      );
+
       return rows.map((row) => ({
         conversationWithUserId: row._id,
         lastMessage: toChatMessageEntity(row.lastMessage),
-        unreadCount: row.unreadCount ?? 0,
+        unreadCount: row.unreadCount > 0 ? row.unreadCount : markedUnreadConversationIds.has(row._id) ? 1 : 0,
         updatedAt: row.updatedAt,
       }));
     } catch (error) {

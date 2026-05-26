@@ -288,6 +288,7 @@ export const SOCIAL_DESCRIPTIONS = {
     },
     MUTATIONS: {
       markNotificationRead: 'Mark a single notification as read.',
+      markNotificationUnread: 'Mark a single notification as unread.',
       markAllNotificationsRead: 'Mark all notifications as read for the authenticated user.',
       deleteNotification: 'Delete a notification.',
     },

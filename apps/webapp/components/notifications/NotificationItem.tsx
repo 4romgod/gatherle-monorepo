@@ -12,6 +12,7 @@ import {
   Security as SecurityIcon,
   Notifications as NotificationIcon,
   MarkEmailRead as MarkReadIcon,
+  MarkEmailUnread as MarkUnreadIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,6 +23,7 @@ import { logger } from '@/lib/utils';
 interface NotificationItemProps {
   notification: Notification;
   onMarkRead?: (notificationId: string) => void;
+  onMarkUnread?: (notificationId: string) => void;
   onDelete?: (notificationId: string) => void;
   isLoading?: boolean;
 }
@@ -83,6 +85,7 @@ function getNotificationStyle(type: NotificationType): { icon: React.ReactNode; 
 export default function NotificationItem({
   notification,
   onMarkRead,
+  onMarkUnread,
   onDelete,
   isLoading = false,
 }: NotificationItemProps) {
@@ -110,6 +113,14 @@ export default function NotificationItem({
     }
   };
 
+  const handleMarkUnread = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (notification.isRead && onMarkUnread) {
+      onMarkUnread(notification.notificationId);
+    }
+  };
+
   // Get actor display name
   const actorName = notification.actor
     ? `${notification.actor.given_name} ${notification.actor.family_name}`.trim()
@@ -118,6 +129,11 @@ export default function NotificationItem({
   // Determine link destination
   const linkHref = notification.actionUrl || '#';
   const isClickable = !!notification.actionUrl;
+  const handleOpen = () => {
+    if (!notification.isRead && onMarkRead) {
+      void Promise.resolve(onMarkRead(notification.notificationId));
+    }
+  };
 
   const content = (
     <ListItem
@@ -166,7 +182,7 @@ export default function NotificationItem({
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-              {!notification.isRead && onMarkRead && (
+              {!notification.isRead && onMarkRead ? (
                 <Tooltip title="Mark as read">
                   <IconButton
                     size="small"
@@ -180,7 +196,21 @@ export default function NotificationItem({
                     <MarkReadIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-              )}
+              ) : notification.isRead && onMarkUnread ? (
+                <Tooltip title="Mark as unread">
+                  <IconButton
+                    size="small"
+                    onClick={handleMarkUnread}
+                    disabled={isLoading}
+                    sx={{
+                      p: 0.5,
+                      '&:hover': { color: 'primary.main' },
+                    }}
+                  >
+                    <MarkUnreadIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
               {onDelete && (
                 <Tooltip title="Delete notification">
                   <IconButton
@@ -227,7 +257,7 @@ export default function NotificationItem({
 
   if (isClickable) {
     return (
-      <Link href={linkHref} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <Link href={linkHref} onClick={handleOpen} style={{ textDecoration: 'none', color: 'inherit' }}>
         {content}
       </Link>
     );

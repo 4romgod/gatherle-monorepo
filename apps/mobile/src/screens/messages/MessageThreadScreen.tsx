@@ -51,7 +51,7 @@ export function MessageThreadScreen() {
   const scrollRef = useRef<ScrollView | null>(null);
   const [replyMomentViewerOpen, setReplyMomentViewerOpen] = useState(false);
   const [replyMomentViewerItems, setReplyMomentViewerItems] = useState<MobileEventMoment[]>([]);
-  const { appendMessage, error, loading, messages, refetch } = useChatThread({
+  const { appendMessage, error, loading, markMessagesRead, messages, refetch } = useChatThread({
     authToken,
     enabled: isAuthenticated,
     withUserId,
@@ -96,6 +96,17 @@ export function MessageThreadScreen() {
       if (isIncomingMessage) {
         markConversationRead(withUserId);
       }
+    },
+    onChatRead: (payload) => {
+      if (!userId || payload.readerUserId !== withUserId || payload.withUserId !== userId) {
+        return;
+      }
+
+      markMessagesRead({
+        readAt: payload.readAt,
+        recipientUserId: withUserId,
+        senderUserId: userId,
+      });
     },
   });
 

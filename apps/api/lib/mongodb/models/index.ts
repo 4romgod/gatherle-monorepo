@@ -12,6 +12,7 @@ export { default as Activity } from './activity';
 export { default as Follow } from './follow';
 export { default as Notification } from './notification';
 export { default as ChatMessage } from './chatMessage';
+export { default as ChatConversationUnreadState } from './chatConversationUnreadState';
 export { default as WebSocketConnection } from './websocketConnection';
 export { default as WebSocketRequestThrottle } from './websocketRequestThrottle';
 export { default as UserFeed } from './userFeed';

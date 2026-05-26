@@ -246,14 +246,22 @@ describe('useChat hooks', () => {
     );
   });
 
-  it('useChatActions calls mark conversation read mutation', async () => {
+  it('useChatActions calls mark conversation read and unread mutations', async () => {
     const markConversationReadMutation = jest.fn().mockResolvedValue({ data: { markChatConversationRead: 2 } });
-    useMutationMock.mockReturnValue([markConversationReadMutation, { loading: false }]);
+    const markConversationUnreadMutation = jest.fn().mockResolvedValue({
+      data: { markChatConversationUnread: true },
+    });
+    useMutationMock
+      .mockImplementationOnce(() => [markConversationReadMutation, { loading: false }])
+      .mockImplementationOnce(() => [markConversationUnreadMutation, { loading: false }]);
 
     const { result } = renderHook(() => useChatActions());
 
     await act(async () => {
       await result.current.markConversationRead('user-2');
+    });
+    await act(async () => {
+      await result.current.markConversationUnread('user-2');
     });
 
     expect(getAuthHeaderMock).toHaveBeenCalledWith('token-1');
@@ -263,12 +271,20 @@ describe('useChat hooks', () => {
         headers: { Authorization: 'Bearer token' },
       },
       refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
-      awaitRefetchQueries: true,
+    });
+    expect(markConversationUnreadMutation).toHaveBeenCalledWith({
+      variables: { withUserId: 'user-2' },
+      context: {
+        headers: { Authorization: 'Bearer token' },
+      },
+      refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
     });
   });
 
   it('useChatActions exposes loading state from mutation', () => {
-    useMutationMock.mockReturnValue([jest.fn(), { loading: true }]);
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
 
     const { result } = renderHook(() => useChatActions());
 
@@ -340,7 +356,9 @@ describe('useChat hooks', () => {
 
   it('useChatActions uses no-token path gracefully', () => {
     mockUseSession.mockReturnValue({ data: null });
-    useMutationMock.mockReturnValue([jest.fn(), { loading: false }]);
+    useMutationMock
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
 
     const { result } = renderHook(() => useChatActions());
 

@@ -5,3 +5,9 @@ export const MarkChatConversationReadDocument = graphql(`
     markChatConversationRead(withUserId: $withUserId)
   }
 `);
+
+export const MarkChatConversationUnreadDocument = graphql(`
+  mutation MarkChatConversationUnread($withUserId: ID!) {
+    markChatConversationUnread(withUserId: $withUserId)
+  }
+`);

@@ -28,6 +28,7 @@ import {
   formatConversationRelativeTime,
   resolveChatIdentity,
 } from '@/components/messages/chatUiUtils';
+import { ConversationUnreadToggleButton } from '@/components/messages/ConversationUnreadToggleButton';
 
 const CHAT_CONVERSATIONS_LIMIT = 100;
 
@@ -254,7 +255,15 @@ export default function MessagesPanel() {
 
               return (
                 <React.Fragment key={conversation.conversationWithUserId}>
-                  <ListItem disablePadding>
+                  <ListItem
+                    disablePadding
+                    secondaryAction={
+                      <ConversationUnreadToggleButton
+                        unreadCount={conversation.unreadCount}
+                        withUserId={conversation.conversationWithUserId}
+                      />
+                    }
+                  >
                     {conversation.href ? (
                       <ListItemButton
                         component={Link}
@@ -262,6 +271,7 @@ export default function MessagesPanel() {
                         selected={pathname === conversation.href}
                         sx={{
                           px: 2,
+                          pr: 8,
                           py: 1.5,
                           '&:hover': { backgroundColor: 'action.hover' },
                           '&.Mui-selected': { backgroundColor: 'action.selected' },
@@ -271,7 +281,7 @@ export default function MessagesPanel() {
                         {rowContent}
                       </ListItemButton>
                     ) : (
-                      <ListItemButton disabled sx={{ px: 2, py: 1.5 }}>
+                      <ListItemButton disabled sx={{ px: 2, pr: 8, py: 1.5 }}>
                         {rowContent}
                       </ListItemButton>
                     )}

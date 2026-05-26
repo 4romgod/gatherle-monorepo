@@ -103,6 +103,7 @@ export const OPERATIONS = {
   },
   NOTIFICATION: {
     MARK_NOTIFICATION_READ: 'markNotificationRead',
+    MARK_NOTIFICATION_UNREAD: 'markNotificationUnread',
     MARK_ALL_NOTIFICATIONS_READ: 'markAllNotificationsRead',
     DELETE_NOTIFICATION: 'deleteNotification',
     READ_NOTIFICATIONS: 'readNotifications',

@@ -41,7 +41,10 @@ jest.mock('@/lib/utils/realtime', () => ({
 const mockCacheHandlers = {
   handleRealtimeEventRsvp: jest.fn(),
   handleRealtimeFollowRequest: jest.fn(),
+  handleRealtimeNotificationDeleted: jest.fn(),
   handleRealtimeNotification: jest.fn(),
+  handleRealtimeNotificationUpdated: jest.fn(),
+  handleRealtimeNotificationsAllRead: jest.fn(),
 };
 
 jest.mock('@/hooks/useNotificationRealtime/notificationRealtimeCache', () => ({
@@ -91,6 +94,16 @@ const validFollowRequestPayload = {
       bio: null,
     },
   },
+};
+
+const validNotificationDeletedPayload = {
+  notificationId: 'notif-1',
+  unreadCount: 2,
+};
+
+const validNotificationsAllReadPayload = {
+  readAt: new Date().toISOString(),
+  unreadCount: 0,
 };
 
 const validRsvpPayload = {
@@ -218,6 +231,61 @@ describe('useNotificationRealtime', () => {
     expect(mockCacheHandlers.handleRealtimeFollowRequest).toHaveBeenCalledWith(validFollowRequestPayload);
   });
 
+  it('dispatches notification.updated event to the update handler for read notifications', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(
+        JSON.stringify({
+          type: 'notification.updated',
+          payload: {
+            ...validNotificationPayload,
+            notification: {
+              ...validNotificationPayload.notification,
+              isRead: true,
+            },
+          },
+        }),
+      );
+    });
+
+    expect(mockCacheHandlers.handleRealtimeNotificationUpdated).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notification: expect.objectContaining({ isRead: true }),
+      }),
+    );
+  });
+
+  it('dispatches notification.deleted event to the deletion handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(
+        JSON.stringify({ type: 'notification.deleted', payload: validNotificationDeletedPayload }),
+      );
+    });
+
+    expect(mockCacheHandlers.handleRealtimeNotificationDeleted).toHaveBeenCalledWith(validNotificationDeletedPayload);
+  });
+
+  it('dispatches notification.all_read event to the all-read handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(
+        JSON.stringify({ type: 'notification.all_read', payload: validNotificationsAllReadPayload }),
+      );
+    });
+
+    expect(mockCacheHandlers.handleRealtimeNotificationsAllRead).toHaveBeenCalledWith(validNotificationsAllReadPayload);
+  });
+
   it('dispatches event.rsvp.updated event to rsvp handler', () => {
     renderHook(() => useNotificationRealtime(true));
 
@@ -340,6 +408,19 @@ describe('useNotificationRealtime', () => {
 
     const { logger } = require('@/lib/utils');
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed event RSVP'));
+  });
+
+  it('warns when malformed notification deletion payload received', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'notification.deleted', payload: { bad: 'data' } }));
+    });
+
+    const { logger } = require('@/lib/utils');
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed notification deletion'));
   });
 
   it('logs warning when sendSharedRealtimeAction fails to send subscribe', () => {

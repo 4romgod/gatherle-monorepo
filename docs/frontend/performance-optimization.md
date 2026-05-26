@@ -263,29 +263,72 @@ export default function RootLayout({ children }) {
 
 ---
 
-## Additional Optimization Opportunities
+## Streaming And Suspense
 
-### Future Enhancements
+Some Gatherle pages still wait for too much server-side data before rendering. When that happens, users stare at a blank
+or mostly blank page until every awaited query resolves.
+
+### When to use streaming
+
+Use streaming and suspense when:
+
+- the page shell is fast but one section is slow
+- you can render a meaningful placeholder or skeleton
+- the page does not need every query to finish before showing any UI
+
+### Core pattern
+
+1. Keep fast server-only work in the route component.
+2. Move slower content behind a `Suspense` boundary or into a client child component.
+3. Render a placeholder immediately.
+4. Let the slower data hydrate or stream in when ready.
+
+### Hybrid server/client pattern
+
+Use this when full server blocking hurts perceived performance:
+
+1. Keep `metadata`, `revalidate`, auth checks, and lightweight routing logic in `page.tsx`.
+2. Render a client component from the page.
+3. Let the client component fetch slower data with Apollo hooks and show skeletons while loading.
+
+This is especially useful when the page's SEO needs are small compared to the cost of the underlying data fetches.
+
+### Good current candidates
+
+- `apps/webapp/app/events/[slug]/page.tsx`
+- `apps/webapp/app/organizations/[slug]/page.tsx`
+- `apps/webapp/app/(protected)/account/page.tsx`
+- `apps/webapp/app/(protected)/account/events/page.tsx`
+- `apps/webapp/app/(protected)/account/events/[slug]/page.tsx`
+- `apps/webapp/app/(protected)/account/events/create/page.tsx`
+- `apps/webapp/app/(protected)/account/events/[slug]/edit/page.tsx`
+
+### Practical implementation rules
+
+- avoid top-level `await getClient().query(...)` for every expensive dependency
+- wrap slower sections in `React.Suspense`
+- use skeletons for lists, cards, and detail panes
+- stream or defer the slow section instead of blocking the full page
+
+---
+
+## Additional Optimization Opportunities
 
 1. **GraphQL Query Batching**
    - Combine multiple queries into a single network request
    - Requires Apollo Link Batch HTTP setup
 
-2. **React Server Components Streaming**
-   - Use `<Suspense>` boundaries to stream content as it loads
-   - Show skeleton loaders for slower queries
-
-3. **Database Query Optimization**
+2. **Database Query Optimization**
    - Add indexes for frequently queried fields
    - Use projection to limit returned fields
    - Consider database query caching (Redis)
 
-4. **Image Optimization**
+3. **Image Optimization**
    - Use Next.js `<Image>` component everywhere
    - Add blur placeholders for hero images
    - Consider WebP format with fallbacks
 
-5. **Code Splitting**
+4. **Code Splitting**
    - Dynamic imports for heavy components
    - Route-based code splitting is already enabled
 

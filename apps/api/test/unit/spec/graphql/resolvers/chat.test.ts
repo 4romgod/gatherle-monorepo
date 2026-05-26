@@ -1,14 +1,21 @@
 import 'reflect-metadata';
 import { ChatResolver } from '@/graphql/resolvers/chat';
 import { ChatMessageDAO } from '@/mongodb/dao';
+import { chatMessagingService } from '@/services';
 import { getAuthenticatedUser } from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
   ChatMessageDAO: {
-    markConversationRead: jest.fn(),
     readConversation: jest.fn(),
     readConversations: jest.fn(),
     countUnreadTotal: jest.fn(),
+  },
+}));
+
+jest.mock('@/services', () => ({
+  chatMessagingService: {
+    markConversationAsRead: jest.fn(),
+    markConversationAsUnread: jest.fn(),
   },
 }));
 
@@ -46,12 +53,12 @@ describe('ChatResolver', () => {
 
   it('readChatMessages marks conversation read when markAsRead is true', async () => {
     const connection = { messages: [], hasMore: false, count: 0 };
-    (ChatMessageDAO.markConversationRead as jest.Mock).mockResolvedValue(2);
+    (chatMessagingService.markConversationAsRead as jest.Mock).mockResolvedValue({ markedCount: 2 });
     (ChatMessageDAO.readConversation as jest.Mock).mockResolvedValue(connection);
 
     const result = await resolver.readChatMessages('user-2', mockContext as any, 25, 'cursor-1', true);
 
-    expect(ChatMessageDAO.markConversationRead).toHaveBeenCalledWith('user-1', 'user-2');
+    expect(chatMessagingService.markConversationAsRead).toHaveBeenCalledWith('user-1', 'user-2');
     expect(ChatMessageDAO.readConversation).toHaveBeenCalledWith('user-1', 'user-2', {
       limit: 25,
       cursor: 'cursor-1',
@@ -65,7 +72,7 @@ describe('ChatResolver', () => {
 
     await resolver.readChatMessages('user-2', mockContext as any, 10, undefined, false);
 
-    expect(ChatMessageDAO.markConversationRead).not.toHaveBeenCalled();
+    expect(chatMessagingService.markConversationAsRead).not.toHaveBeenCalled();
     expect(ChatMessageDAO.readConversation).toHaveBeenCalledWith('user-1', 'user-2', {
       limit: 10,
       cursor: undefined,
@@ -92,11 +99,20 @@ describe('ChatResolver', () => {
   });
 
   it('markChatConversationRead delegates to DAO with authenticated user', async () => {
-    (ChatMessageDAO.markConversationRead as jest.Mock).mockResolvedValue(3);
+    (chatMessagingService.markConversationAsRead as jest.Mock).mockResolvedValue({ markedCount: 3 });
 
     const result = await resolver.markChatConversationRead('user-2', mockContext as any);
 
-    expect(ChatMessageDAO.markConversationRead).toHaveBeenCalledWith('user-1', 'user-2');
+    expect(chatMessagingService.markConversationAsRead).toHaveBeenCalledWith('user-1', 'user-2');
     expect(result).toBe(3);
+  });
+
+  it('markChatConversationUnread delegates to service with authenticated user', async () => {
+    (chatMessagingService.markConversationAsUnread as jest.Mock).mockResolvedValue({ unreadCount: 1 });
+
+    const result = await resolver.markChatConversationUnread('user-2', mockContext as any);
+
+    expect(chatMessagingService.markConversationAsUnread).toHaveBeenCalledWith('user-1', 'user-2');
+    expect(result).toBe(true);
   });
 });

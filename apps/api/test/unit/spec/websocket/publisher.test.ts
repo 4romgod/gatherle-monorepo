@@ -5,7 +5,10 @@ import {
   publishEventRsvpUpdated,
   publishFollowRequestCreated,
   publishFollowRequestUpdated,
+  publishNotificationDeleted,
+  publishNotificationsMarkedAllRead,
   publishNotificationCreated,
+  publishNotificationUpdated,
 } from '@/websocket/publisher';
 import { WEBSOCKET_EVENT_TYPES } from '@/websocket/constants';
 import { createRealtimeEventEnvelope, isGoneConnectionError, postToConnection } from '@/websocket/gateway';
@@ -122,6 +125,45 @@ describe('websocket publisher', () => {
       unreadCount: 4,
     });
     expect(postToConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes notification.updated with the refreshed unread count', async () => {
+    (NotificationDAO.countUnread as jest.Mock).mockResolvedValue(2);
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishNotificationUpdated(notification);
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.NOTIFICATION_UPDATED, {
+      notification,
+      unreadCount: 2,
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes notification.deleted payload with the refreshed unread count', async () => {
+    (NotificationDAO.countUnread as jest.Mock).mockResolvedValue(1);
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishNotificationDeleted('user-1', 'note-1');
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.NOTIFICATION_DELETED, {
+      notificationId: 'note-1',
+      unreadCount: 1,
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes notification.all_read payload with readAt metadata', async () => {
+    (NotificationDAO.countUnread as jest.Mock).mockResolvedValue(0);
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishNotificationsMarkedAllRead('user-1', '2026-05-26T10:30:00.000Z');
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.NOTIFICATION_ALL_READ, {
+      unreadCount: 0,
+      readAt: '2026-05-26T10:30:00.000Z',
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
   });
 
   it('removes stale connections when publishFollowRequestUpdated hits GoneException', async () => {

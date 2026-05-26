@@ -10,7 +10,7 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { RemoteImage } from '@/components/core/RemoteImage';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
-import { ConversationRow } from '@/components/messages/ConversationRow';
+import { SwipeableConversationRow } from '@/components/messages/SwipeableConversationRow';
 import { ConversationRowSkeleton } from '@/components/skeleton/ConversationRowSkeleton';
 import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
@@ -26,7 +26,10 @@ export function MessagesScreen() {
   const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const { conversations, error, loading, refetch } = useMessages(authToken, isAuthenticated);
+  const { conversations, error, loading, markConversationRead, markConversationUnread, refetch } = useMessages(
+    authToken,
+    isAuthenticated,
+  );
   const {
     clear: clearUserSearch,
     loading: userSearchLoading,
@@ -193,7 +196,7 @@ export function MessagesScreen() {
       ) : filteredConversations.length > 0 ? (
         <View style={styles.messageList}>
           {filteredConversations.map((conversation) => (
-            <ConversationRow
+            <SwipeableConversationRow
               conversation={conversation}
               key={conversation.conversationWithUserId}
               onPress={() =>
@@ -203,6 +206,11 @@ export function MessagesScreen() {
                   username: conversation.conversationWithUser?.username,
                   withUserId: conversation.conversationWithUserId,
                 })
+              }
+              onToggleUnread={() =>
+                void (conversation.unreadCount > 0
+                  ? markConversationRead(conversation.conversationWithUserId)
+                  : markConversationUnread(conversation.conversationWithUserId))
               }
             />
           ))}

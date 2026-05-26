@@ -200,11 +200,13 @@ describe('useNotificationActions', () => {
 
   it('provides action helpers that call the mutations', async () => {
     const markReadMutation = jest.fn().mockResolvedValue({});
+    const markUnreadMutation = jest.fn().mockResolvedValue({});
     const markAllReadMutation = jest.fn().mockResolvedValue({});
     const deleteMutation = jest.fn().mockResolvedValue({});
 
     useMutationMock
       .mockImplementationOnce(() => [markReadMutation, { loading: false }])
+      .mockImplementationOnce(() => [markUnreadMutation, { loading: false }])
       .mockImplementationOnce(() => [markAllReadMutation, { loading: false }])
       .mockImplementationOnce(() => [deleteMutation, { loading: false }]);
 
@@ -214,6 +216,9 @@ describe('useNotificationActions', () => {
       await result.current.markAsRead('note-1');
     });
     await act(async () => {
+      await result.current.markAsUnread('note-1');
+    });
+    await act(async () => {
       await result.current.markAllAsRead();
     });
     await act(async () => {
@@ -221,6 +226,7 @@ describe('useNotificationActions', () => {
     });
 
     expect(markReadMutation).toHaveBeenCalledWith({ variables: { notificationId: 'note-1' } });
+    expect(markUnreadMutation).toHaveBeenCalledWith({ variables: { notificationId: 'note-1' } });
     expect(markAllReadMutation).toHaveBeenCalled();
     expect(deleteMutation).toHaveBeenCalledWith({ variables: { notificationId: 'note-1' } });
     expect(result.current.isLoading).toBe(false);
@@ -229,6 +235,7 @@ describe('useNotificationActions', () => {
   it('exposes isLoading=true when a mutation is in flight', () => {
     useMutationMock
       .mockImplementationOnce(() => [jest.fn(), { loading: true }])
+      .mockImplementationOnce(() => [jest.fn(), { loading: false }])
       .mockImplementationOnce(() => [jest.fn(), { loading: false }])
       .mockImplementationOnce(() => [jest.fn(), { loading: false }]);
 

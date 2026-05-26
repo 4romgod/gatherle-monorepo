@@ -5,6 +5,11 @@ import { Notification, NotificationConnection, User, UserRole } from '@gatherle/
 import { NotificationDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { getAuthenticatedUser, CustomError, ErrorTypes } from '@/utils';
+import {
+  publishNotificationDeleted,
+  publishNotificationsMarkedAllRead,
+  publishNotificationUpdated,
+} from '@/websocket/publisher';
 
 @Resolver(() => Notification)
 export class NotificationResolver {
@@ -57,6 +62,25 @@ export class NotificationResolver {
     if (!updated) {
       throw CustomError('Notification not found or does not belong to you', ErrorTypes.NOT_FOUND);
     }
+
+    await publishNotificationUpdated(updated);
+    return updated;
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => Notification, { description: NOTIFICATION_DESCRIPTIONS.MUTATIONS.markNotificationUnread })
+  async markNotificationUnread(
+    @Arg('notificationId', () => ID) notificationId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<Notification> {
+    const user = getAuthenticatedUser(context);
+
+    const updated = await NotificationDAO.markAsUnread(notificationId, user.userId);
+    if (!updated) {
+      throw CustomError('Notification not found or does not belong to you', ErrorTypes.NOT_FOUND);
+    }
+
+    await publishNotificationUpdated(updated);
     return updated;
   }
 
@@ -64,7 +88,13 @@ export class NotificationResolver {
   @Mutation(() => Int, { description: NOTIFICATION_DESCRIPTIONS.MUTATIONS.markAllNotificationsRead })
   async markAllNotificationsRead(@Ctx() context: ServerContext): Promise<number> {
     const user = getAuthenticatedUser(context);
-    return NotificationDAO.markAllAsRead(user.userId);
+    const markedCount = await NotificationDAO.markAllAsRead(user.userId);
+
+    if (markedCount > 0) {
+      await publishNotificationsMarkedAllRead(user.userId, new Date().toISOString());
+    }
+
+    return markedCount;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -80,6 +110,8 @@ export class NotificationResolver {
     if (!deleted) {
       throw CustomError('Notification not found or does not belong to you', ErrorTypes.NOT_FOUND);
     }
+
+    await publishNotificationDeleted(user.userId, notificationId);
     return true;
   }
 }

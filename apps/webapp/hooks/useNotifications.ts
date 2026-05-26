@@ -5,6 +5,7 @@ import {
   GetNotificationsDocument,
   GetUnreadNotificationCountDocument,
   MarkNotificationReadDocument,
+  MarkNotificationUnreadDocument,
   MarkAllNotificationsReadDocument,
   DeleteNotificationDocument,
 } from '@/data/graphql/query';
@@ -125,6 +126,12 @@ export function useNotificationActions() {
     },
     refetchQueries: ['GetNotifications', 'GetUnreadNotificationCount'],
   });
+  const [markUnreadMutation, { loading: markUnreadLoading }] = useMutation(MarkNotificationUnreadDocument, {
+    context: {
+      headers: getAuthHeader(token),
+    },
+    refetchQueries: ['GetNotifications', 'GetUnreadNotificationCount'],
+  });
 
   const [markAllReadMutation, { loading: markAllReadLoading }] = useMutation(MarkAllNotificationsReadDocument, {
     context: {
@@ -153,6 +160,15 @@ export function useNotificationActions() {
     return markAllReadMutation();
   }, [markAllReadMutation]);
 
+  const markAsUnread = useCallback(
+    async (notificationId: string) => {
+      return markUnreadMutation({
+        variables: { notificationId },
+      });
+    },
+    [markUnreadMutation],
+  );
+
   const deleteNotification = useCallback(
     async (notificationId: string) => {
       return deleteMutation({
@@ -164,10 +180,12 @@ export function useNotificationActions() {
 
   return {
     markAsRead,
+    markAsUnread,
     markAllAsRead,
     deleteNotification,
-    isLoading: markReadLoading || markAllReadLoading || deleteLoading,
+    isLoading: markReadLoading || markUnreadLoading || markAllReadLoading || deleteLoading,
     markReadLoading,
+    markUnreadLoading,
     markAllReadLoading,
     deleteLoading,
   };
