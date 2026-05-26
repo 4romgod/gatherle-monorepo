@@ -1,4 +1,5 @@
 import type { ApolloError } from '@apollo/client';
+import { useApolloClient } from '@apollo/client';
 import { useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
 import { StateNotice } from '@/components/core/StateNotice';
+import { InlineButton } from '@/components/core/InlineButton';
 import { NotificationRowSkeleton } from '@/components/skeleton/NotificationRowSkeleton';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
@@ -19,6 +21,7 @@ import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
+import { navigateFromNotificationActionUrl } from '@/lib/notifications/actionUrl';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 
@@ -27,6 +30,7 @@ type NotificationFeedItem =
   | { createdAt: string; id: string; kind: 'follow-request'; request: MobileFollowRequest };
 
 export function NotificationsScreen() {
+  const apolloClient = useApolloClient();
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
@@ -40,7 +44,9 @@ export function NotificationsScreen() {
     loadMore,
     loading,
     loadingMore,
+    markAllNotificationsRead,
     markNotificationRead,
+    markNotificationUnread,
     notifications,
     refetch,
     rejectFollowRequest,
@@ -107,6 +113,26 @@ export function NotificationsScreen() {
     resetKey: `${groupedFeed.length}:${unreadCount}`,
   });
 
+  const handleNotificationPress = useCallback(
+    async (notification: MobileNotification) => {
+      if (!notification.isRead) {
+        void markNotificationRead(notification.notificationId);
+      }
+
+      const navigated = await navigateFromNotificationActionUrl({
+        actionUrl: notification.actionUrl,
+        apolloClient,
+        authToken,
+        navigation,
+      });
+
+      if (!navigated && !notification.isRead) {
+        await refetch();
+      }
+    },
+    [apolloClient, authToken, markNotificationRead, navigation, refetch],
+  );
+
   if (!isAuthenticated) {
     return (
       <PageContainer>
@@ -140,6 +166,13 @@ export function NotificationsScreen() {
       refreshing={refreshing}
       scrollEventThrottle={infiniteScroll.scrollEventThrottle}
     >
+      <View style={styles.headerRow}>
+        <PageHeading title="Notifications" />
+        {unreadCount > 0 ? (
+          <InlineButton compact label="Mark all read" onPress={() => void markAllNotificationsRead()} tone="neutral" />
+        ) : null}
+      </View>
+
       {loading && feedItems.length === 0 ? (
         <View style={styles.feed}>
           <View style={styles.group}>
@@ -179,7 +212,12 @@ export function NotificationsScreen() {
                       key={item.id}
                       message={item.notification.message}
                       onDelete={() => void deleteNotification(item.notification.notificationId)}
-                      onPress={() => void markNotificationRead(item.notification.notificationId)}
+                      onPress={() => void handleNotificationPress(item.notification)}
+                      onToggleRead={() =>
+                        void (item.notification.isRead
+                          ? markNotificationUnread(item.notification.notificationId)
+                          : markNotificationRead(item.notification.notificationId))
+                      }
                       secondaryLabel={formatRelativeTime(item.notification.createdAt)}
                       title={item.notification.title}
                     />
@@ -203,6 +241,14 @@ export function NotificationsScreen() {
                       key={item.id}
                       message={item.request.follower?.bio || 'Requested to follow you.'}
                       onDelete={() => void rejectFollowRequest(item.request.followId)}
+                      onPress={() =>
+                        navigation.navigate('UserProfile', {
+                          avatarUrl: item.request.follower?.profile_picture ?? undefined,
+                          displayName: getDisplayName(item.request.follower),
+                          userId: item.request.follower?.userId ?? item.request.followerUserId,
+                          username: item.request.follower?.username ?? undefined,
+                        })
+                      }
                       secondaryLabel={formatRelativeTime(item.request.createdAt)}
                       title={`${item.request.follower?.username ? `@${item.request.follower.username}` : getDisplayName(item.request.follower)} wants to connect`}
                     />
@@ -247,6 +293,11 @@ function buildNotificationActions(
 const styles = StyleSheet.create({
   feed: {
     gap: 18,
+  },
+  headerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   group: {
     gap: 8,

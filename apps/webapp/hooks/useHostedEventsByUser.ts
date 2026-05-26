@@ -30,6 +30,7 @@ export function useHostedEventsByUser(
   const loadingMoreRef = useRef(false);
   const pageRef = useRef(0);
   const eventsRef = useRef<EventPreview[]>([]);
+  const totalCountKnownRef = useRef(false);
 
   const [loadEvents, { loading }] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
@@ -64,13 +65,14 @@ export function useHostedEventsByUser(
       setTotalCount(0);
       setError(null);
       pageRef.current = 0;
+      totalCountKnownRef.current = false;
       return;
     }
 
     try {
       setError(null);
       pageRef.current = 0;
-      const [page, countResponse] = await Promise.all([
+      const [pageResult, countResult] = await Promise.allSettled([
         loadPage(0),
         loadEventsCount({
           context: { headers: getAuthHeader(token) },
@@ -79,11 +81,24 @@ export function useHostedEventsByUser(
           },
         }),
       ]);
-      const nextTotalCount = countResponse.data?.readEventsCount ?? 0;
+
+      if (pageResult.status !== 'fulfilled') {
+        throw pageResult.reason;
+      }
+
+      const page = pageResult.value;
+      const nextTotalCount = countResult.status === 'fulfilled' ? countResult.value.data?.readEventsCount : undefined;
+      const hasReliableTotalCount = typeof nextTotalCount === 'number';
+
+      if (countResult.status === 'rejected') {
+        logger.warn('Failed to load hosted events count for user profile', countResult.reason);
+      }
+
+      totalCountKnownRef.current = hasReliableTotalCount;
       eventsRef.current = page;
       setEvents(page);
-      setTotalCount(nextTotalCount);
-      setHasMore(page.length < nextTotalCount);
+      setTotalCount(hasReliableTotalCount ? nextTotalCount : page.length);
+      setHasMore(hasReliableTotalCount ? page.length < nextTotalCount : page.length >= pageSize);
     } catch (caughtError) {
       const resolvedError =
         caughtError instanceof Error ? caughtError : new Error('Unable to load hosted events right now.');
@@ -93,6 +108,7 @@ export function useHostedEventsByUser(
       setEvents([]);
       setHasMore(false);
       setTotalCount(0);
+      totalCountKnownRef.current = false;
     }
   }, [enabled, loadEventsCount, loadPage, token, userId]);
 
@@ -114,7 +130,7 @@ export function useHostedEventsByUser(
       const nextEvents = [...eventsRef.current, ...page.filter((event) => !existingIds.has(event.eventId))];
       eventsRef.current = nextEvents;
       setEvents(nextEvents);
-      setHasMore(totalCount > 0 ? nextEvents.length < totalCount : page.length >= pageSize);
+      setHasMore(totalCountKnownRef.current ? nextEvents.length < totalCount : page.length >= pageSize);
       pageRef.current = nextPage;
     } catch (caughtError) {
       const resolvedError =

@@ -56,6 +56,16 @@ export const MarkNotificationReadDocument = graphql(`
   }
 `);
 
+export const MarkNotificationUnreadDocument = graphql(`
+  mutation MarkNotificationUnread($notificationId: ID!) {
+    markNotificationUnread(notificationId: $notificationId) {
+      notificationId
+      isRead
+      readAt
+    }
+  }
+`);
+
 /**
  * Mark all notifications as read
  */

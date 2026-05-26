@@ -1,4 +1,4 @@
-import { ChatMessageDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
+import { ChatConversationUnreadStateDAO, ChatMessageDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_EVENT_TYPES } from '@/websocket/constants';
 import {
@@ -37,7 +37,7 @@ interface ChatConversationUpdatedEventPayload {
   conversationWithUserId: string;
   unreadCount: number;
   unreadTotal: number;
-  reason: 'chat.send' | 'chat.read';
+  reason: 'chat.send' | 'chat.read' | 'chat.unread';
   updatedAt: string;
   lastMessage: ChatMessageEventPayload | ChatConversationUpdatedMessage | null;
 }
@@ -71,6 +71,12 @@ interface SendMessageResult {
 interface MarkConversationReadResult {
   markedCount: number;
   readerUnreadTotal: number;
+  stats: DeliveryStats;
+}
+
+interface MarkConversationUnreadResult {
+  markerUnreadTotal: number;
+  unreadCount: number;
   stats: DeliveryStats;
 }
 
@@ -128,6 +134,8 @@ export class ChatMessagingService {
       },
     );
 
+    await ChatConversationUnreadStateDAO.clearConversationUnreadForParticipants(senderUserId, recipientUserId);
+
     // Fetch unread counts for both users
     const [senderUnreadCount, recipientUnreadCount, senderUnreadTotal, recipientUnreadTotal] = await Promise.all([
       ChatMessageDAO.countUnreadForConversation(senderUserId, recipientUserId),
@@ -182,6 +190,7 @@ export class ChatMessagingService {
   async markConversationAsRead(readerUserId: string, withUserId: string): Promise<MarkConversationReadResult> {
     // Mark messages as read in database
     const markedCount = await ChatMessageDAO.markConversationRead(readerUserId, withUserId);
+    const clearedMarkedUnread = await ChatConversationUnreadStateDAO.clearConversationUnread(readerUserId, withUserId);
 
     // Fetch connections and stats
     const [
@@ -204,20 +213,41 @@ export class ChatMessagingService {
 
     const readAt = new Date().toISOString();
     const updatedAt = latestMessage?.createdAt?.toISOString() ?? readAt;
+    const lastMessagePayload = this.toConversationUpdatedMessage(latestMessage);
 
-    const lastMessagePayload: ChatConversationUpdatedMessage | null = latestMessage
-      ? {
-          messageId: latestMessage.chatMessageId,
-          senderUserId: latestMessage.senderUserId,
-          recipientUserId: latestMessage.recipientUserId,
-          message: latestMessage.message,
-          isRead: latestMessage.isRead,
-          createdAt: latestMessage.createdAt.toISOString(),
-          ...(latestMessage.replyToMomentId ? { replyToMomentId: latestMessage.replyToMomentId } : {}),
-          ...(latestMessage.replyToMomentCaption ? { replyToMomentCaption: latestMessage.replyToMomentCaption } : {}),
-          ...(latestMessage.replyToMomentType ? { replyToMomentType: latestMessage.replyToMomentType } : {}),
-        }
-      : null;
+    if (markedCount === 0) {
+      if (!clearedMarkedUnread) {
+        return {
+          markedCount,
+          readerUnreadTotal,
+          stats: this.createEmptyDeliveryStats(),
+        };
+      }
+
+      const stats = await this.deliverLocalConversationUpdatedEvents(deduplicateConnections(readerConnections), {
+        conversationWithUserId: withUserId,
+        lastMessagePayload,
+        ownerUserId: readerUserId,
+        reason: 'chat.read',
+        unreadCount: readerUnreadCount,
+        unreadTotal: readerUnreadTotal,
+        updatedAt,
+      });
+
+      logger.info('Chat conversation unread marker cleared without message read changes', {
+        readerUserId,
+        withUserId,
+        readerConnections: readerConnections.length,
+        readerUnreadTotal,
+        ...stats,
+      });
+
+      return {
+        markedCount,
+        readerUnreadTotal,
+        stats,
+      };
+    }
 
     // Create read event payload
     const readEventPayload = createRealtimeEventEnvelope<ChatReadEventPayload>(WEBSOCKET_EVENT_TYPES.CHAT_READ, {
@@ -256,6 +286,59 @@ export class ChatMessagingService {
     return {
       markedCount,
       readerUnreadTotal,
+      stats,
+    };
+  }
+
+  async markConversationAsUnread(markerUserId: string, withUserId: string): Promise<MarkConversationUnreadResult> {
+    const [markerConnections, actualUnreadCount, latestMessage] = await Promise.all([
+      WebSocketConnectionDAO.readConnectionsByUserId(markerUserId),
+      ChatMessageDAO.countUnreadForConversation(markerUserId, withUserId),
+      ChatMessageDAO.readLatestInConversation(markerUserId, withUserId),
+    ]);
+
+    if (!latestMessage) {
+      return {
+        markerUnreadTotal: await ChatMessageDAO.countUnreadTotal(markerUserId),
+        unreadCount: 0,
+        stats: this.createEmptyDeliveryStats(),
+      };
+    }
+
+    if (actualUnreadCount > 0) {
+      return {
+        markerUnreadTotal: await ChatMessageDAO.countUnreadTotal(markerUserId),
+        unreadCount: actualUnreadCount,
+        stats: this.createEmptyDeliveryStats(),
+      };
+    }
+
+    await ChatConversationUnreadStateDAO.markConversationUnread(markerUserId, withUserId);
+
+    const unreadTotal = await ChatMessageDAO.countUnreadTotal(markerUserId);
+    const unreadCount = 1;
+
+    const stats = await this.deliverLocalConversationUpdatedEvents(deduplicateConnections(markerConnections), {
+      conversationWithUserId: withUserId,
+      lastMessagePayload: this.toConversationUpdatedMessage(latestMessage),
+      ownerUserId: markerUserId,
+      reason: 'chat.unread',
+      unreadCount,
+      unreadTotal,
+      updatedAt: latestMessage.createdAt.toISOString(),
+    });
+
+    logger.info('Chat conversation marked as unread', {
+      markerUserId,
+      withUserId,
+      markerConnections: markerConnections.length,
+      unreadTotal,
+      ...stats,
+    });
+
+    return {
+      markerUnreadTotal: unreadTotal,
+      unreadCount,
       stats,
     };
   }
@@ -346,6 +429,70 @@ export class ChatMessagingService {
     };
   }
 
+  private async deliverLocalConversationUpdatedEvents(
+    targetConnections: Map<string, WebSocketTargetConnection & { userId: string }>,
+    context: {
+      ownerUserId: string;
+      conversationWithUserId: string;
+      unreadCount: number;
+      unreadTotal: number;
+      updatedAt: string;
+      reason: 'chat.read' | 'chat.unread';
+      lastMessagePayload: ChatConversationUpdatedMessage | null;
+    },
+  ): Promise<DeliveryStats> {
+    let conversationDeliveredCount = 0;
+    let failedCount = 0;
+    let staleCount = 0;
+
+    const conversationUpdatedEventPayload = createRealtimeEventEnvelope<ChatConversationUpdatedEventPayload>(
+      WEBSOCKET_EVENT_TYPES.CHAT_CONVERSATION_UPDATED,
+      {
+        conversationWithUserId: context.conversationWithUserId,
+        unreadCount: context.unreadCount,
+        unreadTotal: context.unreadTotal,
+        reason: context.reason,
+        updatedAt: context.updatedAt,
+        lastMessage: context.lastMessagePayload,
+      },
+    );
+
+    await Promise.all(
+      [...targetConnections.values()].map(async (connection) => {
+        try {
+          await postToConnection(connection, conversationUpdatedEventPayload);
+          conversationDeliveredCount += 1;
+        } catch (error) {
+          if (isGoneConnectionError(error)) {
+            staleCount += 1;
+            await this.cleanupStaleConnection(
+              connection.connectionId,
+              context.ownerUserId,
+              context.conversationWithUserId,
+            );
+            return;
+          }
+
+          failedCount += 1;
+          logger.warn('Failed to deliver websocket chat conversation update', {
+            connectionId: connection.connectionId,
+            conversationWithUserId: context.conversationWithUserId,
+            ownerUserId: context.ownerUserId,
+            reason: context.reason,
+            error,
+          });
+        }
+      }),
+    );
+
+    return {
+      ...this.createEmptyDeliveryStats(),
+      conversationDeliveredCount,
+      failedCount,
+      staleCount,
+    };
+  }
+
   /**
    * Deliver chat read and conversation updated events to all target connections
    */
@@ -425,6 +572,48 @@ export class ChatMessagingService {
       staleCount,
       deliveredToReaderCount,
       deliveredToWithUserCount,
+    };
+  }
+
+  private createEmptyDeliveryStats(): DeliveryStats {
+    return {
+      messageDeliveredCount: 0,
+      conversationDeliveredCount: 0,
+      readEventDeliveredCount: 0,
+      failedCount: 0,
+      staleCount: 0,
+      deliveredToReaderCount: 0,
+      deliveredToWithUserCount: 0,
+    };
+  }
+
+  private toConversationUpdatedMessage(
+    latestMessage: {
+      chatMessageId: string;
+      senderUserId: string;
+      recipientUserId: string;
+      message: string;
+      isRead: boolean;
+      createdAt: Date;
+      replyToMomentCaption?: string;
+      replyToMomentId?: string;
+      replyToMomentType?: string;
+    } | null,
+  ): ChatConversationUpdatedMessage | null {
+    if (!latestMessage) {
+      return null;
+    }
+
+    return {
+      messageId: latestMessage.chatMessageId,
+      senderUserId: latestMessage.senderUserId,
+      recipientUserId: latestMessage.recipientUserId,
+      message: latestMessage.message,
+      isRead: latestMessage.isRead,
+      createdAt: latestMessage.createdAt.toISOString(),
+      ...(latestMessage.replyToMomentId ? { replyToMomentId: latestMessage.replyToMomentId } : {}),
+      ...(latestMessage.replyToMomentCaption ? { replyToMomentCaption: latestMessage.replyToMomentCaption } : {}),
+      ...(latestMessage.replyToMomentType ? { replyToMomentType: latestMessage.replyToMomentType } : {}),
     };
   }
 

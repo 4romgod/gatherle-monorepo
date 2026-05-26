@@ -9,6 +9,7 @@ import { useUserEventOccurrences } from '@/hooks/useUserEventOccurrences';
 const useLazyQueryMock = jest.fn();
 const useQueryMock = jest.fn();
 const loggerErrorMock = jest.fn();
+const loggerWarnMock = jest.fn();
 
 jest.mock('@apollo/client', () => ({
   useLazyQuery: (...args: unknown[]) => useLazyQueryMock(...args),
@@ -21,6 +22,7 @@ jest.mock('@/lib/utils/auth', () => ({
 
 jest.mock('@/lib/utils', () => ({
   logger: {
+    warn: (...args: unknown[]) => loggerWarnMock(...args),
     error: (...args: unknown[]) => loggerErrorMock(...args),
   },
 }));
@@ -122,6 +124,29 @@ describe('event collection hooks', () => {
       });
     });
 
+    it('treats hosted event count failures as best-effort and falls back to page size for hasMore', async () => {
+      const loadEvents = jest.fn().mockResolvedValue({
+        data: {
+          readEvents: [createHostedEvent('event-1'), createHostedEvent('event-2')],
+        },
+      });
+      const loadEventsCount = jest.fn().mockRejectedValue(new Error('count failed'));
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
+
+      await waitFor(() => expect(result.current.events).toHaveLength(2));
+
+      expect(result.current.error).toBeNull();
+      expect(result.current.totalCount).toBe(2);
+      expect(result.current.hasMore).toBe(true);
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        'Failed to load hosted events count for user profile',
+        expect.any(Error),
+      );
+      expect(loggerErrorMock).not.toHaveBeenCalled();
+    });
+
     it('treats missing event and count payloads as empty results', async () => {
       const loadEvents = jest.fn().mockResolvedValue({});
       const loadEventsCount = jest.fn().mockResolvedValue({});
@@ -144,6 +169,34 @@ describe('event collection hooks', () => {
           },
         },
       });
+    });
+
+    it('falls back to page-size-based pagination when the count payload is missing', async () => {
+      const loadEvents = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: [createHostedEvent('event-1'), createHostedEvent('event-2')],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: [createHostedEvent('event-3')],
+          },
+        });
+      const loadEventsCount = jest.fn().mockResolvedValue({});
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
+
+      await waitFor(() => expect(result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.events.map((event) => event.eventId)).toEqual(['event-1', 'event-2', 'event-3']);
+      expect(result.current.hasMore).toBe(false);
     });
 
     it('loads additional pages, dedupes event ids, and advances pagination', async () => {

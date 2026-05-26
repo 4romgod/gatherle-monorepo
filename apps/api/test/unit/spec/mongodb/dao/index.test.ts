@@ -1,5 +1,6 @@
 import * as DAO from '@/mongodb/dao';
 import {
+  ChatConversationUnreadStateDAO,
   ChatMessageDAO,
   EventCategoryDAO,
   EventOccurrenceDAO,
@@ -32,6 +33,11 @@ describe('Index Exports', () => {
   it('should export ChatMessageDAO', () => {
     expect(DAO.ChatMessageDAO).toBeDefined();
     expect(new DAO.ChatMessageDAO()).toBeInstanceOf(ChatMessageDAO);
+  });
+
+  it('should export ChatConversationUnreadStateDAO', () => {
+    expect(DAO.ChatConversationUnreadStateDAO).toBeDefined();
+    expect(new DAO.ChatConversationUnreadStateDAO()).toBeInstanceOf(ChatConversationUnreadStateDAO);
   });
 
   it('should export WebSocketConnectionDAO', () => {

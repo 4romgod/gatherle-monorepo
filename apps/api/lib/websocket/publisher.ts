@@ -20,6 +20,16 @@ interface NotificationEventPayload {
   unreadCount: number;
 }
 
+interface NotificationDeletedEventPayload {
+  notificationId: string;
+  unreadCount: number;
+}
+
+interface NotificationAllReadEventPayload {
+  unreadCount: number;
+  readAt: string;
+}
+
 export interface FollowRequestRealtimeSnapshot {
   followId: string;
   followerUserId: string;
@@ -129,6 +139,76 @@ export const publishNotificationCreated = async (notification: Notification): Pr
       error,
       recipientUserId: notification.recipientUserId,
       notificationId: notification.notificationId,
+    });
+  }
+};
+
+export const publishNotificationUpdated = async (notification: Notification): Promise<void> => {
+  try {
+    const userId = notification.recipientUserId;
+    const unreadCount = await NotificationDAO.countUnread(userId);
+    const eventPayload: RealtimeEventEnvelope<NotificationEventPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.NOTIFICATION_UPDATED,
+      {
+        notification,
+        unreadCount,
+      },
+    );
+
+    await publishToUserConnections(userId, eventPayload, {
+      notificationId: notification.notificationId,
+    });
+  } catch (error) {
+    logger.error('Failed to publish notification.updated event', {
+      error,
+      recipientUserId: notification.recipientUserId,
+      notificationId: notification.notificationId,
+    });
+  }
+};
+
+export const publishNotificationDeleted = async (recipientUserId: string, notificationId: string): Promise<void> => {
+  try {
+    const unreadCount = await NotificationDAO.countUnread(recipientUserId);
+    const eventPayload: RealtimeEventEnvelope<NotificationDeletedEventPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.NOTIFICATION_DELETED,
+      {
+        notificationId,
+        unreadCount,
+      },
+    );
+
+    await publishToUserConnections(recipientUserId, eventPayload, {
+      notificationId,
+    });
+  } catch (error) {
+    logger.error('Failed to publish notification.deleted event', {
+      error,
+      recipientUserId,
+      notificationId,
+    });
+  }
+};
+
+export const publishNotificationsMarkedAllRead = async (recipientUserId: string, readAt: string): Promise<void> => {
+  try {
+    const unreadCount = await NotificationDAO.countUnread(recipientUserId);
+    const eventPayload: RealtimeEventEnvelope<NotificationAllReadEventPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.NOTIFICATION_ALL_READ,
+      {
+        unreadCount,
+        readAt,
+      },
+    );
+
+    await publishToUserConnections(recipientUserId, eventPayload, {
+      readAt,
+    });
+  } catch (error) {
+    logger.error('Failed to publish notification.all_read event', {
+      error,
+      recipientUserId,
+      readAt,
     });
   }
 };

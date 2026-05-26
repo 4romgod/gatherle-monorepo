@@ -10,9 +10,10 @@ import {
   DeleteNotificationDocument,
   MarkAllNotificationsReadDocument,
   MarkNotificationReadDocument,
+  MarkNotificationUnreadDocument,
 } from '@data/graphql/mutation/Notification/mutation';
 import { GetPendingFollowRequestsDocument } from '@data/graphql/query/Follow/query';
-import { GetNotificationsDocument } from '@data/graphql/query/Notification/query';
+import { GetNotificationsDocument, GetUnreadNotificationCountDocument } from '@data/graphql/query/Notification/query';
 import { getApolloAuthContext } from '@/lib/auth';
 
 export function useNotifications(authToken: string | null, enabled = true) {
@@ -45,20 +46,21 @@ export function useNotifications(authToken: string | null, enabled = true) {
   });
 
   const [markNotificationReadMutation] = useMutation(MarkNotificationReadDocument, queryOptions);
+  const [markNotificationUnreadMutation] = useMutation(MarkNotificationUnreadDocument, queryOptions);
   const [markAllNotificationsReadMutation] = useMutation(MarkAllNotificationsReadDocument, queryOptions);
   const [deleteNotificationMutation] = useMutation(DeleteNotificationDocument, queryOptions);
   const [acceptFollowRequestMutation] = useMutation(AcceptFollowRequestDocument, queryOptions);
   const [rejectFollowRequestMutation] = useMutation(RejectFollowRequestDocument, queryOptions);
   const [followMutation] = useMutation(FollowDocument, queryOptions);
 
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     const refreshes: Array<Promise<unknown>> = [refetch()];
     if (shouldLoadFollowRequests) {
       refreshes.push(refetchFollowRequests());
     }
 
     await Promise.all(refreshes);
-  };
+  }, [refetch, refetchFollowRequests, shouldLoadFollowRequests]);
 
   const loadMore = useCallback(async () => {
     if (!authToken || loadingMoreRef.current || !data?.notifications?.hasMore || !data.notifications.nextCursor) {
@@ -96,85 +98,117 @@ export function useNotifications(authToken: string | null, enabled = true) {
     }
   }, [authToken, data?.notifications, fetchMore]);
 
-  const markNotificationRead = async (notificationId: string) => {
-    if (!authToken) {
-      return;
-    }
+  const markNotificationRead = useCallback(
+    async (notificationId: string) => {
+      if (!authToken) {
+        return;
+      }
 
-    await markNotificationReadMutation({
-      variables: {
-        notificationId,
-      },
-    });
+      await markNotificationReadMutation({
+        variables: {
+          notificationId,
+        },
+      });
 
-    await refetch();
-  };
+      await refetch();
+    },
+    [authToken, markNotificationReadMutation, refetch],
+  );
 
-  const markAllNotificationsRead = async () => {
+  const markAllNotificationsRead = useCallback(async () => {
     if (!authToken) {
       return;
     }
 
     await markAllNotificationsReadMutation();
     await refetch();
-  };
+  }, [authToken, markAllNotificationsReadMutation, refetch]);
 
-  const deleteNotification = async (notificationId: string) => {
-    if (!authToken) {
-      return;
-    }
+  const markNotificationUnread = useCallback(
+    async (notificationId: string) => {
+      if (!authToken) {
+        return;
+      }
 
-    await deleteNotificationMutation({
-      variables: {
-        notificationId,
-      },
-    });
-
-    await refetch();
-  };
-
-  const acceptFollowRequest = async (followId: string) => {
-    if (!authToken) {
-      return;
-    }
-
-    await acceptFollowRequestMutation({
-      variables: {
-        followId,
-      },
-    });
-
-    await refetchFollowRequests();
-  };
-
-  const rejectFollowRequest = async (followId: string) => {
-    if (!authToken) {
-      return;
-    }
-
-    await rejectFollowRequestMutation({
-      variables: {
-        followId,
-      },
-    });
-
-    await refetchFollowRequests();
-  };
-
-  const followBackUser = async (targetId: string) => {
-    if (!authToken) {
-      return;
-    }
-
-    await followMutation({
-      variables: {
-        input: {
-          targetId,
-          targetType: FollowTargetType.User,
+      await markNotificationUnreadMutation({
+        variables: {
+          notificationId,
         },
-      },
-    });
-  };
+      });
+
+      await refetch();
+    },
+    [authToken, markNotificationUnreadMutation, refetch],
+  );
+
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
+      if (!authToken) {
+        return;
+      }
+
+      await deleteNotificationMutation({
+        variables: {
+          notificationId,
+        },
+      });
+
+      await refetch();
+    },
+    [authToken, deleteNotificationMutation, refetch],
+  );
+
+  const acceptFollowRequest = useCallback(
+    async (followId: string) => {
+      if (!authToken) {
+        return;
+      }
+
+      await acceptFollowRequestMutation({
+        variables: {
+          followId,
+        },
+      });
+
+      await refetchFollowRequests();
+    },
+    [acceptFollowRequestMutation, authToken, refetchFollowRequests],
+  );
+
+  const rejectFollowRequest = useCallback(
+    async (followId: string) => {
+      if (!authToken) {
+        return;
+      }
+
+      await rejectFollowRequestMutation({
+        variables: {
+          followId,
+        },
+      });
+
+      await refetchFollowRequests();
+    },
+    [authToken, rejectFollowRequestMutation, refetchFollowRequests],
+  );
+
+  const followBackUser = useCallback(
+    async (targetId: string) => {
+      if (!authToken) {
+        return;
+      }
+
+      await followMutation({
+        variables: {
+          input: {
+            targetId,
+            targetType: FollowTargetType.User,
+          },
+        },
+      });
+    },
+    [authToken, followMutation],
+  );
 
   return {
     acceptFollowRequest,
@@ -185,6 +219,7 @@ export function useNotifications(authToken: string | null, enabled = true) {
     loading: loading || followRequestsLoading,
     markAllNotificationsRead,
     markNotificationRead,
+    markNotificationUnread,
     notifications: data?.notifications?.notifications ?? [],
     hasMore: data?.notifications?.hasMore ?? false,
     loadMore,
@@ -192,5 +227,20 @@ export function useNotifications(authToken: string | null, enabled = true) {
     refetch: refreshAll,
     rejectFollowRequest,
     unreadCount: data?.notifications?.unreadCount ?? 0,
+  };
+}
+
+export function useUnreadNotificationCount(authToken: string | null, enabled = true) {
+  const { data, error, loading, refetch } = useQuery(GetUnreadNotificationCountDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip: !enabled || !authToken,
+    ...getApolloAuthContext(authToken),
+  });
+
+  return {
+    error,
+    loading,
+    refetch,
+    unreadCount: data?.unreadNotificationCount ?? 0,
   };
 }

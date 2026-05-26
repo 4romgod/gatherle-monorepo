@@ -67,6 +67,16 @@ describe('mobile message realtime protocol', () => {
       isChatConversationUpdatedPayload({
         conversationWithUserId: 'user-1',
         lastMessage: null,
+        reason: 'chat.unread',
+        unreadCount: 1,
+        unreadTotal: 1,
+        updatedAt: '2026-05-23T10:02:00.000Z',
+      }),
+    ).toBe(true);
+    expect(
+      isChatConversationUpdatedPayload({
+        conversationWithUserId: 'user-1',
+        lastMessage: null,
         reason: 'chat.read',
         unreadCount: 0,
         unreadTotal: 0,

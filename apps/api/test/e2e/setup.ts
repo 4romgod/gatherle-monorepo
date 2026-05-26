@@ -9,7 +9,6 @@ import { generateToken } from '@/utils/auth';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
-const jwtSecret = process.env.JWT_SECRET;
 
 const WARMUP_QUERY = JSON.stringify({ query: '{ __typename }' });
 
@@ -101,7 +100,7 @@ const getReadSeededUserByUsernameQuery = (username: string) => ({
 });
 
 const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
-  if (status !== 429 || !jwtSecret) {
+  if (status !== 429) {
     return false;
   }
 
@@ -110,10 +109,6 @@ const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
 };
 
 const mintSeededUserToken = async (graphqlUrl: string, user: SeededUserCredentials): Promise<UserWithToken> => {
-  if (!jwtSecret) {
-    throw new Error('JWT_SECRET is required to mint seeded user tokens locally.');
-  }
-
   const response = await postGraphQL(graphqlUrl, getReadSeededUserByUsernameQuery(user.username), 20_000);
   const seededUser = response.body.data?.readUserByUsername;
 
@@ -123,16 +118,13 @@ const mintSeededUserToken = async (graphqlUrl: string, user: SeededUserCredentia
     );
   }
 
-  const token = await generateToken(
-    {
-      userId: seededUser.userId,
-      email: user.email,
-      username: user.username,
-      userRole: user.userRole,
-      isTestUser: true,
-    },
-    jwtSecret,
-  );
+  const token = await generateToken({
+    userId: seededUser.userId,
+    email: user.email,
+    username: user.username,
+    userRole: user.userRole,
+    isTestUser: true,
+  });
 
   return {
     ...seededUser,

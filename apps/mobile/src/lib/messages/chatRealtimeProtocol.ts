@@ -27,7 +27,7 @@ export interface ChatReadRealtimePayload {
 export interface ChatConversationUpdatedRealtimePayload {
   conversationWithUserId: string;
   lastMessage: ChatMessageRealtimePayload | null;
-  reason: 'chat.send' | 'chat.read';
+  reason: 'chat.send' | 'chat.read' | 'chat.unread';
   unreadCount: number;
   unreadTotal: number;
   updatedAt: string;
@@ -77,7 +77,7 @@ export const isChatConversationUpdatedPayload = (value: unknown): value is ChatC
     typeof value.conversationWithUserId === 'string' &&
     typeof value.unreadCount === 'number' &&
     typeof value.unreadTotal === 'number' &&
-    (value.reason === 'chat.send' || value.reason === 'chat.read') &&
+    (value.reason === 'chat.send' || value.reason === 'chat.read' || value.reason === 'chat.unread') &&
     typeof value.updatedAt === 'string' &&
     (value.lastMessage === null || isChatMessagePayload(value.lastMessage))
   );

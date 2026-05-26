@@ -20,7 +20,9 @@ import {
   type EventQueryParticipantCacheItem,
   type RealtimeEventRsvpPayload,
   type RealtimeFollowRequestPayload,
+  type RealtimeNotificationDeletedPayload,
   type RealtimeNotificationPayload,
+  type RealtimeNotificationsAllReadPayload,
 } from './notificationRealtimeProtocol';
 
 const DEFAULT_NOTIFICATION_PAGE_LIMIT = 20;
@@ -439,6 +441,160 @@ export const createNotificationRealtimeCacheHandlers = ({
     }
   };
 
+  const handleRealtimeNotificationUpdated = (payload: RealtimeNotificationPayload) => {
+    const { notification, unreadCount } = payload;
+    const normalizedNotification = normalizeNotificationForCache(notification);
+
+    client.writeQuery({
+      query: GetUnreadNotificationCountDocument,
+      data: {
+        unreadNotificationCount: unreadCount,
+      },
+    });
+
+    const updateNotificationListCache = (unreadOnly: boolean) => {
+      client.cache.updateQuery(
+        {
+          query: GetNotificationsDocument,
+          variables: { limit: DEFAULT_NOTIFICATION_PAGE_LIMIT, unreadOnly },
+        },
+        (existing) => {
+          if (!existing?.notifications) {
+            return existing;
+          }
+
+          const currentItems = existing.notifications.notifications;
+          const existingIndex = currentItems.findIndex(
+            (item) => item.notificationId === normalizedNotification.notificationId,
+          );
+
+          let nextItems = currentItems;
+          if (existingIndex >= 0) {
+            nextItems = currentItems.map((item, index) =>
+              index === existingIndex
+                ? ({
+                    ...item,
+                    ...normalizedNotification,
+                  } as (typeof currentItems)[number])
+                : item,
+            );
+          } else if (!unreadOnly || normalizedNotification.isRead === false) {
+            const maxItems = Math.max(currentItems.length, DEFAULT_NOTIFICATION_PAGE_LIMIT);
+            nextItems = [normalizedNotification as (typeof currentItems)[number], ...currentItems].slice(0, maxItems);
+          }
+
+          if (unreadOnly) {
+            nextItems = nextItems.filter((item) => item.isRead === false);
+          }
+
+          return {
+            ...existing,
+            notifications: {
+              ...existing.notifications,
+              unreadCount,
+              notifications: nextItems,
+            },
+          };
+        },
+      );
+    };
+
+    updateNotificationListCache(false);
+    updateNotificationListCache(true);
+  };
+
+  const handleRealtimeNotificationDeleted = (payload: RealtimeNotificationDeletedPayload) => {
+    client.writeQuery({
+      query: GetUnreadNotificationCountDocument,
+      data: {
+        unreadNotificationCount: payload.unreadCount,
+      },
+    });
+
+    const updateNotificationListCache = (unreadOnly: boolean) => {
+      client.cache.updateQuery(
+        {
+          query: GetNotificationsDocument,
+          variables: { limit: DEFAULT_NOTIFICATION_PAGE_LIMIT, unreadOnly },
+        },
+        (existing) => {
+          if (!existing?.notifications) {
+            return existing;
+          }
+
+          return {
+            ...existing,
+            notifications: {
+              ...existing.notifications,
+              unreadCount: payload.unreadCount,
+              notifications: existing.notifications.notifications.filter(
+                (item) => item.notificationId !== payload.notificationId,
+              ),
+            },
+          };
+        },
+      );
+    };
+
+    updateNotificationListCache(false);
+    updateNotificationListCache(true);
+  };
+
+  const handleRealtimeNotificationsAllRead = (payload: RealtimeNotificationsAllReadPayload) => {
+    client.writeQuery({
+      query: GetUnreadNotificationCountDocument,
+      data: {
+        unreadNotificationCount: payload.unreadCount,
+      },
+    });
+
+    client.cache.updateQuery(
+      {
+        query: GetNotificationsDocument,
+        variables: { limit: DEFAULT_NOTIFICATION_PAGE_LIMIT, unreadOnly: false },
+      },
+      (existing) => {
+        if (!existing?.notifications) {
+          return existing;
+        }
+
+        return {
+          ...existing,
+          notifications: {
+            ...existing.notifications,
+            unreadCount: payload.unreadCount,
+            notifications: existing.notifications.notifications.map((item) => ({
+              ...item,
+              isRead: true,
+              readAt: item.readAt ?? payload.readAt,
+            })),
+          },
+        };
+      },
+    );
+
+    client.cache.updateQuery(
+      {
+        query: GetNotificationsDocument,
+        variables: { limit: DEFAULT_NOTIFICATION_PAGE_LIMIT, unreadOnly: true },
+      },
+      (existing) => {
+        if (!existing?.notifications) {
+          return existing;
+        }
+
+        return {
+          ...existing,
+          notifications: {
+            ...existing.notifications,
+            unreadCount: payload.unreadCount,
+            notifications: [],
+          },
+        };
+      },
+    );
+  };
+
   const handleRealtimeFollowRequest = (payload: RealtimeFollowRequestPayload) => {
     const normalizedFollowRequest = normalizeFollowRequestForCache(payload.follow);
     upsertFollowRequestCache(normalizedFollowRequest);
@@ -453,6 +609,9 @@ export const createNotificationRealtimeCacheHandlers = ({
 
   return {
     handleRealtimeNotification,
+    handleRealtimeNotificationUpdated,
+    handleRealtimeNotificationDeleted,
+    handleRealtimeNotificationsAllRead,
     handleRealtimeFollowRequest,
     handleRealtimeEventRsvp,
   };

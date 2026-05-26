@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import {
   GetUnreadChatCountDocument,
   MarkChatConversationReadDocument,
+  MarkChatConversationUnreadDocument,
   GetChatConversationsDocument,
   GetChatMessagesDocument,
 } from '@/data/graphql/query';
@@ -135,6 +136,9 @@ export function useChatActions() {
   const [markConversationReadMutation, { loading: markConversationReadLoading }] = useMutation(
     MarkChatConversationReadDocument,
   );
+  const [markConversationUnreadMutation, { loading: markConversationUnreadLoading }] = useMutation(
+    MarkChatConversationUnreadDocument,
+  );
 
   const markConversationRead = useCallback(
     async (withUserId: string) => {
@@ -144,14 +148,28 @@ export function useChatActions() {
           headers: getAuthHeader(token),
         },
         refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
-        awaitRefetchQueries: true,
       });
     },
     [markConversationReadMutation, token],
   );
 
+  const markConversationUnread = useCallback(
+    async (withUserId: string) => {
+      return markConversationUnreadMutation({
+        variables: { withUserId },
+        context: {
+          headers: getAuthHeader(token),
+        },
+        refetchQueries: ['GetChatConversations', 'GetChatMessages', 'GetUnreadChatCount'],
+      });
+    },
+    [markConversationUnreadMutation, token],
+  );
+
   return {
     markConversationRead,
+    markConversationUnread,
     markConversationReadLoading,
+    markConversationUnreadLoading,
   };
 }

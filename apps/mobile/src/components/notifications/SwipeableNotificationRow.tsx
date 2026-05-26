@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
 import { NotificationRow } from '@/components/notifications/NotificationRow';
@@ -6,25 +6,28 @@ import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type SwipeableNotificationRowProps = React.ComponentProps<typeof NotificationRow> & {
   onDelete?: () => void;
+  onToggleRead?: () => void;
 };
 
-function NotificationRightActions({ onDelete }: { onDelete?: () => void }) {
+function NotificationRightActions({
+  isRead,
+  onDelete,
+  onToggleRead,
+}: {
+  isRead?: boolean;
+  onDelete?: () => void;
+  onToggleRead?: () => void;
+}) {
   const { theme } = useAppTheme();
 
   return (
     <View style={styles.actionsWrap}>
       <Pressable
         accessibilityRole="button"
-        onPress={() =>
-          Alert.alert('Notification options', 'Choose how you want Gatherle to handle updates like this.', [
-            { text: 'Mute this person' },
-            { text: 'Mute this type' },
-            { style: 'cancel', text: 'Cancel' },
-          ])
-        }
+        onPress={onToggleRead}
         style={[styles.actionButton, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
       >
-        <Feather color={theme.colors.textPrimary} name="more-horizontal" size={16} />
+        <Feather color={theme.colors.textPrimary} name={isRead ? 'mail' : 'check'} size={16} />
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -37,9 +40,15 @@ function NotificationRightActions({ onDelete }: { onDelete?: () => void }) {
   );
 }
 
-export function SwipeableNotificationRow({ onDelete, ...props }: SwipeableNotificationRowProps) {
+export function SwipeableNotificationRow({ onDelete, onToggleRead, ...props }: SwipeableNotificationRowProps) {
   return (
-    <Swipeable overshootRight={false} renderRightActions={() => <NotificationRightActions onDelete={onDelete} />}>
+    <Swipeable
+      dragOffsetFromRightEdge={18}
+      overshootRight={false}
+      renderRightActions={() => (
+        <NotificationRightActions isRead={props.isRead} onDelete={onDelete} onToggleRead={onToggleRead} />
+      )}
+    >
       <NotificationRow {...props} />
     </Swipeable>
   );

@@ -19,6 +19,9 @@ export const WEBSOCKET_ROUTES = {
 
 export const WEBSOCKET_EVENT_TYPES = {
   NOTIFICATION_NEW: 'notification.new',
+  NOTIFICATION_UPDATED: 'notification.updated',
+  NOTIFICATION_DELETED: 'notification.deleted',
+  NOTIFICATION_ALL_READ: 'notification.all_read',
   CHAT_MESSAGE: 'chat.message',
   CHAT_READ: 'chat.read',
   CHAT_CONVERSATION_UPDATED: 'chat.conversation.updated',

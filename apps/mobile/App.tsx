@@ -18,6 +18,7 @@ import { apolloClient } from '@data/graphql/apollo-client';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AppFeedbackProvider } from '@/app/providers/AppFeedbackProvider';
 import { AppShellProvider } from '@/app/providers/AppShellProvider';
+import { RealtimeInboxProvider } from '@/app/providers/RealtimeInboxProvider';
 import { AppDrawer } from '@/app/navigation/AppDrawer';
 import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
@@ -68,11 +69,13 @@ export default function App() {
           <AppThemeProvider>
             <KeyboardProvider>
               <AppShellProvider>
-                <AppFeedbackProvider>
-                  <BottomSheetModalProvider>
-                    <AppContent />
-                  </BottomSheetModalProvider>
-                </AppFeedbackProvider>
+                <RealtimeInboxProvider>
+                  <AppFeedbackProvider>
+                    <BottomSheetModalProvider>
+                      <AppContent />
+                    </BottomSheetModalProvider>
+                  </AppFeedbackProvider>
+                </RealtimeInboxProvider>
               </AppShellProvider>
             </KeyboardProvider>
           </AppThemeProvider>

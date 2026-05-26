@@ -42,7 +42,11 @@ export function ConversationRow({ conversation, onPress }: ConversationRowProps)
           </Text>
           <View style={styles.metaRow}>
             {conversation.unreadCount > 0 ? (
-              <View style={[styles.unreadDot, { backgroundColor: theme.colors.primary }]} />
+              <View style={[styles.unreadBadge, { backgroundColor: theme.colors.primary }]}>
+                <Text style={[styles.unreadBadgeText, { color: theme.colors.primaryContrast }]}>
+                  {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                </Text>
+              </View>
             ) : null}
             <Text style={[styles.time, { color: theme.colors.textSecondary }]}>
               {formatRelativeTime(conversation.updatedAt)}
@@ -113,9 +117,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
   },
-  unreadDot: {
+  unreadBadge: {
+    alignItems: 'center',
     borderRadius: 999,
-    height: 8,
-    width: 8,
+    justifyContent: 'center',
+    minHeight: 18,
+    minWidth: 18,
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    ...typography.bodyBold,
+    fontSize: 10,
   },
 });

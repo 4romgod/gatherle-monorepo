@@ -28,6 +28,16 @@ export type RealtimeNotificationPayload = {
   unreadCount: number;
 };
 
+export type RealtimeNotificationDeletedPayload = {
+  notificationId: string;
+  unreadCount: number;
+};
+
+export type RealtimeNotificationsAllReadPayload = {
+  unreadCount: number;
+  readAt: string;
+};
+
 export type FollowRequestCacheItem = GetFollowRequestsQuery['readFollowRequests'][number];
 export type EventParticipantsCacheItem = GetEventParticipantsQuery['readEventParticipants'][number];
 export type MyRsvpStatusCacheItem = NonNullable<GetMyRsvpStatusQuery['myRsvpStatus']>;
@@ -124,6 +134,22 @@ export const isRealtimeNotificationPayload = (value: unknown): value is Realtime
     typeof notification.isRead === 'boolean' &&
     typeof notification.createdAt === 'string'
   );
+};
+
+export const isRealtimeNotificationDeletedPayload = (value: unknown): value is RealtimeNotificationDeletedPayload => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.notificationId === 'string' && typeof value.unreadCount === 'number';
+};
+
+export const isRealtimeNotificationsAllReadPayload = (value: unknown): value is RealtimeNotificationsAllReadPayload => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.unreadCount === 'number' && typeof value.readAt === 'string';
 };
 
 export const isRealtimeFollowRequestPayload = (value: unknown): value is RealtimeFollowRequestPayload => {

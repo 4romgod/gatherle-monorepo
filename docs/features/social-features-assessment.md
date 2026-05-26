@@ -643,7 +643,7 @@ properly reflect pending states. Follower counts are dynamically computed ensuri
 ## Related Documentation
 
 - [Data Model](../api/data-model.md)
-- [Design System](../webapp/design-system.md)
+- [Design System](../frontend/design-system.md)
 - [Environment Variables](../environment-variables.md)
 - [Project Brief](../project-brief.md)
 

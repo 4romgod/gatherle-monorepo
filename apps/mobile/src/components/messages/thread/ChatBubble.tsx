@@ -61,7 +61,14 @@ export function ChatBubble({ isOutgoing, message, onPressReplyMoment }: ChatBubb
           {message.message}
         </Text>
       </View>
-      <Text style={[styles.time, { color: theme.colors.textMuted }]}>{formatThreadTime(message.createdAt)}</Text>
+      <View style={styles.metaRow}>
+        <Text style={[styles.time, { color: theme.colors.textMuted }]}>{formatThreadTime(message.createdAt)}</Text>
+        {isOutgoing ? (
+          <Text style={[styles.status, { color: message.isRead ? theme.colors.primary : theme.colors.textMuted }]}>
+            {message.isRead ? 'Read' : 'Sent'}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -74,6 +81,12 @@ const styles = StyleSheet.create({
     minWidth: 56,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 2,
   },
   message: {
     ...typography.bodyRegular,
@@ -110,9 +123,12 @@ const styles = StyleSheet.create({
   rowOutgoing: {
     alignItems: 'flex-end',
   },
+  status: {
+    ...typography.bodyMedium,
+    fontSize: fontSize.xxs,
+  },
   time: {
     ...typography.bodyMedium,
     fontSize: fontSize.xxs,
-    paddingHorizontal: 2,
   },
 });

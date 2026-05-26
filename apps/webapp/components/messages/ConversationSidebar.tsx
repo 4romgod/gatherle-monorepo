@@ -25,6 +25,7 @@ import {
   formatConversationRelativeTime,
   resolveChatIdentity,
 } from '@/components/messages/chatUiUtils';
+import { ConversationUnreadToggleButton } from '@/components/messages/ConversationUnreadToggleButton';
 
 interface ConversationSidebarProps {
   conversations: {
@@ -177,7 +178,15 @@ export function ConversationSidebar({
           <List disablePadding>
             {filteredConversationItems.map((conversation, index) => (
               <React.Fragment key={conversation.conversationWithUserId}>
-                <ListItem disablePadding>
+                <ListItem
+                  disablePadding
+                  secondaryAction={
+                    <ConversationUnreadToggleButton
+                      unreadCount={conversation.unreadCount}
+                      withUserId={conversation.conversationWithUserId}
+                    />
+                  }
+                >
                   {conversation.href ? (
                     <ListItemButton
                       component={Link}
@@ -186,6 +195,7 @@ export function ConversationSidebar({
                         mx: 1,
                         my: 0.5,
                         px: 2,
+                        pr: 8,
                         py: 1.5,
                         borderRadius: 1.5,
                         borderLeft: '3px solid',
@@ -281,7 +291,7 @@ export function ConversationSidebar({
                       />
                     </ListItemButton>
                   ) : (
-                    <ListItemButton disabled sx={{ px: 2, py: 1.5 }}>
+                    <ListItemButton disabled sx={{ px: 2, pr: 8, py: 1.5 }}>
                       <ListItemAvatar>
                         <Avatar src={conversation.avatarSrc} alt={conversation.displayName} />
                       </ListItemAvatar>

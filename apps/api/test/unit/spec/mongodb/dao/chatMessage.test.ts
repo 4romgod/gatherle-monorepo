@@ -1,6 +1,7 @@
 import { GraphQLError } from 'graphql';
 import { ChatMessageDAO } from '@/mongodb/dao';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
+import ChatConversationUnreadStateDAO from '@/mongodb/dao/chatConversationUnreadState';
 
 jest.mock('@/mongodb/models', () => ({
   ChatMessage: Object.assign(jest.fn(), {
@@ -10,6 +11,14 @@ jest.mock('@/mongodb/models', () => ({
     aggregate: jest.fn(),
     updateMany: jest.fn(),
   }),
+}));
+
+jest.mock('@/mongodb/dao/chatConversationUnreadState', () => ({
+  __esModule: true,
+  default: {
+    countMarkedUnreadConversationsWithoutUnreadMessages: jest.fn(),
+    readMarkedUnreadConversationIds: jest.fn(),
+  },
 }));
 
 const ChatMessageModelMock = ChatMessageModel as unknown as jest.Mock & {
@@ -47,6 +56,10 @@ const createFindOneQuery = <T>(result: T) => ({
 describe('ChatMessageDAO', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (ChatConversationUnreadStateDAO.countMarkedUnreadConversationsWithoutUnreadMessages as jest.Mock).mockResolvedValue(
+      0,
+    );
+    (ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds as jest.Mock).mockResolvedValue(new Set());
   });
 
   it('buildConversationKey sorts and trims ids deterministically', () => {
@@ -216,6 +229,34 @@ describe('ChatMessageDAO', () => {
     ]);
   });
 
+  it('readConversations uses marked-unread state when the message unread count is zero', async () => {
+    const updatedAt = new Date('2026-02-15T11:59:00.000Z');
+    (ChatMessageModel.aggregate as jest.Mock).mockReturnValue(
+      createExecQuery([
+        {
+          _id: 'user-2',
+          unreadCount: 0,
+          updatedAt,
+          lastMessage: {
+            chatMessageId: 'm1',
+            senderUserId: 'user-1',
+            recipientUserId: 'user-2',
+            message: 'see you later',
+            isRead: true,
+            createdAt: updatedAt,
+          },
+        },
+      ]),
+    );
+    (ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds as jest.Mock).mockResolvedValue(
+      new Set(['user-2']),
+    );
+
+    const result = await ChatMessageDAO.readConversations('user-1', 10);
+
+    expect(result[0]?.unreadCount).toBe(1);
+  });
+
   it('markConversationRead updates unread incoming messages and returns modified count', async () => {
     (ChatMessageModel.updateMany as jest.Mock).mockReturnValue(createExecQuery({ modifiedCount: 5 }));
 
@@ -279,6 +320,9 @@ describe('ChatMessageDAO', () => {
 
   it('countUnreadTotal returns the total unread count for a recipient', async () => {
     (ChatMessageModel.countDocuments as jest.Mock).mockReturnValue(createExecQuery(7));
+    (ChatConversationUnreadStateDAO.countMarkedUnreadConversationsWithoutUnreadMessages as jest.Mock).mockResolvedValue(
+      2,
+    );
 
     const result = await ChatMessageDAO.countUnreadTotal('user-1');
 
@@ -286,7 +330,7 @@ describe('ChatMessageDAO', () => {
       recipientUserId: 'user-1',
       isRead: { $ne: true },
     });
-    expect(result).toBe(7);
+    expect(result).toBe(9);
   });
 
   it('countUnreadTotal re-throws failures as GraphQLError', async () => {

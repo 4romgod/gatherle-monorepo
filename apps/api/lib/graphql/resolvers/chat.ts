@@ -3,6 +3,7 @@ import { Arg, Authorized, Ctx, FieldResolver, ID, Int, Mutation, Query, Resolver
 import { ChatConversation, ChatMessage, ChatMessageConnection, User, UserRole } from '@gatherle/commons/types';
 import { ChatMessageDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
+import { chatMessagingService } from '@/services';
 import { getAuthenticatedUser } from '@/utils';
 
 @Resolver(() => ChatMessage)
@@ -36,7 +37,7 @@ export class ChatResolver {
   ): Promise<ChatMessageConnection> {
     const user = getAuthenticatedUser(context);
     if (markAsRead) {
-      await ChatMessageDAO.markConversationRead(user.userId, withUserId);
+      await chatMessagingService.markConversationAsRead(user.userId, withUserId);
     }
     return ChatMessageDAO.readConversation(user.userId, withUserId, { limit, cursor });
   }
@@ -65,6 +66,21 @@ export class ChatResolver {
     @Ctx() context: ServerContext,
   ): Promise<number> {
     const user = getAuthenticatedUser(context);
-    return ChatMessageDAO.markConversationRead(user.userId, withUserId);
+    const result = await chatMessagingService.markConversationAsRead(user.userId, withUserId);
+    return result.markedCount;
+  }
+
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => Boolean, {
+    description:
+      'Mark a direct conversation as unread for the authenticated user without changing sender-facing read receipts.',
+  })
+  async markChatConversationUnread(
+    @Arg('withUserId', () => ID) withUserId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<boolean> {
+    const user = getAuthenticatedUser(context);
+    await chatMessagingService.markConversationAsUnread(user.userId, withUserId);
+    return true;
   }
 }

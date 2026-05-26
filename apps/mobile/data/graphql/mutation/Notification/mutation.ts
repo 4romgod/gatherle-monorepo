@@ -10,6 +10,16 @@ export const MarkNotificationReadDocument = graphql(`
   }
 `);
 
+export const MarkNotificationUnreadDocument = graphql(`
+  mutation MarkNotificationUnread($notificationId: ID!) {
+    markNotificationUnread(notificationId: $notificationId) {
+      notificationId
+      isRead
+      readAt
+    }
+  }
+`);
+
 export const MarkAllNotificationsReadDocument = graphql(`
   mutation MarkAllNotificationsRead {
     markAllNotificationsRead

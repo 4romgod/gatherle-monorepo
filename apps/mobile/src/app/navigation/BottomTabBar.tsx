@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
+import { useUnreadChatCount } from '@/hooks/messages/useMessages';
+import { useUnreadNotificationCount } from '@/hooks/notifications/useNotifications';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { MOBILE_BOTTOM_TAB_BAR_HEIGHT } from '@/lib/constants/layout';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -25,11 +27,13 @@ type BottomTabBarProps = MaterialTopTabBarProps & {
 };
 
 export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBarProps) {
-  const { isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
+  const { authToken, isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileLabel = getDisplayName(profile);
+  const { unreadCount: unreadMessages } = useUnreadChatCount(authToken, isAuthenticated);
+  const { unreadCount: unreadNotifications } = useUnreadNotificationCount(authToken, isAuthenticated);
 
   return (
     <View
@@ -53,6 +57,8 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
         const focused = state.index === index;
         const routeName = route.name as keyof MainTabParamList;
         const color = focused ? theme.colors.primary : theme.colors.textSecondary;
+        const tabBadgeCount =
+          routeName === 'Messages' ? unreadMessages : routeName === 'Notifications' ? unreadNotifications : 0;
 
         const handlePress = () => {
           const event = navigation.emit({
@@ -93,7 +99,16 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
                 size={focused ? 32 : 30}
               />
             ) : (
-              <Feather color={color} name={TAB_ICONS[routeName]} size={23} />
+              <View style={styles.iconWrap}>
+                <Feather color={color} name={TAB_ICONS[routeName]} size={23} />
+                {tabBadgeCount > 0 ? (
+                  <View style={[styles.badge, { backgroundColor: theme.colors.error }]}>
+                    <Text style={[styles.badgeText, { color: theme.colors.primaryContrast }]}>
+                      {tabBadgeCount > 99 ? '99+' : tabBadgeCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             )}
 
             {isTabletLayout ? (
@@ -109,11 +124,29 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
 }
 
 const styles = StyleSheet.create({
+  badge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    minHeight: 16,
+    minWidth: 16,
+    paddingHorizontal: 4,
+    position: 'absolute',
+    right: -10,
+    top: -5,
+  },
+  badgeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    lineHeight: 16,
+  },
   indicator: {
     borderRadius: 999,
     height: 3,
     marginTop: 3,
     width: 14,
+  },
+  iconWrap: {
+    position: 'relative',
   },
   item: {
     alignItems: 'center',

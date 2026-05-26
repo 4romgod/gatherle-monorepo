@@ -308,7 +308,7 @@ later-created moment in a pending state.
 
 - A user can upload a video longer than 30 seconds or larger than 75 MB and the server accepts it, triggering a
   full-cost MediaConvert job with no rejection.
-- The feature docs (`docs/features/event-moments.md`) state that these limits are enforced server-side, which is
+- The feature docs (`docs/features/moments-platform.md`) state that these limits are enforced server-side, which is
   incorrect.
 
 ### Root Cause

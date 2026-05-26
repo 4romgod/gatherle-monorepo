@@ -12,6 +12,7 @@ export { default as FollowDAO } from '@/mongodb/dao/follow';
 export { default as ActivityDAO } from '@/mongodb/dao/activity';
 export { default as NotificationDAO } from '@/mongodb/dao/notification';
 export { default as ChatMessageDAO } from '@/mongodb/dao/chatMessage';
+export { default as ChatConversationUnreadStateDAO } from '@/mongodb/dao/chatConversationUnreadState';
 export { default as WebSocketConnectionDAO } from '@/mongodb/dao/websocketConnection';
 export { default as WebSocketRequestThrottleDAO } from '@/mongodb/dao/websocketRequestThrottle';
 export { default as UserFeedDAO } from '@/mongodb/dao/userFeed';

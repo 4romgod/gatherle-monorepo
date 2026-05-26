@@ -1,6 +1,6 @@
 # Environment & Secrets Reference
 
-For end-to-end account/bootstrap instructions, see `docs/aws-account-setup.md`.
+For end-to-end account/bootstrap instructions, see `docs/runbooks/aws-account-setup.md`.
 
 ## Environment Validation Strategy
 
@@ -113,7 +113,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `NEXT_PUBLIC_S3_MEDIA_URL` — required when testing media uploads locally. Point at the Beta bucket:
     `https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
-    `docs/webapp/media-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
+    `docs/frontend/media-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
     `S3BucketStack` CloudFormation output.
 - These values stay local and are never checked in (respect `.gitignore` for `.env*`).
 
@@ -130,7 +130,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in
-  Vercel + Route53 DNS records in the DNS account. Follow `docs/aws-account-setup.md` section
+  Vercel + Route53 DNS records in the DNS account. Follow `docs/runbooks/aws-account-setup.md` section
   `D. Connect webapp domain in Vercel`.
 
 ### E2E tests (Playwright)

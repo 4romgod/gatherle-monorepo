@@ -77,9 +77,10 @@ export function PullToRefreshShell({ children, indicatorTop = 80 }: PullToRefres
 
       <Box
         {...handlers}
+        data-testid="pull-to-refresh-shell-content"
         sx={{
           minHeight: 'inherit',
-          transform: `translateY(${pullDistance}px)`,
+          transform: pullDistance === 0 ? 'none' : `translateY(${pullDistance}px)`,
           transition: isPulling || isRefreshing ? 'none' : 'transform 180ms ease',
         }}
       >

@@ -17,7 +17,9 @@ import { createNotificationRealtimeCacheHandlers } from './notificationRealtimeC
 import {
   isRealtimeEventRsvpPayload,
   isRealtimeFollowRequestPayload,
+  isRealtimeNotificationDeletedPayload,
   isRealtimeNotificationPayload,
+  isRealtimeNotificationsAllReadPayload,
   parseRealtimeEnvelope,
 } from './notificationRealtimeProtocol';
 
@@ -37,20 +39,30 @@ export function useNotificationRealtime(enabled: boolean = true) {
   const handleRealtimeEventRsvpRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeFollowRequestRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeNotificationRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeNotificationDeletedRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeNotificationsAllReadRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!userId) {
       handleRealtimeEventRsvpRef.current = null;
       handleRealtimeFollowRequestRef.current = null;
       handleRealtimeNotificationRef.current = null;
+      handleRealtimeNotificationDeletedRef.current = null;
+      handleRealtimeNotificationsAllReadRef.current = null;
       return;
     }
 
-    const { handleRealtimeEventRsvp, handleRealtimeFollowRequest, handleRealtimeNotification } =
-      createNotificationRealtimeCacheHandlers({
-        client,
-        userId,
-      });
+    const {
+      handleRealtimeEventRsvp,
+      handleRealtimeFollowRequest,
+      handleRealtimeNotification,
+      handleRealtimeNotificationDeleted,
+      handleRealtimeNotificationUpdated,
+      handleRealtimeNotificationsAllRead,
+    } = createNotificationRealtimeCacheHandlers({
+      client,
+      userId,
+    });
 
     handleRealtimeEventRsvpRef.current = (payload: unknown) => {
       if (!isRealtimeEventRsvpPayload(payload)) {
@@ -76,7 +88,30 @@ export function useNotificationRealtime(enabled: boolean = true) {
         return;
       }
 
+      if (payload.notification.isRead) {
+        handleRealtimeNotificationUpdated(payload);
+        return;
+      }
+
       handleRealtimeNotification(payload);
+    };
+
+    handleRealtimeNotificationDeletedRef.current = (payload: unknown) => {
+      if (!isRealtimeNotificationDeletedPayload(payload)) {
+        logger.warn('Received malformed notification deletion websocket payload');
+        return;
+      }
+
+      handleRealtimeNotificationDeleted(payload);
+    };
+
+    handleRealtimeNotificationsAllReadRef.current = (payload: unknown) => {
+      if (!isRealtimeNotificationsAllReadPayload(payload)) {
+        logger.warn('Received malformed notification all-read websocket payload');
+        return;
+      }
+
+      handleRealtimeNotificationsAllRead(payload);
     };
   }, [client, userId]);
 
@@ -97,8 +132,18 @@ export function useNotificationRealtime(enabled: boolean = true) {
       return;
     }
 
-    if (parsed.type === 'notification.new') {
+    if (parsed.type === 'notification.new' || parsed.type === 'notification.updated') {
       handleRealtimeNotificationRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'notification.deleted') {
+      handleRealtimeNotificationDeletedRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'notification.all_read') {
+      handleRealtimeNotificationsAllReadRef.current?.(parsed.payload);
       return;
     }
 

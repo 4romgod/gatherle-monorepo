@@ -73,6 +73,21 @@ export function useChatThread({ authToken, enabled = true, withUserId }: UseChat
     hasMore: thread?.hasMore ?? false,
     loadMore,
     loading,
+    markMessagesRead: (params: { readAt: string; recipientUserId: string; senderUserId: string }) => {
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          message.senderUserId === params.senderUserId &&
+          message.recipientUserId === params.recipientUserId &&
+          !message.isRead
+            ? {
+                ...message,
+                isRead: true,
+                readAt: message.readAt ?? params.readAt,
+              }
+            : message,
+        ),
+      );
+    },
     messages,
     refetch,
   };
