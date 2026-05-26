@@ -1,16 +1,24 @@
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MobileEventSeriesListItem } from '@data/graphql/query/Event/types';
+import { EventOccurrenceStatus } from '@data/graphql/types/graphql';
 
 export function mapEventSeriesToOccurrence(event: MobileEventSeriesListItem): MobileEventOccurrence | null {
   const occurrence = event.representativeOccurrence;
+  const fallbackStartAt = event.primarySchedule?.anchorStartAt ?? null;
+  const fallbackDurationMinutes = event.primarySchedule?.occurrenceDurationMinutes ?? 0;
+  const fallbackEndAt =
+    fallbackStartAt && fallbackDurationMinutes > 0
+      ? new Date(new Date(fallbackStartAt).getTime() + fallbackDurationMinutes * 60 * 1000).toISOString()
+      : null;
+  const resolvedStartAt = occurrence?.startAt ?? fallbackStartAt;
 
-  if (!occurrence) {
+  if (!resolvedStartAt) {
     return null;
   }
 
   return {
     __typename: 'EventOccurrence',
-    endAt: occurrence.endAt,
+    endAt: occurrence?.endAt ?? fallbackEndAt,
     eventSeries: {
       __typename: 'EventSeries',
       description: event.description,
@@ -32,16 +40,16 @@ export function mapEventSeriesToOccurrence(event: MobileEventSeriesListItem): Mo
       venueId: event.venueId ?? null,
       visibility: event.visibility ?? null,
     },
-    eventSeriesId: occurrence.eventSeriesId,
-    isException: occurrence.isException,
-    myRsvp: occurrence.myRsvp ?? null,
-    occurrenceId: occurrence.occurrenceId,
-    occurrenceKey: occurrence.occurrenceKey,
-    originalStartAt: occurrence.originalStartAt,
-    participants: occurrence.participants ?? null,
-    rsvpCount: occurrence.rsvpCount ?? null,
-    startAt: occurrence.startAt,
-    status: occurrence.status,
-    timezone: occurrence.timezone,
+    eventSeriesId: occurrence?.eventSeriesId ?? event.eventId,
+    isException: occurrence?.isException ?? false,
+    myRsvp: occurrence?.myRsvp ?? event.myRsvp ?? null,
+    occurrenceId: occurrence?.occurrenceId ?? `synthetic:${event.eventId}`,
+    occurrenceKey: occurrence?.occurrenceKey ?? `synthetic:${event.eventId}`,
+    originalStartAt: occurrence?.originalStartAt ?? resolvedStartAt,
+    participants: occurrence?.participants ?? null,
+    rsvpCount: occurrence?.rsvpCount ?? event.rsvpCount ?? null,
+    startAt: resolvedStartAt,
+    status: occurrence?.status ?? EventOccurrenceStatus.Scheduled,
+    timezone: occurrence?.timezone ?? event.primarySchedule?.timezone ?? 'UTC',
   } as MobileEventOccurrence;
 }

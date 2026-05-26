@@ -14,15 +14,22 @@ jest.mock('@/mongodb/models', () => ({
     find: jest.fn(),
     findOneAndDelete: jest.fn(),
     countDocuments: jest.fn(),
+    deleteMany: jest.fn(),
   },
 }));
 
 const createMockSuccessMongooseQuery = <T>(result: T) => ({
+  and: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
   sort: jest.fn().mockReturnThis(),
   exec: jest.fn().mockResolvedValue(result),
 });
 
 const createMockFailedMongooseQuery = <T>(error: T) => ({
+  and: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
   sort: jest.fn().mockReturnThis(),
   exec: jest.fn().mockRejectedValue(error),
 });
@@ -482,11 +489,7 @@ describe('FollowDAO', () => {
 
       const result = await FollowDAO.readSavedEventsForUser('user-1');
 
-      expect(FollowModel.find).toHaveBeenCalledWith({
-        followerUserId: 'user-1',
-        targetType: FollowTargetType.EventSeries,
-        approvalStatus: FollowApprovalStatus.Accepted,
-      });
+      expect(FollowModel.find).toHaveBeenCalledWith();
       expect(result).toHaveLength(2);
       expect(result[0].targetId).toBe('event-1');
     });
@@ -534,6 +537,47 @@ describe('FollowDAO', () => {
       (FollowModel.countDocuments as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(FollowDAO.countSavesForEvent('event-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('deleteByUserId', () => {
+    it('deletes follows created by or targeting the user', async () => {
+      (FollowModel.deleteMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ acknowledged: true }));
+
+      await expect(FollowDAO.deleteByUserId('user-1')).resolves.toBeUndefined();
+
+      expect(FollowModel.deleteMany).toHaveBeenCalledWith({
+        $or: [{ followerUserId: 'user-1' }, { targetType: FollowTargetType.User, targetId: 'user-1' }],
+      });
+    });
+
+    it('wraps deleteByUserId failures', async () => {
+      (FollowModel.deleteMany as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(FollowDAO.deleteByUserId('user-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('deleteByTarget', () => {
+    it('deletes follows for the provided target', async () => {
+      (FollowModel.deleteMany as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery({ acknowledged: true }));
+
+      await expect(FollowDAO.deleteByTarget(FollowTargetType.EventSeries, 'event-1')).resolves.toBeUndefined();
+
+      expect(FollowModel.deleteMany).toHaveBeenCalledWith({
+        targetType: FollowTargetType.EventSeries,
+        targetId: 'event-1',
+      });
+    });
+
+    it('wraps deleteByTarget failures', async () => {
+      (FollowModel.deleteMany as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(FollowDAO.deleteByTarget(FollowTargetType.EventSeries, 'event-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });

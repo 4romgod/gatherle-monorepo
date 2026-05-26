@@ -1,0 +1,388 @@
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { SortOrderInput } from '@/data/graphql/types/graphql';
+import { useHostedEventsByUser } from '@/hooks/useHostedEventsByUser';
+import { useMyEventOccurrenceRsvps } from '@/hooks/useMyEventOccurrenceRsvps';
+import { useSavedEvents } from '@/hooks/useSavedEvents';
+import { useUserEventOccurrences } from '@/hooks/useUserEventOccurrences';
+
+const useLazyQueryMock = jest.fn();
+const useQueryMock = jest.fn();
+const loggerErrorMock = jest.fn();
+
+jest.mock('@apollo/client', () => ({
+  useLazyQuery: (...args: unknown[]) => useLazyQueryMock(...args),
+  useQuery: (...args: unknown[]) => useQueryMock(...args),
+}));
+
+jest.mock('@/lib/utils/auth', () => ({
+  getAuthHeader: jest.fn((token?: string | null) => (token ? { Authorization: `Bearer ${token}` } : {})),
+}));
+
+jest.mock('@/lib/utils', () => ({
+  logger: {
+    error: (...args: unknown[]) => loggerErrorMock(...args),
+  },
+}));
+
+describe('event collection hooks', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('useHostedEventsByUser', () => {
+    const createHostedEvent = (eventId: string) =>
+      ({
+        eventId,
+        title: eventId,
+        slug: eventId,
+        primarySchedule: {
+          anchorStartAt: '2026-05-25T10:00:00.000Z',
+        },
+      }) as any;
+
+    it('does not request data when disabled or missing a userId', async () => {
+      const loadEvents = jest.fn();
+      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+
+      const { result, rerender } = renderHook(
+        ({ userId, enabled }: { userId?: string; enabled?: boolean }) =>
+          useHostedEventsByUser(userId, 'token', { enabled }),
+        {
+          initialProps: { userId: undefined, enabled: true },
+        },
+      );
+
+      await act(async () => {});
+      expect(result.current.events).toEqual([]);
+      expect(result.current.hasMore).toBe(false);
+      expect(loadEvents).not.toHaveBeenCalled();
+
+      rerender({ userId: 'user-1', enabled: false });
+      await act(async () => {});
+      expect(loadEvents).not.toHaveBeenCalled();
+    });
+
+    it('loads the first page and uses hosted query options', async () => {
+      const loadEvents = jest.fn().mockResolvedValue({
+        data: {
+          readEvents: [createHostedEvent('event-1'), createHostedEvent('event-2')],
+        },
+      });
+      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
+
+      await waitFor(() => expect(result.current.events).toHaveLength(2));
+      expect(result.current.hasMore).toBe(true);
+      expect(loadEvents).toHaveBeenCalledWith({
+        context: { headers: { Authorization: 'Bearer token' } },
+        variables: {
+          options: {
+            filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+            pagination: { limit: 2, skip: 0 },
+            sort: [{ field: 'createdAt', order: SortOrderInput.Desc }],
+          },
+        },
+      });
+    });
+
+    it('loads additional pages, dedupes event ids, and advances pagination', async () => {
+      const loadEvents = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: [createHostedEvent('event-1'), createHostedEvent('event-2')],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: [createHostedEvent('event-2'), createHostedEvent('event-3')],
+          },
+        });
+      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
+
+      await waitFor(() => expect(result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.events.map((event) => event.eventId)).toEqual(['event-1', 'event-2', 'event-3']);
+      expect(loadEvents).toHaveBeenLastCalledWith({
+        context: { headers: { Authorization: 'Bearer token' } },
+        variables: {
+          options: {
+            filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+            pagination: { limit: 2, skip: 2 },
+            sort: [{ field: 'createdAt', order: SortOrderInput.Desc }],
+          },
+        },
+      });
+    });
+
+    it('surfaces refresh and load-more errors', async () => {
+      const loadEvents = jest.fn().mockRejectedValueOnce('bad-refresh');
+      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token'));
+
+      await waitFor(() => expect(result.current.error?.message).toBe('Unable to load hosted events right now.'));
+      expect(loggerErrorMock).toHaveBeenCalled();
+
+      const loadMoreError = new Error('load more failed');
+      const loadMoreFn = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: Array.from({ length: 18 }, (_, index) => createHostedEvent(`event-${index}`)),
+          },
+        })
+        .mockRejectedValueOnce(loadMoreError);
+      useLazyQueryMock.mockReturnValue([loadMoreFn, { loading: false }]);
+
+      const secondHook = renderHook(() => useHostedEventsByUser('user-1', 'token'));
+      await waitFor(() => expect(secondHook.result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await secondHook.result.current.loadMore();
+      });
+
+      expect(secondHook.result.current.error).toBe(loadMoreError);
+      expect(loggerErrorMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('useMyEventOccurrenceRsvps', () => {
+    const futureStart = '2026-06-01T10:00:00.000Z';
+    const futureEnd = '2026-06-01T12:00:00.000Z';
+    const pastStart = '2026-04-01T10:00:00.000Z';
+    const pastEnd = '2026-04-01T12:00:00.000Z';
+
+    const makeRsvp = (occurrenceId: string, startAt: string, endAt: string, includeEventSeries = true) =>
+      ({
+        participantId: `participant-${occurrenceId}`,
+        occurrenceId,
+        status: 'Going',
+        quantity: 1,
+        occurrence: includeEventSeries
+          ? {
+              occurrenceId,
+              eventSeriesId: `series-${occurrenceId}`,
+              startAt,
+              endAt,
+              participants: [],
+              eventSeries: {
+                eventId: `event-${occurrenceId}`,
+                title: occurrenceId,
+                slug: occurrenceId,
+              },
+            }
+          : null,
+      }) as any;
+
+    it('requests paginated RSVPs, filters invalid previews, and splits upcoming/past events', () => {
+      useQueryMock.mockReturnValue({
+        data: {
+          myEventOccurrenceRsvps: [
+            makeRsvp('future', futureStart, futureEnd),
+            makeRsvp('past', pastStart, pastEnd),
+            makeRsvp('ignored', futureStart, futureEnd, false),
+          ],
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      const { result } = renderHook(() => useMyEventOccurrenceRsvps('token', true, { limit: 10, skip: 5 }));
+
+      expect(useQueryMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          variables: {
+            includeCancelled: true,
+            options: {
+              pagination: {
+                limit: 10,
+                skip: 5,
+              },
+            },
+          },
+          skip: false,
+        }),
+      );
+      expect(result.current.events).toHaveLength(2);
+      expect(result.current.upcomingEvents.map((event) => event.occurrenceId)).toEqual(['future']);
+      expect(result.current.pastEvents.map((event) => event.occurrenceId)).toEqual(['past']);
+    });
+
+    it('skips the query when disabled or token is missing', () => {
+      useQueryMock.mockReturnValue({
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      renderHook(() => useMyEventOccurrenceRsvps(undefined, false));
+      expect(useQueryMock).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+
+      renderHook(() => useMyEventOccurrenceRsvps('token', false, { enabled: false, limit: 4 }));
+      expect(useQueryMock).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          skip: true,
+          variables: {
+            includeCancelled: false,
+            options: {
+              pagination: {
+                limit: 4,
+                skip: 0,
+              },
+            },
+          },
+        }),
+      );
+    });
+  });
+
+  describe('useSavedEvents', () => {
+    const makeSavedEvent = (eventId: string, anchorStartAt: string | null) =>
+      ({
+        eventId,
+        title: eventId,
+        slug: eventId,
+        primarySchedule: anchorStartAt
+          ? {
+              anchorStartAt,
+            }
+          : null,
+      }) as any;
+
+    it('filters null follow targets, sorts by start time, and passes pagination options', () => {
+      useQueryMock.mockReturnValue({
+        data: {
+          readSavedEvents: [
+            { targetEvent: makeSavedEvent('later', '2026-06-02T10:00:00.000Z') },
+            { targetEvent: null },
+            { targetEvent: makeSavedEvent('earlier', '2026-06-01T10:00:00.000Z') },
+            { targetEvent: makeSavedEvent('missing', null) },
+          ],
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      const { result } = renderHook(() => useSavedEvents('token', { limit: 3, skip: 6 }));
+
+      expect(useQueryMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          variables: {
+            options: {
+              pagination: {
+                limit: 3,
+                skip: 6,
+              },
+            },
+          },
+          skip: false,
+        }),
+      );
+      expect(result.current.savedEvents.map((event) => event.eventId)).toEqual(['earlier', 'later', 'missing']);
+    });
+
+    it('skips when token is missing and returns an empty list when no data exists', () => {
+      useQueryMock.mockReturnValue({
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      const { result } = renderHook(() => useSavedEvents(undefined));
+
+      expect(result.current.savedEvents).toEqual([]);
+      expect(useQueryMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          skip: true,
+          variables: {
+            options: undefined,
+          },
+        }),
+      );
+    });
+  });
+
+  describe('useUserEventOccurrences', () => {
+    it('requests paginated occurrences and partitions upcoming/past events', () => {
+      useQueryMock.mockReturnValue({
+        data: {
+          readUserEventOccurrences: [
+            {
+              occurrenceId: 'upcoming',
+              startAt: '2026-06-10T10:00:00.000Z',
+              endAt: '2026-06-10T12:00:00.000Z',
+            },
+            {
+              occurrenceId: 'past',
+              startAt: '2026-04-10T10:00:00.000Z',
+              endAt: '2026-04-10T12:00:00.000Z',
+            },
+          ],
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      const { result } = renderHook(() => useUserEventOccurrences('user-1', 'token', { limit: 8, skip: 4 }));
+
+      expect(useQueryMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          variables: {
+            userId: 'user-1',
+            options: {
+              pagination: {
+                limit: 8,
+                skip: 4,
+              },
+            },
+          },
+          skip: false,
+        }),
+      );
+      expect(result.current.upcomingEvents.map((occurrence) => occurrence.occurrenceId)).toEqual(['upcoming']);
+      expect(result.current.pastEvents.map((occurrence) => occurrence.occurrenceId)).toEqual(['past']);
+    });
+
+    it('skips the query when disabled or the userId is missing', () => {
+      useQueryMock.mockReturnValue({
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      });
+
+      renderHook(() => useUserEventOccurrences(undefined, 'token'));
+      expect(useQueryMock).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ skip: true }));
+
+      renderHook(() => useUserEventOccurrences('user-1', 'token', { enabled: false }));
+      expect(useQueryMock).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          skip: true,
+          variables: {
+            userId: 'user-1',
+            options: undefined,
+          },
+        }),
+      );
+    });
+  });
+});

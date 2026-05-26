@@ -16,8 +16,8 @@ export const GetMyEventOccurrenceRsvpStatusDocument = graphql(`
 `);
 
 export const GetMyEventOccurrenceRsvpsDocument = graphql(`
-  query GetMyEventOccurrenceRsvps($includeCancelled: Boolean = false) {
-    myEventOccurrenceRsvps(includeCancelled: $includeCancelled) {
+  query GetMyEventOccurrenceRsvps($includeCancelled: Boolean = false, $options: QueryOptionsInput) {
+    myEventOccurrenceRsvps(includeCancelled: $includeCancelled, options: $options) {
       participantId
       occurrenceId
       userId
@@ -98,8 +98,8 @@ export const GetMyEventOccurrenceRsvpsDocument = graphql(`
 `);
 
 export const GetUserEventOccurrencesDocument = graphql(`
-  query GetUserEventOccurrences($userId: String!) {
-    readUserEventOccurrences(userId: $userId) {
+  query GetUserEventOccurrences($userId: String!, $options: QueryOptionsInput) {
+    readUserEventOccurrences(userId: $userId, options: $options) {
       occurrenceId
       occurrenceKey
       eventSeriesId

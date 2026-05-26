@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import React, { useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { Box, Button, Grid, Stack, Typography } from '@mui/material';
@@ -8,15 +8,11 @@ import { Edit as EditIcon } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
   FollowTargetType,
-  GetEventsDocument,
-  GetMyEventOccurrenceRsvpsDocument,
   GetMyRsvpsDocument,
-  GetSavedEventsDocument,
   GetUserByUsernameDocument,
-  ParticipantStatus,
   SocialVisibility,
 } from '@/data/graphql/types/graphql';
-import { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/Event/types';
+import { EventPreview } from '@/data/graphql/query/Event/types';
 import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
@@ -24,19 +20,16 @@ import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton'
 import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
 import { ROUTES, BUTTON_STYLES, SPACING } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
-import { logger } from '@/lib/utils';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { useFollowing } from '@/hooks/useFollow';
+import { useHostedEventsByUser } from '@/hooks/useHostedEventsByUser';
+import { useMyEventOccurrenceRsvps } from '@/hooks/useMyEventOccurrenceRsvps';
+import { useSavedEvents } from '@/hooks/useSavedEvents';
+import { useUserEventOccurrences } from '@/hooks/useUserEventOccurrences';
 import ErrorPage from '@/components/errors/ErrorPage';
-import {
-  AnyEventPreview,
-  getEventPreviewStartAt,
-  getEventPreviewTitle,
-  isEventPreviewUpcoming,
-  projectOccurrenceRsvpToEventPreview,
-} from '@/components/events/event-preview-utils';
+import { AnyEventPreview } from '@/components/events/event-preview-utils';
 
 interface UserProfilePageClientProps {
   username: string;
@@ -63,41 +56,12 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     return set;
   }, [following]);
 
-  const compareByPreviewDate = useCallback((left: AnyEventPreview, right: AnyEventPreview) => {
-    const leftStartAt = getEventPreviewStartAt(left);
-    const rightStartAt = getEventPreviewStartAt(right);
-
-    const leftTimestamp = leftStartAt ? new Date(leftStartAt).getTime() : Number.POSITIVE_INFINITY;
-    const rightTimestamp = rightStartAt ? new Date(rightStartAt).getTime() : Number.POSITIVE_INFINITY;
-
-    if (leftTimestamp !== rightTimestamp) {
-      return leftTimestamp - rightTimestamp;
-    }
-
-    return getEventPreviewTitle(left).localeCompare(getEventPreviewTitle(right));
-  }, []);
-
   const {
     data: userData,
     loading: userLoading,
     error: userError,
   } = useQuery(GetUserByUsernameDocument, {
     variables: { username },
-    fetchPolicy: 'cache-and-network',
-  });
-
-  const {
-    data: eventsData,
-    loading: eventsLoading,
-    error: eventsError,
-  } = useQuery(GetEventsDocument, {
-    fetchPolicy: 'cache-and-network',
-    context: { headers: getAuthHeader(token) },
-  });
-
-  const { data: savedData, loading: savedLoading } = useQuery(GetSavedEventsDocument, {
-    skip: !isOwnProfile || !token,
-    context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
 
@@ -108,26 +72,34 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     fetchPolicy: 'cache-and-network',
   });
 
-  const { data: myOccurrenceRsvpsData, loading: myOccurrenceRsvpsLoading } = useQuery(
-    GetMyEventOccurrenceRsvpsDocument,
-    {
-      variables: { includeCancelled: false },
-      skip: !isOwnProfile || !token,
-      context: { headers: getAuthHeader(token) },
-      fetchPolicy: 'cache-and-network',
-    },
-  );
-
   const user = userData?.readUserByUsername ?? null;
-  const events = (eventsData?.readEvents ?? []) as EventPreview[];
-  const savedEvents = useMemo(
-    () =>
-      (savedData?.readSavedEvents ?? [])
-        .map((follow) => follow.targetEvent)
-        .filter((event): event is EventPreview => Boolean(event))
-        .sort(compareByPreviewDate) as EventPreview[],
-    [compareByPreviewDate, savedData],
-  );
+  const {
+    error: hostedEventsError,
+    hostedEvents,
+    hasMore: hostedEventsHasMore,
+    loading: hostedEventsLoading,
+    loadingMore: hostedEventsLoadingMore,
+    loadMore: loadMoreHostedEvents,
+  } = useHostedEventsByUser(user?.userId, token);
+  const {
+    error: participantEventsError,
+    loading: participantEventsLoading,
+    occurrences: participantOccurrences,
+    pastEvents: participantPastEvents,
+    upcomingEvents: participantUpcomingEvents,
+  } = useUserEventOccurrences(user?.userId, token, { enabled: !isOwnProfile });
+  const {
+    error: savedEventsError,
+    loading: savedLoading,
+    savedEvents,
+  } = useSavedEvents(token, { enabled: isOwnProfile });
+  const {
+    error: myOccurrenceRsvpsError,
+    loading: myOccurrenceRsvpsLoading,
+    pastEvents: myPastRsvpEvents,
+    upcomingEvents: myUpcomingRsvpEvents,
+    events: myOccurrenceRsvpEvents,
+  } = useMyEventOccurrenceRsvps(token, false, { enabled: isOwnProfile });
 
   const viewerCanSeeProfile = Boolean(
     user &&
@@ -151,56 +123,16 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   );
 
   const allRsvpdEventPreviews = useMemo<AnyEventPreview[]>(() => {
-    if (isOwnProfile && myOccurrenceRsvpsData?.myEventOccurrenceRsvps) {
-      return myOccurrenceRsvpsData.myEventOccurrenceRsvps
-        .map((rsvp) => {
-          const preview = projectOccurrenceRsvpToEventPreview(rsvp);
-          if (!preview) {
-            logger.warn(
-              'UserProfilePageClient: myEventOccurrenceRsvps entry without associated occurrence encountered',
-            );
-          }
-          return preview;
-        })
-        .filter((preview): preview is EventOccurrencePreview => preview != null);
+    if (isOwnProfile) {
+      return myOccurrenceRsvpEvents;
     }
 
-    return events.filter((event) =>
-      event.participants?.some((p) => p.userId === user?.userId && p.status !== ParticipantStatus.Cancelled),
-    ) as AnyEventPreview[];
-  }, [isOwnProfile, myOccurrenceRsvpsData, events, user?.userId]);
+    return participantOccurrences;
+  }, [isOwnProfile, myOccurrenceRsvpEvents, participantOccurrences]);
 
-  const upcomingRsvpdEvents = useMemo<AnyEventPreview[]>(
-    () =>
-      allRsvpdEventPreviews
-        .filter((event) => isEventPreviewUpcoming(event))
-        .sort((left, right) => {
-          if ('occurrenceId' in left && 'occurrenceId' in right) {
-            return new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
-          }
-          return 0;
-        }),
-    [allRsvpdEventPreviews],
-  );
-  const pastRsvpdEvents = useMemo<AnyEventPreview[]>(
-    () =>
-      allRsvpdEventPreviews
-        .filter((event) => !isEventPreviewUpcoming(event))
-        .sort((left, right) => {
-          if ('occurrenceId' in left && 'occurrenceId' in right) {
-            return new Date(right.startAt).getTime() - new Date(left.startAt).getTime();
-          }
-          return 0;
-        }),
-    [allRsvpdEventPreviews],
-  );
-  const organizedEvents = useMemo(
-    () =>
-      events
-        .filter((event) => event.organizers.some((organizer) => organizer.user.userId === user?.userId))
-        .sort(compareByPreviewDate),
-    [compareByPreviewDate, events, user?.userId],
-  );
+  const upcomingRsvpdEvents = isOwnProfile ? myUpcomingRsvpEvents : participantUpcomingEvents;
+  const pastRsvpdEvents = isOwnProfile ? myPastRsvpEvents : participantPastEvents;
+  const organizedEventsForMoments = hostedEvents;
 
   // Moments ring needs ALL events the user was ever a participant in (including cancelled RSVPs)
   // because moments persist after RSVP cancellation.
@@ -208,25 +140,31 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     if (isOwnProfile && myRsvpsData?.myRsvps) {
       return myRsvpsData.myRsvps.map((r) => r.event).filter((e): e is EventPreview => e != null);
     }
-    // For other profiles include any participant status (including Cancelled)
-    return events.filter((event) => event.participants?.some((p) => p.userId === user?.userId));
-  }, [isOwnProfile, myRsvpsData, events, user?.userId]);
+    return participantOccurrences.flatMap((occurrence) => (occurrence.eventSeries ? [occurrence.eventSeries] : []));
+  }, [isOwnProfile, myRsvpsData, participantOccurrences]);
 
   const profileMomentEvents = useMemo(() => {
     const byId = new Map<string, { eventId: string; title: string }>();
-    [...organizedEvents, ...allRsvpdEventsForMoments].forEach((e) => {
+    [...organizedEventsForMoments, ...allRsvpdEventsForMoments].forEach((e) => {
       if (!byId.has(e.eventId)) {
         byId.set(e.eventId, { eventId: e.eventId, title: e.title });
       }
     });
     return Array.from(byId.values());
-  }, [organizedEvents, allRsvpdEventsForMoments]);
+  }, [organizedEventsForMoments, allRsvpdEventsForMoments]);
 
   const interests = user?.interests ?? [];
 
   const isLoading =
-    userLoading || eventsLoading || (isOwnProfile && (savedLoading || myRsvpsLoading || myOccurrenceRsvpsLoading));
-  const hasError = userError || eventsError;
+    userLoading ||
+    hostedEventsLoading ||
+    participantEventsLoading ||
+    (isOwnProfile && (savedLoading || myRsvpsLoading || myOccurrenceRsvpsLoading));
+  const hasError =
+    userError ||
+    hostedEventsError ||
+    participantEventsError ||
+    (isOwnProfile ? savedEventsError || myOccurrenceRsvpsError : null);
   const notFoundError = isNotFoundGraphQLError(userError);
 
   if (notFoundError) {
@@ -298,7 +236,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
                   displayName={getDisplayName(user)}
                   initialFollowersCount={user.followersCount ?? 0}
                   initialFollowingCount={0}
-                  organizedEventsCount={organizedEvents.length}
+                  organizedEventsCount={hostedEvents.length}
                   rsvpdEventsCount={allRsvpdEventPreviews.length}
                   savedEventsCount={savedEvents.length}
                   interestsCount={interests.length}
@@ -362,14 +300,23 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
               <Grid container spacing={SPACING.standard}>
                 {/* ── Main content: tabbed events ── */}
                 <Grid size={{ xs: 12 }}>
-                  <ProfileEventsTabs
-                    upcomingRsvpdEvents={upcomingRsvpdEvents}
-                    pastRsvpdEvents={pastRsvpdEvents}
-                    organizedEvents={organizedEvents}
-                    savedEvents={savedEvents}
-                    isOwnProfile={isOwnProfile}
-                    emptyCreatedCta={emptyCreatedCTA}
-                  />
+                  {hostedEventsError ? (
+                    <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
+                      We couldn&apos;t load this member&apos;s hosted events right now.
+                    </Typography>
+                  ) : (
+                    <ProfileEventsTabs
+                      upcomingRsvpdEvents={upcomingRsvpdEvents}
+                      pastRsvpdEvents={pastRsvpdEvents}
+                      organizedEvents={hostedEvents}
+                      organizedEventsHasMore={hostedEventsHasMore}
+                      organizedEventsLoadingMore={hostedEventsLoadingMore}
+                      onLoadMoreOrganized={loadMoreHostedEvents}
+                      savedEvents={savedEvents}
+                      isOwnProfile={isOwnProfile}
+                      emptyCreatedCta={emptyCreatedCTA}
+                    />
+                  )}
                 </Grid>
               </Grid>
             </Box>

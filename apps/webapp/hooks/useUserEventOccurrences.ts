@@ -1,17 +1,21 @@
+'use client';
+
 import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
-import { GetUserEventOccurrencesDocument } from '@data/graphql/query/EventOccurrenceParticipant/query';
-import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
-import { getApolloAuthContext } from '@/lib/auth';
+import { GetUserEventOccurrencesDocument } from '@/data/graphql/query/EventOccurrenceParticipant/query';
+import type { GetUserEventOccurrencesQuery } from '@/data/graphql/types/graphql';
 import {
   buildCollectionPagination,
   splitItemsByEventTime,
   type CollectionQueryPaginationOptions,
-} from '@/lib/events/eventCollections';
+} from '@/lib/utils/eventCollections';
+import { getAuthHeader } from '@/lib/utils/auth';
+
+type UserOccurrencePreview = NonNullable<GetUserEventOccurrencesQuery['readUserEventOccurrences']>[number];
 
 export function useUserEventOccurrences(
   userId: string | undefined,
-  authToken: string | null,
+  token?: string | null,
   options: CollectionQueryPaginationOptions = {},
 ) {
   const { enabled = true, limit, skip } = options;
@@ -22,10 +26,11 @@ export function useUserEventOccurrences(
       userId: userId ?? '',
       options: buildCollectionPagination(limit, skip),
     },
-    ...getApolloAuthContext(authToken),
+    context: { headers: getAuthHeader(token) },
   });
 
-  const occurrences = useMemo<MobileEventOccurrence[]>(() => data?.readUserEventOccurrences ?? [], [data]);
+  const occurrences = useMemo(() => (data?.readUserEventOccurrences ?? []) as UserOccurrencePreview[], [data]);
+
   const { past, upcoming } = useMemo(
     () =>
       splitItemsByEventTime(

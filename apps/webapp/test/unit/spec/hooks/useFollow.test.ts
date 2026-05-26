@@ -177,6 +177,25 @@ describe('useFollow and related hooks', () => {
     expect(result.current.refetch).toBe(refetch);
   });
 
+  it('skips muted users query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    renderHook(() => useMutedUsers());
+
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        skip: true,
+      }),
+    );
+  });
+
   it('provides mute/unmute helpers for organizations', async () => {
     const muteMutation = jest.fn().mockResolvedValue({});
     const unmuteMutation = jest.fn().mockResolvedValue({});
@@ -212,6 +231,25 @@ describe('useFollow and related hooks', () => {
 
     expect(result.current.mutedOrgIds).toEqual(['org-1', 'org-2']);
     expect(result.current.refetch).toBe(refetch);
+  });
+
+  it('skips muted organizations query when token is missing', () => {
+    mockUseSession.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    renderHook(() => useMutedOrganizations());
+
+    expect(useQueryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        skip: true,
+      }),
+    );
   });
 
   it('allows removing followers', async () => {

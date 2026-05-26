@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
@@ -16,11 +16,13 @@ import { StateNotice } from '@/components/core/StateNotice';
 import { SwipePagerTabs } from '@/components/core/SwipePagerTabs';
 import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
 import { MomentViewer } from '@/components/moments/MomentViewer';
-import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
+import { useMyEventOccurrenceRsvps } from '@/hooks/events/useMyEventOccurrenceRsvps';
+import { useSavedEvents } from '@/hooks/events/useSavedEvents';
 import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
-import { dedupeOccurrencesBySeries, getDisplayName } from '@/lib/events/formatters';
+import { getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 
@@ -32,7 +34,6 @@ export function AccountScreen() {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const [momentsOpen, setMomentsOpen] = useState(false);
-  const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
   const {
     error: profileError,
     loading: profileLoading,
@@ -41,31 +42,47 @@ export function AccountScreen() {
   } = usePreviewProfile(username, isAuthenticated);
   const profileUserId = profile?.userId ?? userId ?? undefined;
   const { moments: userMoments } = useUserMoments(isAuthenticated ? profileUserId : undefined, authToken);
+  const {
+    error: hostedEventsError,
+    hostedEvents,
+    hasMore: hostedEventsHasMore,
+    loading: hostedEventsLoading,
+    loadingMore: hostedEventsLoadingMore,
+    loadMore: loadMoreHostedEvents,
+    refetch: refetchHostedEvents,
+  } = useHostedEventsByUser(profileUserId, authToken);
+  const {
+    error: myOccurrenceRsvpsError,
+    loading: myOccurrenceRsvpsLoading,
+    pastEvents: pastRsvpEvents,
+    refetch: refetchMyOccurrenceRsvps,
+    upcomingEvents: upcomingRsvpEvents,
+  } = useMyEventOccurrenceRsvps(authToken, false);
+  const {
+    error: savedEventsError,
+    loading: savedEventsLoading,
+    refetch: refetchSavedEvents,
+    savedEvents,
+  } = useSavedEvents(authToken);
   const profileName = getDisplayName(profile);
-  const profileEventsCount = useMemo(
-    () => dedupeOccurrencesBySeries([...upcomingEvents, ...trendingEvents]).length,
-    [trendingEvents, upcomingEvents],
-  );
+  const profileEventsCount = hostedEvents.length;
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const profileTileSize = useMemo(() => Math.floor((width - 40 - 12) / 3), [width]);
 
   const eventCollections = useMemo<Record<AccountTab, MobileEventOccurrence[]>>(
     () => ({
-      going: upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status).slice(0, 6),
-      past: trendingEvents.slice(0, 4),
-      hosting: dedupeOccurrencesBySeries(
-        [...upcomingEvents, ...trendingEvents].filter((occurrence) =>
-          occurrence.eventSeries?.organizers?.some((organizer) => organizer.user?.userId === userId),
-        ),
-        6,
-      ),
-      saved: dedupeOccurrencesBySeries(
-        [...trendingEvents, ...upcomingEvents].filter((occurrence) => occurrence.eventSeries?.isSavedByMe),
-        6,
-      ),
+      going: upcomingRsvpEvents,
+      past: pastRsvpEvents,
+      hosting: hostedEvents,
+      saved: savedEvents,
     }),
-    [trendingEvents, upcomingEvents, userId],
+    [hostedEvents, pastRsvpEvents, savedEvents, upcomingRsvpEvents],
   );
+  const eventCollectionsLoading = hostedEventsLoading || myOccurrenceRsvpsLoading || savedEventsLoading;
+  const eventCollectionsError = hostedEventsError || myOccurrenceRsvpsError || savedEventsError;
+  const refetchEventCollections = useCallback(async () => {
+    await Promise.all([refetchHostedEvents(), refetchMyOccurrenceRsvps(), refetchSavedEvents()]);
+  }, [refetchHostedEvents, refetchMyOccurrenceRsvps, refetchSavedEvents]);
 
   const accountRoutes = useMemo(
     () =>
@@ -89,14 +106,25 @@ export function AccountScreen() {
                     ? 'Hosting activity will appear here when your events go live.'
                     : 'Saved events will show here as you bookmark more plans.'
             }
-            loading={loading}
+            hasMore={route.key === 'hosting' ? hostedEventsHasMore : false}
+            loading={eventCollectionsLoading}
+            loadingMore={route.key === 'hosting' ? hostedEventsLoadingMore : false}
+            onLoadMore={route.key === 'hosting' ? loadMoreHostedEvents : undefined}
             onPressEvent={(occurrence) => navigation.navigate('EventDetails', { occurrence })}
             occurrences={eventCollections[route.key]}
             tileSize={profileTileSize}
           />
         ),
       })),
-    [eventCollections, loading, navigation, profileTileSize],
+    [
+      eventCollections,
+      eventCollectionsLoading,
+      hostedEventsHasMore,
+      hostedEventsLoadingMore,
+      loadMoreHostedEvents,
+      navigation,
+      profileTileSize,
+    ],
   );
 
   if (!isAuthenticated) {
@@ -211,11 +239,11 @@ export function AccountScreen() {
         <ProfileActionButton icon="settings" label="Settings" onPress={() => navigation.navigate('Settings')} />
       </View>
 
-      {error ? (
+      {eventCollectionsError ? (
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load your account event collections."
-          onPressAction={() => void refetch()}
+          onPressAction={() => void refetchEventCollections()}
         />
       ) : (
         <SwipePagerTabs routes={accountRoutes} variant="icon" />
@@ -230,17 +258,25 @@ export function AccountScreen() {
 
 function AccountTabPane({
   emptyMessage,
+  hasMore = false,
   loading,
+  loadingMore = false,
+  onLoadMore,
   occurrences,
   onPressEvent,
   tileSize,
 }: {
   emptyMessage: string;
+  hasMore?: boolean;
   loading: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   occurrences: MobileEventOccurrence[];
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
   tileSize: number;
 }) {
+  const { theme } = useAppTheme();
+
   if (loading && occurrences.length === 0) {
     return <StateNotice message="Loading your account activity..." />;
   }
@@ -250,15 +286,35 @@ function AccountTabPane({
   }
 
   return (
-    <View style={styles.profileEventGrid}>
-      {occurrences.map((event) => (
-        <ProfileEventTile
-          key={event.occurrenceId}
-          occurrence={event}
-          onPress={() => onPressEvent(event)}
-          size={tileSize}
-        />
-      ))}
+    <View style={styles.profileEventsSection}>
+      <View style={styles.profileEventGrid}>
+        {occurrences.map((event) => (
+          <ProfileEventTile
+            key={event.occurrenceId}
+            occurrence={event}
+            onPress={() => onPressEvent(event)}
+            size={tileSize}
+          />
+        ))}
+      </View>
+      {hasMore ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onLoadMore}
+          style={({ pressed }) => [
+            styles.loadMoreButton,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              opacity: pressed ? 0.84 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.loadMoreButtonText, { color: theme.colors.textPrimary }]}>
+            {loadingMore ? 'Loading more…' : 'Show more events'}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -267,6 +323,18 @@ const styles = StyleSheet.create({
   avatarButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadMoreButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  loadMoreButtonText: {
+    ...typography.bodySemiBold,
+    fontSize: 14,
   },
   profileBio: {
     ...typography.bodyRegular,
@@ -278,6 +346,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
     marginTop: -14,
+  },
+  profileEventsSection: {
+    gap: 4,
   },
   profileBadgesRow: {
     flexDirection: 'row',

@@ -87,6 +87,35 @@ export default function SaveEventButton({
   ) : (
     <BookmarkBorder />
   );
+  const mergeSx = (base: SxProps<Theme>): SxProps<Theme> => {
+    if (!sx) {
+      return base;
+    }
+
+    return Array.isArray(sx) ? ([base, ...sx] as SxProps<Theme>) : ([base, sx] as SxProps<Theme>);
+  };
+  const labeledButtonSx = mergeSx({
+    minHeight: 52,
+    borderRadius: 3,
+    justifyContent: 'center',
+    textTransform: 'none',
+    fontWeight: 700,
+    bgcolor: isSaved ? 'primary.main' : 'transparent',
+    borderColor: isSaved ? 'primary.main' : 'divider',
+    color: isSaved ? 'common.white' : 'text.primary',
+    '&:hover': {
+      bgcolor: isSaved ? 'primary.dark' : 'action.hover',
+      borderColor: isSaved ? 'primary.dark' : 'primary.main',
+    },
+  });
+  const iconButtonSx = mergeSx({
+    color: isSaved ? 'primary.main' : 'text.secondary',
+    bgcolor: isSaved ? 'primary.lighter' : 'transparent',
+    '&:hover': {
+      color: isSaved ? 'primary.dark' : 'primary.main',
+      bgcolor: isSaved ? 'primary.light' : 'action.hover',
+    },
+  });
 
   const button = label ? (
     <Button
@@ -96,38 +125,12 @@ export default function SaveEventButton({
       size={size}
       startIcon={icon}
       variant={isSaved ? 'contained' : 'outlined'}
-      sx={{
-        minHeight: 52,
-        borderRadius: 3,
-        justifyContent: 'center',
-        textTransform: 'none',
-        fontWeight: 700,
-        bgcolor: isSaved ? 'primary.main' : 'transparent',
-        borderColor: isSaved ? 'primary.main' : 'divider',
-        color: isSaved ? 'common.white' : 'text.primary',
-        '&:hover': {
-          bgcolor: isSaved ? 'primary.dark' : 'action.hover',
-          borderColor: isSaved ? 'primary.dark' : 'primary.main',
-        },
-        ...sx,
-      }}
+      sx={labeledButtonSx}
     >
       {label}
     </Button>
   ) : (
-    <IconButton
-      onClick={handleToggleSave}
-      disabled={isLoading}
-      size={size}
-      sx={{
-        color: isSaved ? 'primary.main' : 'text.secondary',
-        bgcolor: isSaved ? 'primary.lighter' : 'transparent',
-        '&:hover': {
-          color: isSaved ? 'primary.dark' : 'primary.main',
-          bgcolor: isSaved ? 'primary.light' : 'action.hover',
-        },
-      }}
-    >
+    <IconButton onClick={handleToggleSave} disabled={isLoading} size={size} sx={iconButtonSx}>
       {icon}
     </IconButton>
   );

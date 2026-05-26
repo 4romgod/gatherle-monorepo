@@ -83,4 +83,25 @@ describe('EventMomentsRing', () => {
 
     expect(onMomentClick).toHaveBeenCalledWith([[baseMoment]], 0);
   });
+
+  it('renders the empty-state helper when the viewer cannot post and there are no moments', () => {
+    mockUseQuery.mockReturnValue({
+      data: { readEventMoments: { items: [] } },
+      loading: false,
+      startPolling,
+      stopPolling,
+    });
+
+    render(
+      <EventMomentsRing
+        eventId="event-1"
+        myRsvpStatus={ParticipantStatus.Interested}
+        onAddClick={jest.fn()}
+        onMomentClick={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Moments from this event will appear here. RSVP as going to post your own.')).toBeTruthy();
+    expect(screen.queryByText('Your moment')).toBeNull();
+  });
 });

@@ -581,5 +581,35 @@ describe('useMigrateSessionState', () => {
       expect(migrationResult.migratedKeys).toEqual(['filter']);
       expect(migrationResult.success).toBe(true);
     });
+
+    it('should return a failed result when localStorage iteration throws', async () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(Storage.prototype, 'length');
+
+      Object.defineProperty(Storage.prototype, 'length', {
+        configurable: true,
+        get() {
+          throw new Error('boom');
+        },
+      });
+
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <MockedProvider mocks={[]} addTypename={false}>
+          {children}
+        </MockedProvider>
+      );
+
+      try {
+        const { result } = renderHook(() => useMigrateSessionState(), { wrapper });
+        const migrationResult = await result.current.migrate(mockToken, mockUserId, namespace);
+
+        expect(migrationResult.success).toBe(false);
+        expect(migrationResult.migratedKeys).toEqual([]);
+        expect(migrationResult.errors).toEqual([]);
+      } finally {
+        if (originalDescriptor) {
+          Object.defineProperty(Storage.prototype, 'length', originalDescriptor);
+        }
+      }
+    });
   });
 });

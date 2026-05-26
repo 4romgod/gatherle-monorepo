@@ -4,6 +4,7 @@ import {
   CancelEventOccurrenceParticipantInput,
   EventOccurrence,
   EventOccurrenceParticipant,
+  QueryOptionsInput,
   User,
   UserRole,
   UpsertEventOccurrenceParticipantInput,
@@ -129,10 +130,11 @@ export class EventOccurrenceParticipantResolver {
   })
   async myEventOccurrenceRsvps(
     @Arg('includeCancelled', () => Boolean, { defaultValue: false }) includeCancelled: boolean,
+    @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrenceParticipant[]> {
     const user = getAuthenticatedUser(context);
-    return EventOccurrenceParticipantService.readByUser(user.userId, !includeCancelled);
+    return EventOccurrenceParticipantService.readByUser(user.userId, !includeCancelled, options);
   }
 
   @FieldResolver(() => User, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.USER })

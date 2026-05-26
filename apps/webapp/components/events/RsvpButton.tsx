@@ -132,6 +132,35 @@ export default function RsvpButton({
   ) : (
     <EventAvailableOutlined />
   );
+  const mergeSx = (base: SxProps<Theme>): SxProps<Theme> => {
+    if (!sx) {
+      return base;
+    }
+
+    return Array.isArray(sx) ? ([base, ...sx] as SxProps<Theme>) : ([base, sx] as SxProps<Theme>);
+  };
+  const labeledButtonSx = mergeSx({
+    minHeight: 52,
+    borderRadius: 3,
+    justifyContent: 'center',
+    textTransform: 'none',
+    fontWeight: 700,
+    bgcolor: hasRsvpd ? 'success.main' : 'transparent',
+    borderColor: hasRsvpd ? 'success.main' : 'divider',
+    color: hasRsvpd ? 'common.white' : 'text.primary',
+    '&:hover': {
+      bgcolor: hasRsvpd ? 'success.dark' : 'action.hover',
+      borderColor: hasRsvpd ? 'success.dark' : 'success.main',
+    },
+  });
+  const iconButtonSx = mergeSx({
+    color: hasRsvpd ? 'success.main' : 'text.secondary',
+    bgcolor: hasRsvpd ? 'success.lighter' : 'transparent',
+    '&:hover': {
+      color: hasRsvpd ? 'success.dark' : 'success.main',
+      bgcolor: hasRsvpd ? 'success.light' : 'action.hover',
+    },
+  });
 
   const button = label ? (
     <Button
@@ -142,21 +171,7 @@ export default function RsvpButton({
       size={size}
       startIcon={icon}
       variant={hasRsvpd ? 'contained' : 'outlined'}
-      sx={{
-        minHeight: 52,
-        borderRadius: 3,
-        justifyContent: 'center',
-        textTransform: 'none',
-        fontWeight: 700,
-        bgcolor: hasRsvpd ? 'success.main' : 'transparent',
-        borderColor: hasRsvpd ? 'success.main' : 'divider',
-        color: hasRsvpd ? 'common.white' : 'text.primary',
-        '&:hover': {
-          bgcolor: hasRsvpd ? 'success.dark' : 'action.hover',
-          borderColor: hasRsvpd ? 'success.dark' : 'success.main',
-        },
-        ...sx,
-      }}
+      sx={labeledButtonSx}
     >
       {label}
     </Button>
@@ -166,15 +181,7 @@ export default function RsvpButton({
       onClick={handleButtonClick}
       disabled={isLoading}
       size={size}
-      sx={{
-        color: hasRsvpd ? 'success.main' : 'text.secondary',
-        bgcolor: hasRsvpd ? 'success.lighter' : 'transparent',
-        '&:hover': {
-          color: hasRsvpd ? 'success.dark' : 'success.main',
-          bgcolor: hasRsvpd ? 'success.light' : 'action.hover',
-        },
-        ...sx,
-      }}
+      sx={iconButtonSx}
       aria-label={tooltipText}
     >
       {icon}

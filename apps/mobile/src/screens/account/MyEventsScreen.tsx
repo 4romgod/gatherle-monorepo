@@ -9,42 +9,43 @@ import { StateNotice } from '@/components/core/StateNotice';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
-import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
+import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
+import { useMyEventOccurrenceRsvps } from '@/hooks/events/useMyEventOccurrenceRsvps';
+import { useSavedEvents } from '@/hooks/events/useSavedEvents';
 
 export function MyEventsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { authToken, isAuthenticated, userId } = useAppShell();
-  const { error, loading, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
+  const {
+    error: hostedEventsError,
+    hostedEvents,
+    loading: hostedEventsLoading,
+    refetch: refetchHostedEvents,
+  } = useHostedEventsByUser(userId ?? undefined, authToken, { pageSize: 6 });
+  const {
+    error: myRsvpEventsError,
+    loading: myRsvpEventsLoading,
+    refetch: refetchMyRsvpEvents,
+    upcomingEvents,
+  } = useMyEventOccurrenceRsvps(authToken, false);
+  const {
+    error: savedEventsError,
+    loading: savedEventsLoading,
+    refetch: refetchSavedEvents,
+    savedEvents,
+  } = useSavedEvents(authToken);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await refetch();
-    }, [refetch]),
+      await Promise.all([refetchHostedEvents(), refetchMyRsvpEvents(), refetchSavedEvents()]);
+    }, [refetchHostedEvents, refetchMyRsvpEvents, refetchSavedEvents]),
   );
 
-  const goingEvents = useMemo(
-    () => upcomingEvents.filter((occurrence) => occurrence.myRsvp?.status).slice(0, 6),
-    [upcomingEvents],
-  );
-  const savedEvents = useMemo(
-    () =>
-      dedupeOccurrencesBySeries(
-        trendingEvents.filter((occurrence) => occurrence.eventSeries?.isSavedByMe),
-        6,
-      ),
-    [trendingEvents],
-  );
-  const hostingEvents = useMemo(
-    () =>
-      dedupeOccurrencesBySeries(
-        [...upcomingEvents, ...trendingEvents].filter((occurrence) =>
-          occurrence.eventSeries?.organizers?.some((organizer) => organizer.user?.userId === userId),
-        ),
-        6,
-      ),
-    [trendingEvents, upcomingEvents, userId],
-  );
+  const goingEvents = useMemo(() => upcomingEvents.slice(0, 6), [upcomingEvents]);
+  const hostingEvents = hostedEvents;
+  const visibleSavedEvents = useMemo(() => savedEvents.slice(0, 6), [savedEvents]);
+  const loading = hostedEventsLoading || myRsvpEventsLoading || savedEventsLoading;
+  const error = hostedEventsError || myRsvpEventsError || savedEventsError;
 
   if (!isAuthenticated) {
     return (
@@ -63,7 +64,7 @@ export function MyEventsScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      {loading && goingEvents.length === 0 && savedEvents.length === 0 && hostingEvents.length === 0 ? (
+      {loading && goingEvents.length === 0 && visibleSavedEvents.length === 0 && hostingEvents.length === 0 ? (
         <View style={styles.sections}>
           <View style={styles.section}>
             <SectionHeading title="Going" />
@@ -85,7 +86,11 @@ export function MyEventsScreen() {
           </View>
         </View>
       ) : error ? (
-        <StateNotice actionLabel="Retry" message="We couldn’t load your events." onPressAction={() => void refetch()} />
+        <StateNotice
+          actionLabel="Retry"
+          message="We couldn’t load your events."
+          onPressAction={() => void onRefresh()}
+        />
       ) : (
         <View style={styles.sections}>
           <View style={styles.section}>
@@ -107,9 +112,9 @@ export function MyEventsScreen() {
 
           <View style={styles.section}>
             <SectionHeading title="Saved" />
-            {savedEvents.length ? (
+            {visibleSavedEvents.length ? (
               <View style={styles.list}>
-                {savedEvents.map((occurrence) => (
+                {visibleSavedEvents.map((occurrence) => (
                   <EventCard
                     key={occurrence.occurrenceId}
                     occurrence={occurrence}
