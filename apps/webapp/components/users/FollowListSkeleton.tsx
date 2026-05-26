@@ -23,13 +23,16 @@ function FollowListItemSkeleton() {
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
           <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
-            <Skeleton variant="text" width="60%" height={24} animation="wave" />
-            <Skeleton variant="text" width="40%" height={20} animation="wave" />
-            <Skeleton variant="text" width="85%" height={18} animation="wave" />
-            <Skeleton variant="text" width="70%" height={18} animation="wave" />
+            <Skeleton variant="text" width="46%" height={24} animation="wave" />
+            <Skeleton variant="text" width="30%" height={20} animation="wave" />
+            <Skeleton variant="text" width="78%" height={18} animation="wave" />
+            <Skeleton variant="text" width="64%" height={18} animation="wave" />
           </Stack>
 
-          <Skeleton variant="rounded" width={90} height={32} animation="wave" sx={{ borderRadius: 2 }} />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Skeleton variant="circular" width={32} height={32} animation="wave" />
+            <Skeleton variant="rounded" width={92} height={32} animation="wave" sx={{ borderRadius: 2 }} />
+          </Stack>
         </Stack>
       </Box>
     </ListItem>

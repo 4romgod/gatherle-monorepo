@@ -18,14 +18,13 @@ export function EventCardSkeleton({ cardWidth = '100%', variant = 'feed' }: Even
         styles.card,
         {
           backgroundColor: theme.colors.surface,
-          borderWidth: 0,
           width: cardWidth,
         },
       ]}
     >
       <View style={[styles.imageShell, isFeatured ? styles.imageFeatured : styles.imageFeed]}>
         <SkeletonBlock style={StyleSheet.absoluteFill} />
-        <SkeletonBlock style={isFeatured ? styles.cityPill : styles.statusPill} />
+        <SkeletonBlock style={styles.overlayPill} />
       </View>
 
       <View style={styles.body}>
@@ -55,10 +54,12 @@ export function EventCardSkeleton({ cardWidth = '100%', variant = 'feed' }: Even
 
         <View style={isFeatured ? styles.featuredFooter : styles.feedFooter}>
           {!isFeatured ? (
-            <View style={styles.avatarStack}>
-              <SkeletonBlock style={styles.avatar} />
-              <SkeletonBlock style={[styles.avatar, styles.avatarOverlap]} />
-              <SkeletonBlock style={[styles.avatar, styles.avatarOverlap]} />
+            <View style={styles.participantsRow}>
+              <View style={styles.avatarStack}>
+                <SkeletonBlock style={styles.avatar} />
+                <SkeletonBlock style={[styles.avatar, styles.avatarOverlap]} />
+                <SkeletonBlock style={[styles.avatar, styles.avatarOverlap]} />
+              </View>
             </View>
           ) : null}
 
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   attendancePill: {
     borderRadius: 999,
     height: 24,
-    width: 88,
+    width: 92,
   },
   avatar: {
     borderRadius: 999,
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
   avatarStack: {
     alignItems: 'center',
     flexDirection: 'row',
+    minHeight: 30,
   },
   body: {
     gap: 10,
@@ -108,17 +110,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   card: {
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 14,
     overflow: 'hidden',
-  },
-  cityPill: {
-    borderRadius: 999,
-    height: 28,
-    left: 12,
-    position: 'absolute',
-    top: 12,
-    width: 78,
   },
   featuredFooter: {
     alignItems: 'center',
@@ -133,10 +126,10 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   imageFeatured: {
-    height: 200,
+    aspectRatio: 16 / 9,
   },
   imageFeed: {
-    height: 190,
+    aspectRatio: 16 / 9,
   },
   imageShell: {
     position: 'relative',
@@ -167,19 +160,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  statusPill: {
+  overlayPill: {
     borderRadius: 999,
-    height: 28,
+    height: 24,
     left: 12,
     position: 'absolute',
     top: 12,
-    width: 96,
+    width: 94,
+  },
+  participantsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   titleGroup: {
     gap: 6,
   },
   titleLine: {
-    height: 20,
+    height: 18,
   },
   titleLineLong: {
     width: '76%',

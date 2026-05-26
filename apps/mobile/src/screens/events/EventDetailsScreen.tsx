@@ -34,6 +34,7 @@ import {
   openEventSourceLink,
   shareEvent,
 } from '@/lib/events/deviceActions';
+import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -52,6 +53,10 @@ export function EventDetailsScreen() {
   const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
   const participants = getOccurrenceParticipantPreview(occurrence, 6);
   const hostUser = occurrence.eventSeries?.organizers?.[0]?.user;
+  const importedOrganizerUser =
+    occurrence.eventSeries?.organizers?.find((organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME)
+      ?.user ?? null;
+  const hasImportedSystemOrganizer = Boolean(importedOrganizerUser);
   const hostOrganization = occurrence.eventSeries?.organization;
   const hostLabel = occurrence.eventSeries?.organization?.name ?? getDisplayName(hostUser);
   const categories = occurrence.eventSeries?.eventCategories ?? [];
@@ -189,6 +194,24 @@ export function EventDetailsScreen() {
     });
   };
 
+  const handleMessageGatherle = () => {
+    if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    if (!importedOrganizerUser?.userId) {
+      Alert.alert('Messaging unavailable', 'We could not find the Gatherle account for this imported event.');
+      return;
+    }
+
+    navigation.navigate('MessageThread', {
+      avatarUrl: importedOrganizerUser.profile_picture,
+      displayName: getDisplayName(importedOrganizerUser),
+      username: importedOrganizerUser.username,
+      withUserId: importedOrganizerUser.userId,
+    });
+  };
+
   const handleOpenHostProfile = () => {
     if (hostOrganization?.orgId) {
       navigation.navigate('OrganizationDetails', {
@@ -267,6 +290,17 @@ export function EventDetailsScreen() {
               icon="external-link"
               label="View event source"
               onPress={handleOpenEventSource}
+              tone="secondary"
+            />
+          </View>
+        ) : null}
+
+        {hasImportedSystemOrganizer ? (
+          <View style={styles.actionsRow}>
+            <EventDetailActionButton
+              icon="message-circle"
+              label="Message Gatherle"
+              onPress={handleMessageGatherle}
               tone="secondary"
             />
           </View>

@@ -16,7 +16,8 @@ export default function CategoryExplorer({
   title,
   description,
 }: CategoryExplorerProps) {
-  const shouldRender = isLoading || categories.length > 0;
+  const showSkeletons = isLoading && categories.length === 0;
+  const shouldRender = showSkeletons || categories.length > 0;
   if (!shouldRender) {
     return null;
   }
@@ -64,7 +65,7 @@ export default function CategoryExplorer({
           }}
         >
           <Stack direction="row" spacing={{ xs: 1.25, sm: 1.5, md: 2 }} sx={{ minWidth: 0 }}>
-            {isLoading
+            {showSkeletons
               ? Array.from({ length: skeletonCount }).map((_, index) => (
                   <Box
                     key={`category-skeleton-${index}`}

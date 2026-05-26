@@ -10,6 +10,7 @@ import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import EventBoxSmSkeleton from '@/components/events/eventBoxSm/EventBoxSmSkeleton';
+import { getEventPreviewKey } from '@/components/events/event-preview-utils';
 import { useMemo } from 'react';
 import type { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
@@ -52,6 +53,9 @@ export default function HomeClient() {
     return dedupeOccurrencesBySeries(occurrences, 6);
   }, [trendingEventsData]);
   const featuredEvents: EventPreview[] = (featuredEventsData?.readEvents ?? []) as EventPreview[];
+  const isTrendingInitialLoading = trendingEventsLoading && !trendingEventsData;
+  const isFeaturedInitialLoading = featuredEventsLoading && !featuredEventsData;
+  const isCategoriesInitialLoading = categoriesLoading && !categoriesData;
 
   const heroEvent = trendingEvents[0] ?? null;
 
@@ -92,7 +96,7 @@ export default function HomeClient() {
             <NearbyEventsSection />
 
             <Box id="trending-events">
-              {trendingEventsLoading ? (
+              {isTrendingInitialLoading ? (
                 <CarouselSkeleton
                   title="Trending Events"
                   itemCount={5}
@@ -101,6 +105,7 @@ export default function HomeClient() {
               ) : trendingEvents.length > 0 ? (
                 <Carousel
                   items={trendingEvents}
+                  itemKey={(event) => getEventPreviewKey(event)}
                   title="Trending Events"
                   autoplay={false}
                   autoplayInterval={6000}
@@ -116,7 +121,7 @@ export default function HomeClient() {
             </Box>
 
             <Box id="featured-events">
-              {featuredEventsLoading ? (
+              {isFeaturedInitialLoading ? (
                 <CarouselSkeleton
                   title="Featured Events"
                   itemCount={5}
@@ -125,6 +130,7 @@ export default function HomeClient() {
               ) : (
                 <Carousel
                   items={featuredEvents}
+                  itemKey={(event) => getEventPreviewKey(event)}
                   title="Featured Events"
                   autoplay={false}
                   autoplayInterval={6000}
@@ -143,7 +149,7 @@ export default function HomeClient() {
         title={'Choose your kind of magic'}
         description={'Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.'}
         categories={eventCategories}
-        isLoading={categoriesLoading}
+        isLoading={isCategoriesInitialLoading}
       />
 
       {/* <SocialProofSection

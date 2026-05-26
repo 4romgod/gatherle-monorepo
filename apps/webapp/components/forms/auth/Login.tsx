@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Box,
   Button,
@@ -27,6 +28,16 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [formState, formAction, isPending] = useActionState(loginUserAction, {});
   const { setToastProps, toastProps } = useAppContext();
+  const searchParams = useSearchParams();
+  const requestedRedirectTo = searchParams.get('redirectTo')?.trim() ?? '';
+  const safeRedirectTo =
+    requestedRedirectTo.startsWith('/') && !requestedRedirectTo.startsWith('//') ? requestedRedirectTo : null;
+  const forgotPasswordHref = safeRedirectTo
+    ? `${ROUTES.AUTH.FORGOT_PASSWORD}?redirectTo=${encodeURIComponent(safeRedirectTo)}`
+    : ROUTES.AUTH.FORGOT_PASSWORD;
+  const registerHref = safeRedirectTo
+    ? `${ROUTES.AUTH.REGISTER}?redirectTo=${encodeURIComponent(safeRedirectTo)}`
+    : ROUTES.AUTH.REGISTER;
 
   const handleClickShowPassword = () => setShowPassword((prev) => !prev);
   const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -63,6 +74,7 @@ export default function LoginForm() {
 
   return (
     <Box component="form" action={formAction} noValidate sx={{ mt: 1 }}>
+      {safeRedirectTo ? <input type="hidden" name="redirectTo" value={safeRedirectTo} /> : null}
       <FormControl required fullWidth margin="normal">
         <InputLabel htmlFor="email" color="secondary">
           Email Address
@@ -105,18 +117,14 @@ export default function LoginForm() {
 
       <Grid container>
         <Grid>
-          <Typography
-            component={Link}
-            href={ROUTES.AUTH.FORGOT_PASSWORD}
-            sx={{ color: 'primary.main', cursor: 'pointer' }}
-          >
+          <Typography component={Link} href={forgotPasswordHref} sx={{ color: 'primary.main', cursor: 'pointer' }}>
             Forgot password?
           </Typography>
         </Grid>
         <Grid>
           <Box>
             <span>Don&apos;t have an account?&nbsp;</span>
-            <Typography component={Link} href={ROUTES.AUTH.REGISTER} sx={{ color: 'primary.main', cursor: 'pointer' }}>
+            <Typography component={Link} href={registerHref} sx={{ color: 'primary.main', cursor: 'pointer' }}>
               Sign Up
             </Typography>
           </Box>

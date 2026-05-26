@@ -64,7 +64,7 @@ Current seed entry points live under:
   - requires the catalog and system users to already exist
 - `npm run seed:mock -w @gatherle/api`
   - seeds mock/demo data
-  - seeds the catalog automatically as part of the mock flow
+  - requires the catalog to already exist
 - `npm run geocode-events -w @gatherle/api`
   - geocodes seeded event locations after the event seed completes
 
@@ -92,7 +92,6 @@ Use this when you want a full local demo dataset.
 
 What it seeds:
 
-- catalog
 - mock users
 - mock organizations
 - mock venues
@@ -109,6 +108,7 @@ Password env vars used by this flow:
 Recommended command:
 
 ```bash
+npm run seed:catalog -w @gatherle/api
 npm run seed:mock -w @gatherle/api
 ```
 
@@ -116,12 +116,13 @@ Non-interactive example:
 
 ```bash
 export GATHERLE_MOCK_USERS_PASSWORD='...'
+npm run seed:catalog -w @gatherle/api
 npm run seed:mock -w @gatherle/api
 ```
 
 Notes:
 
-- `seed:mock` is self-contained with respect to the catalog.
+- `seed:mock` requires the catalog to already exist.
 - `seed:mock` does not seed any system users.
 - If you want test users alongside mock data, use `seed:dev`.
 
@@ -178,7 +179,6 @@ Use this when you want a cleaner dataset based on curated public event listings.
 
 What it seeds:
 
-- catalog
 - imports system user
 - reusable seeded test users
 - imported host organizations
@@ -240,7 +240,7 @@ For the public-events flow, also verify:
 
 Use these as the default rules:
 
-- local demo data only: `seed:mock`
+- local demo data only: `seed:catalog` → `seed:mock`
 - local demo data plus seeded test users: `seed:dev`
 - launch-like local or beta dataset: `seed:catalog` → `seed:system-users` → `seed:public-events` → `geocode-events`
 

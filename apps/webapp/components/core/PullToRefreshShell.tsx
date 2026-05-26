@@ -1,10 +1,8 @@
 'use client';
 
-import { startTransition } from 'react';
 import { useApolloClient } from '@apollo/client';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { useRouter } from 'next/navigation';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 const PULL_TO_REFRESH_SETTLE_MS = 180;
@@ -16,14 +14,10 @@ type PullToRefreshShellProps = {
 
 export function PullToRefreshShell({ children, indicatorTop = 80 }: PullToRefreshShellProps) {
   const apolloClient = useApolloClient();
-  const router = useRouter();
   const { handlers, isPulling, isRefreshing, pullDistance, readyToRefresh } = usePullToRefresh({
     onRefresh: async () => {
-      startTransition(() => {
-        router.refresh();
-      });
-
       await apolloClient.reFetchObservableQueries();
+
       // Keep the indicator visible briefly so the completion state does not snap away.
       await new Promise((resolve) => setTimeout(resolve, PULL_TO_REFRESH_SETTLE_MS));
     },

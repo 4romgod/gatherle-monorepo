@@ -16,7 +16,6 @@ export function AccountScreenSkeleton() {
               <SkeletonBlock style={styles.handle} />
               <View style={styles.badges}>
                 <SkeletonBlock style={styles.badge} />
-                <SkeletonBlock style={styles.badge} />
               </View>
             </View>
 
@@ -53,7 +52,7 @@ export function AccountScreenSkeleton() {
       </View>
 
       <View style={styles.grid}>
-        {[0, 1, 2, 3].map((value) => (
+        {[0, 1, 2, 3, 4, 5].map((value) => (
           <SkeletonBlock key={value} style={styles.tile} />
         ))}
       </View>
@@ -161,8 +160,8 @@ const styles = StyleSheet.create({
   },
   tile: {
     aspectRatio: 1,
-    borderRadius: 20,
-    width: '48.9%',
+    borderRadius: 14,
+    width: '31.8%',
   },
   topRail: {
     flex: 1,

@@ -44,8 +44,9 @@ describe('rrule utils', () => {
       expect(isEventUpcoming(undefined, undefined)).toBe(true);
     });
 
-    it('parses direct RRULE strings embedded in anchorStartAt', () => {
-      expect(isEventUpcoming('FREQ=DAILY;COUNT=1', undefined)).toBe(false);
+    it('treats direct RRULE strings without DTSTART as incomplete schedule data', () => {
+      expect(isEventUpcoming('FREQ=DAILY;COUNT=1', undefined)).toBe(true);
+      expect(warnMock).toHaveBeenCalled();
     });
 
     it('parses embedded DTSTART + RRULE strings', () => {

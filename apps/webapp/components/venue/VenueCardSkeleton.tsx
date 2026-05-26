@@ -1,29 +1,32 @@
 'use client';
 
-import { Card, CardContent, Skeleton, Stack } from '@mui/material';
+import { Box, Skeleton, Stack } from '@mui/material';
 import Surface from '@/components/core/Surface';
 
 export default function VenueCardSkeleton() {
   return (
     <Surface
-      component={Card}
       sx={{
-        borderRadius: 3,
-        minHeight: 280,
+        borderRadius: 2,
         display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.2s ease',
+        overflow: 'hidden',
       }}
     >
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Stack spacing={1}>
-          <Skeleton variant="rectangular" width={80} height={22} />
-          <Skeleton variant="text" width="60%" height={28} />
-          <Skeleton variant="text" width="40%" height={18} />
-          <Skeleton variant="rectangular" width="100%" height={110} />
-          <Skeleton variant="text" width="70%" height={18} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75, width: '100%' }}>
+        <Skeleton variant="rounded" width={72} height={72} sx={{ borderRadius: 1.25, flexShrink: 0 }} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Skeleton variant="text" width="58%" height={24} />
+          <Skeleton variant="text" width="30%" height={18} />
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
+            <Skeleton variant="circular" width={16} height={16} />
+            <Skeleton variant="text" width="72%" height={18} />
+          </Stack>
+        </Box>
+        <Stack spacing={1} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
+          <Skeleton variant="rounded" width={88} height={24} />
+          <Skeleton variant="circular" width={18} height={18} />
         </Stack>
-      </CardContent>
+      </Box>
     </Surface>
   );
 }

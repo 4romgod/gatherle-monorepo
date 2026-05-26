@@ -11,7 +11,7 @@ export function useInfiniteScroll({
   enabled,
   loading = false,
   onEndReached,
-  rootMargin = '0px 0px 320px 0px',
+  rootMargin = '0px 0px 960px 0px',
 }: UseInfiniteScrollOptions) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const latestEnabledRef = useRef(enabled);

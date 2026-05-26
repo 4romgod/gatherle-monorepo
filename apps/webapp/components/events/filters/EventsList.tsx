@@ -3,8 +3,11 @@
 import { Box, Stack, Typography, Alert, Button, CircularProgress } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import EventTileGrid from '@/components/events/EventTileGrid';
+import EventTileSkeletonGrid from '@/components/events/EventTileSkeleton';
 import type { AnyEventPreview } from '@/components/events/event-preview-utils';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+
+const NEXT_PAGE_PLACEHOLDER_COUNT = 10;
 
 interface EventsListProps {
   events: AnyEventPreview[];
@@ -29,7 +32,7 @@ export default function EventsList({
   loadingMore = false,
   totalCount,
 }: EventsListProps) {
-  const showSkeletons = loading;
+  const showSkeletons = loading && events.length === 0;
   const loadMoreTriggerRef = useInfiniteScroll({
     enabled: hasMore && Boolean(onLoadMore),
     loading: loading || loadingMore,
@@ -83,6 +86,11 @@ export default function EventsList({
         </Typography>
       </Stack>
       <EventTileGrid events={events} loading={showSkeletons} />
+      {loadingMore ? (
+        <Box sx={{ mt: 2 }}>
+          <EventTileSkeletonGrid count={NEXT_PAGE_PLACEHOLDER_COUNT} />
+        </Box>
+      ) : null}
       {hasMore && onLoadMore && (
         <Box
           ref={loadMoreTriggerRef}
@@ -93,6 +101,7 @@ export default function EventsList({
             flexDirection: 'column',
             alignItems: 'center',
             gap: 1.5,
+            minHeight: loadingMore ? 0 : 72,
           }}
         >
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>

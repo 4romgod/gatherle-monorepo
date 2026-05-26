@@ -15,6 +15,7 @@ import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import EventBoxSmSkeleton from '@/components/events/eventBoxSm/EventBoxSmSkeleton';
+import { getEventPreviewKey } from '@/components/events/event-preview-utils';
 import { ROUTES } from '@/lib/constants';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import { GetEventOccurrencesDocument } from '@/data/graphql/query';
@@ -144,7 +145,7 @@ export default function NearbyEventsSection() {
   );
 
   const events = useMemo(() => dedupeOccurrencesBySeries(data?.readEventOccurrences ?? [], 6), [data]);
-  const isLoadingContent = Boolean(locationFilter) && loading;
+  const isLoadingContent = Boolean(locationFilter) && loading && events.length === 0;
   const locationLabel = useMemo(() => {
     if (events.length === 0) {
       return null;
@@ -238,6 +239,7 @@ export default function NearbyEventsSection() {
       <Stack gap={{ xs: 1.5, md: 2 }}>
         <Carousel
           items={events}
+          itemKey={(event) => getEventPreviewKey(event)}
           viewAllButton={{ href: ROUTES.EVENTS.ROOT }}
           renderItem={(event) => <EventBoxSm event={event} />}
         />

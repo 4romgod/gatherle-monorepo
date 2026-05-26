@@ -105,7 +105,7 @@ export class ChatConversation {
 
 @modelOptions({ schemaOptions: { timestamps: true }, options: { allowMixed: Severity.ALLOW } })
 @index({ userId: 1, conversationWithUserId: 1 }, { unique: true })
-@index({ userId: 1, conversationKey: 1 })
+@index({ userId: 1, conversationKey: 1 }, { unique: true })
 export class ChatConversationUnreadState {
   @prop({ required: true, index: true, type: () => String })
   userId: string;

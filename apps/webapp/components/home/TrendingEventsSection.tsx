@@ -22,7 +22,7 @@ export default function TrendingEventsSection() {
   });
 
   const events = data?.readTrendingEvents ?? [];
-  const isLoading = loading && !data;
+  const isLoading = loading && events.length === 0;
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>

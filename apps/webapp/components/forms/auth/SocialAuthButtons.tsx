@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button, Stack } from '@mui/material';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
@@ -15,10 +16,18 @@ type SocialAuthButtonsProps = {
 
 export default function SocialAuthButtons({ showEmailSignupButton = false }: SocialAuthButtonsProps) {
   const [isPending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const requestedRedirectTo = searchParams.get('redirectTo')?.trim() ?? '';
+  const safeRedirectTo =
+    requestedRedirectTo.startsWith('/') && !requestedRedirectTo.startsWith('//') ? requestedRedirectTo : null;
+  const redirectTo = safeRedirectTo ?? DEFAULT_LOGIN_REDIRECT;
+  const registerHref = safeRedirectTo
+    ? `${ROUTES.AUTH.REGISTER}?redirectTo=${encodeURIComponent(safeRedirectTo)}`
+    : ROUTES.AUTH.REGISTER;
 
   const handleProviderSignIn = (provider: 'google' | 'apple') => {
     startTransition(() => {
-      void signIn(provider, { redirectTo: DEFAULT_LOGIN_REDIRECT });
+      void signIn(provider, { redirectTo });
     });
   };
 
@@ -66,7 +75,7 @@ export default function SocialAuthButtons({ showEmailSignupButton = false }: Soc
           size="large"
           fullWidth
           component={Link}
-          href={ROUTES.AUTH.REGISTER}
+          href={registerHref}
           sx={{
             mt: 1,
             mb: 1,

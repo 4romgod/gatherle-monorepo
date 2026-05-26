@@ -16,13 +16,15 @@ export function NotificationRowSkeleton({ withActions = true }: NotificationRowS
         <SkeletonBlock style={styles.avatar} />
       </View>
 
-      <View style={styles.content}>
-        <SkeletonBlock style={styles.title} />
-        <SkeletonBlock style={styles.messageLong} />
-        <SkeletonBlock style={styles.messageShort} />
-        <SkeletonBlock style={styles.meta} />
+      <View style={styles.bodyRow}>
+        <View style={styles.content}>
+          <SkeletonBlock style={styles.title} />
+          <SkeletonBlock style={styles.messageLong} />
+          <SkeletonBlock style={styles.messageShort} />
+          <SkeletonBlock style={styles.meta} />
+        </View>
         {withActions ? (
-          <View style={styles.inlineActions}>
+          <View style={styles.trailingActions}>
             <SkeletonBlock style={styles.actionButton} />
             <SkeletonBlock style={styles.actionButton} />
           </View>
@@ -36,22 +38,23 @@ const styles = StyleSheet.create({
   actionButton: {
     borderRadius: 999,
     height: 28,
-    width: 76,
+    width: 74,
   },
   avatar: {
     borderRadius: 999,
     height: 34,
     width: 34,
   },
+  bodyRow: {
+    alignItems: 'flex-start',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
   content: {
     flex: 1,
     gap: 5,
     minHeight: 34,
-  },
-  inlineActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
   },
   leading: {
     alignItems: 'center',
@@ -82,6 +85,12 @@ const styles = StyleSheet.create({
   title: {
     height: 14,
     width: '56%',
+  },
+  trailingActions: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+    gap: 6,
+    paddingTop: 2,
   },
   unreadDot: {
     borderRadius: 999,
