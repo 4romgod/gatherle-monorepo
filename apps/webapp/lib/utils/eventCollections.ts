@@ -63,6 +63,12 @@ export function buildHostedEventsQueryOptions<TOrder extends EventQuerySortOrder
   };
 }
 
+export function buildHostedEventsCountQueryOptions(userId: string) {
+  return {
+    filters: [{ field: 'organizers.user.userId', value: userId }],
+  };
+}
+
 export function isUpcomingEventTime(startAt: EventTimeValue, endAt?: EventTimeValue, fromDate: Date = new Date()) {
   const comparisonTimestamp = resolveTimestamp(endAt ?? startAt, Number.NEGATIVE_INFINITY);
   return comparisonTimestamp >= fromDate.getTime();

@@ -2,13 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Box, Button, Card, Tab, Tabs, Tooltip, Typography } from '@mui/material';
-import {
-  EventAvailable as GoingIcon,
-  Event as EventIcon,
-  History as PastIcon,
-  Bookmark as BookmarkIcon,
-} from '@mui/icons-material';
+import { Box, Button, Card, CircularProgress, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { FiBookmark, FiCalendar, FiCheckSquare, FiClock } from 'react-icons/fi';
 import {
   ROUTES,
   BUTTON_STYLES,
@@ -17,6 +12,7 @@ import {
   EMPTY_STATE_ICON_STYLES,
 } from '@/lib/constants';
 import { AnyEventPreview, getEventPreviewKey } from '@/components/events/event-preview-utils';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import ProfileEventTile from './ProfileEventTile';
 
 interface ProfileEventsTabsProps {
@@ -44,6 +40,20 @@ export default function ProfileEventsTabs({
 }: ProfileEventsTabsProps) {
   const [activeTab, setActiveTab] = useState(0);
 
+  const tabIconSx = {
+    alignItems: 'center',
+    display: 'inline-flex',
+    fontSize: 19,
+    justifyContent: 'center',
+    lineHeight: 0,
+  } as const;
+  const emptyIconSx = {
+    color: 'text.secondary',
+    display: 'inline-flex',
+    fontSize: 48,
+    lineHeight: 0,
+  } as const;
+
   const defaultEmptyCreatedCta = emptyCreatedCta ?? (
     <Button
       variant="contained"
@@ -66,13 +76,37 @@ export default function ProfileEventsTabs({
         onChange={(_, v) => setActiveTab(v)}
         variant="fullWidth"
         sx={{
-          '& .MuiTab-root': {
-            py: 2,
-            minWidth: 'auto',
-            minHeight: 56,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          '& .MuiTabs-indicator': {
+            display: 'none',
           },
-          '& .MuiTab-iconWrapper': {
-            mb: 0,
+          '& .MuiTab-root': {
+            minHeight: 42,
+            minWidth: 'auto',
+            position: 'relative',
+            py: 1.5,
+            color: 'text.secondary',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 56,
+              height: 2.5,
+              borderRadius: 999,
+              backgroundColor: 'transparent',
+            },
+            '&.Mui-selected': {
+              color: 'primary.main',
+            },
+            '&.Mui-selected::after': {
+              backgroundColor: 'primary.main',
+            },
+          },
+          '& .MuiTab-icon': {
+            margin: '0 !important',
           },
         }}
       >
@@ -80,7 +114,9 @@ export default function ProfileEventsTabs({
           aria-label="Going"
           icon={
             <Tooltip title="Going — events you've RSVPed to" placement="bottom" arrow>
-              <GoingIcon sx={{ fontSize: 28 }} />
+              <Box component="span" sx={tabIconSx}>
+                <FiCheckSquare />
+              </Box>
             </Tooltip>
           }
         />
@@ -88,7 +124,9 @@ export default function ProfileEventsTabs({
           aria-label="Attended"
           icon={
             <Tooltip title="Attended — past events you went to" placement="bottom" arrow>
-              <PastIcon sx={{ fontSize: 28 }} />
+              <Box component="span" sx={tabIconSx}>
+                <FiClock />
+              </Box>
             </Tooltip>
           }
         />
@@ -96,7 +134,9 @@ export default function ProfileEventsTabs({
           aria-label="Hosted"
           icon={
             <Tooltip title="Hosted — events you've created or co-hosted" placement="bottom" arrow>
-              <EventIcon sx={{ fontSize: 28 }} />
+              <Box component="span" sx={tabIconSx}>
+                <FiCalendar />
+              </Box>
             </Tooltip>
           }
         />
@@ -105,7 +145,9 @@ export default function ProfileEventsTabs({
             aria-label="Saved"
             icon={
               <Tooltip title="Saved — bookmarked events" placement="bottom" arrow>
-                <BookmarkIcon sx={{ fontSize: 28 }} />
+                <Box component="span" sx={tabIconSx}>
+                  <FiBookmark />
+                </Box>
               </Tooltip>
             }
           />
@@ -116,7 +158,11 @@ export default function ProfileEventsTabs({
         {activeTab === 0 && (
           <EventTabPanel
             events={upcomingRsvpdEvents}
-            emptyIcon={<GoingIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyIcon={
+              <Box component="span" sx={emptyIconSx}>
+                <FiCheckSquare />
+              </Box>
+            }
             emptyTitle="No upcoming events"
             emptyDescription="RSVP to events and they'll appear here"
             emptyCta={
@@ -136,7 +182,11 @@ export default function ProfileEventsTabs({
         {activeTab === 1 && (
           <EventTabPanel
             events={pastRsvpdEvents}
-            emptyIcon={<PastIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyIcon={
+              <Box component="span" sx={emptyIconSx}>
+                <FiClock />
+              </Box>
+            }
             emptyTitle="No attended events"
             emptyDescription="Events you've attended will show up here"
             emptyCta={
@@ -156,7 +206,11 @@ export default function ProfileEventsTabs({
         {activeTab === 2 && (
           <EventTabPanel
             events={organizedEvents}
-            emptyIcon={<EventIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyIcon={
+              <Box component="span" sx={emptyIconSx}>
+                <FiCalendar />
+              </Box>
+            }
             emptyTitle="No events hosted yet"
             emptyDescription="Start hosting events and they'll appear here"
             emptyCta={defaultEmptyCreatedCta}
@@ -169,7 +223,11 @@ export default function ProfileEventsTabs({
         {isOwnProfile && activeTab === 3 && (
           <EventTabPanel
             events={savedEvents ?? []}
-            emptyIcon={<BookmarkIcon sx={{ fontSize: 48, color: 'text.secondary' }} />}
+            emptyIcon={
+              <Box component="span" sx={emptyIconSx}>
+                <FiBookmark />
+              </Box>
+            }
             emptyTitle="No saved events yet"
             emptyDescription="Bookmark events you're interested in to view them later"
             emptyCta={
@@ -209,6 +267,12 @@ function EventTabPanel({
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }) {
+  const loadMoreTriggerRef = useInfiniteScroll({
+    enabled: hasMore && Boolean(onLoadMore),
+    loading: loadingMore,
+    onEndReached: () => onLoadMore?.(),
+  });
+
   if (events.length === 0) {
     return (
       <Box sx={EMPTY_STATE_STYLES}>
@@ -230,7 +294,8 @@ function EventTabPanel({
         sx={{
           display: 'grid',
           gridTemplateColumns: {
-            xs: 'repeat(3, minmax(0, 1fr))',
+            xs: 'repeat(2, minmax(0, 1fr))',
+            sm: 'repeat(3, minmax(0, 1fr))',
             md: 'repeat(4, minmax(0, 1fr))',
             xl: 'repeat(5, minmax(0, 1fr))',
           },
@@ -242,19 +307,8 @@ function EventTabPanel({
         ))}
       </Box>
       {hasMore ? (
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-          <Button
-            onClick={onLoadMore}
-            variant="outlined"
-            disabled={loadingMore}
-            sx={{
-              ...BUTTON_STYLES,
-              borderColor: 'divider',
-              minWidth: 180,
-            }}
-          >
-            {loadingMore ? 'Loading more…' : 'Show more events'}
-          </Button>
+        <Box ref={loadMoreTriggerRef} sx={{ mt: 2, display: 'flex', justifyContent: 'center', minHeight: 24 }}>
+          {loadingMore ? <CircularProgress size={20} /> : null}
         </Box>
       ) : null}
     </Box>

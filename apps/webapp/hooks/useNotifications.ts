@@ -11,7 +11,7 @@ import {
 import type { Notification, NotificationConnection } from '@/data/graphql/query/Notification/types';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface UseNotificationsOptions {
   limit?: number;
@@ -25,45 +25,57 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const { limit = 20, unreadOnly = false } = options;
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
 
   const { data, loading, error, refetch, fetchMore } = useQuery(GetNotificationsDocument, {
     variables: { limit, unreadOnly },
     skip: !token,
     fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
     context: {
       headers: getAuthHeader(token),
     },
   });
 
   const loadMore = useCallback(async () => {
-    if (!data?.notifications?.nextCursor || !data.notifications.hasMore) {
+    if (loadingMoreRef.current || !data?.notifications?.nextCursor || !data.notifications.hasMore) {
       return;
     }
 
-    await fetchMore({
-      variables: {
-        cursor: data.notifications.nextCursor,
-        limit,
-        unreadOnly,
-      },
-      updateQuery: (prev, { fetchMoreResult }) => {
-        if (!fetchMoreResult) return prev;
-        return {
-          notifications: {
-            ...fetchMoreResult.notifications,
-            notifications: [
-              ...(prev.notifications?.notifications || []),
-              ...(fetchMoreResult.notifications?.notifications || []),
-            ],
-          },
-        };
-      },
-    });
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+
+    try {
+      await fetchMore({
+        variables: {
+          cursor: data.notifications.nextCursor,
+          limit,
+          unreadOnly,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return {
+            notifications: {
+              ...fetchMoreResult.notifications,
+              notifications: [
+                ...(prev.notifications?.notifications || []),
+                ...(fetchMoreResult.notifications?.notifications || []),
+              ],
+            },
+          };
+        },
+      });
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
   }, [data?.notifications?.nextCursor, data?.notifications?.hasMore, fetchMore, limit, unreadOnly]);
 
   return {
     notifications: data?.notifications?.notifications ?? [],
     hasMore: data?.notifications?.hasMore ?? false,
+    loadingMore,
     nextCursor: data?.notifications?.nextCursor,
     unreadCount: data?.notifications?.unreadCount ?? 0,
     loading,

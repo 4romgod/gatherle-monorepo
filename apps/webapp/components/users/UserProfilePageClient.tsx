@@ -3,8 +3,7 @@ import Link from 'next/link';
 import React, { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
-import { Box, Button, Grid, Stack, Typography } from '@mui/material';
-import { Edit as EditIcon } from '@mui/icons-material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import {
   FollowApprovalStatus,
   FollowTargetType,
@@ -14,11 +13,10 @@ import {
 } from '@/data/graphql/types/graphql';
 import { EventPreview } from '@/data/graphql/query/Event/types';
 import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
-import UserProfileStats from '@/components/users/UserProfileStats';
 import UserProfileActions from '@/components/users/UserProfileActions';
 import UserProfilePageSkeleton from '@/components/users/UserProfilePageSkeleton';
 import UserAvatarMomentsRing from '@/components/eventMoments/UserAvatarMomentsRing';
-import { ROUTES, BUTTON_STYLES, SPACING } from '@/lib/constants';
+import { ROUTES, BUTTON_STYLES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { getAvatarSrc, getDisplayName } from '@/lib/utils/general';
 import { canViewUserDetails, getVisibilityLabel as getVisibilityLabelText } from '@/components/users/visibility-utils';
@@ -29,7 +27,11 @@ import { useMyEventOccurrenceRsvps } from '@/hooks/useMyEventOccurrenceRsvps';
 import { useSavedEvents } from '@/hooks/useSavedEvents';
 import { useUserEventOccurrences } from '@/hooks/useUserEventOccurrences';
 import ErrorPage from '@/components/errors/ErrorPage';
-import { AnyEventPreview } from '@/components/events/event-preview-utils';
+import { ProfileActionButton } from '@/components/users/ProfileActionButton';
+import { ProfileBadge } from '@/components/users/ProfileBadge';
+import { ProfileStat } from '@/components/users/ProfileStat';
+import { buildProfileBadges } from '@/lib/profileBadges';
+import { FiEdit2, FiSettings } from 'react-icons/fi';
 
 interface UserProfilePageClientProps {
   username: string;
@@ -80,6 +82,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     loading: hostedEventsLoading,
     loadingMore: hostedEventsLoadingMore,
     loadMore: loadMoreHostedEvents,
+    totalCount: hostedEventsTotalCount,
   } = useHostedEventsByUser(user?.userId, token);
   const {
     error: participantEventsError,
@@ -98,7 +101,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     loading: myOccurrenceRsvpsLoading,
     pastEvents: myPastRsvpEvents,
     upcomingEvents: myUpcomingRsvpEvents,
-    events: myOccurrenceRsvpEvents,
   } = useMyEventOccurrenceRsvps(token, false, { enabled: isOwnProfile });
 
   const viewerCanSeeProfile = Boolean(
@@ -121,14 +123,6 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     !isOwnProfile &&
     (followingUserIds.has(user.userId) || user.defaultVisibility === SocialVisibility.Public),
   );
-
-  const allRsvpdEventPreviews = useMemo<AnyEventPreview[]>(() => {
-    if (isOwnProfile) {
-      return myOccurrenceRsvpEvents;
-    }
-
-    return participantOccurrences;
-  }, [isOwnProfile, myOccurrenceRsvpEvents, participantOccurrences]);
 
   const upcomingRsvpdEvents = isOwnProfile ? myUpcomingRsvpEvents : participantUpcomingEvents;
   const pastRsvpdEvents = isOwnProfile ? myPastRsvpEvents : participantPastEvents;
@@ -153,7 +147,7 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
     return Array.from(byId.values());
   }, [organizedEventsForMoments, allRsvpdEventsForMoments]);
 
-  const interests = user?.interests ?? [];
+  const profileBadges = useMemo(() => buildProfileBadges({ userRole: user?.userRole }), [user?.userRole]);
 
   const isLoading =
     userLoading ||
@@ -216,109 +210,139 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ maxWidth: 935, mx: 'auto', width: '100%', overflowX: 'hidden' }}>
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 1.5, md: 4 }, pb: 2 }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 4 }, pb: 2 }}>
           <Box sx={{ maxWidth: 560, mx: 'auto' }}>
-            {/* Row 1: Avatar (left) + Stats (right) — Instagram style */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 3, md: 4 }, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2.5, md: 3 }, mb: 1.75 }}>
               <UserAvatarMomentsRing
                 userId={user.userId}
                 avatarSrc={getAvatarSrc(user) || undefined}
-                displayName={`${user.given_name} ${user.family_name}`}
+                displayName={getDisplayName(user)}
                 events={profileMomentEvents}
                 token={token}
                 isOwnProfile={isOwnProfile}
               />
 
-              {/* Stats inline beside avatar (compact = no top border/margin) */}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <UserProfileStats
-                  userId={user.userId}
-                  displayName={getDisplayName(user)}
-                  initialFollowersCount={user.followersCount ?? 0}
-                  initialFollowingCount={0}
-                  organizedEventsCount={hostedEvents.length}
-                  rsvpdEventsCount={allRsvpdEventPreviews.length}
-                  savedEventsCount={savedEvents.length}
-                  interestsCount={interests.length}
-                  isOwnProfile={false}
-                  compact
-                />
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  justifyContent: 'center',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                  <Typography
+                    sx={(theme) => ({
+                      color: theme.palette.text.primary,
+                      fontFamily: theme.typography.body1.fontFamily,
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.2,
+                    })}
+                  >
+                    @{user.username}
+                  </Typography>
+
+                  {profileBadges.length > 0 ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                      {profileBadges.map((badge) => (
+                        <ProfileBadge badge={badge} key={badge.label} />
+                      ))}
+                    </Box>
+                  ) : null}
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                  <ProfileStat
+                    href={ROUTES.USERS.USER_EVENTS(user.username)}
+                    label="Events"
+                    value={String(hostedEventsTotalCount)}
+                  />
+                  <ProfileStat
+                    href={ROUTES.USERS.USER_FOLLOWERS(user.username)}
+                    label="Followers"
+                    value={String(user.followersCount ?? 0)}
+                  />
+                  <ProfileStat
+                    href={ROUTES.USERS.USER_FOLLOWING(user.username)}
+                    label="Following"
+                    value={String(user.followingCount ?? 0)}
+                  />
+                </Box>
               </Box>
             </Box>
 
-            {/* Row 2: Display name */}
-            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', md: '1.15rem' }, lineHeight: 1.3 }}>
-              {user.given_name} {user.family_name}
-            </Typography>
-
-            {/* Row 3: @username */}
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: user.bio ? 0.75 : 1.5 }}>
-              @{user.username}
-            </Typography>
-
-            {/* Row 4: Bio */}
-            {user.bio && (
-              <Typography variant="body2" sx={{ lineHeight: 1.55, mb: 1.5, maxWidth: 480 }}>
-                {user.bio}
-              </Typography>
-            )}
-
-            {/* Row 5: Full-width action buttons */}
-            {isOwnProfile ? (
-              <Button
-                component={Link}
-                href={ROUTES.ACCOUNT.ROOT}
-                variant="outlined"
-                fullWidth
-                startIcon={<EditIcon />}
-                sx={{
-                  ...BUTTON_STYLES,
-                  borderColor: 'divider',
-                  '&:hover': {
-                    bgcolor: 'background.default',
-                    borderColor: 'text.secondary',
-                  },
-                }}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography
+                sx={(theme) => ({
+                  color: theme.palette.text.primary,
+                  fontFamily: theme.typography.h4.fontFamily,
+                  fontSize: { xs: '1.125rem', md: '1.1875rem' },
+                  fontWeight: 700,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.2,
+                })}
               >
-                Edit Profile
-              </Button>
-            ) : (
-              <UserProfileActions
-                userId={user.userId}
-                username={user.username}
-                canMessage={canMessageUser}
-                messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
-                fullWidth
-              />
-            )}
+                {getDisplayName(user)}
+              </Typography>
+
+              <Typography
+                sx={(theme) => ({
+                  color: theme.palette.text.primary,
+                  fontFamily: theme.typography.body1.fontFamily,
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  lineHeight: 1.5,
+                  maxWidth: 480,
+                })}
+              >
+                {user.bio || 'No bio added yet.'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 1.25, mt: 1.75 }}>
+              {isOwnProfile ? (
+                <>
+                  <ProfileActionButton href={ROUTES.ACCOUNT.TAB('profile')} icon={FiEdit2} label="Edit profile" />
+                  <ProfileActionButton href={ROUTES.ACCOUNT.TAB('account')} icon={FiSettings} label="Settings" />
+                </>
+              ) : (
+                <UserProfileActions
+                  userId={user.userId}
+                  username={user.username}
+                  canMessage={canMessageUser}
+                  messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
+                  fullWidth
+                  showOverflow={false}
+                />
+              )}
+            </Box>
           </Box>
         </Box>
 
         <Box sx={{ position: 'relative' }}>
           <Box sx={detailBlurSx}>
             <Box sx={{ overflow: 'hidden' }}>
-              <Grid container spacing={SPACING.standard}>
-                {/* ── Main content: tabbed events ── */}
-                <Grid size={{ xs: 12 }}>
-                  {hostedEventsError ? (
-                    <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
-                      We couldn&apos;t load this member&apos;s hosted events right now.
-                    </Typography>
-                  ) : (
-                    <ProfileEventsTabs
-                      upcomingRsvpdEvents={upcomingRsvpdEvents}
-                      pastRsvpdEvents={pastRsvpdEvents}
-                      organizedEvents={hostedEvents}
-                      organizedEventsHasMore={hostedEventsHasMore}
-                      organizedEventsLoadingMore={hostedEventsLoadingMore}
-                      onLoadMoreOrganized={loadMoreHostedEvents}
-                      savedEvents={savedEvents}
-                      isOwnProfile={isOwnProfile}
-                      emptyCreatedCta={emptyCreatedCTA}
-                    />
-                  )}
-                </Grid>
-              </Grid>
+              {hostedEventsError ? (
+                <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
+                  We couldn&apos;t load this member&apos;s hosted events right now.
+                </Typography>
+              ) : (
+                <ProfileEventsTabs
+                  upcomingRsvpdEvents={upcomingRsvpdEvents}
+                  pastRsvpdEvents={pastRsvpdEvents}
+                  organizedEvents={hostedEvents}
+                  organizedEventsHasMore={hostedEventsHasMore}
+                  organizedEventsLoadingMore={hostedEventsLoadingMore}
+                  onLoadMoreOrganized={loadMoreHostedEvents}
+                  savedEvents={savedEvents}
+                  isOwnProfile={isOwnProfile}
+                  emptyCreatedCta={emptyCreatedCTA}
+                />
+              )}
             </Box>
           </Box>
           {shouldMaskProfileDetails && (

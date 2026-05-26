@@ -1,6 +1,6 @@
 'use client';
 
-import { SyntheticEvent, useMemo } from 'react';
+import { SyntheticEvent, useEffect, useMemo, useRef } from 'react';
 import { Tabs, Tab, Box, Tooltip, Typography, Card, useTheme, useMediaQuery } from '@mui/material';
 import { CustomTabPanel } from './CustomTabsPanel';
 import { StorageType, usePersistentState } from '@/hooks/usePersistentState';
@@ -27,7 +27,9 @@ export type CustomTabsProps = {
   tabsTitle: string;
   tabs: CustomTabItem[];
   defaultTab?: number;
+  forceDefaultTab?: boolean;
   id?: string;
+  layout?: 'default' | 'mobile';
   variant?: 'scrollable' | 'standard' | 'fullWidth';
   orientation?: 'vertical' | 'horizontal';
   onTabChange?: (index: number) => void;
@@ -39,7 +41,9 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
     tabs,
     tabsTitle,
     defaultTab = 0,
+    forceDefaultTab = false,
     id = 'custom-tabs',
+    layout = 'default',
     variant = 'scrollable',
     orientation = 'vertical',
     onTabChange,
@@ -59,12 +63,31 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   const isXsScreen = useMediaQuery(theme.breakpoints.only('xs'));
+  const isMobileLayout = layout === 'mobile';
+  const previousDefaultSyncRef = useRef<{ defaultTab: number; forceDefaultTab: boolean } | null>(null);
 
   // Use default value during SSR and initial render to prevent hydration mismatch
   const displayValue = isHydrated ? value : defaultTab;
 
+  useEffect(() => {
+    const previousSync = previousDefaultSyncRef.current;
+    const hasDefaultChanged = previousSync?.defaultTab !== defaultTab;
+    const hasForceJustEnabled = forceDefaultTab && !previousSync?.forceDefaultTab;
+
+    previousDefaultSyncRef.current = {
+      defaultTab,
+      forceDefaultTab,
+    };
+
+    if (!forceDefaultTab || !isHydrated || (!hasDefaultChanged && !hasForceJustEnabled) || value === defaultTab) {
+      return;
+    }
+
+    setValue(defaultTab);
+  }, [defaultTab, forceDefaultTab, isHydrated, setValue, value]);
+
   // Use horizontal orientation on mobile for more content space
-  const effectiveOrientation = isSmallScreen ? 'horizontal' : orientation;
+  const effectiveOrientation = isMobileLayout ? 'horizontal' : isSmallScreen ? 'horizontal' : orientation;
 
   // Memoize tab panels to avoid unnecessary re-renders
   const tabPanels = useMemo(
@@ -84,7 +107,9 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
     }
   };
 
-  const isCompactHorizontal = isXsScreen && effectiveOrientation === 'horizontal';
+  const canUseIconOnlyTabs = tabs.every(({ icon }) => Boolean(icon));
+  const isCompactHorizontal =
+    isXsScreen && effectiveOrientation === 'horizontal' && canUseIconOnlyTabs && !isMobileLayout;
   const isRegularHorizontal = !isXsScreen && effectiveOrientation === 'horizontal';
 
   function getTabPx(): number {
@@ -106,35 +131,35 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         display: 'flex',
         flexDirection: effectiveOrientation === 'vertical' ? 'row' : 'column',
         minHeight: { xs: 'auto', md: effectiveOrientation === 'vertical' ? '100vh' : 'auto' },
-        gap: { xs: 2, md: 3 },
+        gap: isMobileLayout ? 0 : { xs: 2, md: 3 },
       }}
     >
       {/* Sidebar Navigation */}
       <Card
         elevation={0}
         sx={{
-          borderRadius: { xs: 3, md: 3 },
+          borderRadius: isMobileLayout ? 0 : { xs: 3, md: 3 },
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'background.default',
+          backgroundColor: isMobileLayout ? 'transparent' : 'background.default',
           backgroundImage: 'none',
           minHeight: effectiveOrientation === 'vertical' ? 'auto' : 'auto',
           position: effectiveOrientation === 'vertical' ? { md: 'sticky' } : 'static',
           top: effectiveOrientation === 'vertical' ? { md: 24 } : 'auto',
           alignSelf: 'flex-start',
-          overflow: effectiveOrientation === 'horizontal' ? 'hidden' : 'visible',
+          overflow: effectiveOrientation === 'horizontal' && !isMobileLayout ? 'hidden' : 'visible',
           width: effectiveOrientation === 'horizontal' ? '100%' : 'auto',
           ...(effectiveOrientation === 'vertical' ? { minWidth: { xs: 'auto', md: 240 } } : {}),
         }}
       >
-        {tabsTitle && !isSmallScreen && (
+        {tabsTitle && !isSmallScreen && !isMobileLayout && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mt: 0.5 }}>
               {tabsTitle}
             </Typography>
           </Box>
         )}
-        {tabsTitle && isSmallScreen && (
+        {tabsTitle && isSmallScreen && !isMobileLayout && (
           <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
             <Typography
               variant="caption"
@@ -160,14 +185,17 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
               style:
                 effectiveOrientation === 'vertical'
                   ? { left: 0, width: 3, borderRadius: 4, backgroundColor: theme.palette.primary.main }
-                  : { height: 0, display: 'none' },
+                  : isMobileLayout
+                    ? { height: 2.5, borderRadius: 999, backgroundColor: theme.palette.primary.main }
+                    : { height: 0, display: 'none' },
             },
           }}
           sx={{
-            p: effectiveOrientation === 'vertical' ? 1 : { xs: 1, sm: 0 },
+            p: isMobileLayout ? 0 : effectiveOrientation === 'vertical' ? 1 : { xs: 1, sm: 0 },
             minHeight: effectiveOrientation === 'horizontal' ? 56 : 'auto',
             width: '100%',
-            borderBottom: effectiveOrientation === 'horizontal' ? 'none' : 'unset',
+            borderBottom: effectiveOrientation === 'horizontal' ? (isMobileLayout ? '1px solid' : 'none') : 'unset',
+            borderColor: 'divider',
             '& .MuiTabs-flexContainer': {
               width: effectiveOrientation === 'horizontal' ? 'max-content' : '100%',
             },
@@ -187,23 +215,25 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
               borderRadius: effectiveOrientation === 'vertical' ? 1 : 0,
               mx: effectiveOrientation === 'vertical' ? 0.5 : 0,
               my: effectiveOrientation === 'vertical' ? 0.25 : 0,
-              px: effectiveOrientation === 'horizontal' ? 2 : 2,
+              px: isMobileLayout ? 2.25 : effectiveOrientation === 'horizontal' ? 2 : 2,
               color: 'text.secondary',
-              fontWeight: 600,
+              fontWeight: isMobileLayout ? 700 : 600,
               transition: 'all 0.2s ease',
-              borderBottom: effectiveOrientation === 'horizontal' ? '2px solid transparent' : 'none',
+              borderBottom: effectiveOrientation === 'horizontal' && !isMobileLayout ? '2px solid transparent' : 'none',
+              minWidth: isMobileLayout ? 'auto' : undefined,
               '&:hover': {
-                backgroundColor: 'action.hover',
+                backgroundColor: isMobileLayout ? 'transparent' : 'action.hover',
                 color: 'text.primary',
-                borderBottom: effectiveOrientation === 'horizontal' ? '2px solid' : 'none',
-                borderColor: effectiveOrientation === 'horizontal' ? 'action.hover' : 'transparent',
+                borderBottom: effectiveOrientation === 'horizontal' && !isMobileLayout ? '2px solid' : 'none',
+                borderColor: effectiveOrientation === 'horizontal' && !isMobileLayout ? 'action.hover' : 'transparent',
               },
               '&.Mui-selected': {
                 fontWeight: 700,
                 color: 'primary.main',
-                backgroundColor: effectiveOrientation === 'vertical' ? 'action.selected' : 'transparent',
-                borderBottom: effectiveOrientation === 'horizontal' ? '2px solid' : 'none',
-                borderColor: effectiveOrientation === 'horizontal' ? 'primary.main' : 'transparent',
+                backgroundColor:
+                  effectiveOrientation === 'vertical' && !isMobileLayout ? 'action.selected' : 'transparent',
+                borderBottom: effectiveOrientation === 'horizontal' && !isMobileLayout ? '2px solid' : 'none',
+                borderColor: effectiveOrientation === 'horizontal' && !isMobileLayout ? 'primary.main' : 'transparent',
               },
             },
             '& .MuiTab-icon': {
@@ -263,15 +293,15 @@ export default function CustomTabs({ tabsProps }: { tabsProps: CustomTabsProps }
         elevation={0}
         sx={{
           flex: 1,
-          borderRadius: { xs: 3, md: 3 },
-          backgroundColor: 'background.default',
+          borderRadius: isMobileLayout ? 0 : { xs: 3, md: 3 },
+          backgroundColor: isMobileLayout ? 'transparent' : 'background.default',
           backgroundImage: 'none',
           overflow: 'visible',
-          minHeight: { xs: 'auto', md: '100vh' },
+          minHeight: isMobileLayout ? 'auto' : { xs: 'auto', md: '100vh' },
         }}
       >
         {/* Mobile active tab title */}
-        {isSmallScreen && tabs[displayValue] && (
+        {!isMobileLayout && isSmallScreen && tabs[displayValue] && (
           <Box
             sx={{
               px: 3,

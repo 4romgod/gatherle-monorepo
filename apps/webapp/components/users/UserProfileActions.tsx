@@ -1,12 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
-import { Button, Box, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Stack } from '@mui/material';
-import { MoreVert, Block, RemoveCircleOutline, MailOutline } from '@mui/icons-material';
+import { Box, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Stack } from '@mui/material';
+import { MoreVert, Block, RemoveCircleOutline } from '@mui/icons-material';
 import { useBlock, useBlockedUsers, useAppContext } from '@/hooks';
 import { useRouter } from 'next/navigation';
 import FollowButton from './FollowButton';
+import { ProfileActionButton } from './ProfileActionButton';
+import { FiMessageCircle } from 'react-icons/fi';
 
 interface UserProfileActionsProps {
   userId: string;
@@ -15,6 +16,7 @@ interface UserProfileActionsProps {
   messageHref?: string;
   /** When true, Follow and Message buttons stretch to fill available width */
   fullWidth?: boolean;
+  showOverflow?: boolean;
 }
 
 export default function UserProfileActions({
@@ -23,6 +25,7 @@ export default function UserProfileActions({
   canMessage = false,
   messageHref,
   fullWidth = false,
+  showOverflow = true,
 }: UserProfileActionsProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { blockUser, unblockUser, isLoading } = useBlock();
@@ -94,77 +97,55 @@ export default function UserProfileActions({
         ...(fullWidth && { width: '100%' }),
       }}
     >
-      {canMessage && messageHref && (
-        <Box sx={{ flex: fullWidth ? 1 : undefined, minWidth: 0 }}>
-          <Button
-            component={Link}
-            href={messageHref}
-            variant="outlined"
-            size={fullWidth ? 'medium' : 'small'}
-            fullWidth={fullWidth}
-            startIcon={<MailOutline />}
-            sx={{
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
-              color: 'text.primary',
-              textTransform: 'none',
-              fontWeight: 600,
-              '&:hover': {
-                bgcolor: 'background.default',
-                borderColor: 'text.secondary',
-              },
-            }}
-          >
-            Message
-          </Button>
-        </Box>
-      )}
+      {canMessage && messageHref && <ProfileActionButton href={messageHref} icon={FiMessageCircle} label="Message" />}
       <Box sx={{ flex: fullWidth ? 1 : undefined, minWidth: 0 }}>
-        <FollowButton targetId={userId} size={fullWidth ? 'medium' : 'small'} fullWidth={fullWidth} />
+        <FollowButton targetId={userId} size={fullWidth ? 'medium' : 'small'} fullWidth={fullWidth} variant="profile" />
       </Box>
-      <IconButton
-        onClick={handleMenuOpen}
-        size="small"
-        sx={{
-          borderRadius: 2,
-          flexShrink: 0,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
-          '&:hover': {
-            bgcolor: 'background.default',
-            borderColor: 'text.secondary',
-          },
-        }}
-      >
-        <MoreVert />
-      </IconButton>
+      {showOverflow ? (
+        <IconButton
+          onClick={handleMenuOpen}
+          size="small"
+          sx={{
+            borderRadius: 2,
+            flexShrink: 0,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
+            '&:hover': {
+              bgcolor: 'background.default',
+              borderColor: 'text.secondary',
+            },
+          }}
+        >
+          <MoreVert />
+        </IconButton>
+      ) : null}
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        {isBlocked ? (
-          <MenuItem onClick={handleUnblock} disabled={isLoading}>
-            <ListItemIcon>
-              <RemoveCircleOutline fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Unblock User</ListItemText>
-          </MenuItem>
-        ) : (
-          <MenuItem onClick={handleBlock} disabled={isLoading}>
-            <ListItemIcon>
-              <Block fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Block User</ListItemText>
-          </MenuItem>
-        )}
-      </Menu>
+      {showOverflow ? (
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        >
+          {isBlocked ? (
+            <MenuItem onClick={handleUnblock} disabled={isLoading}>
+              <ListItemIcon>
+                <RemoveCircleOutline fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Unblock User</ListItemText>
+            </MenuItem>
+          ) : (
+            <MenuItem onClick={handleBlock} disabled={isLoading}>
+              <ListItemIcon>
+                <Block fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Block User</ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
+      ) : null}
     </Stack>
   );
 }

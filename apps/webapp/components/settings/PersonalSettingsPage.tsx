@@ -3,40 +3,42 @@
 import React, { useActionState, useEffect, useState } from 'react';
 import {
   Box,
-  Typography,
-  Grid,
-  Switch,
-  FormControlLabel,
   Button,
-  Select,
-  MenuItem,
   FormControl,
+  FormControlLabel,
+  Grid,
   InputLabel,
+  MenuItem,
+  Select,
   Stack,
+  Switch,
   TextField,
+  Typography,
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { Save as SaveIcon, Block as BlockIcon } from '@mui/icons-material';
-import { Gender, User, FollowPolicy, SocialVisibility } from '@/data/graphql/types/graphql';
-import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
-import { useAppContext } from '@/hooks/useAppContext';
-import { BlockedUsersList } from '@/components/users/BlockedUsersList';
+import { Block as BlockIcon, Save as SaveIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
-import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
-import { featureFlags } from '@/lib/constants/feature-flags';
 import { signIn, useSession } from 'next-auth/react';
+import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
+import { FollowPolicy, Gender, SocialVisibility, type User } from '@/data/graphql/types/graphql';
+import { useAppContext } from '@/hooks/useAppContext';
+import { featureFlags } from '@/lib/constants/feature-flags';
+import { BlockedUsersList } from '@/components/users/BlockedUsersList';
+import { SETTINGS_PRIMARY_BUTTON_SX, SETTINGS_SECONDARY_BUTTON_SX, SettingsSection } from './SettingsSection';
+
+type PersonalSettingsSection = 'activity' | 'personal' | 'privacy';
 
 interface PersonalSettings {
   birthdate: string;
+  defaultVisibility: SocialVisibility;
+  followersListVisibility: SocialVisibility;
+  followPolicy: FollowPolicy;
+  followingListVisibility: SocialVisibility;
   gender: Gender | null;
   phone_number: string;
-  followPolicy: FollowPolicy;
-  followersListVisibility: SocialVisibility;
-  followingListVisibility: SocialVisibility;
-  defaultVisibility: SocialVisibility;
-  shareRSVPByDefault: boolean;
   shareCheckinsByDefault: boolean;
+  shareRSVPByDefault: boolean;
 }
 
 type PrivacySettingsSource = Partial<
@@ -66,9 +68,29 @@ function getPrivacySettings(
   };
 }
 
-export default function PersonalSettingsPage({ user }: { user: User }) {
+const SECTION_COPY: Record<PersonalSettingsSection, { description: string; title: string }> = {
+  activity: {
+    description: 'Decide which activity defaults should apply to your account.',
+    title: 'Activity',
+  },
+  personal: {
+    description: 'Personal information and discovery-relevant details.',
+    title: 'Personal',
+  },
+  privacy: {
+    description: 'Decide how visible your activity and social graph should be.',
+    title: 'Privacy',
+  },
+};
+
+export default function PersonalSettingsPage({
+  user,
+  section = 'personal',
+}: {
+  user: User;
+  section?: PersonalSettingsSection;
+}) {
   const { setToastProps, toastProps } = useAppContext();
-  const [loading, setLoading] = useState(false);
   const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const [blockedUsersOpen, setBlockedUsersOpen] = useState(false);
   const { data: session } = useSession();
@@ -81,38 +103,22 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
     shareCheckinsByDefault: user.shareCheckinsByDefault ?? true,
   });
 
-  // Sync local state with session when it updates (e.g., after tab switch)
   useEffect(() => {
-    if (session?.user) {
-      setSettings({
-        birthdate: session.user.birthdate || '',
-        gender: session.user.gender || null,
-        phone_number: session.user.phone_number || '',
-        ...getPrivacySettings(session.user),
-        shareRSVPByDefault: session.user.shareRSVPByDefault ?? true,
-        shareCheckinsByDefault: session.user.shareCheckinsByDefault ?? true,
-      });
+    if (!session?.user) {
+      return;
     }
+
+    setSettings({
+      birthdate: session.user.birthdate || '',
+      gender: session.user.gender || null,
+      phone_number: session.user.phone_number || '',
+      ...getPrivacySettings(session.user),
+      shareRSVPByDefault: session.user.shareRSVPByDefault ?? true,
+      shareCheckinsByDefault: session.user.shareCheckinsByDefault ?? true,
+    });
   }, [session?.user]);
 
-  const handleBooleanToggle = (name: 'shareRSVPByDefault' | 'shareCheckinsByDefault') => {
-    setSettings((prev) => ({
-      ...prev,
-      [name]: !prev[name],
-    }));
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSettings((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   useEffect(() => {
-    setLoading(false);
-
     if (formState.apiError) {
       setToastProps({
         ...toastProps,
@@ -125,7 +131,6 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
     if (formState.data && session?.user?.token) {
       const updatedUser = formState.data as User;
 
-      // Update local state immediately with the returned data
       setSettings({
         birthdate: updatedUser.birthdate || '',
         gender: updatedUser.gender || null,
@@ -135,7 +140,6 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         shareCheckinsByDefault: updatedUser.shareCheckinsByDefault ?? true,
       });
 
-      // Refresh the session with updated user data
       signIn('refresh-session', {
         userData: JSON.stringify(updatedUser),
         token: session.user.token,
@@ -146,400 +150,310 @@ export default function PersonalSettingsPage({ user }: { user: User }) {
         ...toastProps,
         open: true,
         severity: 'success',
-        message: 'Personal Settings updated successfully!',
+        message: 'Settings updated successfully!',
       });
     }
-  }, [formState]);
+  }, [formState, session, setToastProps, toastProps]);
+
+  const handleBooleanToggle = (name: 'shareRSVPByDefault' | 'shareCheckinsByDefault') => {
+    setSettings((previous) => ({
+      ...previous,
+      [name]: !previous[name],
+    }));
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setSettings((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
 
   return (
-    <Box>
-      <Stack spacing={3}>
-        {/* Page Header */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Personal Settings
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-            Manage your personal information and account preferences
-          </Typography>
-        </Box>
+    <>
+      <Box component="form" action={formAction} noValidate>
+        <input type="hidden" name="birthdate" value={settings.birthdate} />
+        <input type="hidden" name="gender" value={settings.gender || ''} />
+        <input
+          type="hidden"
+          name="followPolicy"
+          value={featureFlags.enablePrivateUsers ? settings.followPolicy : FollowPolicy.Public}
+        />
+        <input
+          type="hidden"
+          name="followersListVisibility"
+          value={featureFlags.enablePrivateUsers ? settings.followersListVisibility : SocialVisibility.Public}
+        />
+        <input
+          type="hidden"
+          name="followingListVisibility"
+          value={featureFlags.enablePrivateUsers ? settings.followingListVisibility : SocialVisibility.Public}
+        />
+        <input
+          type="hidden"
+          name="defaultVisibility"
+          value={featureFlags.enablePrivateUsers ? settings.defaultVisibility : SocialVisibility.Public}
+        />
+        <input type="hidden" name="shareRSVPByDefault" value={String(settings.shareRSVPByDefault)} />
+        <input type="hidden" name="shareCheckinsByDefault" value={String(settings.shareCheckinsByDefault)} />
+        <input type="hidden" name="phone_number" value={settings.phone_number} />
 
-        <Box component="form" action={formAction} noValidate>
-          {/* Hidden fields to submit privacy values with form data */}
-          <input type="hidden" name="birthdate" value={settings.birthdate} />
-          <input type="hidden" name="gender" value={settings.gender || ''} />
-          <input
-            type="hidden"
-            name="followPolicy"
-            value={featureFlags.enablePrivateUsers ? settings.followPolicy : FollowPolicy.Public}
-          />
-          <input
-            type="hidden"
-            name="followersListVisibility"
-            value={featureFlags.enablePrivateUsers ? settings.followersListVisibility : SocialVisibility.Public}
-          />
-          <input
-            type="hidden"
-            name="followingListVisibility"
-            value={featureFlags.enablePrivateUsers ? settings.followingListVisibility : SocialVisibility.Public}
-          />
-          <input
-            type="hidden"
-            name="defaultVisibility"
-            value={featureFlags.enablePrivateUsers ? settings.defaultVisibility : SocialVisibility.Public}
-          />
-          <input type="hidden" name="shareRSVPByDefault" value={String(settings.shareRSVPByDefault)} />
-          <input type="hidden" name="shareCheckinsByDefault" value={String(settings.shareCheckinsByDefault)} />
-          <input type="hidden" name="phone_number" value={settings.phone_number} />
-
-          {/* Personal Details */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Personal Details
-            </Typography>
-
-            <Grid container spacing={{ xs: 2, sm: 3 }}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
-                  <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
-                    <DatePicker
-                      label="Date of Birth"
-                      format="YYYY-MM-DD"
-                      name="birthdate"
-                      value={settings.birthdate ? dayjs(settings.birthdate) : null}
-                      onChange={(newValue) => {
-                        setSettings((prev) => ({
-                          ...prev,
-                          birthdate: newValue ? newValue.format('YYYY-MM-DD') : '',
-                        }));
-                      }}
-                      slotProps={{
-                        textField: {
-                          id: 'personal-birthdate',
-                          color: 'secondary',
-                        },
-                      }}
-                    />
-                  </LocalizationProvider>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="personal-gender-label" color="secondary">
-                    Gender
-                  </InputLabel>
-                  <Select
-                    id="personal-gender"
-                    labelId="personal-gender-label"
-                    name="gender"
-                    value={settings.gender || ''}
-                    onChange={(e) => handleInputChange(e as React.ChangeEvent<HTMLInputElement>)}
-                    label="Gender"
+        <Stack spacing={4}>
+          {section === 'personal' ? (
+            <SettingsSection description={SECTION_COPY.personal.description} title={SECTION_COPY.personal.title}>
+              <Grid container spacing={{ xs: 2, sm: 3 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormControl fullWidth>
+                    <LocalizationProvider adapterLocale="en" dateAdapter={AdapterDayjs}>
+                      <DatePicker
+                        format="YYYY-MM-DD"
+                        label="Date of birth"
+                        name="birthdate"
+                        onChange={(newValue) => {
+                          setSettings((previous) => ({
+                            ...previous,
+                            birthdate: newValue ? newValue.format('YYYY-MM-DD') : '',
+                          }));
+                        }}
+                        slotProps={{
+                          textField: {
+                            color: 'secondary',
+                            id: 'personal-birthdate',
+                          },
+                        }}
+                        value={settings.birthdate ? dayjs(settings.birthdate) : null}
+                      />
+                    </LocalizationProvider>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel color="secondary" id="personal-gender-label">
+                      Gender
+                    </InputLabel>
+                    <Select
+                      color="secondary"
+                      id="personal-gender"
+                      label="Gender"
+                      labelId="personal-gender-label"
+                      name="gender"
+                      onChange={(event) => handleInputChange(event as React.ChangeEvent<HTMLInputElement>)}
+                      value={settings.gender || ''}
+                    >
+                      {Object.values(Gender).map((gender) => (
+                        <MenuItem key={gender} value={gender}>
+                          {gender}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <TextField
                     color="secondary"
-                  >
-                    {Object.values(Gender).map((gender) => (
-                      <MenuItem key={gender} value={gender}>
-                        {gender}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    fullWidth
+                    id="personal-phone-number"
+                    label="Phone number"
+                    name="phone_number"
+                    onChange={(event) => setSettings((previous) => ({ ...previous, phone_number: event.target.value }))}
+                    placeholder="+27 12 345 6789"
+                    value={settings.phone_number}
+                  />
+                </Grid>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  id="personal-phone-number"
-                  fullWidth
-                  label="Phone Number"
-                  name="phone_number"
-                  value={settings.phone_number}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, phone_number: e.target.value }))}
-                  variant="outlined"
+            </SettingsSection>
+          ) : null}
+
+          {section === 'privacy' && featureFlags.enablePrivateUsers ? (
+            <>
+              <SettingsSection description={SECTION_COPY.privacy.description} title={SECTION_COPY.privacy.title}>
+                <Stack spacing={2}>
+                  <Box sx={{ py: 0.5 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={settings.followPolicy === FollowPolicy.RequireApproval}
+                          color="secondary"
+                          name="followPolicy"
+                          onChange={() =>
+                            setSettings((previous) => ({
+                              ...previous,
+                              followPolicy:
+                                previous.followPolicy === FollowPolicy.Public
+                                  ? FollowPolicy.RequireApproval
+                                  : FollowPolicy.Public,
+                            }))
+                          }
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography fontWeight={600} variant="body1">
+                            Private account
+                          </Typography>
+                          <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
+                            Require your approval before someone can follow you.
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </Box>
+
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel color="secondary" id="default-visibility-label">
+                      Default activity visibility
+                    </InputLabel>
+                    <Select
+                      color="secondary"
+                      id="default-visibility"
+                      label="Default activity visibility"
+                      labelId="default-visibility-label"
+                      onChange={(event) =>
+                        setSettings((previous) => ({
+                          ...previous,
+                          defaultVisibility: event.target.value as SocialVisibility,
+                        }))
+                      }
+                      value={settings.defaultVisibility}
+                    >
+                      <MenuItem value={SocialVisibility.Public}>Everyone</MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>Followers only</MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>Only me</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel color="secondary" id="followers-visibility-label">
+                      Followers list visibility
+                    </InputLabel>
+                    <Select
+                      color="secondary"
+                      id="followers-visibility"
+                      label="Followers list visibility"
+                      labelId="followers-visibility-label"
+                      onChange={(event) =>
+                        setSettings((previous) => ({
+                          ...previous,
+                          followersListVisibility: event.target.value as SocialVisibility,
+                        }))
+                      }
+                      value={settings.followersListVisibility}
+                    >
+                      <MenuItem value={SocialVisibility.Public}>Everyone</MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>Followers only</MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>Only me</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel color="secondary" id="following-visibility-label">
+                      Following list visibility
+                    </InputLabel>
+                    <Select
+                      color="secondary"
+                      id="following-visibility"
+                      label="Following list visibility"
+                      labelId="following-visibility-label"
+                      onChange={(event) =>
+                        setSettings((previous) => ({
+                          ...previous,
+                          followingListVisibility: event.target.value as SocialVisibility,
+                        }))
+                      }
+                      value={settings.followingListVisibility}
+                    >
+                      <MenuItem value={SocialVisibility.Public}>Everyone</MenuItem>
+                      <MenuItem value={SocialVisibility.Followers}>Followers only</MenuItem>
+                      <MenuItem value={SocialVisibility.Private}>Only me</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </SettingsSection>
+
+              <SettingsSection
+                description="Manage users you’ve blocked. Blocked users cannot follow you or see your activity."
+                title="Blocked users"
+              >
+                <Button
                   color="secondary"
-                  placeholder="+27 12 345 6789"
-                />
-              </Grid>
-            </Grid>
-          </Box>
+                  onClick={() => setBlockedUsersOpen(true)}
+                  startIcon={<BlockIcon />}
+                  sx={{ ...SETTINGS_SECONDARY_BUTTON_SX, alignSelf: 'flex-start', width: { xs: '100%', sm: 'auto' } }}
+                  variant="outlined"
+                >
+                  View blocked users
+                </Button>
+              </SettingsSection>
+            </>
+          ) : null}
 
-          {featureFlags.enablePrivateUsers ? (
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-                Privacy Settings
-              </Typography>
-
+          {section === 'activity' ? (
+            <SettingsSection description={SECTION_COPY.activity.description} title={SECTION_COPY.activity.title}>
               <Stack spacing={2}>
-                <Box sx={{ py: 1 }}>
+                <Box sx={{ py: 0.5 }}>
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={settings.followPolicy === FollowPolicy.RequireApproval}
-                        onChange={() =>
-                          setSettings((prev) => ({
-                            ...prev,
-                            followPolicy:
-                              prev.followPolicy === FollowPolicy.Public
-                                ? FollowPolicy.RequireApproval
-                                : FollowPolicy.Public,
-                          }))
-                        }
+                        checked={settings.shareRSVPByDefault}
                         color="secondary"
-                        name="followPolicy"
+                        onChange={() => handleBooleanToggle('shareRSVPByDefault')}
                       />
                     }
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={600}>
-                          Private Account
+                        <Typography fontWeight={600} variant="body1">
+                          Share RSVPs by default
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          Require your approval before someone can follow you
+                        <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
+                          Let your followers see when you RSVP to events.
                         </Typography>
                       </Box>
                     }
                   />
                 </Box>
 
-                {/* Default Activity Visibility */}
-                <Box sx={{ py: 1 }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="default-visibility-label" color="secondary">
-                      Default Activity Visibility
-                    </InputLabel>
-                    <Select
-                      id="default-visibility"
-                      labelId="default-visibility-label"
-                      name="defaultVisibility"
-                      value={settings.defaultVisibility}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          defaultVisibility: e.target.value as SocialVisibility,
-                        }))
-                      }
-                      label="Default Activity Visibility"
-                      color="secondary"
-                    >
-                      <MenuItem value={SocialVisibility.Public}>
-                        <Box>
-                          <Typography variant="body1">Everyone</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Your activity is visible to anyone
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Followers}>
-                        <Box>
-                          <Typography variant="body1">Followers Only</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Only people who follow you can see your activity
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Private}>
-                        <Box>
-                          <Typography variant="body1">Only Me</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Your activity is hidden from everyone
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-
-                {/* Followers List Visibility */}
-                <Box sx={{ py: 1 }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="followers-visibility-label" color="secondary">
-                      Who can see your followers
-                    </InputLabel>
-                    <Select
-                      id="followers-visibility"
-                      labelId="followers-visibility-label"
-                      name="followersListVisibility"
-                      value={settings.followersListVisibility}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          followersListVisibility: e.target.value as SocialVisibility,
-                        }))
-                      }
-                      label="Who can see your followers"
-                      color="secondary"
-                    >
-                      <MenuItem value={SocialVisibility.Public}>
-                        <Box>
-                          <Typography variant="body1">Everyone</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Anyone can see who follows you
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Followers}>
-                        <Box>
-                          <Typography variant="body1">Followers Only</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Only people who follow you can see your followers
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Private}>
-                        <Box>
-                          <Typography variant="body1">Only Me</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Only you can see who follows you
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-
-                {/* Following List Visibility */}
-                <Box sx={{ py: 1 }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel id="following-visibility-label" color="secondary">
-                      Who can see who you follow
-                    </InputLabel>
-                    <Select
-                      id="following-visibility"
-                      labelId="following-visibility-label"
-                      name="followingListVisibility"
-                      value={settings.followingListVisibility}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          followingListVisibility: e.target.value as SocialVisibility,
-                        }))
-                      }
-                      label="Who can see who you follow"
-                      color="secondary"
-                    >
-                      <MenuItem value={SocialVisibility.Public}>
-                        <Box>
-                          <Typography variant="body1">Everyone</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Anyone can see who you follow
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Followers}>
-                        <Box>
-                          <Typography variant="body1">Followers Only</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Only your followers can see who you follow
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                      <MenuItem value={SocialVisibility.Private}>
-                        <Box>
-                          <Typography variant="body1">Only Me</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Only you can see who you follow
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
+                <Box sx={{ py: 0.5 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.shareCheckinsByDefault}
+                        color="secondary"
+                        onChange={() => handleBooleanToggle('shareCheckinsByDefault')}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography fontWeight={600} variant="body1">
+                          Share check-ins by default
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
+                          Let your followers see when you check in at events.
+                        </Typography>
+                      </Box>
+                    }
+                  />
                 </Box>
               </Stack>
-            </Box>
+            </SettingsSection>
           ) : null}
 
-          {/* Activity Sharing */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Activity Sharing
-            </Typography>
-
-            <Stack spacing={2}>
-              <Box sx={{ py: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.shareRSVPByDefault}
-                      onChange={() => handleBooleanToggle('shareRSVPByDefault')}
-                      color="secondary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        Share RSVP Status
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Let your followers see when you RSVP to events
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-
-              <Box sx={{ py: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.shareCheckinsByDefault}
-                      onChange={() => handleBooleanToggle('shareCheckinsByDefault')}
-                      color="secondary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        Share Check-ins
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Let your followers see when you check in at events
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Blocked Users Card */}
-          <Box sx={{ mb: 4 }}>
-            <Stack spacing={2}>
-              <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-                Blocked Users
-              </Typography>
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Manage users you&apos;ve blocked. Blocked users cannot follow you or see your activity.
-                </Typography>
-                <Button
-                  startIcon={<BlockIcon />}
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => setBlockedUsersOpen(true)}
-                  sx={{ ...BUTTON_STYLES }}
-                >
-                  View Blocked Users
-                </Button>
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Action Button */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end">
             <Button
-              startIcon={<SaveIcon />}
-              variant="contained"
               color="primary"
-              type="submit"
               size="large"
-              sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
+              startIcon={<SaveIcon />}
+              sx={{ ...SETTINGS_PRIMARY_BUTTON_SX, width: { xs: '100%', sm: 'auto' } }}
+              type="submit"
+              variant="contained"
             >
-              Save Changes
+              Save changes
             </Button>
           </Stack>
-        </Box>
-      </Stack>
+        </Stack>
+      </Box>
 
-      {/* Blocked Users Dialog */}
-      <BlockedUsersList open={blockedUsersOpen} onClose={() => setBlockedUsersOpen(false)} />
-    </Box>
+      <BlockedUsersList onClose={() => setBlockedUsersOpen(false)} open={blockedUsersOpen} />
+    </>
   );
 }

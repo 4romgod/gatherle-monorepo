@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
+  Avatar,
   Box,
   Button,
   Divider,
@@ -11,47 +12,89 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Avatar,
   Typography,
 } from '@mui/material';
-import {
-  Clear,
-  Menu,
-  ControlPointOutlined,
-  Settings,
-  Security,
-  Logout,
-  Business,
-  DarkMode,
-  LightMode,
-} from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
-import NavLinksList from '@/components/navigation/main/NavLinksList';
+import type { IconType } from 'react-icons';
+import {
+  FiBriefcase,
+  FiGrid,
+  FiInstagram,
+  FiLinkedin,
+  FiLogOut,
+  FiMapPin,
+  FiMenu,
+  FiMoon,
+  FiMusic,
+  FiPlusCircle,
+  FiSettings,
+  FiShield,
+  FiSun,
+  FiTwitter,
+  FiUsers,
+  FiX,
+} from 'react-icons/fi';
 import { ROUTES } from '@/lib/constants';
 import { getDisplayName, getAvatarSrc } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 import { APP_NAME } from '@/lib/constants';
 import { useLogout } from '@/hooks/useLogout';
-import { socialLinks } from '@/components/footer/NavigationItems';
+
+type DrawerLinkItem = {
+  href: string;
+  icon: IconType;
+  label: string;
+};
+
+type DrawerActionItem = {
+  icon: IconType;
+  keepOpen?: boolean;
+  label: string;
+  onClick: () => void;
+};
+
+type SocialLinkConfig = {
+  href: string;
+  icon: IconType;
+  label: string;
+};
 
 const drawerItemSx = {
   borderRadius: 2.25,
-  gap: 1.5,
+  gap: 2.25,
   minHeight: 56,
   px: 1,
   py: 1.35,
-  '& .MuiListItemIcon-root': {
-    color: 'text.secondary',
-    minWidth: 30,
-  },
-  '& .MuiListItemText-primary': {
-    fontSize: '1rem',
-    fontWeight: 600,
+  justifyContent: 'flex-start',
+  '&:hover': {
+    bgcolor: 'action.hover',
   },
 };
+
+const socialLinks: SocialLinkConfig[] = [
+  { href: 'https://www.instagram.com/gatherleofficial', icon: FiInstagram, label: 'Instagram' },
+  { href: 'https://www.tiktok.com/@gatherle', icon: FiMusic, label: 'TikTok' },
+  { href: 'https://www.linkedin.com/company/gatherle', icon: FiLinkedin, label: 'LinkedIn' },
+  { href: 'https://x.com/getgatherle', icon: FiTwitter, label: 'X' },
+];
+
+function DrawerFeatherIcon({ icon: Icon, size = 22 }: { icon: IconType; size?: number }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        alignItems: 'center',
+        color: 'text.secondary',
+        display: 'inline-flex',
+        justifyContent: 'center',
+        lineHeight: 0,
+      }}
+    >
+      <Icon size={size} />
+    </Box>
+  );
+}
 
 export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
   const [open, setOpen] = useState(false);
@@ -70,6 +113,79 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
     [session?.user?.username],
   );
 
+  const primaryItems: DrawerLinkItem[] = [
+    { href: ROUTES.CATEGORIES.ROOT, icon: FiGrid, label: 'Categories' },
+    { href: ROUTES.ORGANIZATIONS.ROOT, icon: FiGrid, label: 'Organizations' },
+    { href: ROUTES.VENUES.ROOT, icon: FiMapPin, label: 'Venues' },
+    { href: ROUTES.USERS.ROOT, icon: FiUsers, label: 'Community' },
+  ];
+  const accountItems: Array<DrawerLinkItem | DrawerActionItem> = isAuthN
+    ? [
+        { href: ROUTES.ACCOUNT.ORGANIZATIONS.ROOT, icon: FiBriefcase, label: 'My Organizations' },
+        { href: ROUTES.ACCOUNT.TAB('account'), icon: FiSettings, label: 'Settings' },
+        ...(isAdmin ? ([{ href: ROUTES.ADMIN.ROOT, icon: FiShield, label: 'Admin Portal' }] as const) : []),
+        {
+          icon: FiLogOut,
+          label: 'Logout',
+          onClick: async () => {
+            setOpen(false);
+            await logout();
+          },
+        },
+      ]
+    : [];
+  const appearanceItem: DrawerActionItem = {
+    icon: themeMode === 'dark' ? FiSun : FiMoon,
+    keepOpen: true,
+    label: themeMode === 'dark' ? 'Light mode' : 'Dark mode',
+    onClick: () => setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark')),
+  };
+
+  const renderDrawerItem = (item: DrawerLinkItem | DrawerActionItem) => {
+    const content = (
+      <>
+        <DrawerFeatherIcon icon={item.icon} />
+        <Typography
+          sx={{
+            color: 'text.primary',
+            fontSize: '1rem',
+            fontWeight: 600,
+            lineHeight: 1.2,
+          }}
+        >
+          {item.label}
+        </Typography>
+      </>
+    );
+
+    if ('href' in item) {
+      return (
+        <ListItem disablePadding key={item.label}>
+          <ListItemButton component={Link} href={item.href} onClick={toggleDrawer(false)} sx={drawerItemSx}>
+            {content}
+          </ListItemButton>
+        </ListItem>
+      );
+    }
+
+    return (
+      <ListItem disablePadding key={item.label}>
+        <ListItemButton
+          onClick={() => {
+            if (!item.keepOpen) {
+              setOpen(false);
+            }
+
+            void item.onClick();
+          }}
+          sx={drawerItemSx}
+        >
+          {content}
+        </ListItemButton>
+      </ListItem>
+    );
+  };
+
   const DrawerList = (
     <Box
       sx={{
@@ -77,29 +193,48 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         height: '100%',
         px: 2.75,
         py: 2,
-        width: drawerWidth,
+        width: '100%',
       }}
       role="presentation"
-      onClick={toggleDrawer(false)}
     >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ alignItems: 'flex-start', display: 'flex', justifyContent: 'space-between', mb: isAuthN ? 2 : 1.25 }}>
         {isAuthN && session?.user ? (
           <Link
             href={profileHref}
+            onClick={toggleDrawer(false)}
             aria-label="View profile"
-            style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, textDecoration: 'none' }}
+            style={{ alignItems: 'center', display: 'flex', gap: 14, minWidth: 0, textDecoration: 'none' }}
           >
             <Avatar
               src={getAvatarSrc(session.user)}
               alt={getDisplayName(session.user)}
-              sx={{ width: 62, height: 62, fontWeight: 800 }}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                fontWeight: 800,
+                height: 62,
+                width: 62,
+              }}
             />
-            <Box sx={{ minWidth: 0, pt: 0.25 }}>
-              <Typography noWrap variant="subtitle1" sx={{ color: 'text.primary', fontWeight: 800, lineHeight: 1.25 }}>
+            <Box sx={{ flex: 1, minWidth: 0, pt: 0.25 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  color: 'text.primary',
+                  fontSize: '1.5rem',
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  maxWidth: 170,
+                  wordBreak: 'break-word',
+                }}
+              >
                 {getDisplayName(session.user)}
               </Typography>
               {session.user.username && (
-                <Typography noWrap variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.3, mt: 0.5 }}
+                >
                   @{session.user.username}
                 </Typography>
               )}
@@ -109,8 +244,16 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           <Box />
         )}
 
-        <IconButton onClick={toggleDrawer(false)} aria-label="close drawer" sx={{ color: 'text.secondary' }}>
-          <Clear />
+        <IconButton
+          onClick={toggleDrawer(false)}
+          aria-label="close drawer"
+          sx={{
+            color: 'text.secondary',
+            height: 34,
+            width: 34,
+          }}
+        >
+          <FiX size={28} />
         </IconButton>
       </Box>
 
@@ -118,82 +261,32 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         variant="contained"
         color="secondary"
         fullWidth
-        startIcon={isAuthN ? <ControlPointOutlined /> : undefined}
+        startIcon={isAuthN ? <FiPlusCircle size={20} /> : undefined}
         component={Link}
         href={isAuthN ? ROUTES.ACCOUNT.EVENTS.CREATE : ROUTES.AUTH.REGISTER}
-        sx={{ borderRadius: 2, fontWeight: 800, mb: 2.25, py: 1.65 }}
+        onClick={toggleDrawer(false)}
+        sx={{
+          borderRadius: 2,
+          boxShadow: 'none',
+          fontSize: '1rem',
+          fontWeight: 800,
+          mb: 2.25,
+          minHeight: 58,
+          py: 1.65,
+          '&:hover': {
+            boxShadow: 'none',
+          },
+        }}
       >
         {isAuthN ? 'Host an event' : `Join ${APP_NAME}`}
       </Button>
 
       <Divider sx={{ mb: 1.5 }} />
 
-      <NavLinksList variant="drawer" />
-
-      <Divider sx={{ my: 1.5 }} />
-
-      {isAuthN && (
-        <>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ORGANIZATIONS.ROOT} sx={drawerItemSx}>
-                <ListItemIcon>
-                  <Business />
-                </ListItemIcon>
-                <ListItemText primary={'My Organizations'} />
-              </ListItemButton>
-            </ListItem>
-
-            <ListItem disablePadding>
-              <ListItemButton component={Link} href={ROUTES.ACCOUNT.ROOT} sx={drawerItemSx}>
-                <ListItemIcon>
-                  <Settings />
-                </ListItemIcon>
-                <ListItemText primary={'Settings'} />
-              </ListItemButton>
-            </ListItem>
-
-            {isAdmin && (
-              <ListItem disablePadding>
-                <ListItemButton component={Link} href={ROUTES.ADMIN.ROOT} sx={drawerItemSx}>
-                  <ListItemIcon>
-                    <Security />
-                  </ListItemIcon>
-                  <ListItemText primary={'Admin Portal'} />
-                </ListItemButton>
-              </ListItem>
-            )}
-          </List>
-
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton
-                sx={drawerItemSx}
-                onClick={async () => {
-                  setOpen(false);
-                  await logout();
-                }}
-              >
-                <ListItemIcon>
-                  <Logout />
-                </ListItemIcon>
-                <ListItemText primary={'Logout'} />
-              </ListItemButton>
-            </ListItem>
-          </List>
-        </>
-      )}
-
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => setThemeMode((currentThemeMode) => (currentThemeMode === 'dark' ? 'light' : 'dark'))}
-            sx={drawerItemSx}
-          >
-            <ListItemIcon>{themeMode === 'dark' ? <LightMode /> : <DarkMode />}</ListItemIcon>
-            <ListItemText primary={themeMode === 'dark' ? 'Light mode' : 'Dark mode'} />
-          </ListItemButton>
-        </ListItem>
+      <List disablePadding>
+        {primaryItems.map(renderDrawerItem)}
+        {accountItems.map(renderDrawerItem)}
+        {renderDrawerItem(appearanceItem)}
       </List>
 
       <Divider sx={{ my: 1.5 }} />
@@ -204,9 +297,9 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           sx={{
             color: 'text.secondary',
             display: 'block',
-            fontSize: '0.7rem',
+            fontSize: '0.875rem',
             fontWeight: 800,
-            letterSpacing: '0.08em',
+            letterSpacing: '0.02em',
             mb: 1.25,
           }}
         >
@@ -215,10 +308,10 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         <Box sx={{ display: 'flex', gap: 1.25 }}>
           {socialLinks.map((social) => (
             <IconButton
-              aria-label={social.name}
-              component={Link}
+              aria-label={social.label}
+              component="a"
               href={social.href}
-              key={social.name}
+              key={social.label}
               rel="noopener noreferrer"
               size="small"
               target="_blank"
@@ -235,7 +328,7 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
                 },
               }}
             >
-              {social.icon}
+              <social.icon size={18} />
             </IconButton>
           ))}
         </Box>
@@ -256,9 +349,25 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
           ...(open && { display: 'none' }),
         }}
       >
-        <Menu color="primary" />
+        <Box component="span" sx={{ color: 'primary.main', display: 'inline-flex', lineHeight: 0 }}>
+          <FiMenu size={26} />
+        </Box>
       </IconButton>
-      <Drawer anchor="right" open={open} onClose={toggleDrawer(false)}>
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={toggleDrawer(false)}
+        slotProps={{
+          paper: {
+            sx: {
+              backgroundImage: 'none',
+              borderLeft: '1px solid',
+              borderColor: 'divider',
+              width: drawerWidth,
+            },
+          },
+        }}
+      >
         {DrawerList}
       </Drawer>
     </div>

@@ -111,6 +111,42 @@ describe('WebSocketRequestThrottleDAO', () => {
     expect(logDaoError).not.toHaveBeenCalled();
   });
 
+  it('wraps non-object persistence failures without treating them as duplicate-key races', async () => {
+    (WebSocketRequestThrottleModel.findOneAndUpdate as jest.Mock).mockReturnValue(createExecQuery('mongo down', true));
+
+    await expect(
+      WebSocketRequestThrottleDAO.assertAllowed('ping', ['ping:connection:conn-1'], {
+        maxRequests: 120,
+        windowMs: 60_000,
+      }),
+    ).rejects.toBeInstanceOf(GraphQLError);
+    expect(logDaoError).toHaveBeenCalledWith('Error enforcing websocket request throttle', {
+      error: 'mongo down',
+      routeKey: 'ping',
+      scopeKeys: ['ping:connection:conn-1'],
+    });
+  });
+
+  it('wraps the guard failure when neither throttle upsert path returns a record', async () => {
+    (WebSocketRequestThrottleModel.findOneAndUpdate as jest.Mock)
+      .mockReturnValueOnce(createExecQuery(null))
+      .mockReturnValueOnce(createExecQuery(null));
+
+    await expect(
+      WebSocketRequestThrottleDAO.assertAllowed('chat.send', ['chat.send:user:user-1'], {
+        maxRequests: 20,
+        windowMs: 60_000,
+      }),
+    ).rejects.toBeInstanceOf(GraphQLError);
+    expect(logDaoError).toHaveBeenCalledWith('Error enforcing websocket request throttle', {
+      error: expect.objectContaining({
+        message: 'Failed to upsert websocket throttle record for chat.send:user:user-1',
+      }),
+      routeKey: 'chat.send',
+      scopeKeys: ['chat.send:user:user-1'],
+    });
+  });
+
   it('wraps unexpected persistence failures', async () => {
     const error = new Error('mongo down');
     (WebSocketRequestThrottleModel.findOneAndUpdate as jest.Mock).mockReturnValue(createExecQuery(error, true));

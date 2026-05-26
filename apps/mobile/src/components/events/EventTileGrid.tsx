@@ -2,6 +2,11 @@ import { useMemo, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { ProfileEventTile } from '@/components/account/ProfileEventTile';
+import {
+  getProfileEventGridColumns,
+  getProfileEventTileSize,
+  PROFILE_EVENT_TILE_GRID_GAP,
+} from '@/lib/events/eventTileGrid';
 
 type EventTileGridProps = {
   columns?: number;
@@ -9,11 +14,15 @@ type EventTileGridProps = {
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
 };
 
-export function EventTileGrid({ columns = 3, occurrences, onPressEvent }: EventTileGridProps) {
+export function EventTileGrid({ columns, occurrences, onPressEvent }: EventTileGridProps) {
   const { width } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const resolvedWidth = containerWidth ?? width - 40;
-  const tileSize = useMemo(() => Math.floor((resolvedWidth - 6 * (columns - 1)) / columns), [columns, resolvedWidth]);
+  const resolvedColumns = columns ?? getProfileEventGridColumns(resolvedWidth);
+  const tileSize = useMemo(
+    () => getProfileEventTileSize(resolvedWidth, resolvedColumns),
+    [resolvedColumns, resolvedWidth],
+  );
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const nextWidth = event.nativeEvent.layout.width;
@@ -40,6 +49,6 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: PROFILE_EVENT_TILE_GRID_GAP,
   },
 });

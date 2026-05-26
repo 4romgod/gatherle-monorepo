@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -15,6 +14,7 @@ import { EventSearchBar } from '@/components/core/EventSearchBar';
 import { EventCard } from '@/components/events/EventCard';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
+import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
@@ -109,6 +109,11 @@ export function EventsScreen() {
   }, [filtersKey, searchQuery]);
 
   const paginatedEvents = filteredEvents.slice(0, visibleCount);
+  const infiniteScroll = useInfiniteScroll({
+    enabled: visibleCount < filteredEvents.length,
+    onEndReached: () => setVisibleCount((current) => Math.min(current + PAGE_SIZE, filteredEvents.length)),
+    resetKey: `${filtersKey}:${searchQuery}:${selectedEventId}`,
+  });
 
   const handleClearAll = () => {
     setSearchQuery('');
@@ -117,7 +122,13 @@ export function EventsScreen() {
   };
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      onContentSizeChange={infiniteScroll.onContentSizeChange}
+      onRefresh={onRefresh}
+      onScroll={infiniteScroll.onScroll}
+      refreshing={refreshing}
+      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+    >
       <EventSearchBar
         onSelectEvent={(event) => {
           setSearchQuery(event.title ?? '');
@@ -196,7 +207,7 @@ export function EventsScreen() {
         <SkeletonBlock style={styles.eventsCountSkeleton} />
       ) : (
         <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-          {paginatedEvents.length} Events Found
+          {filteredEvents.length} Events Found
         </Text>
       )}
 
@@ -224,23 +235,6 @@ export function EventsScreen() {
               />
             ))}
           </View>
-          {visibleCount < filteredEvents.length ? (
-            <View style={styles.paginationSection}>
-              <Text style={[styles.showingText, { color: theme.colors.textMuted }]}>
-                Showing {Math.min(visibleCount, filteredEvents.length)}
-              </Text>
-              <Pressable
-                onPress={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                style={({ pressed }) => [
-                  styles.showMoreButton,
-                  { borderColor: theme.colors.border, opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <Text style={[styles.showMoreText, { color: theme.colors.textPrimary }]}>Show more events</Text>
-                <Feather color={theme.colors.textPrimary} name="chevron-down" size={16} />
-              </Pressable>
-            </View>
-          ) : null}
         </>
       ) : (
         <StateNotice message="No events match your current search or filter." />
@@ -290,29 +284,5 @@ const styles = StyleSheet.create({
   },
   feedList: {
     gap: 24,
-  },
-  paginationSection: {
-    alignItems: 'center',
-    gap: 12,
-    paddingTop: 8,
-  },
-  showingText: {
-    ...typography.bodyRegular,
-    fontSize: fontSize.sm,
-  },
-  showMoreButton: {
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    width: '100%',
-  },
-  showMoreText: {
-    ...typography.bodySemiBold,
-    fontSize: fontSize.base,
   },
 });

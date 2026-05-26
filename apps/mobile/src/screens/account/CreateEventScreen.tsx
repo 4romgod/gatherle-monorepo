@@ -312,7 +312,7 @@ export function CreateEventScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to publish events, attach organizations, and manage attendee flow from mobile."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -326,7 +326,12 @@ export function CreateEventScreen() {
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      contentContainerStyle={styles.pageContent}
+      disablePullToRefresh
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    >
       <View style={styles.section}>
         <SectionHeading title="Basics" />
         <AccountTextField label="Title" onChangeText={(value) => updateField('title', value)} value={formState.title} />

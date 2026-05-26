@@ -29,8 +29,8 @@ export const GetFollowingDocument = graphql(`
 `);
 
 export const GetFollowersDocument = graphql(`
-  query GetFollowers($targetType: FollowTargetType!, $targetId: ID!) {
-    readFollowers(targetType: $targetType, targetId: $targetId) {
+  query GetFollowers($targetType: FollowTargetType!, $targetId: ID!, $options: QueryOptionsInput) {
+    readFollowers(targetType: $targetType, targetId: $targetId, options: $options) {
       followId
       followerUserId
       follower {
@@ -46,6 +46,34 @@ export const GetFollowersDocument = graphql(`
       targetId
       approvalStatus
       createdAt
+    }
+  }
+`);
+
+export const GetUserFollowingDocument = graphql(`
+  query GetUserFollowing($userId: ID!, $options: QueryOptionsInput) {
+    readUserFollowing(userId: $userId, options: $options) {
+      followId
+      followerUserId
+      targetType
+      targetId
+      approvalStatus
+      createdAt
+      targetUser {
+        userId
+        username
+        email
+        given_name
+        family_name
+        profile_picture
+        bio
+      }
+      targetOrganization {
+        orgId
+        slug
+        name
+        logo
+      }
     }
   }
 `);

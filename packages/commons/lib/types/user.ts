@@ -314,6 +314,10 @@ export class User {
   // Computed field - resolved via @FieldResolver in UserResolver (no @prop, not stored in DB)
   @Field(() => Number, { description: USER_DESCRIPTIONS.FOLLOWERS_COUNT })
   followersCount?: number;
+
+  // Computed field - resolved via @FieldResolver in UserResolver (no @prop, not stored in DB)
+  @Field(() => Number, { description: USER_DESCRIPTIONS.FOLLOWING_COUNT })
+  followingCount?: number;
 }
 
 @ObjectType('UserWithToken', { description: USER_DESCRIPTIONS.WITH_TOKEN })

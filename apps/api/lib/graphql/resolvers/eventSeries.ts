@@ -175,8 +175,10 @@ export class EventSeriesResolver {
   }
 
   @Query(() => Int, { description: 'Read the total number of events.' })
-  async readEventsCount(): Promise<number> {
-    return EventSeriesDAO.count();
+  async readEventsCount(
+    @Arg('options', () => EventsQueryOptionsInput, { nullable: true }) options?: EventsQueryOptionsInput,
+  ): Promise<number> {
+    return EventSeriesDAO.countEvents(options);
   }
 
   @Query(() => [EventSeries], { description: 'Read the top trending upcoming events ranked by RSVP + saved-by score.' })

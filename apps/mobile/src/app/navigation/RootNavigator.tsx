@@ -40,6 +40,8 @@ import { OrganizationsScreen } from '@/screens/organizations/OrganizationsScreen
 import { OrganizationDetailsScreen } from '@/screens/organizations/OrganizationDetailsScreen';
 import { OrganizationMembersScreen } from '@/screens/organizations/OrganizationMembersScreen';
 import { UserProfileScreen } from '@/screens/users/UserProfileScreen';
+import { UserHostedEventsScreen } from '@/screens/users/UserHostedEventsScreen';
+import { UserConnectionsScreen } from '@/screens/users/UserConnectionsScreen';
 import { VenuesScreen } from '@/screens/venues/VenuesScreen';
 import { VenueDetailsScreen } from '@/screens/venues/VenueDetailsScreen';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -195,6 +197,25 @@ export function RootNavigator() {
         options={({ route }) => ({
           presentation: 'card',
           title: route.params.displayName ?? route.params.username ?? 'Profile',
+        })}
+      />
+      <Stack.Screen
+        component={UserHostedEventsScreen}
+        name="UserHostedEvents"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.displayName ?? route.params.username ?? 'Hosted events',
+        })}
+      />
+      <Stack.Screen
+        component={UserConnectionsScreen}
+        name="UserConnections"
+        options={({ route }) => ({
+          presentation: 'card',
+          title:
+            route.params.mode === 'followers'
+              ? `${route.params.displayName ?? route.params.username ?? 'Member'} followers`
+              : `${route.params.displayName ?? route.params.username ?? 'Member'} following`,
         })}
       />
       <Stack.Screen

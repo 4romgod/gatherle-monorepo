@@ -68,6 +68,15 @@ export class UserResolver {
     return FollowDAO.countFollowers(FollowTargetType.User, user.userId);
   }
 
+  @FieldResolver(() => Number)
+  async followingCount(@Root() user: User): Promise<number> {
+    if (!user.userId) {
+      return 0;
+    }
+
+    return FollowDAO.countAcceptedFollowingForUser(user.userId);
+  }
+
   @Mutation(() => UserWithToken, { description: RESOLVER_DESCRIPTIONS.USER.createUser })
   async createUser(
     @Arg('input', () => CreateUserInput, { description: USER_DESCRIPTIONS.CREATE_INPUT }) input: CreateUserInput,

@@ -68,7 +68,7 @@ jobs:
           echo "stack_suffix=$STACK_SUFFIX" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -166,7 +166,7 @@ jobs:
         run: npm run build:ts -w @gatherle/api
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -338,7 +338,7 @@ jobs:
         run: npm run build:ts -w @gatherle/commons
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -379,7 +379,7 @@ jobs:
         run: npm run build:ts -w @gatherle/commons
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -420,7 +420,7 @@ jobs:
         run: npm run build:ts -w @gatherle/commons
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}

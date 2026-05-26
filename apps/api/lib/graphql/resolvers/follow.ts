@@ -141,6 +141,7 @@ export class FollowResolver {
   async readFollowers(
     @Arg('targetType', () => FollowTargetType) targetType: FollowTargetType,
     @Arg('targetId', () => ID) targetId: string,
+    @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
     @Ctx() context: ServerContext,
   ): Promise<Follow[]> {
     // Check visibility settings
@@ -156,7 +157,11 @@ export class FollowResolver {
         return [];
       }
 
-      if (visibility === SocialVisibility.Followers && viewerId && viewerId !== targetId) {
+      if (visibility === SocialVisibility.Followers && viewerId !== targetId) {
+        if (!viewerId) {
+          return [];
+        }
+
         // Check if viewer follows the target (single query instead of loading all follows)
         const isFollowing = await FollowDAO.isFollowing(viewerId, FollowTargetType.User, targetId);
         if (!isFollowing) {
@@ -172,7 +177,11 @@ export class FollowResolver {
         return [];
       }
 
-      if (visibility === SocialVisibility.Followers && viewerId && viewerId !== targetOrg.ownerId) {
+      if (visibility === SocialVisibility.Followers && viewerId !== targetOrg.ownerId) {
+        if (!viewerId) {
+          return [];
+        }
+
         // Check if viewer follows the target (single query instead of loading all follows)
         const isFollowing = await FollowDAO.isFollowing(viewerId, FollowTargetType.Organization, targetId);
         if (!isFollowing) {
@@ -181,7 +190,35 @@ export class FollowResolver {
       }
     }
 
-    return FollowDAO.readFollowers(targetType, targetId);
+    return FollowDAO.readFollowersWithOptions(targetType, targetId, options);
+  }
+
+  @Query(() => [Follow], { description: 'Read accepted users and organizations followed by a specific user.' })
+  async readUserFollowing(
+    @Arg('userId', () => ID) userId: string,
+    @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
+    @Ctx() context: ServerContext,
+  ): Promise<Follow[]> {
+    const targetUser = await UserDAO.readUserById(userId);
+    const visibility = targetUser.followingListVisibility ?? SocialVisibility.Public;
+    const viewerId = context.user?.userId;
+
+    if (visibility === SocialVisibility.Private && viewerId !== userId) {
+      return [];
+    }
+
+    if (visibility === SocialVisibility.Followers && viewerId !== userId) {
+      if (!viewerId) {
+        return [];
+      }
+
+      const isFollowing = await FollowDAO.isFollowing(viewerId, FollowTargetType.User, userId);
+      if (!isFollowing) {
+        return [];
+      }
+    }
+
+    return FollowDAO.readAcceptedFollowingForUser(userId, options);
   }
 
   // ============================================================================

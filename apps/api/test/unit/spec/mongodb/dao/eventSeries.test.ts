@@ -576,6 +576,81 @@ describe('EventSeriesDAO', () => {
     });
   });
 
+  describe('countEvents', () => {
+    it('counts filtered events without passing pagination or sort into the count pipeline', async () => {
+      const options: EventsQueryOptionsInput = {
+        filters: [{ field: 'status', value: EventStatus.Upcoming }],
+        pagination: { limit: 25, skip: 50 },
+        sort: [{ field: 'title', order: SortOrderInput.asc }],
+      };
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([{ count: 26 }]));
+
+      const count = await EventSeriesDAO.countEvents(options);
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0] as PipelineStage[];
+
+      expect(count).toBe(26);
+      expect(pipeline.at(-1)).toEqual({ $count: 'count' });
+      expect(pipeline.some((stage) => '$sort' in stage)).toBe(false);
+      expect(pipeline.some((stage) => '$skip' in stage || '$limit' in stage)).toBe(false);
+    });
+
+    it('returns 0 when no persisted occurrences match the requested date range', async () => {
+      (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue([]);
+
+      const count = await EventSeriesDAO.countEvents({
+        dateRange: {
+          startDate: new Date('2026-01-01T00:00:00.000Z'),
+          endDate: new Date('2026-01-31T23:59:59.999Z'),
+        },
+      });
+
+      expect(count).toBe(0);
+      expect(EventSeriesModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('counts persisted occurrence-backed matches for custom-date queries', async () => {
+      const customDate = new Date('2026-05-26T12:00:00.000Z');
+      const startDate = new Date(customDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(customDate);
+      endDate.setHours(23, 59, 59, 999);
+      (EventOccurrenceDAO.readEventSeriesIdsInRange as jest.Mock).mockResolvedValue(['event-1', 'event-2']);
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([{ count: 2 }]));
+
+      const count = await EventSeriesDAO.countEvents({
+        filters: [{ field: 'status', value: EventStatus.Upcoming }],
+        customDate,
+        dateRange: {
+          startDate: new Date('2030-01-01T00:00:00.000Z'),
+          endDate: new Date('2030-01-02T00:00:00.000Z'),
+        },
+      });
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0] as PipelineStage[];
+
+      expect(count).toBe(2);
+      expect(EventOccurrenceDAO.readEventSeriesIdsInRange).toHaveBeenCalledWith(startDate, endDate);
+      expect(pipeline.at(-1)).toEqual({ $count: 'count' });
+    });
+
+    it('returns 0 when the aggregate count result is empty', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      const count = await EventSeriesDAO.countEvents();
+
+      expect(count).toBe(0);
+    });
+
+    it('wraps aggregate failures', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(
+        EventSeriesDAO.countEvents({
+          filters: [{ field: 'status', value: EventStatus.Upcoming }],
+        }),
+      ).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
+    });
+  });
+
   describe('readOccurrenceMaintenanceBatch', () => {
     it('reads a minimal batch of event series for occurrence maintenance', async () => {
       (EventSeriesModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([expectedEvent]));

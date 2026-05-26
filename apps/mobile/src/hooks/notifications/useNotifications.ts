@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@apollo/client';
+import { useCallback, useRef, useState } from 'react';
 import { FollowTargetType } from '@data/graphql/types/graphql';
 import {
   AcceptFollowRequestDocument,
@@ -17,8 +18,11 @@ import { getApolloAuthContext } from '@/lib/auth';
 export function useNotifications(authToken: string | null, enabled = true) {
   const queryOptions = getApolloAuthContext(authToken);
   const shouldLoadFollowRequests = enabled && Boolean(authToken);
-  const { data, error, loading, refetch } = useQuery(GetNotificationsDocument, {
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const { data, error, loading, refetch, fetchMore } = useQuery(GetNotificationsDocument, {
     fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
     skip: !enabled || !authToken,
     variables: {
       limit: 24,
@@ -55,6 +59,42 @@ export function useNotifications(authToken: string | null, enabled = true) {
 
     await Promise.all(refreshes);
   };
+
+  const loadMore = useCallback(async () => {
+    if (!authToken || loadingMoreRef.current || !data?.notifications?.hasMore || !data.notifications.nextCursor) {
+      return;
+    }
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+
+    try {
+      await fetchMore({
+        variables: {
+          cursor: data.notifications.nextCursor,
+          limit: 24,
+        },
+        updateQuery: (previousResult, { fetchMoreResult }) => {
+          if (!fetchMoreResult?.notifications) {
+            return previousResult;
+          }
+
+          return {
+            notifications: {
+              ...fetchMoreResult.notifications,
+              notifications: [
+                ...(previousResult.notifications?.notifications ?? []),
+                ...(fetchMoreResult.notifications.notifications ?? []),
+              ],
+            },
+          };
+        },
+      });
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [authToken, data?.notifications, fetchMore]);
 
   const markNotificationRead = async (notificationId: string) => {
     if (!authToken) {
@@ -146,6 +186,9 @@ export function useNotifications(authToken: string | null, enabled = true) {
     markAllNotificationsRead,
     markNotificationRead,
     notifications: data?.notifications?.notifications ?? [],
+    hasMore: data?.notifications?.hasMore ?? false,
+    loadMore,
+    loadingMore,
     refetch: refreshAll,
     rejectFollowRequest,
     unreadCount: data?.notifications?.unreadCount ?? 0,

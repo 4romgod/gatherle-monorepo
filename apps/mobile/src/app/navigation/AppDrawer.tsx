@@ -49,7 +49,7 @@ function navigateTo(routeName: DrawerRouteName) {
     return;
   }
 
-  navigationRef.navigate(routeName);
+  navigationRef.navigate(routeName as never);
 }
 
 function navigateToTab(tabName: keyof MainTabParamList) {

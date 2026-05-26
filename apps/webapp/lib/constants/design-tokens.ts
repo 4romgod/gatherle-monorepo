@@ -129,7 +129,7 @@ export const SECTION_TITLE_STYLES: SxProps<Theme> = {
  * Empty state container
  */
 export const EMPTY_STATE_STYLES: SxProps<Theme> = {
-  py: 8,
+  py: 2,
   px: 3,
   textAlign: 'center',
   display: 'flex',

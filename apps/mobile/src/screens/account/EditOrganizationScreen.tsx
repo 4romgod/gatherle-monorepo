@@ -155,7 +155,7 @@ export function EditOrganizationScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to edit organizations that you manage."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -169,7 +169,12 @@ export function EditOrganizationScreen() {
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      contentContainerStyle={styles.pageContent}
+      disablePullToRefresh
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    >
       <View style={styles.section}>
         <SectionHeading title="Organization details" />
         <AccountTextField label="Name" onChangeText={(value) => updateField('name', value)} value={formState.name} />

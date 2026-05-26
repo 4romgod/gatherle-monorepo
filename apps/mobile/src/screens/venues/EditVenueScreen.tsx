@@ -154,7 +154,7 @@ export function EditVenueScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to edit venues that your organization manages."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -169,7 +169,7 @@ export function EditVenueScreen() {
 
   if ((venueQuery.loading || accessLoading) && !venue) {
     return (
-      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+      <PageContainer disablePullToRefresh onRefresh={onRefresh} refreshing={refreshing}>
         <View style={styles.loadingWrap}>
           <DirectoryRowSkeleton avatarShape="rounded" avatarSize={66} showTrailing trailingWidth={72} />
           <StateNotice message="Loading venue..." />
@@ -180,7 +180,7 @@ export function EditVenueScreen() {
 
   if ((venueQuery.error && !venue) || !venue) {
     return (
-      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+      <PageContainer disablePullToRefresh onRefresh={onRefresh} refreshing={refreshing}>
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load this venue."
@@ -192,14 +192,19 @@ export function EditVenueScreen() {
 
   if (!canManageVenue(venue.orgId)) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <StateNotice message="Only Gatherle admins and the linked organization owners/admins can edit this venue." />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      contentContainerStyle={styles.pageContent}
+      disablePullToRefresh
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    >
       <View style={styles.section}>
         <SectionHeading title="Venue details" />
         <AccountTextField label="Name" onChangeText={(value) => updateField('name', value)} value={formState.name} />

@@ -16,6 +16,7 @@ export const GetUsersDocument = graphql(`
       defaultVisibility
       userRole
       followersCount
+      followingCount
       location {
         city
         state
@@ -49,6 +50,7 @@ export const GetUserByIdDocument = graphql(`
       profile_picture
       userRole
       followersCount
+      followingCount
       defaultVisibility
       location {
         city
@@ -84,6 +86,7 @@ export const GetUserProfileByIdDocument = graphql(`
       userRole
       followPolicy
       followersCount
+      followingCount
       location {
         city
         state
@@ -130,6 +133,7 @@ export const GetUserByUsernameDocument = graphql(`
       profile_picture
       userRole
       followersCount
+      followingCount
       defaultVisibility
       location {
         city
@@ -163,6 +167,7 @@ export const GetUserProfileDocument = graphql(`
       profile_picture
       userRole
       followersCount
+      followingCount
       defaultVisibility
       followPolicy
       followersListVisibility

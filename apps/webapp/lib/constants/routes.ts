@@ -1,5 +1,6 @@
 export const ROUTES = {
   ACCOUNT: {
+    TAB: (tab: string) => `/account?tab=${encodeURIComponent(tab)}`,
     EVENTS: {
       EVENT: (slug: string) => `/account/events/${slug}`,
       EDIT_EVENT: (slug: string) => `/account/events/${slug}/edit`,
@@ -40,6 +41,9 @@ export const ROUTES = {
   },
   USERS: {
     USER: (username: string) => `/users/${username}`,
+    USER_EVENTS: (username: string) => `/users/${username}/events`,
+    USER_FOLLOWERS: (username: string) => `/users/${username}/followers`,
+    USER_FOLLOWING: (username: string) => `/users/${username}/following`,
     ROOT: '/users',
   },
   ROOT: '/',
