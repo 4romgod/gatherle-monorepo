@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { holdForDebug } from '../helpers';
+import { expectLoginPage, holdForDebug } from '../helpers';
 
 test.describe('Register Page', () => {
   test.afterEach(async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Register Page', () => {
     await page.goto('/auth/register');
     const loginLink = page.getByRole('link', { name: 'Log in here' });
     await expect(loginLink).toBeVisible();
-    await Promise.all([page.waitForURL(/\/auth\/login\/?$/, { timeout: 20_000 }), loginLink.click()]);
-    await expect(page.getByRole('heading', { level: 1, name: 'Welcome back' })).toBeVisible();
+    await loginLink.click();
+    await expectLoginPage(page);
   });
 });

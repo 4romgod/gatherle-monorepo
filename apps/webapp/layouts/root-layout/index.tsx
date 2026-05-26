@@ -16,6 +16,7 @@ import MobileBottomNav, { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigati
 import Footer from '@/components/footer';
 import NotificationRealtimeListener from '@/components/notifications/NotificationRealtimeListener';
 import ChatRealtimeListener from '@/components/messages/ChatRealtimeListener';
+import { PullToRefreshShell } from '@/components/core/PullToRefreshShell';
 import { Box } from '@mui/material';
 import { Session } from 'next-auth';
 import { logger } from '@/lib/utils';
@@ -56,32 +57,34 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
                   <TopProgressBar />
                   {!isMomentsRoute && <MainNavigation isAuthN={isAuthN} />}
                   <MobileBottomNav />
-                  <Box
-                    sx={{
-                      marginTop: isMomentsRoute ? 0 : `${NAV_HEIGHT}px`,
-                      ...(isIndividualChatThreadRoute
-                        ? {
-                            height: `calc(100dvh - ${NAV_HEIGHT}px)`,
-                            overflow: 'hidden',
-                          }
-                        : isMomentsRoute
+                  <PullToRefreshShell indicatorTop={isMomentsRoute ? 18 : NAV_HEIGHT + 12}>
+                    <Box
+                      sx={{
+                        marginTop: isMomentsRoute ? 0 : `${NAV_HEIGHT}px`,
+                        ...(isIndividualChatThreadRoute
                           ? {
-                              minHeight: '100dvh',
-                              pb: 0,
+                              height: `calc(100dvh - ${NAV_HEIGHT}px)`,
+                              overflow: 'hidden',
                             }
-                          : {
-                              minHeight: '100vh',
-                              pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },
-                            }),
-                    }}
-                  >
-                    {children}
-                  </Box>
-                  {!isIndividualChatThreadRoute && !isMomentsRoute && (
-                    <Box sx={{ pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 } }}>
-                      <Footer />
+                          : isMomentsRoute
+                            ? {
+                                minHeight: '100dvh',
+                                pb: 0,
+                              }
+                            : {
+                                minHeight: '100vh',
+                                pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },
+                              }),
+                      }}
+                    >
+                      {children}
                     </Box>
-                  )}
+                    {!isIndividualChatThreadRoute && !isMomentsRoute && (
+                      <Box sx={{ pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 } }}>
+                        <Footer />
+                      </Box>
+                    )}
+                  </PullToRefreshShell>
                 </CustomThemeProvider>
               </CustomAppContextProvider>
             </SessionProvider>

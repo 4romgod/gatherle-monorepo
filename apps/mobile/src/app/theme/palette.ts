@@ -17,6 +17,7 @@ export type AppTheme = {
     primaryContrast: string;
     primarySoft: string;
     secondary: string;
+    secondaryContrast: string;
     secondarySoft: string;
     success: string;
     successSoft: string;
@@ -51,6 +52,7 @@ export const lightTheme: AppTheme = {
     primaryContrast: '#ffffff',
     primarySoft: '#ede9fe',
     secondary: '#ff7a1a',
+    secondaryContrast: '#ffffff',
     secondarySoft: '#ffedd5',
     success: '#12b76a',
     successSoft: '#d1fadf',
@@ -85,6 +87,7 @@ export const darkTheme: AppTheme = {
     primaryContrast: '#ffffff',
     primarySoft: '#2a2575',
     secondary: '#ff8d3b',
+    secondaryContrast: '#ffffff',
     secondarySoft: '#7c2d12',
     success: '#32d583',
     successSoft: '#0f5132',

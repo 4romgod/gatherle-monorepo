@@ -1,8 +1,8 @@
 import { graphql } from '@/data/graphql/types';
 
 export const GetEventsCountDocument = graphql(`
-  query GetEventsCount {
-    readEventsCount
+  query GetEventsCount($options: EventsQueryOptionsInput) {
+    readEventsCount(options: $options)
   }
 `);
 

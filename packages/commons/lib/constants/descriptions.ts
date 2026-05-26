@@ -227,6 +227,7 @@ export const USER_DESCRIPTIONS = {
   BIO: 'Short biography about the user',
   SHARE_CHECKINS: 'Whether check-in activity is shared with followers by default',
   FOLLOWERS_COUNT: 'Number of accepted followers for the user.',
+  FOLLOWING_COUNT: 'Number of accepted user and organization follows for the user.',
   TOKEN: 'Authentication and Authorization JWT token',
   USER_ROLE: 'Role assigned to the user within the system, ("Admin", "User", "Host", "Guest")',
   USERNAME: "User's unique chosen or auto generated username (e.g., 'deku123')",

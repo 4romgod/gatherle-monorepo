@@ -225,7 +225,7 @@ export function EditEventScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to edit events that you manage."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -239,7 +239,12 @@ export function EditEventScreen() {
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent} onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      contentContainerStyle={styles.pageContent}
+      disablePullToRefresh
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    >
       <View style={styles.section}>
         <SectionHeading title="Basics" />
         <AccountTextField label="Title" onChangeText={(value) => updateField('title', value)} value={formState.title} />

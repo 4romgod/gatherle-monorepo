@@ -113,6 +113,7 @@ export const useFilteredEvents = (
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(initialEvents.length >= DEFAULT_PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const pageRef = useRef(0);
 
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
@@ -199,8 +200,13 @@ export const useFilteredEvents = (
   ]);
 
   const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMore) {
+      return;
+    }
+
     const nextPage = pageRef.current + 1;
     const skip = nextPage * DEFAULT_PAGE_SIZE;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
 
     try {
@@ -222,9 +228,10 @@ export const useFilteredEvents = (
     } catch (err) {
       logger.error('Error loading more events', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [loadEvents, buildQueryOptions, token]);
+  }, [buildQueryOptions, hasMore, loadEvents, token]);
 
   return {
     events,

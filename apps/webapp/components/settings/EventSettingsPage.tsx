@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useActionState, useEffect, useState } from 'react';
-import { Box, Typography, Switch, FormControlLabel, Button, Stack, CircularProgress } from '@mui/material';
-import { User } from '@/data/graphql/types/graphql';
-import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
-import { useAppContext } from '@/hooks/useAppContext';
+import { Box, Button, FormControlLabel, Stack, Switch, Typography } from '@mui/material';
+import { CircularProgress } from '@mui/material';
 import { signIn, useSession } from 'next-auth/react';
-import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { useFormStatus } from 'react-dom';
-import UserEventsList from '@/components/account/UserEventsList';
+import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
+import { type User } from '@/data/graphql/types/graphql';
+import { useAppContext } from '@/hooks/useAppContext';
+import { SETTINGS_PRIMARY_BUTTON_SX, SettingsSection } from './SettingsSection';
 
 interface CommunicationPrefs {
   emailEnabled: boolean;
@@ -19,21 +19,20 @@ interface EventPreferences {
   communicationPrefs: CommunicationPrefs;
 }
 
-// Separate submit button component to use useFormStatus
 function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
     <Button
+      color="primary"
+      disabled={pending}
+      size="large"
+      startIcon={pending ? <CircularProgress color="inherit" size={20} /> : undefined}
+      sx={{ ...SETTINGS_PRIMARY_BUTTON_SX, width: { xs: '100%', sm: 'auto' } }}
       type="submit"
       variant="contained"
-      color="primary"
-      size="large"
-      disabled={pending}
-      startIcon={pending ? <CircularProgress size={20} color="inherit" /> : undefined}
-      sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
     >
-      {pending ? 'Saving...' : 'Save Changes'}
+      {pending ? 'Saving...' : 'Save alerts'}
     </Button>
   );
 }
@@ -42,8 +41,6 @@ export default function EventSettingsPage({ user }: { user: User }) {
   const { setToastProps, toastProps } = useAppContext();
   const [formState, formAction] = useActionState(updateUserProfileAction, {});
   const { data: session } = useSession();
-
-  // Initialize from user.preferences or defaults
   const [preferences, setPreferences] = useState<EventPreferences>({
     communicationPrefs: {
       emailEnabled: user.preferences?.communicationPrefs?.emailEnabled ?? true,
@@ -51,16 +48,17 @@ export default function EventSettingsPage({ user }: { user: User }) {
     },
   });
 
-  // Sync local state with session when it updates
   useEffect(() => {
-    if (session?.user?.preferences) {
-      setPreferences({
-        communicationPrefs: {
-          emailEnabled: session.user.preferences?.communicationPrefs?.emailEnabled ?? true,
-          pushEnabled: session.user.preferences?.communicationPrefs?.pushEnabled ?? false,
-        },
-      });
+    if (!session?.user?.preferences) {
+      return;
     }
+
+    setPreferences({
+      communicationPrefs: {
+        emailEnabled: session.user.preferences.communicationPrefs?.emailEnabled ?? true,
+        pushEnabled: session.user.preferences.communicationPrefs?.pushEnabled ?? false,
+      },
+    });
   }, [session?.user]);
 
   useEffect(() => {
@@ -76,7 +74,6 @@ export default function EventSettingsPage({ user }: { user: User }) {
     if (formState.data && session?.user?.token) {
       const updatedUser = formState.data as User;
 
-      // Update local state immediately
       setPreferences({
         communicationPrefs: {
           emailEnabled: updatedUser.preferences?.communicationPrefs?.emailEnabled ?? true,
@@ -84,7 +81,6 @@ export default function EventSettingsPage({ user }: { user: User }) {
         },
       });
 
-      // Refresh the session with updated user data
       signIn('refresh-session', {
         userData: JSON.stringify(updatedUser),
         token: session.user.token,
@@ -95,112 +91,80 @@ export default function EventSettingsPage({ user }: { user: User }) {
         ...toastProps,
         open: true,
         severity: 'success',
-        message: 'Event preferences updated successfully!',
+        message: 'Alert preferences updated successfully!',
       });
     }
-  }, [formState]);
+  }, [formState, session, setToastProps, toastProps]);
 
   const handleToggleChange = (field: keyof CommunicationPrefs) => {
-    setPreferences((prev) => ({
-      ...prev,
+    setPreferences((previous) => ({
+      ...previous,
       communicationPrefs: {
-        ...prev.communicationPrefs,
-        [field]: !prev.communicationPrefs[field],
+        ...previous.communicationPrefs,
+        [field]: !previous.communicationPrefs[field],
       },
     }));
   };
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          Event Preferences
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-          Customize how you receive notifications about events
-        </Typography>
-      </Box>
+    <Box component="form" action={formAction} noValidate>
+      <input type="hidden" name="preferences" value={JSON.stringify(preferences)} />
 
-      <Box component="form" action={formAction} noValidate>
-        {/* Hidden input for preferences JSON */}
-        <input type="hidden" name="preferences" value={JSON.stringify(preferences)} />
+      <Stack spacing={4}>
+        <SettingsSection description="How Gatherle should reach you when something matters." title="Communication">
+          <Stack spacing={2}>
+            <Box sx={{ py: 0.5 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={preferences.communicationPrefs.emailEnabled}
+                    color="secondary"
+                    id="email-notifications"
+                    onChange={() => handleToggleChange('emailEnabled')}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography fontWeight={600} variant="body1">
+                      Email updates
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
+                      Receive invites, reminders, and important account changes via email.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
 
-        <Stack spacing={3}>
-          {/* Communication Preferences */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Communication Preferences
-            </Typography>
+            <Box sx={{ py: 0.5 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={preferences.communicationPrefs.pushEnabled}
+                    color="secondary"
+                    id="push-notifications"
+                    onChange={() => handleToggleChange('pushEnabled')}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography fontWeight={600} variant="body1">
+                      Push notifications
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
+                      Prepare for future native push alerts when event activity needs immediate attention.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+          </Stack>
+        </SettingsSection>
 
-            <Stack spacing={2}>
-              <Box sx={{ py: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      id="email-notifications"
-                      checked={preferences.communicationPrefs.emailEnabled}
-                      onChange={() => handleToggleChange('emailEnabled')}
-                      color="secondary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        Email Notifications
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Receive event updates, reminders, and recommendations via email
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-
-              <Box sx={{ py: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      id="push-notifications"
-                      checked={preferences.communicationPrefs.pushEnabled}
-                      onChange={() => handleToggleChange('pushEnabled')}
-                      color="secondary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" fontWeight={600}>
-                        Push Notifications
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        Get instant notifications on your device for event updates
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Info Card */}
-          <Box sx={{ borderRadius: 2, p: 2.5, bgcolor: 'action.hover', mb: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              <strong>Looking to manage your event interests?</strong> Visit the{' '}
-              <Typography component="span" color="primary.main" fontWeight={600}>
-                Interests
-              </Typography>{' '}
-              tab to customize the types of events you want to see.
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end">
           <SubmitButton />
         </Stack>
-      </Box>
-
-      <Box sx={{ mt: 6 }}>
-        <UserEventsList userId={user.userId} />
-      </Box>
+      </Stack>
     </Box>
   );
 }

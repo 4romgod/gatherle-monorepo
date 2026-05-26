@@ -15,6 +15,9 @@ export type MainTabParamList = {
   Account: undefined;
 };
 
+export type SettingsTabKey = 'account' | 'activity' | 'alerts' | 'appearance' | 'personal' | 'privacy' | 'profile';
+export type UserConnectionsMode = 'followers' | 'following';
+
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Categories: undefined;
@@ -40,6 +43,19 @@ export type RootStackParamList = {
     avatarUrl?: string | null;
     openMoments?: boolean;
   };
+  UserHostedEvents: {
+    userId: string;
+    username?: string | null;
+    displayName?: string;
+    totalCount?: number;
+  };
+  UserConnections: {
+    userId: string;
+    username?: string | null;
+    displayName?: string;
+    mode: UserConnectionsMode;
+    totalCount?: number;
+  };
   EventDetails: {
     occurrence: MobileEventOccurrence;
   };
@@ -50,7 +66,11 @@ export type RootStackParamList = {
     withUserId: string;
   };
   Profile: undefined;
-  Settings: undefined;
+  Settings:
+    | {
+        initialTab?: SettingsTabKey;
+      }
+    | undefined;
   MyEvents: undefined;
   CreateEvent: undefined;
   EditEvent: {
@@ -207,6 +227,18 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     sectionLabel: 'Social',
     title: 'User profile',
     description: 'This route shows a public member profile with follow, message, and visible activity surfaces.',
+    category: 'social',
+  },
+  UserHostedEvents: {
+    sectionLabel: 'Social',
+    title: 'Hosted events',
+    description: 'This route shows all hosted events for a member with the same tile-based infinite scroll pattern.',
+    category: 'social',
+  },
+  UserConnections: {
+    sectionLabel: 'Social',
+    title: 'Connections',
+    description: 'Followers and following lists for a member live here with infinite scroll and pull to refresh.',
     category: 'social',
   },
   EventDetails: {

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { Person, PersonOutlined, ManageAccounts, Password, Interests, Event, Storage } from '@mui/icons-material';
 import { Box, Container } from '@mui/material';
-import CustomTabs from '@/components/core/tabs/CustomTabs';
+import CustomTabs, { type CustomTabItem } from '@/components/core/tabs/CustomTabs';
 import EditProfilePage from '@/components/settings/EditProfilePage';
 import PersonalSettingsPage from '@/components/settings/PersonalSettingsPage';
 import InterestsSettingsPage from '@/components/settings/InterestsSettingsPage';
@@ -10,6 +9,7 @@ import EventSettingsPage from '@/components/settings/EventSettingsPage';
 import AccountSettingsPage from '@/components/settings/AccountSettingsPage';
 import SessionStateSettings from '@/components/settings/SessionStateSettings';
 import PasswordSettingsPage from '@/components/settings/PasswordSettingsPage';
+import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
 import { GetEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
@@ -17,6 +17,7 @@ import { omit } from 'lodash';
 import { buildPageMetadata } from '@/lib/metadata';
 import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
+import { featureFlags } from '@/lib/constants/feature-flags';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Account Settings',
@@ -24,11 +25,37 @@ export const metadata: Metadata = buildPageMetadata({
   noIndex: true,
 });
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams: Promise<{ tab?: string }>;
+};
+
+type AccountSettingsTab = CustomTabItem & {
+  key: string;
+};
+
+const TAB_ALIASES: Record<string, string> = {
+  appearance: 'appearance',
+  events: 'alerts',
+  interests: 'interests',
+  password: 'password',
+  personal: 'personal',
+  privacy: 'privacy',
+  profile: 'profile',
+  session: 'session',
+  theme: 'appearance',
+  account: 'account',
+  activity: 'activity',
+  alerts: 'alerts',
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const session = await auth();
   if (!session?.user?.token) {
     redirect(ROUTES.AUTH.LOGIN);
   }
+
+  const { tab } = await searchParams;
+  const requestedTabKey = tab ? (TAB_ALIASES[tab] ?? 'account') : 'account';
 
   const { data: groups } = await getClient().query({
     query: GetEventCategoryGroupsDocument,
@@ -36,56 +63,94 @@ export default async function SettingsPage() {
 
   const user = omit(session.user, ['token', '__typename']);
 
-  const tabs = [
+  const tabs: AccountSettingsTab[] = [
     {
+      key: 'profile',
       name: 'Profile',
       content: <EditProfilePage user={user} />,
-      icon: <PersonOutlined sx={{ marginRight: 1 }} key="profile-icon" fontSize="small" />,
       description: 'Customize your public profile',
     },
     {
-      name: 'Personal',
-      content: <PersonalSettingsPage user={user} />,
-      icon: <Person key="personal-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Personal details and privacy',
-    },
-    {
-      name: 'Interests',
-      content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
-      icon: <Interests key="interests-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Manage your event interests',
-    },
-    {
-      name: 'Events',
-      content: <EventSettingsPage user={user} />,
-      icon: <Event key="events-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Event preferences and notifications',
-    },
-    {
+      key: 'account',
       name: 'Account',
       content: <AccountSettingsPage user={user} />,
-      icon: <ManageAccounts key="account-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Account security and settings',
+      description: 'Email and account management',
     },
     {
-      name: 'Password',
-      content: <PasswordSettingsPage />,
-      icon: <Password key="password-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Change your password',
+      key: 'personal',
+      name: 'Personal',
+      content: <PersonalSettingsPage section="personal" user={user} />,
+      description: 'Personal details and discovery context',
     },
     {
-      name: 'Session Data',
-      content: <SessionStateSettings token={session.user.token} />,
-      icon: <Storage key="session-icon" fontSize="small" sx={{ marginRight: 1 }} />,
-      description: 'Manage saved filters and drafts',
+      key: 'activity',
+      name: 'Activity',
+      content: <PersonalSettingsPage section="activity" user={user} />,
+      description: 'Defaults for RSVPs and check-ins',
+    },
+    {
+      key: 'alerts',
+      name: 'Alerts',
+      content: <EventSettingsPage user={user} />,
+      description: 'Email and push delivery preferences',
+    },
+    {
+      key: 'appearance',
+      name: 'Theme',
+      content: <AppearanceSettingsPage />,
+      description: 'Color mode and visual preference',
     },
   ];
 
+  if (featureFlags.enablePrivateUsers) {
+    const activityIndex = tabs.findIndex(({ key }) => key === 'activity');
+    const privacyTab: AccountSettingsTab = {
+      key: 'privacy',
+      name: 'Privacy',
+      content: <PersonalSettingsPage section="privacy" user={user} />,
+      description: 'Audience and relationship visibility',
+    };
+
+    if (activityIndex >= 0) {
+      tabs.splice(activityIndex, 0, privacyTab);
+    } else {
+      tabs.push(privacyTab);
+    }
+  }
+
+  tabs.push(
+    {
+      key: 'interests',
+      name: 'Interests',
+      content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
+      description: 'Manage your event interests',
+    },
+    {
+      key: 'password',
+      name: 'Password',
+      content: <PasswordSettingsPage />,
+      description: 'Change your password',
+    },
+    {
+      key: 'session',
+      name: 'Session',
+      content: <SessionStateSettings token={session.user.token} />,
+      description: 'Reset saved filters and drafts',
+    },
+  );
+
+  const defaultTabIndex = tabs.findIndex(({ key }) => key === 'account');
+  const requestedTabIndex = tabs.findIndex(({ key }) => key === requestedTabKey);
+  const initialTabIndex = requestedTabIndex >= 0 ? requestedTabIndex : defaultTabIndex;
+
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 0, md: 4 } }}>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: { xs: 0, md: 2.5 } }}>
       <Container maxWidth="lg" sx={{ px: { xs: 0, sm: 2, md: 3 } }}>
         <CustomTabs
           tabsProps={{
+            defaultTab: initialTabIndex,
+            forceDefaultTab: true,
+            layout: 'mobile',
             tabsTitle: 'Settings',
             tabs,
             persistence: {

@@ -4,6 +4,24 @@ import { Follow as FollowModel } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError, transformOptionsToQuery } from '@/utils';
 
 class FollowDAO {
+  private static createUserFacingFollowOptions(
+    baseFilters: NonNullable<QueryOptionsInput['filters']>,
+    options?: QueryOptionsInput,
+  ): QueryOptionsInput {
+    return {
+      ...options,
+      filters: [...baseFilters, ...(options?.filters ?? [])],
+      sort: options?.sort?.length
+        ? options.sort
+        : [
+            {
+              field: 'createdAt',
+              order: SortOrderInput.desc,
+            },
+          ],
+    };
+  }
+
   static async upsert(
     input: CreateFollowInput & { followerUserId: string; approvalStatus?: FollowApprovalStatus },
   ): Promise<FollowEntity> {
@@ -111,16 +129,44 @@ class FollowDAO {
 
   static async readFollowers(targetType: FollowTargetType, targetId: string): Promise<FollowEntity[]> {
     try {
-      const follows = await FollowModel.find({
-        targetType,
-        targetId,
-        approvalStatus: FollowApprovalStatus.Accepted,
-      })
-        .sort({ createdAt: -1 })
-        .exec();
+      const follows = await transformOptionsToQuery(
+        FollowModel,
+        this.createUserFacingFollowOptions(
+          [
+            { field: 'targetType', value: targetType },
+            { field: 'targetId', value: targetId },
+            { field: 'approvalStatus', value: FollowApprovalStatus.Accepted },
+          ],
+          undefined,
+        ),
+      ).exec();
       return follows.map((f) => f.toObject());
     } catch (error) {
       logDaoError('Error reading followers', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readFollowersWithOptions(
+    targetType: FollowTargetType,
+    targetId: string,
+    options?: QueryOptionsInput,
+  ): Promise<FollowEntity[]> {
+    try {
+      const follows = await transformOptionsToQuery(
+        FollowModel,
+        this.createUserFacingFollowOptions(
+          [
+            { field: 'targetType', value: targetType },
+            { field: 'targetId', value: targetId },
+            { field: 'approvalStatus', value: FollowApprovalStatus.Accepted },
+          ],
+          options,
+        ),
+      ).exec();
+      return follows.map((f) => f.toObject());
+    } catch (error) {
+      logDaoError('Error reading followers with options', { error, targetType, targetId, options });
       throw KnownCommonError(error);
     }
   }
@@ -134,6 +180,39 @@ class FollowDAO {
       }).exec();
     } catch (error) {
       logDaoError('Error counting followers', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readAcceptedFollowingForUser(userId: string, options?: QueryOptionsInput): Promise<FollowEntity[]> {
+    try {
+      const follows = await transformOptionsToQuery(
+        FollowModel,
+        this.createUserFacingFollowOptions(
+          [
+            { field: 'followerUserId', value: userId },
+            { field: 'approvalStatus', value: FollowApprovalStatus.Accepted },
+            { field: 'targetType', value: [FollowTargetType.User, FollowTargetType.Organization] },
+          ],
+          options,
+        ),
+      ).exec();
+      return follows.map((f) => f.toObject());
+    } catch (error) {
+      logDaoError('Error reading accepted following list', { error, userId, options });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async countAcceptedFollowingForUser(userId: string): Promise<number> {
+    try {
+      return await FollowModel.countDocuments({
+        followerUserId: userId,
+        approvalStatus: FollowApprovalStatus.Accepted,
+        targetType: { $in: [FollowTargetType.User, FollowTargetType.Organization] },
+      }).exec();
+    } catch (error) {
+      logDaoError('Error counting accepted following list', { error, userId });
       throw KnownCommonError(error);
     }
   }

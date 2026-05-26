@@ -147,7 +147,7 @@ export function EditProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer>
+      <PageContainer disablePullToRefresh>
         <AuthPromptCard
           description="Your name, handle, bio, and location live here once you’re signed in."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -162,7 +162,7 @@ export function EditProfileScreen() {
 
   if (loading && !profile) {
     return (
-      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+      <PageContainer disablePullToRefresh onRefresh={onRefresh} refreshing={refreshing}>
         <View style={styles.skeletonWrap}>
           <SkeletonBlock style={styles.heroSkeleton} />
           <SkeletonBlock style={styles.sectionSkeleton} />
@@ -175,7 +175,7 @@ export function EditProfileScreen() {
 
   if (error || !profile) {
     return (
-      <PageContainer>
+      <PageContainer disablePullToRefresh>
         <StateNotice
           actionLabel="Retry"
           message="We couldn’t load your editable profile."
@@ -186,7 +186,7 @@ export function EditProfileScreen() {
   }
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer disablePullToRefresh onRefresh={onRefresh} refreshing={refreshing}>
       <ProfileEditorHero
         avatarUrlOverride={avatarPreviewUrl}
         onAvatarPress={() => void handleAvatarPress()}

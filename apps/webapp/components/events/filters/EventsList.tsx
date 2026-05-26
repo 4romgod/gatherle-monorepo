@@ -2,9 +2,9 @@
 
 import { Box, Stack, Typography, Alert, Button, CircularProgress } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EventTileGrid from '@/components/events/EventTileGrid';
 import type { AnyEventPreview } from '@/components/events/event-preview-utils';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface EventsListProps {
   events: AnyEventPreview[];
@@ -30,6 +30,11 @@ export default function EventsList({
   totalCount,
 }: EventsListProps) {
   const showSkeletons = loading;
+  const loadMoreTriggerRef = useInfiniteScroll({
+    enabled: hasMore && Boolean(onLoadMore),
+    loading: loading || loadingMore,
+    onEndReached: () => onLoadMore?.(),
+  });
 
   if (error) {
     return (
@@ -80,6 +85,7 @@ export default function EventsList({
       <EventTileGrid events={events} loading={showSkeletons} />
       {hasMore && onLoadMore && (
         <Box
+          ref={loadMoreTriggerRef}
           sx={{
             mt: 5,
             mb: 2,
@@ -92,28 +98,9 @@ export default function EventsList({
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {typeof totalCount === 'number' ? `Showing ${events.length} of ${totalCount}` : `Showing ${events.length}`}
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={onLoadMore}
-            disabled={loading || loadingMore}
-            endIcon={loadingMore ? <CircularProgress size={18} color="inherit" /> : <ExpandMoreIcon />}
-            sx={{
-              textTransform: 'none',
-              px: 4,
-              py: 1.25,
-              borderRadius: 2,
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              borderColor: 'divider',
-              color: 'text.primary',
-              '&:hover': {
-                borderColor: 'primary.main',
-                backgroundColor: 'action.hover',
-              },
-            }}
-          >
-            {loadingMore ? 'Loading…' : 'Show more events'}
-          </Button>
+          <Box sx={{ minHeight: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {loadingMore ? <CircularProgress size={20} /> : null}
+          </Box>
         </Box>
       )}
     </Box>

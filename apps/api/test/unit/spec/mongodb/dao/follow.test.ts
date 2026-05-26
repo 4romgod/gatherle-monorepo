@@ -2,7 +2,7 @@ import { GraphQLError } from 'graphql';
 import { FollowDAO } from '@/mongodb/dao';
 import { Follow as FollowModel } from '@/mongodb/models';
 import type { Follow, CreateFollowInput } from '@gatherle/commons/types';
-import { FollowTargetType, FollowApprovalStatus } from '@gatherle/commons/types';
+import { FollowTargetType, FollowApprovalStatus, SortOrderInput } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';
@@ -155,21 +155,22 @@ describe('FollowDAO', () => {
 
   describe('readFollowers', () => {
     it('reads followers list', async () => {
-      (FollowModel.find as jest.Mock).mockReturnValue(
-        createMockSuccessMongooseQuery([
-          {
-            toObject: () => mockFollow,
-          },
-        ]),
-      );
+      const query = createMockSuccessMongooseQuery([
+        {
+          toObject: () => mockFollow,
+        },
+      ]);
+      (FollowModel.find as jest.Mock).mockReturnValue(query);
 
       const result = await FollowDAO.readFollowers(FollowTargetType.User, 'user-2');
 
-      expect(FollowModel.find).toHaveBeenCalledWith({
-        targetType: FollowTargetType.User,
-        targetId: 'user-2',
-        approvalStatus: FollowApprovalStatus.Accepted,
-      });
+      expect(FollowModel.find).toHaveBeenCalledWith();
+      expect(query.and).toHaveBeenCalledWith([
+        { targetType: { $eq: FollowTargetType.User } },
+        { targetId: { $eq: 'user-2' } },
+        { approvalStatus: { $eq: FollowApprovalStatus.Accepted } },
+      ]);
+      expect(query.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result).toEqual([mockFollow]);
     });
 
@@ -179,6 +180,45 @@ describe('FollowDAO', () => {
       await expect(FollowDAO.readFollowers(FollowTargetType.User, 'user-2')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
+    });
+  });
+
+  describe('readFollowersWithOptions', () => {
+    it('merges caller options with default user-facing filters', async () => {
+      const query = createMockSuccessMongooseQuery([
+        {
+          toObject: () => mockFollow,
+        },
+      ]);
+      (FollowModel.find as jest.Mock).mockReturnValue(query);
+
+      const result = await FollowDAO.readFollowersWithOptions(FollowTargetType.User, 'user-2', {
+        filters: [{ field: 'followerUserId', value: 'user-1' }],
+        pagination: { limit: 10, skip: 20 },
+        sort: [{ field: 'updatedAt', order: SortOrderInput.asc }],
+      });
+
+      expect(FollowModel.find).toHaveBeenCalledWith();
+      expect(query.and).toHaveBeenCalledWith([
+        { targetType: { $eq: FollowTargetType.User } },
+        { targetId: { $eq: 'user-2' } },
+        { approvalStatus: { $eq: FollowApprovalStatus.Accepted } },
+        { followerUserId: { $eq: 'user-1' } },
+      ]);
+      expect(query.sort).toHaveBeenCalledWith({ updatedAt: 1 });
+      expect(query.limit).toHaveBeenCalledWith(10);
+      expect(query.skip).toHaveBeenCalledWith(20);
+      expect(result).toEqual([mockFollow]);
+    });
+
+    it('wraps errors', async () => {
+      (FollowModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(
+        FollowDAO.readFollowersWithOptions(FollowTargetType.User, 'user-2', {
+          pagination: { limit: 5, skip: 0 },
+        }),
+      ).rejects.toThrow(CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR));
     });
   });
 
@@ -381,6 +421,76 @@ describe('FollowDAO', () => {
       (FollowModel.countDocuments as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(FollowDAO.countFollowers(FollowTargetType.User, 'user-2')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('readAcceptedFollowingForUser', () => {
+    it('reads accepted following limited to users and organizations', async () => {
+      const followingUser = {
+        ...mockFollow,
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.Organization,
+        targetId: 'org-2',
+      };
+      const query = createMockSuccessMongooseQuery([{ toObject: () => mockFollow }, { toObject: () => followingUser }]);
+      (FollowModel.find as jest.Mock).mockReturnValue(query);
+
+      const result = await FollowDAO.readAcceptedFollowingForUser('user-1');
+
+      expect(FollowModel.find).toHaveBeenCalledWith();
+      expect(query.and).toHaveBeenCalledWith([
+        { followerUserId: { $eq: 'user-1' } },
+        { approvalStatus: { $eq: FollowApprovalStatus.Accepted } },
+        { targetType: { $in: [FollowTargetType.User, FollowTargetType.Organization] } },
+      ]);
+      expect(query.sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(result).toEqual([mockFollow, followingUser]);
+    });
+
+    it('wraps errors', async () => {
+      (FollowModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(FollowDAO.readAcceptedFollowingForUser('user-1')).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+
+    it('respects caller pagination and sort overrides for accepted following', async () => {
+      const query = createMockSuccessMongooseQuery([{ toObject: () => mockFollow }]);
+      (FollowModel.find as jest.Mock).mockReturnValue(query);
+
+      const result = await FollowDAO.readAcceptedFollowingForUser('user-1', {
+        pagination: { limit: 5, skip: 10 },
+        sort: [{ field: 'updatedAt', order: SortOrderInput.asc }],
+      });
+
+      expect(query.sort).toHaveBeenCalledWith({ updatedAt: 1 });
+      expect(query.limit).toHaveBeenCalledWith(5);
+      expect(query.skip).toHaveBeenCalledWith(10);
+      expect(result).toEqual([mockFollow]);
+    });
+  });
+
+  describe('countAcceptedFollowingForUser', () => {
+    it('counts accepted user and organization follows for a user', async () => {
+      (FollowModel.countDocuments as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(7));
+
+      const result = await FollowDAO.countAcceptedFollowingForUser('user-1');
+
+      expect(FollowModel.countDocuments).toHaveBeenCalledWith({
+        followerUserId: 'user-1',
+        approvalStatus: FollowApprovalStatus.Accepted,
+        targetType: { $in: [FollowTargetType.User, FollowTargetType.Organization] },
+      });
+      expect(result).toBe(7);
+    });
+
+    it('wraps errors', async () => {
+      (FollowModel.countDocuments as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
+
+      await expect(FollowDAO.countAcceptedFollowingForUser('user-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });

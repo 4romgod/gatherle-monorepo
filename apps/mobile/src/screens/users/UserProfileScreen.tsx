@@ -11,6 +11,8 @@ import { GetUserProfileByIdDocument } from '@data/graphql/query/User/query';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
+import { ProfileEventsEmptyState } from '@/components/account/ProfileEventsEmptyState';
+import type { ProfileEventsEmptyStateConfig } from '@/components/account/ProfileEventsEmptyState';
 import { ProfileBadge } from '@/components/account/ProfileBadge';
 import { ProfileActionButton } from '@/components/account/ProfileActionButton';
 import { ProfileStat } from '@/components/account/ProfileStat';
@@ -24,6 +26,7 @@ import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
 import { MomentViewer } from '@/components/moments/MomentViewer';
 import { AccountScreenSkeleton } from '@/components/skeleton/AccountScreenSkeleton';
 import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
+import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
 import { useUserEventOccurrences } from '@/hooks/events/useUserEventOccurrences';
@@ -76,6 +79,7 @@ export function UserProfileScreen() {
     openMoments = false,
   } = route.params;
   const isOwnProfile = viewerUserId === userId;
+  const [activeTab, setActiveTab] = useState<PublicProfileTab>('going');
   const [fallbackMoments, setFallbackMoments] = useState<MobileUserEventMoment[]>([]);
   const [momentsOpen, setMomentsOpen] = useState(false);
   const autoOpenedMomentsRef = useRef(false);
@@ -103,6 +107,7 @@ export function UserProfileScreen() {
     loadingMore: hostedEventsLoadingMore,
     loadMore: loadMoreHostedEvents,
     refetch: refetchHostedEvents,
+    totalCount: hostedEventsTotalCount,
   } = useHostedEventsByUser(userId, authToken);
   const {
     error: participantEventsError,
@@ -127,7 +132,7 @@ export function UserProfileScreen() {
   const badges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
   const followerPreview = followers.slice(0, 3);
-  const hostedEventsCount = hostedEvents.length;
+  const hostedEventsCount = hostedEventsTotalCount;
   const participantActivityUnsupported = isUnsupportedUserEventOccurrencesError(participantEventsError);
   const shouldShowParticipantTabs = !participantActivityUnsupported;
   const profileTabs = useMemo<Record<PublicProfileTab, MobileEventOccurrence[]>>(
@@ -155,46 +160,78 @@ export function UserProfileScreen() {
         [
           ...(shouldShowParticipantTabs
             ? ([
-                { icon: 'check-square', key: 'going', label: 'RSVPs' },
-                { icon: 'clock', key: 'past', label: 'Past' },
+                {
+                  emptyState: {
+                    ctaLabel: 'Explore Events',
+                    description: "RSVP to events and they'll appear here",
+                    icon: 'check-square',
+                    title: 'No upcoming events',
+                  },
+                  icon: 'check-square',
+                  key: 'going',
+                  label: 'RSVPs',
+                },
+                {
+                  emptyState: {
+                    ctaLabel: 'Explore Events',
+                    description: "Events you've attended will show up here",
+                    icon: 'clock',
+                    title: 'No attended events',
+                  },
+                  icon: 'clock',
+                  key: 'past',
+                  label: 'Past',
+                },
               ] as const)
             : []),
-          { icon: 'calendar', key: 'hosting', label: 'Hosting' },
+          {
+            emptyState: {
+              ctaLabel: isOwnProfile ? 'Create Your First Event' : 'Explore Events',
+              description: "Start hosting events and they'll appear here",
+              icon: 'calendar',
+              title: 'No events hosted yet',
+            },
+            icon: 'calendar',
+            key: 'hosting',
+            label: 'Hosting',
+          },
         ] as const
       ).map((route) => ({
         ...route,
         render: () => (
           <PublicProfileTabPane
-            emptyMessage={
-              route.key === 'going'
-                ? 'No upcoming RSVPs are visible for this member right now.'
-                : route.key === 'past'
-                  ? 'No past event activity is visible for this member right now.'
-                  : 'This member has no visible hosted events right now.'
-            }
-            hasMore={route.key === 'hosting' ? hostedEventsHasMore : false}
+            emptyState={route.emptyState}
             loading={route.key === 'hosting' ? hostedEventsLoading : participantEventsLoading}
             loadingMore={route.key === 'hosting' ? hostedEventsLoadingMore : false}
-            onLoadMore={route.key === 'hosting' ? loadMoreHostedEvents : undefined}
+            onPressCta={() =>
+              route.key === 'hosting' && isOwnProfile
+                ? navigation.navigate('CreateEvent')
+                : navigation.navigate('MainTabs', { screen: 'Events' })
+            }
             occurrences={profileTabs[route.key]}
             onPressEvent={(occurrence) => navigation.navigate('EventDetails', { occurrence })}
           />
         ),
       })),
     [
-      hostedEventsHasMore,
       hostedEventsLoading,
       hostedEventsLoadingMore,
-      loadMoreHostedEvents,
       navigation,
       participantEventsLoading,
       profileTabs,
       shouldShowParticipantTabs,
+      isOwnProfile,
     ],
   );
   const shouldShowEventActivityError =
     Boolean(hostedEventsError) || (Boolean(participantEventsError) && !participantActivityUnsupported);
   const visibleUserMoments = userMoments.length > 0 ? userMoments : fallbackMoments;
+  const infiniteScroll = useInfiniteScroll({
+    enabled: activeTab === 'hosting' && hostedEventsHasMore,
+    loading: hostedEventsLoading || hostedEventsLoadingMore,
+    onEndReached: loadMoreHostedEvents,
+    resetKey: `${activeTab}:${hostedEvents.length}`,
+  });
 
   useEffect(() => {
     if (!openMoments || autoOpenedMomentsRef.current || userMomentsLoading || visibleUserMoments.length === 0) {
@@ -267,7 +304,7 @@ export function UserProfileScreen() {
 
   const handleFollowPress = () => {
     if (isOwnProfile) {
-      navigation.navigate('Profile');
+      navigation.navigate('Settings', { initialTab: 'profile' });
       return;
     }
 
@@ -286,7 +323,7 @@ export function UserProfileScreen() {
 
   const handleMessagePress = () => {
     if (isOwnProfile) {
-      navigation.navigate('Settings');
+      navigation.navigate('Settings', { initialTab: 'account' });
       return;
     }
 
@@ -300,6 +337,25 @@ export function UserProfileScreen() {
       displayName: profileName,
       username: profile?.username ?? routeUsername,
       withUserId: userId,
+    });
+  };
+
+  const openHostedEvents = () => {
+    navigation.navigate('UserHostedEvents', {
+      displayName: profileName,
+      totalCount: hostedEventsTotalCount,
+      userId,
+      username: profile?.username ?? routeUsername,
+    });
+  };
+
+  const openConnections = (mode: 'followers' | 'following', totalCount?: number) => {
+    navigation.navigate('UserConnections', {
+      displayName: profileName,
+      mode,
+      totalCount,
+      userId,
+      username: profile?.username ?? routeUsername,
     });
   };
 
@@ -324,7 +380,13 @@ export function UserProfileScreen() {
   }
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      onContentSizeChange={infiniteScroll.onContentSizeChange}
+      onRefresh={onRefresh}
+      onScroll={infiniteScroll.onScroll}
+      refreshing={refreshing}
+      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+    >
       <View style={styles.profileHeaderSection}>
         <View style={styles.profileTopRow}>
           {visibleUserMoments.length > 0 ? (
@@ -349,9 +411,17 @@ export function UserProfileScreen() {
             </View>
 
             <View style={styles.profileStatsRow}>
-              <ProfileStat label="Events" value={String(hostedEventsCount)} />
-              <ProfileStat label="Followers" value={String(profile.followersCount ?? 0)} />
-              <ProfileStat label="Interests" value={String(interests.length)} />
+              <ProfileStat label="Events" onPress={openHostedEvents} value={String(hostedEventsCount)} />
+              <ProfileStat
+                label="Followers"
+                onPress={() => openConnections('followers', profile.followersCount ?? 0)}
+                value={String(profile.followersCount ?? 0)}
+              />
+              <ProfileStat
+                label="Following"
+                onPress={() => openConnections('following', profile.followingCount ?? 0)}
+                value={String(profile.followingCount ?? 0)}
+              />
             </View>
           </View>
         </View>
@@ -435,7 +505,11 @@ export function UserProfileScreen() {
           onPressAction={() => void Promise.all([refetchHostedEvents(), refetchParticipantOccurrences()])}
         />
       ) : (
-        <SwipePagerTabs routes={profileRoutes} variant="icon" />
+        <SwipePagerTabs
+          onActiveKeyChange={(key) => setActiveTab(key as PublicProfileTab)}
+          routes={profileRoutes}
+          variant="icon"
+        />
       )}
 
       {momentsOpen && (
@@ -446,19 +520,17 @@ export function UserProfileScreen() {
 }
 
 function PublicProfileTabPane({
-  emptyMessage,
-  hasMore = false,
+  emptyState,
   loading,
   loadingMore = false,
-  onLoadMore,
+  onPressCta,
   occurrences,
   onPressEvent,
 }: {
-  emptyMessage: string;
-  hasMore?: boolean;
+  emptyState: ProfileEventsEmptyStateConfig;
   loading: boolean;
   loadingMore?: boolean;
-  onLoadMore?: () => void;
+  onPressCta?: () => void;
   occurrences: MobileEventOccurrence[];
   onPressEvent: (occurrence: MobileEventOccurrence) => void;
 }) {
@@ -469,29 +541,22 @@ function PublicProfileTabPane({
   }
 
   if (!occurrences.length) {
-    return <StateNotice message={emptyMessage} />;
+    return (
+      <ProfileEventsEmptyState
+        ctaLabel={emptyState.ctaLabel}
+        description={emptyState.description}
+        icon={emptyState.icon}
+        onPressCta={onPressCta}
+        title={emptyState.title}
+      />
+    );
   }
 
   return (
     <View style={styles.profileEventsSection}>
       <EventTileGrid occurrences={occurrences} onPressEvent={onPressEvent} />
-      {hasMore ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onLoadMore}
-          style={({ pressed }) => [
-            styles.loadMoreButton,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              opacity: pressed ? 0.84 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.loadMoreButtonText, { color: theme.colors.textPrimary }]}>
-            {loadingMore ? 'Loading more…' : 'Show more events'}
-          </Text>
-        </Pressable>
+      {loadingMore ? (
+        <Text style={[styles.loadingMoreText, { color: theme.colors.textSecondary }]}>Loading more…</Text>
       ) : null}
     </View>
   );
@@ -531,17 +596,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  loadMoreButton: {
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  loadMoreButtonText: {
-    ...typography.bodySemiBold,
+  loadingMoreText: {
+    ...typography.bodyMedium,
     fontSize: 14,
+    marginTop: 16,
+    textAlign: 'center',
   },
   profileBadgesRow: {
     flexDirection: 'row',

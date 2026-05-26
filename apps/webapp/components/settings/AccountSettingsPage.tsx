@@ -4,48 +4,47 @@ import React, { useActionState, useEffect, useState, useTransition } from 'react
 import { alpha } from '@mui/material/styles';
 import {
   Box,
-  Typography,
-  Grid,
-  TextField,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stack,
   Card,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  Stack,
+  TextField,
+  Typography,
   useTheme,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import { User } from '@/data/graphql/types/graphql';
-import { updateUserProfileAction, deleteUserProfileAction } from '@/data/actions/server/user';
-import { useAppContext } from '@/hooks/useAppContext';
 import { signIn, useSession } from 'next-auth/react';
-import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { useFormStatus } from 'react-dom';
+import { deleteUserProfileAction, updateUserProfileAction } from '@/data/actions/server/user';
+import { type User } from '@/data/graphql/types/graphql';
+import { useAppContext } from '@/hooks/useAppContext';
 import { useLogout } from '@/hooks/useLogout';
+import { SETTINGS_PRIMARY_BUTTON_SX, SETTINGS_SECONDARY_BUTTON_SX, SettingsSection } from './SettingsSection';
 
 interface AccountSettings {
-  username: string;
   email: string;
+  username: string;
 }
 
-// Separate submit button component to use useFormStatus
 function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
     <Button
+      color="primary"
+      disabled={pending}
+      size="large"
+      startIcon={pending ? <CircularProgress color="inherit" size={20} /> : undefined}
+      sx={{ ...SETTINGS_PRIMARY_BUTTON_SX, width: { xs: '100%', sm: 'auto' } }}
       type="submit"
       variant="contained"
-      color="primary"
-      size="large"
-      disabled={pending}
-      startIcon={pending ? <CircularProgress size={20} color="inherit" /> : undefined}
-      sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
     >
-      {pending ? 'Saving...' : 'Save Changes'}
+      {pending ? 'Saving...' : 'Save account'}
     </Button>
   );
 }
@@ -59,34 +58,32 @@ export default function AccountSettingsPage({ user }: { user: User }) {
   const { data: session } = useSession();
   const { logout } = useLogout();
   const [settings, setSettings] = useState<AccountSettings>({
-    username: user.username,
     email: user.email,
+    username: user.username,
   });
-
   const [openDeleteAccountDialog, setOpenDeleteAccountDialog] = useState(false);
 
-  // Sync local state with session when it updates
   useEffect(() => {
-    if (session?.user) {
-      setSettings({
-        username: session.user.username,
-        email: session.user.email,
-      });
+    if (!session?.user) {
+      return;
     }
+
+    setSettings({
+      email: session.user.email,
+      username: session.user.username,
+    });
   }, [session?.user]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSettings((prev) => ({
-      ...prev,
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setSettings((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  // Create a function to handle the delete confirmation
   const handleDeleteConfirm = async () => {
     setOpenDeleteAccountDialog(false);
-    // Use startTransition to properly handle the async action
     startTransition(() => {
       deleteUserAction(new FormData());
     });
@@ -106,13 +103,11 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     if (updateUserFormState.data && session?.user?.token) {
       const updatedUser = updateUserFormState.data as User;
 
-      // Update local state immediately
       setSettings({
-        username: updatedUser.username,
         email: updatedUser.email,
+        username: updatedUser.username,
       });
 
-      // Refresh the session with updated user data
       signIn('refresh-session', {
         userData: JSON.stringify(updatedUser),
         token: session.user.token,
@@ -126,7 +121,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
         message: 'Account settings updated successfully!',
       });
     }
-  }, [updateUserFormState]);
+  }, [session, setToastProps, toastProps, updateUserFormState]);
 
   useEffect(() => {
     if (deleteUserFormState.apiError) {
@@ -146,239 +141,173 @@ export default function AccountSettingsPage({ user }: { user: User }) {
         message: 'Account deleted successfully!',
       });
     }
-  }, [deleteUserFormState]);
+  }, [deleteUserFormState, setToastProps, toastProps]);
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ ...SECTION_TITLE_STYLES, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          Account Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-          Manage your account settings
-        </Typography>
-      </Box>
-
-      <Stack spacing={3}>
-        <Box component="form" action={updateUserFormAction} noValidate>
-          {/* Account Details */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-              Account Details
-            </Typography>
-
+    <Stack spacing={4}>
+      <Box component="form" action={updateUserFormAction} noValidate>
+        <Stack spacing={4}>
+          <SettingsSection
+            description="Account details stay close at hand. Changing your email will require reverification."
+            title="Account"
+          >
             <Grid container spacing={{ xs: 2, sm: 3 }}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  id="account-username"
+                  color="secondary"
+                  disabled
                   fullWidth
+                  id="account-username"
                   label="Username"
                   name="username"
-                  value={settings.username}
-                  variant="outlined"
                   slotProps={{
                     input: {
                       readOnly: true,
                     },
                   }}
-                  color="secondary"
-                  disabled
+                  value={settings.username}
                 />
               </Grid>
-
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
-                  id="account-email"
+                  color="secondary"
                   fullWidth
-                  label="Email"
+                  id="account-email"
+                  label="Email address"
                   name="email"
+                  onChange={handleInputChange}
                   type="email"
                   value={settings.email}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  color="secondary"
                 />
               </Grid>
             </Grid>
-          </Box>
+          </SettingsSection>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end">
             <SubmitButton />
           </Stack>
-        </Box>
+        </Stack>
+      </Box>
 
-        {/* Delete Account Section - Danger Zone */}
-        <Card
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: '2px solid',
-            borderColor: 'error.main',
-            p: 3,
-            overflow: 'visible',
-            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'error.dark' : 'error.lighter'),
+      <Card
+        elevation={0}
+        sx={{
+          bgcolor: (currentTheme) => (currentTheme.palette.mode === 'dark' ? 'error.dark' : 'error.lighter'),
+          border: '2px solid',
+          borderColor: 'error.main',
+          borderRadius: 4,
+          overflow: 'visible',
+          p: { xs: 2.5, sm: 3 },
+        }}
+      >
+        <Stack spacing={3}>
+          <SettingsSection
+            description="Permanently remove your account and all associated data. This action cannot be undone."
+            title="Danger zone"
+            tone="danger"
+          >
+            <Button
+              color="error"
+              disabled={isPending}
+              onClick={() => setOpenDeleteAccountDialog(true)}
+              size="large"
+              startIcon={<DeleteIcon />}
+              sx={{
+                ...SETTINGS_SECONDARY_BUTTON_SX,
+                alignSelf: 'flex-start',
+                width: { xs: '100%', sm: 'auto' },
+                ...(theme.palette.mode === 'dark'
+                  ? {
+                      color: theme.palette.error.contrastText,
+                      borderColor: theme.palette.error.contrastText,
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.error.contrastText, 0.15),
+                        borderColor: theme.palette.error.contrastText,
+                      },
+                    }
+                  : {}),
+              }}
+              variant="outlined"
+            >
+              Delete my account
+            </Button>
+          </SettingsSection>
+        </Stack>
+
+        <Dialog
+          open={openDeleteAccountDialog}
+          onClose={() => setOpenDeleteAccountDialog(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              p: 2,
+            },
           }}
         >
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            alignItems={{ xs: 'flex-start', sm: 'center' }}
-            sx={{ mb: 2 }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 48,
-                height: 48,
-                borderRadius: 2,
-                bgcolor: 'error.main',
-                color: 'error.contrastText',
-              }}
-            >
-              <DeleteIcon />
-            </Box>
-            <Box>
-              <Typography
-                variant="h6"
-                fontWeight={600}
-                gutterBottom
-                sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'error.main') }}
+          <DialogTitle sx={{ pb: 2 }}>
+            <Stack alignItems="center" direction="row" spacing={2}>
+              <Box
+                sx={{
+                  alignItems: 'center',
+                  bgcolor: 'error.main',
+                  borderRadius: 2,
+                  color: 'white',
+                  display: 'flex',
+                  height: 48,
+                  justifyContent: 'center',
+                  width: 48,
+                }}
               >
-                Danger Zone
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'text.secondary') }}
-              >
-                Irreversible and destructive actions
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Box sx={{ mb: 3, mt: 2 }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              sx={{ color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'inherit') }}
-            >
-              Delete Account
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: (theme) => (theme.palette.mode === 'dark' ? 'error.contrastText' : 'text.secondary'),
-                mb: 3,
-              }}
-            >
-              Permanently remove your account and all associated data. This action cannot be undone and all your events,
-              purchases, and profile information will be permanently deleted.
-            </Typography>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={() => setOpenDeleteAccountDialog(true)}
-              disabled={isPending}
-              size="large"
-              sx={{
-                ...BUTTON_STYLES,
-                px: 3,
-                width: { xs: '100%', sm: 'auto' },
-                ...(theme.palette.mode === 'dark' && {
-                  color: theme.palette.error.contrastText,
-                  borderColor: theme.palette.error.contrastText,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.error.contrastText, 0.15),
-                    borderColor: theme.palette.error.contrastText,
-                  },
-                }),
-              }}
-            >
-              Delete My Account
-            </Button>
-          </Box>
-
-          {/* Delete Account Confirmation Dialog */}
-          <Dialog
-            open={openDeleteAccountDialog}
-            onClose={() => setOpenDeleteAccountDialog(false)}
-            PaperProps={{
-              sx: {
-                borderRadius: 3,
-                p: 2,
-              },
-            }}
-          >
-            <DialogTitle sx={{ pb: 2 }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: 'error.main',
-                    color: 'white',
-                  }}
-                >
-                  <DeleteIcon />
-                </Box>
-                <Typography variant="h5" fontWeight={600}>
-                  Delete Account?
-                </Typography>
-              </Stack>
-            </DialogTitle>
-            <DialogContent>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                Are you absolutely sure you want to permanently delete your account?
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                This action will:
-              </Typography>
-              <Box component="ul" sx={{ pl: 3, color: 'text.secondary' }}>
-                <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
-                  Permanently delete all your personal data
-                </Typography>
-                <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
-                  Remove all your events and purchases
-                </Typography>
-                <Typography component="li" variant="body2" sx={{ mb: 0.5 }}>
-                  Cancel any active subscriptions
-                </Typography>
-                <Typography component="li" variant="body2">
-                  This action cannot be reversed
-                </Typography>
+                <DeleteIcon />
               </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-              <Button
-                onClick={() => setOpenDeleteAccountDialog(false)}
-                variant="outlined"
-                disabled={isPending}
-                size="large"
-                sx={{ ...BUTTON_STYLES, px: 3 }}
-              >
-                Cancel
-              </Button>
-              <Button
-                color="error"
-                variant="contained"
-                onClick={handleDeleteConfirm}
-                disabled={isPending}
-                size="large"
-                sx={{ ...BUTTON_STYLES, px: 3 }}
-              >
-                {isPending ? 'Deleting...' : 'Yes, Delete My Account'}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </Card>
-      </Stack>
-    </Box>
+              <Typography fontWeight={600} variant="h5">
+                Delete account?
+              </Typography>
+            </Stack>
+          </DialogTitle>
+          <DialogContent>
+            <Typography sx={{ mb: 2 }} variant="body1">
+              Are you absolutely sure you want to permanently delete your account?
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 1 }} variant="body2">
+              This action will:
+            </Typography>
+            <Box component="ul" sx={{ color: 'text.secondary', pl: 3 }}>
+              <Typography component="li" sx={{ mb: 0.5 }} variant="body2">
+                Permanently delete all your personal data
+              </Typography>
+              <Typography component="li" sx={{ mb: 0.5 }} variant="body2">
+                Remove all your events and purchases
+              </Typography>
+              <Typography component="li" sx={{ mb: 0.5 }} variant="body2">
+                Cancel any active subscriptions
+              </Typography>
+              <Typography component="li" variant="body2">
+                This action cannot be reversed
+              </Typography>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ gap: 1, pb: 2, px: 3 }}>
+            <Button
+              disabled={isPending}
+              onClick={() => setOpenDeleteAccountDialog(false)}
+              sx={SETTINGS_SECONDARY_BUTTON_SX}
+              variant="outlined"
+            >
+              Cancel
+            </Button>
+            <Button
+              color="error"
+              disabled={isPending}
+              onClick={handleDeleteConfirm}
+              sx={SETTINGS_PRIMARY_BUTTON_SX}
+              variant="contained"
+            >
+              {isPending ? 'Deleting...' : 'Yes, delete my account'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Card>
+    </Stack>
   );
 }

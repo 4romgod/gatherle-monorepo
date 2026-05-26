@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import dayjs from 'dayjs';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
@@ -248,5 +248,150 @@ describe('useFilteredEvents', () => {
         }),
       }),
     );
+  });
+
+  it('supports active backend filters without category inputs', async () => {
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: [] } });
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters: EventFilters = {
+      ...baseFilters,
+      location: {
+        city: 'Johannesburg',
+      },
+    };
+
+    renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(loadEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: {
+          options: expect.objectContaining({
+            filters: undefined,
+            location: expect.objectContaining({
+              city: 'Johannesburg',
+            }),
+          }),
+        },
+      }),
+    );
+  });
+
+  it('does not reset paginated events when initial events change after pagination', async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => makeOccurrence(`occ-${i}`)) as any[];
+    const secondPage = [makeOccurrence('occ-10')] as any[];
+    const refreshedInitialEvents = [makeOccurrence('server-occ')] as any[];
+    let resolveRefetch: ((value: { data: { readEventOccurrences: any[] } }) => void) | undefined;
+    const loadEvents = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage } })
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ data: { readEventOccurrences: any[] } }>((resolve) => {
+            resolveRefetch = resolve;
+          }),
+      );
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
+    const { result, rerender } = renderHook(
+      ({ currentInitialEvents }: { currentInitialEvents: any[] }) => useFilteredEvents(filters, currentInitialEvents),
+      {
+        initialProps: { currentInitialEvents: initialEvents },
+      },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    rerender({ currentInitialEvents: refreshedInitialEvents });
+
+    expect(result.current.events).toEqual([...firstPage, ...secondPage]);
+
+    await act(async () => {
+      resolveRefetch?.({ data: { readEventOccurrences: refreshedInitialEvents } });
+      await Promise.resolve();
+    });
+  });
+
+  it('ignores stale filter responses after the hook unmounts', async () => {
+    let resolveEvents: ((value: { data: { readEventOccurrences: any[] } }) => void) | undefined;
+
+    const loadEvents = jest.fn(
+      () =>
+        new Promise<{ data: { readEventOccurrences: any[] } }>((resolve) => {
+          resolveEvents = resolve;
+        }),
+    );
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
+    const { result, unmount } = renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    unmount();
+
+    await act(async () => {
+      resolveEvents?.({ data: { readEventOccurrences: [makeOccurrence('late-occ')] } });
+      await Promise.resolve();
+    });
+
+    expect(result.current.events).toEqual(initialEvents);
+  });
+
+  it('ignores stale filter errors after the hook unmounts', async () => {
+    let rejectEvents: ((reason?: unknown) => void) | undefined;
+
+    const loadEvents = jest.fn(
+      () =>
+        new Promise<never>((_, reject) => {
+          rejectEvents = reject;
+        }),
+    );
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
+    const { result, unmount } = renderHook(() => useFilteredEvents(filters, initialEvents));
+
+    unmount();
+
+    await act(async () => {
+      rejectEvents?.(new Error('late failure'));
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBeNull();
+  });
+
+  it('keeps state stable when the next page fails', async () => {
+    const firstPage = Array.from({ length: 10 }, (_, index) => makeOccurrence(`occ-${index}`)) as any[];
+    const loadMoreError = new Error('next page failed');
+    const loadMoreFailure = jest
+      .fn()
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
+      .mockImplementation(() => Promise.reject(loadMoreError));
+    mockUseLazyQuery.mockReturnValue([loadMoreFailure, { loading: false }]);
+
+    const retryingHook = renderHook(() => useFilteredEvents({ ...baseFilters, categories: ['Music'] }, initialEvents));
+
+    await waitFor(() => expect(retryingHook.result.current.hasMore).toBe(true));
+
+    await act(async () => {
+      await retryingHook.result.current.loadMore();
+    });
+
+    expect(retryingHook.result.current.events).toEqual(firstPage);
+    expect(retryingHook.result.current.loadingMore).toBe(false);
   });
 });

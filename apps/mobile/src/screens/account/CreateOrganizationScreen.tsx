@@ -131,7 +131,7 @@ export function CreateOrganizationScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to create and manage organizations."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -145,7 +145,7 @@ export function CreateOrganizationScreen() {
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent}>
+    <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
       <View style={styles.section}>
         <SectionHeading title="Organization details" />
         <AccountTextField label="Name" onChangeText={(value) => updateField('name', value)} value={formState.name} />

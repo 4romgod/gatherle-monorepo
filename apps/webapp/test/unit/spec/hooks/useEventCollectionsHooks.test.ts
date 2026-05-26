@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { GetEventsCountDocument } from '@/data/graphql/query/Event/query';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
 import { useHostedEventsByUser } from '@/hooks/useHostedEventsByUser';
 import { useMyEventOccurrenceRsvps } from '@/hooks/useMyEventOccurrenceRsvps';
@@ -30,6 +31,12 @@ describe('event collection hooks', () => {
   });
 
   describe('useHostedEventsByUser', () => {
+    const mockHostedEventsQueries = (loadEvents: jest.Mock, loadEventsCount: jest.Mock) => {
+      useLazyQueryMock.mockImplementation((document: unknown) =>
+        document === GetEventsCountDocument ? [loadEventsCount, { loading: false }] : [loadEvents, { loading: false }],
+      );
+    };
+
     const createHostedEvent = (eventId: string) =>
       ({
         eventId,
@@ -42,7 +49,8 @@ describe('event collection hooks', () => {
 
     it('does not request data when disabled or missing a userId', async () => {
       const loadEvents = jest.fn();
-      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+      const loadEventsCount = jest.fn();
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
 
       const { result, rerender } = renderHook(
         ({ userId, enabled }: { userId?: string; enabled?: boolean }) =>
@@ -62,13 +70,33 @@ describe('event collection hooks', () => {
       expect(loadEvents).not.toHaveBeenCalled();
     });
 
+    it('does not load more when the hook has no user id', async () => {
+      const loadEvents = jest.fn();
+      const loadEventsCount = jest.fn();
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
+
+      const { result } = renderHook(() => useHostedEventsByUser(undefined, 'token'));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(loadEvents).not.toHaveBeenCalled();
+      expect(loadEventsCount).not.toHaveBeenCalled();
+    });
+
     it('loads the first page and uses hosted query options', async () => {
       const loadEvents = jest.fn().mockResolvedValue({
         data: {
           readEvents: [createHostedEvent('event-1'), createHostedEvent('event-2')],
         },
       });
-      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+      const loadEventsCount = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 3,
+        },
+      });
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
 
       const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
 
@@ -76,6 +104,38 @@ describe('event collection hooks', () => {
       expect(result.current.hasMore).toBe(true);
       expect(loadEvents).toHaveBeenCalledWith({
         context: { headers: { Authorization: 'Bearer token' } },
+        variables: {
+          options: {
+            filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+            pagination: { limit: 2, skip: 0 },
+            sort: [{ field: 'createdAt', order: SortOrderInput.Desc }],
+          },
+        },
+      });
+      expect(loadEventsCount).toHaveBeenCalledWith({
+        context: { headers: { Authorization: 'Bearer token' } },
+        variables: {
+          options: {
+            filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+          },
+        },
+      });
+    });
+
+    it('treats missing event and count payloads as empty results', async () => {
+      const loadEvents = jest.fn().mockResolvedValue({});
+      const loadEventsCount = jest.fn().mockResolvedValue({});
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
+
+      const { result } = renderHook(() => useHostedEventsByUser('user-1', null, { pageSize: 2 }));
+
+      await waitFor(() => expect(loadEvents).toHaveBeenCalledTimes(1));
+
+      expect(result.current.events).toEqual([]);
+      expect(result.current.totalCount).toBe(0);
+      expect(result.current.hasMore).toBe(false);
+      expect(loadEvents).toHaveBeenCalledWith({
+        context: { headers: {} },
         variables: {
           options: {
             filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
@@ -99,7 +159,12 @@ describe('event collection hooks', () => {
             readEvents: [createHostedEvent('event-2'), createHostedEvent('event-3')],
           },
         });
-      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+      const loadEventsCount = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 3,
+        },
+      });
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
 
       const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token', { pageSize: 2 }));
 
@@ -110,6 +175,7 @@ describe('event collection hooks', () => {
       });
 
       expect(result.current.events.map((event) => event.eventId)).toEqual(['event-1', 'event-2', 'event-3']);
+      expect(result.current.hasMore).toBe(false);
       expect(loadEvents).toHaveBeenLastCalledWith({
         context: { headers: { Authorization: 'Bearer token' } },
         variables: {
@@ -124,7 +190,12 @@ describe('event collection hooks', () => {
 
     it('surfaces refresh and load-more errors', async () => {
       const loadEvents = jest.fn().mockRejectedValueOnce('bad-refresh');
-      useLazyQueryMock.mockReturnValue([loadEvents, { loading: false }]);
+      const loadEventsCount = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 0,
+        },
+      });
+      mockHostedEventsQueries(loadEvents, loadEventsCount);
 
       const { result } = renderHook(() => useHostedEventsByUser('user-1', 'token'));
 
@@ -140,7 +211,12 @@ describe('event collection hooks', () => {
           },
         })
         .mockRejectedValueOnce(loadMoreError);
-      useLazyQueryMock.mockReturnValue([loadMoreFn, { loading: false }]);
+      const loadMoreCountFn = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 20,
+        },
+      });
+      mockHostedEventsQueries(loadMoreFn, loadMoreCountFn);
 
       const secondHook = renderHook(() => useHostedEventsByUser('user-1', 'token'));
       await waitFor(() => expect(secondHook.result.current.hasMore).toBe(true));
@@ -151,6 +227,45 @@ describe('event collection hooks', () => {
 
       expect(secondHook.result.current.error).toBe(loadMoreError);
       expect(loggerErrorMock).toHaveBeenCalled();
+    });
+
+    it('preserves refresh errors and normalizes string load-more failures', async () => {
+      const refreshError = new Error('refresh exploded');
+      const refreshEvents = jest.fn().mockRejectedValueOnce(refreshError);
+      const refreshCount = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 0,
+        },
+      });
+      mockHostedEventsQueries(refreshEvents, refreshCount);
+
+      const refreshHook = renderHook(() => useHostedEventsByUser('user-1', 'token'));
+
+      await waitFor(() => expect(refreshHook.result.current.error).toBe(refreshError));
+
+      const loadMoreEvents = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            readEvents: Array.from({ length: 18 }, (_, index) => createHostedEvent(`event-${index}`)),
+          },
+        })
+        .mockRejectedValueOnce('broken-load-more');
+      const loadMoreCount = jest.fn().mockResolvedValue({
+        data: {
+          readEventsCount: 20,
+        },
+      });
+      mockHostedEventsQueries(loadMoreEvents, loadMoreCount);
+
+      const secondHook = renderHook(() => useHostedEventsByUser('user-1', 'token'));
+      await waitFor(() => expect(secondHook.result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await secondHook.result.current.loadMore();
+      });
+
+      expect(secondHook.result.current.error?.message).toBe('Unable to load more hosted events right now.');
     });
   });
 

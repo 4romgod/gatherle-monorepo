@@ -1,6 +1,6 @@
 import type { ApolloError } from '@apollo/client';
 import { useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
 import type { MobileNotification } from '@data/graphql/query/Notification/types';
@@ -15,6 +15,7 @@ import { NotificationRowSkeleton } from '@/components/skeleton/NotificationRowSk
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
+import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
@@ -35,7 +36,10 @@ export function NotificationsScreen() {
     error,
     followBackUser,
     followRequests,
+    hasMore,
+    loadMore,
     loading,
+    loadingMore,
     markNotificationRead,
     notifications,
     refetch,
@@ -96,6 +100,12 @@ export function NotificationsScreen() {
 
     return Array.from(groups.entries()).map(([label, items]) => ({ items, label }));
   }, [feedItems]);
+  const infiniteScroll = useInfiniteScroll({
+    enabled: hasMore,
+    loading: loading || loadingMore,
+    onEndReached: loadMore,
+    resetKey: `${groupedFeed.length}:${unreadCount}`,
+  });
 
   if (!isAuthenticated) {
     return (
@@ -123,7 +133,13 @@ export function NotificationsScreen() {
   }
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+    <PageContainer
+      onContentSizeChange={infiniteScroll.onContentSizeChange}
+      onRefresh={onRefresh}
+      onScroll={infiniteScroll.onScroll}
+      refreshing={refreshing}
+      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+    >
       {loading && feedItems.length === 0 ? (
         <View style={styles.feed}>
           <View style={styles.group}>
@@ -195,6 +211,11 @@ export function NotificationsScreen() {
               </View>
             </View>
           ))}
+          {loadingMore ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator color={theme.colors.primary} size="small" />
+            </View>
+          ) : null}
         </View>
       ) : (
         <StateNotice message="You’re all caught up." />
@@ -240,5 +261,9 @@ const styles = StyleSheet.create({
   groupTitleSkeleton: {
     height: 12,
     width: 84,
+  },
+  loadingMore: {
+    alignItems: 'center',
+    paddingTop: 8,
   },
 });

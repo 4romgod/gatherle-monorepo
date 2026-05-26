@@ -124,6 +124,37 @@ consistency, responsiveness, and product polish across:
 
 Its most important job is to keep the **mobile app** and the **mobile-sized webapp** in parity.
 
+## Interaction Defaults
+
+This agent should treat modern touch-friendly interaction patterns as part of the default Gatherle frontend toolbox, not
+as optional embellishments.
+
+When the product surface supports them, prefer:
+
+- **Pull to refresh**
+  - default refresh affordance for scrollable pages on both mobile and the mobile-sized webapp
+  - use the shared page-shell refresh primitives before inventing route-local refresh UI
+  - do not ship a data-backed scroll page without deciding explicitly whether pull to refresh should be enabled
+- **Infinite scroll**
+  - default pagination pattern for feeds and paginated lists
+  - avoid manual `Show more` / `Load more` buttons on primary content feeds unless there is a strong product reason
+  - for reverse-chronological history surfaces such as chat, prefer automatic boundary loading over manual pagination
+- **Swipeable tabs / pagers**
+  - when a surface presents peer sections of content, assume swipe navigation should be considered first on mobile and
+    mobile-sized web
+  - tapped tabs are still valid, but swipe should be part of the evaluation
+- **Gesture-friendly surfaces**
+  - bottom sheets, drag-to-dismiss, horizontal carousels, and other direct-manipulation patterns are first-class tools
+  - preserve gesture compatibility when adding new interactions; for example, a pull-to-refresh implementation should
+    not break horizontal swipes or paged tab gestures
+
+When working on a page or flow, the agent should actively ask:
+
+1. Should this page support pull to refresh?
+2. If this list paginates, should it be infinite scroll instead of a button?
+3. If this page has sibling tabs or content panes, should swipe navigation be supported?
+4. Are there existing shared primitives for these behaviors that should be reused instead of duplicating logic?
+
 ## Primary Objective
 
 Treat the **mobile app** as a first-class product surface and treat the **mobile-sized webapp** as its closest web
@@ -478,6 +509,7 @@ Avoid:
 - excessive borders when soft surfaces/background fills read better
 - hidden creator actions
 - inconsistent success/error feedback across surfaces
+- pagination that feels mechanical when a gesture-first pattern would be more natural
 
 ### 3. Mobile-specific Rule
 
@@ -485,6 +517,8 @@ On mobile, pay special attention to:
 
 - keyboard avoidance
 - full-screen/modal layout interactions
+- pull-to-refresh behavior on scroll pages
+- swipe gestures for tabs, pagers, and media flows
 - moments viewer vs moments feed behavior
 - bottom-nav-safe positioning
 - stale image caching after uploads
@@ -495,10 +529,21 @@ On mobile, pay special attention to:
 On web, pay special attention to:
 
 - mobile breakpoints first
+- mobile-web gesture support where it improves parity with the native app
 - MUI theme token usage
 - Next.js app-router boundaries
 - server/client component fit
 - layout consistency with `docs/webapp/design-system.md`
+
+### 5. Pagination and Refresh Rule
+
+Use these defaults unless the task explicitly requires something else:
+
+- page refresh on scrollable pages should prefer pull to refresh over extra top-level refresh buttons
+- paginated feeds should default to infinite scroll
+- if a page already fetches a bounded initial slice, do not stop at that slice without deciding whether follow-up pages
+  should load automatically
+- when parity is expected, do not leave one surface on manual pagination while the other uses infinite scroll
 
 ## Common Gatherle Workflows This Agent Should Know
 

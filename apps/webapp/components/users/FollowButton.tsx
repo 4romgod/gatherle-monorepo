@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, CircularProgress } from '@mui/material';
-import { PersonAdd, PersonRemove, HourglassEmpty, Block } from '@mui/icons-material';
+import { FiClock, FiSlash, FiUserCheck, FiUserPlus } from 'react-icons/fi';
 import { useFollow, useFollowing, useBlockedUsers } from '@/hooks';
 import { FollowTargetType, FollowApprovalStatus } from '@/data/graphql/types/graphql';
 import { useEffect, useState } from 'react';
@@ -17,7 +17,7 @@ interface FollowButtonProps {
   targetType?: FollowTargetType;
   size?: 'small' | 'medium' | 'large';
   fullWidth?: boolean;
-  variant?: 'default' | 'primary';
+  variant?: 'default' | 'primary' | 'profile';
 }
 
 export default function FollowButton({
@@ -95,10 +95,10 @@ export default function FollowButton({
 
   const getButtonIcon = () => {
     if (isLoading) return <CircularProgress size={16} />;
-    if (isBlocked) return <Block />;
-    if (isFollowing) return <PersonRemove />;
-    if (isPending) return <HourglassEmpty />;
-    return <PersonAdd />;
+    if (isBlocked) return <FiSlash size={14} />;
+    if (isFollowing) return <FiUserCheck size={14} />;
+    if (isPending) return <FiClock size={14} />;
+    return <FiUserPlus size={14} />;
   };
 
   const getButtonLabel = () => {
@@ -124,19 +124,38 @@ export default function FollowButton({
               textTransform: 'none',
               py: 1.5,
             }
-          : {
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              border: '1px solid',
-              borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
-              boxShadow: 'none',
-              '&:hover': {
-                bgcolor: 'background.default',
-                borderColor: 'text.secondary',
+          : variant === 'profile'
+            ? {
+                backgroundColor: 'action.disabledBackground',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '11px',
                 boxShadow: 'none',
-              },
-            }
+                color: 'text.primary',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                minHeight: 38,
+                px: 1.5,
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'action.disabledBackground',
+                  borderColor: 'text.secondary',
+                  boxShadow: 'none',
+                },
+              }
+            : {
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: (theme) => (theme.palette.mode === 'light' ? 'rgba(0,0,0,0.3)' : 'divider'),
+                boxShadow: 'none',
+                '&:hover': {
+                  bgcolor: 'background.default',
+                  borderColor: 'text.secondary',
+                  boxShadow: 'none',
+                },
+              }
       }
     >
       {getButtonLabel()}

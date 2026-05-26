@@ -263,6 +263,44 @@ class EventSeriesDAO {
     }
   }
 
+  static async countEvents(options?: EventsQueryOptionsInput): Promise<number> {
+    try {
+      let effectiveOptions = options;
+      const dateRange = this.resolveReadEventsDateRange(options);
+
+      if (dateRange) {
+        const matchingEventSeriesIds = await EventOccurrenceDAO.readEventSeriesIdsInRange(
+          dateRange.startDate,
+          dateRange.endDate,
+        );
+
+        if (matchingEventSeriesIds.length === 0) {
+          return 0;
+        }
+
+        effectiveOptions = {
+          ...options,
+          filters: [...(options?.filters ?? []), { field: 'eventId', value: matchingEventSeriesIds }],
+        };
+      }
+
+      const pipeline = transformEventOptionsToPipeline(
+        effectiveOptions
+          ? {
+              ...effectiveOptions,
+              pagination: undefined,
+              sort: undefined,
+            }
+          : undefined,
+      );
+      const result = await EventSeriesModel.aggregate<{ count: number }>([...pipeline, { $count: 'count' }]).exec();
+      return result[0]?.count ?? 0;
+    } catch (error) {
+      logDaoError('Error counting filtered events', { error, options });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readCandidateEventSeriesForOccurrences(options?: EventsQueryOptionsInput): Promise<EventEntity[]> {
     try {
       const pipeline = transformEventOptionsToPipeline(

@@ -154,7 +154,7 @@ export function CreateVenueScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <AuthPromptCard
           description="Sign in to create and manage venues."
           onPressPrimary={() => navigation.navigate('Login')}
@@ -169,7 +169,7 @@ export function CreateVenueScreen() {
 
   if (accessLoading) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <StateNotice message="Checking your venue management access..." />
       </PageContainer>
     );
@@ -177,14 +177,14 @@ export function CreateVenueScreen() {
 
   if (!canCreateVenue) {
     return (
-      <PageContainer contentContainerStyle={styles.pageContent}>
+      <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
         <StateNotice message="Only Gatherle admins and organization owners/admins can create venues." />
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer contentContainerStyle={styles.pageContent}>
+    <PageContainer contentContainerStyle={styles.pageContent} disablePullToRefresh>
       <View style={styles.section}>
         <SectionHeading title="Venue owner" />
         <View style={styles.choiceBlock}>

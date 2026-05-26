@@ -17,6 +17,7 @@ import {
 import { DoneAll as MarkAllReadIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import PendingFollowRequestsList from './follow/PendingFollowRequestsList';
 import NotificationItem from './NotificationItem';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useNotifications, useNotificationActions } from '@/hooks';
 import { logger } from '@/lib/utils';
 
@@ -54,8 +55,15 @@ function NotificationsSkeleton() {
 export default function NotificationsPage() {
   const [tabValue, setTabValue] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { notifications, loading, error, hasMore, loadMore, refetch, unreadCount } = useNotifications({ limit: 20 });
+  const { notifications, loading, error, hasMore, loadMore, loadingMore, refetch, unreadCount } = useNotifications({
+    limit: 20,
+  });
   const { markAsRead, markAllAsRead, deleteNotification, isLoading: actionsLoading } = useNotificationActions();
+  const loadMoreTriggerRef = useInfiniteScroll({
+    enabled: tabValue === 0 && hasMore,
+    loading: loading || loadingMore || isRefreshing,
+    onEndReached: loadMore,
+  });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -192,14 +200,11 @@ export default function NotificationsPage() {
                 </List>
 
                 {hasMore && (
-                  <Box sx={{ p: 2, textAlign: 'center' }}>
-                    <Button
-                      onClick={loadMore}
-                      disabled={loading}
-                      startIcon={loading ? <CircularProgress size={16} /> : null}
-                    >
-                      {loading ? 'Loading...' : 'Load More'}
-                    </Button>
+                  <Box
+                    ref={loadMoreTriggerRef}
+                    sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minHeight: 48, p: 2 }}
+                  >
+                    {loadingMore ? <CircularProgress size={18} /> : null}
                   </Box>
                 )}
               </>

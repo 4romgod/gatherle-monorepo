@@ -1,5 +1,18 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { holdForDebug } from './helpers';
+
+async function waitForEventsSurface(page: Page) {
+  const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });
+  const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
+
+  try {
+    await expect(discoverEventsHeading).toBeVisible({ timeout: 20_000 });
+    return { discoverEventsHeading, loadError, loadedWithError: false };
+  } catch {
+    await expect(loadError).toBeVisible({ timeout: 20_000 });
+    return { discoverEventsHeading, loadError, loadedWithError: true };
+  }
+}
 
 test.describe('Events Page', () => {
   test.afterEach(async ({ page }) => {
@@ -7,28 +20,17 @@ test.describe('Events Page', () => {
   });
 
   test('renders /events route', async ({ page }) => {
-    await page.goto('/events', { waitUntil: 'domcontentloaded' });
+    await page.goto('/events');
     await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
 
-    const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });
-    const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
-
-    await expect(discoverEventsHeading.or(loadError)).toBeVisible({ timeout: 20_000 });
+    const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
+    await expect(loadedWithError ? loadError : discoverEventsHeading).toBeVisible();
   });
 
   test('shows search and filter controls when events data loads', async ({ page }) => {
     await page.goto('/events');
 
-    const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
-    const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });
-
-    let loadedWithError = false;
-    try {
-      await discoverEventsHeading.waitFor({ state: 'visible', timeout: 20_000 });
-    } catch {
-      loadedWithError = true;
-      await loadError.waitFor({ state: 'visible', timeout: 20_000 });
-    }
+    const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
 
     if (loadedWithError) {
       await expect(loadError).toBeVisible();
@@ -46,16 +48,7 @@ test.describe('Events Page', () => {
   test('opens share dialog from an event card with supported actions only', async ({ page }) => {
     await page.goto('/events');
 
-    const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
-    const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });
-
-    let loadedWithError = false;
-    try {
-      await discoverEventsHeading.waitFor({ state: 'visible', timeout: 20_000 });
-    } catch {
-      loadedWithError = true;
-      await loadError.waitFor({ state: 'visible', timeout: 20_000 });
-    }
+    const { loadError, loadedWithError } = await waitForEventsSurface(page);
 
     if (loadedWithError) {
       await expect(loadError).toBeVisible();

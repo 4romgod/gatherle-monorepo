@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLazyQuery } from '@apollo/client';
-import { GetEventsDocument } from '@data/graphql/query/Event/query';
+import { GetEventsCountDocument, GetEventsDocument } from '@data/graphql/query/Event/query';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MobileEventSeriesListItem } from '@data/graphql/query/Event/types';
 import { SortOrderInput } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
 import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
-import { buildHostedEventsQueryOptions } from '@/lib/events/eventCollections';
+import { buildHostedEventsCountQueryOptions, buildHostedEventsQueryOptions } from '@/lib/events/eventCollections';
 
 const PAGE_SIZE = 18;
 
@@ -25,11 +25,16 @@ export function useHostedEventsByUser(
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const loadingMoreRef = useRef(false);
   const pageRef = useRef(0);
 
   const [loadEvents, { loading }] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
     notifyOnNetworkStatusChange: true,
+  });
+  const [loadEventsCount] = useLazyQuery(GetEventsCountDocument, {
+    fetchPolicy: 'network-only',
   });
 
   const mapSeriesPage = useCallback(
@@ -60,6 +65,7 @@ export function useHostedEventsByUser(
     if (!enabled || !userId) {
       setEvents([]);
       setHasMore(false);
+      setTotalCount(0);
       setError(null);
       pageRef.current = 0;
       return;
@@ -68,9 +74,19 @@ export function useHostedEventsByUser(
     try {
       setError(null);
       pageRef.current = 0;
-      const page = await loadPage(0);
+      const [page, countResponse] = await Promise.all([
+        loadPage(0),
+        loadEventsCount({
+          context: getApolloAuthContext(authToken),
+          variables: {
+            options: buildHostedEventsCountQueryOptions(userId),
+          },
+        }),
+      ]);
+      const nextTotalCount = countResponse.data?.readEventsCount ?? 0;
       setEvents(mapSeriesPage(page));
-      setHasMore(page.length >= pageSize);
+      setTotalCount(nextTotalCount);
+      setHasMore(page.length < nextTotalCount);
     } catch (caughtError) {
       const resolvedError =
         caughtError instanceof Error ? caughtError : new Error('Unable to load hosted events right now.');
@@ -78,28 +94,33 @@ export function useHostedEventsByUser(
       setError(resolvedError);
       setEvents([]);
       setHasMore(false);
+      setTotalCount(0);
     }
-  }, [enabled, loadPage, mapSeriesPage, pageSize, userId]);
+  }, [authToken, enabled, loadEventsCount, loadPage, mapSeriesPage, userId]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const loadMore = useCallback(async () => {
-    if (!userId || loadingMore || !hasMore) {
+    if (!userId || loadingMoreRef.current || !hasMore) {
       return;
     }
 
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const nextPage = pageRef.current + 1;
       const page = await loadPage(nextPage);
       const mappedPage = mapSeriesPage(page);
+      let nextEventCount = 0;
       setEvents((current) => {
         const existingIds = new Set(current.map((event) => event.occurrenceId));
-        return [...current, ...mappedPage.filter((event) => !existingIds.has(event.occurrenceId))];
+        const nextEvents = [...current, ...mappedPage.filter((event) => !existingIds.has(event.occurrenceId))];
+        nextEventCount = nextEvents.length;
+        return nextEvents;
       });
-      setHasMore(page.length >= pageSize);
+      setHasMore(totalCount > 0 ? nextEventCount < totalCount : page.length >= pageSize);
       pageRef.current = nextPage;
     } catch (caughtError) {
       const resolvedError =
@@ -107,9 +128,10 @@ export function useHostedEventsByUser(
       console.error('Failed to load more hosted events for user profile', resolvedError);
       setError(resolvedError);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [hasMore, loadPage, loadingMore, mapSeriesPage, pageSize, userId]);
+  }, [hasMore, loadPage, mapSeriesPage, pageSize, totalCount, userId]);
 
   return useMemo(
     () => ({
@@ -121,7 +143,8 @@ export function useHostedEventsByUser(
       loadingMore,
       loadMore,
       refetch: refresh,
+      totalCount,
     }),
-    [error, events, hasMore, loading, loadingMore, loadMore, refresh],
+    [error, events, hasMore, loading, loadingMore, loadMore, refresh, totalCount],
   );
 }

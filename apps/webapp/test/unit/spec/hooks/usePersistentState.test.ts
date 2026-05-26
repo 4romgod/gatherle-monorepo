@@ -152,6 +152,42 @@ describe('usePersistentState', () => {
     }
   });
 
+  it('supports function default values and refreshes the default ref on rerender', () => {
+    const initialDefault = jest.fn(() => 'initial-default');
+    const nextDefault = jest.fn(() => 'next-default');
+
+    const { result, rerender } = renderHook(
+      ({ defaultFactory }: { defaultFactory: () => string }) => usePersistentState(hookKey, defaultFactory),
+      {
+        initialProps: { defaultFactory: initialDefault },
+      },
+    );
+
+    expect(result.current.value).toBe('initial-default');
+
+    act(() => {
+      result.current.setValue('temporary');
+    });
+    act(() => {
+      result.current.clearStorage();
+    });
+
+    expect(result.current.value).toBe('initial-default');
+
+    rerender({ defaultFactory: nextDefault });
+
+    act(() => {
+      result.current.setValue('temporary-again');
+    });
+    act(() => {
+      result.current.clearStorage();
+    });
+
+    expect(result.current.value).toBe('next-default');
+    expect(initialDefault).toHaveBeenCalled();
+    expect(nextDefault).toHaveBeenCalled();
+  });
+
   describe('Backend sync functionality', () => {
     it('syncs to backend when syncToBackend is enabled', async () => {
       const token = 'test-token';
@@ -262,6 +298,38 @@ describe('usePersistentState', () => {
       });
 
       expect(mockMutate).not.toHaveBeenCalled();
+    });
+
+    it('does not rewrite local storage from backend data when the hook is disabled', () => {
+      mockUseQuery.mockReturnValue({
+        data: {
+          readSessionState: {
+            key: hookKey,
+            value: 'backend-value',
+            version: 1,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        loading: false,
+        error: null,
+      });
+
+      const storageProto = Object.getPrototypeOf(window.localStorage) as Storage;
+      const storageSpy = jest.spyOn(storageProto, 'setItem');
+
+      const { result } = renderHook(() =>
+        usePersistentState(hookKey, 'default', {
+          disabled: true,
+          syncToBackend: true,
+          token: 'test-token',
+          userId: 'user-123',
+        }),
+      );
+
+      expect(result.current.value).toBe('backend-value');
+      expect(storageSpy).not.toHaveBeenCalled();
+
+      storageSpy.mockRestore();
     });
   });
 
@@ -445,6 +513,23 @@ describe('usePersistentState', () => {
       expect(mockMutate).toHaveBeenCalledTimes(3); // No more retries
       expect(result.current.syncStatus).toBe('error');
       expect(result.current.syncError).toBeTruthy();
+    });
+
+    it('returns early when retrySync is called without pending sync state', async () => {
+      const { result } = renderHook(() =>
+        usePersistentState(hookKey, 'default', {
+          syncToBackend: true,
+          token: 'test-token',
+          userId: 'user-123',
+        }),
+      );
+
+      await act(async () => {
+        await result.current.retrySync();
+      });
+
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(result.current.syncStatus).toBe('idle');
     });
 
     it('allows manual retry via retrySync', async () => {
