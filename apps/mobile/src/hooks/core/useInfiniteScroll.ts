@@ -21,6 +21,8 @@ export function useInfiniteScroll({
     offsetY: 0,
     viewportHeight: 0,
   });
+  // Remembers which rendered content height already triggered pagination so
+  // appended rows/spinners do not recursively load more without a new scroll.
   const lastTriggeredContentHeightRef = useRef<number | null>(null);
 
   const maybeTrigger = useCallback(() => {
@@ -70,7 +72,12 @@ export function useInfiniteScroll({
         contentHeight: height,
       };
 
-      maybeTrigger();
+      // Avoid retriggering pagination purely because the list grew while the
+      // user is still parked at the bottom. A fresh scroll gesture should be
+      // what requests the next page after appended content renders.
+      if (lastTriggeredContentHeightRef.current === null) {
+        maybeTrigger();
+      }
     },
     [maybeTrigger],
   );

@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type EventDetailActionButtonProps = {
@@ -73,7 +74,7 @@ export function EventDetailActionButton({
 const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1.5,
     flex: 1,
     flexDirection: 'row',
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   actionButtonCompact: {
-    borderRadius: 12,
+    borderRadius: MOBILE_RADIUS.compact,
     gap: 6,
     minHeight: 42,
     paddingHorizontal: 10,

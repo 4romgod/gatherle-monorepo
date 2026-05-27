@@ -49,6 +49,7 @@ jest.mock('@/data/graphql/query', () => ({
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({
+  EventMomentImageDisplayMode: { Fit: 'Fit', Fill: 'Fill' },
   EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
   EventMomentState: { UploadPending: 'UploadPending', Transcoding: 'Transcoding', Ready: 'Ready', Failed: 'Failed' },
 }));
@@ -124,6 +125,30 @@ describe('EventMomentViewer — mediaLoaded spinner', () => {
   });
 
   describe('image moments', () => {
+    it('renders a blurred backdrop for Fit image moments', () => {
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Image', { imageDisplayMode: 'Fit', mediaUrl: 'https://cdn.example.com/image.jpg' })]}
+        />,
+      );
+
+      expect(document.querySelectorAll('img').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByRole('img', { name: 'A test moment caption' })).toBeTruthy();
+    });
+
+    it('renders only the foreground image for Fill image moments', () => {
+      render(
+        <EventMomentViewer
+          {...defaultProps}
+          moments={[makeMoment('Image', { imageDisplayMode: 'Fill', mediaUrl: 'https://cdn.example.com/image.jpg' })]}
+        />,
+      );
+
+      expect(document.querySelectorAll('img').length).toBe(1);
+      expect(screen.getByRole('img', { name: 'A test moment caption' })).toBeTruthy();
+    });
+
     it('shows a loading spinner before the image has loaded', () => {
       render(
         <EventMomentViewer

@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 
 type AccountTabButtonProps = {
   active: boolean;
@@ -58,14 +59,14 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   activeIndicator: {
-    borderRadius: 999,
+    borderRadius: MOBILE_RADIUS.pill,
     height: 3,
     width: 44,
   },
   iconFrame: {
     alignItems: 'center',
     borderColor: 'transparent',
-    borderRadius: 14,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     height: 36,
     justifyContent: 'center',

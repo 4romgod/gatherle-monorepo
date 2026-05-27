@@ -100,12 +100,29 @@ const getReadSeededUserByUsernameQuery = (username: string) => ({
   variables: { username },
 });
 
+const isLocalGraphqlUrl = (graphqlUrl: string): boolean => new URL(graphqlUrl).hostname.includes('localhost');
+
 const canMintSeededUserToken = (): boolean => {
   if (process.env.STAGE === APPLICATION_STAGES.DEV) {
     return Boolean(process.env.JWT_SECRET?.trim());
   }
 
   return Boolean(process.env.SECRET_ARN?.trim() && process.env.AWS_REGION?.trim());
+};
+
+const getRetryAfterSeconds = (body: unknown): number | undefined => {
+  if (!body || typeof body !== 'object') {
+    return undefined;
+  }
+
+  const payload = body as {
+    errors?: Array<{ extensions?: { retryAfterSeconds?: unknown } }>;
+  };
+
+  const retryAfterSeconds = payload.errors?.find((error) => typeof error.extensions?.retryAfterSeconds === 'number')
+    ?.extensions?.retryAfterSeconds;
+
+  return typeof retryAfterSeconds === 'number' ? retryAfterSeconds : undefined;
 };
 
 const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
@@ -229,8 +246,21 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
   const seededUsers = getSeededTestUsers();
   const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
   const seededUsersByEmail: Record<string, UserWithToken> = {};
+  const preferMintedSeededTokens = !isLocalGraphqlUrl(graphqlUrl) && canMintSeededUserToken();
 
   for (const user of usersByEmail) {
+    if (preferMintedSeededTokens) {
+      try {
+        seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
+        continue;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[setup] direct seeded token mint failed for ${user.email}; falling back to login flow: ${message}`,
+        );
+      }
+    }
+
     let lastFailure = '';
 
     for (let attempt = 1; attempt <= 5; attempt++) {
@@ -247,6 +277,7 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
       }
 
       lastFailure = JSON.stringify(response.body.errors ?? response.body);
+      const retryAfterSeconds = getRetryAfterSeconds(response.body);
       if (canFallbackToLocalToken(response.status, response.body)) {
         if (canMintSeededUserToken()) {
           try {
@@ -264,6 +295,12 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
             `[setup] seeded user ${user.email} is temporarily locked, but local token mint fallback is not configured`,
           );
         }
+      }
+
+      if (retryAfterSeconds) {
+        throw new Error(
+          `Failed to prime seeded user ${user.email}: ${lastFailure}. Login is throttled for another ${retryAfterSeconds}s.`,
+        );
       }
 
       const shouldRetry = attempt < 5 && isRetryableFailure(response.status, response.body);

@@ -12,6 +12,7 @@ export const CreateEventMomentDocument = graphql(`
       caption
       mediaUrl
       thumbnailUrl
+      imageDisplayMode
       background
       durationSeconds
       expiresAt

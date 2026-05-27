@@ -4,6 +4,7 @@ import SocialAuthButtons from '@/components/forms/auth/SocialAuthButtons';
 import { Box, Container, Divider, Paper, Typography } from '@mui/material';
 import { buildPageMetadata } from '@/lib/metadata';
 import { APP_NAME } from '@/lib/constants';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export const metadata = buildPageMetadata({
   title: 'Sign In',
@@ -19,7 +20,7 @@ export default function LoginPage() {
           elevation={0}
           sx={{
             padding: 4,
-            borderRadius: 2,
+            borderRadius: WEB_RADIUS.card,
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>

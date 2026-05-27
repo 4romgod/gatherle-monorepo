@@ -46,7 +46,7 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
       component={Link}
       href={href}
       sx={{
-        aspectRatio: '1 / 1',
+        aspectRatio: '16 / 9',
         borderRadius: { xs: 2, md: 2.5 },
         overflow: 'hidden',
         position: 'relative',

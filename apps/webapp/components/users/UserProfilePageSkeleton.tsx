@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Skeleton, Stack } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export default function UserProfilePageSkeleton() {
   return (
@@ -35,8 +36,8 @@ export default function UserProfilePageSkeleton() {
             </Stack>
 
             <Stack direction="row" spacing={1.25} sx={{ mt: 1.75 }}>
-              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: 3 }} />
-              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: WEB_RADIUS.card }} />
+              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: WEB_RADIUS.card }} />
             </Stack>
           </Box>
         </Box>
@@ -64,7 +65,11 @@ export default function UserProfilePageSkeleton() {
               }}
             >
               {Array.from({ length: 6 }).map((_, index) => (
-                <Skeleton key={index} variant="rounded" sx={{ aspectRatio: '1 / 1', borderRadius: 2 }} />
+                <Skeleton
+                  key={index}
+                  variant="rounded"
+                  sx={{ aspectRatio: '16 / 9', borderRadius: WEB_RADIUS.control }}
+                />
               ))}
             </Box>
           </Box>

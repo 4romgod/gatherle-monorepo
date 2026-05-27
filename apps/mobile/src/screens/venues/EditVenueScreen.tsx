@@ -24,6 +24,7 @@ import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useVenueManagementAccess } from '@/hooks/venues/useVenueManagementAccess';
 import { getApolloAuthContext } from '@/lib/auth';
+import { MOBILE_MEDIA_ASPECT_RATIOS, MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
 import { buildVenueInput, createVenueFormState, validateVenueForm, type VenueFormState } from '@/lib/venues/forms';
 
@@ -87,7 +88,7 @@ export function EditVenueScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [16, 9],
+      aspect: MOBILE_MEDIA_PICKER_ASPECTS.venueFeatured,
       mediaTypes: 'images',
       quality: 0.85,
     });
@@ -324,9 +325,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   featuredImagePreview: {
+    aspectRatio: MOBILE_MEDIA_ASPECT_RATIOS.venueFeatured,
     borderRadius: 8,
     borderWidth: 1,
-    height: 160,
     width: '100%',
   },
   fieldHalf: {
@@ -339,10 +340,10 @@ const styles = StyleSheet.create({
   },
   imagePlaceholder: {
     alignItems: 'center',
+    aspectRatio: MOBILE_MEDIA_ASPECT_RATIOS.venueFeatured,
     borderRadius: 8,
     borderStyle: 'dashed',
     borderWidth: 1,
-    height: 100,
     justifyContent: 'center',
   },
   loadingWrap: {

@@ -16,7 +16,9 @@ import {
   type UserLocationInput,
 } from '@/data/graphql/types/graphql';
 import { useAppContext } from '@/hooks/useAppContext';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { SETTINGS_PRIMARY_BUTTON_SX, SettingsSection } from './SettingsSection';
 
 export default function EditProfilePage({ user }: { user: User }) {
@@ -37,6 +39,13 @@ export default function EditProfilePage({ user }: { user: User }) {
 
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [localAvatarPreview, setLocalAvatarPreview] = useState<string | null>(null);
+  const { cropDialog: avatarCropDialog, selectFileForCrop: selectAvatarForCrop } = useAspectRatioImageSelection({
+    onCropped: ({ file, previewUrl }) => {
+      setPendingAvatarFile(file);
+      setLocalAvatarPreview(previewUrl);
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.avatar,
+  });
   const [profile, setProfile] = useState<UpdateUserInput>({
     userId: user.userId,
     given_name: user.given_name,
@@ -104,13 +113,6 @@ export default function EditProfilePage({ user }: { user: User }) {
       setLocalAvatarPreview(null);
     }
   }, [formState, session, setToastProps, toastProps]);
-
-  const handleAvatarSelect = (file: File) => {
-    setPendingAvatarFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setLocalAvatarPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -200,12 +202,12 @@ export default function EditProfilePage({ user }: { user: User }) {
                 ) : null}
                 <Box sx={{ position: 'absolute', bottom: 0, right: 0 }}>
                   <input
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     id="profile-picture-upload"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       if (file) {
-                        handleAvatarSelect(file);
+                        selectAvatarForCrop(file);
                       }
                       event.target.value = '';
                     }}
@@ -237,7 +239,7 @@ export default function EditProfilePage({ user }: { user: User }) {
                   Profile picture
                 </Typography>
                 <Typography color="text.secondary" variant="body2">
-                  Upload a clear square image so people recognize you quickly across Gatherle.
+                  Upload and crop a clear square image so people recognize you quickly across Gatherle.
                 </Typography>
                 {avatarError ? (
                   <Typography color="error" variant="caption">
@@ -322,6 +324,7 @@ export default function EditProfilePage({ user }: { user: User }) {
           </Button>
         </Stack>
       </Stack>
+      {avatarCropDialog}
     </Box>
   );
 }

@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { SkeletonBlock } from './SkeletonBlock';
 
 export function ChatThreadSkeleton() {
@@ -32,12 +33,12 @@ const styles = StyleSheet.create({
     width: 84,
   },
   incomingBubble: {
-    borderRadius: 15,
+    borderRadius: MOBILE_RADIUS.control,
     height: 34,
     width: '58%',
   },
   incomingBubbleShort: {
-    borderRadius: 15,
+    borderRadius: MOBILE_RADIUS.control,
     height: 34,
     width: '36%',
   },
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   outgoingBubble: {
-    borderRadius: 15,
+    borderRadius: MOBILE_RADIUS.control,
     height: 34,
     width: '42%',
   },

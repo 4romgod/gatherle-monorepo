@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { IconType } from 'react-icons';
 import { Box } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 type ProfileActionButtonProps = {
   href?: string;
@@ -17,7 +18,7 @@ const profileActionButtonSx = {
   backgroundColor: 'action.disabledBackground',
   border: '1px solid',
   borderColor: 'divider',
-  borderRadius: '11px',
+  borderRadius: WEB_RADIUS.control,
   color: 'text.primary',
   cursor: 'pointer',
   display: 'flex',

@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Grid, Skeleton, Stack } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 import EventTileSkeletonGrid from './EventTileSkeleton';
 
 /**
@@ -23,7 +24,7 @@ export default function EventsPageSkeleton() {
             </Stack>
 
             {/* Search bar skeleton */}
-            <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: 4 }} />
+            <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: WEB_RADIUS.panel }} />
           </Box>
 
           {/* Filter buttons row */}
@@ -42,7 +43,7 @@ export default function EventsPageSkeleton() {
                 variant="rounded"
                 width={label === 'Categories' ? 130 : label === 'Location' ? 115 : 95}
                 height={40}
-                sx={{ borderRadius: '50px', flexShrink: 0 }}
+                sx={{ borderRadius: WEB_RADIUS.pill, flexShrink: 0 }}
               />
             ))}
           </Box>
@@ -68,8 +69,8 @@ export default function EventsPageSkeleton() {
             }}
           >
             {/* Sidebar card skeletons */}
-            <Skeleton variant="rounded" width="100%" height={200} sx={{ borderRadius: 3 }} />
-            <Skeleton variant="rounded" width="100%" height={160} sx={{ borderRadius: 3 }} />
+            <Skeleton variant="rounded" width="100%" height={200} sx={{ borderRadius: WEB_RADIUS.card }} />
+            <Skeleton variant="rounded" width="100%" height={160} sx={{ borderRadius: WEB_RADIUS.card }} />
           </Box>
         </Grid>
       </Grid>

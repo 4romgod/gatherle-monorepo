@@ -42,7 +42,7 @@ describe('mobile useInfiniteScroll', () => {
     expect(onEndReached).toHaveBeenCalledTimes(1);
   });
 
-  it('dedupes repeated triggers for the same content height until the content grows', () => {
+  it('dedupes repeated triggers for the same content height and waits for another scroll after the content grows', () => {
     const onEndReached = jest.fn();
     const { result } = renderHook(() =>
       useInfiniteScroll({
@@ -72,6 +72,18 @@ describe('mobile useInfiniteScroll', () => {
 
     act(() => {
       result.current.onContentSizeChange(0, 1020);
+    });
+
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.onScroll(
+        createScrollEvent({
+          contentHeight: 1020,
+          offsetY: 720,
+          viewportHeight: 100,
+        }),
+      );
     });
 
     expect(onEndReached).toHaveBeenCalledTimes(2);

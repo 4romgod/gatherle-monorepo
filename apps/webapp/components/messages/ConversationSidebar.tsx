@@ -26,6 +26,7 @@ import {
   resolveChatIdentity,
 } from '@/components/messages/chatUiUtils';
 import { ConversationUnreadToggleButton } from '@/components/messages/ConversationUnreadToggleButton';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 interface ConversationSidebarProps {
   conversations: {
@@ -261,7 +262,7 @@ export function ConversationSidebar({
                                     minWidth: 20,
                                     height: 20,
                                     px: 0.75,
-                                    borderRadius: 10,
+                                    borderRadius: WEB_RADIUS.pill,
                                     backgroundColor: 'primary.main',
                                     color: 'primary.contrastText',
                                     display: 'flex',

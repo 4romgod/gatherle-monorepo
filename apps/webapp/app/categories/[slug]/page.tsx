@@ -22,6 +22,7 @@ import CategoryInterestToggleButton from '@/components/categories/CategoryIntere
 import { isGraphQLErrorNotFound } from '@/lib/utils/error-utils';
 import { buildPageMetadata } from '@/lib/metadata';
 import { dedupeOccurrencesBySeries, buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export const revalidate = 60;
 
@@ -141,7 +142,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
                   sx={{
                     width: 60,
                     height: 60,
-                    borderRadius: '16px',
+                    borderRadius: WEB_RADIUS.card,
                     backgroundColor: avatarBackground,
                     display: 'flex',
                     alignItems: 'center',
@@ -176,7 +177,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
                 <Button
                   href={ROUTES.CATEGORIES.ROOT}
                   variant="outlined"
-                  sx={{ borderRadius: 10, textTransform: 'none', fontWeight: 600 }}
+                  sx={{ borderRadius: WEB_RADIUS.control, textTransform: 'none', fontWeight: 600 }}
                 >
                   Browse all categories
                 </Button>
@@ -186,7 +187,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
             <Box
               sx={{
                 width: { xs: '100%', md: 300 },
-                borderRadius: 3,
+                borderRadius: WEB_RADIUS.card,
                 border: '1px solid',
                 borderColor: categoryColor ? alpha(categoryColor, 0.45) : 'divider',
                 bgcolor: categoryColor ? alpha(categoryColor, 0.12) : 'background.paper',
@@ -202,7 +203,7 @@ export default async function CategoryDetailPage({ params }: CategoryPageProps) 
                   sx={{
                     width: 48,
                     height: 48,
-                    borderRadius: '14px',
+                    borderRadius: WEB_RADIUS.control,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

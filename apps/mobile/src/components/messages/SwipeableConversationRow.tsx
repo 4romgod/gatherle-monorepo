@@ -3,6 +3,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
 import type { MobileChatConversation } from '@data/graphql/query/Chat/types';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { ConversationRow } from '@/components/messages/ConversationRow';
 
 type SwipeableConversationRowProps = {
@@ -48,7 +49,7 @@ export function SwipeableConversationRow({ conversation, onPress, onToggleUnread
 const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     height: 42,
     justifyContent: 'center',

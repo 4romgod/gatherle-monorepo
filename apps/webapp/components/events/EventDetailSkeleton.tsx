@@ -1,13 +1,14 @@
 'use client';
 
-import { Box, Button, Chip, Container, Grid, Paper, Skeleton, Stack } from '@mui/material';
+import { Box, Chip, Container, Grid, Paper, Skeleton, Stack } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export default function EventDetailSkeleton() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: 18, md: 22 } }}>
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 }, px: { xs: 1.5, sm: 2, md: 3 } }}>
         <Stack spacing={{ xs: 2, md: 2.5 }}>
-          <Box sx={{ aspectRatio: '16 / 9', borderRadius: 1.5, overflow: 'hidden' }}>
+          <Box sx={{ aspectRatio: '16 / 9', borderRadius: WEB_RADIUS.control, overflow: 'hidden' }}>
             <Skeleton variant="rectangular" width="100%" height="100%" />
           </Box>
 
@@ -40,21 +41,50 @@ export default function EventDetailSkeleton() {
             <Stack spacing={3.5} sx={{ px: { xs: 1, md: 0 } }}>
               <Stack spacing={1.25}>
                 <Stack direction="row" spacing={1.25}>
-                  <Button fullWidth variant="outlined" sx={{ justifyContent: 'flex-start', borderRadius: 4, py: 1.75 }}>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      borderRadius: WEB_RADIUS.panel,
+                      py: 1.75,
+                      px: 2,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                    }}
+                  >
                     <Skeleton variant="text" width={92} height={20} />
-                  </Button>
-                  <Button fullWidth variant="outlined" sx={{ justifyContent: 'flex-start', borderRadius: 4, py: 1.75 }}>
+                  </Box>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      borderRadius: WEB_RADIUS.panel,
+                      py: 1.75,
+                      px: 2,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                    }}
+                  >
                     <Skeleton variant="text" width={118} height={20} />
-                  </Button>
+                  </Box>
                 </Stack>
-                <Button fullWidth variant="outlined" sx={{ justifyContent: 'flex-start', borderRadius: 4, py: 1.75 }}>
+                <Box
+                  sx={{
+                    borderRadius: WEB_RADIUS.panel,
+                    py: 1.75,
+                    px: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                  }}
+                >
                   <Skeleton variant="text" width={136} height={20} />
-                </Button>
+                </Box>
               </Stack>
 
               <Box>
                 <Skeleton variant="text" width={112} height={32} sx={{ mb: 1.5 }} />
-                <Skeleton variant="rounded" width="100%" height={96} sx={{ borderRadius: 3 }} />
+                <Skeleton variant="rounded" width="100%" height={96} sx={{ borderRadius: WEB_RADIUS.card }} />
               </Box>
 
               <Stack direction="row" flexWrap="wrap" gap={1.5}>
@@ -62,7 +92,7 @@ export default function EventDetailSkeleton() {
                   <Paper
                     key={index}
                     elevation={0}
-                    sx={{ flex: '1 1 180px', minHeight: 124, borderRadius: '18px', p: 2 }}
+                    sx={{ flex: '1 1 180px', minHeight: 124, borderRadius: WEB_RADIUS.card, p: 2 }}
                   >
                     <Skeleton variant="circular" width={22} height={22} />
                     <Skeleton variant="text" width="42%" height={20} sx={{ mt: 1 }} />
@@ -83,7 +113,7 @@ export default function EventDetailSkeleton() {
 
               <Box>
                 <Skeleton variant="text" width={132} height={32} sx={{ mb: 1.5 }} />
-                <Paper elevation={0} sx={{ borderRadius: '18px', p: 2 }}>
+                <Paper elevation={0} sx={{ borderRadius: WEB_RADIUS.card, p: 2 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Skeleton variant="rounded" width={48} height={48} sx={{ borderRadius: 2 }} />
                     <Box sx={{ flex: 1 }}>
@@ -99,19 +129,19 @@ export default function EventDetailSkeleton() {
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: 'sticky', top: 24, display: { xs: 'none', md: 'block' } }}>
               <Stack spacing={3}>
-                <Paper elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+                <Paper elevation={0} sx={{ borderRadius: WEB_RADIUS.card, p: 3 }}>
                   <Skeleton variant="text" width={96} height={18} sx={{ mb: 1.5 }} />
                   <Skeleton variant="text" width="86%" height={26} />
                   <Skeleton variant="text" width="62%" height={24} />
                 </Paper>
-                <Paper elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+                <Paper elevation={0} sx={{ borderRadius: WEB_RADIUS.card, p: 3 }}>
                   <Skeleton variant="text" width={144} height={18} sx={{ mb: 1.5 }} />
                   <Stack direction="row" spacing={1} flexWrap="wrap">
                     <Skeleton variant="rounded" width={128} height={32} />
                     <Skeleton variant="rounded" width={112} height={32} />
                   </Stack>
                 </Paper>
-                <Paper elevation={0} sx={{ borderRadius: 3, p: 3 }}>
+                <Paper elevation={0} sx={{ borderRadius: WEB_RADIUS.card, p: 3 }}>
                   <Skeleton variant="text" width={96} height={18} sx={{ mb: 1.5 }} />
                   <Stack direction="row" spacing={1} flexWrap="wrap">
                     <Skeleton variant="rounded" width={88} height={28} />

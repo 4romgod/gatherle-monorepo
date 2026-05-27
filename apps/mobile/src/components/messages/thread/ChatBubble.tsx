@@ -3,6 +3,7 @@ import { EventMomentType } from '@data/graphql/types/graphql';
 import type { MobileChatMessage } from '@data/graphql/query/Chat/types';
 import { formatThreadTime } from '@/lib/messages/thread';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
 
 type ChatBubbleProps = {
@@ -75,7 +76,7 @@ export function ChatBubble({ isOutgoing, message, onPressReplyMoment }: ChatBubb
 
 const styles = StyleSheet.create({
   bubble: {
-    borderRadius: 15,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     maxWidth: '72%',
     minWidth: 56,
@@ -94,10 +95,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   replyCard: {
-    borderBottomRightRadius: 8,
-    borderTopRightRadius: 8,
+    borderBottomRightRadius: MOBILE_RADIUS.compact,
+    borderTopRightRadius: MOBILE_RADIUS.compact,
     borderLeftWidth: 3,
-    borderRadius: 4,
+    borderRadius: MOBILE_RADIUS.xs,
     marginBottom: 7,
     paddingLeft: 8,
     paddingRight: 4,

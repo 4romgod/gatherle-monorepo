@@ -1,7 +1,7 @@
 import { EventMomentDAO } from '@/mongodb/dao';
 import { EventMoment as EventMomentModel } from '@/mongodb/models';
 import type { EventMoment } from '@gatherle/commons/types';
-import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/types';
 import { MockMongoError } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({
@@ -113,6 +113,58 @@ describe('EventMomentDAO', () => {
       expect(EventMomentModel.create).toHaveBeenCalledWith(
         expect.objectContaining({ thumbnailUrl: 'https://cdn.example.com/thumb.jpg' }),
       );
+    });
+
+    it('defaults image display mode to Fit for image moments when omitted', async () => {
+      const imageMoment: EventMoment = {
+        ...mockMoment,
+        type: EventMomentType.Image,
+        mediaUrl: 'https://cdn.example.com/img.jpg',
+        imageDisplayMode: EventMomentImageDisplayMode.Fit,
+      };
+      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => imageMoment });
+
+      await EventMomentDAO.create(
+        { eventId: 'event-1', type: EventMomentType.Image },
+        'user-1',
+        'https://cdn.example.com/img.jpg',
+      );
+
+      expect(EventMomentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ imageDisplayMode: EventMomentImageDisplayMode.Fit }),
+      );
+    });
+
+    it('persists the provided image display mode for image moments', async () => {
+      const imageMoment: EventMoment = {
+        ...mockMoment,
+        type: EventMomentType.Image,
+        mediaUrl: 'https://cdn.example.com/img.jpg',
+        imageDisplayMode: EventMomentImageDisplayMode.Fill,
+      };
+      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => imageMoment });
+
+      await EventMomentDAO.create(
+        {
+          eventId: 'event-1',
+          type: EventMomentType.Image,
+          imageDisplayMode: EventMomentImageDisplayMode.Fill,
+        },
+        'user-1',
+        'https://cdn.example.com/img.jpg',
+      );
+
+      expect(EventMomentModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({ imageDisplayMode: EventMomentImageDisplayMode.Fill }),
+      );
+    });
+
+    it('does not persist image display mode for non-image moments', async () => {
+      (EventMomentModel.create as jest.Mock).mockResolvedValue({ toObject: () => mockMoment });
+
+      await EventMomentDAO.create(baseInput, 'user-1');
+
+      expect(EventMomentModel.create).toHaveBeenCalledWith(expect.objectContaining({ imageDisplayMode: undefined }));
     });
 
     it('throws on DB error', async () => {

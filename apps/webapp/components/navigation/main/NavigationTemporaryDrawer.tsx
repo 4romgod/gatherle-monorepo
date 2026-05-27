@@ -40,6 +40,7 @@ import { useIsAdmin } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 import { APP_NAME } from '@/lib/constants';
 import { useLogout } from '@/hooks/useLogout';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 type DrawerLinkItem = {
   href: string;
@@ -61,7 +62,7 @@ type SocialLinkConfig = {
 };
 
 const drawerItemSx = {
-  borderRadius: 2.25,
+  borderRadius: WEB_RADIUS.control,
   gap: 2.25,
   minHeight: 56,
   px: 1,

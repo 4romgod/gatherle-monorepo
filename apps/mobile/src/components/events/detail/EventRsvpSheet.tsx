@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
 
 type EventRsvpSheetProps = {
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 8,
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
   },
   option: {
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: MOBILE_RADIUS.card,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
@@ -213,8 +214,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: MOBILE_RADIUS.panel,
+    borderTopRightRadius: MOBILE_RADIUS.panel,
     borderWidth: 1,
     borderBottomWidth: 0,
     paddingHorizontal: 20,

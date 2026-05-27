@@ -459,6 +459,10 @@ export class UpdateUserInput {
   @Field(() => Boolean, { nullable: true, description: 'Marks system-seeded test users to exclude from user lists' })
   isTestUser?: boolean;
 
+  @Authorized([UserRole.Admin])
+  @Field(() => Boolean, { nullable: true, description: 'Marks whether the user email has been verified' })
+  emailVerified?: boolean;
+
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: string[];
 

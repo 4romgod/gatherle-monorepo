@@ -20,11 +20,13 @@ import { ArrowBack, Save, CloudUpload, Close } from '@mui/icons-material';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { CreateOrganizationDocument } from '@/data/graphql/query';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader } from '@/lib/utils';
 import type { CreateOrganizationInput } from '@/data/graphql/types/graphql';
 import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 
 export default function CreateOrganizationPage() {
@@ -48,25 +50,23 @@ export default function CreateOrganizationPage() {
     context: { headers: getAuthHeader(token) },
   });
 
-  const {
-    upload: uploadLogo,
-    uploading: logoUploading,
-    preview: logoUploadPreview,
-  } = useMediaUpload({
+  const { upload: uploadLogo, uploading: logoUploading } = useMediaUpload({
     entityType: MediaEntityType.Organization,
     mediaType: MediaType.Logo,
     // Stable draft id so repeated uploads before submit overwrite the same S3 path
     entityId: draftEntityId.current,
   });
-
-  const handleFileSelect = (file: File) => {
-    setLogoFile(file);
-    // Preview is generated inside the hook once upload() is called;
-    // for immediate preview before the user submits, read locally here too.
-    const reader = new FileReader();
-    reader.onloadend = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  const {
+    clearSelection: clearLogoSelection,
+    cropDialog: logoCropDialog,
+    selectFileForCrop: selectLogoForCrop,
+  } = useAspectRatioImageSelection({
+    onCropped: ({ file, previewUrl }) => {
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.organizationLogo,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,12 +200,13 @@ export default function CreateOrganizationPage() {
                       <input
                         type="file"
                         hidden
-                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            handleFileSelect(file);
+                            selectLogoForCrop(file);
                           }
+                          e.target.value = '';
                         }}
                       />
                     </Button>
@@ -215,6 +216,7 @@ export default function CreateOrganizationPage() {
                         onClick={() => {
                           setLogoFile(null);
                           setLogoPreview(null);
+                          clearLogoSelection();
                         }}
                         sx={{ color: 'text.secondary' }}
                       >
@@ -242,7 +244,7 @@ export default function CreateOrganizationPage() {
                     </Box>
                   )}
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                    Upload your logo (max 5MB). Supported formats: JPG, PNG, WebP, GIF
+                    Upload and crop a square logo. Supported formats: JPG, PNG, WebP
                   </Typography>
                 </Box>
 
@@ -323,6 +325,7 @@ export default function CreateOrganizationPage() {
           </Alert>
         </Box>
       </Container>
+      {logoCropDialog}
     </Box>
   );
 }

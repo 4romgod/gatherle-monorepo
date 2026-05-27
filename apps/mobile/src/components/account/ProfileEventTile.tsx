@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { formatShortDate, getEventImageUrl, getEventStatusLabel, getEventTitle } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 import { RemoteImage } from '@/components/core/RemoteImage';
 
@@ -72,7 +73,7 @@ export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTile
 
 const styles = StyleSheet.create({
   profileEventBadge: {
-    borderRadius: 999,
+    borderRadius: MOBILE_RADIUS.pill,
     borderWidth: 1,
     left: 5,
     paddingHorizontal: 5,
@@ -129,8 +130,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   profileEventTile: {
-    aspectRatio: 1,
-    borderRadius: 14,
+    aspectRatio: 16 / 9,
+    borderRadius: MOBILE_RADIUS.control,
     overflow: 'hidden',
     position: 'relative',
   },

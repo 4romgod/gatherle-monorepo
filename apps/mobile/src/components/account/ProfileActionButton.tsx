@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type ProfileActionButtonProps = {
@@ -34,7 +35,7 @@ export function ProfileActionButton({ icon, label, onPress }: ProfileActionButto
 const styles = StyleSheet.create({
   profileActionButton: {
     alignItems: 'center',
-    borderRadius: 11,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     flex: 1,
     flexDirection: 'row',

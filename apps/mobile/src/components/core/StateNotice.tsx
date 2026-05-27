@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 import { InlineButton } from './InlineButton';
 
@@ -24,7 +25,7 @@ export function StateNotice({ actionLabel, message, onPressAction }: StateNotice
 
 const styles = StyleSheet.create({
   stateNotice: {
-    borderRadius: 24,
+    borderRadius: MOBILE_RADIUS.panel,
     gap: 16,
     padding: 20,
   },

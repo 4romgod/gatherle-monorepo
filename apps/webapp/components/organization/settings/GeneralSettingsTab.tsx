@@ -3,6 +3,8 @@
 import { Dispatch, SetStateAction } from 'react';
 import { Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { CloudUpload, Close, Save } from '@mui/icons-material';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { OrganizationFormData } from './types';
 
 interface GeneralSettingsTabProps {
@@ -27,19 +29,22 @@ export default function GeneralSettingsTab({
   updateLoading,
 }: GeneralSettingsTabProps) {
   const previewSrc = logoPreview || formData.logo || undefined;
+  const {
+    clearSelection: clearLogoSelection,
+    cropDialog: logoCropDialog,
+    selectFileForCrop: selectLogoForCrop,
+  } = useAspectRatioImageSelection({
+    onCropped: ({ file, previewUrl }) => {
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.organizationLogo,
+  });
 
-  const handleLogoChange = (file: File | null) => {
-    if (!file) {
-      setLogoFile(null);
-      setLogoPreview(null);
-      return;
-    }
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const handleLogoClear = () => {
+    clearLogoSelection();
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
   return (
@@ -80,16 +85,25 @@ export default function GeneralSettingsTab({
             <input
               type="file"
               hidden
-              accept="image/*"
-              onChange={(event) => handleLogoChange(event.target.files?.[0] ?? null)}
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  selectLogoForCrop(file);
+                }
+                event.target.value = '';
+              }}
             />
           </Button>
           {previewSrc && (
-            <IconButton size="small" onClick={() => handleLogoChange(null)} sx={{ color: 'text.secondary' }}>
+            <IconButton size="small" onClick={handleLogoClear} sx={{ color: 'text.secondary' }}>
               <Close fontSize="small" />
             </IconButton>
           )}
         </Box>
+        <Typography color="text.secondary" variant="body2">
+          Upload and crop a square logo so the organization mark stays consistent across Gatherle.
+        </Typography>
         {previewSrc && (
           <Box
             sx={{
@@ -138,6 +152,7 @@ export default function GeneralSettingsTab({
           {updateLoading ? 'Saving...' : 'Save Changes'}
         </Button>
       </Box>
+      {logoCropDialog}
     </Stack>
   );
 }

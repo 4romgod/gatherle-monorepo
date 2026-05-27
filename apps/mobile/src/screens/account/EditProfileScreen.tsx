@@ -20,6 +20,7 @@ import { useAccountProfile } from '@/hooks/account/useAccountProfile';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildEditProfileInput, createEditProfileForm, validateEditProfileForm } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
+import { MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { uploadImageAssetToSignedUrl, getImageAssetExtension } from '@/lib/media/upload';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 
@@ -58,7 +59,7 @@ export function EditProfileScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: MOBILE_MEDIA_PICKER_ASPECTS.avatar,
       mediaTypes: 'images',
       quality: 0.85,
     });

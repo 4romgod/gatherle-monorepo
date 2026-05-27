@@ -2,6 +2,7 @@ import { alpha, PaletteMode, ThemeOptions } from '@mui/material';
 import { plusJakarta, spaceGrotesk } from '@/components/theme/fonts';
 import darkModeColors from '@/components/theme/colors/DarkMode';
 import lightModeColors from '@/components/theme/colors/LightMode';
+import { WEB_RADIUS_PX } from '@/lib/constants/radius';
 
 /**
  * Color Scheme: https://m2.material.io/design/color/the-color-system.html#tools-for-picking-colors
@@ -146,7 +147,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       },
       styleOverrides: {
         root: {
-          borderRadius: 11,
+          borderRadius: WEB_RADIUS_PX.control,
           minHeight: 38,
           paddingInline: 14,
           paddingBlock: 8,
@@ -156,14 +157,14 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     MuiPaper: {
       styleOverrides: {
         rounded: {
-          borderRadius: 12,
+          borderRadius: WEB_RADIUS_PX.control,
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 14,
+          borderRadius: WEB_RADIUS_PX.card,
         },
       },
     },
@@ -213,7 +214,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       styleOverrides: {
         root: ({ theme }) => ({
           backgroundColor: theme.palette.background.paper,
-          borderRadius: 10,
+          borderRadius: WEB_RADIUS_PX.control,
           '&:hover': {
             backgroundColor:
               theme.palette.mode === 'dark'
@@ -263,7 +264,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
 
           return {
             backgroundColor: background,
-            borderRadius: 2,
+            borderRadius: WEB_RADIUS_PX.compact,
             '&::before': {
               backgroundImage: `linear-gradient(90deg, transparent, ${wave}, transparent)`,
             },
