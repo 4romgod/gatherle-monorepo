@@ -3,6 +3,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
 import { NotificationRow } from '@/components/notifications/NotificationRow';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 
 type SwipeableNotificationRowProps = React.ComponentProps<typeof NotificationRow> & {
   onDelete?: () => void;
@@ -57,7 +58,7 @@ export function SwipeableNotificationRow({ onDelete, onToggleRead, ...props }: S
 const styles = StyleSheet.create({
   actionButton: {
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     height: 42,
     justifyContent: 'center',

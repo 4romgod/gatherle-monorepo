@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type AccountPrimaryButtonProps = {
@@ -65,7 +66,7 @@ export function AccountPrimaryButton({
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: MOBILE_RADIUS.card,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 10,

@@ -65,6 +65,7 @@ export const UserSchema = z.object({
         .optional(),
     })
     .optional(),
+  emailVerified: z.boolean().optional(),
 });
 
 export const CreateUserInputSchema = UserSchema.extend({

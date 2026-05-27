@@ -40,6 +40,7 @@ import EventLocationInput from './EventLocationInput';
 import EventDateInput from './EventDateInput';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import { usePersistentState } from '@/hooks';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
@@ -47,6 +48,7 @@ import { useSession } from 'next-auth/react';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { CreateEventDocument, UpdateEventDocument } from '@/data/graphql/query/Event/mutation';
 import { ROUTES } from '@/lib/constants';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { getAuthHeader } from '@/lib/utils/auth';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
@@ -158,7 +160,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     upload: uploadFeaturedImage,
     uploading: featuredImageUploading,
     error: featuredImageError,
-    preview: featuredImagePreview,
+    reset: resetFeaturedImage,
   } = useMediaUpload({
     entityType: MediaEntityType.EventSeries,
     mediaType: MediaType.Featured,
@@ -172,6 +174,21 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const {
+    clearSelection: clearFeaturedImageSelection,
+    cropDialog: featuredImageCropDialog,
+    previewUrl: featuredImageCropPreview,
+    selectFileForCrop: selectFeaturedImageForCrop,
+  } = useAspectRatioImageSelection({
+    onCropped: async ({ file }) => {
+      const readUrl = await uploadFeaturedImage(file);
+      setEventData((prev) => ({
+        ...prev,
+        media: { ...(prev.media ?? {}), featuredImageUrl: readUrl },
+      }));
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.eventCover,
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -506,7 +523,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   Featured Image
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Upload a cover image for your event
+                  Upload a 16:9 cover image for your event cards and event detail page.
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Button
@@ -522,32 +539,26 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     <input
                       type="file"
                       hidden
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                      onChange={async (e) => {
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         e.target.value = '';
-                        try {
-                          const readUrl = await uploadFeaturedImage(file);
-                          setEventData((prev) => ({
-                            ...prev,
-                            media: { ...(prev.media ?? {}), featuredImageUrl: readUrl },
-                          }));
-                        } catch {
-                          // error shown via featuredImageError below
-                        }
+                        selectFeaturedImageForCrop(file);
                       }}
                     />
                   </Button>
-                  {(featuredImageUrl || featuredImagePreview) && !featuredImageUploading && (
+                  {(featuredImageUrl || featuredImageCropPreview) && !featuredImageUploading && (
                     <IconButton
                       size="small"
-                      onClick={() =>
+                      onClick={() => {
+                        clearFeaturedImageSelection();
+                        resetFeaturedImage();
                         setEventData((prev) => ({
                           ...prev,
                           media: { ...(prev.media ?? {}), featuredImageUrl: undefined },
-                        }))
-                      }
+                        }));
+                      }}
                     >
                       <Close fontSize="small" />
                     </IconButton>
@@ -558,15 +569,15 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     {featuredImageError}
                   </Typography>
                 )}
-                {(featuredImagePreview || featuredImageUrl) && (
+                {(featuredImageCropPreview || featuredImageUrl) && (
                   <Box
                     component="img"
-                    src={featuredImagePreview || featuredImageUrl}
+                    src={featuredImageCropPreview || featuredImageUrl}
                     alt="Featured image preview"
                     sx={{
                       width: '100%',
                       maxWidth: 360,
-                      height: 160,
+                      aspectRatio: '16 / 9',
                       objectFit: 'cover',
                       borderRadius: 2,
                       mt: 1.5,
@@ -864,6 +875,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
         onConfirm={confirmDiscardDraft}
         onCancel={cancelDiscard}
       />
+      {featuredImageCropDialog}
     </>
   );
 }

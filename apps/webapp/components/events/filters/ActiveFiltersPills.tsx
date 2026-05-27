@@ -3,6 +3,7 @@
 import { Stack, Chip } from '@mui/material';
 import { CalendarMonth, LocationOn } from '@mui/icons-material';
 import { EventStatus } from '@/data/graphql/types/graphql';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 interface ActiveFiltersPillsProps {
   categories: string[];
@@ -42,7 +43,7 @@ export default function ActiveFiltersPills({
           color="info"
           variant="outlined"
           sx={{
-            borderRadius: '50px',
+            borderRadius: WEB_RADIUS.pill,
             fontWeight: 600,
           }}
         />
@@ -56,7 +57,7 @@ export default function ActiveFiltersPills({
           color="success"
           variant="outlined"
           sx={{
-            borderRadius: '50px',
+            borderRadius: WEB_RADIUS.pill,
             fontWeight: 600,
           }}
         />
@@ -70,7 +71,7 @@ export default function ActiveFiltersPills({
           color="primary"
           variant="outlined"
           sx={{
-            borderRadius: '50px',
+            borderRadius: WEB_RADIUS.pill,
             fontWeight: 600,
           }}
         />
@@ -84,7 +85,7 @@ export default function ActiveFiltersPills({
           color="secondary"
           variant="outlined"
           sx={{
-            borderRadius: '50px',
+            borderRadius: WEB_RADIUS.pill,
             fontWeight: 600,
           }}
         />

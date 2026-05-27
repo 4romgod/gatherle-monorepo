@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type DetailStatChipProps = {
@@ -28,7 +29,7 @@ export function DetailStatChip({ label, value }: DetailStatChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.card,
     borderWidth: 1,
     flex: 1,
     gap: 4,

@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type SmallActionButtonProps = {
@@ -48,7 +49,7 @@ export function SmallActionButton({ compact = false, icon, label, onPress, tone 
 const styles = StyleSheet.create({
   smallActionButton: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   smallActionButtonCompact: {
-    borderRadius: 12,
+    borderRadius: MOBILE_RADIUS.compact,
     gap: 8,
     minHeight: 44,
     paddingHorizontal: 14,

@@ -12,6 +12,11 @@ export enum EventMomentType {
   Video = 'video',
 }
 
+export enum EventMomentImageDisplayMode {
+  Fit = 'Fit',
+  Fill = 'Fill',
+}
+
 export enum EventMomentState {
   UploadPending = 'UploadPending',
   Transcoding = 'Transcoding',
@@ -22,6 +27,11 @@ export enum EventMomentState {
 registerEnumType(EventMomentType, {
   name: 'EventMomentType',
   description: EVENT_MOMENT_DESCRIPTIONS.TYPE_ENUM,
+});
+
+registerEnumType(EventMomentImageDisplayMode, {
+  name: 'EventMomentImageDisplayMode',
+  description: EVENT_MOMENT_DESCRIPTIONS.IMAGE_DISPLAY_MODE_ENUM,
 });
 
 registerEnumType(EventMomentState, {
@@ -71,6 +81,13 @@ export class EventMoment {
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: EVENT_MOMENT_DESCRIPTIONS.THUMBNAIL_URL })
   thumbnailUrl?: string;
+
+  @prop({ enum: EventMomentImageDisplayMode, type: () => String })
+  @Field(() => EventMomentImageDisplayMode, {
+    nullable: true,
+    description: EVENT_MOMENT_DESCRIPTIONS.IMAGE_DISPLAY_MODE,
+  })
+  imageDisplayMode?: EventMomentImageDisplayMode;
 
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: EVENT_MOMENT_DESCRIPTIONS.BACKGROUND })
@@ -142,6 +159,12 @@ export class CreateEventMomentInput {
 
   @Field(() => String, { nullable: true, description: EVENT_MOMENT_DESCRIPTIONS.THUMBNAIL_KEY })
   thumbnailKey?: string;
+
+  @Field(() => EventMomentImageDisplayMode, {
+    nullable: true,
+    description: EVENT_MOMENT_DESCRIPTIONS.IMAGE_DISPLAY_MODE,
+  })
+  imageDisplayMode?: EventMomentImageDisplayMode;
 
   @Field(() => String, { nullable: true, description: EVENT_MOMENT_DESCRIPTIONS.BACKGROUND })
   background?: string;

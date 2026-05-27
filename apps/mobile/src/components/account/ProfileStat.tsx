@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type ProfileStatProps = {
@@ -40,7 +41,7 @@ export function ProfileStat({ label, onPress, value }: ProfileStatProps) {
 const styles = StyleSheet.create({
   profileStat: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: MOBILE_RADIUS.control,
     flex: 1,
     gap: 2,
     minHeight: 54,

@@ -22,8 +22,10 @@ import { CreateVenueInput, VenueType } from '@/data/graphql/types/graphql';
 import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { ROUTES } from '@/lib/constants';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { logger } from '@/lib/utils';
 import { usePersistentState } from '@/hooks';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { STORAGE_KEYS, STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -89,11 +91,22 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
     upload: uploadFeaturedImage,
     uploading: featuredImageUploading,
     error: featuredImageError,
-    preview: featuredImagePreview,
     reset: resetFeaturedImage,
   } = useMediaUpload({
     entityType: MediaEntityType.Venue,
     mediaType: MediaType.Featured,
+  });
+  const {
+    clearSelection: clearFeaturedImageSelection,
+    cropDialog: featuredImageCropDialog,
+    previewUrl: featuredImageCropPreview,
+    selectFileForCrop: selectFeaturedImageForCrop,
+  } = useAspectRatioImageSelection({
+    onCropped: async ({ file }) => {
+      const readUrl = await uploadFeaturedImage(file);
+      setFeaturedReadUrl(readUrl);
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.venueFeatured,
   });
 
   const requiresAddress = useMemo(() => displayState.type !== VenueType.Virtual, [displayState.type]);
@@ -372,7 +385,7 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
                 Featured image
               </Typography>
               <Typography color="text.secondary" variant="body2">
-                A cover photo that appears on the venue profile and event pages.
+                A 16:9 cover photo for venue previews and linked event surfaces.
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Button
@@ -386,26 +399,22 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
                   <input
                     type="file"
                     hidden
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                    onChange={async (e) => {
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       e.target.value = '';
-                      try {
-                        const readUrl = await uploadFeaturedImage(file);
-                        setFeaturedReadUrl(readUrl);
-                      } catch {
-                        // error shown via featuredImageError below
-                      }
+                      selectFeaturedImageForCrop(file);
                     }}
                   />
                 </Button>
-                {(featuredReadUrl || featuredImagePreview) && !featuredImageUploading && (
+                {(featuredReadUrl || featuredImageCropPreview) && !featuredImageUploading && (
                   <Button
                     size="small"
                     color="secondary"
                     onClick={() => {
                       setFeaturedReadUrl(null);
+                      clearFeaturedImageSelection();
                       resetFeaturedImage();
                     }}
                   >
@@ -418,14 +427,15 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
                   {featuredImageError}
                 </Typography>
               )}
-              {(featuredImagePreview || featuredReadUrl) && (
+              {(featuredImageCropPreview || featuredReadUrl) && (
                 <Box
                   component="img"
-                  src={featuredImagePreview || featuredReadUrl || undefined}
+                  src={featuredImageCropPreview || featuredReadUrl || undefined}
                   alt="Featured venue preview"
                   sx={{
-                    width: 200,
-                    height: 120,
+                    width: '100%',
+                    maxWidth: 320,
+                    aspectRatio: '16 / 9',
                     borderRadius: 2,
                     mt: 1,
                     objectFit: 'cover',
@@ -475,6 +485,7 @@ export default function VenueCreationForm({ token, defaultOrgId }: VenueCreation
         onConfirm={confirmDiscardDraft}
         onCancel={cancelDiscard}
       />
+      {featuredImageCropDialog}
     </>
   );
 }

@@ -19,7 +19,9 @@ jest.mock('@/data/graphql/query', () => ({
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({
+  EventMomentImageDisplayMode: { Fit: 'Fit', Fill: 'Fill' },
   EventMomentState: { UploadPending: 'UploadPending', Transcoding: 'Transcoding', Ready: 'Ready', Failed: 'Failed' },
+  EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
   ParticipantStatus: { Going: 'Going', CheckedIn: 'CheckedIn', Interested: 'Interested' },
 }));
 

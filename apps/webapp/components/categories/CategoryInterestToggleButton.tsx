@@ -7,6 +7,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { updateUserProfileAction } from '@/data/actions/server/user';
 import { EventCategory, User } from '@/data/graphql/types/graphql';
 import { useAppContext } from '@/hooks/useAppContext';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 type CategoryInterestToggleButtonProps = {
   category: Pick<EventCategory, 'eventCategoryId' | 'name'>;
@@ -117,7 +118,7 @@ export default function CategoryInterestToggleButton({ category }: CategoryInter
       }
       endIcon={!isPending && isInterested ? <CheckCircleOutline fontSize="small" /> : undefined}
       sx={{
-        borderRadius: 10,
+        borderRadius: WEB_RADIUS.control,
         textTransform: 'none',
         fontWeight: 600,
       }}

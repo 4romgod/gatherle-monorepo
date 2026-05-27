@@ -18,6 +18,7 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { getApolloAuthContext } from '@/lib/auth';
+import { MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -97,7 +98,7 @@ export function EditOrganizationScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: MOBILE_MEDIA_PICKER_ASPECTS.organizationLogo,
       mediaTypes: 'images',
       quality: 0.85,
     });

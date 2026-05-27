@@ -27,6 +27,7 @@ import { logger } from '@/lib/utils';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 interface EventFiltersBottomSheetProps {
   categories: EventCategory[];
@@ -180,7 +181,7 @@ export default function EventFiltersBottomSheet({
           startIcon={<TuneOutlined fontSize="small" />}
           onClick={() => setOpen(true)}
           sx={{
-            borderRadius: '50px',
+            borderRadius: WEB_RADIUS.pill,
             px: 2,
             py: 0.875,
             textTransform: 'none',
@@ -204,8 +205,8 @@ export default function EventFiltersBottomSheet({
         slotProps={{
           paper: {
             sx: {
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
+              borderTopLeftRadius: WEB_RADIUS.panel,
+              borderTopRightRadius: WEB_RADIUS.panel,
               maxHeight: '90vh',
               '@supports (height: 100dvh)': {
                 maxHeight: '90dvh',

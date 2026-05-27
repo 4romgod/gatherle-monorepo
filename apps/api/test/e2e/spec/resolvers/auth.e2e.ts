@@ -5,6 +5,7 @@ import {
   getLoginUserMutation,
   getRequestEmailVerificationMutation,
   getResetPasswordMutation,
+  getUpdateUserMutation,
   getVerifyEmailMutation,
 } from '@/test/utils';
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
@@ -15,6 +16,7 @@ import {
   buildCreateUserInput,
   cleanupUsersById,
   createUserOnServer,
+  postGraphQLWithRetry,
   uniqueSuffix,
 } from '@/test/e2e/utils/userResolverHelpers';
 
@@ -211,9 +213,21 @@ describe('Auth Resolver', () => {
     });
 
     it('clears prior failures after a successful login so the counter restarts from zero', async () => {
-      const seededUsers = getSeededTestUsers();
-      const loginSubject = seededUsers.user2;
+      const input = newUserInput();
+      const loginSubject = await createUserOnServer(url, input, createdUserIds);
       const forwardedIp = nextForwardedIp();
+      const verifyUserResponse = await postGraphQLWithRetry(
+        url,
+        getUpdateUserMutation({
+          userId: loginSubject.userId,
+          emailVerified: true,
+        }),
+        adminToken,
+      );
+
+      expect(verifyUserResponse.status).toBe(200);
+      expect(verifyUserResponse.body.errors).toBeUndefined();
+      expect(verifyUserResponse.body.data.updateUser.emailVerified).toBe(true);
 
       for (let attempt = 1; attempt <= 3; attempt++) {
         const failedResponse = await attemptLogin(loginSubject.email, 'invalidPassword123', forwardedIp);
@@ -222,7 +236,7 @@ describe('Auth Resolver', () => {
         expect(failedResponse.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
       }
 
-      const successResponse = await attemptLogin(loginSubject.email, loginSubject.password, forwardedIp);
+      const successResponse = await attemptLogin(loginSubject.email, input.password!, forwardedIp);
       expect(successResponse.status).toBe(200);
       expect(successResponse.body.errors).toBeUndefined();
       expect(successResponse.body.data.loginUser.email).toBe(loginSubject.email);
@@ -236,7 +250,7 @@ describe('Auth Resolver', () => {
         expect(failedResponse.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
       }
 
-      const finalSuccessResponse = await attemptLogin(loginSubject.email, loginSubject.password, forwardedIp);
+      const finalSuccessResponse = await attemptLogin(loginSubject.email, input.password!, forwardedIp);
       expect(finalSuccessResponse.status).toBe(429);
       expect(finalSuccessResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
       expect(finalSuccessResponse.body.errors[0].message).toContain('Too many login attempts');

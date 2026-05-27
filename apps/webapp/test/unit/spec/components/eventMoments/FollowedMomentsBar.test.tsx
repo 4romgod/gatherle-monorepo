@@ -19,7 +19,9 @@ jest.mock('@/data/graphql/query', () => ({
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({
+  EventMomentImageDisplayMode: { Fit: 'Fit', Fill: 'Fill' },
   EventMomentState: { Ready: 'READY' },
+  EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
 }));
 
 jest.mock('@/lib/utils/auth', () => ({

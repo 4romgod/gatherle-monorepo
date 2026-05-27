@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { FollowTargetType } from '@gatherle/commons/types/follow';
 import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
-import { EventMomentType } from '@gatherle/commons/types/eventMoment';
+import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/types/eventMoment';
 import { ERROR_MESSAGES } from '@/validation';
 
 const objectIdSchema = z
@@ -35,6 +35,7 @@ export const CreateEventMomentInputSchema = z
     caption: z.string().max(280, 'Caption must be 280 characters or fewer').optional(),
     mediaKey: z.string().optional(),
     thumbnailKey: z.string().optional(),
+    imageDisplayMode: z.nativeEnum(EventMomentImageDisplayMode).optional(),
     background: z
       .enum([
         'bg-purple-600',

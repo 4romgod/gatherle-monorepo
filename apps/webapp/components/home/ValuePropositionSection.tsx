@@ -3,6 +3,7 @@
 import { Box, Button, Typography } from '@mui/material';
 import Link from 'next/link';
 import { ROUTES, APP_NAME } from '@/lib/constants';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export default function ValuePropositionSection() {
   return (
@@ -11,7 +12,7 @@ export default function ValuePropositionSection() {
         sx={{
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: { xs: 3, md: 4 },
+          borderRadius: WEB_RADIUS.panel,
           border: '1px solid',
           borderColor: 'divider',
           backgroundColor: 'background.paper',
@@ -58,7 +59,7 @@ export default function ValuePropositionSection() {
             color="secondary"
             component={Link}
             href={ROUTES.AUTH.REGISTER}
-            sx={{ borderRadius: 10, mt: 3, px: 3, py: 1.25, fontWeight: 700 }}
+            sx={{ borderRadius: WEB_RADIUS.control, mt: 3, px: 3, py: 1.25, fontWeight: 700 }}
           >
             Join {APP_NAME}
           </Button>

@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 
 export function ThemeModeButton() {
   const { isDark, theme, toggleMode } = useAppTheme();
@@ -27,7 +28,7 @@ export function ThemeModeButton() {
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1,
     height: 38,
     justifyContent: 'center',

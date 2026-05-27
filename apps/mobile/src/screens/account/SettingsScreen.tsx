@@ -37,6 +37,7 @@ import {
 } from '@/lib/account/forms';
 import { getApolloAuthContext } from '@/lib/auth';
 import { featureFlags } from '@/lib/featureFlags';
+import { MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
 
 const VISIBILITY_OPTIONS = [SocialVisibility.Public, SocialVisibility.Followers, SocialVisibility.Private];
@@ -116,7 +117,7 @@ export function SettingsScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: MOBILE_MEDIA_PICKER_ASPECTS.avatar,
       mediaTypes: 'images',
       quality: 0.85,
     });

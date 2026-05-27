@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import {
   Alert,
+  alpha,
   Avatar,
   Box,
   Button,
@@ -15,6 +16,7 @@ import {
   Divider,
   Grid,
   Paper,
+  Portal,
   Stack,
   Theme,
   Typography,
@@ -77,6 +79,7 @@ import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
 import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
 import EventMomentsRing from '@/components/eventMoments/EventMomentsRing';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
 import EventMomentComposer from '@/components/eventMoments/EventMomentComposer';
 import type { GetEventBySlugQuery, GetEventMomentsQuery } from '@/data/graphql/types/graphql';
@@ -456,7 +459,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   });
   const utilityActionButtonSx = {
     minHeight: { xs: 52, md: 48 },
-    borderRadius: '14px',
+    borderRadius: WEB_RADIUS.control,
     borderWidth: 2,
     borderColor: 'divider',
     bgcolor: 'background.paper',
@@ -485,7 +488,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const xsAttendanceValue = formatMobileCountLabel(activeParticipantCount, 'guest');
   const xsDetailCardSx = {
     bgcolor: 'action.hover',
-    borderRadius: '18px',
+    borderRadius: WEB_RADIUS.card,
     p: 2,
     minHeight: 110,
     flexBasis: '48%',
@@ -523,7 +526,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     color: 'inherit',
     border: '1px solid',
     borderColor: 'divider',
-    borderRadius: '18px',
+    borderRadius: WEB_RADIUS.card,
     bgcolor: 'action.hover',
     p: 2,
   } as const;
@@ -546,7 +549,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               width: '100%',
               border: '1px solid',
               borderColor: 'divider',
-              borderRadius: { xs: 1.5, md: 1.5 },
+              borderRadius: WEB_RADIUS.control,
               overflow: 'hidden',
               backgroundColor: 'grey.950',
               p: 0,
@@ -1317,121 +1320,143 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         src={featuredImageUrl}
       />
 
-      <Box
-        sx={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: { xs: 12, md: 20 },
-          zIndex: 1200,
-          px: { xs: 1.5, sm: 2, md: 3 },
-          pointerEvents: 'none',
-        }}
-      >
-        <Container maxWidth="lg" sx={{ px: '0 !important' }}>
-          <Paper
-            elevation={0}
-            sx={{
-              pointerEvents: 'auto',
-              width: '100%',
-              maxWidth: 480,
-              mx: 'auto',
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1.5,
-              px: 0.875,
-              py: 0.875,
-              bgcolor: 'background.paper',
-              boxShadow: (theme) => theme.shadows[4],
-            }}
-          >
-            <Stack direction="row" spacing={0.75} sx={{ width: '100%' }}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <RsvpButton
-                  currentStatus={mobileRsvpStatus}
-                  eventId={eventId}
-                  fullWidth
-                  label={
-                    mobileRsvpStatus === ParticipantStatus.Going
-                      ? 'Going'
-                      : mobileRsvpStatus === ParticipantStatus.Interested
-                        ? 'Interested'
-                        : 'RSVP'
-                  }
-                  occurrenceId={activeOccurrenceId ?? undefined}
-                  onRsvpChange={setMobileRsvpStatus}
-                  showTooltip={false}
-                  size="medium"
-                  sx={{
-                    minHeight: 42,
-                    borderRadius: 1,
-                    px: 1.25,
-                    fontSize: '0.85rem',
-                    bgcolor:
-                      mobileRsvpStatus === ParticipantStatus.Going || mobileRsvpStatus === ParticipantStatus.Interested
-                        ? 'success.lighter'
-                        : 'secondary.main',
-                    borderColor:
-                      mobileRsvpStatus === ParticipantStatus.Going || mobileRsvpStatus === ParticipantStatus.Interested
-                        ? 'success.main'
-                        : 'secondary.main',
-                    color:
-                      mobileRsvpStatus === ParticipantStatus.Going || mobileRsvpStatus === ParticipantStatus.Interested
-                        ? 'success.main'
-                        : 'secondary.contrastText',
-                    '&:hover': {
-                      bgcolor:
-                        mobileRsvpStatus === ParticipantStatus.Going ||
-                        mobileRsvpStatus === ParticipantStatus.Interested
-                          ? 'success.light'
-                          : 'secondary.dark',
-                      borderColor:
-                        mobileRsvpStatus === ParticipantStatus.Going ||
-                        mobileRsvpStatus === ParticipantStatus.Interested
-                          ? 'success.main'
-                          : 'secondary.dark',
-                    },
-                  }}
-                />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <SaveEventButton
-                  eventId={eventId}
-                  fullWidth
-                  isSaved={mobileSavedState}
-                  label={mobileSavedState ? 'Saved' : 'Save'}
-                  onSaveChange={setMobileSavedState}
-                  showTooltip={false}
-                  size="medium"
-                  sx={{
-                    minHeight: 42,
-                    borderRadius: 1,
-                    px: 1.25,
-                    fontSize: '0.85rem',
-                  }}
-                />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <EventShareButton
-                  eventSlug={slug}
-                  eventTitle={title}
-                  eventUrl={eventUrl}
-                  fullWidth
-                  label="Share"
-                  size="medium"
-                  stopPropagation
-                  sx={{
-                    minHeight: 42,
-                    borderRadius: 1,
-                    px: 1.25,
-                    fontSize: '0.85rem',
-                  }}
-                />
-              </Box>
-            </Stack>
-          </Paper>
-        </Container>
-      </Box>
+      <Portal>
+        <Box
+          sx={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: {
+              xs: 'max(12px, env(safe-area-inset-bottom, 0px))',
+              md: 20,
+            },
+            zIndex: 1200,
+            px: { xs: 1.5, sm: 2, md: 3 },
+            pointerEvents: 'none',
+          }}
+        >
+          <Container maxWidth="lg" sx={{ px: '0 !important' }}>
+            <Paper
+              elevation={0}
+              sx={{
+                pointerEvents: 'auto',
+                width: '100%',
+                maxWidth: 480,
+                mx: 'auto',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1.5,
+                px: 0.875,
+                py: 0.875,
+                bgcolor: 'background.paper',
+                boxShadow: (theme) => theme.shadows[4],
+              }}
+            >
+              <Stack direction="row" spacing={0.75} sx={{ width: '100%' }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <RsvpButton
+                    currentStatus={mobileRsvpStatus}
+                    eventId={eventId}
+                    fullWidth
+                    label={
+                      mobileRsvpStatus === ParticipantStatus.Going
+                        ? 'Going'
+                        : mobileRsvpStatus === ParticipantStatus.Interested
+                          ? 'Interested'
+                          : 'RSVP'
+                    }
+                    occurrenceId={activeOccurrenceId ?? undefined}
+                    onRsvpChange={setMobileRsvpStatus}
+                    showTooltip={false}
+                    size="medium"
+                    sx={{
+                      ...(mobileRsvpStatus === ParticipantStatus.Going ||
+                      mobileRsvpStatus === ParticipantStatus.Interested
+                        ? {
+                            bgcolor: (theme) =>
+                              alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.28 : 0.18),
+                            borderColor: 'success.main',
+                            color: 'success.main',
+                            '&:hover': {
+                              bgcolor: (theme) =>
+                                alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.38 : 0.26),
+                              borderColor: 'success.main',
+                            },
+                          }
+                        : {
+                            bgcolor: 'secondary.main',
+                            borderColor: 'secondary.main',
+                            color: 'secondary.contrastText',
+                            '&:hover': {
+                              bgcolor: 'secondary.dark',
+                              borderColor: 'secondary.dark',
+                            },
+                          }),
+                      minHeight: 42,
+                      borderRadius: 1,
+                      px: 1.25,
+                      fontSize: '0.85rem',
+                      boxShadow: 'none',
+                    }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <SaveEventButton
+                    eventId={eventId}
+                    fullWidth
+                    isSaved={mobileSavedState}
+                    label={mobileSavedState ? 'Saved' : 'Save'}
+                    onSaveChange={setMobileSavedState}
+                    showTooltip={false}
+                    size="medium"
+                    sx={{
+                      minHeight: 42,
+                      borderRadius: 1,
+                      px: 1.25,
+                      fontSize: '0.85rem',
+                      boxShadow: 'none',
+                      bgcolor: mobileSavedState ? 'action.selected' : 'background.paper',
+                      borderColor: mobileSavedState ? 'primary.main' : 'divider',
+                      color: mobileSavedState ? 'primary.main' : 'text.primary',
+                      '&:hover': {
+                        bgcolor: mobileSavedState ? 'action.selected' : 'action.hover',
+                        borderColor: mobileSavedState ? 'primary.main' : 'divider',
+                        color: mobileSavedState ? 'primary.main' : 'text.primary',
+                        boxShadow: 'none',
+                      },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <EventShareButton
+                    eventSlug={slug}
+                    eventTitle={title}
+                    eventUrl={eventUrl}
+                    fullWidth
+                    label="Share"
+                    size="medium"
+                    stopPropagation
+                    sx={{
+                      minHeight: 42,
+                      borderRadius: 1,
+                      px: 1.25,
+                      fontSize: '0.85rem',
+                      bgcolor: 'background.paper',
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                      },
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </Paper>
+          </Container>
+        </Box>
+      </Portal>
 
       {/* Event Moments Viewer */}
       <EventMomentViewer

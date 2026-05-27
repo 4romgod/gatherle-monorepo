@@ -13,6 +13,7 @@ export const GetMomentsFeedDocument = graphql(`
         caption
         mediaUrl
         thumbnailUrl
+        imageDisplayMode
         background
         durationSeconds
         expiresAt
@@ -48,6 +49,7 @@ export const GetFollowedMomentsDocument = graphql(`
         caption
         mediaUrl
         thumbnailUrl
+        imageDisplayMode
         background
         durationSeconds
         expiresAt
@@ -81,6 +83,7 @@ export const GetUserEventMomentsDocument = graphql(`
       caption
       mediaUrl
       thumbnailUrl
+      imageDisplayMode
       background
       durationSeconds
       expiresAt
@@ -112,6 +115,7 @@ export const GetEventMomentsDocument = graphql(`
         caption
         mediaUrl
         thumbnailUrl
+        imageDisplayMode
         background
         durationSeconds
         expiresAt

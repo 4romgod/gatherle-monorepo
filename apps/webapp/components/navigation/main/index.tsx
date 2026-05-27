@@ -30,6 +30,7 @@ import { useSession } from 'next-auth/react';
 import { useUnreadChatCount, useUnreadNotificationCount } from '@/hooks';
 import { useAppContext } from '@/hooks/useAppContext';
 import Logo from '@/components/logo';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 type MainNavigationProps = {
   isAuthN: boolean;
@@ -248,7 +249,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 color="secondary"
                 component={Link}
                 href={ROUTES.AUTH.REGISTER}
-                sx={{ borderRadius: 10 }}
+                sx={{ borderRadius: WEB_RADIUS.control }}
               >
                 Join {APP_NAME}
               </Button>
@@ -272,7 +273,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 startIcon={<ControlPointOutlined />}
                 component={Link}
                 href={ROUTES.ACCOUNT.EVENTS.CREATE}
-                sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: 10 }}
+                sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: WEB_RADIUS.control }}
               >
                 Host an event
               </Button>
@@ -344,7 +345,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
                 onClick={handleProfilesMenuOpen}
                 sx={{
                   display: { xs: 'none', md: 'inline-flex' },
-                  borderRadius: 12,
+                  borderRadius: WEB_RADIUS.control,
                   border: '1px solid',
                   borderColor: 'divider',
                   backgroundColor: 'background.paper',
@@ -375,7 +376,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               sx={{
                 border: '2px solid',
                 borderColor: 'primary.main',
-                borderRadius: 999,
+                borderRadius: WEB_RADIUS.pill,
                 color: 'primary.main',
                 display: { xs: 'inline-flex', md: 'none' },
                 height: 28,

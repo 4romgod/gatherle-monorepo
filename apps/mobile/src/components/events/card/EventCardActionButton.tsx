@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, type GestureResponderEvent } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 
 type EventCardActionButtonProps = {
   active?: boolean;
@@ -69,7 +70,7 @@ export function EventCardActionButton({
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: MOBILE_RADIUS.compact,
     borderWidth: 1,
     height: 32,
     justifyContent: 'center',

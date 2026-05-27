@@ -33,11 +33,12 @@ import { LocationFilter } from '@/components/events/filters/EventFilterContext';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import { useSession } from 'next-auth/react';
 import { logger } from '@/lib/utils';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 // Previously had dual-mode (controlled/uncontrolled) complexity. Simplified to always-uncontrolled.
 
 const filterButtonSx = {
-  borderRadius: '50px',
+  borderRadius: WEB_RADIUS.pill,
   minHeight: 36,
   minWidth: 'auto',
   px: { xs: 1.25, sm: 1.5, md: 1.75 },

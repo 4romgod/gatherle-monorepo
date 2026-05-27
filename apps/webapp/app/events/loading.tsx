@@ -1,4 +1,5 @@
 import { Box, Container, Grid, Skeleton, Stack, Typography } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export default function EventsLoading() {
   return (
@@ -15,14 +16,34 @@ export default function EventsLoading() {
                 </Box>
               </Stack>
 
-              <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: 4 }} />
+              <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: WEB_RADIUS.panel }} />
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, pb: 1, mb: 2 }}>
-              <Skeleton variant="rounded" width={130} height={40} sx={{ borderRadius: '50px', flexShrink: 0 }} />
-              <Skeleton variant="rounded" width={95} height={40} sx={{ borderRadius: '50px', flexShrink: 0 }} />
-              <Skeleton variant="rounded" width={95} height={40} sx={{ borderRadius: '50px', flexShrink: 0 }} />
-              <Skeleton variant="rounded" width={115} height={40} sx={{ borderRadius: '50px', flexShrink: 0 }} />
+              <Skeleton
+                variant="rounded"
+                width={130}
+                height={40}
+                sx={{ borderRadius: WEB_RADIUS.pill, flexShrink: 0 }}
+              />
+              <Skeleton
+                variant="rounded"
+                width={95}
+                height={40}
+                sx={{ borderRadius: WEB_RADIUS.pill, flexShrink: 0 }}
+              />
+              <Skeleton
+                variant="rounded"
+                width={95}
+                height={40}
+                sx={{ borderRadius: WEB_RADIUS.pill, flexShrink: 0 }}
+              />
+              <Skeleton
+                variant="rounded"
+                width={115}
+                height={40}
+                sx={{ borderRadius: WEB_RADIUS.pill, flexShrink: 0 }}
+              />
             </Box>
 
             <Skeleton variant="text" width={180} height={32} sx={{ mt: 5, mb: 3 }} />
@@ -30,7 +51,7 @@ export default function EventsLoading() {
             <Grid container spacing={2}>
               {Array.from({ length: 4 }).map((_, index) => (
                 <Grid key={index} size={{ xs: 12, sm: 6 }}>
-                  <Skeleton variant="rounded" width="100%" height={280} sx={{ borderRadius: 3 }} />
+                  <Skeleton variant="rounded" width="100%" height={280} sx={{ borderRadius: WEB_RADIUS.card }} />
                 </Grid>
               ))}
             </Grid>
@@ -38,8 +59,8 @@ export default function EventsLoading() {
 
           <Grid size={{ xs: 12, lg: 4 }} sx={{ display: { xs: 'none', lg: 'block' } }}>
             <Box sx={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Skeleton variant="rounded" width="100%" height={200} sx={{ borderRadius: 3 }} />
-              <Skeleton variant="rounded" width="100%" height={160} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" width="100%" height={200} sx={{ borderRadius: WEB_RADIUS.card }} />
+              <Skeleton variant="rounded" width="100%" height={160} sx={{ borderRadius: WEB_RADIUS.card }} />
             </Box>
           </Grid>
         </Grid>

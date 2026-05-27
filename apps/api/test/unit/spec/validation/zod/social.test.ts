@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { CreateEventMomentInputSchema } from '@/validation/zod/social';
-import { EventMomentType } from '@gatherle/commons/types';
+import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/types';
 
 const validId = new mongoose.Types.ObjectId().toString();
 
@@ -100,6 +100,48 @@ describe('CreateEventMomentInputSchema', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.thumbnailKey).toBeUndefined();
+      }
+    });
+
+    it('accepts Fit and Fill image display modes', () => {
+      const fitResult = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Image,
+        mediaKey: 'uploads/photo.jpg',
+        imageDisplayMode: EventMomentImageDisplayMode.Fit,
+      });
+      const fillResult = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Image,
+        mediaKey: 'uploads/photo.jpg',
+        imageDisplayMode: EventMomentImageDisplayMode.Fill,
+      });
+
+      expect(fitResult.success).toBe(true);
+      expect(fillResult.success).toBe(true);
+    });
+
+    it('rejects an invalid image display mode string', () => {
+      const result = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Image,
+        mediaKey: 'uploads/photo.jpg',
+        imageDisplayMode: 'Stretch',
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('keeps image display mode optional', () => {
+      const result = CreateEventMomentInputSchema.safeParse({
+        eventId: validId,
+        type: EventMomentType.Image,
+        mediaKey: 'uploads/photo.jpg',
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.imageDisplayMode).toBeUndefined();
       }
     });
   });

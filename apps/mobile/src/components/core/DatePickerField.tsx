@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
 
 type DatePickerFieldProps = {
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1.5,
     flexDirection: 'row',
     gap: 12,
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   iosCard: {
-    borderRadius: 24,
+    borderRadius: MOBILE_RADIUS.panel,
     borderWidth: 1,
     gap: 16,
     maxWidth: 380,

@@ -22,6 +22,7 @@ jest.mock('@/data/graphql/query', () => ({
 }));
 
 jest.mock('@/data/graphql/types/graphql', () => ({
+  EventMomentImageDisplayMode: { Fit: 'Fit', Fill: 'Fill' },
   EventMomentType: { Text: 'Text', Image: 'Image', Video: 'Video' },
 }));
 
@@ -183,6 +184,72 @@ describe('EventMomentComposer — file validation', () => {
     // No size error or type error should appear
     expect(screen.queryByText(/too large/i)).toBeNull();
     expect(screen.queryByText(/unsupported file type/i)).toBeNull();
+  });
+
+  it('submits image moments with the selected Fill display mode', async () => {
+    const mockCreateMoment = jest.fn().mockResolvedValue({
+      data: { createEventMoment: { momentId: 'moment-1' } },
+    });
+    const mockGetUploadUrl = jest.fn().mockResolvedValue({
+      data: { getEventMomentUploadUrl: { uploadUrl: 'https://s3.example.com/upload', key: 'media/key.jpg' } },
+      errors: undefined,
+    });
+    let mutationHookCalls = 0;
+
+    mockUseMutation.mockImplementation(() => {
+      const result = mutationHookCalls % 2 === 0 ? [mockCreateMoment, { loading: false }] : [mockGetUploadUrl, {}];
+      mutationHookCalls += 1;
+      return result;
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({ ok: true });
+
+    class MockFileReader {
+      result: string | null = null;
+      onloadend: (() => void) | null = null;
+      readAsDataURL(_file: Blob) {
+        this.result = 'data:image/jpeg;base64,MOCK';
+        this.onloadend?.();
+      }
+    }
+    Object.defineProperty(global, 'FileReader', { value: MockFileReader, writable: true });
+
+    render(<EventMomentComposer {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Photo' }));
+    });
+
+    const input = document.querySelector('input[type="file"][accept*="image"]') as HTMLInputElement;
+    const validFile = new File([new ArrayBuffer(5 * 1024 * 1024)], 'photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(input, 'files', { value: [validFile], writable: false, configurable: true });
+
+    await act(async () => {
+      fireEvent.change(input);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Fill' }));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Share moment' }));
+    });
+
+    await waitFor(() => {
+      expect(mockCreateMoment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: expect.objectContaining({
+            input: expect.objectContaining({
+              eventId: 'event-1',
+              imageDisplayMode: 'Fill',
+              mediaKey: 'media/key.jpg',
+              type: 'Image',
+            }),
+          }),
+        }),
+      );
+    });
   });
 
   it('includes occurrenceId when creating a text moment for a selected occurrence', async () => {

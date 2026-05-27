@@ -6,13 +6,14 @@
  */
 
 import { SxProps, Theme } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 /**
  * Standard card styling - elevation zero
  */
 export const CARD_STYLES: SxProps<Theme> = {
   elevation: 0,
-  borderRadius: 3,
+  borderRadius: WEB_RADIUS.card,
   p: { xs: 3, md: 4 },
 };
 
@@ -35,7 +36,7 @@ export const INTERACTIVE_CARD_STYLES: SxProps<Theme> = {
  */
 export const CARD_COMPACT_STYLES: SxProps<Theme> = {
   elevation: 0,
-  borderRadius: 3,
+  borderRadius: WEB_RADIUS.card,
   p: 3,
 };
 
@@ -45,7 +46,7 @@ export const CARD_COMPACT_STYLES: SxProps<Theme> = {
 export const BUTTON_STYLES: SxProps<Theme> = {
   fontWeight: 600,
   textTransform: 'none',
-  borderRadius: 2,
+  borderRadius: WEB_RADIUS.control,
 };
 
 /**
@@ -143,7 +144,7 @@ export const EMPTY_STATE_STYLES: SxProps<Theme> = {
  */
 export const EMPTY_STATE_ICON_STYLES: SxProps<Theme> = {
   p: 3,
-  borderRadius: '50%',
+  borderRadius: WEB_RADIUS.circle,
   bgcolor: 'action.hover',
   display: 'flex',
   alignItems: 'center',
@@ -182,7 +183,7 @@ export const CHIP_STYLES: SxProps<Theme> = {
 export const FORM_PAPER_STYLES: SxProps<Theme> = {
   elevation: 0,
   p: { xs: 3, md: 4 },
-  borderRadius: 3,
+  borderRadius: WEB_RADIUS.card,
   border: '1px solid',
   borderColor: 'divider',
 };

@@ -36,7 +36,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { DeleteEventMomentDocument, GetEventMomentsDocument } from '@/data/graphql/query';
-import { EventMomentType } from '@/data/graphql/types/graphql';
+import { EventMomentImageDisplayMode, EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { differenceInSeconds } from 'date-fns';
 import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
@@ -696,31 +696,84 @@ export default function EventMomentViewer({
                 </Box>
               ) : (
                 <Box
-                  component="img"
-                  src={moment.mediaUrl}
-                  alt={moment.caption ?? 'Event moment'}
-                  onLoad={() => {
-                    mediaLoadedRef.current = true;
-                    setMediaLoaded(true);
-                  }}
-                  onError={() => {
-                    // Image failed to load (404, CORS, etc.) — unfreeze the timer so the
-                    // viewer can still advance rather than stalling indefinitely.
-                    mediaLoadedRef.current = true;
-                    setMediaLoaded(true);
-                    setMediaError(true);
-                  }}
                   sx={{
                     width: '100%',
                     height: '100%',
                     maxWidth: { xs: '100%', sm: 480, md: 560 },
                     maxHeight: { xs: '100%', sm: '90vh' },
-                    objectFit: 'contain',
                     borderRadius: { xs: 0, sm: 2 },
-                    opacity: mediaLoaded ? 1 : 0,
-                    transition: 'opacity 0.25s ease',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    bgcolor: 'background.paper',
                   }}
-                />
+                >
+                  {(moment.imageDisplayMode ?? EventMomentImageDisplayMode.Fit) === EventMomentImageDisplayMode.Fit ? (
+                    <>
+                      <Box
+                        component="img"
+                        src={moment.mediaUrl}
+                        alt=""
+                        aria-hidden
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          filter: 'blur(26px)',
+                          transform: 'scale(1.08)',
+                          opacity: mediaLoaded ? 0.66 : 0,
+                          transition: 'opacity 0.25s ease',
+                        }}
+                      />
+                      <Box
+                        component="img"
+                        src={moment.mediaUrl}
+                        alt={moment.caption ?? 'Event moment'}
+                        onLoad={() => {
+                          mediaLoadedRef.current = true;
+                          setMediaLoaded(true);
+                        }}
+                        onError={() => {
+                          mediaLoadedRef.current = true;
+                          setMediaLoaded(true);
+                          setMediaError(true);
+                        }}
+                        sx={{
+                          position: 'relative',
+                          zIndex: 1,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          opacity: mediaLoaded ? 1 : 0,
+                          transition: 'opacity 0.25s ease',
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <Box
+                      component="img"
+                      src={moment.mediaUrl}
+                      alt={moment.caption ?? 'Event moment'}
+                      onLoad={() => {
+                        mediaLoadedRef.current = true;
+                        setMediaLoaded(true);
+                      }}
+                      onError={() => {
+                        mediaLoadedRef.current = true;
+                        setMediaLoaded(true);
+                        setMediaError(true);
+                      }}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: mediaLoaded ? 1 : 0,
+                        transition: 'opacity 0.25s ease',
+                      }}
+                    />
+                  )}
+                </Box>
               )}
             </>
           )}

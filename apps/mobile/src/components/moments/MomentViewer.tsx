@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import type { VideoPlayer } from 'expo-video';
 import type { EventMomentState } from '@data/graphql/types/graphql';
-import { EventMomentType } from '@data/graphql/types/graphql';
+import { EventMomentImageDisplayMode, EventMomentType } from '@data/graphql/types/graphql';
 import { GetEventsDocument } from '@data/graphql/query/Event/query';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -69,6 +69,7 @@ type MomentLike = {
     title?: string | null;
   } | null;
   eventId?: string;
+  imageDisplayMode?: EventMomentImageDisplayMode | null;
   mediaUrl?: string | null;
   momentId: string;
   state: EventMomentState;
@@ -860,15 +861,43 @@ export function MomentViewer({
               </>
             ) : (
               <>
-                <Image
-                  onError={() => {
-                    setMomentReady(true);
-                    setMediaError(true);
-                  }}
-                  onLoad={() => setMomentReady(true)}
-                  source={{ uri: currentMoment.mediaUrl }}
-                  style={styles.mediaFrame}
-                />
+                {(currentMoment.imageDisplayMode ?? EventMomentImageDisplayMode.Fit) ===
+                EventMomentImageDisplayMode.Fit ? (
+                  <>
+                    <Image
+                      blurRadius={20}
+                      onError={() => {
+                        setMomentReady(true);
+                        setMediaError(true);
+                      }}
+                      onLoad={() => setMomentReady(true)}
+                      resizeMode="cover"
+                      source={{ uri: currentMoment.mediaUrl }}
+                      style={styles.mediaFrameBackground}
+                    />
+                    <Image
+                      onError={() => {
+                        setMomentReady(true);
+                        setMediaError(true);
+                      }}
+                      onLoad={() => setMomentReady(true)}
+                      resizeMode="contain"
+                      source={{ uri: currentMoment.mediaUrl }}
+                      style={styles.mediaFrame}
+                    />
+                  </>
+                ) : (
+                  <Image
+                    onError={() => {
+                      setMomentReady(true);
+                      setMediaError(true);
+                    }}
+                    onLoad={() => setMomentReady(true)}
+                    resizeMode="cover"
+                    source={{ uri: currentMoment.mediaUrl }}
+                    style={styles.mediaFrame}
+                  />
+                )}
                 {mediaError ? (
                   <View style={styles.mediaStateOverlay}>
                     <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Image unavailable</Text>
@@ -1096,6 +1125,15 @@ const styles = StyleSheet.create({
   mediaFrame: {
     height: '100%',
     width: '100%',
+  },
+  mediaFrameBackground: {
+    bottom: 0,
+    left: 0,
+    opacity: 0.68,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    transform: [{ scale: 1.08 }],
   },
   mediaStateOverlay: {
     alignItems: 'center',

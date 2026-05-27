@@ -1,5 +1,6 @@
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
 import { useKeyboardAwareField } from '@/hooks/core/useKeyboardAwareField';
 
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     minHeight: 104,
   },
   inputWrap: {
-    borderRadius: 16,
+    borderRadius: MOBILE_RADIUS.control,
     borderWidth: 1.5,
     minHeight: 54,
     paddingHorizontal: 16,

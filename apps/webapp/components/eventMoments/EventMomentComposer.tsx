@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 
 import {
   alpha,
-  Drawer,
   Box,
   Typography,
   TextField,
@@ -18,6 +17,7 @@ import {
   Tabs,
   CircularProgress,
   Alert,
+  Dialog,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
@@ -29,11 +29,12 @@ import {
   GetEventMomentUploadUrlDocument,
   GetEventMomentsDocument,
 } from '@/data/graphql/query';
-import { EventMomentType } from '@/data/graphql/types/graphql';
+import { EventMomentImageDisplayMode, EventMomentType } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { getFileExtension } from '@/lib/utils';
 import { EmojiPickerPopover } from '@/components/core/EmojiPickerPopover';
 import type { CreateEventMomentMutation } from '@/data/graphql/types/graphql';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 type CreatedMoment = CreateEventMomentMutation['createEventMoment'];
 
@@ -132,6 +133,9 @@ export default function EventMomentComposer({
   const [thumbnailKey, setThumbnailKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [imageDisplayMode, setImageDisplayMode] = useState<EventMomentImageDisplayMode>(
+    EventMomentImageDisplayMode.Fit,
+  );
 
   // Emoji picker
   const [emojiAnchorEl, setEmojiAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -211,6 +215,7 @@ export default function EventMomentComposer({
     pendingFileRef.current = null;
     setSubmitError(null);
     setActiveTab(0);
+    setImageDisplayMode(EventMomentImageDisplayMode.Fit);
     closeEmojiPicker();
     onClose();
   };
@@ -237,8 +242,14 @@ export default function EventMomentComposer({
   };
 
   const uploadFile = async (file: File, acceptedTypes: Set<string>) => {
+    const expectsVideo = acceptedTypes.has('video/mp4');
+
     if (!acceptedTypes.has(file.type)) {
-      setSubmitError('Unsupported file type. Please choose a different file.');
+      setSubmitError(
+        expectsVideo
+          ? 'Unsupported file type. Please choose an MP4, MOV, or WEBM video.'
+          : 'Unsupported file type. Please choose a JPEG, PNG, or WEBP image. GIFs are not supported for moments.',
+      );
       return;
     }
 
@@ -381,6 +392,7 @@ export default function EventMomentComposer({
         type,
         ...(caption.trim() ? { caption: caption.trim() } : {}),
         ...(type === EventMomentType.Text ? { background: selectedBg } : {}),
+        ...(type === EventMomentType.Image ? { imageDisplayMode } : {}),
         ...(type === EventMomentType.Video && videoMomentId ? { momentId: videoMomentId } : {}),
         ...(mediaKey ? { mediaKey } : {}),
         ...(thumbnailKey ? { thumbnailKey } : {}),
@@ -409,334 +421,438 @@ export default function EventMomentComposer({
 
   return (
     <>
-      <Drawer
-        anchor="bottom"
-        open={open}
-        onClose={handleClose}
-        PaperProps={{
-          sx: {
-            borderRadius: '16px 16px 0 0',
-            maxHeight: '90vh',
-            overflow: 'auto',
-          },
-        }}
-      >
-        {/* Constrain inner content width on large screens */}
-        <Box sx={{ maxWidth: 520, mx: 'auto', width: '100%', p: 2 }}>
-          {/* Handle */}
-          <Box sx={{ width: 40, height: 4, bgcolor: 'divider', borderRadius: 2, mx: 'auto', mb: 2 }} />
-
-          {/* Header */}
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="h6" fontWeight={700}>
-              Share a moment
-            </Typography>
-            <IconButton onClick={handleClose} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-
-          {/* Tabs */}
-          <Tabs
-            value={activeTab}
-            onChange={(_, v) => {
-              setActiveTab(v);
-              setSubmitError(null);
-              resetMedia();
+      {/* Fullscreen keeps the vertical preview, Fit/Fill controls, and caption
+          editor visible together without the compression we had in drawers. */}
+      <Dialog fullScreen open={open} onClose={handleClose}>
+        <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
+          <Box
+            sx={{
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              px: { xs: 2, sm: 3 },
+              py: 1.5,
+              position: 'sticky',
+              top: 0,
+              zIndex: 5,
+              bgcolor: 'background.default',
             }}
-            variant="fullWidth"
-            sx={{ mb: 2, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}
           >
-            <Tab label="Text" />
-            <Tab label="Photo" />
-            <Tab label="Video" />
-          </Tabs>
-
-          {/* Error */}
-          {submitError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {submitError}
-            </Alert>
-          )}
-
-          {/* Text tab */}
-          {activeTab === 0 && (
-            <Box>
-              {/* Preview card */}
-              <Box
-                sx={{
-                  bgcolor: BG_SWATCHES.find((s) => s.token === selectedBg)?.color ?? BG_SWATCHES[0].color,
-                  borderRadius: 3,
-                  p: 3,
-                  mb: 2,
-                  minHeight: 140,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+            <Box
+              sx={{
+                maxWidth: 680,
+                mx: 'auto',
+                position: 'relative',
+                minHeight: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} textAlign="center">
+                Share a moment
+              </Typography>
+              <IconButton
+                onClick={handleClose}
+                size="small"
+                sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}
               >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  color="common.white"
-                  textAlign="center"
-                  sx={{ opacity: caption.trim() ? 1 : 0.4, lineHeight: 1.4 }}
-                >
-                  {caption.trim() || 'Your message here…'}
-                </Typography>
-              </Box>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </Box>
 
-              {/* Background color picker */}
-              <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                {BG_SWATCHES.map((swatch) => (
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            <Box sx={{ maxWidth: 680, mx: 'auto', width: '100%', px: { xs: 2, sm: 3 }, py: 2.5, pb: 16 }}>
+              <Tabs
+                value={activeTab}
+                onChange={(_, v) => {
+                  setActiveTab(v);
+                  setSubmitError(null);
+                  resetMedia();
+                }}
+                variant="fullWidth"
+                sx={{ mb: 2.5, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}
+              >
+                <Tab label="Text" />
+                <Tab label="Photo" />
+                <Tab label="Video" />
+              </Tabs>
+
+              {submitError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {submitError}
+                </Alert>
+              )}
+
+              {activeTab === 0 && (
+                <Box>
                   <Box
-                    key={swatch.token}
-                    onClick={() => setSelectedBg(swatch.token)}
                     sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      bgcolor: swatch.color,
-                      cursor: 'pointer',
-                      border: selectedBg === swatch.token ? '3px solid' : '2px solid transparent',
-                      borderColor: selectedBg === swatch.token ? 'primary.main' : 'transparent',
-                      outline: selectedBg === swatch.token ? '2px solid' : 'none',
-                      outlineColor: selectedBg === swatch.token ? 'common.white' : 'transparent',
-                      transition: 'transform 0.15s ease',
-                      '&:hover': { transform: 'scale(1.15)' },
+                      bgcolor: BG_SWATCHES.find((s) => s.token === selectedBg)?.color ?? BG_SWATCHES[0].color,
+                      borderRadius: WEB_RADIUS.panel,
+                      p: 3,
+                      mb: 2,
+                      minHeight: { xs: 240, sm: 320 },
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="h5"
+                      fontWeight={700}
+                      color="common.white"
+                      textAlign="center"
+                      sx={{ opacity: caption.trim() ? 1 : 0.4, lineHeight: 1.35 }}
+                    >
+                      {caption.trim() || 'Your message here…'}
+                    </Typography>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                    {BG_SWATCHES.map((swatch) => (
+                      <Box
+                        key={swatch.token}
+                        onClick={() => setSelectedBg(swatch.token)}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          bgcolor: swatch.color,
+                          cursor: 'pointer',
+                          border: selectedBg === swatch.token ? '3px solid' : '2px solid transparent',
+                          borderColor: selectedBg === swatch.token ? 'primary.main' : 'transparent',
+                          outline: selectedBg === swatch.token ? '2px solid' : 'none',
+                          outlineColor: selectedBg === swatch.token ? 'common.white' : 'transparent',
+                          transition: 'transform 0.15s ease',
+                          '&:hover': { transform: 'scale(1.15)' },
+                        }}
+                      />
+                    ))}
+                  </Stack>
+
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    maxRows={6}
+                    placeholder="What's happening at this event?"
+                    value={caption}
+                    inputRef={captionInputRef}
+                    onChange={(e) => {
+                      const { value, selectionStart, selectionEnd } = e.target;
+                      setCaption(value.slice(0, MAX_CAPTION));
+                      captionSelectionRef.current = {
+                        start: selectionStart ?? value.length,
+                        end: selectionEnd ?? value.length,
+                      };
+                    }}
+                    onClick={captureCaptionSelection}
+                    onSelect={captureCaptionSelection}
+                    onKeyUp={captureCaptionSelection}
+                    helperText={`${caption.length} / ${MAX_CAPTION}`}
+                    slotProps={{
+                      htmlInput: { maxLength: MAX_CAPTION },
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end" sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
+                            <Tooltip title="Add emoji">
+                              <IconButton
+                                size="small"
+                                onClick={openEmojiPicker}
+                                sx={{ color: isEmojiPickerOpen ? 'primary.main' : 'text.secondary' }}
+                              >
+                                <SentimentSatisfiedAltIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </InputAdornment>
+                        ),
+                      },
                     }}
                   />
-                ))}
-              </Stack>
-
-              <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                maxRows={5}
-                placeholder="What's happening at this event?"
-                value={caption}
-                inputRef={captionInputRef}
-                onChange={(e) => {
-                  const { value, selectionStart, selectionEnd } = e.target;
-                  setCaption(value.slice(0, MAX_CAPTION));
-                  captionSelectionRef.current = {
-                    start: selectionStart ?? value.length,
-                    end: selectionEnd ?? value.length,
-                  };
-                }}
-                onClick={captureCaptionSelection}
-                onSelect={captureCaptionSelection}
-                onKeyUp={captureCaptionSelection}
-                helperText={`${caption.length} / ${MAX_CAPTION}`}
-                slotProps={{
-                  htmlInput: { maxLength: MAX_CAPTION },
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end" sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
-                        <Tooltip title="Add emoji">
-                          <IconButton
-                            size="small"
-                            onClick={openEmojiPicker}
-                            sx={{ color: isEmojiPickerOpen ? 'primary.main' : 'text.secondary' }}
-                          >
-                            <SentimentSatisfiedAltIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            </Box>
-          )}
-
-          {/* Photo tab */}
-          {activeTab === 1 && (
-            <Box>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                hidden
-                onChange={(e) => handleFileChange(e, ACCEPTED_IMAGE_TYPES)}
-              />
-              {mediaPreview ? (
-                <Box sx={{ position: 'relative', mb: 2 }}>
-                  <Box
-                    component="img"
-                    src={mediaPreview}
-                    alt="Preview"
-                    sx={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 2 }}
-                  />
-                  {uploading && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        bgcolor: (theme) => alpha(theme.palette.common.black, 0.4),
-                        borderRadius: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <CircularProgress sx={{ color: 'common.white' }} />
-                    </Box>
-                  )}
-                  <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
-                    Change photo
-                  </Button>
-                  {/* Show retry only when preview exists but upload hasn't completed */}
-                  {!mediaKey && !uploading && (
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={retryUpload}
-                      sx={{ mt: 1, ml: 1, textTransform: 'none' }}
-                    >
-                      Retry upload
-                    </Button>
-                  )}
-                </Box>
-              ) : (
-                <Box
-                  onClick={() => imageInputRef.current?.click()}
-                  sx={{
-                    border: '2px dashed',
-                    borderColor: 'divider',
-                    borderRadius: 3,
-                    p: 4,
-                    mb: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 1,
-                    cursor: 'pointer',
-                    '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
-                  }}
-                >
-                  <ImageOutlinedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Tap to choose a photo
-                  </Typography>
-                  <Typography variant="caption" color="text.disabled">
-                    JPEG, PNG or WebP · max 15 MB
-                  </Typography>
                 </Box>
               )}
-              <TextField
-                fullWidth
-                placeholder="Add a caption (optional)"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION))}
-                slotProps={{ htmlInput: { maxLength: MAX_CAPTION } }}
-                helperText={`${caption.length} / ${MAX_CAPTION}`}
-              />
-            </Box>
-          )}
 
-          {/* Video tab */}
-          {activeTab === 2 && (
-            <Box>
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/mp4,video/quicktime,video/webm"
-                hidden
-                onChange={(e) => handleFileChange(e, ACCEPTED_VIDEO_TYPES)}
-              />
-              {mediaPreview ? (
-                <Box sx={{ position: 'relative', mb: 2 }}>
-                  <Box
-                    component="video"
-                    src={mediaPreview}
-                    muted
-                    playsInline
-                    controls
-                    sx={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 2 }}
+              {activeTab === 1 && (
+                <Box>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                    onChange={(e) => handleFileChange(e, ACCEPTED_IMAGE_TYPES)}
                   />
-                  {uploading && (
+                  {mediaPreview ? (
+                    <Box sx={{ position: 'relative', mb: 2 }}>
+                      <Box
+                        sx={{
+                          width: '100%',
+                          maxWidth: 260,
+                          aspectRatio: '9 / 16',
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          position: 'relative',
+                          bgcolor: 'background.paper',
+                        }}
+                      >
+                        {imageDisplayMode === EventMomentImageDisplayMode.Fit ? (
+                          <>
+                            <Box
+                              component="img"
+                              src={mediaPreview}
+                              alt=""
+                              aria-hidden
+                              sx={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                filter: 'blur(24px)',
+                                transform: 'scale(1.08)',
+                                opacity: 0.68,
+                              }}
+                            />
+                            <Box
+                              component="img"
+                              src={mediaPreview}
+                              alt="Preview"
+                              sx={{
+                                position: 'relative',
+                                zIndex: 1,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <Box
+                            component="img"
+                            src={mediaPreview}
+                            alt="Preview"
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        )}
+                      </Box>
+                      {uploading && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            bgcolor: (theme) => alpha(theme.palette.common.black, 0.4),
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <CircularProgress sx={{ color: 'common.white' }} />
+                        </Box>
+                      )}
+                      <Stack direction="row" spacing={1} sx={{ mt: 1.5, mb: 1 }}>
+                        {(
+                          [
+                            { label: 'Fit', value: EventMomentImageDisplayMode.Fit },
+                            { label: 'Fill', value: EventMomentImageDisplayMode.Fill },
+                          ] as const
+                        ).map((option) => {
+                          const selected = imageDisplayMode === option.value;
+                          return (
+                            <Button
+                              key={option.value}
+                              onClick={() => setImageDisplayMode(option.value)}
+                              size="small"
+                              sx={{
+                                textTransform: 'none',
+                                borderRadius: 999,
+                                px: 1.75,
+                                minWidth: 0,
+                                color: selected ? 'primary.main' : 'text.secondary',
+                                border: '1px solid',
+                                borderColor: selected ? 'primary.main' : 'divider',
+                                bgcolor: selected ? 'action.selected' : 'background.paper',
+                              }}
+                              variant="text"
+                            >
+                              {option.label}
+                            </Button>
+                          );
+                        })}
+                      </Stack>
+                      <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
+                        Change photo
+                      </Button>
+                      {/* Show retry only when preview exists but upload hasn't completed */}
+                      {!mediaKey && !uploading && (
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={retryUpload}
+                          sx={{ mt: 1, ml: 1, textTransform: 'none' }}
+                        >
+                          Retry upload
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
                     <Box
+                      onClick={() => imageInputRef.current?.click()}
                       sx={{
-                        position: 'absolute',
-                        inset: 0,
-                        bgcolor: (theme) => alpha(theme.palette.common.black, 0.4),
-                        borderRadius: 2,
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 3,
+                        p: 4,
+                        mb: 2,
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        gap: 1,
+                        cursor: 'pointer',
+                        '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
                       }}
                     >
-                      <CircularProgress sx={{ color: 'common.white' }} />
+                      <ImageOutlinedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Tap to choose a photo
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        Keep the full image and choose how it fits the 9:16 story frame · JPEG, PNG or WebP · max 15 MB
+                      </Typography>
                     </Box>
                   )}
-                  <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
-                    Change video
-                  </Button>
-                  {/* Show retry only when preview exists but upload hasn't completed */}
-                  {!mediaKey && !uploading && (
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={retryUpload}
-                      sx={{ mt: 1, ml: 1, textTransform: 'none' }}
-                    >
-                      Retry upload
-                    </Button>
-                  )}
-                </Box>
-              ) : (
-                <Box
-                  onClick={() => videoInputRef.current?.click()}
-                  sx={{
-                    border: '2px dashed',
-                    borderColor: 'divider',
-                    borderRadius: 3,
-                    p: 4,
-                    mb: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 1,
-                    cursor: 'pointer',
-                    '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
-                  }}
-                >
-                  <VideoFileOutlinedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Tap to choose a video
-                  </Typography>
-                  <Typography variant="caption" color="text.disabled">
-                    MP4, MOV or WebM · max 30s · max 75 MB
-                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="Add a caption (optional)"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION))}
+                    slotProps={{ htmlInput: { maxLength: MAX_CAPTION } }}
+                    helperText={`${caption.length} / ${MAX_CAPTION}`}
+                  />
                 </Box>
               )}
-              <TextField
-                fullWidth
-                placeholder="Add a caption (optional)"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION))}
-                slotProps={{ htmlInput: { maxLength: MAX_CAPTION } }}
-                helperText={`${caption.length} / ${MAX_CAPTION}`}
-              />
-            </Box>
-          )}
 
-          {/* Submit */}
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={submitDisabled}
-            onClick={handleSubmit}
-            sx={{ mt: 2, mb: 1, textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
-            startIcon={submitDisabled ? <CircularProgress size={18} color="inherit" /> : undefined}
+              {activeTab === 2 && (
+                <Box>
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/webm"
+                    hidden
+                    onChange={(e) => handleFileChange(e, ACCEPTED_VIDEO_TYPES)}
+                  />
+                  {mediaPreview ? (
+                    <Box sx={{ position: 'relative', mb: 2 }}>
+                      <Box
+                        component="video"
+                        src={mediaPreview}
+                        muted
+                        playsInline
+                        controls
+                        sx={{
+                          width: '100%',
+                          maxWidth: 260,
+                          aspectRatio: '9 / 16',
+                          objectFit: 'cover',
+                          borderRadius: 2,
+                        }}
+                      />
+                      {uploading && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            bgcolor: (theme) => alpha(theme.palette.common.black, 0.4),
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <CircularProgress sx={{ color: 'common.white' }} />
+                        </Box>
+                      )}
+                      <Button size="small" onClick={resetMedia} sx={{ mt: 1, textTransform: 'none' }}>
+                        Change video
+                      </Button>
+                      {/* Show retry only when preview exists but upload hasn't completed */}
+                      {!mediaKey && !uploading && (
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={retryUpload}
+                          sx={{ mt: 1, ml: 1, textTransform: 'none' }}
+                        >
+                          Retry upload
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    <Box
+                      onClick={() => videoInputRef.current?.click()}
+                      sx={{
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 3,
+                        p: 4,
+                        mb: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1,
+                        cursor: 'pointer',
+                        '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <VideoFileOutlinedIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Tap to choose a video
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        Previewed in a 9:16 story frame · MP4, MOV or WebM · max 30s · max 75 MB
+                      </Typography>
+                    </Box>
+                  )}
+                  <TextField
+                    fullWidth
+                    placeholder="Add a caption (optional)"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value.slice(0, MAX_CAPTION))}
+                    slotProps={{ htmlInput: { maxLength: MAX_CAPTION } }}
+                    helperText={`${caption.length} / ${MAX_CAPTION}`}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              px: { xs: 2, sm: 3 },
+              py: 1.5,
+              position: 'sticky',
+              bottom: 0,
+              bgcolor: 'background.default',
+            }}
           >
-            {uploading ? 'Uploading…' : creating ? 'Sharing…' : 'Share moment'}
-          </Button>
+            <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                disabled={submitDisabled}
+                onClick={handleSubmit}
+                sx={{ textTransform: 'none', fontWeight: 600, borderRadius: WEB_RADIUS.control, minHeight: 52 }}
+                startIcon={submitDisabled ? <CircularProgress size={18} color="inherit" /> : undefined}
+              >
+                {uploading ? 'Uploading…' : creating ? 'Sharing…' : 'Share moment'}
+              </Button>
+            </Box>
+          </Box>
         </Box>
-      </Drawer>
+      </Dialog>
 
       <EmojiPickerPopover
         anchorEl={emojiAnchorEl}

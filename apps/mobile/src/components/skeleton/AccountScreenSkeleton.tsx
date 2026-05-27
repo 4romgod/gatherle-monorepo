@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tile: {
-    aspectRatio: 1,
+    aspectRatio: 16 / 9,
     borderRadius: 14,
     width: '31.8%',
   },

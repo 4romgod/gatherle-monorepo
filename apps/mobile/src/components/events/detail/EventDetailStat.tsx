@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
 
 type EventDetailStatProps = {
@@ -35,7 +36,7 @@ export function EventDetailStat({ icon, label, onPress, value }: EventDetailStat
 
 const styles = StyleSheet.create({
   detailStatCard: {
-    borderRadius: 18,
+    borderRadius: MOBILE_RADIUS.card,
     flexBasis: '48%',
     gap: 8,
     minHeight: 110,

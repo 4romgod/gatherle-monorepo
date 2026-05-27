@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     gap: PROFILE_EVENT_TILE_GRID_GAP,
   },
   tile: {
-    aspectRatio: 1,
+    aspectRatio: 16 / 9,
     borderRadius: 14,
   },
 });

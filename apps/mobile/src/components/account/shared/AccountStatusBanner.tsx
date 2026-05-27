@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
 
 type AccountStatusBannerProps = {
@@ -39,7 +40,7 @@ export function AccountStatusBanner({ message, tone }: AccountStatusBannerProps)
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: 18,
+    borderRadius: MOBILE_RADIUS.card,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,

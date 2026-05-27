@@ -1,5 +1,5 @@
 import { useMutation } from '@apollo/client';
-import { EventMomentType } from '@data/graphql/types/graphql';
+import { EventMomentImageDisplayMode, EventMomentType } from '@data/graphql/types/graphql';
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { CreateEventMomentDocument, DeleteEventMomentDocument } from '@data/graphql/mutation/EventMoment/mutation';
 import { GetEventMomentUploadUrlDocument } from '@data/graphql/mutation/Media/mutation';
@@ -19,6 +19,7 @@ type CreateMomentArgs =
       asset: ImagePickerAsset;
       caption?: string;
       eventId: string;
+      imageDisplayMode: EventMomentImageDisplayMode;
       occurrenceId?: string;
       type: 'image';
     }
@@ -133,6 +134,7 @@ export function useCreateEventMoment(authToken: string | null) {
         : {
             caption: args.caption?.trim().slice(0, MOMENT_MAX_CAPTION_LENGTH) || undefined,
             eventId: args.eventId,
+            imageDisplayMode: args.imageDisplayMode,
             mediaKey: uploadTarget.key,
             occurrenceId: args.occurrenceId,
             type: EventMomentType.Image,

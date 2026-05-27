@@ -28,7 +28,9 @@ import {
 } from '@/data/graphql/types/graphql';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { ROUTES } from '@/lib/constants';
+import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { logger } from '@/lib/utils';
+import { useAspectRatioImageSelection } from '@/hooks/useAspectRatioImageSelection';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { useVenueManagementAccess } from '@/hooks/useVenueManagementAccess';
 
@@ -94,12 +96,23 @@ export default function VenueEditForm({ slug, token }: VenueEditFormProps) {
     upload: uploadFeaturedImage,
     uploading: featuredImageUploading,
     error: featuredImageError,
-    preview: featuredImagePreview,
     reset: resetFeaturedImage,
   } = useMediaUpload({
     entityType: MediaEntityType.Venue,
     mediaType: MediaType.Featured,
     entityId: venue?.venueId,
+  });
+  const {
+    clearSelection: clearFeaturedImageSelection,
+    cropDialog: featuredImageCropDialog,
+    previewUrl: featuredImageCropPreview,
+    selectFileForCrop: selectFeaturedImageForCrop,
+  } = useAspectRatioImageSelection({
+    onCropped: async ({ file }) => {
+      const readUrl = await uploadFeaturedImage(file);
+      setFeaturedReadUrl(readUrl);
+    },
+    preset: WEB_MEDIA_CROP_PRESETS.venueFeatured,
   });
 
   const [updateVenue, { loading: saving, error: mutationError }] = useMutation(UpdateVenueDocument, {
@@ -352,6 +365,9 @@ export default function VenueEditForm({ slug, token }: VenueEditFormProps) {
               <Typography variant="subtitle2" fontWeight={700}>
                 Featured image
               </Typography>
+              <Typography color="text.secondary" variant="body2">
+                Keep this to a 16:9 cover so venue media stays consistent everywhere it appears.
+              </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Button
                   component="label"
@@ -364,26 +380,22 @@ export default function VenueEditForm({ slug, token }: VenueEditFormProps) {
                   <input
                     type="file"
                     hidden
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                    onChange={async (e) => {
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       e.target.value = '';
-                      try {
-                        const readUrl = await uploadFeaturedImage(file);
-                        setFeaturedReadUrl(readUrl);
-                      } catch {
-                        // error shown below
-                      }
+                      selectFeaturedImageForCrop(file);
                     }}
                   />
                 </Button>
-                {(featuredReadUrl || featuredImagePreview) && !featuredImageUploading && (
+                {(featuredReadUrl || featuredImageCropPreview) && !featuredImageUploading && (
                   <Button
                     size="small"
                     color="secondary"
                     onClick={() => {
                       setFeaturedReadUrl(null);
+                      clearFeaturedImageSelection();
                       resetFeaturedImage();
                     }}
                   >
@@ -396,14 +408,15 @@ export default function VenueEditForm({ slug, token }: VenueEditFormProps) {
                   {featuredImageError}
                 </Typography>
               )}
-              {(featuredImagePreview || featuredReadUrl || venue.featuredImageUrl) && (
+              {(featuredImageCropPreview || featuredReadUrl || venue.featuredImageUrl) && (
                 <Box
                   component="img"
-                  src={featuredImagePreview || featuredReadUrl || venue.featuredImageUrl || undefined}
+                  src={featuredImageCropPreview || featuredReadUrl || venue.featuredImageUrl || undefined}
                   alt="Featured venue preview"
                   sx={{
-                    width: 220,
-                    height: 130,
+                    width: '100%',
+                    maxWidth: 320,
+                    aspectRatio: '16 / 9',
                     borderRadius: 2,
                     objectFit: 'cover',
                     border: '1px solid',
@@ -429,6 +442,7 @@ export default function VenueEditForm({ slug, token }: VenueEditFormProps) {
           </Stack>
         </Box>
       </Paper>
+      {featuredImageCropDialog}
     </Container>
   );
 }

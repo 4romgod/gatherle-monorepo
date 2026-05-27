@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Card, CardContent, Container, Divider, Grid, Skeleton, Stack, Typography } from '@mui/material';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 export default function VenueDetailSkeleton() {
   return (
@@ -60,12 +61,12 @@ export default function VenueDetailSkeleton() {
                   <Skeleton
                     variant="rectangular"
                     animation="wave"
-                    sx={{ width: '100%', height: 220, borderRadius: 2 }}
+                    sx={{ width: '100%', height: 220, borderRadius: WEB_RADIUS.card }}
                   />
                 </Box>
               </Box>
 
-              <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Card elevation={0} sx={{ borderRadius: WEB_RADIUS.card, border: '1px solid', borderColor: 'divider' }}>
                 <CardContent>
                   <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
                     Amenities
@@ -82,19 +83,35 @@ export default function VenueDetailSkeleton() {
 
           <Grid size={{ xs: 12, md: 4 }}>
             <Stack spacing={3}>
-              <Skeleton variant="rounded" animation="wave" sx={{ width: '100%', height: 54, borderRadius: 2 }} />
-              <Skeleton variant="rounded" animation="wave" sx={{ width: '100%', height: 188, borderRadius: 3 }} />
+              <Skeleton
+                variant="rounded"
+                animation="wave"
+                sx={{ width: '100%', height: 54, borderRadius: WEB_RADIUS.control }}
+              />
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Upcoming Events
+                  More details
                 </Typography>
-                <Stack direction="row" spacing={2}>
+                <Stack spacing={1.25}>
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <Stack key={index} direction="row" spacing={1.25} alignItems="center">
+                      <Skeleton variant="circular" animation="wave" width={18} height={18} />
+                      <Skeleton variant="text" animation="wave" width={index === 0 ? '58%' : '48%'} height={22} />
+                    </Stack>
+                  ))}
+                </Stack>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Gallery
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ overflow: 'hidden' }}>
                   {Array.from({ length: 3 }).map((_, index) => (
                     <Skeleton
                       key={index}
                       variant="rounded"
                       animation="wave"
-                      sx={{ width: 220, height: 220, borderRadius: 2 }}
+                      sx={{ flex: 1, minWidth: 0, height: 80, borderRadius: WEB_RADIUS.control }}
                     />
                   ))}
                 </Stack>

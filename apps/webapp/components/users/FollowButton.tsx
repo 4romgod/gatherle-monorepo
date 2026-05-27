@@ -11,6 +11,7 @@ import { ROUTES } from '@/lib/constants';
 import { useAppContext } from '@/hooks/useAppContext';
 import { logger } from '@/lib/utils';
 import NProgress from 'nprogress';
+import { WEB_RADIUS } from '@/lib/constants/radius';
 
 interface FollowButtonProps {
   targetId: string;
@@ -129,7 +130,7 @@ export default function FollowButton({
                 backgroundColor: 'action.disabledBackground',
                 border: '1px solid',
                 borderColor: 'divider',
-                borderRadius: '11px',
+                borderRadius: WEB_RADIUS.control,
                 boxShadow: 'none',
                 color: 'text.primary',
                 fontSize: '0.8125rem',

@@ -1,6 +1,6 @@
 import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import type { EventMoment as EventMomentEntity, CreateEventMomentInput } from '@gatherle/commons/types';
-import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/types';
 import { EventMoment } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 
@@ -50,6 +50,10 @@ class EventMomentDAO {
         caption: input.caption,
         mediaUrl,
         thumbnailUrl,
+        imageDisplayMode:
+          input.type === EventMomentType.Image
+            ? (input.imageDisplayMode ?? EventMomentImageDisplayMode.Fit)
+            : undefined,
         background: input.background,
         state: EventMomentState.Ready,
         isPublished: true,
