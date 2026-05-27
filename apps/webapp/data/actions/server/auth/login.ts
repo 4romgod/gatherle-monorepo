@@ -10,6 +10,16 @@ import { logger } from '@/lib/utils/logger';
 
 const EMAIL_NOT_VERIFIED_MESSAGE = 'Please verify your email address before logging in.';
 
+function resolveRedirectTo(formData: FormData) {
+  const requestedRedirectTo = formData.get('redirectTo')?.toString().trim();
+
+  if (!requestedRedirectTo || !requestedRedirectTo.startsWith('/') || requestedRedirectTo.startsWith('//')) {
+    return DEFAULT_LOGIN_REDIRECT;
+  }
+
+  return requestedRedirectTo;
+}
+
 const getCredentialsSignInMessage = (error: AuthError): string => {
   if (error.message.includes(EMAIL_NOT_VERIFIED_MESSAGE)) {
     return EMAIL_NOT_VERIFIED_MESSAGE;
@@ -37,17 +47,18 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
   }
 
   const { email, password } = validatedFields.data;
+  const redirectTo = resolveRedirectTo(formData);
 
   try {
     logger.debug('Attempting sign in');
     await signIn('credentials', {
       email,
       password,
-      redirectTo: DEFAULT_LOGIN_REDIRECT,
+      redirectTo,
       redirect: true,
     });
 
-    logger.info('User logged in successfully', { email });
+    logger.info('User logged in successfully', { email, redirectTo });
 
     return {
       ...prevState,
@@ -61,7 +72,7 @@ export async function loginUserAction(prevState: ActionState, formData: FormData
       error instanceof Error &&
       (error.message === 'NEXT_REDIRECT' || (error as any).digest?.startsWith('NEXT_REDIRECT'))
     ) {
-      logger.info('Login successful, redirecting user', { email, redirect: DEFAULT_LOGIN_REDIRECT });
+      logger.info('Login successful, redirecting user', { email, redirect: redirectTo });
       throw error;
     }
 

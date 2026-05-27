@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { APPLICATION_STAGES } from '@gatherle/commons';
 import type { UserWithToken } from '@gatherle/commons/types';
 import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
@@ -98,6 +99,14 @@ const getReadSeededUserByUsernameQuery = (username: string) => ({
   }`,
   variables: { username },
 });
+
+const canMintSeededUserToken = (): boolean => {
+  if (process.env.STAGE === APPLICATION_STAGES.DEV) {
+    return Boolean(process.env.JWT_SECRET?.trim());
+  }
+
+  return Boolean(process.env.SECRET_ARN?.trim() && process.env.AWS_REGION?.trim());
+};
 
 const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
   if (status !== 429) {
@@ -239,10 +248,22 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
 
       lastFailure = JSON.stringify(response.body.errors ?? response.body);
       if (canFallbackToLocalToken(response.status, response.body)) {
-        console.warn(`[setup] seeded user ${user.email} is temporarily locked; minting local e2e token instead`);
-        seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
-        lastFailure = '';
-        break;
+        if (canMintSeededUserToken()) {
+          try {
+            console.warn(`[setup] seeded user ${user.email} is temporarily locked; minting local e2e token instead`);
+            seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
+            lastFailure = '';
+            break;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.warn(`[setup] local token mint fallback failed for ${user.email}: ${message}`);
+            lastFailure = `${lastFailure}; local token mint fallback failed: ${message}`;
+          }
+        } else {
+          console.warn(
+            `[setup] seeded user ${user.email} is temporarily locked, but local token mint fallback is not configured`,
+          );
+        }
       }
 
       const shouldRetry = attempt < 5 && isRetryableFailure(response.status, response.body);

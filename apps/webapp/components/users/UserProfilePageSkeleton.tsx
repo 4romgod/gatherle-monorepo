@@ -1,83 +1,75 @@
 'use client';
 
-import { Box, Container, Grid, Paper, Skeleton, Stack } from '@mui/material';
+import { Box, Skeleton, Stack } from '@mui/material';
 
 export default function UserProfilePageSkeleton() {
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
-      <Container maxWidth="lg">
-        <Stack spacing={4}>
-          <Paper
-            elevation={0}
-            sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}
-          >
-            <Box sx={{ p: { xs: 3, md: 4 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 2, md: 3 } }}>
-                <Skeleton variant="circular" width={100} height={100} sx={{ flexShrink: 0 }} />
-                <Box sx={{ flex: 1 }}>
-                  <Skeleton variant="text" width="50%" height={36} />
-                  <Skeleton variant="text" width="30%" height={24} sx={{ mb: 1 }} />
-                  <Skeleton variant="text" width="70%" height={18} />
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box sx={{ maxWidth: 935, mx: 'auto', width: '100%', overflowX: 'hidden' }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 4 }, pb: 2 }}>
+          <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2.5, md: 3 }, mb: 1.75 }}>
+              <Skeleton variant="circular" width={88} height={88} sx={{ flexShrink: 0 }} />
+
+              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Skeleton variant="text" width={150} height={28} />
+                  <Skeleton variant="rounded" width={26} height={26} />
+                </Stack>
+
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                  {[0, 1, 2].map((stat) => (
+                    <Box key={stat} sx={{ flex: 1 }}>
+                      <Skeleton variant="text" width="42%" height={28} sx={{ mx: 'auto' }} />
+                      <Skeleton variant="text" width="72%" height={18} sx={{ mx: 'auto', mt: -0.5 }} />
+                    </Box>
+                  ))}
                 </Box>
               </Box>
             </Box>
-          </Paper>
 
-          <Grid container spacing={3}>
-            {/* Tabs — full width */}
-            <Grid size={{ xs: 12 }}>
-              <Paper
-                elevation={0}
-                sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}
-              >
-                {/* Tab bar skeleton — 4 tabs */}
-                <Stack direction="row" spacing={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-                  {[1, 2, 3, 4].map((tab) => (
-                    <Box key={tab} sx={{ flex: 1, py: 2, display: 'flex', justifyContent: 'center' }}>
-                      <Skeleton variant="text" width="60%" height={24} />
-                    </Box>
-                  ))}
-                </Stack>
-                {/* Event cards skeleton */}
-                <Box sx={{ p: 3 }}>
-                  <Grid container spacing={3}>
-                    {[1, 2, 3].map((card) => (
-                      <Grid key={card} size={{ xs: 12, sm: 4 }}>
-                        <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: 2 }} />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              </Paper>
-            </Grid>
+            <Stack spacing={0.75}>
+              <Skeleton variant="text" width="44%" height={34} />
+              <Skeleton variant="text" width="92%" height={20} />
+              <Skeleton variant="text" width="74%" height={20} sx={{ mt: -0.75 }} />
+            </Stack>
 
-            {/* Info sections below the tabs */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                <Stack spacing={1}>
-                  <Skeleton variant="text" width="40%" height={20} />
-                  <Skeleton variant="rectangular" width="100%" height={18} />
-                  <Skeleton variant="rectangular" width="80%" height={18} />
-                  <Skeleton variant="rectangular" width="90%" height={18} />
-                </Stack>
-              </Paper>
-            </Grid>
+            <Stack direction="row" spacing={1.25} sx={{ mt: 1.75 }}>
+              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: 3 }} />
+              <Skeleton variant="rounded" width="100%" height={44} sx={{ borderRadius: 3 }} />
+            </Stack>
+          </Box>
+        </Box>
 
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                <Stack spacing={1}>
-                  <Skeleton variant="text" width="40%" height={20} />
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pt: 1 }}>
-                    {[1, 2, 3, 4, 5].map((chip) => (
-                      <Skeleton key={chip} variant="rounded" width={80} height={32} />
-                    ))}
-                  </Box>
-                </Stack>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Stack>
-      </Container>
+        <Box>
+          <Box sx={{ display: 'flex', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 3 } }}>
+            {[0, 1, 2, 3].map((tab) => (
+              <Box key={tab} sx={{ flex: 1, py: 1.5, display: 'flex', justifyContent: 'center' }}>
+                <Skeleton variant="circular" width={22} height={22} />
+              </Box>
+            ))}
+          </Box>
+
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(2, minmax(0, 1fr))',
+                  sm: 'repeat(3, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                  xl: 'repeat(5, minmax(0, 1fr))',
+                },
+                gap: { xs: 0.75, md: 1 },
+              }}
+            >
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} variant="rounded" sx={{ aspectRatio: '1 / 1', borderRadius: 2 }} />
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 }

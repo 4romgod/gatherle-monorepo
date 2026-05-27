@@ -40,6 +40,7 @@ export function isEventUpcoming(
         .map((line) => line.trim())
         .filter(Boolean);
       const dtstartLine = lines.find((line) => line.toUpperCase().startsWith('DTSTART:'));
+      const embeddedRuleLine = lines.find((line) => line.toUpperCase().startsWith('RRULE:'));
 
       if (dtstartLine) {
         const normalizedAnchor = dtstartLine
@@ -48,6 +49,11 @@ export function isEventUpcoming(
           .replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/, '$1-$2-$3T$4:$5:$6.000Z');
         const rule = RRule.fromString(buildScheduleRuleString(new Date(normalizedAnchor), anchorStartAt));
         return rule.after(new Date(), true) !== null;
+      }
+
+      if (embeddedRuleLine || /^FREQ=/i.test(anchorStartAt.trim())) {
+        logger.warn('[rrule] Missing DTSTART for embedded recurrenceRule:', anchorStartAt);
+        return true;
       }
 
       const rule = RRule.fromString(anchorStartAt);

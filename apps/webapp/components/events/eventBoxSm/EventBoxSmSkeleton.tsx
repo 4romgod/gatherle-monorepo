@@ -1,44 +1,75 @@
 'use client';
 
-import CardContent from '@mui/material/CardContent';
-import { Card, Stack, Box, Skeleton } from '@mui/material';
-import Surface from '@/components/core/Surface';
+import { Avatar, Box, Skeleton, Stack } from '@mui/material';
 
 export default function EventBoxSmSkeleton() {
   return (
-    <Surface
-      component={Card}
+    <Box
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 2,
+        borderRadius: { xs: 1, sm: 2 },
         overflow: 'hidden',
         minHeight: 240,
-        boxShadow: 'none',
       }}
     >
       <Box
         sx={{
           position: 'relative',
-          height: { xs: 140, sm: 180 },
+          paddingTop: '56.25%',
           width: '100%',
           overflow: 'hidden',
-          bgcolor: 'action.selected',
+          bgcolor: 'action.hover',
         }}
       >
-        <Skeleton variant="rectangular" width="100%" height="100%" />
+        <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0 }} />
+        <Skeleton
+          variant="rounded"
+          width={88}
+          height={22}
+          sx={{ position: 'absolute', top: 12, left: 12, borderRadius: 2 }}
+        />
       </Box>
-      <CardContent sx={{ flexGrow: 1, p: 1.25, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Skeleton variant="text" width="70%" height={24} />
-        <Skeleton variant="text" width="50%" height={18} />
-        <Skeleton variant="text" width="65%" height={18} />
-        <Skeleton variant="text" width="40%" height={18} />
-        <Stack direction="row" spacing={0.5} sx={{ mt: 'auto' }}>
-          <Skeleton variant="rounded" width={80} height={32} />
-          <Skeleton variant="rounded" width={80} height={32} />
+
+      <Box sx={{ flexGrow: 1, p: 1.25, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Skeleton variant="text" width="78%" height={22} />
+        <Skeleton variant="text" width="56%" height={22} sx={{ mt: -0.75 }} />
+
+        <Stack spacing={0.5} sx={{ mt: 0.25 }}>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <Skeleton variant="circular" width={14} height={14} />
+            <Skeleton variant="text" width="68%" height={16} />
+          </Stack>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <Skeleton variant="circular" width={14} height={14} />
+            <Skeleton variant="text" width="48%" height={16} />
+          </Stack>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <Skeleton variant="circular" width={14} height={14} />
+            <Skeleton variant="text" width="34%" height={16} />
+          </Stack>
         </Stack>
-      </CardContent>
-    </Surface>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto' }}>
+          <Stack direction="row" spacing={-0.5} alignItems="center">
+            <Avatar sx={{ width: 26, height: 26 }}>
+              <Skeleton variant="circular" width={22} height={22} />
+            </Avatar>
+            <Avatar sx={{ width: 26, height: 26 }}>
+              <Skeleton variant="circular" width={22} height={22} />
+            </Avatar>
+            <Avatar sx={{ width: 26, height: 26 }}>
+              <Skeleton variant="circular" width={22} height={22} />
+            </Avatar>
+          </Stack>
+          <Stack direction="row" spacing={0.5}>
+            <Skeleton variant="circular" width={28} height={28} />
+            <Skeleton variant="circular" width={28} height={28} />
+            <Skeleton variant="circular" width={28} height={28} />
+          </Stack>
+        </Box>
+      </Box>
+    </Box>
   );
 }

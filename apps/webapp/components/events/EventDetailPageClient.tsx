@@ -30,6 +30,7 @@ import {
   GroupsOutlined,
   Language,
   Business,
+  MessageOutlined,
   OpenInNew,
   OpenInNewOutlined,
 } from '@mui/icons-material';
@@ -422,6 +423,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   );
 
   const organizerIds = (event?.organizers ?? []).filter((o) => o.user?.userId).map((o) => o.user!.userId);
+  const importedOrganizerUser =
+    organizerData.find((organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME)?.user ?? null;
   const hasImportedSystemOrganizer = organizerData.some(
     (organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME,
   );
@@ -435,6 +438,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2000&q=80';
   const directionsUrl = location.locationType === 'online' ? null : getLocationNavigationUrl(location);
   const eventSourceUrl = normalizeExternalUrl(event.eventLink);
+  const importedMessageHref = importedOrganizerUser?.username
+    ? ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(importedOrganizerUser.username)
+    : null;
+  const importedMessageLoginHref = importedMessageHref
+    ? `${ROUTES.AUTH.LOGIN}?redirectTo=${encodeURIComponent(importedMessageHref)}`
+    : null;
+  const contactGatherleHref = token ? importedMessageHref : importedMessageLoginHref;
   const calendarUrl = buildGoogleCalendarUrl({
     description: description || '',
     endAt: selectedOccurrence?.endAt ?? scheduleFallbackEndAt,
@@ -692,6 +702,19 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                       View event source
                     </Button>
                   ) : null}
+
+                  {hasImportedSystemOrganizer && contactGatherleHref ? (
+                    <Button
+                      component={Link}
+                      fullWidth
+                      href={contactGatherleHref}
+                      startIcon={<MessageOutlined />}
+                      variant="outlined"
+                      sx={utilityActionButtonSx}
+                    >
+                      Message Gatherle
+                    </Button>
+                  ) : null}
                 </Stack>
 
                 <Stack
@@ -738,6 +761,18 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     sx={{ ...utilityActionButtonSx, display: { xs: 'none', md: 'inline-flex' } }}
                   >
                     View event source
+                  </Button>
+                ) : null}
+
+                {hasImportedSystemOrganizer && contactGatherleHref ? (
+                  <Button
+                    component={Link}
+                    href={contactGatherleHref}
+                    startIcon={<MessageOutlined />}
+                    variant="outlined"
+                    sx={{ ...utilityActionButtonSx, display: { xs: 'none', md: 'inline-flex' } }}
+                  >
+                    Message Gatherle
                   </Button>
                 ) : null}
               </Stack>

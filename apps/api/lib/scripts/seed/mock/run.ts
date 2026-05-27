@@ -39,7 +39,7 @@ import { ParticipantStatus, ParticipantVisibility } from '@gatherle/commons/type
 import { EventVisibility } from '@gatherle/commons/types/eventSeries';
 import { logger } from '@/utils/logger';
 import EventSeriesService from '@/services/eventSeries';
-import { runCatalogSeed } from '../catalog/run';
+import { readSeededCatalogOrThrow } from '../catalog/run';
 import { ensureOwnerMembershipForOrganization } from '../shared/organizations';
 import { promptForHiddenValue } from '../shared/prompt';
 import { getRandomInt, getRandomUniqueItems } from '../shared/random';
@@ -445,7 +445,7 @@ export async function runMockDataSeed() {
 
     logger.info('Completed seeding event participants.');
   }
-  const allEventCategories = await runCatalogSeed();
+  const allEventCategories = await readSeededCatalogOrThrow();
   const allEventCategoriesIds = allEventCategories.map((category) => category.eventCategoryId!);
   const mockUsersPassword = await resolveMockUsersPassword();
 

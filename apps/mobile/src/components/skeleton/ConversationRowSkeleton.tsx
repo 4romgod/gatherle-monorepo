@@ -12,7 +12,10 @@ export function ConversationRowSkeleton() {
       <View style={styles.content}>
         <View style={styles.headerRow}>
           <SkeletonBlock style={styles.title} />
-          <SkeletonBlock style={styles.time} />
+          <View style={styles.metaRow}>
+            <SkeletonBlock style={styles.unreadBadge} />
+            <SkeletonBlock style={styles.time} />
+          </View>
         </View>
         <SkeletonBlock style={styles.preview} />
       </View>
@@ -35,7 +38,13 @@ const styles = StyleSheet.create({
   headerRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
+  },
+  metaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   preview: {
     height: 12,
@@ -56,5 +65,10 @@ const styles = StyleSheet.create({
   title: {
     height: 14,
     width: '44%',
+  },
+  unreadBadge: {
+    borderRadius: 999,
+    height: 18,
+    width: 24,
   },
 });
