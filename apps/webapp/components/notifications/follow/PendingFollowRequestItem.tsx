@@ -3,9 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { Avatar, Box, Button, ListItem, ListItemAvatar, ListItemText, Stack, Typography } from '@mui/material';
-import { Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { FollowApprovalStatus } from '@/data/graphql/types/graphql';
+import { ROUTES } from '@/lib/constants';
 
 interface PendingFollowRequestItemProps {
   followId: string;
@@ -38,6 +38,7 @@ export default function PendingFollowRequestItem({
   const [localLoading, setLocalLoading] = React.useState(false);
 
   const displayName = `${follower.given_name} ${follower.family_name}`.trim();
+  const displayHandle = follower.username ? `@${follower.username}` : displayName;
   const timestamp = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
   const isPending = approvalStatus === FollowApprovalStatus.Pending;
 
@@ -67,17 +68,19 @@ export default function PendingFollowRequestItem({
     <ListItem
       sx={{
         px: 2,
-        py: 2,
-        '&:hover': isPending ? { bgcolor: 'action.hover' } : {},
+        py: 1.5,
+        '&:hover': { bgcolor: 'action.hover' },
         alignItems: 'flex-start',
+        opacity: loading ? 0.72 : 1,
+        transition: 'background-color 0.2s ease, opacity 0.2s ease',
       }}
     >
-      <ListItemAvatar sx={{ mt: 0.5 }}>
-        <Link href={`/users/${follower.username}`}>
+      <ListItemAvatar sx={{ mt: 0.5, minWidth: 48 }}>
+        <Link href={ROUTES.USERS.USER(follower.username)}>
           <Avatar
             src={follower.profile_picture || undefined}
             alt={displayName}
-            sx={{ width: 48, height: 48, cursor: 'pointer' }}
+            sx={{ width: 40, height: 40, cursor: 'pointer' }}
           >
             {displayName.charAt(0).toUpperCase()}
           </Avatar>
@@ -87,98 +90,84 @@ export default function PendingFollowRequestItem({
       <ListItemText
         primary={
           <Box sx={{ minWidth: 0 }}>
-            <Link href={`/users/${follower.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Link href={ROUTES.USERS.USER(follower.username)} style={{ textDecoration: 'none', color: 'inherit' }}>
               <Typography
-                variant="subtitle1"
+                variant="body2"
                 fontWeight={600}
+                color="text.primary"
                 sx={{
+                  mb: 0.25,
                   cursor: 'pointer',
-                  '&:hover': { color: 'primary.main' },
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  '&:hover': { color: 'primary.main' },
                 }}
               >
-                {displayName}
+                {isPending ? `${displayHandle} wants to connect` : displayHandle}
               </Typography>
             </Link>
             <Typography
               variant="body2"
               color="text.secondary"
               sx={{
+                lineHeight: 1.4,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
               }}
             >
-              @{follower.username}
+              {follower.bio?.trim() || 'Requested to follow you.'}
             </Typography>
           </Box>
         }
         secondary={
-          <Box sx={{ mt: 1 }}>
-            {follower.bio && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{
-                  mb: 0.5,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {follower.bio}
-              </Typography>
-            )}
+          <Stack spacing={1} sx={{ mt: 0.75 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
               {formatDistanceToNow(timestamp, { addSuffix: true })}
             </Typography>
 
-            <Box sx={{ mt: 1.5 }}>
-              {isPending ? (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    startIcon={<CheckIcon />}
-                    onClick={handleAccept}
-                    disabled={loading}
-                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
-                  >
-                    Accept
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<CloseIcon />}
-                    onClick={handleReject}
-                    disabled={loading}
-                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
-                  >
-                    Reject
-                  </Button>
-                </Stack>
-              ) : (
-                <Box
-                  sx={{
-                    display: 'inline-block',
-                    px: 2,
-                    py: 0.75,
-                    borderRadius: 2,
-                    bgcolor: 'action.selected',
-                    color: 'text.secondary',
-                  }}
+            {isPending ? (
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleAccept}
+                  disabled={loading}
+                  sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 999 }}
                 >
-                  <Typography variant="caption" fontWeight={700}>
-                    {approvalStatus === FollowApprovalStatus.Accepted ? 'Accepted' : 'Rejected'}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Box>
+                  Accept
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleReject}
+                  disabled={loading}
+                  sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 999 }}
+                >
+                  Decline
+                </Button>
+              </Stack>
+            ) : (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: 1.25,
+                  py: 0.5,
+                  borderRadius: 999,
+                  bgcolor: 'action.selected',
+                  color: 'text.secondary',
+                }}
+              >
+                <Typography variant="caption" fontWeight={700}>
+                  {approvalStatus === FollowApprovalStatus.Accepted ? 'Accepted' : 'Declined'}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
         }
         slotProps={{
           secondary: { component: 'div' },

@@ -15,6 +15,7 @@ import MomentFeedSlide from './MomentFeedSlide';
 
 type Moment = GetMomentsFeedQuery['readMomentsFeed']['items'][number];
 const FEED_PAGE_SIZE = 12;
+const MOBILE_FEED_VIEWPORT_GAP_COMPENSATION = 0.5;
 
 export default function MomentsFeedPageClient() {
   const router = useRouter();
@@ -22,6 +23,9 @@ export default function MomentsFeedPageClient() {
   const token = session?.user?.token;
   const [activeIndex, setActiveIndex] = useState(0);
   const [hiddenMomentIds, setHiddenMomentIds] = useState<string[]>([]);
+  // Safari can leave a thin seam above the fixed mobile nav if the feed height
+  // matches the viewport exactly, so we subtract a half-pixel compensation.
+  const mobileViewportHeight = `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT - MOBILE_FEED_VIEWPORT_GAP_COMPENSATION}px)`;
 
   const { data, loading, error, fetchMore, networkStatus } = useQuery(GetMomentsFeedDocument, {
     context: token ? { headers: getAuthHeader(token) } : undefined,
@@ -148,7 +152,7 @@ export default function MomentsFeedPageClient() {
         sx={{
           alignItems: 'center',
           display: 'flex',
-          minHeight: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+          minHeight: { xs: mobileViewportHeight, md: '100dvh' },
         }}
       >
         <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', width: '100%' }}>
@@ -168,7 +172,7 @@ export default function MomentsFeedPageClient() {
         sx={{
           alignItems: 'center',
           display: 'flex',
-          minHeight: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+          minHeight: { xs: mobileViewportHeight, md: '100dvh' },
         }}
       >
         <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', width: '100%' }}>
@@ -190,7 +194,7 @@ export default function MomentsFeedPageClient() {
     <Box
       sx={{
         bgcolor: 'common.black',
-        minHeight: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+        minHeight: { xs: mobileViewportHeight, md: '100dvh' },
         position: 'relative',
       }}
     >
@@ -218,7 +222,7 @@ export default function MomentsFeedPageClient() {
       <Box
         onScroll={handleFeedScroll}
         sx={{
-          height: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+          height: { xs: mobileViewportHeight, md: '100dvh' },
           overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
@@ -230,7 +234,7 @@ export default function MomentsFeedPageClient() {
           <Box
             key={moment.momentId}
             sx={{
-              height: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+              height: { xs: mobileViewportHeight, md: '100dvh' },
               position: 'relative',
             }}
           >

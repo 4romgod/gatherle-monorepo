@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQuery } from '@apollo/client';
+import { LocationOffOutlined, MyLocationOutlined } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import {
   DateFilterOption,
   GetEventOccurrencesQuery,
@@ -47,6 +49,14 @@ export default function NearbyEventsSection() {
       return;
     }
 
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setPermissionState('unsupported');
+      setStatusMessage(
+        'Location sharing on iPhone Safari requires HTTPS or localhost. This page is not running in a secure context.',
+      );
+      return;
+    }
+
     setPermissionState('requesting');
     setStatusMessage('Requesting permission to read your location...');
 
@@ -66,7 +76,7 @@ export default function NearbyEventsSection() {
         logger.error('Error acquiring location', error);
         setLocationFilter(undefined);
         if (error.code === 1) {
-          setStatusMessage('Please allow location access to surface events near you.');
+          setStatusMessage('Location access is blocked. Allow it in your browser settings to surface events near you.');
         } else {
           setStatusMessage('Unable to determine your location. Please try again.');
         }
@@ -123,8 +133,6 @@ export default function NearbyEventsSection() {
     }
     return 'Share your location to discover the most relevant events nearby.';
   }, [permissionState, statusMessage]);
-
-  const shouldShowActionButton = permissionState === 'denied';
 
   const { data, loading, error } = useQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
     GetEventOccurrencesDocument,
@@ -200,21 +208,55 @@ export default function NearbyEventsSection() {
     }
 
     if (!locationFilter) {
+      const showLocationButton = permissionState === 'denied';
+      const LocationStateIcon = permissionState === 'unsupported' ? LocationOffOutlined : MyLocationOutlined;
+
       return (
         <Box
           sx={{
-            minHeight: 200,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 2,
-            border: (theme) => `1px dashed ${theme.palette.divider}`,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            px: { xs: 1.75, sm: 2 },
+            py: { xs: 1.5, sm: 1.75 },
             backgroundColor: 'background.paper',
           }}
         >
-          <Typography color="text.secondary" textAlign="center" sx={{ px: 2 }}>
-            {helperText}
-          </Typography>
+          <Stack spacing={1.25}>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 999,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'light'
+                      ? alpha(theme.palette.primary.main, 0.1)
+                      : alpha(theme.palette.primary.main, 0.16),
+                  color: 'primary.main',
+                }}
+              >
+                <LocationStateIcon fontSize="small" />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography fontWeight={700} sx={{ fontSize: '0.98rem', mb: 0.2 }}>
+                  {permissionState === 'unsupported' ? 'Location is unavailable here' : 'Turn on location access'}
+                </Typography>
+                <Typography color="text.secondary" variant="body2">
+                  {helperText}
+                </Typography>
+              </Box>
+            </Stack>
+            {showLocationButton ? (
+              <Button variant="outlined" size="small" onClick={requestLocation} sx={{ alignSelf: 'flex-start' }}>
+                Share my location
+              </Button>
+            ) : null}
+          </Stack>
         </Box>
       );
     }
@@ -249,21 +291,12 @@ export default function NearbyEventsSection() {
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
-      <Typography
-        variant="h6"
-        fontWeight={700}
-        sx={{ mb: { xs: 0.5, md: 1 }, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+      <Box sx={{ mb: { xs: 0.5, md: 1 } }}>
+        <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
           {locationLabel ? `Events near ${locationLabel}` : 'Events near you'}
-          {shouldShowActionButton && (
-            <Button variant="outlined" size="small" onClick={requestLocation}>
-              Share my location
-            </Button>
-          )}
-        </Box>
-      </Typography>
-      {permissionState !== 'idle' && permissionState !== 'requesting' && isLocationHydrated && (
+        </Typography>
+      </Box>
+      {permissionState === 'granted' && isLocationHydrated && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {helperText}
         </Typography>

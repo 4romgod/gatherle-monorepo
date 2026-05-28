@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,7 +56,7 @@ export function MomentFeedPage({
   const { authToken, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const footerBottomPadding = Math.max(insets.bottom, 16);
+  const footerBottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom - 6, 12) : Math.max(insets.bottom, 16);
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
   });

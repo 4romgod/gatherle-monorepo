@@ -135,7 +135,7 @@ export default function MomentFeedSlide({ active, moment, onDeleted }: MomentFee
   const videoResetThresholdSeconds = Math.max((moment.durationSeconds ?? 0) - 0.1, 0.1);
   const resolvedBackground =
     moment.type === EventMomentType.Text ? resolveMomentBackground(moment.background) : '#000000';
-  const captionBottomOffset = showReplyComposer ? 92 : 28;
+  const captionBottomOffset = showReplyComposer ? 86 : 28;
   const targetUserId = showReplyComposer ? authorUserId : undefined;
   const desktopFrameSx = {
     width: '100%',
@@ -688,7 +688,7 @@ export default function MomentFeedSlide({ active, moment, onDeleted }: MomentFee
               bottom: 0,
               zIndex: 6,
               px: 2,
-              pb: 2,
+              pb: { xs: 0.5, sm: 2 },
               display: 'flex',
               justifyContent: 'center',
             }}

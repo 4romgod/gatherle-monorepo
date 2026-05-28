@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -9,64 +10,142 @@ import {
   Divider,
   List,
   Skeleton,
-  Tab,
-  Tabs,
-  Tooltip,
+  Stack,
   Typography,
 } from '@mui/material';
 import { DoneAll as MarkAllReadIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import PendingFollowRequestsList from './follow/PendingFollowRequestsList';
+import { FollowApprovalStatus, FollowTargetType, type GetFollowRequestsQuery } from '@/data/graphql/types/graphql';
 import NotificationItem from './NotificationItem';
+import PendingFollowRequestItem from './follow/PendingFollowRequestItem';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { useNotifications, useNotificationActions } from '@/hooks';
+import { useFollowRequests, useNotificationActions, useNotifications } from '@/hooks';
+import type { Notification } from '@/hooks/useNotifications';
 import { logger } from '@/lib/utils';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+type FollowRequest = GetFollowRequestsQuery['readFollowRequests'][number];
+type NotificationFeedItem =
+  | { createdAt: string; id: string; kind: 'notification'; notification: Notification }
+  | { createdAt: string; id: string; kind: 'follow-request'; request: FollowRequest };
 
-function TabPanel({ children, value, index }: TabPanelProps) {
-  return (
-    <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
+function formatDateGroupLabel(createdAt?: string | null) {
+  if (!createdAt) {
+    return 'Earlier';
+  }
+
+  const target = new Date(createdAt);
+  if (Number.isNaN(target.getTime())) {
+    return 'Earlier';
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
+  const dayDiff = Math.round((startOfTarget - startOfToday) / 86400000);
+
+  if (dayDiff === 0) {
+    return 'Today';
+  }
+
+  if (dayDiff === -1) {
+    return 'Yesterday';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+  }).format(target);
 }
 
 function NotificationsSkeleton() {
   return (
-    <List disablePadding>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Box key={i} sx={{ display: 'flex', gap: 2, px: 2, py: 1.5 }}>
-          <Skeleton variant="circular" width={40} height={40} />
-          <Box sx={{ flex: 1 }}>
-            <Skeleton variant="text" width="60%" height={20} />
-            <Skeleton variant="text" width="90%" height={16} />
-            <Skeleton variant="text" width="30%" height={14} />
-          </Box>
+    <Stack spacing={2}>
+      {[1, 2].map((group) => (
+        <Box key={group}>
+          <Skeleton variant="text" width={92} height={18} sx={{ mb: 1 }} />
+          {[1, 2].map((row, index) => (
+            <React.Fragment key={`${group}-${row}`}>
+              <Box sx={{ display: 'flex', gap: 2, px: 2, py: 1.75 }}>
+                <Skeleton variant="circular" width={40} height={40} />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton variant="text" width="58%" height={20} />
+                  <Skeleton variant="text" width="88%" height={16} />
+                  <Skeleton variant="text" width="32%" height={14} />
+                </Box>
+              </Box>
+              <Divider />
+            </React.Fragment>
+          ))}
         </Box>
       ))}
-    </List>
+    </Stack>
   );
 }
 
 export default function NotificationsPage() {
-  const [tabValue, setTabValue] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { notifications, loading, error, hasMore, loadMore, loadingMore, refetch, unreadCount } = useNotifications({
     limit: 20,
   });
   const {
+    requests,
+    loading: followRequestsLoading,
+    error: followRequestsError,
+    refetch: refetchFollowRequests,
+    accept,
+    reject,
+    isLoading: followActionsLoading,
+  } = useFollowRequests(FollowTargetType.User);
+  const {
     markAsRead,
     markAsUnread,
     markAllAsRead,
     deleteNotification,
-    isLoading: actionsLoading,
+    isLoading: notificationActionsLoading,
   } = useNotificationActions();
+
+  const pendingFollowRequests = useMemo(
+    () => requests.filter((request) => request.approvalStatus === FollowApprovalStatus.Pending),
+    [requests],
+  );
+
+  const feedItems = useMemo<NotificationFeedItem[]>(
+    () =>
+      [
+        ...notifications.map((notification) => ({
+          createdAt: notification.createdAt,
+          id: notification.notificationId,
+          kind: 'notification' as const,
+          notification,
+        })),
+        ...pendingFollowRequests.map((request) => ({
+          createdAt: request.createdAt,
+          id: request.followId,
+          kind: 'follow-request' as const,
+          request,
+        })),
+      ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
+    [notifications, pendingFollowRequests],
+  );
+
+  const groupedFeed = useMemo(() => {
+    const groups = new Map<string, NotificationFeedItem[]>();
+
+    for (const item of feedItems) {
+      const label = formatDateGroupLabel(item.createdAt);
+      const current = groups.get(label) ?? [];
+      current.push(item);
+      groups.set(label, current);
+    }
+
+    return Array.from(groups.entries()).map(([label, items]) => ({ items, label }));
+  }, [feedItems]);
+
+  const isLoadingFeed = (loading || followRequestsLoading) && feedItems.length === 0;
+  const isMutating = notificationActionsLoading || followActionsLoading;
+  const blockingError = feedItems.length === 0 ? error || followRequestsError : null;
   const loadMoreTriggerRef = useInfiniteScroll({
-    enabled: tabValue === 0 && hasMore,
+    enabled: hasMore,
     loading: loading || loadingMore || isRefreshing,
     onEndReached: loadMore,
   });
@@ -74,162 +153,168 @@ export default function NotificationsPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), refetchFollowRequests()]);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       await markAsRead(notificationId);
-    } catch (error) {
-      logger.error('Failed to mark notification as read:', error);
+    } catch (actionError) {
+      logger.error('Failed to mark notification as read:', actionError);
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-    } catch (error) {
-      logger.error('Failed to mark all notifications as read:', error);
+    } catch (actionError) {
+      logger.error('Failed to mark all notifications as read:', actionError);
     }
   };
 
   const handleDelete = async (notificationId: string) => {
     try {
       await deleteNotification(notificationId);
-    } catch (error) {
-      logger.error('Failed to delete notification:', error);
+    } catch (actionError) {
+      logger.error('Failed to delete notification:', actionError);
     }
   };
 
   const handleMarkAsUnread = async (notificationId: string) => {
     try {
       await markAsUnread(notificationId);
-    } catch (error) {
-      logger.error('Failed to mark notification as unread:', error);
+    } catch (actionError) {
+      logger.error('Failed to mark notification as unread:', actionError);
+    }
+  };
+
+  const handleAcceptFollowRequest = async (followId: string) => {
+    try {
+      await accept(followId);
+    } catch (actionError) {
+      logger.error('Failed to accept follow request:', actionError);
+    }
+  };
+
+  const handleRejectFollowRequest = async (followId: string) => {
+    try {
+      await reject(followId);
+    } catch (actionError) {
+      logger.error('Failed to reject follow request:', actionError);
     }
   };
 
   return (
-    <Box sx={{ py: 6 }}>
-      <Container maxWidth="md">
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'flex-start', md: 'center' },
-            justifyContent: { xs: 'flex-start', md: 'space-between' },
-            mb: 3,
-            gap: { xs: 1, md: 0 },
-          }}
-        >
-          <Typography variant="h4" fontWeight={700} sx={{ mb: { xs: 1, md: 0 } }}>
-            Notifications
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button size="small" startIcon={<RefreshIcon />} onClick={handleRefresh} disabled={isRefreshing}>
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-            {unreadCount > 0 && (
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<MarkAllReadIcon />}
-                onClick={handleMarkAllAsRead}
-                disabled={actionsLoading}
-              >
-                Mark all read
+    <Box sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="sm">
+        <Stack spacing={2.5}>
+          <Stack spacing={1.5}>
+            <Typography variant="h4" fontWeight={800} sx={{ fontSize: { xs: '2.1rem', md: '2.5rem' } }}>
+              Notifications
+            </Typography>
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button size="small" startIcon={<RefreshIcon />} onClick={handleRefresh} disabled={isRefreshing}>
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
-            )}
-          </Box>
-        </Box>
-
-        <Box>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            sx={{
-              borderBottom: 1,
-              borderColor: 'divider',
-              '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 },
-            }}
-          >
-            <Tab
-              label={
-                <Tooltip
-                  title="All your notifications including likes, comments, and mentions"
-                  placement="bottom"
-                  arrow
+              {unreadCount > 0 ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<MarkAllReadIcon />}
+                  onClick={handleMarkAllAsRead}
+                  disabled={isMutating}
                 >
-                  <span>{`All ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}</span>
-                </Tooltip>
-              }
-            />
-            <Tab
-              label={
-                <Tooltip title="Pending requests from people who want to follow you" placement="bottom" arrow>
-                  <span>Follow Requests</span>
-                </Tooltip>
-              }
-            />
-          </Tabs>
-
-          <TabPanel value={tabValue} index={0}>
-            {(loading && notifications.length === 0) || isRefreshing ? (
-              <NotificationsSkeleton />
-            ) : error ? (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="error">Failed to load notifications</Typography>
-                <Button onClick={() => refetch()} sx={{ mt: 2 }}>
-                  Try Again
+                  Mark all read
                 </Button>
-              </Box>
-            ) : notifications.length === 0 ? (
-              <Box sx={{ p: 6, textAlign: 'center' }}>
-                <Typography color="text.secondary">No notifications yet</Typography>
-                <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
-                  When you get notifications, they&apos;ll show up here
-                </Typography>
-              </Box>
-            ) : (
-              <>
-                <List disablePadding>
-                  {notifications.map((notification, index) => (
-                    <React.Fragment key={notification.notificationId}>
-                      <NotificationItem
-                        notification={notification}
-                        onMarkRead={handleMarkAsRead}
-                        onMarkUnread={handleMarkAsUnread}
-                        onDelete={handleDelete}
-                        isLoading={actionsLoading}
-                      />
-                      {index < notifications.length - 1 && <Divider />}
+              ) : null}
+            </Stack>
+          </Stack>
+
+          {feedItems.length > 0 && (error || followRequestsError) ? (
+            <Alert severity="warning">
+              Part of your notification activity is unavailable right now, but the rest of the feed is still loaded.
+            </Alert>
+          ) : null}
+
+          {isLoadingFeed || isRefreshing ? (
+            <NotificationsSkeleton />
+          ) : blockingError ? (
+            <Box sx={{ py: 8, textAlign: 'center' }}>
+              <Typography color="error" fontWeight={700}>
+                We couldn&apos;t load your notifications.
+              </Typography>
+              <Button onClick={() => void handleRefresh()} sx={{ mt: 2 }}>
+                Try again
+              </Button>
+            </Box>
+          ) : groupedFeed.length === 0 ? (
+            <Box sx={{ py: 8, textAlign: 'center' }}>
+              <Typography fontWeight={700}>You&apos;re all caught up.</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                When new activity happens, it&apos;ll show up here.
+              </Typography>
+            </Box>
+          ) : (
+            <List disablePadding>
+              {groupedFeed.map((group, groupIndex) => (
+                <React.Fragment key={group.label}>
+                  <Typography
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      letterSpacing: 0.2,
+                      mt: groupIndex === 0 ? 0 : 2,
+                      mb: 0.75,
+                      px: 2,
+                    }}
+                  >
+                    {group.label}
+                  </Typography>
+
+                  {group.items.map((item) => (
+                    <React.Fragment key={item.id}>
+                      {item.kind === 'notification' ? (
+                        <NotificationItem
+                          notification={item.notification}
+                          onMarkRead={handleMarkAsRead}
+                          onMarkUnread={handleMarkAsUnread}
+                          onDelete={handleDelete}
+                          isLoading={notificationActionsLoading}
+                        />
+                      ) : (
+                        <PendingFollowRequestItem
+                          followId={item.request.followId}
+                          follower={item.request.follower}
+                          approvalStatus={item.request.approvalStatus}
+                          createdAt={item.request.createdAt}
+                          updatedAt={item.request.updatedAt}
+                          onAccept={handleAcceptFollowRequest}
+                          onReject={handleRejectFollowRequest}
+                          isLoading={followActionsLoading}
+                        />
+                      )}
+                      <Divider />
                     </React.Fragment>
                   ))}
-                </List>
+                </React.Fragment>
+              ))}
 
-                {hasMore && (
-                  <Box
-                    ref={loadMoreTriggerRef}
-                    sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minHeight: 48, p: 2 }}
-                  >
-                    {loadingMore ? <CircularProgress size={18} /> : null}
-                  </Box>
-                )}
-              </>
-            )}
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={1}>
-            <PendingFollowRequestsList />
-          </TabPanel>
-        </Box>
+              {hasMore ? (
+                <Box
+                  ref={loadMoreTriggerRef}
+                  sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minHeight: 48 }}
+                >
+                  {loadingMore ? <CircularProgress size={18} /> : null}
+                </Box>
+              ) : null}
+            </List>
+          )}
+        </Stack>
       </Container>
     </Box>
   );
