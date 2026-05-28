@@ -118,14 +118,11 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
-                  theme.palette.secondary.light,
-                  0.35,
-                )} 100%)`,
-                color: 'text.secondary',
+                background: theme.palette.hero.gradient,
+                color: theme.palette.hero.text,
               }}
             >
-              <PeopleOutline sx={{ fontSize: 40, opacity: 0.7 }} />
+              <PeopleOutline sx={{ fontSize: 40, opacity: 0.82 }} />
             </Box>
           }
           imageSx={{

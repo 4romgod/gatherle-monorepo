@@ -774,7 +774,7 @@ export function MomentViewer({
         embedded ? [styles.embeddedViewerShell, containerHeight ? { height: containerHeight } : null] : null,
         !embedded
           ? {
-              paddingBottom: insets.bottom,
+              paddingBottom: Math.max(insets.bottom, 16),
               paddingTop: insets.top,
             }
           : null,

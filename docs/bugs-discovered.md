@@ -54,6 +54,120 @@ as a knowledge base to prevent similar issues in the future.
 
 ---
 
+## BUG-008: Mobile Workspace Drifted Past The Validated Expo Dependency Matrix
+
+**Date Discovered:** May 28, 2026  
+**Severity:** Medium  
+**Status:** ✅ Fixed
+
+### Symptoms
+
+- The mobile workspace had moved to the Expo SDK 55 / React Native 0.83 package line while this branch also changed
+  native-touching dependencies and media primitives.
+- The branch now introduces `expo-image`, plus safe-area/navigation work that still needs to be verified against one
+  coherent native dependency set before merge.
+- Keeping the SDK 55 versions in this branch would have left the repo on a package matrix we had not revalidated end to
+  end.
+
+### Root Cause
+
+Expo SDK upgrades are not isolated dependency bumps. `expo`, `react-native`, `expo-image`, `react-native-reanimated`,
+`react-native-worklets`, `react-native-pager-view`, `react-native-screens`, and `react-native-keyboard-controller` need
+to move as a coordinated set.
+
+This branch adds `expo-image` and several mobile shell fixes, but the validated dependency matrix for that work is still
+the Expo SDK 54 line. Leaving the mobile workspace on SDK 55 would have mixed new feature work with an unverified
+native/runtime upgrade.
+
+### Fix
+
+- Pin the mobile workspace back to Expo SDK 54-compatible versions in `apps/mobile/package.json`
+- Add `expo-image` on the SDK 54-compatible version line
+- Treat the eventual Expo SDK 55 upgrade as a separate follow-up that upgrades and verifies the full native dependency
+  set together
+
+### Files Changed
+
+- `apps/mobile/package.json`
+- `package-lock.json`
+- `docs/bugs-discovered.md`
+
+### Lessons Learned
+
+1. Expo SDK upgrades should be isolated from feature work that also changes native dependencies.
+2. When adding a native module such as `expo-image`, lock the rest of the mobile dependency matrix to the currently
+   validated Expo SDK before merging.
+
+---
+
+## BUG-007: iPhone Search Cancel Leaves Keyboard-Sized Blank Gap In Home And Events
+
+**Date Discovered:** May 27, 2026  
+**Severity:** High  
+**Status:** 🔴 Open
+
+### Steps To Reproduce
+
+1. Install the Expo mobile app on a physical iPhone.
+2. Open the Gatherle mobile app.
+3. Go to the `Home` tab or the `Events` tab.
+4. Tap the event search pill / search bar.
+5. Enter any search term.
+6. Tap `Cancel`.
+7. Observe the feed layout immediately after the search surface closes.
+
+### Symptoms
+
+- A large white blank region appears above the bottom tab bar after canceling search.
+- The blank region is roughly keyboard-height.
+- Feed content is pushed upward and the layout looks visibly broken until the scene is re-rendered.
+- The issue is most clearly reproducible on a physical iPhone; it was also seen intermittently on Android during earlier
+  testing.
+- The problem affects two primary discovery surfaces: `Home` and `Events`.
+
+### Impact
+
+- High-severity UX bug because it breaks core browsing/discovery flows on the first two tabs most users will interact
+  with.
+- Leaves the app in a visually corrupted state after a common action (`search` -> `cancel`).
+- Makes the mobile build feel unstable on iPhone even when the rest of the screen data has loaded correctly.
+
+### Root Cause
+
+Unknown so far.
+
+Current working hypothesis:
+
+- The bug is caused by an iOS layout recovery issue after the search flow changes keyboard/window height.
+- The most likely interaction point is between the event search surface, iOS keyboard lifecycle, and the
+  `@react-navigation/material-top-tabs` scene/pager layout used for the bottom-tab shell.
+
+### Investigation Notes
+
+The following attempted fixes did **not** resolve the issue:
+
+- Adjusting `PageContainer` keyboard avoidance / keyboard inset behavior for `Home` and `Events`
+- Changing the search modal close order to dismiss the keyboard before closing
+- Explicitly measuring and constraining the `MainTabs` viewport / tab scene height
+
+This means the next investigation should start from the tab scene / pager behavior and the search presentation model,
+not by retrying those same fixes.
+
+### Evidence
+
+- Repro screenshot captured from iPhone on May 27, 2026 shows a white gap approximately the height of the dismissed
+  keyboard, above the bottom tab bar, after canceling search.
+
+### Files Changed
+
+- `docs/bugs-discovered.md`
+
+### Lessons Learned
+
+1. iPhone keyboard/layout bugs in shared tab shells need to be documented early once multiple plausible fixes fail.
+2. When a visual gap matches keyboard height, investigate scene/pager recovery before spending more cycles on cosmetic
+   spacing fixes.
+
 ## BUG-001: Event Participants Not Loading on Detail Page
 
 **Date Discovered:** January 19, 2026  

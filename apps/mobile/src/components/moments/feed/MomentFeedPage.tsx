@@ -8,6 +8,7 @@ import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import type { VideoPlayer } from 'expo-video';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetEventsDocument } from '@data/graphql/query/Event/query';
 import type { MobileMomentsFeedMoment } from '@data/graphql/query/EventMoment/types';
@@ -54,6 +55,8 @@ export function MomentFeedPage({
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const footerBottomPadding = Math.max(insets.bottom, 16);
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
   });
@@ -433,7 +436,10 @@ export function MomentFeedPage({
         ) : null}
       </View>
 
-      <KeyboardStickyView offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }} style={styles.footer}>
+      <KeyboardStickyView
+        offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }}
+        style={[styles.footer, { paddingBottom: footerBottomPadding }]}
+      >
         <ChatComposer
           isConnected={isConnected}
           onSend={handleReply}

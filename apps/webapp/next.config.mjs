@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+const allowedDevOrigins =
+  process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
 
 const getOrigin = (value) => {
   if (!value) {
@@ -119,7 +123,7 @@ const nextConfig = {
   compiler: {
     styledComponents: true,
   },
-  allowedDevOrigins: ['*'],
+  ...(isDevelopment ? { allowedDevOrigins } : {}),
 };
 
 export default nextConfig;
