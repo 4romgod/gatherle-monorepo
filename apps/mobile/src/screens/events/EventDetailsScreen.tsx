@@ -84,7 +84,7 @@ export function EventDetailsScreen() {
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
   const heroPillLabel = useMemo(() => formatCountLabel(localParticipantCount, 'going'), [localParticipantCount]);
-  const stickyBarBottom = Math.max(insets.bottom + 2, 18);
+  const stickyBarBottom = Math.max(insets.bottom, 24);
   const heroFallback = (
     <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
       <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>

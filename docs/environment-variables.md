@@ -110,6 +110,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (required for Google OAuth in NextAuth).
   - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
     credential used by NextAuth).
+  - `NEXT_DEV_ALLOWED_ORIGINS` (optional; comma-separated hostnames/IPs to allow cross-origin `/_next/*` requests in dev
+    mode, e.g. `192.168.0.7` for LAN testing from a phone). Not needed for standard `localhost` development.
   - `NEXT_PUBLIC_S3_MEDIA_URL` — required when testing media uploads locally. Point at the Beta bucket:
     `https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See

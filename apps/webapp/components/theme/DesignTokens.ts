@@ -196,7 +196,7 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
             color: theme.palette.grey[500],
             WebkitTextFillColor: theme.palette.grey[500],
           },
-          '& .MuiInputBase-input': {
+          '& .MuiInputBase-input, & .MuiInputBase-inputMultiline': {
             color: theme.palette.text.primary,
           },
           '& .MuiInputBase-input:-webkit-autofill, & .MuiInputBase-input:-webkit-autofill:hover, & .MuiInputBase-input:-webkit-autofill:focus, & .MuiInputBase-input:-webkit-autofill:active':
@@ -207,6 +207,11 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
               borderRadius: 'inherit',
               transition: 'background-color 9999s ease-out 0s',
             },
+          [theme.breakpoints.down('sm')]: {
+            '& .MuiInputBase-input, & .MuiInputBase-inputMultiline': {
+              fontSize: '16px',
+            },
+          },
         }),
       },
     },
@@ -254,9 +259,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     MuiSkeleton: {
       styleOverrides: {
         root: ({ theme }) => {
-          const baseLight = alpha(theme.palette.text.primary, 0.2);
-          const waveLight = alpha(theme.palette.text.primary, 0.2);
-          const baseDark = alpha(theme.palette.common.white, 0.2);
+          const baseLight = alpha(theme.palette.text.primary, 0.08);
+          const waveLight = alpha(theme.palette.common.white, 0.56);
+          const baseDark = alpha(theme.palette.common.white, 0.1);
           const waveDark = alpha(theme.palette.common.white, 0.2);
 
           const background = theme.palette.mode === 'light' ? baseLight : baseDark;

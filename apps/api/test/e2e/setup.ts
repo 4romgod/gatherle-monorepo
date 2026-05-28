@@ -6,6 +6,8 @@ import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 import { getSeededTestUsers, type SeededUserCredentials } from './utils/helpers';
 import { clearRuntimeContext, writeRuntimeContext } from './runtimeContext';
+import { getConfigValue } from '@/clients';
+import { JWT_SECRET, SECRET_KEYS } from '@/constants';
 import { generateToken } from '@/utils/auth';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
@@ -38,8 +40,27 @@ const assertUrlResponds = async (
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const name = String((error as { name?: unknown }).name ?? 'Error');
+    const message = String((error as { message?: unknown }).message ?? error);
+    return `${name}: ${message}`;
+  }
+
+  return String(error);
+};
+
 const hasRetryableMessage = (value: unknown): boolean =>
   typeof value === 'string' && /(internal server error|timed out|timeout|temporarily unavailable)/i.test(value);
+
+const isRetryableSecretFetchError = (error: unknown): boolean =>
+  /(timed out|timeout|ECONNRESET|socket hang up|fetch failed|AbortError|TooManyRequests|Throttl|ServiceUnavailable)/i.test(
+    describeError(error),
+  );
 
 const isRetryableFailure = (status: number, body: unknown): boolean => {
   if (status === 429 || status >= 500) {
@@ -102,12 +123,39 @@ const getReadSeededUserByUsernameQuery = (username: string) => ({
 
 const isLocalGraphqlUrl = (graphqlUrl: string): boolean => new URL(graphqlUrl).hostname.includes('localhost');
 
-const canMintSeededUserToken = (): boolean => {
-  if (process.env.STAGE === APPLICATION_STAGES.DEV) {
-    return Boolean(process.env.JWT_SECRET?.trim());
+const resolveE2eJwtSecret = async (): Promise<string | undefined> => {
+  if (JWT_SECRET?.trim()) {
+    return JWT_SECRET.trim();
   }
 
-  return Boolean(process.env.SECRET_ARN?.trim() && process.env.AWS_REGION?.trim());
+  if (process.env.STAGE === APPLICATION_STAGES.DEV) {
+    return undefined;
+  }
+
+  if (!process.env.SECRET_ARN?.trim() || !process.env.AWS_REGION?.trim()) {
+    return undefined;
+  }
+
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return (await getConfigValue(SECRET_KEYS.JWT_SECRET)).trim();
+    } catch (error) {
+      const shouldRetry = attempt < maxAttempts && isRetryableSecretFetchError(error);
+
+      if (!shouldRetry) {
+        throw error;
+      }
+
+      console.warn(
+        `[setup] jwt secret fetch retry ${attempt}/${maxAttempts} after transient failure: ${describeError(error)}`,
+      );
+      await sleep(750 * attempt);
+    }
+  }
+
+  return undefined;
 };
 
 const getRetryAfterSeconds = (body: unknown): number | undefined => {
@@ -134,7 +182,11 @@ const canFallbackToLocalToken = (status: number, body: unknown): boolean => {
   return Array.isArray(payload.errors) && payload.errors.some((error) => `${error.message ?? ''}`.includes('Too many'));
 };
 
-const mintSeededUserToken = async (graphqlUrl: string, user: SeededUserCredentials): Promise<UserWithToken> => {
+const mintSeededUserToken = async (
+  graphqlUrl: string,
+  user: SeededUserCredentials,
+  jwtSecret: string,
+): Promise<UserWithToken> => {
   const response = await postGraphQL(graphqlUrl, getReadSeededUserByUsernameQuery(user.username), 20_000);
   const seededUser = response.body.data?.readUserByUsername;
 
@@ -144,13 +196,16 @@ const mintSeededUserToken = async (graphqlUrl: string, user: SeededUserCredentia
     );
   }
 
-  const token = await generateToken({
-    userId: seededUser.userId,
-    email: user.email,
-    username: user.username,
-    userRole: user.userRole,
-    isTestUser: true,
-  });
+  const token = await generateToken(
+    {
+      userId: seededUser.userId,
+      email: user.email,
+      username: user.username,
+      userRole: user.userRole,
+      isTestUser: true,
+    },
+    jwtSecret,
+  );
 
   return {
     ...seededUser,
@@ -242,16 +297,16 @@ const assertServerReady = async (graphqlUrl: string): Promise<void> => {
   }
 };
 
-const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
+const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string): Promise<void> => {
   const seededUsers = getSeededTestUsers();
   const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
   const seededUsersByEmail: Record<string, UserWithToken> = {};
-  const preferMintedSeededTokens = !isLocalGraphqlUrl(graphqlUrl) && canMintSeededUserToken();
+  const preferMintedSeededTokens = !isLocalGraphqlUrl(graphqlUrl) && Boolean(jwtSecret);
 
   for (const user of usersByEmail) {
-    if (preferMintedSeededTokens) {
+    if (preferMintedSeededTokens && jwtSecret) {
       try {
-        seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
+        seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user, jwtSecret);
         continue;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -279,10 +334,10 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
       lastFailure = JSON.stringify(response.body.errors ?? response.body);
       const retryAfterSeconds = getRetryAfterSeconds(response.body);
       if (canFallbackToLocalToken(response.status, response.body)) {
-        if (canMintSeededUserToken()) {
+        if (jwtSecret) {
           try {
             console.warn(`[setup] seeded user ${user.email} is temporarily locked; minting local e2e token instead`);
-            seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user);
+            seededUsersByEmail[user.email] = await mintSeededUserToken(graphqlUrl, user, jwtSecret);
             lastFailure = '';
             break;
           } catch (error) {
@@ -349,6 +404,7 @@ const primeRuntimeContext = async (graphqlUrl: string): Promise<void> => {
   writeRuntimeContext({
     seededUsersByEmail,
     firstEventCategory,
+    jwtSecret,
   });
 };
 
@@ -372,7 +428,8 @@ const setup = async () => {
     await warmUpLambda(graphqlUrl, API_E2E_REMOTE_WARMUP_REQUESTS);
   }
 
-  await primeRuntimeContext(graphqlUrl);
+  const jwtSecret = await resolveE2eJwtSecret();
+  await primeRuntimeContext(graphqlUrl, jwtSecret);
 
   console.log('Done setting up e2e tests...');
 };

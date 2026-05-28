@@ -4,6 +4,7 @@ import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetMomentByIdDocument } from '@data/graphql/query/EventMoment/query';
 import type { MobileEventMoment } from '@data/graphql/query/EventMoment/types';
@@ -46,8 +47,10 @@ export function MessageThreadScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const route = useRoute<MessageThreadRoute>();
   const { theme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { authToken, isAuthenticated, userId } = useAppShell();
   const { avatarUrl, displayName, username, withUserId } = route.params;
+  const composerBottomPadding = Math.max(insets.bottom, 16);
   const scrollRef = useRef<ScrollView | null>(null);
   const [replyMomentViewerOpen, setReplyMomentViewerOpen] = useState(false);
   const [replyMomentViewerItems, setReplyMomentViewerItems] = useState<MobileEventMoment[]>([]);
@@ -248,7 +251,10 @@ export function MessageThreadScreen() {
           </View>
         )}
 
-        <KeyboardStickyView offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }} style={styles.composerSticky}>
+        <KeyboardStickyView
+          offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }}
+          style={[styles.composerSticky, { paddingBottom: composerBottomPadding }]}
+        >
           <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
         </KeyboardStickyView>
       </View>

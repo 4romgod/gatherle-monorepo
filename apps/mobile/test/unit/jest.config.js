@@ -10,6 +10,13 @@ const config = {
     '^@data/(.*)$': '<rootDir>/data/$1',
     '^@gatherle/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
     '^@gatherle/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    '^react$': '<rootDir>/node_modules/react',
+    '^react/jsx-runtime$': '<rootDir>/node_modules/react/jsx-runtime',
+    '^react/jsx-dev-runtime$': '<rootDir>/node_modules/react/jsx-dev-runtime',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^react-test-renderer$': '<rootDir>/node_modules/react-test-renderer',
+    '^react-native$': '<rootDir>/node_modules/react-native',
+    '^react-native/(.*)$': '<rootDir>/node_modules/react-native/$1',
   },
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo|expo-.*|@expo/.*|@expo-google-fonts/.*|@react-navigation/.*|@gorhom/.*|react-native-reanimated|react-native-gesture-handler|react-native-safe-area-context|react-native-screens)/)',

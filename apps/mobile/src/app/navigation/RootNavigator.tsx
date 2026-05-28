@@ -3,11 +3,12 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from '@/components/core/BrandMark';
 import { BottomTabBar } from '@/app/navigation/BottomTabBar';
 import { HeaderMenuButton } from '@/app/navigation/HeaderMenuButton';
+import { StackHeader } from '@/app/navigation/StackHeader';
 import { ForgotPasswordScreen } from '@/screens/auth/ForgotPasswordScreen';
 import { LoginProvidersScreen } from '@/screens/auth/LoginProvidersScreen';
 import { LoginScreen } from '@/screens/auth/LoginScreen';
@@ -106,15 +107,19 @@ export function RootNavigator() {
 
   return (
     <Stack.Navigator
-      screenOptions={{
+      screenOptions={() => ({
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
-        headerRight: () => (
-          <View style={styles.headerRightWrap}>
-            <HeaderMenuButton />
-          </View>
-        ),
+        header: Platform.OS === 'ios' ? (props) => <StackHeader {...props} /> : undefined,
+        headerRight:
+          Platform.OS === 'ios'
+            ? undefined
+            : () => (
+                <View style={styles.headerRightWrap}>
+                  <HeaderMenuButton />
+                </View>
+              ),
         headerShadowVisible: false,
         headerStyle: {
           backgroundColor: theme.colors.surface,
@@ -125,7 +130,7 @@ export function RootNavigator() {
           fontFamily: fontFamily.bodyBold,
           fontSize: 18,
         },
-      }}
+      })}
     >
       <Stack.Screen component={MainTabs} name="MainTabs" options={{ headerShown: false }} />
       <Stack.Screen component={LoginProvidersScreen} name="Login" options={{ presentation: 'modal', title: 'Login' }} />

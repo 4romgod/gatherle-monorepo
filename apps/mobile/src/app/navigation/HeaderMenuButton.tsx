@@ -1,34 +1,20 @@
-import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet } from 'react-native';
 import { useAppShell } from '@/app/providers/AppShellProvider';
-import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 
-export function HeaderMenuButton() {
+type HeaderMenuButtonProps = {
+  tintColor?: string;
+};
+
+export function HeaderMenuButton({ tintColor }: HeaderMenuButtonProps) {
   const { openDrawer } = useAppShell();
-  const { theme } = useAppTheme();
 
   return (
-    <Pressable
+    <HeaderIconButton
       accessibilityLabel="Open navigation menu"
-      accessibilityRole="button"
+      icon="menu"
       onPress={openDrawer}
-      style={({ pressed }) => [
-        styles.button,
-        {
-          opacity: pressed ? 0.64 : 1,
-        },
-      ]}
-    >
-      <Feather color={theme.colors.primary} name="menu" size={20} />
-    </Pressable>
+      size={20}
+      tintColor={tintColor}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 40,
-    minWidth: 40,
-  },
-});

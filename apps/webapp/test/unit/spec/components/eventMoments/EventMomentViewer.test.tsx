@@ -30,6 +30,7 @@ type HlsIsSupported = { isSupported: jest.Mock };
 const mockUseSession = jest.fn();
 const mockUseMutation = jest.fn();
 const mockUseChatRealtime = jest.fn();
+const mockSetToastProps = jest.fn();
 
 jest.mock('next-auth/react', () => ({
   useSession: () => mockUseSession(),
@@ -41,6 +42,12 @@ jest.mock('@apollo/client', () => ({
 
 jest.mock('@/hooks', () => ({
   useChatRealtime: (...args: unknown[]) => mockUseChatRealtime(...args),
+}));
+
+jest.mock('@/hooks/useAppContext', () => ({
+  useAppContext: () => ({
+    setToastProps: mockSetToastProps,
+  }),
 }));
 
 jest.mock('@/data/graphql/query', () => ({

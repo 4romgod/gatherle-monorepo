@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { alpha, Box, Chip, Typography } from '@mui/material';
+import { Box, Chip, Typography } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import RemoteImage from '@/components/core/RemoteImage';
 import {
@@ -70,11 +70,8 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.42)} 0%, ${alpha(
-                theme.palette.secondary.light,
-                0.4,
-              )} 100%)`,
-              color: 'common.white',
+              background: theme.palette.hero.gradient,
+              color: theme.palette.hero.text,
             })}
           >
             <EventIcon sx={{ fontSize: 40, opacity: 0.82 }} />

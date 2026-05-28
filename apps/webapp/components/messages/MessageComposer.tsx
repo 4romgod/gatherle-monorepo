@@ -36,6 +36,7 @@ export function MessageComposer({
   const [draftMessage, setDraftMessage] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
   const [emojiAnchorEl, setEmojiAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const isOverlay = variant === 'overlay';
 
   const draftInputRef = useRef<HTMLTextAreaElement | null>(null);
   const draftSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
@@ -116,7 +117,7 @@ export function MessageComposer({
     <>
       <Box
         sx={
-          variant === 'overlay'
+          isOverlay
             ? {
                 display: 'flex',
                 gap: 1,
@@ -126,8 +127,9 @@ export function MessageComposer({
                 borderRadius: 6,
                 px: 2,
                 py: 0.75,
-                backgroundColor: (muiTheme) => alpha(muiTheme.palette.common.black, 0.5),
-                backdropFilter: 'blur(8px)',
+                backgroundColor: (muiTheme) => alpha(muiTheme.palette.common.black, 0.58),
+                backdropFilter: 'blur(14px)',
+                boxShadow: (muiTheme) => `0 10px 30px ${alpha(muiTheme.palette.common.black, 0.24)}`,
               }
             : {
                 display: 'flex',
@@ -161,7 +163,7 @@ export function MessageComposer({
             }
             openEmojiPicker(event);
           }}
-          sx={{ width: 38, height: 38, mt: 0.5, color: variant === 'overlay' ? 'common.white' : 'text.secondary' }}
+          sx={{ width: 38, height: 38, mt: 0.5, color: isOverlay ? 'common.white' : 'text.secondary' }}
         >
           <SentimentSatisfiedAlt />
         </IconButton>
@@ -200,22 +202,38 @@ export function MessageComposer({
               minHeight: 42,
               display: 'flex',
               alignItems: 'center',
-              ...(variant === 'overlay' && { color: 'common.white' }),
+              ...(isOverlay && {
+                color: 'common.white',
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+              }),
             },
             '& .MuiInputBase-inputMultiline': {
               paddingTop: '10px',
               paddingBottom: '10px',
-              fontSize: '0.98rem',
+              fontSize: { xs: '16px', sm: '0.98rem' },
               lineHeight: 1.45,
-              ...(variant === 'overlay' && { color: 'white', caretColor: 'white' }),
+              ...(isOverlay && { color: 'white', caretColor: 'white', backgroundColor: 'transparent' }),
             },
             '& textarea::placeholder': {
               opacity: 1,
-              ...(variant === 'overlay' && { color: 'rgba(255,255,255,0.65)' }),
+              ...(isOverlay && { color: 'rgba(255,255,255,0.65)' }),
             },
-            ...(variant === 'overlay' && {
-              '& .MuiInputBase-input': { color: 'white', caretColor: 'white' },
+            ...(isOverlay && {
+              '& .MuiInputBase-input': {
+                color: 'white',
+                caretColor: 'white',
+                backgroundColor: 'transparent',
+              },
+              '& textarea, & input': {
+                backgroundColor: 'transparent',
+              },
               '& input::placeholder': { color: 'rgba(255,255,255,0.65)', opacity: 1 },
+              '& input:-webkit-autofill, & textarea:-webkit-autofill': {
+                WebkitTextFillColor: '#ffffff',
+                WebkitBoxShadow: '0 0 0 100px transparent inset',
+                transition: 'background-color 9999s ease-out 0s',
+              },
             }),
           }}
           onKeyDown={(event) => {
@@ -238,7 +256,10 @@ export function MessageComposer({
             backgroundColor: 'primary.main',
             color: 'primary.contrastText',
             '&:hover': { backgroundColor: 'primary.dark' },
-            '&.Mui-disabled': { backgroundColor: 'action.disabledBackground', color: 'action.disabled' },
+            '&.Mui-disabled': {
+              backgroundColor: isOverlay ? 'rgba(255,255,255,0.18)' : 'action.disabledBackground',
+              color: isOverlay ? 'rgba(255,255,255,0.52)' : 'action.disabled',
+            },
           }}
         >
           <Send />

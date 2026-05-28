@@ -7,6 +7,33 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(async () => undefined),
 }));
 
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { Image } = require('react-native');
+
+  const MockExpoImage = React.forwardRef(
+    (
+      { cachePolicy: _cachePolicy, contentFit: _contentFit, onDisplay, onLoad, transition: _transition, ...props }: any,
+      ref: React.ForwardedRef<unknown>,
+    ) =>
+      React.createElement(Image, {
+        ...props,
+        ref,
+        onLoad: (event: unknown) => {
+          onLoad?.(event);
+          onDisplay?.(event);
+        },
+      }),
+  );
+
+  MockExpoImage.displayName = 'ExpoImage';
+
+  return {
+    __esModule: true,
+    Image: MockExpoImage,
+  };
+});
+
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');
   const { Text } = require('react-native');

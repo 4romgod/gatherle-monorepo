@@ -37,14 +37,15 @@ import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { DeleteEventMomentDocument, GetEventMomentsDocument } from '@/data/graphql/query';
 import { EventMomentImageDisplayMode, EventMomentType } from '@/data/graphql/types/graphql';
+import { extractApolloErrorMessage } from '@/lib/utils/apollo-error';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { differenceInSeconds } from 'date-fns';
 import type { GetEventMomentsQuery } from '@/data/graphql/types/graphql';
 import { useChatRealtime } from '@/hooks';
+import { useAppContext } from '@/hooks/useAppContext';
 import { MessageComposer } from '@/components/messages/MessageComposer';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
-import { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import Hls from 'hls.js';
 
 type MomentEventShape = { event?: { slug: string; title: string } | null };
@@ -100,6 +101,7 @@ export default function EventMomentViewer({
   eventContext,
 }: EventMomentViewerProps) {
   const { data: session } = useSession();
+  const { setToastProps } = useAppContext();
   const token = session?.user?.token;
   const viewerUserId = session?.user?.userId;
 
@@ -402,7 +404,7 @@ export default function EventMomentViewer({
     return () => window.removeEventListener('keydown', handleKey);
   }, [open, goNext, goPrev, onClose]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!moment) return;
     const { momentId, eventId } = moment;
     setConfirmDeleteOpen(false);
@@ -430,10 +432,15 @@ export default function EventMomentViewer({
         setCurrentIndex(safeIndex);
         setProgress(0);
       }
-    } catch {
-      // silently ignore — moment may have already expired
+    } catch (error) {
+      setToastProps((previous) => ({
+        ...previous,
+        open: true,
+        severity: 'error',
+        message: extractApolloErrorMessage(error, 'Unable to delete this moment. Please try again.'),
+      }));
     }
-  };
+  }, [currentIndex, deleteMoment, moment, moments, onClose, onDeleted, setToastProps, token]);
 
   if (!open || !moment) return null;
 
@@ -464,13 +471,14 @@ export default function EventMomentViewer({
       open={open}
       onClose={onClose}
       fullScreen
-      sx={{ zIndex: { xs: 1100, md: 1300 } }}
+      sx={{ zIndex: 1300 }}
       slotProps={{
         paper: {
           sx: {
             bgcolor: 'common.black',
             m: 0,
-            height: { xs: `calc(100dvh - ${MOBILE_BOTTOM_NAV_HEIGHT}px)`, md: '100dvh' },
+            height: '100dvh',
+            maxHeight: '100dvh',
             display: 'flex',
             flexDirection: 'column',
             transform: `translateY(${dragY}px)`,

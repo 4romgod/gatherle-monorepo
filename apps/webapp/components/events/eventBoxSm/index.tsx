@@ -128,14 +128,11 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.35)} 0%, ${alpha(
-                  theme.palette.secondary.light,
-                  0.35,
-                )} 100%)`,
-                color: 'text.secondary',
+                background: theme.palette.hero.gradient,
+                color: theme.palette.hero.text,
               })}
             >
-              <CalendarToday sx={{ fontSize: 36, opacity: 0.7 }} />
+              <CalendarToday sx={{ fontSize: 36, opacity: 0.82 }} />
             </Box>
           )}
           <Box

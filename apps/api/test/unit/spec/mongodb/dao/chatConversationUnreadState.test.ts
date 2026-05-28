@@ -60,16 +60,59 @@ describe('ChatConversationUnreadStateDAO', () => {
     });
   });
 
+  it('returns false when clearing a single unread state deletes nothing', async () => {
+    (ChatConversationUnreadStateModel.deleteOne as jest.Mock).mockReturnValue(createExecQuery({ deletedCount: 0 }));
+
+    const result = await ChatConversationUnreadStateDAO.clearConversationUnread('user-1', 'user-2');
+
+    expect(result).toBe(false);
+  });
+
+  it('clears unread state for both participants and falls back to zero when deletedCount is missing', async () => {
+    (ChatConversationUnreadStateModel.deleteMany as jest.Mock)
+      .mockReturnValueOnce(createExecQuery({ deletedCount: 2 }))
+      .mockReturnValueOnce(createExecQuery({}));
+
+    const deletedCount = await ChatConversationUnreadStateDAO.clearConversationUnreadForParticipants(
+      'user-1',
+      'user-2',
+    );
+    const fallbackDeletedCount = await ChatConversationUnreadStateDAO.clearConversationUnreadForParticipants(
+      'user-1',
+      'user-2',
+    );
+
+    expect(deletedCount).toBe(2);
+    expect(fallbackDeletedCount).toBe(0);
+    expect(ChatConversationUnreadStateModel.deleteMany).toHaveBeenCalledWith({
+      conversationKey: 'user-1:user-2',
+      userId: { $in: ['user-1', 'user-2'] },
+    });
+  });
+
   it('returns marked unread conversation ids as a set', async () => {
     (ChatConversationUnreadStateModel.find as jest.Mock).mockReturnValue({
       select: jest.fn().mockReturnThis(),
       lean: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([{ conversationWithUserId: 'user-2' }, { conversationWithUserId: 'user-3' }]),
+      exec: jest
+        .fn()
+        .mockResolvedValue([
+          { conversationWithUserId: 'user-2' },
+          { conversationWithUserId: 'user-3' },
+          { conversationWithUserId: null },
+        ]),
     });
 
     const result = await ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds('user-1', ['user-2', 'user-3']);
 
     expect(result).toEqual(new Set(['user-2', 'user-3']));
+  });
+
+  it('returns an empty set immediately when there are no participant ids to check', async () => {
+    const result = await ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds('user-1', []);
+
+    expect(result).toEqual(new Set());
+    expect(ChatConversationUnreadStateModel.find).not.toHaveBeenCalled();
   });
 
   it('counts only marked unread conversations without actual unread messages', async () => {
@@ -88,6 +131,14 @@ describe('ChatConversationUnreadStateDAO', () => {
       ]),
     );
     expect(result).toBe(4);
+  });
+
+  it('returns zero when no marked unread conversations remain after aggregation', async () => {
+    (ChatConversationUnreadStateModel.aggregate as jest.Mock).mockReturnValue(createExecQuery([]));
+
+    const result = await ChatConversationUnreadStateDAO.countMarkedUnreadConversationsWithoutUnreadMessages('user-1');
+
+    expect(result).toBe(0);
   });
 
   it('wraps aggregate failures as GraphQLError', async () => {

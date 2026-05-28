@@ -77,13 +77,13 @@ export default function EventBoxSkeleton() {
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <Stack direction="row" spacing={-0.5}>
-            <Avatar sx={{ width: 24, height: 24 }}>
+            <Avatar sx={{ width: 24, height: 24, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={20} height={20} />
             </Avatar>
-            <Avatar sx={{ width: 24, height: 24 }}>
+            <Avatar sx={{ width: 24, height: 24, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={20} height={20} />
             </Avatar>
-            <Avatar sx={{ width: 24, height: 24 }}>
+            <Avatar sx={{ width: 24, height: 24, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={20} height={20} />
             </Avatar>
           </Stack>

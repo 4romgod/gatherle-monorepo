@@ -10,6 +10,7 @@ export type CachedEventCategoryRef = {
 export type ApiE2ERuntimeContext = {
   seededUsersByEmail: Record<string, UserWithToken>;
   firstEventCategory: CachedEventCategoryRef;
+  jwtSecret?: string;
 };
 
 export const API_E2E_RUNTIME_CONTEXT_PATH = resolve(__dirname, 'reports/runtime-context.json');

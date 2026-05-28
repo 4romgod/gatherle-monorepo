@@ -1,6 +1,7 @@
 import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
 import { UserRole } from '@gatherle/commons/types';
 import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
+import { readRuntimeContext } from '../runtimeContext';
 import { cleanupTrackedEntities, trackCreatedId } from './eventSeriesResolverHelpers';
 import { generateToken } from '@/utils/auth';
 import { JWT_SECRET } from '@/constants';
@@ -113,6 +114,12 @@ export const buildCreateUserInput = (
 });
 
 const withE2eAuthToken = async (user: UserWithToken, input: CreateUserInput): Promise<UserWithToken> => {
+  const jwtSecret = readRuntimeContext()?.jwtSecret ?? JWT_SECRET?.trim();
+
+  if (!jwtSecret) {
+    throw new Error('JWT secret was not primed for API e2e tests. Ensure the global setup completed successfully.');
+  }
+
   const token = await generateToken(
     {
       userId: user.userId,
@@ -121,7 +128,7 @@ const withE2eAuthToken = async (user: UserWithToken, input: CreateUserInput): Pr
       userRole: input.userRole ?? UserRole.User,
       isTestUser: true,
     },
-    JWT_SECRET,
+    jwtSecret,
   );
 
   return { ...user, token };

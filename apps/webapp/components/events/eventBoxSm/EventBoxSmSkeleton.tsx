@@ -53,13 +53,13 @@ export default function EventBoxSmSkeleton() {
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto' }}>
           <Stack direction="row" spacing={-0.5} alignItems="center">
-            <Avatar sx={{ width: 26, height: 26 }}>
+            <Avatar sx={{ width: 26, height: 26, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={22} height={22} />
             </Avatar>
-            <Avatar sx={{ width: 26, height: 26 }}>
+            <Avatar sx={{ width: 26, height: 26, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={22} height={22} />
             </Avatar>
-            <Avatar sx={{ width: 26, height: 26 }}>
+            <Avatar sx={{ width: 26, height: 26, bgcolor: 'transparent' }}>
               <Skeleton variant="circular" width={22} height={22} />
             </Avatar>
           </Stack>

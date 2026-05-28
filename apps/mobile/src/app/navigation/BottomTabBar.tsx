@@ -30,6 +30,7 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
   const { authToken, isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, 12);
   const { profile } = usePreviewProfile(username, isAuthenticated);
   const profileLabel = getDisplayName(profile);
   const { unreadCount: unreadMessages } = useUnreadChatCount(authToken, isAuthenticated);
@@ -48,8 +49,9 @@ export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBar
         {
           backgroundColor: theme.colors.tabBar,
           borderTopColor: theme.colors.surfaceRaised,
-          minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
-          paddingBottom: 2, // TODO: restore bottom safe-area padding, Math.max(insets.bottom, 2)
+          minHeight: MOBILE_BOTTOM_TAB_BAR_HEIGHT + bottomPadding,
+          paddingBottom: bottomPadding,
+          paddingTop: 4,
         },
       ]}
     >
