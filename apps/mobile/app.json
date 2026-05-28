@@ -29,6 +29,7 @@
       "expo-font",
       "expo-secure-store",
       "expo-video",
+      "expo-web-browser",
       [
         "@react-native-community/datetimepicker",
         {
@@ -83,8 +84,7 @@
             }
           }
         }
-      ],
-      "expo-web-browser"
+      ]
     ],
     "extra": {
       "eas": {

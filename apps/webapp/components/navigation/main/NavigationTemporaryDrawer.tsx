@@ -222,19 +222,25 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
                 variant="subtitle1"
                 sx={{
                   color: 'text.primary',
-                  fontSize: '1.5rem',
+                  fontSize: '1rem',
                   fontWeight: 800,
                   lineHeight: 1.15,
                   maxWidth: 170,
-                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
                 }}
               >
                 {getDisplayName(session.user)}
               </Typography>
-              {session.user.username && (
+              {!!session.user.username && (
                 <Typography
-                  variant="body2"
-                  sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.3, mt: 0.5 }}
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                    maxWidth: 170,
+                    overflowWrap: 'anywhere',
+                  }}
                 >
                   @{session.user.username}
                 </Typography>
