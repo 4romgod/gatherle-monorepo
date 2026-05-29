@@ -945,7 +945,7 @@ export default function EventMomentViewer({
               onSend={handleReply}
               isConnected={isConnected}
               targetUserId={moment.authorId}
-              placeholder={`Reply to ${displayName}…`}
+              placeholder={`Reply…`}
               onFocus={() => setPaused(true)}
               onBlur={() => setPaused(false)}
               onAfterSend={() => {

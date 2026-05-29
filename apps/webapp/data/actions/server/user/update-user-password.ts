@@ -1,6 +1,11 @@
 'use server';
 
-import { UpdateUserInput, UpdateUserDocument, LoginUserDocument } from '@/data/graphql/types/graphql';
+import {
+  GetUserByIdDocument,
+  UpdateUserInput,
+  UpdateUserDocument,
+  LoginUserDocument,
+} from '@/data/graphql/types/graphql';
 import { UpdateUserInputSchema } from '@/data/validation';
 import { getClient } from '@/data/graphql';
 import { auth } from '@/auth';
@@ -28,34 +33,59 @@ export async function updateUserPasswordAction(prevState: ActionState, formData:
 
   const currentPassword = formData.get('currentPassword')?.toString();
   const newPassword = formData.get('newPassword')?.toString();
+  let requiresCurrentPassword = session?.user?.hasLocalPassword !== false;
 
-  if (!currentPassword || !newPassword) {
+  if (userId && token) {
+    try {
+      const profileResponse = await getClient().query({
+        query: GetUserByIdDocument,
+        variables: { userId },
+        context: {
+          headers: getAuthHeader(token),
+        },
+        fetchPolicy: 'no-cache',
+      });
+
+      requiresCurrentPassword = profileResponse.data?.readUserById?.hasLocalPassword !== false;
+    } catch (error) {
+      logger.warn('Could not resolve current password mode from user profile. Falling back to session data.', {
+        error,
+        userId,
+      });
+    }
+  }
+
+  if ((requiresCurrentPassword && !currentPassword) || !newPassword) {
     return {
       ...prevState,
-      apiError: 'Both current and new passwords are required',
+      apiError: requiresCurrentPassword ? 'Both current and new passwords are required' : 'A new password is required',
       zodErrors: null,
     };
   }
 
-  // Verify current password by attempting to login
-  try {
-    logger.debug('Verifying current password');
-    await getClient().mutate({
-      mutation: LoginUserDocument,
-      variables: {
-        input: {
-          email: userEmail,
-          password: currentPassword,
+  if (requiresCurrentPassword) {
+    const currentPasswordToVerify = currentPassword as string;
+
+    // Verify current password by attempting to login
+    try {
+      logger.debug('Verifying current password');
+      await getClient().mutate({
+        mutation: LoginUserDocument,
+        variables: {
+          input: {
+            email: userEmail,
+            password: currentPasswordToVerify,
+          },
         },
-      },
-    });
-  } catch (error) {
-    logger.warn('Current password verification failed');
-    return {
-      ...prevState,
-      apiError: 'Current password is incorrect',
-      zodErrors: null,
-    };
+      });
+    } catch (error) {
+      logger.warn('Current password verification failed');
+      return {
+        ...prevState,
+        apiError: 'Current password is incorrect',
+        zodErrors: null,
+      };
+    }
   }
 
   let inputData: UpdateUserInput = {

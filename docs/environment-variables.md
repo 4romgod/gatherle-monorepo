@@ -44,7 +44,9 @@ The following commands work without any environment variables:
   - `EMAIL_FROM` (defaults to `noreply@gatherle.com`; sender address for transactional emails).
   - `WEBAPP_URL` (defaults to `http://localhost:3000`; used by the API EmailService to build email verification and
     password reset links in dev).
-  - `GOOGLE_CLIENT_ID` (required to verify Google OAuth identity tokens in the API).
+  - `GOOGLE_OAUTH_CLIENT_ID_WEB` (required to verify web Google OAuth identity tokens in the API).
+  - `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when testing Android mobile Google sign-in against the local API).
+  - `GOOGLE_OAUTH_CLIENT_ID_IOS` (required when testing iOS mobile Google sign-in against the local API).
   - `APPLE_CLIENT_ID` (required to verify Apple OAuth identity tokens in the API).
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
@@ -72,8 +74,12 @@ The following commands work without any environment variables:
     region).
   - `WEBAPP_URL` (public webapp URL, e.g. `https://app.gatherle.com`; used by the API EmailService to build email
     verification and password reset links).
-  - `GOOGLE_CLIENT_ID` (required when Google sign-in is enabled; the API validates Google `id_token` audience against
-    this value).
+  - `GOOGLE_OAUTH_CLIENT_ID_WEB` (required when Google sign-in is enabled on the webapp; the API validates Google
+    `id_token` audience against this value).
+  - `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when Android mobile Google sign-in is enabled; the API accepts this
+    audience too).
+  - `GOOGLE_OAUTH_CLIENT_ID_IOS` (optional until iOS mobile Google sign-in is enabled; when set, the API accepts this
+    audience too).
   - `APPLE_CLIENT_ID` (required when Apple sign-in is enabled; the API validates Apple `id_token` audience against this
     value).
   - `NODE_OPTIONS` (handled in CDK, no manual change).
@@ -107,7 +113,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
     notifications).
   - `NEXT_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
-  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (required for Google OAuth in NextAuth).
+  - `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` (required for Google OAuth in NextAuth).
   - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
     credential used by NextAuth).
   - `NEXT_DEV_ALLOWED_ORIGINS` (optional; comma-separated hostnames/IPs to allow cross-origin `/_next/*` requests in dev
@@ -124,7 +130,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Host or CI (e.g., Vercel) should inject `NEXTAUTH_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
 - Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
 - Set `NEXT_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
-- Inject `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` when Google sign-in is enabled.
+- Inject `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` when Google sign-in is enabled.
 - Inject `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
 - `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
@@ -156,12 +162,20 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `EXPO_PUBLIC_GRAPHQL_URL` (e.g., `http://10.0.2.2:9000/v1/graphql` for Android emulator or
     `http://localhost:9000/v1/graphql` when using `adb reverse`).
   - `EXPO_PUBLIC_WEBSOCKET_URL` (local or deployed websocket endpoint for realtime notifications and chat).
+  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required for Android native Google sign-in, including local
+    `apk:release` builds and Android dev clients).
+  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` (required for iOS native Google sign-in).
+  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` (used for Expo web/browser Google auth flows).
   - `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
 
 ### Production & Staging
 
 - Inject `EXPO_PUBLIC_GRAPHQL_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` from the deployed API/WebSocket outputs.
+- Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID` for Android builds and `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
+  for iOS builds.
+- Configure Expo EAS environments (`development`, `preview`, `production`) with the required `EXPO_PUBLIC_GOOGLE_*`
+  values so remote EAS builds inline the correct client IDs.
 - Set `EXPO_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 
 ## CI/CD (`.github/workflows/deploy-trigger.yaml` + reusable deploy workflows)
@@ -197,6 +211,16 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `VERCEL_TOKEN` (required if web deploy is enabled).
 - `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
 - `NEXTAUTH_SECRET` (used by NextAuth session signing in the webapp deployment environment).
+- `GOOGLE_OAUTH_CLIENT_ID_WEB` (required for web Google OAuth and API verification of web Google `id_token` audiences).
+- `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when building the Android mobile release in CI/CD and for API verification
+  of Android Google `id_token` audiences).
+- `GOOGLE_OAUTH_CLIENT_ID_IOS` (required once iOS mobile Google sign-in is enabled and for API verification of iOS
+  Google `id_token` audiences).
+- `ANDROID_RELEASE_KEYSTORE_BASE64` (required for the GitHub Actions Android APK build; base64-encoded contents of the
+  release `.jks` file).
+- `ANDROID_RELEASE_KEYSTORE_PASSWORD` (required for the GitHub Actions Android APK build).
+- `ANDROID_RELEASE_KEY_ALIAS` (required for the GitHub Actions Android APK build).
+- `ANDROID_RELEASE_KEY_PASSWORD` (required for the GitHub Actions Android APK build).
 - `SECRET_ARN` is resolved dynamically in CI/CD from Secrets Manager using `STAGE` + `AWS_REGION`, so you do not need to
   store it in GitHub variables.
 

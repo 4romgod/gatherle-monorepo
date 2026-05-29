@@ -26,8 +26,8 @@ export default {
       },
     }),
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID_WEB,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB,
       authorization: {
         url: 'https://accounts.google.com/o/oauth2/v2/auth',
         params: {

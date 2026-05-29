@@ -20,7 +20,9 @@ const BaseEnvSchema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   EMAIL_FROM: z.string().optional().default('noreply@gatherle.com'),
   WEBAPP_URL: z.string().optional().default('http://localhost:3000'),
-  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID_WEB: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID_ANDROID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID_IOS: z.string().optional(),
   APPLE_CLIENT_ID: z.string().optional(),
   LOG_LEVEL: z
     .string()
@@ -138,6 +140,15 @@ export const MEDIA_CDN_DOMAIN = env.MEDIA_CDN_DOMAIN;
 export const CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
 export const EMAIL_FROM = env.EMAIL_FROM;
 export const WEBAPP_URL = env.WEBAPP_URL;
-export const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID;
+export const GOOGLE_OAUTH_CLIENT_ID_WEB = env.GOOGLE_OAUTH_CLIENT_ID_WEB;
+export const GOOGLE_OAUTH_CLIENT_ID_ANDROID = env.GOOGLE_OAUTH_CLIENT_ID_ANDROID;
+export const GOOGLE_OAUTH_CLIENT_ID_IOS = env.GOOGLE_OAUTH_CLIENT_ID_IOS;
+export const GOOGLE_CLIENT_IDS = [
+  ...new Set(
+    [env.GOOGLE_OAUTH_CLIENT_ID_WEB, env.GOOGLE_OAUTH_CLIENT_ID_ANDROID, env.GOOGLE_OAUTH_CLIENT_ID_IOS]
+      .filter((clientId): clientId is string => typeof clientId === 'string' && clientId.trim().length > 0)
+      .map((clientId) => clientId.trim()),
+  ),
+];
 export const APPLE_CLIENT_ID = env.APPLE_CLIENT_ID;
 export const LOG_LEVEL = env.LOG_LEVEL;

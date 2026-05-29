@@ -4,23 +4,26 @@
     "slug": "gatherle-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "gatherle",
     "icon": "./assets/favicon/orbit/light/android-chrome-512x512.png",
+    "backgroundColor": "#f8fafc",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/favicon/orbit/light/android-chrome-512x512.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f8fafc"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.gatherlemobile"
+      "bundleIdentifier": "com.gatherle.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/favicon/orbit/light/android-chrome-512x512.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#f8fafc"
       },
-      "package": "com.anonymous.gatherlemobile"
+      "edgeToEdgeEnabled": true,
+      "package": "com.gatherle.mobile"
     },
     "web": {
       "favicon": "./assets/favicon/orbit/light/favicon-32x32.png"

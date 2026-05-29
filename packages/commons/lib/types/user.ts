@@ -249,6 +249,13 @@ export class User {
   @prop({ required: true, select: false, type: () => String })
   password: string;
 
+  @prop({ default: true, type: () => Boolean })
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Whether this account has a user-managed local password for email/password sign-in.',
+  })
+  hasLocalPassword?: boolean;
+
   @prop({ unique: true, sparse: true, index: true, type: () => String })
   googleSubject?: string;
 

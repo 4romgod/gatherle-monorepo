@@ -15,7 +15,17 @@ export type MainTabParamList = {
   Account: undefined;
 };
 
-export type SettingsTabKey = 'account' | 'activity' | 'alerts' | 'appearance' | 'personal' | 'privacy' | 'profile';
+export type SettingsTabKey =
+  | 'account'
+  | 'activity'
+  | 'alerts'
+  | 'appearance'
+  | 'interests'
+  | 'password'
+  | 'personal'
+  | 'privacy'
+  | 'profile'
+  | 'session';
 export type UserConnectionsMode = 'followers' | 'following';
 
 export type RootStackParamList = {

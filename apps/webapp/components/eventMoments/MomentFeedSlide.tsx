@@ -697,7 +697,7 @@ export default function MomentFeedSlide({ active, moment, onDeleted }: MomentFee
               <MessageComposer
                 isConnected={isConnected}
                 onSend={handleSendReply}
-                placeholder={`Reply to ${authorUsername ?? displayName}...`}
+                placeholder={`Reply...`}
                 targetUserId={targetUserId}
                 variant="overlay"
                 onFocus={() => setPaused(true)}

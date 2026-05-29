@@ -5,6 +5,7 @@ export const CreateUserDocument = graphql(`
     createUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -32,6 +33,7 @@ export const LoginUserDocument = graphql(`
     loginUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -68,6 +70,7 @@ export const LoginWithOAuthDocument = graphql(`
     loginWithOAuth(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       followersCount
       bio
@@ -105,6 +108,7 @@ export const UpdateUserDocument = graphql(`
     updateUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -149,6 +153,7 @@ export const DeleteUserByIdDocument = graphql(`
     deleteUserById(userId: $userId) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate

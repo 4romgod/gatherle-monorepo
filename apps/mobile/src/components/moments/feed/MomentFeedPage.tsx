@@ -443,7 +443,7 @@ export function MomentFeedPage({
         <ChatComposer
           isConnected={isConnected}
           onSend={handleReply}
-          placeholder={targetUserId ? `Reply to ${moment.author?.username ?? displayName}...` : 'Your moment'}
+          placeholder={targetUserId ? `Reply...` : 'Your moment'}
           showStatus={false}
           targetUserId={targetUserId}
           variant="overlay"

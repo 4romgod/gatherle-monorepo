@@ -85,6 +85,9 @@ The mobile app primarily uses:
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=
 EXPO_PUBLIC_WEBSOCKET_URL=
+EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB=
+EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID=
+EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS=
 EXPO_PUBLIC_ENABLE_PRIVATE_USERS=
 ```
 
@@ -93,10 +96,17 @@ For local development, create `apps/mobile/.env`:
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
 EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
+EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID=<android-google-client-id>
 ```
 
 `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` is optional and defaults to disabled. Set it to `true` only when testing the
 private-user privacy controls and follow-request review flow.
+
+For Google sign-in:
+
+- Android native builds require `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID`
+- iOS native builds require `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
+- Expo web/browser auth uses `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB`
 
 Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
 Android `adb reverse` flow documented below.

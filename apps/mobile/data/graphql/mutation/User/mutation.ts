@@ -5,6 +5,7 @@ export const CreateUserDocument = graphql(`
     createUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -32,6 +33,7 @@ export const LoginUserDocument = graphql(`
     loginUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -68,6 +70,7 @@ export const LoginWithOAuthDocument = graphql(`
     loginWithOAuth(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -133,6 +136,7 @@ export const UpdateUserDocument = graphql(`
     updateUser(input: $input) {
       userId
       email
+      hasLocalPassword
       username
       bio
       birthdate
@@ -159,6 +163,33 @@ export const UpdateUserDocument = graphql(`
           pushEnabled
         }
       }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
+
+export const DeleteUserByIdDocument = graphql(`
+  mutation DeleteUserById($userId: String!) {
+    deleteUserById(userId: $userId) {
+      userId
+      email
+      hasLocalPassword
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      userRole
       interests {
         eventCategoryId
         slug

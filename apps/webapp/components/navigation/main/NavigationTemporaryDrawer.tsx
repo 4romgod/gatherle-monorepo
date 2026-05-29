@@ -63,10 +63,10 @@ type SocialLinkConfig = {
 
 const drawerItemSx = {
   borderRadius: WEB_RADIUS.control,
-  gap: 2.25,
-  minHeight: 56,
-  px: 1,
-  py: 1.35,
+  gap: 2,
+  minHeight: 52,
+  px: 0.75,
+  py: 1.1,
   justifyContent: 'flex-start',
   '&:hover': {
     bgcolor: 'action.hover',
@@ -80,7 +80,7 @@ const socialLinks: SocialLinkConfig[] = [
   { href: 'https://x.com/getgatherle', icon: FiTwitter, label: 'X' },
 ];
 
-function DrawerFeatherIcon({ icon: Icon, size = 22 }: { icon: IconType; size?: number }) {
+function DrawerFeatherIcon({ icon: Icon, size = 20 }: { icon: IconType; size?: number }) {
   return (
     <Box
       component="span"
@@ -149,9 +149,10 @@ export default function TemporaryDrawer({ isAuthN }: { isAuthN: boolean }) {
         <Typography
           sx={{
             color: 'text.primary',
-            fontSize: '1rem',
-            fontWeight: 600,
-            lineHeight: 1.2,
+            fontSize: '0.9375rem',
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.25,
           }}
         >
           {item.label}

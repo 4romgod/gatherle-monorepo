@@ -2,6 +2,7 @@ export * from './Chat/query';
 export * from './Chat/types';
 export * from './Discovery/query';
 export * from './Discovery/types';
+export * from './EventCategoryGroup/query';
 export * from './Event/query';
 export * from './Event/types';
 export * from './EventMoment/query';

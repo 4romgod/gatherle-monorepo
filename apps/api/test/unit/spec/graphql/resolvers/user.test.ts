@@ -62,6 +62,13 @@ const context = {
 describe('UserResolver login hardening', () => {
   let resolver: UserResolver;
   const validUserId = '507f1f77bcf86cd799439011';
+  const ownerContext = {
+    ...context,
+    user: {
+      userId: validUserId,
+      userRole: 'User',
+    },
+  } as any;
 
   beforeEach(() => {
     resolver = new UserResolver();
@@ -113,6 +120,50 @@ describe('UserResolver login hardening', () => {
     expect(logger.warn).toHaveBeenCalledWith('[UserResolver] Failed to record auth attempt after login failure', {
       scopeKeys: ['email:user@example.com', 'ip:203.0.113.10'],
       error: recordError,
+    });
+  });
+
+  describe('hasLocalPassword field resolver', () => {
+    it('returns the stored value when the field is present', () => {
+      expect(
+        resolver.hasLocalPassword(
+          {
+            userId: validUserId,
+            hasLocalPassword: false,
+          } as any,
+          ownerContext,
+        ),
+      ).toBe(false);
+    });
+
+    it('defaults legacy users without the field to true', () => {
+      expect(
+        resolver.hasLocalPassword(
+          {
+            userId: validUserId,
+            googleSubject: 'google-subject',
+          } as any,
+          ownerContext,
+        ),
+      ).toBe(true);
+    });
+
+    it('returns null for viewers who should not see sensitive account fields', () => {
+      expect(
+        resolver.hasLocalPassword(
+          {
+            userId: validUserId,
+            hasLocalPassword: true,
+          } as any,
+          {
+            ...context,
+            user: {
+              userId: 'different-user',
+              userRole: 'User',
+            },
+          } as any,
+        ),
+      ).toBeNull();
     });
   });
 

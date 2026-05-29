@@ -156,6 +156,10 @@ class UserDAO {
             existingEmailUser.profile_picture = identity.profilePicture;
           }
 
+          if (typeof existingEmailUser.hasLocalPassword !== 'boolean') {
+            existingEmailUser.hasLocalPassword = true;
+          }
+
           await existingEmailUser.save();
           return toUserWithToken(existingEmailUser);
         }
@@ -179,6 +183,7 @@ class UserDAO {
         email: normalizedEmail,
         given_name: deriveGivenName(identity),
         family_name: deriveFamilyName(identity),
+        hasLocalPassword: false,
         password: buildOAuthPlaceholderPassword(),
         emailVerified: identity.emailVerified,
         profile_picture: identity.profilePicture,
@@ -312,6 +317,10 @@ class UserDAO {
         fieldsToUpdate.emailVerified = false;
       }
 
+      if (typeof fieldsToUpdate.password === 'string') {
+        fieldsToUpdate.hasLocalPassword = true;
+      }
+
       Object.assign(existingUser, fieldsToUpdate);
       await existingUser.save();
       return existingUser.toObject();
@@ -354,6 +363,7 @@ class UserDAO {
       throw CustomError(`User with id ${userId} does not exist`, ErrorTypes.NOT_FOUND);
     }
     try {
+      user.hasLocalPassword = true;
       user.password = newPassword;
       await user.save(); // pre('validate') hook hashes the password automatically
     } catch (error) {

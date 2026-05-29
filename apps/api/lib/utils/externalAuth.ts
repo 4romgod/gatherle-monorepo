@@ -1,4 +1,4 @@
-import { APPLE_CLIENT_ID, GOOGLE_CLIENT_ID } from '@/constants';
+import { APPLE_CLIENT_ID, GOOGLE_CLIENT_IDS } from '@/constants';
 import type { ExchangeOAuthInput } from '@gatherle/commons/types';
 import { OAuthProvider } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from './exceptions';
@@ -24,7 +24,7 @@ type JoseModule = {
   jwtVerify: (
     token: string,
     jwks: RemoteJwkSet,
-    options: { audience: string; issuer: string | string[] },
+    options: { audience: string | string[]; issuer: string | string[] },
   ) => Promise<{ payload: JwtPayload }>;
 };
 
@@ -72,8 +72,13 @@ const getAppleJwks = (): Promise<RemoteJwkSet> => {
   return appleJwksPromise;
 };
 
-const requireAudience = (provider: OAuthProvider): string => {
-  const audience = provider === OAuthProvider.Google ? GOOGLE_CLIENT_ID : APPLE_CLIENT_ID;
+const requireAudience = (provider: OAuthProvider): string | string[] => {
+  const audience =
+    provider === OAuthProvider.Google
+      ? GOOGLE_CLIENT_IDS.length <= 1
+        ? GOOGLE_CLIENT_IDS[0]
+        : GOOGLE_CLIENT_IDS
+      : APPLE_CLIENT_ID;
   if (!audience) {
     throw CustomError(`${provider} sign-in is not configured.`, ErrorTypes.INTERNAL_SERVER_ERROR);
   }
@@ -89,7 +94,7 @@ const verifyIdentityToken = async ({
 }: {
   provider: OAuthProvider;
   idToken: string;
-  audience: string;
+  audience: string | string[];
   issuer: string | string[];
   getJwks: () => Promise<RemoteJwkSet>;
 }): Promise<JwtPayload> => {
