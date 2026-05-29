@@ -12,6 +12,8 @@ data/graphql/types/
 
 # Native
 .kotlin/
+credentials.json
+credentials/
 *.orig.*
 *.jks
 *.p8

@@ -9,6 +9,7 @@ import { clearRuntimeContext, writeRuntimeContext } from './runtimeContext';
 import { getConfigValue } from '@/clients';
 import { JWT_SECRET, SECRET_KEYS } from '@/constants';
 import { generateToken } from '@/utils/auth';
+import { cleanupOrphanedE2EUsers, resolveE2EUserNamespace } from './utils/userResolverHelpers';
 
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
@@ -298,6 +299,7 @@ const assertServerReady = async (graphqlUrl: string): Promise<void> => {
 };
 
 const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string): Promise<void> => {
+  const e2eUserNamespace = resolveE2EUserNamespace();
   const seededUsers = getSeededTestUsers();
   const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
   const seededUsersByEmail: Record<string, UserWithToken> = {};
@@ -405,7 +407,18 @@ const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string): Prom
     seededUsersByEmail,
     firstEventCategory,
     jwtSecret,
+    e2eUserNamespace,
   });
+
+  const adminToken = seededUsersByEmail[seededUsers.admin.email]?.token;
+  if (adminToken) {
+    try {
+      await cleanupOrphanedE2EUsers(graphqlUrl, adminToken, 'setup-orphaned-e2e-user-cleanup', e2eUserNamespace);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[setup] failed to sweep orphaned API e2e users: ${message}`);
+    }
+  }
 };
 
 const setup = async () => {

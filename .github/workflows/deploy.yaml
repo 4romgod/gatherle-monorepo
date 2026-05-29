@@ -4,32 +4,32 @@ on:
   workflow_call:
     inputs:
       build_mobile:
-        description: 'Whether to build and publish the Android APK'
+        description: "Whether to build and publish the Android APK"
         required: false
         default: true
         type: boolean
       deploy_api:
-        description: 'Whether to deploy API infrastructure/runtime and run API e2e tests'
+        description: "Whether to deploy API infrastructure/runtime and run API e2e tests"
         required: false
         default: true
         type: boolean
       deploy_webapp:
-        description: 'Whether to deploy the webapp and run webapp e2e tests'
+        description: "Whether to deploy the webapp and run webapp e2e tests"
         required: false
         default: true
         type: boolean
       stage:
-        description: 'Application stage (example: Beta, Prod)'
+        description: "Application stage (example: Beta, Prod)"
         required: true
         type: string
       region:
-        description: 'AWS region (example: eu-west-1)'
+        description: "AWS region (example: eu-west-1)"
         required: true
         type: string
       web_domain_alias:
-        description: 'Optional webapp custom domain alias (example: beta.gatherle.com)'
+        description: "Optional webapp custom domain alias (example: beta.gatherle.com)"
         required: false
-        default: ''
+        default: ""
         type: string
 
 permissions:
@@ -121,7 +121,9 @@ jobs:
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+      GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
+      GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     outputs:
       graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
       websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
@@ -181,13 +183,13 @@ jobs:
             echo "GraphQLStack template not found at $TEMPLATE"
             exit 1
           fi
-          GOOGLE_CLIENT_ID_IN_TEMPLATE=$(jq -r '.Resources | to_entries[] | .value.Properties.Environment.Variables.GOOGLE_CLIENT_ID // empty' "$TEMPLATE" 2>/dev/null | head -1)
-          if [ -z "$GOOGLE_CLIENT_ID_IN_TEMPLATE" ]; then
-            echo "ERROR: GOOGLE_CLIENT_ID is empty in the synthesized GraphQLStack template."
-            echo "GOOGLE_CLIENT_ID env var present in shell: $(test -n "$GOOGLE_CLIENT_ID" && echo yes || echo no)"
+          GOOGLE_OAUTH_CLIENT_ID_WEB_IN_TEMPLATE=$(jq -r '.Resources | to_entries[] | .value.Properties.Environment.Variables.GOOGLE_OAUTH_CLIENT_ID_WEB // empty' "$TEMPLATE" 2>/dev/null | head -1)
+          if [ -z "$GOOGLE_OAUTH_CLIENT_ID_WEB_IN_TEMPLATE" ]; then
+            echo "ERROR: GOOGLE_OAUTH_CLIENT_ID_WEB is empty in the synthesized GraphQLStack template."
+            echo "GOOGLE_OAUTH_CLIENT_ID_WEB env var present in shell: $(test -n "$GOOGLE_OAUTH_CLIENT_ID_WEB" && echo yes || echo no)"
             exit 1
           fi
-          echo "GOOGLE_CLIENT_ID is present in synthesized template."
+          echo "GOOGLE_OAUTH_CLIENT_ID_WEB is present in synthesized template."
 
       - name: Resolve Backend Secret ARN
         id: resolve_secret
@@ -315,6 +317,8 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      E2E_API_SHARD: 1-of-3
+      E2E_USER_NAMESPACE: gha-${{ github.run_id }}-${{ github.run_attempt }}-shard-1
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
@@ -357,6 +361,8 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      E2E_API_SHARD: 2-of-3
+      E2E_USER_NAMESPACE: gha-${{ github.run_id }}-${{ github.run_attempt }}-shard-2
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
@@ -399,6 +405,8 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      E2E_API_SHARD: 3-of-3
+      E2E_USER_NAMESPACE: gha-${{ github.run_id }}-${{ github.run_attempt }}-shard-3
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       SECRET_ARN: ${{ needs.deploy-api.outputs.secret_arn }}
@@ -434,8 +442,24 @@ jobs:
         run: npm run test:e2e:api -- --shard=3/3 --maxWorkers=1
 
   deploy-webapp:
-    if: ${{ always() && inputs.deploy_webapp && (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') && (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') && (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') && (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped') }}
-    needs: [resolve-deploy-context, deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
+    if: >-
+      ${{
+        always() &&
+        inputs.deploy_webapp &&
+        (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') &&
+        (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
+        (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') &&
+        (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') &&
+        (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped')
+      }}
+    needs:
+      [
+        resolve-deploy-context,
+        deploy-api,
+        e2e-api-events,
+        e2e-api-discovery,
+        e2e-api-user-org,
+      ]
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
@@ -476,8 +500,8 @@ jobs:
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
           NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url || needs.resolve-deploy-context.outputs.s3_media_url }}
           NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url || needs.resolve-deploy-context.outputs.media_cdn_url }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+          GOOGLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_WEB }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
@@ -485,8 +509,8 @@ jobs:
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
             --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
             --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
-            --env GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
-            --env GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
+            --env GOOGLE_OAUTH_CLIENT_ID_WEB="$GOOGLE_OAUTH_CLIENT_ID_WEB" \
+            --env GOOGLE_OAUTH_CLIENT_SECRET_WEB="$GOOGLE_OAUTH_CLIENT_SECRET_WEB" \
             --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
             > deployment-url.txt
           DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)
@@ -537,6 +561,9 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -584,8 +611,24 @@ jobs:
         run: npm run test:e2e:web
 
   build-android-apk:
-    if: ${{ always() && inputs.build_mobile && (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') && (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') && (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') && (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') && (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped') }}
-    needs: [resolve-deploy-context, deploy-api, e2e-api-events, e2e-api-discovery, e2e-api-user-org]
+    if: >-
+      ${{
+        always() &&
+        inputs.build_mobile &&
+        (needs.resolve-deploy-context.result == 'success' || needs.resolve-deploy-context.result == 'skipped') &&
+        (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
+        (needs.e2e-api-events.result == 'success' || needs.e2e-api-events.result == 'skipped') &&
+        (needs.e2e-api-discovery.result == 'success' || needs.e2e-api-discovery.result == 'skipped') &&
+        (needs.e2e-api-user-org.result == 'success' || needs.e2e-api-user-org.result == 'skipped')
+      }}
+    needs:
+      [
+        resolve-deploy-context,
+        deploy-api,
+        e2e-api-events,
+        e2e-api-discovery,
+        e2e-api-user-org,
+      ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -593,6 +636,9 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -606,8 +652,8 @@ jobs:
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
 
       - name: Install Dependencies
         run: npm ci
@@ -622,6 +668,24 @@ jobs:
         working-directory: ./apps/mobile
         run: npx expo prebuild --no-install --platform android
 
+      - name: Materialize Android Release Keystore
+        working-directory: ./apps/mobile
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_RELEASE_KEYSTORE_BASE64" || (echo "Missing ANDROID_RELEASE_KEYSTORE_BASE64 secret" && exit 1)
+          mkdir -p credentials/android
+          printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > credentials/android/ci-release.keystore.jks
+
+      - name: Prepare Android Release Signing
+        working-directory: ./apps/mobile
+        env:
+          ANDROID_RELEASE_KEYSTORE_PATH: credentials/android/ci-release.keystore.jks
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: npm run android:prepare:release-signing
+
       - name: Cache Gradle Packages
         uses: actions/cache@v4
         with:
@@ -629,7 +693,9 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
             apps/mobile/android/.gradle
-          key: gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/package.json', 'package-lock.json', 'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          key:
+            gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/package.json', 'package-lock.json',
+            'apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 
@@ -638,7 +704,12 @@ jobs:
         env:
           EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
           EXPO_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
-        run: ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true
+          EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+          EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
+          EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
+        run:
+          ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel
+          -Dorg.gradle.caching=true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

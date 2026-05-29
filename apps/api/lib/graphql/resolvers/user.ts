@@ -60,6 +60,19 @@ const redactUserIfNeeded = (user: User | null, context: ServerContext): User | n
 
 @Resolver(() => User)
 export class UserResolver {
+  @FieldResolver(() => Boolean, { nullable: true })
+  hasLocalPassword(@Root() user: User, @Ctx() context: ServerContext): boolean | null {
+    if (!canViewSensitiveUserFields(context, user)) {
+      return null;
+    }
+
+    if (typeof user.hasLocalPassword === 'boolean') {
+      return user.hasLocalPassword;
+    }
+
+    return true;
+  }
+
   @FieldResolver(() => Number)
   async followersCount(@Root() user: User): Promise<number> {
     if (!user.userId) {

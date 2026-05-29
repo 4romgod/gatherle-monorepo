@@ -1,18 +1,26 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useLazyQuery } from '@apollo/client';
 import { Box, CircularProgress } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { useSession } from 'next-auth/react';
+import { GetMomentByIdDocument } from '@/data/graphql/query';
+import type { GetMomentByIdQuery } from '@/data/graphql/types/graphql';
 import { useChatActions, useChatRealtime } from '@/hooks';
+import { useAppContext } from '@/hooks/useAppContext';
 import { STORAGE_KEYS } from '@/hooks/usePersistentState';
 import { useConversationData } from '@/hooks/useConversationData';
 import { useMarkConversationRead } from '@/hooks/useMarkConversationRead';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { useMessageScroll } from '@/hooks/useMessageScroll';
+import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
 import { ConversationSidebar } from '@/components/messages/ConversationSidebar';
 import { MessageThread, MessageThreadError } from '@/components/messages/MessageThread';
 import { MessageComposer } from '@/components/messages/MessageComposer';
+import { getAuthHeader } from '@/lib/utils/auth';
+import { extractApolloErrorMessage } from '@/lib/utils/apollo-error';
 
 interface ConversationThreadProps {
   username: string;
@@ -21,6 +29,9 @@ interface ConversationThreadProps {
 export default function ConversationThread({ username }: ConversationThreadProps) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const { data: session } = useSession();
+  const { setToastProps } = useAppContext();
+  const token = session?.user?.token;
 
   const {
     currentUserId,
@@ -41,6 +52,14 @@ export default function ConversationThread({ username }: ConversationThreadProps
   const { addPendingMessage, threadItems } = useThreadMessages({ messages, currentUserId });
   const { messageListRef, messagesBottomRef, showJumpToLatest, updateScrollStickiness, scrollToLatest } =
     useMessageScroll({ targetUserId, messagesLength: messages.length });
+  const [replyMomentViewerOpen, setReplyMomentViewerOpen] = useState(false);
+  const [replyMomentViewerItems, setReplyMomentViewerItems] = useState<
+    NonNullable<GetMomentByIdQuery['readMomentById']>[]
+  >([]);
+  const [loadReplyMoment] = useLazyQuery(GetMomentByIdDocument, {
+    fetchPolicy: 'network-only',
+    context: { headers: getAuthHeader(token) },
+  });
 
   const { markConversationRead: markConversationReadMutation } = useChatActions();
 
@@ -91,6 +110,36 @@ export default function ConversationThread({ username }: ConversationThreadProps
     [addPendingMessage, sendChatMessage, targetUserId],
   );
 
+  const handleOpenReplyMoment = useCallback(
+    async (momentId: string) => {
+      try {
+        const { data } = await loadReplyMoment({ variables: { momentId } });
+        const moment = data?.readMomentById;
+
+        if (!moment) {
+          setToastProps((previous) => ({
+            ...previous,
+            open: true,
+            severity: 'error',
+            message: 'This moment is no longer available.',
+          }));
+          return;
+        }
+
+        setReplyMomentViewerItems([moment]);
+        setReplyMomentViewerOpen(true);
+      } catch (error) {
+        setToastProps((previous) => ({
+          ...previous,
+          open: true,
+          severity: 'error',
+          message: extractApolloErrorMessage(error, 'Unable to open this moment right now.'),
+        }));
+      }
+    },
+    [loadReplyMoment, setToastProps],
+  );
+
   const threadPane = (
     <Box
       sx={{
@@ -117,12 +166,12 @@ export default function ConversationThread({ username }: ConversationThreadProps
             targetUser={targetUser}
             displayIdentity={displayIdentity}
             username={username}
-            isDesktop={isDesktop}
             showJumpToLatest={showJumpToLatest}
             scrollToLatest={scrollToLatest}
             messageListRef={messageListRef}
             messagesBottomRef={messagesBottomRef}
             updateScrollStickiness={updateScrollStickiness}
+            onOpenReplyMoment={handleOpenReplyMoment}
           />
           <MessageComposer onSend={handleSend} isConnected={isConnected} targetUserId={targetUserId} />
         </>
@@ -150,6 +199,13 @@ export default function ConversationThread({ username }: ConversationThreadProps
         />
       )}
       {threadPane}
+      <EventMomentViewer
+        moments={replyMomentViewerItems}
+        startIndex={0}
+        open={replyMomentViewerOpen}
+        onClose={() => setReplyMomentViewerOpen(false)}
+        organizerIds={[]}
+      />
     </Box>
   );
 }

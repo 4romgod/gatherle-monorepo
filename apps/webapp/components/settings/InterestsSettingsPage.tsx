@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useActionState, useTransition, useEffect } from 'react';
+import { alpha } from '@mui/material/styles';
 import {
   Box,
   Typography,
@@ -22,7 +23,6 @@ import { Search as SearchIcon, Add as AddIcon, Save as SaveIcon, Close as CloseI
 import { EventCategoryGroup, EventCategory, User } from '@/data/graphql/types/graphql';
 import { updateUserProfileAction } from '@/data/actions/server/user';
 import { signIn, useSession } from 'next-auth/react';
-import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import { useAppContext } from '@/hooks/useAppContext';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES, EMPTY_STATE_STYLES, EMPTY_STATE_ICON_STYLES } from '@/lib/constants';
 
@@ -116,6 +116,23 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
     }
   }, [state.data, state.apiError]);
 
+  const selectedInterestChipSx = {
+    minHeight: 31,
+    borderRadius: 999,
+    border: '1px solid',
+    borderColor: (theme: { palette: { primary: { main: string }; mode: string } }) =>
+      alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.4 : 0.24),
+    bgcolor: (theme: { palette: { primary: { main: string }; mode: string } }) =>
+      theme.palette.mode === 'dark' ? alpha(theme.palette.primary.main, 0.16) : alpha(theme.palette.primary.main, 0.08),
+    color: 'primary.main',
+    fontWeight: 600,
+    fontSize: '0.86rem',
+    '& .MuiChip-label': {
+      px: 1.15,
+      py: 0,
+    },
+  } as const;
+
   return (
     <Box>
       <Stack spacing={3}>
@@ -172,9 +189,7 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
           ) : (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
               {selectedInterests.map((interest) => (
-                <Box key={interest.eventCategoryId} sx={{ position: 'relative', display: 'inline-flex' }}>
-                  <EventCategoryBadge category={interest} />
-                </Box>
+                <Chip key={interest.eventCategoryId} label={interest.name} size="small" sx={selectedInterestChipSx} />
               ))}
             </Box>
           )}
@@ -253,10 +268,13 @@ export default function InterestsSettingsPage({ user, eventCategoryGroups }: Int
                     onDelete={() => handleInterestToggle(interest)}
                     size="small"
                     sx={{
-                      bgcolor: 'background.paper',
-                      color: 'text.primary',
-                      borderRadius: 1.5,
-                      fontWeight: 500,
+                      ...selectedInterestChipSx,
+                      '& .MuiChip-deleteIcon': {
+                        color: 'primary.main',
+                        '&:hover': {
+                          color: 'primary.dark',
+                        },
+                      },
                     }}
                   />
                 ))

@@ -24,6 +24,7 @@ import { deleteUserProfileAction, updateUserProfileAction } from '@/data/actions
 import { type User } from '@/data/graphql/types/graphql';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useLogout } from '@/hooks/useLogout';
+import { ROUTES } from '@/lib/constants';
 import { SETTINGS_PRIMARY_BUTTON_SX, SETTINGS_SECONDARY_BUTTON_SX, SettingsSection } from './SettingsSection';
 
 interface AccountSettings {
@@ -62,6 +63,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     username: user.username,
   });
   const [openDeleteAccountDialog, setOpenDeleteAccountDialog] = useState(false);
+  const [pendingDeleteLogout, setPendingDeleteLogout] = useState(false);
 
   useEffect(() => {
     if (!session?.user) {
@@ -82,12 +84,12 @@ export default function AccountSettingsPage({ user }: { user: User }) {
     }));
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     setOpenDeleteAccountDialog(false);
+    setPendingDeleteLogout(true);
     startTransition(() => {
       deleteUserAction(new FormData());
     });
-    await logout();
   };
 
   useEffect(() => {
@@ -125,6 +127,7 @@ export default function AccountSettingsPage({ user }: { user: User }) {
 
   useEffect(() => {
     if (deleteUserFormState.apiError) {
+      setPendingDeleteLogout(false);
       setToastProps({
         ...toastProps,
         open: true,
@@ -133,15 +136,13 @@ export default function AccountSettingsPage({ user }: { user: User }) {
       });
     }
 
-    if (deleteUserFormState.data) {
-      setToastProps({
-        ...toastProps,
-        open: true,
-        severity: 'success',
-        message: 'Account deleted successfully!',
-      });
+    if (deleteUserFormState.data && pendingDeleteLogout) {
+      void (async () => {
+        await logout({ redirect: false });
+        window.location.replace(ROUTES.ROOT);
+      })();
     }
-  }, [deleteUserFormState, setToastProps, toastProps]);
+  }, [deleteUserFormState, logout, pendingDeleteLogout, setToastProps, toastProps]);
 
   return (
     <Stack spacing={4}>
@@ -192,46 +193,89 @@ export default function AccountSettingsPage({ user }: { user: User }) {
       <Card
         elevation={0}
         sx={{
-          bgcolor: (currentTheme) => (currentTheme.palette.mode === 'dark' ? 'error.dark' : 'error.lighter'),
-          border: '2px solid',
-          borderColor: 'error.main',
+          bgcolor:
+            theme.palette.mode === 'dark'
+              ? alpha(theme.palette.error.main, 0.08)
+              : alpha(theme.palette.error.main, 0.04),
+          border: '1px solid',
+          borderColor:
+            theme.palette.mode === 'dark'
+              ? alpha(theme.palette.error.main, 0.34)
+              : alpha(theme.palette.error.main, 0.2),
           borderRadius: 4,
-          overflow: 'visible',
           p: { xs: 2.5, sm: 3 },
         }}
       >
         <Stack spacing={3}>
-          <SettingsSection
-            description="Permanently remove your account and all associated data. This action cannot be undone."
-            title="Danger zone"
-            tone="danger"
-          >
-            <Button
-              color="error"
-              disabled={isPending}
-              onClick={() => setOpenDeleteAccountDialog(true)}
-              size="large"
-              startIcon={<DeleteIcon />}
+          <Stack direction="row" spacing={2}>
+            <Box
               sx={{
-                ...SETTINGS_SECONDARY_BUTTON_SX,
-                alignSelf: 'flex-start',
-                width: { xs: '100%', sm: 'auto' },
-                ...(theme.palette.mode === 'dark'
-                  ? {
-                      color: theme.palette.error.contrastText,
-                      borderColor: theme.palette.error.contrastText,
-                      '&:hover': {
-                        backgroundColor: alpha(theme.palette.error.contrastText, 0.15),
-                        borderColor: theme.palette.error.contrastText,
-                      },
-                    }
-                  : {}),
+                alignItems: 'center',
+                bgcolor:
+                  theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.error.main, 0.16)
+                    : alpha(theme.palette.error.main, 0.1),
+                borderRadius: 2.5,
+                color: 'error.main',
+                display: 'flex',
+                flexShrink: 0,
+                height: 48,
+                justifyContent: 'center',
+                width: 48,
               }}
-              variant="outlined"
             >
-              Delete my account
-            </Button>
-          </SettingsSection>
+              <DeleteIcon />
+            </Box>
+            <Box sx={{ display: 'grid', gap: 0.75 }}>
+              <Typography
+                sx={{
+                  color: 'error.main',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  lineHeight: 1,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Danger zone
+              </Typography>
+              <Typography sx={{ fontSize: '1.0625rem', fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                Delete account
+              </Typography>
+              <Typography color="text.secondary" sx={{ lineHeight: 1.6 }} variant="body2">
+                Permanently remove your account and associated data. This action cannot be undone.
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Button
+            color="error"
+            disabled={isPending}
+            onClick={() => setOpenDeleteAccountDialog(true)}
+            size="large"
+            startIcon={<DeleteIcon />}
+            sx={{
+              ...SETTINGS_SECONDARY_BUTTON_SX,
+              alignSelf: 'flex-start',
+              width: { xs: '100%', sm: 'auto' },
+              bgcolor: 'background.paper',
+              borderColor:
+                theme.palette.mode === 'dark'
+                  ? alpha(theme.palette.error.main, 0.46)
+                  : alpha(theme.palette.error.main, 0.28),
+              color: 'error.main',
+              '&:hover': {
+                bgcolor:
+                  theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.error.main, 0.12)
+                    : alpha(theme.palette.error.main, 0.06),
+                borderColor: 'error.main',
+              },
+            }}
+            variant="outlined"
+          >
+            Delete my account
+          </Button>
         </Stack>
 
         <Dialog

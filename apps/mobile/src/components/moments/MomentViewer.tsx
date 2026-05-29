@@ -1020,7 +1020,7 @@ export function MomentViewer({
             }}
             onFocus={() => setPaused(true)}
             onSend={handleReply}
-            placeholder={`Reply to ${displayName}…`}
+            placeholder={`Reply…`}
             showStatus={false}
             targetUserId={currentMoment.authorId}
             variant="overlay"

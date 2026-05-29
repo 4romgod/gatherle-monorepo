@@ -63,4 +63,17 @@ describe('useLogout', () => {
     expect(loggerMock.warn).toHaveBeenCalledWith('Failed to clear Apollo cache during logout', cacheError);
     expect(signOutMock).toHaveBeenCalledWith({ redirect: true, redirectTo: '/auth/login' });
   });
+
+  it('supports signing out without a redirect', async () => {
+    const { result } = renderHook(() => useLogout());
+
+    await act(async () => {
+      await result.current.logout({ redirect: false });
+    });
+
+    expect(clearStore).toHaveBeenCalledTimes(1);
+    expect(signOutMock).toHaveBeenCalledWith({ redirect: false });
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.error).not.toHaveBeenCalled();
+  });
 });

@@ -12,12 +12,14 @@ import PasswordSettingsPage from '@/components/settings/PasswordSettingsPage';
 import AppearanceSettingsPage from '@/components/settings/AppearanceSettingsPage';
 import { auth } from '@/auth';
 import { getClient } from '@/data/graphql';
+import { GetUserByIdDocument } from '@/data/graphql/query/User/query';
 import { GetEventCategoryGroupsDocument } from '@/data/graphql/types/graphql';
 import { omit } from 'lodash';
 import { buildPageMetadata } from '@/lib/metadata';
 import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { featureFlags } from '@/lib/constants/feature-flags';
+import { getAuthHeader } from '@/lib/utils/auth';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Account Settings',
@@ -57,11 +59,25 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const { tab } = await searchParams;
   const requestedTabKey = tab ? (TAB_ALIASES[tab] ?? 'account') : 'account';
 
-  const { data: groups } = await getClient().query({
-    query: GetEventCategoryGroupsDocument,
-  });
+  const [groupsResult, userPasswordStateResult] = await Promise.all([
+    getClient().query({
+      query: GetEventCategoryGroupsDocument,
+    }),
+    getClient()
+      .query({
+        query: GetUserByIdDocument,
+        variables: { userId: session.user.userId },
+        context: {
+          headers: getAuthHeader(session.user.token),
+        },
+        fetchPolicy: 'no-cache',
+      })
+      .catch(() => null),
+  ]);
 
   const user = omit(session.user, ['token', '__typename']);
+  const hasLocalPassword =
+    userPasswordStateResult?.data?.readUserById?.hasLocalPassword ?? session.user.hasLocalPassword ?? null;
 
   const tabs: AccountSettingsTab[] = [
     {
@@ -122,13 +138,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     {
       key: 'interests',
       name: 'Interests',
-      content: <InterestsSettingsPage user={user} eventCategoryGroups={groups.readEventCategoryGroups} />,
+      content: <InterestsSettingsPage user={user} eventCategoryGroups={groupsResult.data.readEventCategoryGroups} />,
       description: 'Manage your event interests',
     },
     {
       key: 'password',
       name: 'Password',
-      content: <PasswordSettingsPage />,
+      content: <PasswordSettingsPage hasLocalPassword={hasLocalPassword} />,
       description: 'Change your password',
     },
     {

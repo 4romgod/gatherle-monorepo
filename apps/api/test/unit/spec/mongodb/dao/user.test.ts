@@ -289,15 +289,18 @@ describe('UserDAO', () => {
 
       expect(User.findOne).toHaveBeenNthCalledWith(1, { googleSubject: 'google-user-1' });
       expect(User.findOne).toHaveBeenNthCalledWith(2, { email: 'oauthuser@example.com' });
-      expect(UserModelMock).toHaveBeenCalledWith({
-        email: 'oauthuser@example.com',
-        given_name: 'OAuth',
-        family_name: 'User',
-        password: expect.any(String),
-        emailVerified: true,
-        profile_picture: 'https://example.com/avatar.png',
-        googleSubject: 'google-user-1',
-      });
+      expect(UserModelMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'oauthuser@example.com',
+          given_name: 'OAuth',
+          family_name: 'User',
+          password: expect.any(String),
+          hasLocalPassword: false,
+          emailVerified: true,
+          profile_picture: 'https://example.com/avatar.png',
+          googleSubject: 'google-user-1',
+        }),
+      );
       expect(createdUserDoc.save).toHaveBeenCalled();
       expect(result).toEqual({
         userId: 'user-1',

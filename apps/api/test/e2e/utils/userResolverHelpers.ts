@@ -1,15 +1,25 @@
-import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
+import { randomBytes } from 'node:crypto';
+import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
 import { UserRole } from '@gatherle/commons/types';
-import { getCreateUserMutation, getDeleteUserByIdMutation, getLoginUserMutation } from '@/test/utils';
+import {
+  getCreateUserMutation,
+  getDeleteUserByIdMutation,
+  getLoginUserMutation,
+  getReadUsersWithOptionsQuery,
+} from '@/test/utils';
 import { readRuntimeContext } from '../runtimeContext';
 import { cleanupTrackedEntities, trackCreatedId } from './eventSeriesResolverHelpers';
 import { generateToken } from '@/utils/auth';
 import { JWT_SECRET } from '@/constants';
 
-export const uniqueSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+export const uniqueSuffix = () => `${Date.now()}-${randomBytes(4).toString('hex')}`;
+export const E2E_USER_EMAIL_PREFIX = 'test-';
+export const E2E_USER_EMAIL_DOMAIN = '@example.com';
+export const E2E_USER_USERNAME_PREFIX = 'testUsername-';
 
 const MAX_USER_HELPER_ATTEMPTS = 5;
 const GRAPHQL_REQUEST_TIMEOUT_MS = 45_000;
+const ORPHAN_SWEEP_SEARCH_LIMIT = 500;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,6 +62,35 @@ export type GraphQLTestResponse = {
   status: number;
   body: any;
 };
+
+type MinimalUserRef = Pick<UserWithToken, 'userId' | 'email' | 'username'>;
+
+const sanitizeE2ENamespace = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+
+const deriveDefaultE2EUserNamespace = (): string => {
+  const explicitNamespace = process.env.E2E_USER_NAMESPACE?.trim();
+  if (explicitNamespace) {
+    return sanitizeE2ENamespace(explicitNamespace);
+  }
+
+  const fallbackSegments = [
+    process.env.GITHUB_RUN_ID,
+    process.env.GITHUB_RUN_ATTEMPT,
+    process.env.E2E_API_SHARD,
+    process.pid.toString(),
+  ].filter((segment): segment is string => typeof segment === 'string' && segment.trim().length > 0);
+
+  return sanitizeE2ENamespace(fallbackSegments.join('-') || 'local-e2e');
+};
+
+export const resolveE2EUserNamespace = (): string =>
+  sanitizeE2ENamespace(readRuntimeContext()?.e2eUserNamespace ?? deriveDefaultE2EUserNamespace()) || 'local-e2e';
 
 export const postGraphQLWithRetry = async (
   url: string,
@@ -106,12 +145,16 @@ export const buildCreateUserInput = (
   template: CreateUserInput,
   password: string,
   suffix = uniqueSuffix(),
-): CreateUserInput => ({
-  ...template,
-  email: `test-${suffix}@example.com`,
-  username: `testUsername-${suffix}`,
-  password,
-});
+): CreateUserInput => {
+  const namespace = resolveE2EUserNamespace();
+
+  return {
+    ...template,
+    email: `${E2E_USER_EMAIL_PREFIX}${namespace}-${suffix}${E2E_USER_EMAIL_DOMAIN}`,
+    username: `${E2E_USER_USERNAME_PREFIX}${namespace}-${suffix}`,
+    password,
+  };
+};
 
 const withE2eAuthToken = async (user: UserWithToken, input: CreateUserInput): Promise<UserWithToken> => {
   const jwtSecret = readRuntimeContext()?.jwtSecret ?? JWT_SECRET?.trim();
@@ -160,6 +203,72 @@ const tryLoginExistingUser = async (
   }
 
   return null;
+};
+
+const readUsersBySearch = async (url: string, adminToken: string, searchValue: string): Promise<MinimalUserRef[]> => {
+  const options: QueryOptionsInput = {
+    pagination: {
+      limit: ORPHAN_SWEEP_SEARCH_LIMIT,
+    },
+    search: {
+      fields: ['email', 'username'],
+      value: searchValue,
+      caseSensitive: false,
+    },
+  };
+
+  const response = await postGraphQLWithRetry(url, getReadUsersWithOptionsQuery(options), adminToken);
+
+  if (response.status !== 200 || response.body.errors) {
+    throw new Error(
+      `Failed to read e2e users during orphan sweep: ${JSON.stringify(response.body.errors ?? response.body)}`,
+    );
+  }
+
+  return (response.body.data?.readUsers ?? []) as MinimalUserRef[];
+};
+
+const isTrackedE2EUser = (user: MinimalUserRef, namespace: string): boolean => {
+  const normalizedEmail = user.email?.trim().toLowerCase() ?? '';
+  const normalizedUsername = user.username?.trim().toLowerCase() ?? '';
+  const normalizedNamespace = sanitizeE2ENamespace(namespace);
+
+  return (
+    normalizedEmail.startsWith(`${E2E_USER_EMAIL_PREFIX}${normalizedNamespace}-`) &&
+    normalizedEmail.endsWith(E2E_USER_EMAIL_DOMAIN) &&
+    normalizedUsername.startsWith(`${E2E_USER_USERNAME_PREFIX.toLowerCase()}${normalizedNamespace}-`)
+  );
+};
+
+export const cleanupOrphanedE2EUsers = async (
+  url: string,
+  adminToken: string,
+  phase = 'orphaned-e2e-user-cleanup',
+  namespace = resolveE2EUserNamespace(),
+) => {
+  const normalizedNamespace = sanitizeE2ENamespace(namespace);
+  const searchTerms = [
+    `${E2E_USER_USERNAME_PREFIX}${normalizedNamespace}`,
+    `${E2E_USER_EMAIL_PREFIX}${normalizedNamespace}`,
+  ];
+  const discoveredUsers = new Map<string, MinimalUserRef>();
+
+  for (const searchTerm of searchTerms) {
+    const users = await readUsersBySearch(url, adminToken, searchTerm);
+    users
+      .filter((user) => isTrackedE2EUser(user, normalizedNamespace))
+      .forEach((user) => {
+        discoveredUsers.set(user.userId, user);
+      });
+  }
+
+  const orphanedUserIds = [...discoveredUsers.keys()];
+  if (orphanedUserIds.length === 0) {
+    return [];
+  }
+
+  console.warn(`[${phase}] Cleaning up ${orphanedUserIds.length} orphaned API e2e users`);
+  return cleanupUsersById(url, adminToken, orphanedUserIds, phase);
 };
 
 export const createUserOnServer = async (

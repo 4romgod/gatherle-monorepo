@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Avatar, Box, Button, CircularProgress, Divider, IconButton, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { ArrowBack, KeyboardArrowDown } from '@mui/icons-material';
+import { KeyboardArrowDown } from '@mui/icons-material';
 import { AccessTime } from '@mui/icons-material';
 import { ROUTES } from '@/lib/constants';
 import { getAvatarSrc } from '@/lib/utils';
@@ -32,12 +32,12 @@ interface MessageThreadProps {
   targetUser: ThreadUser | null | undefined;
   displayIdentity: DisplayIdentity;
   username: string;
-  isDesktop: boolean;
   showJumpToLatest: boolean;
   scrollToLatest: (behavior?: ScrollBehavior) => void;
   messageListRef: React.RefObject<HTMLDivElement | null>;
   messagesBottomRef: React.RefObject<HTMLDivElement | null>;
   updateScrollStickiness: () => void;
+  onOpenReplyMoment?: (momentId: string) => void;
 }
 
 export function MessageThread({
@@ -47,12 +47,12 @@ export function MessageThread({
   targetUser,
   displayIdentity,
   username,
-  isDesktop,
   showJumpToLatest,
   scrollToLatest,
   messageListRef,
   messagesBottomRef,
   updateScrollStickiness,
+  onOpenReplyMoment,
 }: MessageThreadProps) {
   const theme = useTheme();
   const surfaceLineColor =
@@ -60,19 +60,6 @@ export function MessageThread({
 
   return (
     <>
-      {!isDesktop && (
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <IconButton
-            component={Link}
-            href={ROUTES.ACCOUNT.MESSAGES}
-            aria-label="Back to conversations"
-            sx={{ ml: -1 }}
-          >
-            <ArrowBack />
-          </IconButton>
-        </Box>
-      )}
-
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Box
           component={Link}
@@ -140,6 +127,9 @@ export function MessageThread({
                   borderBottomLeftRadius: item.isGroupEnd ? 16 : 8,
                 };
 
+            const replyMomentId = item.message.replyToMomentId;
+            const canOpenReplyMoment = Boolean(replyMomentId && onOpenReplyMoment);
+
             return (
               <Box
                 key={item.key}
@@ -161,6 +151,10 @@ export function MessageThread({
                 >
                   {item.message.replyToMomentId && (
                     <Box
+                      component={canOpenReplyMoment ? 'button' : 'div'}
+                      type={canOpenReplyMoment ? 'button' : undefined}
+                      onClick={canOpenReplyMoment ? () => onOpenReplyMoment?.(replyMomentId!) : undefined}
+                      aria-label={canOpenReplyMoment ? 'Open replied-to moment' : undefined}
                       sx={{
                         mb: 0.75,
                         px: 1,
@@ -169,6 +163,26 @@ export function MessageThread({
                         borderColor: item.fromMe ? 'rgba(255,255,255,0.6)' : 'primary.main',
                         borderRadius: '2px 4px 4px 2px',
                         opacity: 0.9,
+                        width: '100%',
+                        textAlign: 'left',
+                        color: 'inherit',
+                        font: 'inherit',
+                        background: 'transparent',
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                        borderTop: 'none',
+                        borderRight: 'none',
+                        borderBottom: 'none',
+                        cursor: canOpenReplyMoment ? 'pointer' : 'default',
+                        transition: 'opacity 160ms ease, transform 160ms ease',
+                        '&:hover': canOpenReplyMoment ? { opacity: 1 } : undefined,
+                        '&:focus-visible': canOpenReplyMoment
+                          ? {
+                              outline: '2px solid',
+                              outlineColor: item.fromMe ? 'rgba(255,255,255,0.8)' : 'primary.main',
+                              outlineOffset: 2,
+                            }
+                          : undefined,
                       }}
                     >
                       <Typography
@@ -185,7 +199,7 @@ export function MessageThread({
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
-                            maxWidth: 220,
+                            maxWidth: '100%',
                             opacity: 0.85,
                           }}
                         >

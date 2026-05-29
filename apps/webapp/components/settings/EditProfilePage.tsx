@@ -5,6 +5,7 @@ import { useActionState } from 'react';
 import { Avatar, Box, Button, CircularProgress, Grid, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { CameraAlt as CameraIcon, Save as SaveIcon } from '@mui/icons-material';
 import { signIn, useSession } from 'next-auth/react';
+import { alpha } from '@mui/material/styles';
 import { FormErrors } from '@/components/FormErrors';
 import LocationInput from '@/components/forms/LocationInput';
 import { updateUserProfileAction } from '@/data/actions/server/user/update-user-profile';
@@ -182,7 +183,16 @@ export default function EditProfilePage({ user }: { user: User }) {
                   sx={(theme) => ({
                     width: 92,
                     height: 92,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    bgcolor:
+                      theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.primary.main, 0.18)
+                        : alpha(theme.palette.primary.main, 0.12),
+                    border: '1px solid',
+                    borderColor:
+                      theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.primary.main, 0.3)
+                        : alpha(theme.palette.primary.main, 0.18),
+                    color: 'primary.main',
                   })}
                 />
                 {avatarUploading ? (

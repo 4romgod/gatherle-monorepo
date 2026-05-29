@@ -13,7 +13,10 @@ jest.mock('@/constants', () => {
   const actual = jest.requireActual('@/constants');
   return {
     ...actual,
-    GOOGLE_CLIENT_ID: 'google-client-id',
+    GOOGLE_OAUTH_CLIENT_ID_WEB: 'google-web-client-id',
+    GOOGLE_OAUTH_CLIENT_ID_ANDROID: 'google-android-client-id',
+    GOOGLE_OAUTH_CLIENT_ID_IOS: 'google-ios-client-id',
+    GOOGLE_CLIENT_IDS: ['google-web-client-id', 'google-android-client-id', 'google-ios-client-id'],
     APPLE_CLIENT_ID: 'apple-client-id',
   };
 });
@@ -69,6 +72,15 @@ describe('externalAuth utilities', () => {
 
     expect(mockCreateRemoteJWKSet).toHaveBeenCalledTimes(1);
     expect(mockJwtVerify).toHaveBeenCalledTimes(2);
+    expect(mockJwtVerify).toHaveBeenNthCalledWith(
+      1,
+      'google-id-token',
+      'jwks:https://www.googleapis.com/oauth2/v3/certs',
+      {
+        audience: ['google-web-client-id', 'google-android-client-id', 'google-ios-client-id'],
+        issuer: ['https://accounts.google.com', 'accounts.google.com'],
+      },
+    );
     expect(firstResult).toEqual(secondResult);
     expect(firstResult).toEqual({
       provider: OAuthProvider.Google,

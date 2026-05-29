@@ -9,6 +9,7 @@ type AccountPrimaryButtonProps = {
   icon?: ComponentProps<typeof Feather>['name'];
   label: string;
   loading?: boolean;
+  loadingLabel?: string;
   onPress: () => void;
   tone?: 'danger' | 'primary' | 'secondary';
 };
@@ -17,6 +18,7 @@ export function AccountPrimaryButton({
   icon,
   label,
   loading = false,
+  loadingLabel = 'Saving...',
   onPress,
   tone = 'primary',
 }: AccountPrimaryButtonProps) {
@@ -30,7 +32,7 @@ export function AccountPrimaryButton({
         }
       : tone === 'danger'
         ? {
-            background: theme.colors.errorSoft,
+            background: theme.dark ? theme.colors.surfaceRaised : theme.colors.errorSoft,
             border: theme.colors.error,
             color: theme.colors.error,
           }
@@ -58,7 +60,7 @@ export function AccountPrimaryButton({
       ) : icon ? (
         <Feather color={palette.color} name={icon} size={16} />
       ) : null}
-      <Text style={[styles.label, { color: palette.color }]}>{loading ? 'Saving...' : label}</Text>
+      <Text style={[styles.label, { color: palette.color }]}>{loading ? loadingLabel : label}</Text>
     </Pressable>
   );
 }

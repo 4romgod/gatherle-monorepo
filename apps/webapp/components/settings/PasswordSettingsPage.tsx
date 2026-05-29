@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useEffect, useMemo, useState, useTransition } from 'react';
 import { Box, Typography, TextField, Button, IconButton, InputAdornment, LinearProgress, Stack } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { signIn, useSession } from 'next-auth/react';
 import { updateUserPasswordAction } from '@/data/actions/server/user/update-user-password';
+import type { ActionState } from '@/data/actions/types';
 import { passwordSchema } from '@/data/validation/auth';
+import type { User } from '@/data/graphql/types/graphql';
 import { useAppContext } from '@/hooks/useAppContext';
 import { BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
 
@@ -20,27 +23,35 @@ interface PasswordStrength {
   color: 'error' | 'warning' | 'info' | 'success';
 }
 
-import type { ActionState } from '@/data/actions/types';
+type PasswordSettingsPageProps = {
+  hasLocalPassword?: boolean | null;
+};
 
-export default function PasswordSettingsPage() {
-  const { setToastProps, toastProps } = useAppContext();
+export default function PasswordSettingsPage({ hasLocalPassword }: PasswordSettingsPageProps) {
+  const { setToastProps } = useAppContext();
+  const { data: session } = useSession();
   const [settings, setSettings] = useState<PasswordSettings>({
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: '',
   });
-
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [actionState, setActionState] = useState<ActionState>({});
-
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({
     score: 0,
     feedback: [],
     color: 'error',
   });
+  const [localHasLocalPassword, setLocalHasLocalPassword] = useState<boolean | null>(null);
+  const [lastSubmittedSetMode, setLastSubmittedSetMode] = useState(false);
+
+  const resolvedHasLocalPassword = localHasLocalPassword ?? session?.user?.hasLocalPassword ?? hasLocalPassword ?? true;
+  const requiresCurrentPassword = resolvedHasLocalPassword !== false;
+  const isSetPasswordMode = !requiresCurrentPassword;
+  const newPasswordError = actionState.zodErrors?.password?.[0] ?? actionState.zodErrors?.newPassword?.[0];
 
   const calculatePasswordStrength = (password: string): PasswordStrength => {
     if (!password) {
@@ -87,26 +98,38 @@ export default function PasswordSettingsPage() {
 
   useEffect(() => {
     if (actionState.success) {
-      setToastProps({
-        ...toastProps,
+      const updatedUser = actionState.data as User | undefined;
+
+      if (updatedUser && session?.user?.token) {
+        void signIn('refresh-session', {
+          userData: JSON.stringify(updatedUser),
+          token: session.user.token,
+          redirect: false,
+        });
+      }
+
+      setLocalHasLocalPassword(true);
+      setToastProps((previous) => ({
+        ...previous,
         open: true,
         severity: 'success',
-        message: 'Password changed successfully!',
-      });
+        message: lastSubmittedSetMode ? 'Password set successfully!' : 'Password changed successfully!',
+      }));
       setSettings({
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: '',
       });
+      setActionState({});
     } else if (actionState.apiError) {
-      setToastProps({
-        ...toastProps,
+      setToastProps((previous) => ({
+        ...previous,
         open: true,
         severity: 'error',
-        message: actionState.apiError,
-      });
+        message: actionState.apiError ?? 'An unexpected error occurred',
+      }));
     }
-  }, [actionState]);
+  }, [actionState, lastSubmittedSetMode, session?.user?.token, setToastProps]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -119,16 +142,16 @@ export default function PasswordSettingsPage() {
   };
 
   const showError = (message: string) => {
-    setToastProps({
-      ...toastProps,
+    setToastProps((previous) => ({
+      ...previous,
       open: true,
       severity: 'error',
       message,
-    });
+    }));
   };
 
   const validatePasswords = (): boolean => {
-    if (!settings.currentPassword.trim()) {
+    if (requiresCurrentPassword && !settings.currentPassword.trim()) {
       showError('Current password is required');
       return false;
     }
@@ -144,7 +167,7 @@ export default function PasswordSettingsPage() {
       return false;
     }
 
-    if (settings.currentPassword === settings.newPassword) {
+    if (requiresCurrentPassword && settings.currentPassword === settings.newPassword) {
       showError('New password must be different from current password');
       return false;
     }
@@ -170,14 +193,17 @@ export default function PasswordSettingsPage() {
     }
 
     const formData = new FormData();
-    formData.append('currentPassword', settings.currentPassword);
+    if (requiresCurrentPassword) {
+      formData.append('currentPassword', settings.currentPassword);
+    }
     formData.append('newPassword', settings.newPassword);
+    setLastSubmittedSetMode(!requiresCurrentPassword);
 
     startTransition(async () => {
       try {
         const result = await updateUserPasswordAction({}, formData);
         setActionState(result);
-      } catch (error) {
+      } catch {
         setActionState({
           apiError: 'An unexpected error occurred',
           success: false,
@@ -186,11 +212,18 @@ export default function PasswordSettingsPage() {
     });
   };
 
-  const isFormValid =
-    settings.currentPassword &&
-    settings.newPassword &&
-    settings.confirmNewPassword &&
-    passwordSchema.safeParse(settings.newPassword).success;
+  const isFormValid = useMemo(() => {
+    if (requiresCurrentPassword && !settings.currentPassword.trim()) {
+      return false;
+    }
+
+    return Boolean(
+      settings.newPassword &&
+      settings.confirmNewPassword &&
+      settings.newPassword === settings.confirmNewPassword &&
+      passwordSchema.safeParse(settings.newPassword).success,
+    );
+  }, [requiresCurrentPassword, settings.confirmNewPassword, settings.currentPassword, settings.newPassword]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -199,61 +232,65 @@ export default function PasswordSettingsPage() {
           Password Management
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
-          Update your password to keep your account secure
+          {isSetPasswordMode
+            ? 'Add a password so you can sign in with email in addition to your social login.'
+            : 'Update your password to keep your account secure.'}
         </Typography>
       </Box>
 
       <form onSubmit={handleChangePassword} style={{ width: '100%', maxWidth: 600 }}>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem', mb: 3 }}>
-            Change Password
+            {isSetPasswordMode ? 'Set Password' : 'Change Password'}
           </Typography>
 
           <Stack spacing={{ xs: 2, sm: 3 }}>
-            <TextField
-              id="password-current"
-              fullWidth
-              label="Current Password"
-              type={showCurrentPassword ? 'text' : 'password'}
-              name="currentPassword"
-              value={settings.currentPassword}
-              onChange={handleInputChange}
-              variant="outlined"
-              disabled={isPending}
-              error={!!actionState.zodErrors?.currentPassword}
-              helperText={actionState.zodErrors?.currentPassword?.[0]}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        edge="end"
-                        disabled={isPending}
-                      >
-                        {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
-              color="secondary"
-            />
+            {requiresCurrentPassword ? (
+              <TextField
+                id="password-current"
+                fullWidth
+                label="Current Password"
+                type={showCurrentPassword ? 'text' : 'password'}
+                name="currentPassword"
+                value={settings.currentPassword}
+                onChange={handleInputChange}
+                variant="outlined"
+                disabled={isPending}
+                error={!!actionState.zodErrors?.currentPassword}
+                helperText={actionState.zodErrors?.currentPassword?.[0]}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          edge="end"
+                          disabled={isPending}
+                        >
+                          {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                color="secondary"
+              />
+            ) : null}
 
             <Box>
               <TextField
                 id="password-new"
                 fullWidth
-                label="New Password"
+                label={isSetPasswordMode ? 'Password' : 'New Password'}
                 type={showNewPassword ? 'text' : 'password'}
                 name="newPassword"
                 value={settings.newPassword}
                 onChange={handleInputChange}
                 variant="outlined"
                 disabled={isPending}
-                error={!!actionState.zodErrors?.newPassword}
-                helperText={actionState.zodErrors?.newPassword?.[0]}
+                error={!!newPasswordError}
+                helperText={newPasswordError}
                 slotProps={{
                   input: {
                     endAdornment: (
@@ -273,7 +310,7 @@ export default function PasswordSettingsPage() {
                 color="secondary"
               />
 
-              {settings.newPassword && (
+              {settings.newPassword ? (
                 <Box
                   sx={{
                     mt: 3,
@@ -307,7 +344,7 @@ export default function PasswordSettingsPage() {
                     color={passwordStrength.color}
                     sx={{ height: 10, borderRadius: 5, mb: 2 }}
                   />
-                  {passwordStrength.feedback.length > 0 && (
+                  {passwordStrength.feedback.length > 0 ? (
                     <Box>
                       <Typography
                         variant="caption"
@@ -331,15 +368,15 @@ export default function PasswordSettingsPage() {
                         ))}
                       </Box>
                     </Box>
-                  )}
+                  ) : null}
                 </Box>
-              )}
+              ) : null}
             </Box>
 
             <TextField
               id="password-confirm"
               fullWidth
-              label="Confirm New Password"
+              label={isSetPasswordMode ? 'Confirm Password' : 'Confirm New Password'}
               type={showConfirmPassword ? 'text' : 'password'}
               name="confirmNewPassword"
               value={settings.confirmNewPassword}
@@ -377,7 +414,13 @@ export default function PasswordSettingsPage() {
               size="large"
               sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
             >
-              {isPending ? 'Changing Password...' : 'Change Password'}
+              {isPending
+                ? isSetPasswordMode
+                  ? 'Setting Password...'
+                  : 'Changing Password...'
+                : isSetPasswordMode
+                  ? 'Set Password'
+                  : 'Change Password'}
             </Button>
           </Stack>
         </Box>
