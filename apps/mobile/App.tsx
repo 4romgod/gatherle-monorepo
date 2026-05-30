@@ -1,4 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { useEffect } from 'react';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -24,6 +25,7 @@ import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
 import { AppThemeProvider } from '@/app/theme/AppThemeProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { configureMobileGoogleSignIn } from '@/lib/auth/googleSignIn';
 
 function AppContent() {
   const { isDark, navigationTheme } = useAppTheme();
@@ -57,6 +59,10 @@ export default function App() {
     SpaceGrotesk_500Medium,
     SpaceGrotesk_700Bold,
   });
+
+  useEffect(() => {
+    configureMobileGoogleSignIn();
+  }, []);
 
   if (!fontsLoaded) {
     return null;

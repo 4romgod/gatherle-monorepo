@@ -8,9 +8,6 @@
       "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
-      "env": {
-        "EXPO_PUBLIC_GRAPHQL_URL": "http://localhost:9000/v1/graphql"
-      },
       "android": {
         "buildType": "apk"
       }
@@ -18,10 +15,6 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
-      "env": {
-        "EXPO_PUBLIC_GRAPHQL_URL": "https://api.beta.af-south-1.gatherle.com/graphql",
-        "EXPO_PUBLIC_WEBSOCKET_URL": "wss://ws.beta.af-south-1.gatherle.com"
-      },
       "android": {
         "buildType": "apk"
       }

@@ -1,13 +1,8 @@
-dist
-.DS_Store
-.env
 .git
 .gatherle-env
-.venv
-env/
 .vscode
-build
 gatherle.egg-info
 __pycache__/
+env/
 *.py[cod]
 *.pyo

@@ -1,12 +1,10 @@
 import { AntDesign, Feather } from '@expo/vector-icons';
 import { ApolloError, useMutation } from '@apollo/client';
-import { makeRedirectUri } from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LoginWithOAuthDocument } from '@data/graphql/mutation/User/mutation';
 import { OAuthProvider } from '@data/graphql/types/graphql';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
@@ -14,38 +12,17 @@ import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
 import { getApolloErrorMessage } from '@/lib/auth/apolloErrors';
+import {
+  configureMobileGoogleSignIn,
+  getGoogleSignInUnavailableMessage,
+  isGoogleSignInConfiguredForPlatform,
+} from '@/lib/auth/googleSignIn';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 
-WebBrowser.maybeCompleteAuthSession();
-
 type LoginRoute = RouteProp<RootStackParamList, 'Login'>;
 
-const GOOGLE_OAUTH_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB;
-const GOOGLE_OAUTH_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID;
-const GOOGLE_OAUTH_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS;
-const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
-const GOOGLE_PLACEHOLDER_CLIENT_ID = 'missing-google-client-id';
-const GOOGLE_ACTIVE_CLIENT_ID =
-  Platform.OS === 'android'
-    ? GOOGLE_OAUTH_CLIENT_ID_ANDROID
-    : Platform.OS === 'ios'
-      ? GOOGLE_OAUTH_CLIENT_ID_IOS
-      : GOOGLE_OAUTH_CLIENT_ID_WEB;
-const GOOGLE_NOT_CONFIGURED_MESSAGE =
-  Platform.OS === 'android'
-    ? 'Google sign-in is not configured for this Android build.'
-    : Platform.OS === 'ios'
-      ? 'Google sign-in is not configured for this iOS build.'
-      : 'Google sign-in is not configured for this build.';
-
-const getGoogleOAuthRedirectScheme = (clientId: string | undefined) => {
-  if (!clientId?.trim().endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
-    return undefined;
-  }
-
-  return `com.googleusercontent.apps.${clientId.trim().slice(0, -GOOGLE_CLIENT_ID_SUFFIX.length)}`;
-};
+const GOOGLE_DEVELOPER_ERROR_CODE = '10';
 
 type ProviderOptionProps = {
   disabled?: boolean;
@@ -83,32 +60,9 @@ export function LoginProvidersScreen() {
   const { theme } = useAppTheme();
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const exchangedGoogleTokenRef = useRef<string | null>(null);
   const [loginWithOAuth] = useMutation(LoginWithOAuthDocument);
   const redirectTab = route.params?.redirectTab;
-  const googleRedirectUri = (() => {
-    if (Platform.OS === 'android') {
-      const scheme = getGoogleOAuthRedirectScheme(GOOGLE_OAUTH_CLIENT_ID_ANDROID);
-      return scheme ? makeRedirectUri({ native: `${scheme}:/oauthredirect` }) : undefined;
-    }
-
-    if (Platform.OS === 'ios') {
-      const scheme = getGoogleOAuthRedirectScheme(GOOGLE_OAUTH_CLIENT_ID_IOS);
-      return scheme ? makeRedirectUri({ native: `${scheme}:/oauthredirect` }) : undefined;
-    }
-
-    return undefined;
-  })();
-  const googleConfigured = Boolean(GOOGLE_ACTIVE_CLIENT_ID && (Platform.OS === 'web' || googleRedirectUri));
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    androidClientId: GOOGLE_OAUTH_CLIENT_ID_ANDROID,
-    clientId: GOOGLE_ACTIVE_CLIENT_ID ?? GOOGLE_PLACEHOLDER_CLIENT_ID,
-    iosClientId: GOOGLE_OAUTH_CLIENT_ID_IOS,
-    redirectUri: googleRedirectUri,
-    scopes: ['openid', 'profile', 'email'],
-    selectAccount: true,
-    webClientId: GOOGLE_OAUTH_CLIENT_ID_WEB,
-  });
+  const googleConfigured = isGoogleSignInConfiguredForPlatform();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -126,84 +80,76 @@ export function LoginProvidersScreen() {
     navigation.navigate('EmailLogin', redirectTab ? { redirectTab } : undefined);
   };
 
-  useEffect(() => {
-    if (!googleResponse) {
-      return;
-    }
-
-    if (googleResponse.type === 'cancel' || googleResponse.type === 'dismiss') {
-      setGoogleLoading(false);
-      return;
-    }
-
-    if (googleResponse.type !== 'success') {
-      setGoogleLoading(false);
-      setProviderNotice('Google sign-in was not completed.');
-      return;
-    }
-
-    const idToken = googleResponse.authentication?.idToken ?? googleResponse.params.id_token;
-    if (!idToken) {
-      setGoogleLoading(false);
-      setProviderNotice('Google did not return an identity token. Please try again.');
-      return;
-    }
-
-    if (exchangedGoogleTokenRef.current === idToken) {
-      return;
-    }
-    exchangedGoogleTokenRef.current = idToken;
-
-    const exchangeGoogleIdentity = async () => {
-      try {
-        const response = await loginWithOAuth({
-          variables: {
-            input: {
-              idToken,
-              provider: OAuthProvider.Google,
-            },
-          },
-        });
-
-        if (!response.data?.loginWithOAuth) {
-          setProviderNotice('Google sign-in failed. Please try again.');
-          return;
-        }
-
-        signIn(response.data.loginWithOAuth);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
-        });
-      } catch (error) {
-        exchangedGoogleTokenRef.current = null;
-        setProviderNotice(getApolloErrorMessage(error as ApolloError) ?? 'Google sign-in failed. Please try again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-
-    void exchangeGoogleIdentity();
-  }, [googleResponse, loginWithOAuth, navigation, redirectTab, signIn]);
-
   const handleGoogleLogin = async () => {
     setProviderNotice(null);
     if (!googleConfigured) {
-      setProviderNotice(GOOGLE_NOT_CONFIGURED_MESSAGE);
-      return;
-    }
-
-    if (!googleRequest) {
-      setProviderNotice('Google sign-in is still loading. Please try again.');
+      setProviderNotice(getGoogleSignInUnavailableMessage());
       return;
     }
 
     setGoogleLoading(true);
     try {
-      await promptGoogleAsync();
-    } catch {
+      configureMobileGoogleSignIn();
+
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
+
+      const signInResult = await GoogleSignin.signIn();
+      if (signInResult.type === 'cancelled') {
+        return;
+      }
+
+      const idToken = signInResult.data.idToken;
+      if (!idToken) {
+        setProviderNotice('Google did not return an identity token. Please try again.');
+        return;
+      }
+
+      const response = await loginWithOAuth({
+        variables: {
+          input: {
+            idToken,
+            provider: OAuthProvider.Google,
+          },
+        },
+      });
+
+      if (!response.data?.loginWithOAuth) {
+        setProviderNotice('Google sign-in failed. Please try again.');
+        return;
+      }
+
+      signIn(response.data.loginWithOAuth);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
+      });
+    } catch (error) {
+      if (isErrorWithCode(error)) {
+        if (error.code === statusCodes.IN_PROGRESS) {
+          setProviderNotice('Google sign-in is already in progress.');
+          return;
+        }
+
+        if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          setProviderNotice('Google Play Services are unavailable or outdated on this device.');
+          return;
+        }
+
+        if (error.code === GOOGLE_DEVELOPER_ERROR_CODE || error.message.includes('DEVELOPER_ERROR')) {
+          setProviderNotice(
+            'Google sign-in is misconfigured for this Android build. Confirm the Android OAuth client matches this app package name and signing SHA.',
+          );
+          return;
+        }
+      }
+
       setGoogleLoading(false);
-      setProviderNotice('Google sign-in could not be opened. Please try again.');
+      setProviderNotice(getApolloErrorMessage(error as ApolloError) ?? 'Google sign-in failed. Please try again.');
+      return;
+    } finally {
+      setGoogleLoading(false);
     }
   };
 

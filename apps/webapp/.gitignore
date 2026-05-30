@@ -1,9 +1,2 @@
-.DS_Store
-.env
-.next/
-.vercel
-build/
-coverage/
-node_modules/
+# Generated GraphQL artifacts
 data/graphql/types/
-.env*.local

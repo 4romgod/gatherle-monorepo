@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gatherle.mobile"
+      "bundleIdentifier": "com.gatherle.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +35,6 @@
       "expo-font",
       "expo-secure-store",
       "expo-video",
-      "expo-web-browser",
       [
         "@react-native-community/datetimepicker",
         {
