@@ -1,5 +1,5 @@
 {
-  "watch": ["lib"],
+  "watch": ["lib", "../../packages/commons/lib"],
   "ext": "ts,json",
   "ignore": ["test/**", "**/*.test.ts", "**/*.spec.ts", "dist/**", "node_modules/**", "*.log"],
   "legacyWatch": false,

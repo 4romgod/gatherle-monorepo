@@ -389,6 +389,8 @@ export const RESOLVER_DESCRIPTIONS = {
       'Read a list of events. Accepts optional query options for pagination, sorting, and filtering and returns a list of events.',
     readEventOccurrences:
       'Read occurrence-oriented event results within a required date window. Results are served from persisted EventOccurrence rows inside the current materialization window.',
+    readEventOccurrencesCount:
+      'Read the total number of persisted event occurrences that match the supplied occurrence-oriented query window and filters.',
     updateEventOccurrence:
       'Edit one recurring event occurrence as an exception without changing the rest of the series.',
     cancelEventOccurrence:

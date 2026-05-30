@@ -1,5 +1,10 @@
 import type { ApolloClient } from '@apollo/client';
 import {
+  GetEventOccurrenceParticipantsDocument,
+  GetMyEventOccurrenceRsvpStatusDocument,
+  GetMyEventOccurrenceRsvpsDocument,
+} from '@/data/graphql/query/EventOccurrenceParticipant/query';
+import {
   GetEventParticipantsDocument,
   GetFollowRequestsDocument,
   GetFollowingDocument,
@@ -12,7 +17,9 @@ import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@/dat
 import { isRecord } from '@/lib/utils';
 import {
   normalizeEventParticipantForEventParticipantsCache,
+  normalizeEventParticipantForOccurrenceParticipantsCache,
   normalizeEventParticipantForEventQueryCache,
+  normalizeEventParticipantForMyOccurrenceRsvpStatusCache,
   normalizeEventParticipantForMyRsvpStatusCache,
   normalizeEventParticipantForMyRsvpsCache,
   normalizeFollowRequestForCache,
@@ -281,6 +288,77 @@ export const createNotificationRealtimeCacheHandlers = ({
         include: [GetMyRsvpsDocument],
       });
     }
+  };
+
+  const upsertEventOccurrenceParticipantsCache = (payload: RealtimeEventRsvpPayload) => {
+    const occurrenceId = payload.participant.occurrenceId;
+    if (!occurrenceId) {
+      return;
+    }
+
+    const normalizedParticipant = normalizeEventParticipantForOccurrenceParticipantsCache(payload.participant);
+
+    client.cache.updateQuery(
+      {
+        query: GetEventOccurrenceParticipantsDocument,
+        variables: { occurrenceId },
+      },
+      (existing) => {
+        if (!existing?.readEventOccurrenceParticipants) {
+          return existing;
+        }
+
+        const currentItems = existing.readEventOccurrenceParticipants;
+        const existingIndex = currentItems.findIndex(
+          (item) => item.participantId === normalizedParticipant.participantId,
+        );
+
+        const nextItems =
+          existingIndex === -1
+            ? [normalizedParticipant as (typeof currentItems)[number], ...currentItems]
+            : currentItems.map((item, index) =>
+                index === existingIndex
+                  ? ({
+                      ...item,
+                      ...normalizedParticipant,
+                    } as (typeof currentItems)[number])
+                  : item,
+              );
+
+        return {
+          ...existing,
+          readEventOccurrenceParticipants: nextItems,
+        };
+      },
+    );
+  };
+
+  const upsertMyOccurrenceRsvpCaches = (payload: RealtimeEventRsvpPayload) => {
+    const occurrenceId = payload.participant.occurrenceId;
+    if (payload.participant.userId !== userId || !occurrenceId) {
+      return;
+    }
+
+    client.cache.updateQuery(
+      {
+        query: GetMyEventOccurrenceRsvpStatusDocument,
+        variables: { occurrenceId },
+      },
+      (existing) => {
+        if (!existing || !('myEventOccurrenceRsvpStatus' in existing)) {
+          return existing;
+        }
+
+        return {
+          ...existing,
+          myEventOccurrenceRsvpStatus: normalizeEventParticipantForMyOccurrenceRsvpStatusCache(payload.participant),
+        };
+      },
+    );
+
+    void client.refetchQueries({
+      include: [GetMyEventOccurrenceRsvpsDocument],
+    });
   };
 
   const upsertEventQueryCaches = (payload: RealtimeEventRsvpPayload) => {
@@ -603,7 +681,9 @@ export const createNotificationRealtimeCacheHandlers = ({
 
   const handleRealtimeEventRsvp = (payload: RealtimeEventRsvpPayload) => {
     upsertEventParticipantsCache(payload);
+    upsertEventOccurrenceParticipantsCache(payload);
     upsertMyRsvpCaches(payload);
+    upsertMyOccurrenceRsvpCaches(payload);
     upsertEventQueryCaches(payload);
   };
 

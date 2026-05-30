@@ -1,22 +1,28 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable } from 'react-native';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@apollo/client';
+import { Alert, Modal, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
+import { DeleteEventByIdDocument } from '@data/graphql/mutation/Event/mutation';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
+import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { RemoteImage } from '@/components/core/RemoteImage';
 import { EventDetailActionButton } from '@/components/events/detail/EventDetailActionButton';
 import { EventImageViewerModal } from '@/components/events/detail/EventImageViewerModal';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
 import { EventDetailSection } from '@/components/events/detail/EventDetailSection';
+import { EventSessionsRail } from '@/components/events/detail/EventSessionsRail';
 import { EventDetailStat } from '@/components/events/detail/EventDetailStat';
 import { useEventDetailActions } from '@/hooks/events/useEventDetailActions';
 import { useEventMoments } from '@/hooks/moments/useEventMoments';
 import { EventMomentsRing } from '@/components/moments/EventMomentsRing';
 import { MomentComposerModal } from '@/components/moments/MomentComposerModal';
+import { GetEventBySlugForNavigationDocument } from '@data/graphql/query/Event/query';
 import {
   formatCountLabel,
   formatEventScheduleTwoLine,
@@ -28,12 +34,14 @@ import {
   getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
+import { mapNavigableEventOccurrences } from '@/lib/events/adapters';
 import {
   addEventToCalendar,
   openEventLocationInMaps,
   openEventSourceLink,
   shareEvent,
 } from '@/lib/events/deviceActions';
+import { getApolloAuthContext } from '@/lib/auth';
 import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -41,49 +49,234 @@ import { typography } from '@/app/theme/typography';
 
 type EventDetailsRoute = RouteProp<RootStackParamList, 'EventDetails'>;
 
+type EventOptionsModalProps = {
+  canEditEvent: boolean;
+  hasEventSource: boolean;
+  onClose: () => void;
+  onDeleteEvent: () => void;
+  onEditEvent: () => void;
+  onOpenEventSource: () => void;
+  onShareEvent: () => void;
+  visible: boolean;
+};
+
+function buildAttendanceBadgeLabel(goingCount: number, interestedCount: number, fallbackCount?: number) {
+  if (goingCount <= 0 && interestedCount <= 0) {
+    if (!fallbackCount || fallbackCount <= 0) {
+      return null;
+    }
+
+    return formatCountLabel(fallbackCount, 'attendee');
+  }
+
+  const parts: string[] = [];
+
+  if (goingCount > 0) {
+    parts.push(`${goingCount} going`);
+  }
+
+  if (interestedCount > 0) {
+    parts.push(`${interestedCount} interested`);
+  }
+
+  return parts.join(' · ');
+}
+
+function EventOptionsModal({
+  canEditEvent,
+  hasEventSource,
+  onClose,
+  onDeleteEvent,
+  onEditEvent,
+  onOpenEventSource,
+  onShareEvent,
+  visible,
+}: EventOptionsModalProps) {
+  const { theme } = useAppTheme();
+
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <Pressable style={styles.optionsOverlay} onPress={onClose}>
+        <Pressable
+          onPress={() => {}}
+          style={[
+            styles.optionsCard,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.optionsTitle, { color: theme.colors.textPrimary }]}>Event Options</Text>
+
+          <Pressable onPress={onShareEvent} style={styles.optionRow}>
+            <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Share Event</Text>
+          </Pressable>
+
+          {hasEventSource ? (
+            <Pressable onPress={onOpenEventSource} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Open Source</Text>
+            </Pressable>
+          ) : null}
+
+          {canEditEvent ? (
+            <Pressable onPress={onEditEvent} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Edit Event</Text>
+            </Pressable>
+          ) : null}
+
+          {canEditEvent ? (
+            <Pressable onPress={onDeleteEvent} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.error }]}>Delete Event</Text>
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            onPress={onClose}
+            style={[
+              styles.optionRow,
+              styles.cancelOptionRow,
+              {
+                borderTopColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.optionLabel, { color: theme.colors.primary }]}>Cancel</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export function EventDetailsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<EventDetailsRoute>();
-  const { authToken, isAuthenticated } = useAppShell();
+  const { authToken, isAuthenticated, userId } = useAppShell();
   const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
-  const occurrence = route.params.occurrence;
+  const { showToast, withBlockingLoader } = useAppFeedback();
+  const routeOccurrence = route.params.occurrence;
+  const occurrenceSlug = routeOccurrence.eventSeries?.slug ?? null;
+  const occurrencesFromDate = useMemo(() => new Date().toISOString(), []);
+  const { data: eventNavigationData } = useQuery(GetEventBySlugForNavigationDocument, {
+    skip: !occurrenceSlug,
+    variables: {
+      slug: occurrenceSlug ?? '',
+      occurrencesFromDate,
+    },
+    ...getApolloAuthContext(authToken),
+    fetchPolicy: 'cache-and-network',
+  });
+  const fetchedOccurrences = useMemo(
+    () =>
+      eventNavigationData?.readEventBySlug ? mapNavigableEventOccurrences(eventNavigationData.readEventBySlug) : [],
+    [eventNavigationData?.readEventBySlug],
+  );
+  const sessionOccurrences = useMemo(() => {
+    const seenOccurrenceIds = new Set<string>();
+
+    return [routeOccurrence, ...fetchedOccurrences]
+      .filter((candidate): candidate is typeof routeOccurrence => Boolean(candidate?.occurrenceId))
+      .filter((candidate) => {
+        if (seenOccurrenceIds.has(candidate.occurrenceId)) {
+          return false;
+        }
+
+        seenOccurrenceIds.add(candidate.occurrenceId);
+        return true;
+      })
+      .sort((left, right) => new Date(left.startAt ?? 0).getTime() - new Date(right.startAt ?? 0).getTime());
+  }, [fetchedOccurrences, routeOccurrence]);
+  const occurrence = useMemo(
+    () =>
+      sessionOccurrences.find((candidate) => candidate.occurrenceId === routeOccurrence.occurrenceId) ??
+      routeOccurrence,
+    [routeOccurrence, sessionOccurrences],
+  );
   const imageUrl = getEventImageUrl(occurrence);
   const title = getEventTitle(occurrence);
   const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
   const participants = getOccurrenceParticipantPreview(occurrence, 6);
-  const hostUser = occurrence.eventSeries?.organizers?.[0]?.user;
   const importedOrganizerUser =
     occurrence.eventSeries?.organizers?.find((organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME)
       ?.user ?? null;
   const hasImportedSystemOrganizer = Boolean(importedOrganizerUser);
-  const hostOrganization = occurrence.eventSeries?.organization;
-  const hostLabel = occurrence.eventSeries?.organization?.name ?? getDisplayName(hostUser);
+  const hostOrganization = occurrence.eventSeries?.organization ?? null;
+  const visibleOrganizers =
+    hostOrganization && hasImportedSystemOrganizer
+      ? (occurrence.eventSeries?.organizers ?? []).filter(
+          (organizer) => organizer.user?.username !== IMPORTED_EVENT_SYSTEM_USERNAME,
+        )
+      : (occurrence.eventSeries?.organizers ?? []);
   const categories = occurrence.eventSeries?.eventCategories ?? [];
   const eventId = occurrence.eventSeries?.eventId;
   const eventSourceLink = occurrence.eventSeries?.eventLink ?? null;
+  const canEditEvent = Boolean(
+    userId && (occurrence.eventSeries?.organizers ?? []).some((organizer) => organizer.user?.userId === userId),
+  );
   const description =
     occurrence.eventSeries?.description?.trim() ||
     occurrence.eventSeries?.summary?.trim() ||
     'Event details will appear here once the organizer adds a full description.';
   const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, loading, rsvpStatus, toggleSave } =
     useEventDetailActions(occurrence, authToken);
+  const [deleteEventById] = useMutation(DeleteEventByIdDocument, getApolloAuthContext(authToken));
   const { error: momentsError, moments, refetch: refetchMoments } = useEventMoments(eventId, authToken);
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [eventOptionsVisible, setEventOptionsVisible] = useState(false);
   const [localParticipantCount, setLocalParticipantCount] = useState(participantCount);
+  const initialGoingCount = useMemo(
+    () =>
+      (occurrence.participants ?? []).filter(
+        (participant) =>
+          participant.status === ParticipantStatus.Going || participant.status === ParticipantStatus.CheckedIn,
+      ).length,
+    [occurrence.participants],
+  );
+  const initialInterestedCount = useMemo(
+    () =>
+      (occurrence.participants ?? []).filter((participant) => participant.status === ParticipantStatus.Interested)
+        .length,
+    [occurrence.participants],
+  );
+  const [heroGoingCount, setHeroGoingCount] = useState(initialGoingCount);
+  const [heroInterestedCount, setHeroInterestedCount] = useState(initialInterestedCount);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: ({ tintColor }) => (
+        <HeaderIconButton
+          accessibilityLabel="Open event options"
+          icon="more-vertical"
+          onPress={() => setEventOptionsVisible(true)}
+          size={20}
+          tintColor={tintColor}
+        />
+      ),
+    });
+  }, [navigation]);
 
   useEffect(() => {
     setLocalParticipantCount(participantCount);
   }, [participantCount]);
+
+  useEffect(() => {
+    setHeroGoingCount(initialGoingCount);
+    setHeroInterestedCount(initialInterestedCount);
+  }, [initialGoingCount, initialInterestedCount]);
 
   const rsvpLabel = rsvpStatus === 'Going' ? 'Going' : rsvpStatus === 'Interested' ? 'Interested' : 'RSVP';
   const rsvpTone = !isAuthenticated || !rsvpStatus ? 'primary' : 'successSoft';
   const saveTone = isSaved ? 'primarySoft' : 'secondary';
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
-  const heroPillLabel = useMemo(() => formatCountLabel(localParticipantCount, 'going'), [localParticipantCount]);
+  const heroPillLabel = useMemo(
+    () => buildAttendanceBadgeLabel(heroGoingCount, heroInterestedCount, localParticipantCount),
+    [heroGoingCount, heroInterestedCount, localParticipantCount],
+  );
   const stickyBarBottom = Math.max(insets.bottom, 24);
   const heroFallback = (
     <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
@@ -104,6 +297,38 @@ export function EventDetailsScreen() {
       }
 
       return currentCount;
+    });
+  };
+
+  const applyAttendanceBreakdownDelta = (nextStatus: ParticipantStatus | null) => {
+    const previousStatus = rsvpStatus;
+
+    setHeroGoingCount((currentCount) => {
+      let nextCount = currentCount;
+
+      if (previousStatus === ParticipantStatus.Going || previousStatus === ParticipantStatus.CheckedIn) {
+        nextCount -= 1;
+      }
+
+      if (nextStatus === ParticipantStatus.Going || nextStatus === ParticipantStatus.CheckedIn) {
+        nextCount += 1;
+      }
+
+      return Math.max(0, nextCount);
+    });
+
+    setHeroInterestedCount((currentCount) => {
+      let nextCount = currentCount;
+
+      if (previousStatus === ParticipantStatus.Interested) {
+        nextCount -= 1;
+      }
+
+      if (nextStatus === ParticipantStatus.Interested) {
+        nextCount += 1;
+      }
+
+      return Math.max(0, nextCount);
     });
   };
 
@@ -128,6 +353,7 @@ export function EventDetailsScreen() {
     void goingToEvent()
       .then((nextStatus) => {
         applyParticipantCountDelta(nextStatus);
+        applyAttendanceBreakdownDelta(nextStatus);
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
@@ -139,6 +365,7 @@ export function EventDetailsScreen() {
     void interestedInEvent()
       .then((nextStatus) => {
         applyParticipantCountDelta(nextStatus);
+        applyAttendanceBreakdownDelta(nextStatus);
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
@@ -150,6 +377,7 @@ export function EventDetailsScreen() {
     void cancelRsvp()
       .then((nextStatus) => {
         applyParticipantCountDelta(nextStatus);
+        applyAttendanceBreakdownDelta(nextStatus);
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
@@ -194,6 +422,48 @@ export function EventDetailsScreen() {
     });
   };
 
+  const handleEditEvent = () => {
+    setEventOptionsVisible(false);
+
+    if (!eventId) {
+      Alert.alert('Edit unavailable', 'We could not find the event details needed to edit this event.');
+      return;
+    }
+
+    navigation.navigate('EditEvent', { eventId });
+  };
+
+  const handleDeleteEvent = () => {
+    setEventOptionsVisible(false);
+
+    if (!eventId) {
+      Alert.alert('Delete unavailable', 'We could not find the event details needed to delete this event.');
+      return;
+    }
+
+    Alert.alert('Delete Event', 'This event will be permanently removed. This action cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void withBlockingLoader('Deleting event…', async () => {
+            try {
+              await deleteEventById({ variables: { eventId } });
+              showToast({ message: 'Event deleted successfully.', tone: 'success' });
+              navigation.navigate('MainTabs', { screen: 'Events' });
+            } catch (error) {
+              showToast({
+                message: error instanceof Error ? error.message : 'We could not delete this event.',
+                tone: 'error',
+              });
+            }
+          });
+        },
+      },
+    ]);
+  };
+
   const handleMessageGatherle = () => {
     if (promptLoginIfNeeded()) {
       return;
@@ -212,15 +482,16 @@ export function EventDetailsScreen() {
     });
   };
 
-  const handleOpenHostProfile = () => {
+  const handleOpenOrganizationProfile = () => {
     if (hostOrganization?.orgId) {
       navigation.navigate('OrganizationDetails', {
         orgId: hostOrganization.orgId,
         orgName: hostOrganization.name,
       });
-      return;
     }
+  };
 
+  const handleOpenHostProfile = (hostUser?: (typeof visibleOrganizers)[number]['user'] | null) => {
     if (hostUser?.userId) {
       navigation.navigate('UserProfile', {
         avatarUrl: hostUser.profile_picture,
@@ -242,6 +513,14 @@ export function EventDetailsScreen() {
     }
 
     setComposerVisible(true);
+  };
+
+  const handleSelectOccurrence = (nextOccurrence: typeof occurrence) => {
+    if (nextOccurrence.occurrenceId === occurrence.occurrenceId) {
+      return;
+    }
+
+    navigation.setParams({ occurrence: nextOccurrence });
   };
 
   return (
@@ -268,6 +547,22 @@ export function EventDetailsScreen() {
           ]}
         >
           <RemoteImage fallback={heroFallback} resizeMode="cover" showLoader style={styles.heroImage} uri={imageUrl} />
+
+          {heroPillLabel ? (
+            <View style={styles.heroPillWrap}>
+              <View
+                style={[
+                  styles.heroPill,
+                  {
+                    backgroundColor: 'rgba(8, 17, 32, 0.72)',
+                    borderColor: 'rgba(255, 255, 255, 0.18)',
+                  },
+                ]}
+              >
+                <Text style={styles.heroPillText}>{heroPillLabel}</Text>
+              </View>
+            </View>
+          ) : null}
         </Pressable>
 
         <View style={styles.heroSummary}>
@@ -304,6 +599,16 @@ export function EventDetailsScreen() {
               tone="secondary"
             />
           </View>
+        ) : null}
+
+        {sessionOccurrences.length > 1 ? (
+          <EventDetailSection title="All Sessions">
+            <EventSessionsRail
+              occurrences={sessionOccurrences}
+              onSelectOccurrence={handleSelectOccurrence}
+              selectedOccurrenceId={occurrence.occurrenceId}
+            />
+          </EventDetailSection>
         ) : null}
 
         {eventId ? (
@@ -358,29 +663,61 @@ export function EventDetailsScreen() {
         ) : null}
 
         <EventDetailSection title="Hosted by">
-          <Pressable
-            onPress={handleOpenHostProfile}
-            style={({ pressed }) => [
-              styles.hostCard,
-              {
-                backgroundColor: theme.colors.surfaceRaised,
-                borderColor: theme.colors.border,
-                opacity: pressed ? 0.92 : 1,
-              },
-            ]}
-          >
-            <ProfileAvatar
-              imageUrl={occurrence.eventSeries?.organization?.logo ?? hostUser?.profile_picture}
-              label={hostLabel}
-              size={48}
-            />
-            <View style={styles.hostTextBlock}>
-              <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
-              <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
-                {occurrence.eventSeries?.organization ? 'Organizer' : 'Event host'}
-              </Text>
+          {hostOrganization || visibleOrganizers.length > 0 ? (
+            <View style={styles.hostList}>
+              {hostOrganization ? (
+                <Pressable
+                  onPress={handleOpenOrganizationProfile}
+                  style={({ pressed }) => [
+                    styles.hostCard,
+                    {
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderColor: theme.colors.border,
+                      opacity: pressed ? 0.92 : 1,
+                    },
+                  ]}
+                >
+                  <ProfileAvatar imageUrl={hostOrganization.logo} label={hostOrganization.name} size={48} />
+                  <View style={styles.hostTextBlock}>
+                    <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostOrganization.name}</Text>
+                    <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>Organization</Text>
+                  </View>
+                </Pressable>
+              ) : null}
+
+              {visibleOrganizers
+                .filter((organizer) => organizer.user)
+                .map((organizer) => {
+                  const hostUser = organizer.user;
+                  const hostLabel = getDisplayName(hostUser);
+
+                  return (
+                    <Pressable
+                      key={hostUser?.userId ?? `${hostLabel}:${organizer.role ?? 'host'}`}
+                      onPress={() => handleOpenHostProfile(hostUser)}
+                      style={({ pressed }) => [
+                        styles.hostCard,
+                        {
+                          backgroundColor: theme.colors.surfaceRaised,
+                          borderColor: theme.colors.border,
+                          opacity: pressed ? 0.92 : 1,
+                        },
+                      ]}
+                    >
+                      <ProfileAvatar imageUrl={hostUser?.profile_picture} label={hostLabel} size={48} />
+                      <View style={styles.hostTextBlock}>
+                        <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
+                        <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
+                          {organizer.role || 'Event host'}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
             </View>
-          </Pressable>
+          ) : (
+            <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>No organizers listed.</Text>
+          )}
         </EventDetailSection>
 
         {participants.length > 0 ? (
@@ -471,6 +808,23 @@ export function EventDetailsScreen() {
           <EventDetailActionButton compact icon="share-2" label="Share" onPress={handleShare} tone="secondary" />
         </View>
       </View>
+
+      <EventOptionsModal
+        canEditEvent={canEditEvent}
+        hasEventSource={Boolean(eventSourceLink)}
+        onClose={() => setEventOptionsVisible(false)}
+        onDeleteEvent={handleDeleteEvent}
+        onEditEvent={handleEditEvent}
+        onOpenEventSource={() => {
+          setEventOptionsVisible(false);
+          handleOpenEventSource();
+        }}
+        onShareEvent={() => {
+          setEventOptionsVisible(false);
+          handleShare();
+        }}
+        visible={eventOptionsVisible}
+      />
 
       <EventImageViewerModal
         imageUrl={imageUrl}
@@ -565,12 +919,19 @@ const styles = StyleSheet.create({
   heroPill: {
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   heroPillText: {
     ...typography.bodyBold,
-    fontSize: 12,
+    color: '#FFFFFF',
+    fontSize: 13,
+    letterSpacing: -0.2,
+  },
+  heroPillWrap: {
+    bottom: 14,
+    left: 14,
+    position: 'absolute',
   },
   heroPlaceholder: {
     alignItems: 'center',
@@ -604,6 +965,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
+  hostList: {
+    gap: 12,
+  },
   hostSubtitle: {
     ...typography.bodyRegular,
     fontSize: 13,
@@ -620,6 +984,43 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: 13,
     marginTop: 10,
+  },
+  cancelOptionRow: {
+    borderTopWidth: 1,
+    marginTop: 6,
+    paddingTop: 14,
+  },
+  optionLabel: {
+    ...typography.bodyMedium,
+    fontSize: 15,
+  },
+  optionRow: {
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 4,
+    paddingVertical: 10,
+  },
+  optionsCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 4,
+    maxWidth: 320,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    width: '100%',
+  },
+  optionsOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(8, 17, 32, 0.42)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  optionsTitle: {
+    ...typography.displayBold,
+    fontSize: 18,
+    letterSpacing: -0.4,
+    marginBottom: 6,
   },
   pageContent: {
     gap: 16,

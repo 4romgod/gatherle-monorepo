@@ -45,6 +45,20 @@ export const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   return inputs;
 };
 
+const buildSelectedEventFilter = (selectedEventId?: string): FilterInput[] => {
+  if (!selectedEventId) {
+    return [];
+  }
+
+  return [
+    {
+      field: 'eventId',
+      operator: FilterOperatorInput.Eq,
+      value: [selectedEventId],
+    },
+  ];
+};
+
 /**
  * Builds date filter parameters from event filters.
  * Exported for testing.
@@ -108,15 +122,20 @@ export const useFilteredEvents = (
   initialEvents: EventOccurrencePreview[],
   token?: string | null,
   sort?: SortInput[],
+  initialTotalEvents: number = initialEvents.length,
+  selectedEventId?: string,
 ) => {
   const [events, setEvents] = useState<EventOccurrencePreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(initialEvents.length >= DEFAULT_PAGE_SIZE);
+  const [totalEvents, setTotalEvents] = useState(initialTotalEvents);
+  const [hasMore, setHasMore] = useState(initialEvents.length < initialTotalEvents);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const pageRef = useRef(0);
 
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
+  const selectedEventFilter = useMemo(() => buildSelectedEventFilter(selectedEventId), [selectedEventId]);
+  const queryFilters = useMemo(() => [...filterInputs, ...selectedEventFilter], [filterInputs, selectedEventFilter]);
   const occurrenceDateInput = useMemo(() => buildOccurrenceDateInput(filters), [filters]);
   const locationFilter = useMemo(() => buildLocationFilter(filters.location), [filters.location]);
   const [loadEvents, { loading }] = useLazyQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
@@ -127,11 +146,11 @@ export const useFilteredEvents = (
   );
 
   const hasActiveBackendFilters =
-    filterInputs.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!locationFilter;
+    queryFilters.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!locationFilter;
 
   const buildQueryOptions = useCallback(
     (skip: number) => ({
-      filters: filterInputs.length > 0 ? filterInputs : undefined,
+      filters: queryFilters.length > 0 ? queryFilters : undefined,
       dateFilterOption: occurrenceDateInput.dateFilterOption,
       customDate: occurrenceDateInput.customDate,
       dateRange: occurrenceDateInput.dateRange,
@@ -139,21 +158,23 @@ export const useFilteredEvents = (
       sort,
       pagination: { limit: DEFAULT_PAGE_SIZE, skip },
     }),
-    [filterInputs, locationFilter, occurrenceDateInput, sort],
+    [locationFilter, occurrenceDateInput, queryFilters, sort],
   );
 
   // When initialEvents change (fresh SSR/cache data), reset only if user hasn't paginated
   useEffect(() => {
     if (pageRef.current > 0) return;
     setEvents(initialEvents);
-    setHasMore(initialEvents.length >= DEFAULT_PAGE_SIZE);
-  }, [initialEvents]);
+    setTotalEvents(initialTotalEvents);
+    setHasMore(initialEvents.length < initialTotalEvents);
+  }, [initialEvents, initialTotalEvents]);
 
   // When filters change, fetch page 0
   useEffect(() => {
     if (!hasActiveBackendFilters) {
       setEvents(initialEvents);
-      setHasMore(initialEvents.length >= DEFAULT_PAGE_SIZE);
+      setTotalEvents(initialTotalEvents);
+      setHasMore(initialEvents.length < initialTotalEvents);
       setError(null);
       pageRef.current = 0;
       return;
@@ -171,8 +192,10 @@ export const useFilteredEvents = (
         if (!isCurrent) return;
         if (response.data?.readEventOccurrences) {
           const fetched = response.data.readEventOccurrences as EventOccurrencePreview[];
+          const nextTotalEvents = response.data.readEventOccurrencesCount ?? fetched.length;
           setEvents(fetched);
-          setHasMore(fetched.length >= DEFAULT_PAGE_SIZE);
+          setTotalEvents(nextTotalEvents);
+          setHasMore(fetched.length < nextTotalEvents);
           setError(null);
         } else if (response.error) {
           logger.error('GraphQL error fetching filtered events', response.error);
@@ -189,10 +212,9 @@ export const useFilteredEvents = (
       isCurrent = false;
     };
   }, [
-    filterInputs,
+    queryFilters,
     occurrenceDateInput,
     locationFilter,
-    initialEvents,
     loadEvents,
     buildQueryOptions,
     token,
@@ -217,12 +239,13 @@ export const useFilteredEvents = (
 
       if (response.data?.readEventOccurrences) {
         const fetched = response.data.readEventOccurrences as EventOccurrencePreview[];
-        setEvents((prev) => {
-          const existingIds = new Set(prev.map((e) => e.occurrenceId));
-          const unique = fetched.filter((e) => !existingIds.has(e.occurrenceId));
-          return [...prev, ...unique];
-        });
-        setHasMore(fetched.length >= DEFAULT_PAGE_SIZE);
+        const nextTotalEvents = response.data.readEventOccurrencesCount ?? totalEvents;
+        const existingIds = new Set(events.map((event) => event.occurrenceId));
+        const unique = fetched.filter((event) => !existingIds.has(event.occurrenceId));
+        const nextEvents = [...events, ...unique];
+        setEvents(nextEvents);
+        setTotalEvents(nextTotalEvents);
+        setHasMore(nextEvents.length < nextTotalEvents);
         pageRef.current = nextPage;
       }
     } catch (err) {
@@ -231,7 +254,7 @@ export const useFilteredEvents = (
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [buildQueryOptions, hasMore, loadEvents, token]);
+  }, [buildQueryOptions, events, hasMore, loadEvents, token, totalEvents]);
 
   return {
     events,
@@ -240,6 +263,7 @@ export const useFilteredEvents = (
     hasMore,
     loadMore,
     loadingMore,
+    totalEvents,
     hasFilterInputs: hasActiveBackendFilters,
   };
 };

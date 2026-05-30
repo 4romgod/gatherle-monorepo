@@ -24,17 +24,42 @@ const extractTaggedQuery = (source: string, operationName: string): string => {
 
 const getHomeDiscoveryQuery = extractTaggedQuery(mobileDiscoveryQuerySource, 'GetHomeDiscovery');
 const getEventsFeedQuery = extractTaggedQuery(mobileDiscoveryQuerySource, 'GetEventsFeed');
-const getEventsFeedOccurrenceSelection = (() => {
-  const match = getEventsFeedQuery.match(
-    /readEventOccurrences\(options: \$options\)\s*\{([\s\S]*?)\n\s*\}\n\s*readEventCategories/,
-  );
+const extractFieldSelection = (query: string, fieldName: string): string => {
+  const fieldStart = query.indexOf(`${fieldName}(options: $options)`);
 
-  if (!match?.[1]) {
-    throw new Error('Unable to extract readEventOccurrences selection set from mobile discovery query source.');
+  if (fieldStart === -1) {
+    throw new Error(`Unable to find ${fieldName} in mobile discovery query source.`);
   }
 
-  return match[1];
-})();
+  const openingBrace = query.indexOf('{', fieldStart);
+
+  if (openingBrace === -1) {
+    throw new Error(`Unable to find opening brace for ${fieldName} in mobile discovery query source.`);
+  }
+
+  let depth = 1;
+  let cursor = openingBrace + 1;
+
+  while (cursor < query.length && depth > 0) {
+    const char = query[cursor];
+
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+    }
+
+    cursor += 1;
+  }
+
+  if (depth !== 0) {
+    throw new Error(`Unable to extract ${fieldName} selection set from mobile discovery query source.`);
+  }
+
+  return query.slice(openingBrace + 1, cursor - 1);
+};
+
+const getEventsFeedOccurrenceSelection = extractFieldSelection(getEventsFeedQuery, 'readEventOccurrences');
 const inflatedHomeDiscoveryQuery = getHomeDiscoveryQuery.replace(
   '    readEventCategories {',
   `    overflowA: readEventOccurrences(options: $trendingOptions) {${getEventsFeedOccurrenceSelection}

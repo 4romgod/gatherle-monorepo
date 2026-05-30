@@ -1,6 +1,9 @@
 import type { Notification } from '@/data/graphql/query/Notification/types';
 import type {
+  GetEventOccurrenceParticipantsQuery,
   GetEventParticipantsQuery,
+  GetMyEventOccurrenceRsvpStatusQuery,
+  GetMyEventOccurrenceRsvpsQuery,
   GetFollowRequestsQuery,
   GetMyRsvpStatusQuery,
   GetMyRsvpsQuery,
@@ -39,7 +42,13 @@ export type RealtimeNotificationsAllReadPayload = {
 };
 
 export type FollowRequestCacheItem = GetFollowRequestsQuery['readFollowRequests'][number];
+export type EventOccurrenceParticipantsCacheItem =
+  GetEventOccurrenceParticipantsQuery['readEventOccurrenceParticipants'][number];
 export type EventParticipantsCacheItem = GetEventParticipantsQuery['readEventParticipants'][number];
+export type MyEventOccurrenceRsvpStatusCacheItem = NonNullable<
+  GetMyEventOccurrenceRsvpStatusQuery['myEventOccurrenceRsvpStatus']
+>;
+export type MyEventOccurrenceRsvpsCacheItem = GetMyEventOccurrenceRsvpsQuery['myEventOccurrenceRsvps'][number];
 export type MyRsvpStatusCacheItem = NonNullable<GetMyRsvpStatusQuery['myRsvpStatus']>;
 export type MyRsvpsCacheItem = GetMyRsvpsQuery['myRsvps'][number];
 export type EventQueryParticipantCacheItem = {
@@ -86,6 +95,8 @@ export type RealtimeEventRsvpPayload = {
   participant: {
     participantId: string;
     eventId: string;
+    occurrenceId?: string | null;
+    occurrenceKey?: string | null;
     userId: string;
     status: ParticipantStatus;
     quantity?: number | null;
@@ -197,6 +208,12 @@ export const isRealtimeEventRsvpPayload = (value: unknown): value is RealtimeEve
   if (
     typeof participant.participantId !== 'string' ||
     typeof participant.eventId !== 'string' ||
+    (participant.occurrenceId !== undefined &&
+      participant.occurrenceId !== null &&
+      typeof participant.occurrenceId !== 'string') ||
+    (participant.occurrenceKey !== undefined &&
+      participant.occurrenceKey !== null &&
+      typeof participant.occurrenceKey !== 'string') ||
     typeof participant.userId !== 'string' ||
     !PARTICIPANT_STATUSES.has(participant.status as ParticipantStatus) ||
     (participant.quantity !== undefined && participant.quantity !== null && typeof participant.quantity !== 'number') ||
@@ -312,6 +329,30 @@ export const normalizeEventParticipantForEventParticipantsCache = (
   };
 };
 
+export const normalizeEventParticipantForOccurrenceParticipantsCache = (
+  participant: RealtimeEventRsvpPayload['participant'],
+): EventOccurrenceParticipantsCacheItem => {
+  return {
+    __typename: 'EventOccurrenceParticipant',
+    participantId: participant.participantId,
+    occurrenceId: participant.occurrenceId ?? '',
+    userId: participant.userId,
+    status: participant.status,
+    quantity: participant.quantity ?? null,
+    sharedVisibility: participant.sharedVisibility ?? null,
+    rsvpAt: participant.rsvpAt ?? null,
+    cancelledAt: participant.cancelledAt ?? null,
+    user: {
+      __typename: 'User',
+      userId: participant.user.userId,
+      username: participant.user.username,
+      given_name: participant.user.given_name,
+      family_name: participant.user.family_name,
+      profile_picture: participant.user.profile_picture ?? null,
+    },
+  };
+};
+
 export const normalizeEventParticipantForMyRsvpStatusCache = (
   participant: RealtimeEventRsvpPayload['participant'],
 ): MyRsvpStatusCacheItem => {
@@ -319,6 +360,22 @@ export const normalizeEventParticipantForMyRsvpStatusCache = (
     __typename: 'EventSeriesParticipant',
     participantId: participant.participantId,
     eventId: participant.eventId,
+    userId: participant.userId,
+    status: participant.status,
+    quantity: participant.quantity ?? null,
+    sharedVisibility: participant.sharedVisibility ?? null,
+    rsvpAt: participant.rsvpAt ?? null,
+    cancelledAt: participant.cancelledAt ?? null,
+  };
+};
+
+export const normalizeEventParticipantForMyOccurrenceRsvpStatusCache = (
+  participant: RealtimeEventRsvpPayload['participant'],
+): MyEventOccurrenceRsvpStatusCacheItem => {
+  return {
+    __typename: 'EventOccurrenceParticipant',
+    participantId: participant.participantId,
+    occurrenceId: participant.occurrenceId ?? '',
     userId: participant.userId,
     status: participant.status,
     quantity: participant.quantity ?? null,
@@ -351,6 +408,24 @@ export const normalizeEventParticipantForMyRsvpsCache = (
       profile_picture: participant.user.profile_picture ?? null,
     },
     event: existingParticipant?.event ?? null,
+  };
+};
+
+export const normalizeEventParticipantForMyOccurrenceRsvpsCache = (
+  participant: RealtimeEventRsvpPayload['participant'],
+  existingParticipant?: MyEventOccurrenceRsvpsCacheItem,
+): MyEventOccurrenceRsvpsCacheItem => {
+  return {
+    __typename: 'EventOccurrenceParticipant',
+    participantId: participant.participantId,
+    occurrenceId: participant.occurrenceId ?? '',
+    userId: participant.userId,
+    status: participant.status,
+    quantity: participant.quantity ?? null,
+    sharedVisibility: participant.sharedVisibility ?? null,
+    rsvpAt: participant.rsvpAt ?? null,
+    cancelledAt: participant.cancelledAt ?? null,
+    occurrence: existingParticipant?.occurrence ?? null,
   };
 };
 

@@ -24,7 +24,7 @@ import { GetEventsDocument } from '@/data/graphql/query';
 import type { EventPreview } from '@/data/graphql/query/Event/types';
 import { SortOrderInput } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
-import { getEventPreviewHref, getEventPreviewTitle } from '@/components/events/event-preview-utils';
+import { getEventPreviewTitle } from '@/components/events/event-preview-utils';
 
 interface EventSearchBarProps {
   placeholder?: string;
@@ -32,6 +32,7 @@ interface EventSearchBarProps {
   fullWidth?: boolean;
   autoFocus?: boolean;
   variant?: 'outlined' | 'filled' | 'standard';
+  initialQuery?: string;
 }
 
 /**
@@ -64,9 +65,10 @@ export default function EventSearchBar({
   fullWidth = true,
   autoFocus = false,
   variant = 'outlined',
+  initialQuery = '',
 }: EventSearchBarProps) {
   const inputId = 'event-search-input';
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(initialQuery);
   const [eventOptions, setEventOptions] = useState<EventPreview[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +76,10 @@ export default function EventSearchBar({
   const [searchEvents, { loading: searchLoading }] = useLazyQuery(GetEventsDocument, {
     fetchPolicy: 'network-only',
   });
+
+  useEffect(() => {
+    setSearchInput(initialQuery);
+  }, [initialQuery]);
 
   // Debounced event search - only query when user types (min 2 chars)
   useEffect(() => {
@@ -241,7 +247,12 @@ export default function EventSearchBar({
                 <ListItem key={event.eventId} disablePadding>
                   <ListItemButton
                     component={Link}
-                    href={getEventPreviewHref(event)}
+                    href={{
+                      pathname: '/events',
+                      query: {
+                        eventId: event.eventId,
+                      },
+                    }}
                     onClick={() => {
                       setSearchInput('');
                       setIsOpen(false);

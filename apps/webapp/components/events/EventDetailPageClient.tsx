@@ -64,6 +64,8 @@ import {
 import {
   formatOccurrenceChipLabel,
   formatOccurrenceDateTime,
+  formatOccurrenceSessionDate,
+  formatOccurrenceSessionTime,
   formatRecurrenceRule,
 } from '@/components/events/date-utils';
 import {
@@ -83,6 +85,7 @@ import { WEB_RADIUS } from '@/lib/constants/radius';
 import EventMomentViewer from '@/components/eventMoments/EventMomentViewer';
 import EventMomentComposer from '@/components/eventMoments/EventMomentComposer';
 import type { GetEventBySlugQuery, GetEventMomentsQuery } from '@/data/graphql/types/graphql';
+import { useAppContext } from '@/hooks/useAppContext';
 
 interface EventDetailPageClientProps {
   slug: string;
@@ -202,8 +205,27 @@ function formatMobileCountLabel(count: number, singular: string, plural?: string
   return `${count} ${count === 1 ? singular : pluralLabel}`;
 }
 
+function buildAttendanceBadgeLabel(goingCount: number, interestedCount: number) {
+  if (goingCount <= 0 && interestedCount <= 0) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (goingCount > 0) {
+    parts.push(`${goingCount} going`);
+  }
+
+  if (interestedCount > 0) {
+    parts.push(`${interestedCount} interested`);
+  }
+
+  return parts.join(' · ');
+}
+
 export default function EventDetailPageClient({ slug }: EventDetailPageClientProps) {
   const { data: session } = useSession();
+  const { setToolbarAction } = useAppContext();
   const searchParams = useSearchParams();
   const token = session?.user?.token;
   const occurrencesFromDate = useMemo(() => new Date().toISOString(), []);
@@ -281,6 +303,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   const interestedCount = participantList.filter((p) => p.status === ParticipantStatus.Interested).length;
   const waitlistedCount = participantList.filter((p) => p.status === ParticipantStatus.Waitlisted).length;
   const activeParticipantCount = participantList.filter((p) => p.status !== ParticipantStatus.Cancelled).length;
+  const attendanceBadgeLabel = buildAttendanceBadgeLabel(goingCount, interestedCount);
 
   const eventUrl = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -368,6 +391,29 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   useEffect(() => {
     setMobileSavedState(event?.isSavedByMe ?? false);
   }, [event?.isSavedByMe]);
+
+  useEffect(() => {
+    if (!event) {
+      setToolbarAction(null);
+      return;
+    }
+
+    setToolbarAction(
+      <EventOperationsModal
+        event={event}
+        redirectOnDelete={ROUTES.EVENTS.ROOT}
+        canEditEvent={canEditEvent}
+        buttonSx={{
+          color: 'text.primary',
+          p: 0.75,
+        }}
+      />,
+    );
+
+    return () => {
+      setToolbarAction(null);
+    };
+  }, [canEditEvent, event, setToolbarAction]);
 
   if (notFoundError) {
     return (
@@ -555,6 +601,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               p: 0,
               display: 'block',
               cursor: 'zoom-in',
+              position: 'relative',
             }}
           >
             <Box
@@ -568,18 +615,41 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 objectFit: 'cover',
               }}
             />
+
+            {attendanceBadgeLabel ? (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: { xs: 14, md: 18 },
+                  bottom: { xs: 14, md: 18 },
+                  px: { xs: 1.4, md: 1.6 },
+                  py: { xs: 0.85, md: 0.95 },
+                  borderRadius: 999,
+                  bgcolor: alpha('#081120', 0.72),
+                  border: '1px solid',
+                  borderColor: alpha('#ffffff', 0.18),
+                  color: '#ffffff',
+                  backdropFilter: 'blur(14px)',
+                  boxShadow: '0 16px 32px rgba(8,17,32,0.24)',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: { xs: 13, md: 14 },
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.1,
+                    color: 'inherit',
+                  }}
+                >
+                  {attendanceBadgeLabel}
+                </Typography>
+              </Box>
+            ) : null}
           </Box>
 
           <Stack spacing={1.5} sx={{ px: { xs: 0.5, md: 0 } }}>
-            {goingCount > 0 && (
-              <Chip
-                label={`${goingCount} going${interestedCount > 0 ? ` · ${interestedCount} interested` : ''}`}
-                color="primary"
-                variant="outlined"
-                sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
-              />
-            )}
-
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={1.5}
@@ -592,7 +662,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                   component="h1"
                   sx={{
                     fontWeight: 600,
-                    fontSize: { xs: '1.5rem', md: '2.5rem' },
+                    fontSize: { xs: '1.2rem', md: '2rem' },
                     lineHeight: 1.08,
                     letterSpacing: -1,
                   }}
@@ -652,12 +722,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             {/* Actions */}
             <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
               <Stack spacing={1.25}>
-                {canEditEvent ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <EventOperationsModal event={event} redirectOnDelete={ROUTES.EVENTS.ROOT} />
-                  </Box>
-                ) : null}
-
                 <Stack spacing={1.25} sx={{ display: { xs: 'flex', md: 'none' }, width: '100%' }}>
                   <Stack direction="row" spacing={1.25}>
                     {directionsUrl ? (
@@ -719,6 +783,79 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     </Button>
                   ) : null}
                 </Stack>
+
+                {upcomingOccurrences.length > 1 ? (
+                  <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                    <Typography
+                      variant="overline"
+                      color="text.secondary"
+                      fontWeight={600}
+                      sx={{ letterSpacing: 1, display: 'block', mb: 1 }}
+                    >
+                      All Sessions
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 1.25,
+                        overflowX: 'auto',
+                        pb: 0.5,
+                        pr: 1,
+                        scrollSnapType: 'x proximity',
+                        scrollbarWidth: 'none',
+                        '&::-webkit-scrollbar': { display: 'none' },
+                      }}
+                    >
+                      {upcomingOccurrences.map((occurrence) => {
+                        const isSelected = occurrence.occurrenceId === activeOccurrenceId;
+
+                        return (
+                          <Box
+                            component={Link}
+                            key={occurrence.occurrenceId}
+                            href={buildEventOccurrenceHref(ROUTES.EVENTS.EVENT(slug), occurrence)}
+                            sx={{
+                              minWidth: 154,
+                              px: 1.75,
+                              py: 1.4,
+                              borderRadius: WEB_RADIUS.control,
+                              border: '1px solid',
+                              borderColor: isSelected ? 'primary.main' : 'divider',
+                              bgcolor: isSelected ? 'primary.main' : 'action.hover',
+                              color: isSelected ? 'primary.contrastText' : 'text.primary',
+                              textDecoration: 'none',
+                              scrollSnapAlign: 'start',
+                              boxShadow: isSelected ? '0 14px 28px rgba(82, 69, 246, 0.22)' : 'none',
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: 14,
+                                fontWeight: 700,
+                                letterSpacing: '-0.02em',
+                                lineHeight: 1.15,
+                                color: 'inherit',
+                              }}
+                            >
+                              {formatOccurrenceSessionDate(occurrence.startAt, occurrence.timezone)}
+                            </Typography>
+                            <Typography
+                              sx={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                mt: 0.4,
+                                lineHeight: 1.1,
+                                color: isSelected ? 'inherit' : 'text.secondary',
+                              }}
+                            >
+                              {formatOccurrenceSessionTime(occurrence.startAt, occurrence.timezone)}
+                            </Typography>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                ) : null}
 
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
@@ -882,7 +1019,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 <Typography color="text.secondary">No organizers listed.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {event.organization && hasImportedSystemOrganizer && (
+                  {event.organization && (
                     <>
                       <Paper
                         component={Link}
@@ -1161,10 +1298,10 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                           fontWeight={600}
                           sx={{ letterSpacing: 1, display: 'block', mb: 1 }}
                         >
-                          Upcoming Sessions
+                          All Sessions
                         </Typography>
                         <Stack direction="row" flexWrap="wrap" gap={1}>
-                          {upcomingOccurrences.slice(0, 6).map((occurrence) => {
+                          {upcomingOccurrences.map((occurrence) => {
                             const isSelected = occurrence.occurrenceId === activeOccurrenceId;
                             return (
                               <Chip

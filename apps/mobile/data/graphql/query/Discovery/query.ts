@@ -273,6 +273,7 @@ export const GetEventsFeedDocument = graphql(`
         isSavedByMe
       }
     }
+    readEventOccurrencesCount(options: $options)
     readEventCategories {
       eventCategoryId
       slug
@@ -282,7 +283,6 @@ export const GetEventsFeedDocument = graphql(`
       color
       interestedUsersCount
     }
-    readEventsCount
   }
 `);
 

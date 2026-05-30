@@ -1,6 +1,11 @@
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
 import type { MobileNotification } from '@data/graphql/query/Notification/types';
-import { FollowApprovalStatus, FollowTargetType } from '@data/graphql/types/graphql';
+import {
+  FollowApprovalStatus,
+  FollowTargetType,
+  ParticipantStatus,
+  ParticipantVisibility,
+} from '@data/graphql/types/graphql';
 
 type RealtimeEnvelope = {
   payload?: unknown;
@@ -13,7 +18,8 @@ type NotificationRealtimeEventType =
   | 'notification.deleted'
   | 'notification.all_read'
   | 'follow.request.created'
-  | 'follow.request.updated';
+  | 'follow.request.updated'
+  | 'event.rsvp.updated';
 
 export type MobileRealtimeNotificationPayload = {
   notification: MobileNotification;
@@ -32,6 +38,31 @@ export type MobileRealtimeNotificationsAllReadPayload = {
 
 export type MobileRealtimeFollowRequestPayload = {
   follow: MobileFollowRequest;
+};
+
+export type MobileRealtimeEventRsvpPayload = {
+  participant: {
+    participantId: string;
+    eventId: string;
+    occurrenceId?: string | null;
+    occurrenceKey?: string | null;
+    userId: string;
+    status: ParticipantStatus;
+    quantity?: number | null;
+    sharedVisibility?: ParticipantVisibility | null;
+    rsvpAt?: string | null;
+    cancelledAt?: string | null;
+    checkedInAt?: string | null;
+    user: {
+      userId: string;
+      username: string;
+      given_name: string;
+      family_name: string;
+      profile_picture?: string | null;
+    };
+  };
+  previousStatus: ParticipantStatus | null;
+  rsvpCount: number;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -85,6 +116,55 @@ export const isMobileRealtimeFollowRequestPayload = (value: unknown): value is M
   );
 };
 
+export const isMobileRealtimeEventRsvpPayload = (value: unknown): value is MobileRealtimeEventRsvpPayload => {
+  if (!isRecord(value) || !isRecord(value.participant) || typeof value.rsvpCount !== 'number') {
+    return false;
+  }
+
+  const participant = value.participant;
+  const previousStatus = value.previousStatus;
+
+  if (
+    typeof participant.participantId !== 'string' ||
+    typeof participant.eventId !== 'string' ||
+    (participant.occurrenceId !== undefined &&
+      participant.occurrenceId !== null &&
+      typeof participant.occurrenceId !== 'string') ||
+    (participant.occurrenceKey !== undefined &&
+      participant.occurrenceKey !== null &&
+      typeof participant.occurrenceKey !== 'string') ||
+    typeof participant.userId !== 'string' ||
+    !Object.values(ParticipantStatus).includes(participant.status as ParticipantStatus) ||
+    (participant.quantity !== undefined && participant.quantity !== null && typeof participant.quantity !== 'number') ||
+    (participant.sharedVisibility !== undefined &&
+      participant.sharedVisibility !== null &&
+      !Object.values(ParticipantVisibility).includes(participant.sharedVisibility as ParticipantVisibility)) ||
+    (participant.rsvpAt !== undefined && participant.rsvpAt !== null && typeof participant.rsvpAt !== 'string') ||
+    (participant.cancelledAt !== undefined &&
+      participant.cancelledAt !== null &&
+      typeof participant.cancelledAt !== 'string') ||
+    (participant.checkedInAt !== undefined &&
+      participant.checkedInAt !== null &&
+      typeof participant.checkedInAt !== 'string') ||
+    !isRecord(participant.user) ||
+    (previousStatus !== null &&
+      previousStatus !== undefined &&
+      !Object.values(ParticipantStatus).includes(previousStatus as ParticipantStatus))
+  ) {
+    return false;
+  }
+
+  const actor = participant.user;
+
+  return (
+    typeof actor.userId === 'string' &&
+    typeof actor.username === 'string' &&
+    typeof actor.given_name === 'string' &&
+    typeof actor.family_name === 'string' &&
+    (typeof actor.profile_picture === 'string' || actor.profile_picture === null || actor.profile_picture === undefined)
+  );
+};
+
 const isNotificationRealtimeEventType = (value: unknown): value is NotificationRealtimeEventType => {
   return (
     value === 'notification.new' ||
@@ -92,7 +172,8 @@ const isNotificationRealtimeEventType = (value: unknown): value is NotificationR
     value === 'notification.deleted' ||
     value === 'notification.all_read' ||
     value === 'follow.request.created' ||
-    value === 'follow.request.updated'
+    value === 'follow.request.updated' ||
+    value === 'event.rsvp.updated'
   );
 };
 

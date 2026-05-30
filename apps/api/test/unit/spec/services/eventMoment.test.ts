@@ -968,16 +968,20 @@ describe('EventMomentService', () => {
       );
     });
 
-    it('returns only publicly visible moments for anonymous viewers', async () => {
+    it('keeps all active moments in the feed for anonymous viewers and only uses ranking for order', async () => {
       const result = await EventMomentService.readMomentsFeed(undefined, undefined, 12);
 
       expect(EventMomentDAO.readFeedCandidates).toHaveBeenCalledWith(undefined, 72);
-      expect(result.items.map((item) => item.momentId)).toEqual(['moment-public']);
+      expect(result.items.map((item) => item.momentId)).toEqual([
+        'moment-public',
+        'moment-private-author',
+        'moment-private-event',
+      ]);
       expect(result.hasMore).toBe(true);
       expect(typeof result.nextCursor).toBe('string');
     });
 
-    it('includes accepted private-author moments for followed viewers', async () => {
+    it('still ranks accepted private-author moments highly for followed viewers without excluding other feed moments', async () => {
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
         {
           targetType: FollowTargetType.User,
@@ -987,10 +991,14 @@ describe('EventMomentService', () => {
       ]);
       const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
 
-      expect(result.items.map((item) => item.momentId)).toEqual(['moment-private-author', 'moment-public']);
+      expect(result.items.map((item) => item.momentId)).toEqual([
+        'moment-private-author',
+        'moment-public',
+        'moment-private-event',
+      ]);
     });
 
-    it('includes followed-author moments even when their event is not public', async () => {
+    it('still ranks followed-author moments highly even when their event is not public without excluding other feed moments', async () => {
       (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue([
         {
           targetType: FollowTargetType.User,
@@ -1001,7 +1009,11 @@ describe('EventMomentService', () => {
 
       const result = await EventMomentService.readMomentsFeed('viewer-1', undefined, 10);
 
-      expect(result.items.map((item) => item.momentId)).toEqual(['moment-public', 'moment-private-event']);
+      expect(result.items.map((item) => item.momentId)).toEqual([
+        'moment-public',
+        'moment-private-event',
+        'moment-private-author',
+      ]);
     });
 
     it('prioritizes category matches over followed-author affinity', async () => {

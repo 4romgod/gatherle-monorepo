@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { createMobileNotificationRealtimeCacheHandlers } from '@/lib/notifications/notificationRealtimeCache';
 import {
+  isMobileRealtimeEventRsvpPayload,
   isMobileRealtimeFollowRequestPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
@@ -35,6 +36,7 @@ export function useNotificationRealtime(enabled = true) {
   const handleNotificationDeletedRef = useRef<((payload: unknown) => void) | null>(null);
   const handleNotificationsAllReadRef = useRef<((payload: unknown) => void) | null>(null);
   const handleFollowRequestRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleEventRsvpRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -42,6 +44,7 @@ export function useNotificationRealtime(enabled = true) {
       handleNotificationDeletedRef.current = null;
       handleNotificationsAllReadRef.current = null;
       handleFollowRequestRef.current = null;
+      handleEventRsvpRef.current = null;
       return;
     }
 
@@ -50,6 +53,7 @@ export function useNotificationRealtime(enabled = true) {
       handleRealtimeNotificationDeleted,
       handleRealtimeNotificationsAllRead,
       handleRealtimeFollowRequest,
+      handleRealtimeEventRsvp,
     } = createMobileNotificationRealtimeCacheHandlers({
       client,
       userId,
@@ -86,6 +90,14 @@ export function useNotificationRealtime(enabled = true) {
 
       handleRealtimeFollowRequest(payload);
     };
+
+    handleEventRsvpRef.current = (payload: unknown) => {
+      if (!isMobileRealtimeEventRsvpPayload(payload)) {
+        return;
+      }
+
+      handleRealtimeEventRsvp(payload);
+    };
   }, [client, userId]);
 
   const sendNotificationSubscribe = useCallback(() => {
@@ -118,6 +130,11 @@ export function useNotificationRealtime(enabled = true) {
 
     if (realtimeEvent.type === 'follow.request.created' || realtimeEvent.type === 'follow.request.updated') {
       handleFollowRequestRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'event.rsvp.updated') {
+      handleEventRsvpRef.current?.(realtimeEvent.payload);
     }
   }, []);
 

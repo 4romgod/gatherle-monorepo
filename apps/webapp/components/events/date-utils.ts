@@ -70,3 +70,30 @@ export const formatOccurrenceChipLabel = (startAt?: string | Date | null, timezo
     timeZone: timezone ?? undefined,
   }).format(start);
 };
+
+export const formatOccurrenceSessionDate = (startAt?: string | Date | null, timezone?: string | null): string => {
+  const start = toDate(startAt);
+  if (!start) {
+    return 'Date TBD';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: timezone ?? undefined,
+  }).format(start);
+};
+
+export const formatOccurrenceSessionTime = (startAt?: string | Date | null, timezone?: string | null): string => {
+  const start = toDate(startAt);
+  if (!start) {
+    return 'Time TBD';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: timezone ?? undefined,
+  }).format(start);
+};

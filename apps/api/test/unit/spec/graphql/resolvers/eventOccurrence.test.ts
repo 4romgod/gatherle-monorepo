@@ -4,6 +4,15 @@ import type { ServerContext } from '@/graphql';
 import type { EventOccurrence, EventOccurrenceParticipant, EventSeries, User } from '@gatherle/commons/types';
 import { EventStatus, ParticipantStatus } from '@gatherle/commons/types';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
+import EventOccurrenceService from '@/services/eventOccurrence';
+
+jest.mock('@/services/eventOccurrence', () => ({
+  __esModule: true,
+  default: {
+    readEventOccurrences: jest.fn(),
+    countEventOccurrences: jest.fn(),
+  },
+}));
 
 describe('EventOccurrenceResolver field resolvers', () => {
   const resolver = new EventOccurrenceResolver();
@@ -14,10 +23,10 @@ describe('EventOccurrenceResolver field resolvers', () => {
     title: 'Weekly Yoga',
     description: 'Weekly class',
     primarySchedule: {
-      startAt: new Date('2026-05-06T16:00:00.000Z'),
-      endAt: new Date('2026-05-06T18:00:00.000Z'),
+      anchorStartAt: new Date('2026-05-06T16:00:00.000Z'),
+      occurrenceDurationMinutes: 120,
       timezone: 'Africa/Johannesburg',
-      recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+      recurrenceRule: 'RRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
     },
     location: { type: 'Online', coordinates: [0, 0] } as any,
     status: EventStatus.Upcoming,
@@ -126,5 +135,35 @@ describe('EventOccurrenceResolver field resolvers', () => {
     const result = await resolver.myRsvp(occurrence, unauthenticatedContext);
 
     expect(result).toBeNull();
+  });
+
+  it('delegates occurrence list queries to the occurrence service', async () => {
+    const options = {
+      dateRange: {
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-31T23:59:59.999Z'),
+      },
+    } as any;
+    (EventOccurrenceService.readEventOccurrences as jest.Mock).mockResolvedValue([occurrence]);
+
+    const result = await resolver.readEventOccurrences(options);
+
+    expect(EventOccurrenceService.readEventOccurrences).toHaveBeenCalledWith(options);
+    expect(result).toEqual([occurrence]);
+  });
+
+  it('delegates occurrence count queries to the occurrence service', async () => {
+    const options = {
+      dateRange: {
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-31T23:59:59.999Z'),
+      },
+    } as any;
+    (EventOccurrenceService.countEventOccurrences as jest.Mock).mockResolvedValue(6);
+
+    const result = await resolver.readEventOccurrencesCount(options);
+
+    expect(EventOccurrenceService.countEventOccurrences).toHaveBeenCalledWith(options);
+    expect(result).toBe(6);
   });
 });

@@ -41,7 +41,10 @@ export class Follow {
   followerUserId: string;
 
   // Computed field - resolved via @FieldResolver in FollowResolver (no @prop, not stored in DB)
-  @Field(() => User, { description: 'The user who is following. Resolved via FieldResolver.' })
+  @Field(() => User, {
+    nullable: true,
+    description: 'The user who is following. Resolved via FieldResolver.',
+  })
   follower?: User;
 
   @prop({ required: true, enum: FollowTargetType, type: () => String })

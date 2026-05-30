@@ -415,6 +415,28 @@ class EventOccurrenceDAO {
     }
   }
 
+  static async countByEventSeriesIdsInRange(eventSeriesIds: string[], startDate: Date, endDate: Date): Promise<number> {
+    if (eventSeriesIds.length === 0) {
+      return 0;
+    }
+
+    try {
+      return await EventOccurrenceModel.countDocuments({
+        eventSeriesId: { $in: eventSeriesIds },
+        startAt: { $lte: endDate },
+        $or: [{ endAt: { $gte: startDate } }, { endAt: { $exists: false }, startAt: { $gte: startDate } }],
+      }).exec();
+    } catch (error) {
+      logDaoError('Error counting event occurrences in date range', {
+        error,
+        eventSeriesIds,
+        startDate,
+        endDate,
+      });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async readUpcomingByEventSeriesId(
     eventSeriesId: string,
     fromDate: Date,

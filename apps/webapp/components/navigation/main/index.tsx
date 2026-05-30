@@ -108,7 +108,7 @@ function getSubPageAction(pathname: string): SubPageAction | null {
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
-  const { themeMode, setThemeMode } = useAppContext();
+  const { themeMode, setThemeMode, toolbarAction } = useAppContext();
   const pathname = normalizePathname(usePathname());
   const router = useRouter();
 
@@ -125,6 +125,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const isMainRoute = isMainShellRoute(pathname, session?.user?.username);
   const backFallback = getBackFallback(pathname);
   const subPageAction = !isMainRoute ? getSubPageAction(pathname) : null;
+  const hasToolbarAction = !isMainRoute && Boolean(toolbarAction);
 
   const handleProfilesMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfilesMenuAnchorEl(event.currentTarget);
@@ -220,7 +221,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
 
           <Box sx={{ flexGrow: 1 }} />
 
-          {!isAuthN && (
+          {!isAuthN && !hasToolbarAction && (
             <Box
               component="div"
               sx={{
@@ -256,7 +257,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </Box>
           )}
 
-          {isAuthN && (
+          {isAuthN && !hasToolbarAction && (
             <Box
               component="div"
               sx={{
@@ -368,7 +369,11 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </Box>
           )}
 
-          {subPageAction ? (
+          {hasToolbarAction ? (
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>{toolbarAction}</Box>
+          ) : null}
+
+          {subPageAction && !hasToolbarAction ? (
             <IconButton
               aria-label={subPageAction.label}
               component={Link}

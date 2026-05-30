@@ -65,6 +65,8 @@ export function MomentFeedPage({
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isMediaReady, setMediaReady] = useState(moment.type === EventMomentType.Text);
   const [hasMediaError, setMediaError] = useState(false);
+  const [isHolding, setHolding] = useState(false);
+  const [isComposerFocused, setComposerFocused] = useState(false);
   const [progress, setProgress] = useState(0);
   const elapsedRef = useRef(0);
   const progressRef = useRef(0);
@@ -87,6 +89,7 @@ export function MomentFeedPage({
   const displayName = useMemo(() => getDisplayName(moment.author), [moment.author]);
   const targetUserId = authorUserId && authorUserId !== viewerUserId ? authorUserId : undefined;
   const isOwnedByViewer = Boolean(viewerUserId && moment.authorId === viewerUserId);
+  const paused = isHolding || isComposerFocused || isMenuOpen;
 
   useEventListener(videoPlayer, 'statusChange', (payload) => {
     if (payload.status === 'readyToPlay') {
@@ -119,6 +122,8 @@ export function MomentFeedPage({
     setIsMuted(true);
     setMediaError(false);
     setMediaReady(moment.type === EventMomentType.Text);
+    setHolding(false);
+    setComposerFocused(false);
     setProgress(0);
     progressRef.current = 0;
     elapsedRef.current = 0;
@@ -141,6 +146,11 @@ export function MomentFeedPage({
         return;
       }
 
+      if (paused) {
+        videoPlayer.pause();
+        return;
+      }
+
       if (videoPlayer.currentTime >= Math.max((moment.durationSeconds ?? 0) - 0.1, 0.1)) {
         videoPlayer.currentTime = 0;
         setProgress(0);
@@ -155,6 +165,10 @@ export function MomentFeedPage({
     }
 
     if (!isMediaReady) {
+      return;
+    }
+
+    if (paused) {
       return;
     }
 
@@ -182,7 +196,7 @@ export function MomentFeedPage({
         rafRef.current = null;
       }
     };
-  }, [active, isMediaReady, moment, videoPlayer, videoSource]);
+  }, [active, isMediaReady, moment, paused, videoPlayer, videoSource]);
 
   useEffect(() => {
     videoPlayer.muted = isMuted;
@@ -307,7 +321,12 @@ export function MomentFeedPage({
     moment.type === EventMomentType.Text ? resolveBackgroundColor(moment.background) : theme.colors.background;
 
   return (
-    <View style={[styles.page, { backgroundColor, height: pageHeight }]}>
+    <View
+      onTouchCancel={() => setHolding(false)}
+      onTouchEnd={() => setHolding(false)}
+      onTouchStart={() => setHolding(true)}
+      style={[styles.page, { backgroundColor, height: pageHeight }]}
+    >
       {isMenuOpen ? <Pressable onPress={() => setMenuOpen(false)} style={styles.menuBackdrop} /> : null}
 
       <LinearGradient colors={['rgba(3,7,18,0.18)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
@@ -450,6 +469,8 @@ export function MomentFeedPage({
       >
         <ChatComposer
           isConnected={isConnected}
+          onBlur={() => setComposerFocused(false)}
+          onFocus={() => setComposerFocused(true)}
           onSend={handleReply}
           placeholder={targetUserId ? `Reply...` : 'Your moment'}
           showStatus={false}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -21,6 +21,16 @@ import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents'
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
+
+function applySeriesSelection(
+  event: MobileSearchResult,
+  setSearchQuery: (value: string) => void,
+  setSelectedEventId: (value: string) => void,
+) {
+  setSearchQuery(event.title ?? '');
+  setSelectedEventId(event.eventId);
+}
 
 export function EventsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
@@ -29,11 +39,13 @@ export function EventsScreen() {
   const route = useRoute<RouteProp<MainTabParamList, 'Events'>>();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
   const [selectedEventId, setSelectedEventId] = useState(route.params?.initialEventId ?? '');
+  const appliedSeriesSelectionRef = useRef<string | null>(null);
 
   const {
     appliedFilters,
     draftFilters,
     sheetVisible,
+    isHydrated,
     openSheet,
     closeSheet,
     applyFilters,
@@ -49,7 +61,8 @@ export function EventsScreen() {
     removeAppliedLocation,
   } = useEventsFilters(userId);
 
-  const { categories, error, events, loading, refetch } = useFilteredMobileEvents(appliedFilters, authToken);
+  const { categories, error, events, hasMore, isFetchingMore, loadMore, loading, refetch, totalEvents } =
+    useFilteredMobileEvents(appliedFilters, authToken, selectedEventId || undefined);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
       await refetch();
@@ -66,6 +79,25 @@ export function EventsScreen() {
       setSelectedEventId(route.params.initialEventId);
     }
   }, [route.params?.initialEventId, route.params?.initialSearch]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    if (!selectedEventId) {
+      appliedSeriesSelectionRef.current = null;
+      return;
+    }
+
+    const selectionKey = `${selectedEventId}:${searchQuery}`;
+    if (appliedSeriesSelectionRef.current === selectionKey) {
+      return;
+    }
+
+    clearAllFilters();
+    appliedSeriesSelectionRef.current = selectionKey;
+  }, [clearAllFilters, isHydrated, searchQuery, selectedEventId]);
 
   const filteredEvents = useMemo(() => {
     if (selectedEventId) {
@@ -98,23 +130,17 @@ export function EventsScreen() {
   }, [events, searchQuery, selectedEventId]);
 
   const serverFilterCount = countActiveFilters(appliedFilters);
-  const totalActiveFilterCount = serverFilterCount + Number(Boolean(searchQuery.trim()));
+  const totalActiveFilterCount =
+    serverFilterCount + Number(Boolean(searchQuery.trim() && !selectedEventId)) + Number(Boolean(selectedEventId));
 
-  const PAGE_SIZE = 10;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  // Reset pagination whenever filters or search change
   const filtersKey = JSON.stringify(appliedFilters);
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [filtersKey, searchQuery]);
-
-  const paginatedEvents = filteredEvents.slice(0, visibleCount);
   const infiniteScroll = useInfiniteScroll({
-    enabled: visibleCount < filteredEvents.length,
-    onEndReached: () => setVisibleCount((current) => Math.min(current + PAGE_SIZE, filteredEvents.length)),
+    enabled: hasMore && (!Boolean(searchQuery.trim()) || Boolean(selectedEventId)),
+    loading: loading || isFetchingMore,
+    onEndReached: () => void loadMore(),
     resetKey: `${filtersKey}:${searchQuery}:${selectedEventId}`,
   });
+  const visibleEventCount = selectedEventId ? totalEvents : searchQuery.trim() ? filteredEvents.length : totalEvents;
 
   const handleClearAll = () => {
     setSearchQuery('');
@@ -133,8 +159,8 @@ export function EventsScreen() {
       >
         <EventSearchBar
           onSelectEvent={(event) => {
-            setSearchQuery(event.title ?? '');
-            setSelectedEventId(event.eventId);
+            clearAllFilters();
+            applySeriesSelection(event, setSearchQuery, setSelectedEventId);
           }}
         />
 
@@ -207,7 +233,7 @@ export function EventsScreen() {
           <SkeletonBlock style={styles.eventsCountSkeleton} />
         ) : (
           <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-            {filteredEvents.length} Events Found
+            {visibleEventCount} Events Found
           </Text>
         )}
 
@@ -225,7 +251,7 @@ export function EventsScreen() {
           />
         ) : filteredEvents.length > 0 ? (
           <View style={styles.feedList}>
-            {paginatedEvents.map((event) => (
+            {filteredEvents.map((event) => (
               <EventCard
                 key={event.occurrenceId}
                 occurrence={event}
@@ -233,6 +259,7 @@ export function EventsScreen() {
                 variant="feed"
               />
             ))}
+            {isFetchingMore ? <EventCardSkeleton /> : null}
           </View>
         ) : (
           <StateNotice message="No events match your current search or filter." />

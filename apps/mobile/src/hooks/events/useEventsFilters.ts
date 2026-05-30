@@ -185,6 +185,7 @@ export function useEventsFilters(storageScope?: string | null) {
     appliedFilters,
     draftFilters,
     sheetVisible,
+    isHydrated: hydratedStorageKey === storageKey,
     openSheet,
     closeSheet,
     applyFilters,

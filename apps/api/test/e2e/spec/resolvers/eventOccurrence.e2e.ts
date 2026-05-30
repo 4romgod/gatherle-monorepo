@@ -279,6 +279,71 @@ describe('EventOccurrence Resolver', () => {
     ]);
   });
 
+  it('returns an occurrence count that matches the same filtered date window', async () => {
+    const queryToken = uniqueSuffix();
+    const recurringSeriesTitle = `Occurrence Count Series ${queryToken}`;
+    const singleSeriesTitle = `Occurrence Count Single ${queryToken}`;
+
+    await createEventOnServer(
+      url,
+      testUser.token,
+      buildEventInput({
+        title: recurringSeriesTitle,
+        primarySchedule: {
+          anchorStartAt: occurrenceFixture.firstStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.weeklyDurationMinutes,
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: occurrenceFixture.weeklyRuleCount3,
+        },
+      }),
+      createdEventIds,
+    );
+
+    await createEventOnServer(
+      url,
+      testUser.token,
+      buildEventInput({
+        title: singleSeriesTitle,
+        primarySchedule: {
+          anchorStartAt: occurrenceFixture.singleStartAt,
+          occurrenceDurationMinutes: occurrenceFixture.singleDurationMinutes,
+          timezone: 'Africa/Johannesburg',
+          recurrenceRule: occurrenceFixture.singleRuleCount1,
+        },
+      }),
+      createdEventIds,
+    );
+
+    const response = await request(url)
+      .post('')
+      .send({
+        query: `query GetEventOccurrenceCounts($options: EventsQueryOptionsInput!) {
+          readEventOccurrences(options: $options) {
+            occurrenceId
+          }
+          readEventOccurrencesCount(options: $options)
+        }`,
+        variables: {
+          options: {
+            dateRange: {
+              startDate: occurrenceFixture.rangeStartAt.toISOString(),
+              endDate: occurrenceFixture.rangeEndAt.toISOString(),
+            },
+            search: {
+              fields: ['title'],
+              value: queryToken,
+            },
+            sort: [{ field: 'startAt', order: SortOrderInput.asc }],
+          },
+        },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.readEventOccurrences).toHaveLength(4);
+    expect(response.body.data.readEventOccurrencesCount).toBe(4);
+  });
+
   it('reads upcoming occurrences for a recurring series on the event detail query', async () => {
     const createdEvent = await createEventOnServer(
       url,

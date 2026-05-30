@@ -153,7 +153,7 @@ export class EventMomentResolver {
     return EventMomentService.readMomentById(momentId, context.user?.userId);
   }
 
-  @Query(() => EventMomentPage, { description: 'Get a discoverable feed of active moments across public events' })
+  @Query(() => EventMomentPage, { description: 'Get a discoverable feed of all active moments' })
   async readMomentsFeed(
     @Ctx() context: ServerContext,
     @Arg('cursor', () => String, { nullable: true }) cursor?: string,

@@ -9,6 +9,7 @@ import PendingFollowRequestItem from './PendingFollowRequestItem';
 
 export default function PendingFollowRequestsList() {
   const { requests, loading, error, accept, reject, isLoading } = useFollowRequests(FollowTargetType.User);
+  const validRequests = requests.filter((request) => Boolean(request.follower));
 
   if (loading) {
     return (
@@ -34,7 +35,7 @@ export default function PendingFollowRequestsList() {
   }
 
   // Show empty state
-  if (requests.length === 0) {
+  if (validRequests.length === 0) {
     return (
       <Box
         sx={{
@@ -66,11 +67,11 @@ export default function PendingFollowRequestsList() {
   return (
     <Box>
       <List disablePadding>
-        {requests.map((request, index) => (
+        {validRequests.map((request, index) => (
           <React.Fragment key={request.followId}>
             <PendingFollowRequestItem
               followId={request.followId}
-              follower={request.follower}
+              follower={request.follower!}
               approvalStatus={request.approvalStatus}
               createdAt={request.createdAt}
               updatedAt={request.updatedAt}
@@ -78,7 +79,7 @@ export default function PendingFollowRequestsList() {
               onReject={reject}
               isLoading={isLoading}
             />
-            {index < requests.length - 1 && <Divider component="li" />}
+            {index < validRequests.length - 1 && <Divider component="li" />}
           </React.Fragment>
         ))}
       </List>

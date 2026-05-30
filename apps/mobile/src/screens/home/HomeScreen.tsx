@@ -18,9 +18,17 @@ import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 
 function buildRecommendedEvents(trendingEvents: MobileEventOccurrence[], upcomingEvents: MobileEventOccurrence[]) {
   return dedupeOccurrencesBySeries([...trendingEvents, ...upcomingEvents], 5);
+}
+
+function navigateToEventSeriesResults(navigation: MainTabNavigation, event: MobileSearchResult) {
+  navigation.navigate('Events', {
+    initialEventId: event.eventId,
+    initialSearch: event.title ?? '',
+  });
 }
 
 export function HomeScreen() {
@@ -61,14 +69,7 @@ export function HomeScreen() {
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
 
-        <EventSearchBar
-          onSelectEvent={(event) =>
-            navigation.navigate('Events', {
-              initialEventId: event.eventId,
-              initialSearch: event.title ?? '',
-            })
-          }
-        />
+        <EventSearchBar onSelectEvent={(event) => navigateToEventSeriesResults(navigation, event)} />
 
         <SectionHeading
           actionLabel="View all"

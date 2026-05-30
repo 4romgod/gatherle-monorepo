@@ -111,6 +111,56 @@ describe('FollowResolver', () => {
     expect(result).toBe(mockList);
   });
 
+  it('resolves follower details when the follower user exists', async () => {
+    const follow: Follow = {
+      followId: 'follow-1',
+      followerUserId: 'user-2',
+      targetType: FollowTargetType.User,
+      targetId: 'target-1',
+      approvalStatus: FollowApprovalStatus.Accepted,
+      createdAt: new Date(),
+    };
+
+    const followerUser = {
+      ...mockUser,
+      userId: 'user-2',
+      username: 'follower-user',
+    };
+
+    const context = {
+      loaders: {
+        user: {
+          load: jest.fn().mockResolvedValue(followerUser),
+        },
+      },
+    } as unknown as ServerContext;
+
+    await expect(resolver.follower(follow, context)).resolves.toEqual(followerUser);
+    expect(context.loaders.user.load).toHaveBeenCalledWith('user-2');
+  });
+
+  it('returns null when a follow edge points at a missing follower user', async () => {
+    const follow: Follow = {
+      followId: 'follow-1',
+      followerUserId: 'missing-user',
+      targetType: FollowTargetType.User,
+      targetId: 'target-1',
+      approvalStatus: FollowApprovalStatus.Accepted,
+      createdAt: new Date(),
+    };
+
+    const context = {
+      loaders: {
+        user: {
+          load: jest.fn().mockResolvedValue(null),
+        },
+      },
+    } as unknown as ServerContext;
+
+    await expect(resolver.follower(follow, context)).resolves.toBeNull();
+    expect(context.loaders.user.load).toHaveBeenCalledWith('missing-user');
+  });
+
   it('reads followers', async () => {
     const mockList: Follow[] = [];
     const targetUserId = 'target-1';

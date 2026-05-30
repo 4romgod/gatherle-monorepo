@@ -22,7 +22,7 @@
     "dev:mobile:tunnel": "npm run start:tunnel -w @gatherle/mobile",
     "dev:web": "npm run dev -w @gatherle/webapp",
     "lint:check": "npm run lint:check --workspaces --if-present",
-    "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\"",
+    "lint:fix": "prettier --write \"**/*.{js,ts,tsx,mjs,cjs,json,md}\" --cache",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test:unit": "npm run test:unit:api && npm run test:unit:web && npm run test:unit:mobile",
     "test:unit:api": "npm run test:unit -w @gatherle/api",

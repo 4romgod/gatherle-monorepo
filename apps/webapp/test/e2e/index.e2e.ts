@@ -33,7 +33,8 @@ test.describe('Index Page', () => {
     const signUpLink = page.locator('#hero-section').getByRole('link', { name: 'Sign up', exact: true });
     await expect(signUpLink).toBeVisible();
     await expect(signUpLink).toHaveAttribute('href', '/auth/register');
-    await Promise.all([page.waitForURL(/\/auth\/register\/?$/, { timeout: 20_000 }), signUpLink.click()]);
+    await signUpLink.click();
+    await expect(page).toHaveURL(/\/auth\/register\/?$/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible({ timeout: 20_000 });
   });
 

@@ -1,16 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Box, Button, Grid, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { useQuery } from '@apollo/client';
 import { EventCategory, EventStatus, Organization, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
 import { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
-import {
-  GetEventCategoriesDocument,
-  GetEventsCountDocument,
-  GetPopularOrganizationsDocument,
-} from '@/data/graphql/query';
+import { GetEventCategoriesDocument, GetPopularOrganizationsDocument } from '@/data/graphql/query';
 import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { DATE_FILTER_LABELS, DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { getAuthHeader } from '@/lib/utils';
@@ -27,6 +23,7 @@ import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import EventSearchBar from '@/components/search/EventSearchBar';
 import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.Asc }];
 const DEFAULT_PAGE_SIZE = 10;
@@ -68,11 +65,6 @@ export default function EventsPageClient() {
   } = useQuery(GetPopularOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
   });
-  const { data: totalEventsData } = useQuery(GetEventsCountDocument, {
-    context: authContext,
-    fetchPolicy: 'cache-and-network',
-  });
-
   const eventsList = (eventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[];
   const categories = (categoriesData?.readEventCategories ?? []) as EventCategory[];
   const orgs = organizationsData?.readOrganizations ?? [];
@@ -88,7 +80,7 @@ export default function EventsPageClient() {
     }, orgs[0]);
   }, [orgs]);
 
-  const totalEventsCount = totalEventsData?.readEventsCount ?? eventsList.length;
+  const totalEventsCount = eventsData?.readEventOccurrencesCount ?? eventsList.length;
 
   const stats = useMemo(
     () => ({
@@ -118,6 +110,7 @@ export default function EventsPageClient() {
           <EventsContent
             categories={categories}
             initialEvents={eventsList}
+            initialTotalEvents={totalEventsCount}
             popularOrganization={popularOrganization}
             stats={stats}
             userId={userId}
@@ -131,17 +124,31 @@ export default function EventsPageClient() {
 interface EventsContentProps {
   categories: EventCategory[];
   initialEvents: EventOccurrencePreview[];
+  initialTotalEvents: number;
   popularOrganization: Organization | null;
   stats: PlatformStats;
   userId?: string;
 }
 
-function EventsContent({ categories, initialEvents, popularOrganization, stats, userId }: EventsContentProps) {
+function EventsContent({
+  categories,
+  initialEvents,
+  initialTotalEvents,
+  popularOrganization,
+  stats,
+  userId,
+}: EventsContentProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const selectedEventId = searchParams.get('eventId')?.trim() ?? '';
+  const hasSeriesSelection = selectedEventId.length > 0;
+  const seriesSelectionKey = hasSeriesSelection ? selectedEventId : '';
+  const appliedSeriesSelectionRef = useRef<string | null>(null);
   const {
     filters,
-    setSearchQuery,
     resetFilters,
     hasActiveFilters,
     removeCategory,
@@ -168,10 +175,35 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
   const clearAllFilters = useCallback(() => {
     resetFilters();
     clearSavedLocation();
-  }, [resetFilters, clearSavedLocation]);
+    if (hasSeriesSelection) {
+      router.replace(pathname, { scroll: false });
+      return;
+    }
+  }, [clearSavedLocation, hasSeriesSelection, pathname, resetFilters, router]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    if (!hasSeriesSelection) {
+      appliedSeriesSelectionRef.current = null;
+      return;
+    }
+
+    if (appliedSeriesSelectionRef.current === seriesSelectionKey) {
+      return;
+    }
+
+    resetFilters();
+    appliedSeriesSelectionRef.current = seriesSelectionKey;
+  }, [hasSeriesSelection, isHydrated, resetFilters, seriesSelectionKey]);
 
   // Wait for filters to hydrate before applying them to prevent double-fetch on page load
-  const filtersToUse = isHydrated ? filters : initialFilters;
+  const filtersToUse =
+    !isHydrated || (hasSeriesSelection && appliedSeriesSelectionRef.current !== seriesSelectionKey)
+      ? initialFilters
+      : filters;
   const {
     events: serverEvents,
     loading,
@@ -179,7 +211,8 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
     hasMore,
     loadMore,
     loadingMore,
-  } = useFilteredEvents(filtersToUse, initialEvents, token, DEFAULT_EVENTS_SORT);
+    totalEvents,
+  } = useFilteredEvents(filtersToUse, initialEvents, token, DEFAULT_EVENTS_SORT, initialTotalEvents, selectedEventId);
 
   const hasCoordinates =
     typeof filters.location?.latitude === 'number' && typeof filters.location?.longitude === 'number';
@@ -191,7 +224,14 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
   );
 
   useEffect(() => {
-    if (isHydrated && isLocationHydrated && !hasLocation && savedLocation.latitude && savedLocation.longitude) {
+    if (
+      isHydrated &&
+      isLocationHydrated &&
+      !hasSeriesSelection &&
+      !hasLocation &&
+      savedLocation.latitude &&
+      savedLocation.longitude
+    ) {
       setLocation({
         latitude: savedLocation.latitude,
         longitude: savedLocation.longitude,
@@ -201,6 +241,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
   }, [
     isHydrated,
     isLocationHydrated,
+    hasSeriesSelection,
     hasLocation,
     savedLocation.latitude,
     savedLocation.longitude,
@@ -223,6 +264,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
         event.eventSeries?.eventCategories?.some((category) => category.name?.toLowerCase().includes(query)),
     );
   }, [serverEvents, filters.searchQuery]);
+  const visibleEventCount = filters.searchQuery.trim() ? filteredEvents.length : totalEvents;
 
   const statuses = Object.values(EventStatus);
   const dateOptions = Object.values(DATE_FILTER_OPTIONS);
@@ -232,7 +274,8 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
     filters.categories.length +
     filters.statuses.length +
     (filters.dateRange?.filterOption ? 1 : 0) +
-    (hasLocation ? 1 : 0);
+    (hasLocation ? 1 : 0) +
+    (hasSeriesSelection ? 1 : 0);
 
   function getDateRangeForOption(option: string) {
     const today = dayjs().startOf('day');
@@ -319,7 +362,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
               onClearAll={clearAllFilters}
               activeFilterCount={activeFilterCount}
             />
-            {hasActiveFilters && (
+            {(hasActiveFilters || hasSeriesSelection) && (
               <Button
                 size="small"
                 onClick={clearAllFilters}
@@ -335,7 +378,7 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
             )}
           </Box>
 
-          {hasActiveFilters && (
+          {(hasActiveFilters || hasSeriesSelection) && (
             <Box sx={{ mb: 2, display: { xs: 'none', md: 'block' } }}>
               <Button
                 onClick={clearAllFilters}
@@ -452,12 +495,12 @@ function EventsContent({ categories, initialEvents, popularOrganization, stats, 
             events={filteredEvents}
             loading={loading}
             error={error}
-            hasActiveFilters={hasActiveFilters}
+            hasActiveFilters={hasActiveFilters || hasSeriesSelection}
             onClearFilters={clearAllFilters}
             hasMore={hasMore}
             onLoadMore={loadMore}
             loadingMore={loadingMore}
-            totalCount={undefined}
+            totalCount={visibleEventCount}
           />
         </Grid>
 

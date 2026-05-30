@@ -164,6 +164,31 @@ export function formatShortDate(isoDate?: string | null) {
   }).format(new Date(isoDate));
 }
 
+export function formatOccurrenceSessionDate(isoDate?: string | null, timeZone?: string | null) {
+  if (!isoDate) {
+    return 'Date TBD';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: timeZone ?? undefined,
+    weekday: 'short',
+  }).format(new Date(isoDate));
+}
+
+export function formatOccurrenceSessionTime(isoDate?: string | null, timeZone?: string | null) {
+  if (!isoDate) {
+    return 'Time TBD';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: timeZone ?? undefined,
+  }).format(new Date(isoDate));
+}
+
 export function formatRelativeTime(isoDate?: string | null) {
   if (!isoDate) {
     return '';

@@ -543,6 +543,25 @@ class EventOccurrenceService {
     return paginateOccurrences(sortOccurrences(occurrencesWithSortFields, sortInput), options);
   }
 
+  static async countEventOccurrences(options: EventsQueryOptionsInput): Promise<number> {
+    const { startDate, endDate } = resolveOccurrenceDateRange(options);
+    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(options)) as
+      | OccurrenceQuerySeries[]
+      | [];
+    const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
+
+    warnIfQueryExceedsMaterializationWindow(
+      candidateEventSeries.some((eventSeries) => this.isRecurringSeries(eventSeries)),
+      endDate,
+    );
+
+    if (eventSeriesIds.length === 0) {
+      return 0;
+    }
+
+    return EventOccurrenceDAO.countByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate);
+  }
+
   static async readUpcomingOccurrencesForSeries(
     eventSeries: OccurrenceQuerySeries,
     limit: number = 5,

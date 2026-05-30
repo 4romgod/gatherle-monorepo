@@ -80,6 +80,6 @@ export function useMobileEventsFeed(authToken?: string | null) {
     events,
     loading,
     refetch,
-    totalEvents: data?.readEventsCount ?? events.length,
+    totalEvents: data?.readEventOccurrencesCount ?? events.length,
   };
 }
