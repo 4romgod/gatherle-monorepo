@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
@@ -22,6 +23,7 @@ import { RemoteImage } from '@/components/core/RemoteImage';
 
 type EventSearchBarProps = {
   onSelectEvent: (event: MobileSearchResult) => void;
+  renderTrigger?: (controls: { open: () => void }) => ReactNode;
 };
 
 function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPress: () => void }) {
@@ -72,12 +74,13 @@ function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPres
   );
 }
 
-export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
+export function EventSearchBar({ onSelectEvent, renderTrigger }: EventSearchBarProps) {
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
   const { clear, loading, results, search } = useEventSearch();
+  const openSearch = () => setModalVisible(true);
 
   const handleChangeText = (text: string) => {
     setQuery(text);
@@ -104,17 +107,20 @@ export function EventSearchBar({ onSelectEvent }: EventSearchBarProps) {
 
   return (
     <>
-      {/* Tappable search pill — always visible */}
-      <Pressable
-        accessibilityRole="search"
-        onPress={() => setModalVisible(true)}
-        style={[styles.pill, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
-      >
-        <Feather color={theme.colors.textSecondary} name="search" size={18} />
-        <Text style={[styles.pillPlaceholder, { color: theme.colors.textSecondary }]}>
-          Search events, categories...
-        </Text>
-      </Pressable>
+      {renderTrigger ? (
+        renderTrigger({ open: openSearch })
+      ) : (
+        <Pressable
+          accessibilityRole="search"
+          onPress={openSearch}
+          style={[styles.pill, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
+        >
+          <Feather color={theme.colors.textSecondary} name="search" size={18} />
+          <Text style={[styles.pillPlaceholder, { color: theme.colors.textSecondary }]}>
+            Search events, categories...
+          </Text>
+        </Pressable>
+      )}
 
       {/* Full-screen search modal */}
       <Modal animationType="slide" onRequestClose={handleClose} statusBarTranslucent visible={modalVisible}>

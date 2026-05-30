@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -21,11 +21,13 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useFollowRequests, useNotificationActions, useNotifications } from '@/hooks';
 import type { Notification } from '@/hooks/useNotifications';
 import { logger } from '@/lib/utils';
+import { useToolbarAction } from '@/hooks/useToolbarAction';
 
 type FollowRequest = GetFollowRequestsQuery['readFollowRequests'][number];
+type VisibleFollowRequest = FollowRequest & { follower: NonNullable<FollowRequest['follower']> };
 type NotificationFeedItem =
   | { createdAt: string; id: string; kind: 'notification'; notification: Notification }
-  | { createdAt: string; id: string; kind: 'follow-request'; request: FollowRequest };
+  | { createdAt: string; id: string; kind: 'follow-request'; request: VisibleFollowRequest };
 
 function formatDateGroupLabel(createdAt?: string | null) {
   if (!createdAt) {
@@ -104,8 +106,12 @@ export default function NotificationsPage() {
     isLoading: notificationActionsLoading,
   } = useNotificationActions();
 
-  const pendingFollowRequests = useMemo(
-    () => requests.filter((request) => request.approvalStatus === FollowApprovalStatus.Pending),
+  const pendingFollowRequests = useMemo<VisibleFollowRequest[]>(
+    () =>
+      requests.filter(
+        (request): request is VisibleFollowRequest =>
+          request.approvalStatus === FollowApprovalStatus.Pending && Boolean(request.follower),
+      ),
     [requests],
   );
 
@@ -150,14 +156,14 @@ export default function NotificationsPage() {
     onEndReached: loadMore,
   });
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await Promise.all([refetch(), refetchFollowRequests()]);
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [refetch, refetchFollowRequests]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -167,13 +173,13 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsRead();
     } catch (actionError) {
       logger.error('Failed to mark all notifications as read:', actionError);
     }
-  };
+  }, [markAllAsRead]);
 
   const handleDelete = async (notificationId: string) => {
     try {
@@ -206,6 +212,35 @@ export default function NotificationsPage() {
       logger.error('Failed to reject follow request:', actionError);
     }
   };
+  const toolbarAction = useMemo(
+    () => (
+      <Stack direction="row" spacing={1}>
+        <Button
+          size="small"
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+        >
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+        {unreadCount > 0 ? (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<MarkAllReadIcon />}
+            onClick={handleMarkAllAsRead}
+            disabled={isMutating}
+            sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+          >
+            Mark all read
+          </Button>
+        ) : null}
+      </Stack>
+    ),
+    [handleMarkAllAsRead, isMutating, isRefreshing, unreadCount],
+  );
+  useToolbarAction(toolbarAction);
 
   return (
     <Box sx={{ py: { xs: 3, md: 5 } }}>
@@ -216,7 +251,7 @@ export default function NotificationsPage() {
               Notifications
             </Typography>
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ display: { xs: 'none', md: 'flex' } }}>
               <Button size="small" startIcon={<RefreshIcon />} onClick={handleRefresh} disabled={isRefreshing}>
                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
@@ -286,7 +321,7 @@ export default function NotificationsPage() {
                           onDelete={handleDelete}
                           isLoading={notificationActionsLoading}
                         />
-                      ) : item.request.follower ? (
+                      ) : (
                         <PendingFollowRequestItem
                           followId={item.request.followId}
                           follower={item.request.follower}
@@ -297,7 +332,7 @@ export default function NotificationsPage() {
                           onReject={handleRejectFollowRequest}
                           isLoading={followActionsLoading}
                         />
-                      ) : null}
+                      )}
                       <Divider />
                     </React.Fragment>
                   ))}

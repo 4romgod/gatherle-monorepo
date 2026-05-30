@@ -34,10 +34,11 @@ import { buildProfileBadges } from '@/lib/profileBadges';
 import { FiEdit2, FiSettings } from 'react-icons/fi';
 
 interface UserProfilePageClientProps {
+  hideOwnProfileActions?: boolean;
   username: string;
 }
 
-export default function UserProfilePageClient({ username }: UserProfilePageClientProps) {
+export default function UserProfilePageClient({ hideOwnProfileActions = false, username }: UserProfilePageClientProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
   const isOwnProfile = session?.user?.username === username;
@@ -303,23 +304,25 @@ export default function UserProfilePageClient({ username }: UserProfilePageClien
               </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 1.25, mt: 1.75 }}>
-              {isOwnProfile ? (
-                <>
-                  <ProfileActionButton href={ROUTES.ACCOUNT.TAB('profile')} icon={FiEdit2} label="Edit profile" />
-                  <ProfileActionButton href={ROUTES.ACCOUNT.TAB('account')} icon={FiSettings} label="Settings" />
-                </>
-              ) : (
-                <UserProfileActions
-                  userId={user.userId}
-                  username={user.username}
-                  canMessage={canMessageUser}
-                  messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
-                  fullWidth
-                  showOverflow={false}
-                />
-              )}
-            </Box>
+            {(!isOwnProfile || !hideOwnProfileActions) && (
+              <Box sx={{ display: 'flex', gap: 1.25, mt: 1.75 }}>
+                {isOwnProfile ? (
+                  <>
+                    <ProfileActionButton href={ROUTES.ACCOUNT.TAB('profile')} icon={FiEdit2} label="Edit profile" />
+                    <ProfileActionButton href={ROUTES.ACCOUNT.TAB('account')} icon={FiSettings} label="Settings" />
+                  </>
+                ) : (
+                  <UserProfileActions
+                    userId={user.userId}
+                    username={user.username}
+                    canMessage={canMessageUser}
+                    messageHref={ROUTES.ACCOUNT.MESSAGE_WITH_USERNAME(user.username)}
+                    fullWidth
+                    showOverflow={false}
+                  />
+                )}
+              </Box>
+            )}
           </Box>
         </Box>
 

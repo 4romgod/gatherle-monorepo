@@ -2,13 +2,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import { UserRole } from '@data/graphql/types/graphql';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { AccountSheet } from '@/components/account/AccountSheet';
 import { ProfileEventsEmptyState } from '@/components/account/ProfileEventsEmptyState';
 import type { ProfileEventsEmptyStateConfig } from '@/components/account/ProfileEventsEmptyState';
 import { ProfileBadge } from '@/components/account/ProfileBadge';
-import { ProfileActionButton } from '@/components/account/ProfileActionButton';
 import { ProfileStat } from '@/components/account/ProfileStat';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
@@ -28,15 +30,16 @@ import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
-import { typography } from '@/app/theme/typography';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type AccountTab = 'going' | 'past' | 'hosting' | 'saved';
 
 export function AccountScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, isAuthenticated, userId, username } = useAppShell();
+  const { authToken, isAuthenticated, signOut, userId, username } = useAppShell();
   const { theme } = useAppTheme();
   const [activeTab, setActiveTab] = useState<AccountTab>('going');
+  const [accountSheetVisible, setAccountSheetVisible] = useState(false);
   const [momentsOpen, setMomentsOpen] = useState(false);
   const {
     error: profileError,
@@ -70,6 +73,7 @@ export function AccountScreen() {
     savedEvents,
   } = useSavedEvents(authToken);
   const profileName = getDisplayName(profile);
+  const isAdmin = profile?.userRole === UserRole.Admin;
   const profileEventsCount = hostedEventsTotalCount;
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const openHostedEvents = useCallback(() => {
@@ -188,6 +192,25 @@ export function AccountScreen() {
       })),
     [eventCollections, eventCollectionsLoading, hostedEventsLoadingMore, navigation],
   );
+  const accountToolbarProps = isAuthenticated
+    ? {
+        center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Account</Text>,
+        right: (
+          <View style={styles.toolbarActions}>
+            <HeaderIconButton
+              accessibilityLabel="Create event"
+              icon="plus-circle"
+              onPress={() => navigation.navigate('CreateEvent')}
+            />
+            <HeaderIconButton
+              accessibilityLabel="Open account actions"
+              icon="more-horizontal"
+              onPress={() => setAccountSheetVisible(true)}
+            />
+          </View>
+        ),
+      }
+    : undefined;
 
   if (!isAuthenticated) {
     return (
@@ -209,7 +232,7 @@ export function AccountScreen() {
 
   if (!username) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={accountToolbarProps}>
         <PageContainer>
           <PageHeading title="Account" />
           <StateNotice message="Your account needs a username before we can load the full mobile profile." />
@@ -220,7 +243,7 @@ export function AccountScreen() {
 
   if (profileLoading && !profile) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={accountToolbarProps}>
         <PageContainer>
           <PageHeading title="Account" />
           <StateNotice message="Loading your profile..." />
@@ -231,7 +254,7 @@ export function AccountScreen() {
 
   if (profileError && !profile) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={accountToolbarProps}>
         <PageContainer>
           <PageHeading title="Account" />
           <StateNotice
@@ -245,7 +268,7 @@ export function AccountScreen() {
   }
 
   return (
-    <MainTabScreenLayout>
+    <MainTabScreenLayout toolbarProps={accountToolbarProps}>
       <PageContainer
         onContentSizeChange={infiniteScroll.onContentSizeChange}
         onScroll={infiniteScroll.onScroll}
@@ -322,19 +345,6 @@ export function AccountScreen() {
           </View>
         </View>
 
-        <View style={styles.profileActionsRow}>
-          <ProfileActionButton
-            icon="edit-2"
-            label="Edit profile"
-            onPress={() => navigation.navigate('Settings', { initialTab: 'profile' })}
-          />
-          <ProfileActionButton
-            icon="settings"
-            label="Settings"
-            onPress={() => navigation.navigate('Settings', { initialTab: 'account' })}
-          />
-        </View>
-
         {eventCollectionsError ? (
           <StateNotice
             actionLabel="Retry"
@@ -353,6 +363,16 @@ export function AccountScreen() {
           <MomentViewer moments={userMoments} onClose={() => setMomentsOpen(false)} open startIndex={0} />
         ) : null}
       </PageContainer>
+
+      <AccountSheet
+        isAdmin={isAdmin}
+        onClose={() => setAccountSheetVisible(false)}
+        onOpenAdmin={isAdmin ? () => navigation.navigate('Admin') : undefined}
+        onOpenOrganizations={() => navigation.navigate('MyOrganizations')}
+        onOpenSettings={() => navigation.navigate('Settings', { initialTab: 'account' })}
+        onLogout={signOut}
+        visible={accountSheetVisible}
+      />
     </MainTabScreenLayout>
   );
 }
@@ -459,11 +479,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 88,
   },
-  profileActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: -12,
-  },
   profileTextBlock: {
     gap: 4,
   },
@@ -471,5 +486,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 16,
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  toolbarTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xl2,
+    letterSpacing: -0.3,
   },
 });

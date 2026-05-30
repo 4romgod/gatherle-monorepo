@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { MainTabParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
-import { FilterActionButton } from '@/components/core/FilterActionButton';
 import { FilterChip } from '@/components/core/FilterChip';
 import { PageContainer } from '@/components/core/PageContainer';
 import { StateNotice } from '@/components/core/StateNotice';
@@ -147,9 +147,32 @@ export function EventsScreen() {
     setSelectedEventId('');
     clearAllFilters();
   };
+  const activeSearchLabel = searchQuery.trim();
+  const eventsToolbarProps = {
+    center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Events</Text>,
+    right: (
+      <View style={styles.toolbarActions}>
+        <EventSearchBar
+          onSelectEvent={(event) => {
+            clearAllFilters();
+            applySeriesSelection(event, setSearchQuery, setSelectedEventId);
+          }}
+          renderTrigger={({ open }) => (
+            <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={open} />
+          )}
+        />
+        <HeaderIconButton
+          accessibilityLabel="Open filters"
+          badgeCount={totalActiveFilterCount}
+          icon="sliders"
+          onPress={openSheet}
+        />
+      </View>
+    ),
+  };
 
   return (
-    <MainTabScreenLayout>
+    <MainTabScreenLayout toolbarProps={eventsToolbarProps}>
       <PageContainer
         onContentSizeChange={infiniteScroll.onContentSizeChange}
         onRefresh={onRefresh}
@@ -157,24 +180,16 @@ export function EventsScreen() {
         refreshing={refreshing}
         scrollEventThrottle={infiniteScroll.scrollEventThrottle}
       >
-        <EventSearchBar
-          onSelectEvent={(event) => {
-            clearAllFilters();
-            applySeriesSelection(event, setSearchQuery, setSelectedEventId);
-          }}
-        />
-
-        <View style={styles.eventsToolsRow}>
-          <FilterActionButton activeCount={serverFilterCount} onPress={openSheet} />
-          {totalActiveFilterCount > 0 ? (
+        {totalActiveFilterCount > 0 ? (
+          <View style={styles.clearActionRow}>
             <Pressable
               onPress={handleClearAll}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, justifyContent: 'center' }]}
             >
               <Text style={[styles.clearActionText, { color: theme.colors.textSecondary }]}>Clear all</Text>
             </Pressable>
-          ) : null}
-        </View>
+          </View>
+        ) : null}
 
         {serverFilterCount > 0 ? (
           <View style={styles.activeFilterRow}>
@@ -266,11 +281,16 @@ export function EventsScreen() {
         )}
 
         <EventsFilterSheet
+          activeSearchLabel={activeSearchLabel}
           categories={categories}
           draft={draftFilters}
           onApply={applyFilters}
           onClearAll={handleClearAll}
           onClearLocation={clearDraftLocation}
+          onClearSearch={() => {
+            setSearchQuery('');
+            setSelectedEventId('');
+          }}
           onClose={closeSheet}
           onSetDateOption={setDraftDateOption}
           onSetLocation={setDraftLocation}
@@ -293,6 +313,9 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     fontSize: fontSize.base,
   },
+  clearActionRow: {
+    alignItems: 'flex-end',
+  },
   eventsCount: {
     ...typography.bodyBold,
     fontSize: fontSize.xl2,
@@ -303,12 +326,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     width: 152,
   },
-  eventsToolsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 16,
-  },
   feedList: {
     gap: 24,
+  },
+  toolbarActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 2,
+  },
+  toolbarTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xl2,
+    letterSpacing: -0.3,
   },
 });

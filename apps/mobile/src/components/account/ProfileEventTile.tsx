@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { formatShortDate, getEventImageUrl, getEventStatusLabel, getEventTitle } from '@/lib/events/formatters';
@@ -16,6 +17,12 @@ type ProfileEventTileProps = {
 export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTileProps) {
   const { theme } = useAppTheme();
   const imageUrl = getEventImageUrl(occurrence);
+  const [imageResolved, setImageResolved] = useState(!imageUrl);
+
+  useEffect(() => {
+    setImageResolved(!imageUrl);
+  }, [imageUrl]);
+
   const imageFallback = (
     <LinearGradient colors={theme.colors.heroGradient} style={styles.profileEventPlaceholder}>
       <Text style={[styles.profileEventPlaceholderText, { color: theme.colors.heroText }]}>
@@ -37,7 +44,15 @@ export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTile
         },
       ]}
     >
-      <RemoteImage fallback={imageFallback} uri={imageUrl} style={styles.profileEventImage} />
+      <View style={styles.profileEventImageShell}>
+        <RemoteImage
+          fallback={imageFallback}
+          onError={() => setImageResolved(true)}
+          onLoad={() => setImageResolved(true)}
+          uri={imageUrl}
+          style={[styles.profileEventImage, { backgroundColor: theme.colors.surfaceRaised }]}
+        />
+      </View>
 
       <View style={styles.profileEventOverlay} />
       <LinearGradient
@@ -67,6 +82,31 @@ export function ProfileEventTile({ occurrence, onPress, size }: ProfileEventTile
           {formatShortDate(occurrence.startAt)}
         </Text>
       </View>
+
+      {imageUrl && !imageResolved ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.profileEventLoadingOverlay,
+            {
+              backgroundColor: theme.dark ? 'rgba(2, 6, 23, 0.24)' : 'rgba(255, 255, 255, 0.12)',
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.profileEventLoadingCard,
+              {
+                backgroundColor: theme.dark ? 'rgba(15, 23, 42, 0.84)' : 'rgba(255, 255, 255, 0.92)',
+                borderColor: theme.dark ? theme.colors.heroCardBorder : theme.colors.border,
+                shadowColor: theme.colors.heroBackground,
+              },
+            ]}
+          >
+            <ActivityIndicator color={theme.colors.primary} size="large" />
+          </View>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -102,8 +142,30 @@ const styles = StyleSheet.create({
     top: 0,
   },
   profileEventImage: {
-    height: '100%',
-    width: '100%',
+    flex: 1,
+  },
+  profileEventImageShell: {
+    flex: 1,
+  },
+  profileEventLoadingCard: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 62,
+    minWidth: 62,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+  },
+  profileEventLoadingOverlay: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   profileEventMeta: {
     bottom: 8,

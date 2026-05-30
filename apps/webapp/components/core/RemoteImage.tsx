@@ -15,6 +15,8 @@ type RemoteImageProps = {
   fallback: ReactNode;
   imageSx?: SxProps<Theme>;
   loading?: 'eager' | 'lazy';
+  onError?: () => void;
+  onLoad?: () => void;
   showLoader?: boolean;
   src?: string | null;
   sx?: SxProps<Theme>;
@@ -26,6 +28,8 @@ export default function RemoteImage({
   fallback,
   imageSx,
   loading = 'lazy',
+  onError,
+  onLoad,
   showLoader = false,
   src,
   sx,
@@ -55,8 +59,14 @@ export default function RemoteImage({
         alt={alt}
         component="img"
         loading={loading}
-        onError={() => setFailed(true)}
-        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setFailed(true);
+          onError?.();
+        }}
+        onLoad={() => {
+          setLoaded(true);
+          onLoad?.();
+        }}
         src={src}
         sx={[
           {

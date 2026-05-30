@@ -1,11 +1,12 @@
 'use client';
 
-import React, { FormEvent, useRef, useMemo, useState, useEffect } from 'react';
+import React, { FormEvent, useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import {
   TextField,
   Button,
   Grid,
   Typography,
+  Chip,
   MenuItem,
   Select,
   InputLabel,
@@ -22,6 +23,8 @@ import {
   IconButton,
   Snackbar,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link as LinkIcon, Save, CloudUpload, Close } from '@mui/icons-material';
 import { useQuery, useMutation } from '@apollo/client';
 import { useRouter } from 'next/navigation';
@@ -34,7 +37,7 @@ import {
   Location,
   OrganizationRole,
 } from '@/data/graphql/types/graphql';
-import { EventMutationFormProps, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { EventMutationFormProps, BUTTON_STYLES, SECTION_TITLE_STYLES, getEventCategoryIcon } from '@/lib/constants';
 import CategoryFilter from '@/components/events/filters/category';
 import EventLocationInput from './EventLocationInput';
 import EventDateInput from './EventDateInput';
@@ -57,6 +60,8 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const isEditMode = !!event;
 
   const router = useRouter();
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down('md'));
   const draftEntityId = useRef(crypto.randomUUID());
 
   const { data: sessionData, status: sessionStatus } = useSession();
@@ -147,12 +152,36 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     : eligibleOrganizations.length > 0
       ? 'Owner, Admin, or Host roles can attach this organization to the event.'
       : 'No organizations with the required role were found.';
+  const sectionSpacing = isMobileLayout ? 2.25 : 3;
+  const sectionTitleSx = {
+    ...SECTION_TITLE_STYLES,
+    fontSize: isMobileLayout ? '1rem' : '1.125rem',
+  };
+  const choiceChipBaseSx = {
+    borderRadius: 999,
+    fontWeight: 600,
+    maxWidth: '100%',
+    minHeight: 34,
+    '& .MuiChip-label': {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    },
+  } as const;
+  const helperCopySx = {
+    mb: isMobileLayout ? 1 : 1.5,
+  };
 
   const handleOrganizationChange = (event: SelectChangeEvent<string>) => {
     const value = event.target.value;
     setEventData((prev) => ({
       ...prev,
       orgId: value || undefined,
+    }));
+  };
+  const handleOrganizationSelect = (orgId?: string) => {
+    setEventData((prev) => ({
+      ...prev,
+      orgId: orgId || undefined,
     }));
   };
 
@@ -212,23 +241,21 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, venueId: venueId ?? undefined }));
   };
 
-  const handleEventDateChange = (
-    recurrenceRule: string,
-    anchorStartAt: Date,
-    timezone: string,
-    occurrenceDurationMinutes: number,
-  ) => {
-    setEventData((prev) => ({
-      ...prev,
-      primarySchedule: {
-        ...(prev.primarySchedule ?? {}),
-        recurrenceRule,
-        anchorStartAt,
-        timezone,
-        occurrenceDurationMinutes,
-      },
-    }));
-  };
+  const handleEventDateChange = useCallback(
+    (recurrenceRule: string, anchorStartAt: Date, timezone: string, occurrenceDurationMinutes: number) => {
+      setEventData((prev) => ({
+        ...prev,
+        primarySchedule: {
+          ...(prev.primarySchedule ?? {}),
+          recurrenceRule,
+          anchorStartAt,
+          timezone,
+          occurrenceDurationMinutes,
+        },
+      }));
+    },
+    [setEventData],
+  );
 
   const handleStatusChange = (event: SelectChangeEvent<EventStatus>) => {
     setEventData((prev) => ({ ...prev, status: event.target.value as EventStatus }));
@@ -237,13 +264,27 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const handleVisibilityChange = (event: SelectChangeEvent<EventVisibility>) => {
     setEventData((prev) => ({ ...prev, visibility: event.target.value as EventVisibility }));
   };
+  const handleVisibilitySelect = (visibility: EventVisibility) => {
+    setEventData((prev) => ({ ...prev, visibility }));
+  };
 
   const handlePrivacyChange = (event: SelectChangeEvent<EventPrivacySetting>) => {
     setEventData((prev) => ({ ...prev, privacySetting: event.target.value as EventPrivacySetting }));
   };
+  const handlePrivacySelect = (privacySetting: EventPrivacySetting) => {
+    setEventData((prev) => ({ ...prev, privacySetting }));
+  };
 
   const handleEventCategoryListChange = (eventCategories: string[]) => {
     setEventData((prev) => ({ ...prev, eventCategories }));
+  };
+  const toggleEventCategory = (categoryId: string) => {
+    setEventData((prev) => ({
+      ...prev,
+      eventCategories: prev.eventCategories.includes(categoryId)
+        ? prev.eventCategories.filter((id) => id !== categoryId)
+        : [...prev.eventCategories, categoryId],
+    }));
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -353,30 +394,340 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setDiscardDialogOpen(false);
   };
 
+  const organizationField = isMobileLayout ? (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+        Organization
+      </Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        <Chip
+          label="Personal event"
+          onClick={() => handleOrganizationSelect(undefined)}
+          color={!displayEventData.orgId ? 'primary' : 'default'}
+          variant={!displayEventData.orgId ? 'filled' : 'outlined'}
+          sx={choiceChipBaseSx}
+        />
+        {eligibleOrganizations.map(({ organization }) => (
+          <Chip
+            key={organization.orgId}
+            label={organization.name}
+            onClick={() => handleOrganizationSelect(organization.orgId)}
+            color={displayEventData.orgId === organization.orgId ? 'primary' : 'default'}
+            variant={displayEventData.orgId === organization.orgId ? 'filled' : 'outlined'}
+            sx={choiceChipBaseSx}
+          />
+        ))}
+      </Stack>
+      <Typography color="text.secondary" sx={{ mt: 1 }} variant="caption">
+        {organizationHelperText}
+      </Typography>
+    </Box>
+  ) : (
+    <FormControl fullWidth disabled={!isMounted || myOrganizationsLoading}>
+      <InputLabel id="organization-select-label">Organization</InputLabel>
+      <Select
+        labelId="organization-select-label"
+        label="Organization"
+        value={displayEventData.orgId ?? ''}
+        onChange={handleOrganizationChange}
+        sx={{ minWidth: 120 }}
+      >
+        <MenuItem value="">
+          <em>No organization (personal event)</em>
+        </MenuItem>
+        {eligibleOrganizations.map(({ organization, role }) => (
+          <MenuItem key={organization.orgId} value={organization.orgId}>
+            {organization.name} ({role})
+          </MenuItem>
+        ))}
+      </Select>
+      <FormHelperText>{organizationHelperText}</FormHelperText>
+    </FormControl>
+  );
+
+  const eventLinkField = (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+        Event Link
+      </Typography>
+      {!isMobileLayout ? (
+        <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+          Add a link to your event website or registration page
+        </Typography>
+      ) : null}
+      <TextField
+        fullWidth
+        placeholder={isMobileLayout ? 'https://...' : 'https://your-event-website.com'}
+        name="eventLink"
+        size="medium"
+        color="secondary"
+        value={displayEventData.eventLink}
+        onChange={handleChange}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <LinkIcon color="action" />
+              </InputAdornment>
+            ),
+          },
+        }}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+      />
+    </Box>
+  );
+
+  const featuredImageField = isMobileLayout ? (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+        Featured image (optional)
+      </Typography>
+      <Box
+        component="label"
+        sx={{
+          display: 'block',
+          width: '100%',
+          cursor: featuredImageUploading ? 'progress' : 'pointer',
+        }}
+      >
+        <input
+          type="file"
+          hidden
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            e.target.value = '';
+            selectFeaturedImageForCrop(file);
+          }}
+        />
+        {featuredImageCropPreview || featuredImageUrl ? (
+          <Box
+            component="img"
+            src={featuredImageCropPreview || featuredImageUrl}
+            alt="Featured image preview"
+            sx={{
+              width: '100%',
+              aspectRatio: '16 / 9',
+              objectFit: 'cover',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              alignItems: 'center',
+              aspectRatio: '16 / 9',
+              border: '1px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              display: 'flex',
+              justifyContent: 'center',
+              px: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography color="text.secondary" variant="body2">
+              {featuredImageUploading ? 'Uploading…' : 'Tap to choose image'}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+      {featuredImageError ? (
+        <Typography variant="caption" color="error" sx={{ mt: 0.75, display: 'block' }}>
+          {featuredImageError}
+        </Typography>
+      ) : null}
+      {(featuredImageUrl || featuredImageCropPreview) && !featuredImageUploading ? (
+        <Button
+          color="secondary"
+          onClick={() => {
+            clearFeaturedImageSelection();
+            resetFeaturedImage();
+            setEventData((prev) => ({
+              ...prev,
+              media: { ...(prev.media ?? {}), featuredImageUrl: undefined },
+            }));
+          }}
+          size="small"
+          sx={{ mt: 1, px: 0, textTransform: 'none' }}
+          variant="text"
+        >
+          Remove image
+        </Button>
+      ) : null}
+    </Box>
+  ) : (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+        Featured Image
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+        Upload a 16:9 cover image for your event cards and event detail page.
+      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Button
+          component="label"
+          variant="outlined"
+          startIcon={featuredImageUploading ? <CircularProgress size={16} color="inherit" /> : <CloudUpload />}
+          disabled={featuredImageUploading}
+          size="small"
+        >
+          {featuredImageUploading ? 'Uploading…' : featuredImageUrl ? 'Change image' : 'Upload image'}
+          <input
+            type="file"
+            hidden
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              e.target.value = '';
+              selectFeaturedImageForCrop(file);
+            }}
+          />
+        </Button>
+        {(featuredImageUrl || featuredImageCropPreview) && !featuredImageUploading && (
+          <IconButton
+            size="small"
+            onClick={() => {
+              clearFeaturedImageSelection();
+              resetFeaturedImage();
+              setEventData((prev) => ({
+                ...prev,
+                media: { ...(prev.media ?? {}), featuredImageUrl: undefined },
+              }));
+            }}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        )}
+      </Stack>
+      {featuredImageError && (
+        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+          {featuredImageError}
+        </Typography>
+      )}
+      {(featuredImageCropPreview || featuredImageUrl) && (
+        <Box
+          component="img"
+          src={featuredImageCropPreview || featuredImageUrl}
+          alt="Featured image preview"
+          sx={{
+            width: '100%',
+            maxWidth: 360,
+            aspectRatio: '16 / 9',
+            objectFit: 'cover',
+            borderRadius: 2,
+            mt: 1.5,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        />
+      )}
+    </Box>
+  );
+
+  const categoryField = isMobileLayout ? (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+        Categories
+      </Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {categoryList.map((category) => {
+          const isSelected = displayEventData.eventCategories.includes(category.eventCategoryId);
+          const IconComponent = getEventCategoryIcon(category.iconName);
+          return (
+            <Chip
+              key={category.eventCategoryId}
+              label={category.name}
+              icon={
+                <Box sx={{ display: 'flex', ml: 0.5 }}>
+                  <IconComponent height={14} width={14} />
+                </Box>
+              }
+              onClick={() => toggleEventCategory(category.eventCategoryId)}
+              color={isSelected ? 'primary' : 'default'}
+              variant={isSelected ? 'filled' : 'outlined'}
+              sx={choiceChipBaseSx}
+            />
+          );
+        })}
+      </Stack>
+      {errors.categories ? (
+        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+          {errors.categories}
+        </Typography>
+      ) : null}
+    </Box>
+  ) : (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+        Event Categories *
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+        Help people find your event by selecting relevant categories
+      </Typography>
+      <CategoryFilter
+        categoryList={categoryList}
+        onChange={handleEventCategoryListChange}
+        value={displayEventData.eventCategories}
+        sxProps={{ backgroundColor: 'transparent', backgroundImage: 'none', border: 'none', p: 0 }}
+      />
+      {errors.categories && (
+        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+          {errors.categories}
+        </Typography>
+      )}
+    </Box>
+  );
+
+  const visibilityField = isMobileLayout ? (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+        Visibility
+      </Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {Object.values(EventVisibility).map((visibility) => (
+          <Chip
+            key={visibility}
+            label={visibility}
+            onClick={() => handleVisibilitySelect(visibility)}
+            color={displayEventData.visibility === visibility ? 'primary' : 'default'}
+            variant={displayEventData.visibility === visibility ? 'filled' : 'outlined'}
+            sx={choiceChipBaseSx}
+          />
+        ))}
+      </Stack>
+    </Box>
+  ) : null;
+
+  const privacyField = isMobileLayout ? (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+        Privacy
+      </Typography>
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {Object.values(EventPrivacySetting).map((privacy) => (
+          <Chip
+            key={privacy}
+            label={privacy === EventPrivacySetting.Invitation ? 'Invite only' : privacy}
+            onClick={() => handlePrivacySelect(privacy)}
+            color={displayEventData.privacySetting === privacy ? 'primary' : 'default'}
+            variant={displayEventData.privacySetting === privacy ? 'filled' : 'outlined'}
+            sx={choiceChipBaseSx}
+          />
+        ))}
+      </Stack>
+    </Box>
+  ) : null;
+
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
-          <FormControl fullWidth disabled={!isMounted || myOrganizationsLoading}>
-            <InputLabel id="organization-select-label">Organization</InputLabel>
-            <Select
-              labelId="organization-select-label"
-              label="Organization"
-              value={displayEventData.orgId ?? ''}
-              onChange={handleOrganizationChange}
-              sx={{ minWidth: 120 }}
-            >
-              <MenuItem value="">
-                <em>No organization (personal event)</em>
-              </MenuItem>
-              {eligibleOrganizations.map(({ organization, role }) => (
-                <MenuItem key={organization.orgId} value={organization.orgId}>
-                  {organization.name} ({role})
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{organizationHelperText}</FormHelperText>
-          </FormControl>
+          {!isMobileLayout ? organizationField : null}
 
           {Object.keys(errors).length > 0 && (
             <Alert severity="error" sx={{ borderRadius: 2 }}>
@@ -384,19 +735,21 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
             </Alert>
           )}
 
-          <Box sx={{ py: 4 }}>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
-                Basic Information
+          <Box sx={{ py: isMobileLayout ? 0 : 4 }}>
+            <Stack spacing={sectionSpacing}>
+              <Typography variant="h6" sx={sectionTitleSx}>
+                {isMobileLayout ? 'Basics' : 'Basic Information'}
               </Typography>
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                   Event Title *
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Choose a clear, informative title that tells people exactly what your event is about
-                </Typography>
+                {!isMobileLayout ? (
+                  <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+                    Choose a clear, informative title that tells people exactly what your event is about
+                  </Typography>
+                ) : null}
                 <TextField
                   required
                   fullWidth
@@ -416,9 +769,11 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
                   Summary *
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Write a short, attention-grabbing description (shown in event listings)
-                </Typography>
+                {!isMobileLayout ? (
+                  <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+                    Write a short, attention-grabbing description (shown in event listings)
+                  </Typography>
+                ) : null}
                 <TextField
                   required
                   fullWidth
@@ -438,11 +793,13 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Full Description *
+                  {isMobileLayout ? 'Description *' : 'Full Description *'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Provide detailed information about your event, what to expect, and what guests need to know
-                </Typography>
+                {!isMobileLayout ? (
+                  <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+                    Provide detailed information about your event, what to expect, and what guests need to know
+                  </Typography>
+                ) : null}
                 <TextField
                   required
                   fullWidth
@@ -459,14 +816,16 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
               </Box>
+
+              {isMobileLayout ? eventLinkField : null}
+              {isMobileLayout ? featuredImageField : null}
             </Stack>
           </Box>
 
-          {/* Date and Location */}
           <Box sx={{ mb: 4 }}>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
-                Date & Location
+            <Stack spacing={sectionSpacing}>
+              <Typography variant="h6" sx={sectionTitleSx}>
+                {isMobileLayout ? 'Schedule' : 'Date & Location'}
               </Typography>
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
@@ -479,161 +838,70 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                   </Typography>
                 )}
               </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
-                  Where is it happening? *
-                </Typography>
-                <EventLocationInput
-                  onChange={handleLocationChange}
-                  value={displayEventData.location}
-                  venueId={displayEventData.venueId}
-                  onVenueChange={handleVenueChange}
-                />
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Categories & Media */}
-          <Box sx={{ mb: 4 }}>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
-                Categories & Media
-              </Typography>
-              <Box>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Event Categories *
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Help people find your event by selecting relevant categories
-                </Typography>
-                <CategoryFilter
-                  categoryList={categoryList}
-                  onChange={handleEventCategoryListChange}
-                  value={displayEventData.eventCategories}
-                  sxProps={{ backgroundColor: 'transparent', backgroundImage: 'none', border: 'none', p: 0 }}
-                />
-                {errors.categories && (
-                  <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-                    {errors.categories}
+              {!isMobileLayout ? (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                    Where is it happening? *
                   </Typography>
-                )}
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Featured Image
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Upload a 16:9 cover image for your event cards and event detail page.
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Button
-                    component="label"
-                    variant="outlined"
-                    startIcon={
-                      featuredImageUploading ? <CircularProgress size={16} color="inherit" /> : <CloudUpload />
-                    }
-                    disabled={featuredImageUploading}
-                    size="small"
-                  >
-                    {featuredImageUploading ? 'Uploading…' : featuredImageUrl ? 'Change image' : 'Upload image'}
-                    <input
-                      type="file"
-                      hidden
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        e.target.value = '';
-                        selectFeaturedImageForCrop(file);
-                      }}
-                    />
-                  </Button>
-                  {(featuredImageUrl || featuredImageCropPreview) && !featuredImageUploading && (
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        clearFeaturedImageSelection();
-                        resetFeaturedImage();
-                        setEventData((prev) => ({
-                          ...prev,
-                          media: { ...(prev.media ?? {}), featuredImageUrl: undefined },
-                        }));
-                      }}
-                    >
-                      <Close fontSize="small" />
-                    </IconButton>
-                  )}
-                </Stack>
-                {featuredImageError && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
-                    {featuredImageError}
-                  </Typography>
-                )}
-                {(featuredImageCropPreview || featuredImageUrl) && (
-                  <Box
-                    component="img"
-                    src={featuredImageCropPreview || featuredImageUrl}
-                    alt="Featured image preview"
-                    sx={{
-                      width: '100%',
-                      maxWidth: 360,
-                      aspectRatio: '16 / 9',
-                      objectFit: 'cover',
-                      borderRadius: 2,
-                      mt: 1.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
+                  <EventLocationInput
+                    onChange={handleLocationChange}
+                    value={displayEventData.location}
+                    venueId={displayEventData.venueId}
+                    onVenueChange={handleVenueChange}
                   />
-                )}
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Event Link
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  Add a link to your event website or registration page
-                </Typography>
-                <TextField
-                  fullWidth
-                  placeholder="https://your-event-website.com"
-                  name="eventLink"
-                  size="medium"
-                  color="secondary"
-                  value={displayEventData.eventLink}
-                  onChange={handleChange}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LinkIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                />
-              </Box>
+                </Box>
+              ) : null}
             </Stack>
           </Box>
 
-          {/* Capacity & Attendees */}
-          <Box sx={{ mb: 4 }}>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
-                Capacity & Attendee Settings
-              </Typography>
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                    Event Capacity
+          {isMobileLayout ? (
+            <Box sx={{ mb: 4 }}>
+              <Stack spacing={sectionSpacing}>
+                <Typography variant="h6" sx={sectionTitleSx}>
+                  Location
+                </Typography>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                    Where is it happening? *
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Maximum number of attendees
+                  <EventLocationInput
+                    onChange={handleLocationChange}
+                    value={displayEventData.location}
+                    venueId={displayEventData.venueId}
+                    onVenueChange={handleVenueChange}
+                  />
+                </Box>
+              </Stack>
+            </Box>
+          ) : null}
+
+          <Box sx={{ mb: 4 }}>
+            <Stack spacing={sectionSpacing}>
+              <Typography variant="h6" sx={sectionTitleSx}>
+                {isMobileLayout ? 'Community context' : 'Categories & Media'}
+              </Typography>
+              {isMobileLayout ? organizationField : null}
+              {categoryField}
+              {!isMobileLayout ? featuredImageField : null}
+              {!isMobileLayout ? eventLinkField : null}
+            </Stack>
+          </Box>
+
+          {isMobileLayout ? (
+            <Box sx={{ mb: 4 }}>
+              <Stack spacing={sectionSpacing}>
+                <Typography variant="h6" sx={sectionTitleSx}>
+                  Access & settings
+                </Typography>
+                {visibilityField}
+                {privacyField}
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                    Capacity (optional)
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder="100"
+                    placeholder="e.g. 100"
                     name="capacity"
                     type="number"
                     size="medium"
@@ -643,18 +911,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     slotProps={{ htmlInput: { min: 1 } }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
+                </Box>
+                <Box>
                   <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                    RSVP Limit
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Optional RSVP limit (leave empty for no limit)
+                    RSVP limit (optional)
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder="Optional"
+                    placeholder="Leave empty for no limit"
                     name="rsvpLimit"
                     type="number"
                     size="medium"
@@ -664,178 +928,314 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                     slotProps={{ htmlInput: { min: 1 } }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
-                </Grid>
-              </Grid>
-              <Stack spacing={2}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="waitlistEnabled"
-                      checked={displayEventData.waitlistEnabled || false}
-                      onChange={handleSwitchChange}
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        Enable Waitlist
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Allow people to join a waitlist when event is full
-                      </Typography>
-                    </Box>
-                  }
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="allowGuestPlusOnes"
-                      checked={displayEventData.allowGuestPlusOnes || false}
-                      onChange={handleSwitchChange}
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        Allow Plus Ones
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Let attendees bring a guest
-                      </Typography>
-                    </Box>
-                  }
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="showAttendees"
-                      checked={displayEventData.showAttendees !== false}
-                      onChange={handleSwitchChange}
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        Show Attendee List
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Display who's attending on the event page
-                      </Typography>
-                    </Box>
-                  }
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="remindersEnabled"
-                      checked={displayEventData.remindersEnabled !== false}
-                      onChange={handleSwitchChange}
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        Send Reminders
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Automatically remind attendees before the event
-                      </Typography>
-                    </Box>
-                  }
-                />
+                </Box>
+                <Stack spacing={2}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="waitlistEnabled"
+                        checked={displayEventData.waitlistEnabled || false}
+                        onChange={handleSwitchChange}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          Waitlist
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Allow people to join a waitlist when the event is full.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="allowGuestPlusOnes"
+                        checked={displayEventData.allowGuestPlusOnes || false}
+                        onChange={handleSwitchChange}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          Allow plus-ones
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Let attendees bring a guest.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="showAttendees"
+                        checked={displayEventData.showAttendees !== false}
+                        onChange={handleSwitchChange}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          Show attendee list
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Display who is attending on the event page.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="remindersEnabled"
+                        checked={displayEventData.remindersEnabled !== false}
+                        onChange={handleSwitchChange}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          Send reminders
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Automatically remind attendees before the event.
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Stack>
               </Stack>
-            </Stack>
-          </Box>
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ mb: 4 }}>
+                <Stack spacing={3}>
+                  <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                    Capacity & Attendee Settings
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                        Event Capacity
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        Maximum number of attendees
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="100"
+                        name="capacity"
+                        type="number"
+                        size="medium"
+                        color="secondary"
+                        value={displayEventData.capacity || ''}
+                        onChange={handleNumberChange}
+                        slotProps={{ htmlInput: { min: 1 } }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      />
+                    </Grid>
 
-          {/* Settings */}
-          <Box sx={{ py: 4 }}>
-            <Stack spacing={3}>
-              <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
-                Event Settings
-              </Typography>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                        RSVP Limit
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        Optional RSVP limit (leave empty for no limit)
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="Optional"
+                        name="rsvpLimit"
+                        type="number"
+                        size="medium"
+                        color="secondary"
+                        value={displayEventData.rsvpLimit || ''}
+                        onChange={handleNumberChange}
+                        slotProps={{ htmlInput: { min: 1 } }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      />
+                    </Grid>
+                  </Grid>
+                  <Stack spacing={2}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="waitlistEnabled"
+                          checked={displayEventData.waitlistEnabled || false}
+                          onChange={handleSwitchChange}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            Enable Waitlist
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Allow people to join a waitlist when event is full
+                          </Typography>
+                        </Box>
+                      }
+                    />
 
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <FormControl fullWidth size="medium">
-                    <InputLabel color="secondary">Status</InputLabel>
-                    <Select
-                      name="status"
-                      value={displayEventData.status}
-                      onChange={handleStatusChange}
-                      color="secondary"
-                      label="Status"
-                      sx={{ borderRadius: 2 }}
-                    >
-                      {Object.values(EventStatus).map((status) => (
-                        <MenuItem key={status} value={status}>
-                          {status}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="allowGuestPlusOnes"
+                          checked={displayEventData.allowGuestPlusOnes || false}
+                          onChange={handleSwitchChange}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            Allow Plus Ones
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Let attendees bring a guest
+                          </Typography>
+                        </Box>
+                      }
+                    />
 
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <FormControl fullWidth size="medium">
-                    <InputLabel color="secondary">Visibility</InputLabel>
-                    <Select
-                      name="visibility"
-                      value={displayEventData.visibility || ''}
-                      onChange={handleVisibilityChange}
-                      color="secondary"
-                      label="Visibility"
-                      sx={{ borderRadius: 2 }}
-                    >
-                      {Object.values(EventVisibility).map((visibility) => (
-                        <MenuItem key={visibility} value={visibility}>
-                          {visibility}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="showAttendees"
+                          checked={displayEventData.showAttendees !== false}
+                          onChange={handleSwitchChange}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            Show Attendee List
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Display who's attending on the event page
+                          </Typography>
+                        </Box>
+                      }
+                    />
 
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <FormControl fullWidth size="medium">
-                    <InputLabel color="secondary">Privacy</InputLabel>
-                    <Select
-                      name="privacySetting"
-                      value={displayEventData.privacySetting || ''}
-                      onChange={handlePrivacyChange}
-                      color="secondary"
-                      label="Privacy"
-                      sx={{ borderRadius: 2 }}
-                    >
-                      {Object.values(EventPrivacySetting).map((privacy) => (
-                        <MenuItem key={privacy} value={privacy}>
-                          {privacy}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </Stack>
-          </Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="remindersEnabled"
+                          checked={displayEventData.remindersEnabled !== false}
+                          onChange={handleSwitchChange}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            Send Reminders
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Automatically remind attendees before the event
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </Stack>
+                </Stack>
+              </Box>
+
+              <Box sx={{ py: 4 }}>
+                <Stack spacing={3}>
+                  <Typography variant="h6" sx={{ ...SECTION_TITLE_STYLES, fontSize: '1.125rem' }}>
+                    Event Settings
+                  </Typography>
+
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <FormControl fullWidth size="medium">
+                        <InputLabel color="secondary">Status</InputLabel>
+                        <Select
+                          name="status"
+                          value={displayEventData.status}
+                          onChange={handleStatusChange}
+                          color="secondary"
+                          label="Status"
+                          sx={{ borderRadius: 2 }}
+                        >
+                          {Object.values(EventStatus).map((status) => (
+                            <MenuItem key={status} value={status}>
+                              {status}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <FormControl fullWidth size="medium">
+                        <InputLabel color="secondary">Visibility</InputLabel>
+                        <Select
+                          name="visibility"
+                          value={displayEventData.visibility || ''}
+                          onChange={handleVisibilityChange}
+                          color="secondary"
+                          label="Visibility"
+                          sx={{ borderRadius: 2 }}
+                        >
+                          {Object.values(EventVisibility).map((visibility) => (
+                            <MenuItem key={visibility} value={visibility}>
+                              {visibility}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <FormControl fullWidth size="medium">
+                        <InputLabel color="secondary">Privacy</InputLabel>
+                        <Select
+                          name="privacySetting"
+                          value={displayEventData.privacySetting || ''}
+                          onChange={handlePrivacyChange}
+                          color="secondary"
+                          label="Privacy"
+                          sx={{ borderRadius: 2 }}
+                        >
+                          {Object.values(EventPrivacySetting).map((privacy) => (
+                            <MenuItem key={privacy} value={privacy}>
+                              {privacy}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Stack>
+              </Box>
+            </>
+          )}
 
           {/* Submit */}
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" spacing={2} sx={{ pt: 2 }}>
-            <Button
-              variant="outlined"
-              color="secondary"
-              size="large"
-              onClick={handleDiscardDraft}
-              sx={{ ...BUTTON_STYLES, px: 4 }}
-            >
-              Discard draft
-            </Button>
+            {!isMobileLayout ? (
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="large"
+                onClick={handleDiscardDraft}
+                sx={{ ...BUTTON_STYLES, px: 4 }}
+              >
+                Discard draft
+              </Button>
+            ) : null}
             <Button
               type="submit"
               variant="contained"
@@ -845,7 +1245,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
               startIcon={
                 submitting || featuredImageUploading ? <CircularProgress size={20} color="inherit" /> : <Save />
               }
-              sx={{ ...BUTTON_STYLES, px: 4 }}
+              sx={{ ...BUTTON_STYLES, px: 4, width: { xs: '100%', sm: 'auto' } }}
             >
               {submitting || featuredImageUploading ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Event'}
             </Button>

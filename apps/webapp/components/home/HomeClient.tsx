@@ -5,6 +5,8 @@ import { Box, Container, Stack, Typography } from '@mui/material';
 import { GetEventCategoriesDocument, GetEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { HeroSection, CategoryExplorer, NearbyEventsSection } from '@/components/home';
+import HomeBrowseSection from '@/components/home/HomeBrowseSection';
+import ToolbarEventSearchAction from '@/components/navigation/ToolbarEventSearchAction';
 import { getAuthHeader } from '@/lib/utils/auth';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
@@ -16,10 +18,17 @@ import type { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/
 import { ROUTES } from '@/lib/constants';
 import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 import { GetEventOccurrencesDocument } from '@/data/graphql/query';
+import { useToolbarAction } from '@/hooks/useToolbarAction';
 
 export default function HomeClient() {
   const { data: session } = useSession();
+  const toolbarAction = useMemo(
+    () => <ToolbarEventSearchAction placeholder="Search events, categories, or locations..." />,
+    [],
+  );
+  useToolbarAction(toolbarAction);
   const authContext = { headers: getAuthHeader(session?.user?.token) };
+  const isAuthenticated = Boolean(session?.user?.userId && session?.user?.token);
 
   const { data: trendingEventsData, loading: trendingEventsLoading } = useQuery(GetEventOccurrencesDocument, {
     fetchPolicy: 'cache-and-network',
@@ -141,6 +150,8 @@ export default function HomeClient() {
                 />
               )}
             </Box>
+
+            <HomeBrowseSection isAuthenticated={isAuthenticated} />
           </Stack>
         </Container>
       </Box>

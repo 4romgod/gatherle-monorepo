@@ -29,15 +29,15 @@ export default async function CreateEvent() {
       sx={{
         bgcolor: 'background.default',
         minHeight: '100vh',
-        py: 4,
+        py: { xs: 2, md: 4 },
       }}
     >
-      {/* Header */}
       <Box
         sx={{
           bgcolor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
+          display: { xs: 'none', md: 'block' },
           py: { xs: 3, md: 4 },
           mb: 4,
         }}
@@ -69,8 +69,25 @@ export default async function CreateEvent() {
         </Container>
       </Box>
 
-      {/* Form Container */}
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container
+        maxWidth="md"
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          px: { xs: 2, sm: 3 },
+          pb: 2,
+        }}
+      >
+        <Box sx={{ pb: 1 }}>
+          <Typography variant="h4" fontWeight={800} sx={{ fontSize: '1.5rem', letterSpacing: '-0.03em' }}>
+            Create event
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.75 }} variant="body2">
+            Share the essentials, choose the right community context, and publish when you&apos;re ready.
+          </Typography>
+        </Box>
+      </Container>
+
+      <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 0, md: 4 } }}>
         <EventMutationForm categoryList={eventCategories.readEventCategories} />
       </Container>
     </Box>

@@ -15,7 +15,7 @@ import { EventFilters, LocationFilter } from '@/components/events/filters/EventF
 import { DATE_FILTER_OPTIONS } from '@/lib/constants/date-filters';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { logger } from '@/lib/utils';
-import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
+import { buildDefaultOccurrenceDateRange, buildSelectedEventOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -103,6 +103,7 @@ export const buildLocationFilter = (location: LocationFilter): LocationFilterInp
 
 export const buildOccurrenceDateInput = (
   filters: EventFilters,
+  selectedEventId?: string,
 ): Pick<EventsQueryOptionsInput, 'dateFilterOption' | 'customDate' | 'dateRange'> => {
   const input: Pick<EventsQueryOptionsInput, 'dateFilterOption' | 'customDate' | 'dateRange'> = {};
   const dateFilterParams = buildDateFilterParams(filters);
@@ -113,7 +114,7 @@ export const buildOccurrenceDateInput = (
     return input;
   }
 
-  input.dateRange = buildDefaultOccurrenceDateRange();
+  input.dateRange = selectedEventId ? buildSelectedEventOccurrenceDateRange() : buildDefaultOccurrenceDateRange();
   return input;
 };
 
@@ -136,7 +137,10 @@ export const useFilteredEvents = (
   const filterInputs = useMemo(() => buildFilterInputs(filters), [filters.categories, filters.statuses]);
   const selectedEventFilter = useMemo(() => buildSelectedEventFilter(selectedEventId), [selectedEventId]);
   const queryFilters = useMemo(() => [...filterInputs, ...selectedEventFilter], [filterInputs, selectedEventFilter]);
-  const occurrenceDateInput = useMemo(() => buildOccurrenceDateInput(filters), [filters]);
+  const occurrenceDateInput = useMemo(
+    () => buildOccurrenceDateInput(filters, selectedEventId),
+    [filters, selectedEventId],
+  );
   const locationFilter = useMemo(() => buildLocationFilter(filters.location), [filters.location]);
   const [loadEvents, { loading }] = useLazyQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
     GetEventOccurrencesDocument,

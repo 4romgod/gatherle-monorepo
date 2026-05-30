@@ -24,7 +24,7 @@ import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { navigateFromNotificationActionUrl } from '@/lib/notifications/actionUrl';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
-import { typography } from '@/app/theme/typography';
+import { fontSize, typography } from '@/app/theme/typography';
 
 type NotificationFeedItem =
   | { createdAt: string; id: string; kind: 'notification'; notification: MobileNotification }
@@ -113,6 +113,13 @@ export function NotificationsScreen() {
     onEndReached: loadMore,
     resetKey: `${groupedFeed.length}:${unreadCount}`,
   });
+  const notificationsToolbarProps = {
+    center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Notifications</Text>,
+    right:
+      unreadCount > 0 ? (
+        <InlineButton compact label="Mark all read" onPress={() => void markAllNotificationsRead()} tone="neutral" />
+      ) : null,
+  };
 
   const handleNotificationPress = useCallback(
     async (notification: MobileNotification) => {
@@ -136,7 +143,7 @@ export function NotificationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={notificationsToolbarProps}>
         <PageContainer>
           <PageHeading title="Notifications" />
           <AuthPromptCard
@@ -154,7 +161,7 @@ export function NotificationsScreen() {
 
   if (!authToken) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={notificationsToolbarProps}>
         <PageContainer>
           <PageHeading title="Notifications" />
           <StateNotice message="Log in with a real account token to load your notifications and follow requests." />
@@ -164,7 +171,7 @@ export function NotificationsScreen() {
   }
 
   return (
-    <MainTabScreenLayout>
+    <MainTabScreenLayout toolbarProps={notificationsToolbarProps}>
       <PageContainer
         onContentSizeChange={infiniteScroll.onContentSizeChange}
         onRefresh={onRefresh}
@@ -172,18 +179,6 @@ export function NotificationsScreen() {
         refreshing={refreshing}
         scrollEventThrottle={infiniteScroll.scrollEventThrottle}
       >
-        <View style={styles.headerRow}>
-          <PageHeading title="Notifications" />
-          {unreadCount > 0 ? (
-            <InlineButton
-              compact
-              label="Mark all read"
-              onPress={() => void markAllNotificationsRead()}
-              tone="neutral"
-            />
-          ) : null}
-        </View>
-
         {loading && feedItems.length === 0 ? (
           <View style={styles.feed}>
             <View style={styles.group}>
@@ -306,11 +301,6 @@ const styles = StyleSheet.create({
   feed: {
     gap: 18,
   },
-  headerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   group: {
     gap: 8,
   },
@@ -328,5 +318,10 @@ const styles = StyleSheet.create({
   loadingMore: {
     alignItems: 'center',
     paddingTop: 8,
+  },
+  toolbarTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xl2,
+    letterSpacing: -0.3,
   },
 });

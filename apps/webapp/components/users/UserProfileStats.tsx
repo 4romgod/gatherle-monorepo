@@ -183,23 +183,22 @@ export default function UserProfileStats({
             </Typography>
           </Box>
 
-          <Box
-            {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('interests') : undefined)}
-            sx={isOwnProfile ? clickableStatSx : staticStatSx}
-          >
-            <Typography
-              variant="subtitle1"
-              fontWeight={700}
-              color="secondary"
-              className="stat-number"
-              sx={{ lineHeight: 1.2, transition: 'color 0.2s' }}
-            >
-              {formatCount(interestsCount)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Interests
-            </Typography>
-          </Box>
+          {isOwnProfile ? (
+            <Box {...getInteractiveStatProps(() => scrollToSection('interests'))} sx={clickableStatSx}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                color="secondary"
+                className="stat-number"
+                sx={{ lineHeight: 1.2, transition: 'color 0.2s' }}
+              >
+                {formatCount(interestsCount)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Interests
+              </Typography>
+            </Box>
+          ) : null}
         </Stack>
 
         <FollowersList
@@ -336,11 +335,8 @@ export default function UserProfileStats({
         )}
 
         {/* Interests - scrolls to section on own profile (hidden in compact mode) */}
-        {!compact && (
-          <Box
-            {...getInteractiveStatProps(isOwnProfile ? () => scrollToSection('interests') : undefined)}
-            sx={isOwnProfile ? clickableStatSx : staticStatSx}
-          >
+        {isOwnProfile && !compact ? (
+          <Box {...getInteractiveStatProps(() => scrollToSection('interests'))} sx={clickableStatSx}>
             <Typography
               variant="subtitle1"
               fontWeight={700}
@@ -354,7 +350,7 @@ export default function UserProfileStats({
               Interests
             </Typography>
           </Box>
-        )}
+        ) : null}
       </Stack>
 
       <FollowersList

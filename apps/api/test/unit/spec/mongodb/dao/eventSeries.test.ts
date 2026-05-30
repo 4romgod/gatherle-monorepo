@@ -953,7 +953,7 @@ describe('EventSeriesDAO', () => {
   });
 
   describe('readUpcomingPublished', () => {
-    it('queries for upcoming published events through the aggregation pipeline', async () => {
+    it('queries for non-cancelled published events through the aggregation pipeline', async () => {
       const mockEvents = [{ ...expectedEvent, eventId: 'event-1', title: 'Upcoming EventSeries' }];
       (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockEvents));
 
@@ -963,12 +963,25 @@ describe('EventSeriesDAO', () => {
       expect(pipeline[0].$match).toEqual(
         expect.objectContaining({
           lifecycleStatus: 'Published',
-          status: { $in: ['Upcoming', 'Ongoing'] },
+          status: { $ne: 'Cancelled' },
           visibility: { $in: ['Public', 'Unlisted'] },
         }),
       );
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ eventId: 'event-1' });
+    });
+
+    it('requires at least one active occurrence instead of trusting stored series status', async () => {
+      (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await EventSeriesDAO.readUpcomingPublished(10);
+
+      const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
+      expect(pipeline).toContainEqual({
+        $match: {
+          '_activeOccurrences.0': { $exists: true },
+        },
+      });
     });
 
     it('applies the limit argument', async () => {
@@ -1028,7 +1041,7 @@ describe('EventSeriesDAO', () => {
       expect(result).toEqual(mockEvents);
     });
 
-    it('applies the $match filter for Published, Upcoming/Ongoing, Public/Unlisted events', async () => {
+    it('applies the $match filter for non-cancelled Published, Public/Unlisted events', async () => {
       (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
       await EventSeriesDAO.readTrending(10);
@@ -1036,21 +1049,21 @@ describe('EventSeriesDAO', () => {
       const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
       const matchStage = pipeline[0].$match;
       expect(matchStage.lifecycleStatus).toBe('Published');
-      expect(matchStage.status.$in).toEqual(expect.arrayContaining(['Upcoming', 'Ongoing']));
+      expect(matchStage.status).toEqual({ $ne: 'Cancelled' });
       expect(matchStage.visibility.$in).toEqual(expect.arrayContaining(['Public', 'Unlisted']));
     });
 
-    it('includes $or conditions in the $match to handle null startAt and Ongoing events', async () => {
+    it('requires at least one active occurrence instead of trusting stored series status', async () => {
       (EventSeriesModel.aggregate as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
       await EventSeriesDAO.readTrending(10);
 
       const pipeline = (EventSeriesModel.aggregate as jest.Mock).mock.calls[0][0];
-      const matchStage = pipeline[0].$match;
-      expect(matchStage.$or).toBeDefined();
-      expect(matchStage.$or.length).toBeGreaterThanOrEqual(2);
-      // Must have an entry covering Ongoing events
-      expect(matchStage.$or.some((cond: Record<string, unknown>) => cond.status === 'Ongoing')).toBe(true);
+      expect(pipeline).toContainEqual({
+        $match: {
+          '_activeOccurrences.0': { $exists: true },
+        },
+      });
     });
 
     it('filters saves $lookup by approvalStatus Accepted (consistent with createEventLookupStages)', async () => {

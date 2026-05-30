@@ -69,7 +69,7 @@ describe('MobileBottomNav', () => {
       'Moments',
       'Messages',
       'Notifications',
-      'Profile',
+      'Account',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
@@ -104,7 +104,7 @@ describe('MobileBottomNav', () => {
       'Moments',
       'Messages',
       'Notifications',
-      'Profile',
+      'Account',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/',
@@ -112,7 +112,7 @@ describe('MobileBottomNav', () => {
       '/moments',
       '/account/messages',
       '/account/notifications',
-      '/users/alice',
+      '/account',
     ]);
   });
 

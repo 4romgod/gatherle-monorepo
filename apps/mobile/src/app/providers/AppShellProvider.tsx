@@ -1,6 +1,5 @@
 import { PropsWithChildren, createContext, useContext, useMemo, useState } from 'react';
 import { PreviewSessionProvider, usePreviewSession } from './PreviewSessionProvider';
-import { DrawerProvider, useDrawerState } from './DrawerProvider';
 import { MOBILE_BOTTOM_TAB_BAR_HEIGHT } from '@/lib/constants/layout';
 
 type AppLayoutContextValue = {
@@ -26,11 +25,9 @@ export function AppShellProvider({ children }: PropsWithChildren) {
   );
 
   return (
-    <DrawerProvider>
-      <PreviewSessionProvider>
-        <AppLayoutContext.Provider value={layoutValue}>{children}</AppLayoutContext.Provider>
-      </PreviewSessionProvider>
-    </DrawerProvider>
+    <PreviewSessionProvider>
+      <AppLayoutContext.Provider value={layoutValue}>{children}</AppLayoutContext.Provider>
+    </PreviewSessionProvider>
   );
 }
 
@@ -42,7 +39,6 @@ export function useAppShell() {
   }
 
   return {
-    ...useDrawerState(),
     ...usePreviewSession(),
     ...layoutContext,
   };

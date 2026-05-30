@@ -2,6 +2,7 @@ import type { ApolloError } from '@apollo/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -20,12 +21,13 @@ import { useMessages } from '@/hooks/messages/useMessages';
 import { useUserSearch } from '@/hooks/search/useUserSearch';
 import { getDisplayName, getInitials } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
-import { typography } from '@/app/theme/typography';
+import { fontSize, typography } from '@/app/theme/typography';
 
 export function MessagesScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
   const { theme } = useAppTheme();
+  const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { conversations, error, loading, markConversationRead, markConversationUnread, refetch } = useMessages(
     authToken,
@@ -83,6 +85,39 @@ export function MessagesScreen() {
     setSearchQuery('');
     clearUserSearch();
   }, [clearUserSearch]);
+  const handleCloseSearch = useCallback(() => {
+    handleClear();
+    setSearchActive(false);
+  }, [handleClear]);
+  const canSearchMessages = isAuthenticated && Boolean(authToken);
+  const messagesToolbarProps = !canSearchMessages
+    ? {
+        center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Messages</Text>,
+        right: null,
+      }
+    : searchActive
+      ? {
+          center: (
+            <SearchField
+              autoFocus
+              onChangeText={handleSearchChange}
+              onClear={handleClear}
+              placeholder="Search conversations"
+              value={searchQuery}
+            />
+          ),
+          right: <HeaderIconButton accessibilityLabel="Close search" icon="x" onPress={handleCloseSearch} />,
+        }
+      : {
+          center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Messages</Text>,
+          right: (
+            <HeaderIconButton
+              accessibilityLabel="Search conversations"
+              icon="search"
+              onPress={() => setSearchActive(true)}
+            />
+          ),
+        };
 
   useEffect(() => {
     if (!hasLiveSession || !error) {
@@ -99,7 +134,7 @@ export function MessagesScreen() {
 
   if (!isAuthenticated) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={messagesToolbarProps}>
         <PageContainer>
           <PageHeading title="Messages" />
           <AuthPromptCard
@@ -117,7 +152,7 @@ export function MessagesScreen() {
 
   if (!authToken) {
     return (
-      <MainTabScreenLayout>
+      <MainTabScreenLayout toolbarProps={messagesToolbarProps}>
         <PageContainer>
           <PageHeading title="Messages" />
           <StateNotice message="Log in with a real account token to load your conversations from the API." />
@@ -127,16 +162,8 @@ export function MessagesScreen() {
   }
 
   return (
-    <MainTabScreenLayout>
+    <MainTabScreenLayout toolbarProps={messagesToolbarProps}>
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-        <SearchField
-          onChangeText={handleSearchChange}
-          onClear={handleClear}
-          placeholder="Search conversations"
-          value={searchQuery}
-        />
-        <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
-
         {searchQuery.trim().length >= 2 ? (
           userSearchLoading ? (
             <ActivityIndicator color={theme.colors.primary} style={styles.loader} />
@@ -252,9 +279,10 @@ const styles = StyleSheet.create({
   messageList: {
     gap: 0,
   },
-  pageDivider: {
-    height: 1,
-    marginHorizontal: -20,
+  toolbarTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xl2,
+    letterSpacing: -0.3,
   },
   userDisplayName: {
     ...typography.bodyMedium,

@@ -3,6 +3,7 @@ import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } fro
 import {
   EventOccurrenceStatus,
   EventStatus,
+  FilterOperatorInput,
   SortOrderInput,
   type EventOccurrence,
   type EventSeries,
@@ -722,6 +723,51 @@ describe('EventOccurrenceService', () => {
       ]);
       expect(occurrences[0].rsvpCount).toBe(5);
     });
+
+    it('filters occurrences by derived event status instead of trusting stale series status', async () => {
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-1', status: EventStatus.Upcoming }),
+      ]);
+      (EventOccurrenceDAO.readByEventSeriesIdsInRange as jest.Mock).mockResolvedValue([
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-04-20T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-04-20T10:00:00.000Z',
+          originalStartAt: new Date('2026-04-20T10:00:00.000Z'),
+          startAt: new Date('2026-04-20T10:00:00.000Z'),
+          endAt: new Date('2026-04-20T12:00:00.000Z'),
+        }),
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-05-08T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-05-08T10:00:00.000Z',
+          originalStartAt: new Date('2026-05-08T10:00:00.000Z'),
+          startAt: new Date('2026-05-08T10:00:00.000Z'),
+          endAt: new Date('2026-05-08T12:00:00.000Z'),
+        }),
+      ]);
+
+      const occurrences = await EventOccurrenceService.readEventOccurrences({
+        dateRange: {
+          startDate: new Date('2026-04-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+        filters: [
+          {
+            field: 'status',
+            operator: FilterOperatorInput.eq,
+            value: [EventStatus.Upcoming],
+          },
+        ],
+      });
+
+      expect(EventSeriesDAO.readCandidateEventSeriesForOccurrences).toHaveBeenCalledWith({
+        dateRange: {
+          startDate: new Date('2026-04-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+        filters: undefined,
+      });
+      expect(occurrences.map((occurrence) => occurrence.occurrenceId)).toEqual(['series-1#2026-05-08T10:00:00.000Z']);
+    });
   });
 
   describe('countEventOccurrences', () => {
@@ -759,6 +805,45 @@ describe('EventOccurrenceService', () => {
 
       expect(EventOccurrenceDAO.countByEventSeriesIdsInRange).not.toHaveBeenCalled();
       expect(count).toBe(0);
+    });
+
+    it('counts only occurrences whose derived status matches the requested event status filter', async () => {
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-1', status: EventStatus.Upcoming }),
+      ]);
+      (EventOccurrenceDAO.readByEventSeriesIdsInRange as jest.Mock).mockResolvedValue([
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-04-20T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-04-20T10:00:00.000Z',
+          originalStartAt: new Date('2026-04-20T10:00:00.000Z'),
+          startAt: new Date('2026-04-20T10:00:00.000Z'),
+          endAt: new Date('2026-04-20T12:00:00.000Z'),
+        }),
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-05-08T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-05-08T10:00:00.000Z',
+          originalStartAt: new Date('2026-05-08T10:00:00.000Z'),
+          startAt: new Date('2026-05-08T10:00:00.000Z'),
+          endAt: new Date('2026-05-08T12:00:00.000Z'),
+        }),
+      ]);
+
+      const count = await EventOccurrenceService.countEventOccurrences({
+        dateRange: {
+          startDate: new Date('2026-04-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+        filters: [
+          {
+            field: 'status',
+            operator: FilterOperatorInput.eq,
+            value: [EventStatus.Upcoming],
+          },
+        ],
+      });
+
+      expect(EventOccurrenceDAO.countByEventSeriesIdsInRange).not.toHaveBeenCalled();
+      expect(count).toBe(1);
     });
   });
 

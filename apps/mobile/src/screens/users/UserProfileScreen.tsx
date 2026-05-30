@@ -134,7 +134,10 @@ export function UserProfileScreen() {
 
   const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || '';
   const badges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
-  const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
+  const interests = useMemo(
+    () => (isOwnProfile ? (profile?.interests?.filter(Boolean) ?? []) : []),
+    [isOwnProfile, profile?.interests],
+  );
   const hostedEventsCount = hostedEventsTotalCount;
   const participantActivityUnsupported = isUnsupportedUserEventOccurrencesError(participantEventsError);
   const shouldShowParticipantTabs = !participantActivityUnsupported;

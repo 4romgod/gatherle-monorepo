@@ -11,17 +11,20 @@ import {
   getScheduleEndAt,
   normalizeRecurrenceRule,
   pickRepresentativeOccurrence,
+  resolveEventStatusFromOccurrence,
+  resolveOccurrenceLifecycleStatus,
   splitRecurringRuleAtOccurrence,
 } from '@/utils';
 import type {
   EventOccurrence,
   EventSeries,
   EventsQueryOptionsInput,
+  FilterInput,
   QueryOptionsInput,
   UpdateEventOccurrenceInput,
   SortInput,
 } from '@gatherle/commons/types';
-import { SortOrderInput } from '@gatherle/commons/types';
+import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/types';
 import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
 import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
@@ -90,17 +93,6 @@ function buildWindowEnd(now: Date): Date {
   const windowEnd = new Date(now);
   windowEnd.setMonth(windowEnd.getMonth() + MATERIALIZATION_WINDOW_MONTHS);
   return windowEnd;
-}
-
-function mapOccurrenceStatus(eventStatus: EventStatus): EventOccurrenceStatus {
-  switch (eventStatus) {
-    case EventStatus.Cancelled:
-      return EventOccurrenceStatus.Cancelled;
-    case EventStatus.Completed:
-      return EventOccurrenceStatus.Completed;
-    default:
-      return EventOccurrenceStatus.Scheduled;
-  }
 }
 
 function resolveOccurrenceDateRange(
@@ -255,6 +247,7 @@ function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): Eve
   const anchorStartAt = getScheduleAnchorStartAt(eventSeries.primarySchedule);
   const durationMs = getScheduleDurationMinutes(eventSeries.primarySchedule) * 60 * 1000;
   const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(eventSeries.eventId, anchorStartAt);
+  const endAt = buildScheduleEndAt(anchorStartAt, durationMs);
   const fallbackTimestamp = new Date(anchorStartAt);
 
   return {
@@ -264,9 +257,15 @@ function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): Eve
     occurrenceKey,
     originalStartAt: new Date(anchorStartAt),
     startAt: new Date(anchorStartAt),
-    endAt: buildScheduleEndAt(anchorStartAt, durationMs),
+    endAt,
     timezone: eventSeries.primarySchedule.timezone,
-    status: mapOccurrenceStatus(eventSeries.status),
+    status: resolveOccurrenceLifecycleStatus(
+      {
+        startAt: anchorStartAt,
+        endAt,
+      },
+      eventSeries.status,
+    ),
     isException: false,
     seriesScheduleVersion: eventSeries.scheduleVersion ?? 1,
     createdAt: eventSeries.createdAt ? new Date(eventSeries.createdAt) : fallbackTimestamp,
@@ -288,6 +287,68 @@ function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean
     requestedEndDate: endDate,
     materializationWindowEnd,
   });
+}
+
+function normalizeEventStatusValues(value: FilterInput['value']): EventStatus[] {
+  const validStatuses = new Set(Object.values(EventStatus));
+  const rawValues = Array.isArray(value) ? value : [value];
+
+  return rawValues.filter((entry): entry is EventStatus => validStatuses.has(entry as EventStatus));
+}
+
+function matchesDerivedStatusFilter(derivedStatus: EventStatus, filter: FilterInput): boolean {
+  const values = normalizeEventStatusValues(filter.value);
+
+  if (values.length === 0) {
+    return true;
+  }
+
+  const matches = values.includes(derivedStatus);
+  return filter.operator === FilterOperatorInput.ne ? !matches : matches;
+}
+
+function filterOccurrencesByDerivedStatus(
+  occurrences: EventOccurrence[],
+  statusFilters: FilterInput[],
+  now: Date = new Date(),
+): EventOccurrence[] {
+  if (statusFilters.length === 0) {
+    return occurrences;
+  }
+
+  const orFilters = statusFilters.filter((filter) => filter.selectorOperator === SelectorOperatorInput.or);
+  const norFilters = statusFilters.filter((filter) => filter.selectorOperator === SelectorOperatorInput.nor);
+  const andFilters = statusFilters.filter(
+    (filter) =>
+      filter.selectorOperator !== SelectorOperatorInput.or && filter.selectorOperator !== SelectorOperatorInput.nor,
+  );
+
+  return occurrences.filter((occurrence) => {
+    const derivedStatus = resolveEventStatusFromOccurrence(occurrence, now);
+
+    const matchesAnd = andFilters.every((filter) => matchesDerivedStatusFilter(derivedStatus, filter));
+    const matchesOr =
+      orFilters.length === 0 || orFilters.some((filter) => matchesDerivedStatusFilter(derivedStatus, filter));
+    const matchesNor = norFilters.every((filter) => !matchesDerivedStatusFilter(derivedStatus, filter));
+
+    return matchesAnd && matchesOr && matchesNor;
+  });
+}
+
+function splitOccurrenceStatusFilters(options: EventsQueryOptionsInput) {
+  const statusFilters = (options.filters ?? []).filter((filter) => filter.field === 'status');
+  const remainingFilters = (options.filters ?? []).filter((filter) => filter.field !== 'status');
+
+  return {
+    statusFilters,
+    seriesOptions:
+      statusFilters.length === 0
+        ? options
+        : {
+            ...options,
+            filters: remainingFilters.length > 0 ? remainingFilters : undefined,
+          },
+  };
 }
 
 class EventOccurrenceService {
@@ -483,7 +544,6 @@ class EventOccurrenceService {
       windowEnd,
       MAX_WINDOW_OCCURRENCES,
     );
-    const status = mapOccurrenceStatus(eventSeries.status);
     const seriesScheduleVersion = eventSeries.scheduleVersion ?? 1;
 
     return originalStartTimes.map((originalStartAt) => {
@@ -500,7 +560,14 @@ class EventOccurrenceService {
         startAt,
         endAt,
         timezone: schedule.timezone,
-        status,
+        status: resolveOccurrenceLifecycleStatus(
+          {
+            startAt,
+            endAt,
+          },
+          eventSeries.status,
+          now,
+        ),
         isException: false,
         seriesScheduleVersion,
         createdAt: new Date(),
@@ -512,8 +579,9 @@ class EventOccurrenceService {
   static async readEventOccurrences(options: EventsQueryOptionsInput): Promise<EventOccurrence[]> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
     const sortInput = getOccurrenceSortInput(options.sort);
+    const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
     const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
-      options,
+      seriesOptions,
     )) as OccurrenceQuerySeries[];
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
@@ -526,7 +594,7 @@ class EventOccurrenceService {
       return [];
     }
 
-    if (!occurrenceSortRequiresRsvpCount(sortInput)) {
+    if (!occurrenceSortRequiresRsvpCount(sortInput) && statusFilters.length === 0) {
       const pagination = options.pagination ? validatePaginationInput(options.pagination) : undefined;
 
       return EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate, {
@@ -536,7 +604,10 @@ class EventOccurrenceService {
       });
     }
 
-    const occurrences = await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate);
+    const occurrences = filterOccurrencesByDerivedStatus(
+      await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate),
+      statusFilters,
+    );
     const occurrencesWithSortFields =
       occurrences.length > 0 ? await this.attachOccurrenceRsvpCounts(occurrences) : occurrences;
 
@@ -545,7 +616,8 @@ class EventOccurrenceService {
 
   static async countEventOccurrences(options: EventsQueryOptionsInput): Promise<number> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
-    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(options)) as
+    const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
+    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(seriesOptions)) as
       | OccurrenceQuerySeries[]
       | [];
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
@@ -557,6 +629,13 @@ class EventOccurrenceService {
 
     if (eventSeriesIds.length === 0) {
       return 0;
+    }
+
+    if (statusFilters.length > 0) {
+      return filterOccurrencesByDerivedStatus(
+        await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate),
+        statusFilters,
+      ).length;
     }
 
     return EventOccurrenceDAO.countByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate);

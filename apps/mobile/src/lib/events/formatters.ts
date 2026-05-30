@@ -6,6 +6,10 @@ import {
 } from '@data/graphql/query/Discovery/types';
 
 const DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS = 6;
+// Exact event selection should be able to reveal a series across its realistic
+// history and future, instead of disappearing outside the discovery feed window.
+const SELECTED_EVENT_OCCURRENCE_LOOKBACK_YEARS = 10;
+const SELECTED_EVENT_OCCURRENCE_LOOKAHEAD_YEARS = 10;
 
 export function buildDefaultOccurrenceDateRange(fromDate: Date = new Date()) {
   const startDate = new Date(fromDate);
@@ -13,6 +17,21 @@ export function buildDefaultOccurrenceDateRange(fromDate: Date = new Date()) {
 
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS);
+  endDate.setHours(23, 59, 59, 999);
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+}
+
+export function buildSelectedEventOccurrenceDateRange(fromDate: Date = new Date()) {
+  const startDate = new Date(fromDate);
+  startDate.setFullYear(startDate.getFullYear() - SELECTED_EVENT_OCCURRENCE_LOOKBACK_YEARS);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(fromDate);
+  endDate.setFullYear(endDate.getFullYear() + SELECTED_EVENT_OCCURRENCE_LOOKAHEAD_YEARS);
   endDate.setHours(23, 59, 59, 999);
 
   return {
@@ -290,10 +309,15 @@ export function getEventStatusLabel(occurrence?: MobileEventOccurrence | null) {
   }
 
   const startAt = new Date(occurrence.startAt).getTime();
+  const endAt = occurrence.endAt ? new Date(occurrence.endAt).getTime() : startAt;
   const now = Date.now();
 
-  if (startAt < now) {
+  if (endAt < now) {
     return 'Past';
+  }
+
+  if (startAt <= now) {
+    return 'Ongoing';
   }
 
   if (startAt - now <= 24 * 60 * 60 * 1000) {

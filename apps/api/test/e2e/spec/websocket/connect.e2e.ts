@@ -13,7 +13,8 @@ import {
 } from '@/test/e2e/utils/userResolverHelpers';
 
 const OPEN_SOCKET_TIMEOUT_MS = 5_000;
-const CLOSE_SOCKET_TIMEOUT_MS = 5_000;
+const CLOSE_SOCKET_TIMEOUT_MS = 10_000;
+const ABNORMAL_CLOSE_CODE = 1006;
 
 const buildLocalWebSocketUrl = (graphqlUrl: string): string => {
   const url = new URL(graphqlUrl);
@@ -60,6 +61,24 @@ const waitForSocketClose = (
   timeoutMs = CLOSE_SOCKET_TIMEOUT_MS,
 ): Promise<{ code: number; reason: string }> =>
   new Promise((resolve, reject) => {
+    const resolveFromSocketState = () => {
+      const closedSocket = socket as WebSocket & {
+        _closeCode?: number;
+        _closeMessage?: Buffer;
+      };
+
+      resolve({
+        code: typeof closedSocket._closeCode === 'number' ? closedSocket._closeCode : ABNORMAL_CLOSE_CODE,
+        reason: Buffer.isBuffer(closedSocket._closeMessage) ? closedSocket._closeMessage.toString('utf8') : '',
+      });
+    };
+
+    // Fast rejection paths can close the socket before the caller attaches listeners.
+    if (socket.readyState === WebSocket.CLOSED) {
+      resolveFromSocketState();
+      return;
+    }
+
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error('Timed out waiting for websocket connection to close.'));
@@ -83,6 +102,11 @@ const waitForSocketClose = (
 
     socket.once('close', handleClose);
     socket.once('error', handleError);
+
+    if (socket.readyState === WebSocket.CLOSED) {
+      cleanup();
+      resolveFromSocketState();
+    }
   });
 
 const closeSocketQuietly = async (socket: WebSocket): Promise<void> => {

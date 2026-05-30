@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Box, Chip, Typography } from '@mui/material';
+import { Box, Chip, CircularProgress, Typography } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import RemoteImage from '@/components/core/RemoteImage';
 import {
@@ -40,6 +41,11 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
   const imageUrl = getEventPreviewImageUrl(event);
   const statusLabel = getEventPreviewStatusLabel(event) ?? 'Upcoming';
   const dateLabel = formatTileDate(getEventPreviewStartAt(event));
+  const [imageResolved, setImageResolved] = useState(!imageUrl);
+
+  useEffect(() => {
+    setImageResolved(!imageUrl);
+  }, [imageUrl]);
 
   return (
     <Box
@@ -77,6 +83,8 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
             <EventIcon sx={{ fontSize: 40, opacity: 0.82 }} />
           </Box>
         }
+        onError={() => setImageResolved(true)}
+        onLoad={() => setImageResolved(true)}
         src={imageUrl}
         sx={{ width: '100%', height: '100%' }}
       />
@@ -151,6 +159,39 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
           {dateLabel}
         </Typography>
       </Box>
+
+      {imageUrl && !imageResolved ? (
+        <Box
+          sx={(theme) => ({
+            alignItems: 'center',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(2, 6, 23, 0.24)' : 'rgba(255, 255, 255, 0.12)',
+            display: 'flex',
+            inset: 0,
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            position: 'absolute',
+            zIndex: 2,
+          })}
+        >
+          <Box
+            sx={(theme) => ({
+              alignItems: 'center',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.84)' : 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid',
+              borderColor: theme.palette.mode === 'dark' ? 'hero.cardBorder' : 'divider',
+              borderRadius: 999,
+              boxShadow: theme.shadows[6],
+              color: 'primary.main',
+              display: 'flex',
+              justifyContent: 'center',
+              minHeight: 62,
+              minWidth: 62,
+            })}
+          >
+            <CircularProgress color="inherit" size={24} />
+          </Box>
+        </Box>
+      ) : null}
     </Box>
   );
 }
