@@ -13,8 +13,9 @@ import type {
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { SettingsTabKey } from '@/app/navigation/routes';
 import { getApolloAuthContext } from '@/lib/auth';
+import { mapNavigableEventToOccurrence } from '@/lib/events/adapters';
 import { getDisplayName } from '@/lib/events/formatters';
-import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@/lib/events/occurrenceUrl';
+import { PUBLIC_OCCURRENCE_QUERY_PARAM } from '@/lib/events/occurrenceUrl';
 
 const URL_BASE = 'https://gatherle.local';
 
@@ -40,32 +41,6 @@ function mapSettingsTab(value: string | null): SettingsTabKey {
     default:
       return 'account';
   }
-}
-
-function buildOccurrenceFromEvent(
-  event: NonNullable<GetEventBySlugForNavigationQuery['readEventBySlug']>,
-  occurrenceAnchor: string | null,
-): MobileEventOccurrence | null {
-  const candidates = [
-    ...(event.upcomingOccurrences ?? []),
-    ...(event.representativeOccurrence ? [event.representativeOccurrence] : []),
-  ];
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  const selectedOccurrence =
-    (occurrenceAnchor
-      ? candidates.find((occurrence) => getOccurrencePublicAnchor(occurrence.originalStartAt) === occurrenceAnchor)
-      : null) ?? candidates[0];
-
-  return {
-    ...selectedOccurrence,
-    eventSeries: {
-      ...event,
-    },
-  } as MobileEventOccurrence;
 }
 
 export async function navigateFromNotificationActionUrl({
@@ -191,7 +166,7 @@ export async function navigateFromNotificationActionUrl({
 
     const event = data.readEventBySlug;
     const occurrence = event
-      ? buildOccurrenceFromEvent(event, parsedUrl.searchParams.get(PUBLIC_OCCURRENCE_QUERY_PARAM))
+      ? mapNavigableEventToOccurrence(event, parsedUrl.searchParams.get(PUBLIC_OCCURRENCE_QUERY_PARAM))
       : null;
 
     if (!occurrence) {

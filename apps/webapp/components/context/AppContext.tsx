@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, useState, useMemo, ReactNode, createElement, forwardRef } from 'react';
+import {
+  createContext,
+  useState,
+  useMemo,
+  ReactNode,
+  createElement,
+  forwardRef,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import { AlertProps, PaletteMode, SnackbarProps, Theme } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import type { LinkProps as MuiLinkProps } from '@mui/material/Link';
@@ -16,6 +25,8 @@ type CustomAppContextType = {
   appTheme: Theme | undefined;
   toastProps: ToastProps;
   setToastProps: React.Dispatch<React.SetStateAction<ToastProps>>;
+  toolbarAction: ReactNode | null;
+  setToolbarAction: Dispatch<SetStateAction<ReactNode | null>>;
 };
 
 const toastDefaultProps: ToastProps = {
@@ -40,6 +51,8 @@ export const CustomAppContext = createContext<CustomAppContextType>({
   appTheme: undefined,
   toastProps: toastDefaultProps,
   setToastProps: () => {},
+  toolbarAction: null,
+  setToolbarAction: () => {},
 });
 
 export const CustomAppContextProvider = ({ children }: { children: ReactNode }) => {
@@ -73,6 +86,7 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
     [themeMode],
   );
   const [toastProps, setToastProps] = useState<ToastProps>(toastDefaultProps);
+  const [toolbarAction, setToolbarAction] = useState<ReactNode | null>(null);
 
   return createElement(
     CustomAppContext.Provider,
@@ -83,6 +97,8 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
         appTheme: theme,
         toastProps,
         setToastProps,
+        toolbarAction,
+        setToolbarAction,
       },
     },
     children,

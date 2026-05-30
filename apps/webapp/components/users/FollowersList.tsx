@@ -25,18 +25,26 @@ export default function FollowersList({ targetId, targetType, open, onClose, tit
   const isOwnProfile = session?.user?.userId === targetId;
 
   // Convert null to undefined for type safety
-  const mappedFollowers = followers.map((item) => ({
-    followId: item.followId,
-    follower: {
-      userId: item.follower.userId,
-      username: item.follower.username,
-      email: item.follower.email,
-      given_name: item.follower.given_name,
-      family_name: item.follower.family_name,
-      profile_picture: item.follower.profile_picture || undefined,
-      bio: item.follower.bio || undefined,
-    },
-  }));
+  const mappedFollowers = followers.flatMap((item) => {
+    if (!item.follower) {
+      return [];
+    }
+
+    return [
+      {
+        followId: item.followId,
+        follower: {
+          userId: item.follower.userId,
+          username: item.follower.username,
+          email: item.follower.email,
+          given_name: item.follower.given_name,
+          family_name: item.follower.family_name,
+          profile_picture: item.follower.profile_picture || undefined,
+          bio: item.follower.bio || undefined,
+        },
+      },
+    ];
+  });
 
   return (
     <Dialog

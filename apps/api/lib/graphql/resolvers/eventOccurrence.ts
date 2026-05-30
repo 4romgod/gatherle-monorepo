@@ -24,6 +24,14 @@ export class EventOccurrenceResolver {
     return EventOccurrenceService.readEventOccurrences(options);
   }
 
+  @Query(() => Int, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventOccurrencesCount })
+  async readEventOccurrencesCount(
+    @Arg('options', () => EventsQueryOptionsInput) options: EventsQueryOptionsInput,
+  ): Promise<number> {
+    logger.debug('[readEventOccurrencesCount] GraphQL query options:', { options });
+    return EventOccurrenceService.countEventOccurrences(options);
+  }
+
   @Query(() => [EventOccurrence], { description: 'Read event occurrences linked to a specific user participant' })
   async readUserEventOccurrences(
     @Arg('userId', () => String) userId: string,

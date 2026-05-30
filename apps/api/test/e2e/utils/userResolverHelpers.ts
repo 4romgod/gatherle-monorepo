@@ -19,7 +19,7 @@ export const E2E_USER_USERNAME_PREFIX = 'testUsername-';
 
 const MAX_USER_HELPER_ATTEMPTS = 5;
 const GRAPHQL_REQUEST_TIMEOUT_MS = 45_000;
-const ORPHAN_SWEEP_SEARCH_LIMIT = 500;
+const ORPHAN_SWEEP_SEARCH_LIMIT = 50;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -206,26 +206,36 @@ const tryLoginExistingUser = async (
 };
 
 const readUsersBySearch = async (url: string, adminToken: string, searchValue: string): Promise<MinimalUserRef[]> => {
-  const options: QueryOptionsInput = {
-    pagination: {
-      limit: ORPHAN_SWEEP_SEARCH_LIMIT,
-    },
-    search: {
-      fields: ['email', 'username'],
-      value: searchValue,
-      caseSensitive: false,
-    },
-  };
+  const users: MinimalUserRef[] = [];
 
-  const response = await postGraphQLWithRetry(url, getReadUsersWithOptionsQuery(options), adminToken);
+  for (let skip = 0; ; skip += ORPHAN_SWEEP_SEARCH_LIMIT) {
+    const options: QueryOptionsInput = {
+      pagination: {
+        limit: ORPHAN_SWEEP_SEARCH_LIMIT,
+        skip,
+      },
+      search: {
+        fields: ['email', 'username'],
+        value: searchValue,
+        caseSensitive: false,
+      },
+    };
 
-  if (response.status !== 200 || response.body.errors) {
-    throw new Error(
-      `Failed to read e2e users during orphan sweep: ${JSON.stringify(response.body.errors ?? response.body)}`,
-    );
+    const response = await postGraphQLWithRetry(url, getReadUsersWithOptionsQuery(options), adminToken);
+
+    if (response.status !== 200 || response.body.errors) {
+      throw new Error(
+        `Failed to read e2e users during orphan sweep: ${JSON.stringify(response.body.errors ?? response.body)}`,
+      );
+    }
+
+    const page = (response.body.data?.readUsers ?? []) as MinimalUserRef[];
+    users.push(...page);
+
+    if (page.length < ORPHAN_SWEEP_SEARCH_LIMIT) {
+      return users;
+    }
   }
-
-  return (response.body.data?.readUsers ?? []) as MinimalUserRef[];
 };
 
 const isTrackedE2EUser = (user: MinimalUserRef, namespace: string): boolean => {

@@ -8,8 +8,6 @@ import type {
 import {
   EventMomentState,
   EventMomentType,
-  EventVisibility,
-  FollowPolicy,
   FollowApprovalStatus,
   FollowTargetType,
   ParticipantStatus,
@@ -92,14 +90,6 @@ function normalizeRefId(value: unknown): string | null {
 
 function isNonEmptyString(value: string | null | undefined): value is string {
   return typeof value === 'string' && value.length > 0;
-}
-
-function isEventPublic(event: EventSeries | null): boolean {
-  if (!event) {
-    return false;
-  }
-
-  return !event.visibility || event.visibility === EventVisibility.Public;
 }
 
 function rankMomentCandidate(params: {
@@ -630,9 +620,10 @@ class EventMomentService {
   }
 
   /**
-   * Read a discovery feed of active moments across public events.
+   * Read a discovery feed of all active moments.
    * Guests get a freshness/momentum feed; signed-in viewers get discovery-first
    * personalization from interests, novelty, follows, and locality.
+   * Ranking controls order only; it does not exclude otherwise valid feed moments.
    */
   static async readMomentsFeed(callerId?: string, cursor?: string, limit?: number): Promise<EventMomentPage> {
     const pageSize = clampFeedLimit(limit);
@@ -712,22 +703,12 @@ class EventMomentService {
         .filter((moment) => {
           const author = authorsById.get(moment.authorId);
           const event = eventsById.get(moment.eventId) ?? null;
-          const isTrustedAuthor =
-            Boolean(callerId) && (author?.userId === callerId || acceptedFollowedUserIds.has(author?.userId ?? ''));
 
           if (!author || !event) {
             return false;
           }
 
-          if (author.followPolicy === FollowPolicy.RequireApproval) {
-            return Boolean(isTrustedAuthor);
-          }
-
-          if (isEventPublic(event)) {
-            return true;
-          }
-
-          return Boolean(isTrustedAuthor);
+          return true;
         })
         .map((moment) => ({
           moment,

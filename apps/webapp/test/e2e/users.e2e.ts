@@ -20,7 +20,7 @@ test.describe('Users Page', () => {
   });
 
   test('renders /users route', async ({ page }) => {
-    await page.goto('/users');
+    await page.goto('/users', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/users\/?$/, { timeout: 20_000 });
 
     const { loadError, loadedWithError, signInHeading } = await waitForUsersSurface(page);
@@ -28,7 +28,7 @@ test.describe('Users Page', () => {
   });
 
   test('shows sign-in gate for unauthenticated community browsing', async ({ page }) => {
-    await page.goto('/users');
+    await page.goto('/users', { waitUntil: 'domcontentloaded' });
 
     const signInHeading = page.getByRole('heading', { name: 'Sign in to browse community members' });
     const signInButton = page.getByRole('link', { name: /^Sign in$/ });

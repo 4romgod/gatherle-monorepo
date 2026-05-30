@@ -181,9 +181,11 @@ describe('useFilteredEvents', () => {
     consoleSpy.mockRestore();
   });
 
-  it('indicates hasMore is true when page returns >= 10 events', async () => {
+  it('indicates hasMore is true when the backend reports more matching occurrences than are loaded', async () => {
     const tenEvents = Array.from({ length: 10 }, (_, i) => makeOccurrence(`occ-${i}`)) as any[];
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: tenEvents } });
+    const loadEvents = jest
+      .fn()
+      .mockResolvedValue({ data: { readEventOccurrences: tenEvents, readEventOccurrencesCount: 12 } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
@@ -197,9 +199,11 @@ describe('useFilteredEvents', () => {
     expect(result.current.hasMore).toBe(true);
   });
 
-  it('indicates hasMore is false when page returns < 10 events', async () => {
+  it('indicates hasMore is false when the backend count is fully loaded', async () => {
     const fewEvents = [makeOccurrence('occ-1')] as any[];
-    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: fewEvents } });
+    const loadEvents = jest
+      .fn()
+      .mockResolvedValue({ data: { readEventOccurrences: fewEvents, readEventOccurrencesCount: 1 } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
@@ -218,8 +222,8 @@ describe('useFilteredEvents', () => {
     const secondPage = [makeOccurrence('occ-10'), makeOccurrence('occ-11')] as any[];
     const loadEvents = jest
       .fn()
-      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
-      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage } });
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage, readEventOccurrencesCount: 12 } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage, readEventOccurrencesCount: 12 } });
     mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
 
     const filters: EventFilters = { ...baseFilters, categories: ['Music'] };
@@ -239,6 +243,7 @@ describe('useFilteredEvents', () => {
 
     expect(result.current.events).toEqual([...firstPage, ...secondPage]);
     expect(result.current.hasMore).toBe(false);
+    expect(result.current.totalEvents).toBe(12);
     expect(loadEvents).toHaveBeenLastCalledWith(
       expect.objectContaining({
         variables: expect.objectContaining({
@@ -289,8 +294,8 @@ describe('useFilteredEvents', () => {
     let resolveRefetch: ((value: { data: { readEventOccurrences: any[] } }) => void) | undefined;
     const loadEvents = jest
       .fn()
-      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
-      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage, readEventOccurrencesCount: 11 } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: secondPage, readEventOccurrencesCount: 11 } })
       .mockImplementationOnce(
         () =>
           new Promise<{ data: { readEventOccurrences: any[] } }>((resolve) => {
@@ -379,7 +384,7 @@ describe('useFilteredEvents', () => {
     const loadMoreError = new Error('next page failed');
     const loadMoreFailure = jest
       .fn()
-      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage } })
+      .mockResolvedValueOnce({ data: { readEventOccurrences: firstPage, readEventOccurrencesCount: 12 } })
       .mockImplementation(() => Promise.reject(loadMoreError));
     mockUseLazyQuery.mockReturnValue([loadMoreFailure, { loading: false }]);
 
@@ -393,5 +398,30 @@ describe('useFilteredEvents', () => {
 
     expect(retryingHook.result.current.events).toEqual(firstPage);
     expect(retryingHook.result.current.loadingMore).toBe(false);
+  });
+
+  it('filters occurrences by selected event id when provided', async () => {
+    const selectedSeriesOccurrences = [makeOccurrence('occ-2')] as any[];
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: selectedSeriesOccurrences } });
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    renderHook(() =>
+      useFilteredEvents(baseFilters, initialEvents, undefined, undefined, initialEvents.length, 'series-1'),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(loadEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: {
+          options: expect.objectContaining({
+            filters: [{ field: 'eventId', operator: FilterOperatorInput.Eq, value: ['series-1'] }],
+          }),
+        },
+      }),
+    );
   });
 });

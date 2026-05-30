@@ -25,6 +25,7 @@ import {
   ListItemText,
   Typography,
 } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
 import Link from 'next/link';
 import { deleteEventAction } from '@/data/actions/server/events/delete-event';
 import { EventDetail } from '@/data/graphql/query/Event/types';
@@ -32,7 +33,17 @@ import { ROUTES } from '@/lib/constants';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useSession } from 'next-auth/react';
 
-const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail; redirectOnDelete?: string }) => {
+const EventOperationsModal = ({
+  event,
+  redirectOnDelete,
+  canEditEvent = true,
+  buttonSx,
+}: {
+  event: EventDetail;
+  redirectOnDelete?: string;
+  canEditEvent?: boolean;
+  buttonSx?: SxProps<Theme>;
+}) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -103,7 +114,7 @@ const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail;
 
   return (
     <>
-      <IconButton onClick={() => setMenuOpen(true)} aria-label="Event options" size="small">
+      <IconButton onClick={() => setMenuOpen(true)} aria-label="Event options" size="small" sx={buttonSx}>
         <MoreVertIcon />
       </IconButton>
 
@@ -140,38 +151,39 @@ const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail;
 
         <DialogContent sx={{ p: 0 }}>
           <List disablePadding>
-            {/* Edit */}
-            <ListItemButton
-              component={Link}
-              href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(event.slug)}
-              onClick={handleMenuClose}
-              sx={{ px: 2.5, py: 1.5, gap: 2 }}
-            >
-              <ListItemIcon sx={{ minWidth: 'unset' }}>
-                <Box
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 2,
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+            {canEditEvent ? (
+              <ListItemButton
+                component={Link}
+                href={ROUTES.ACCOUNT.EVENTS.EDIT_EVENT(event.slug)}
+                onClick={handleMenuClose}
+                sx={{ px: 2.5, py: 1.5, gap: 2 }}
+              >
+                <ListItemIcon sx={{ minWidth: 'unset' }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary="Edit Event"
+                  secondary="Update event details"
+                  slotProps={{
+                    primary: { fontWeight: 600 },
+                    secondary: { variant: 'caption' },
                   }}
-                >
-                  <EditIcon fontSize="small" />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Edit Event"
-                secondary="Update Event details"
-                slotProps={{
-                  primary: { fontWeight: 600 },
-                  secondary: { variant: 'caption' },
-                }}
-              />
-            </ListItemButton>
+                />
+              </ListItemButton>
+            ) : null}
 
             {/* Copy Link */}
             <ListItemButton onClick={handleCopyLink} sx={{ px: 2.5, py: 1.5, gap: 2 }}>
@@ -202,41 +214,42 @@ const EventOperationsModal = ({ event, redirectOnDelete }: { event: EventDetail;
               />
             </ListItemButton>
 
-            <Divider sx={{ my: 0.5 }} />
+            {canEditEvent ? <Divider sx={{ my: 0.5 }} /> : null}
 
-            {/* Delete */}
-            <ListItemButton
-              onClick={() => {
-                handleMenuClose();
-                setConfirmDeleteOpen(true);
-              }}
-              sx={{ px: 2.5, py: 1.5, gap: 2 }}
-            >
-              <ListItemIcon sx={{ minWidth: 'unset' }}>
-                <Box
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 2,
-                    bgcolor: 'error.main',
-                    color: 'error.contrastText',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </Box>
-              </ListItemIcon>
-              <ListItemText
-                primary="Delete Event"
-                secondary="Permanently remove this event"
-                slotProps={{
-                  primary: { sx: { fontWeight: 600, color: 'error.main' } },
-                  secondary: { variant: 'caption' },
+            {canEditEvent ? (
+              <ListItemButton
+                onClick={() => {
+                  handleMenuClose();
+                  setConfirmDeleteOpen(true);
                 }}
-              />
-            </ListItemButton>
+                sx={{ px: 2.5, py: 1.5, gap: 2 }}
+              >
+                <ListItemIcon sx={{ minWidth: 'unset' }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: 'error.main',
+                      color: 'error.contrastText',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary="Delete Event"
+                  secondary="Permanently remove this event"
+                  slotProps={{
+                    primary: { sx: { fontWeight: 600, color: 'error.main' } },
+                    secondary: { variant: 'caption' },
+                  }}
+                />
+              </ListItemButton>
+            ) : null}
           </List>
         </DialogContent>
       </Dialog>

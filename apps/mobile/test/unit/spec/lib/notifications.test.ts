@@ -1,4 +1,5 @@
 import {
+  isMobileRealtimeEventRsvpPayload,
   isMobileRealtimeFollowRequestPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
@@ -17,6 +18,31 @@ const notificationPayload = {
     createdAt: '2026-05-26T10:00:00.000Z',
   },
   unreadCount: 2,
+};
+
+const eventRsvpPayload = {
+  participant: {
+    participantId: 'participant-1',
+    eventId: 'event-1',
+    occurrenceId: 'occurrence-1',
+    occurrenceKey: 'event-1:2026-05-26T10:00:00.000Z',
+    userId: 'user-1',
+    status: 'Going',
+    quantity: 1,
+    sharedVisibility: 'Public',
+    rsvpAt: '2026-05-26T10:00:00.000Z',
+    cancelledAt: null,
+    checkedInAt: null,
+    user: {
+      userId: 'user-1',
+      username: 'alice',
+      given_name: 'Alice',
+      family_name: 'Smith',
+      profile_picture: null,
+    },
+  },
+  previousStatus: null,
+  rsvpCount: 4,
 };
 
 describe('mobile notification realtime protocol', () => {
@@ -54,6 +80,17 @@ describe('mobile notification realtime protocol', () => {
       }),
     ).toBe(true);
     expect(isMobileRealtimeFollowRequestPayload({ follow: { targetType: 'Bad' } })).toBe(false);
+
+    expect(isMobileRealtimeEventRsvpPayload(eventRsvpPayload)).toBe(true);
+    expect(
+      isMobileRealtimeEventRsvpPayload({
+        ...eventRsvpPayload,
+        participant: {
+          ...eventRsvpPayload.participant,
+          status: 'Nope',
+        },
+      }),
+    ).toBe(false);
   });
 
   it('parses only known notification realtime envelopes', () => {
@@ -70,6 +107,12 @@ describe('mobile notification realtime protocol', () => {
     ).toEqual({
       payload: { notificationId: 'n1' },
       type: 'notification.deleted',
+    });
+    expect(
+      parseNotificationRealtimeEvent(JSON.stringify({ type: 'event.rsvp.updated', payload: eventRsvpPayload })),
+    ).toEqual({
+      payload: eventRsvpPayload,
+      type: 'event.rsvp.updated',
     });
     expect(parseNotificationRealtimeEvent('{bad json')).toBeNull();
     expect(parseNotificationRealtimeEvent(JSON.stringify({ type: 'unknown.event', payload: {} }))).toBeNull();

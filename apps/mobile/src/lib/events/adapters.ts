@@ -1,6 +1,8 @@
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MobileEventSeriesListItem } from '@data/graphql/query/Event/types';
+import type { GetEventBySlugForNavigationQuery } from '@data/graphql/types/graphql';
 import { EventOccurrenceStatus } from '@data/graphql/types/graphql';
+import { getOccurrencePublicAnchor } from '@/lib/events/occurrenceUrl';
 
 export function mapEventSeriesToOccurrence(event: MobileEventSeriesListItem): MobileEventOccurrence | null {
   const occurrence = event.representativeOccurrence;
@@ -52,4 +54,51 @@ export function mapEventSeriesToOccurrence(event: MobileEventSeriesListItem): Mo
     status: occurrence?.status ?? EventOccurrenceStatus.Scheduled,
     timezone: occurrence?.timezone ?? event.primarySchedule?.timezone ?? 'UTC',
   } as MobileEventOccurrence;
+}
+
+export function mapNavigableEventToOccurrence(
+  event: NonNullable<GetEventBySlugForNavigationQuery['readEventBySlug']>,
+  occurrenceAnchor?: string | null,
+): MobileEventOccurrence | null {
+  const candidates = mapNavigableEventOccurrences(event);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const selectedOccurrence =
+    (occurrenceAnchor
+      ? candidates.find((occurrence) => getOccurrencePublicAnchor(occurrence.originalStartAt) === occurrenceAnchor)
+      : null) ?? candidates[0];
+
+  return selectedOccurrence;
+}
+
+export function mapNavigableEventOccurrences(
+  event: NonNullable<GetEventBySlugForNavigationQuery['readEventBySlug']>,
+): MobileEventOccurrence[] {
+  const seenOccurrenceIds = new Set<string>();
+  const candidates = [
+    ...(event.upcomingOccurrences ?? []),
+    ...(event.representativeOccurrence ? [event.representativeOccurrence] : []),
+  ];
+
+  return candidates
+    .filter((occurrence) => {
+      if (seenOccurrenceIds.has(occurrence.occurrenceId)) {
+        return false;
+      }
+
+      seenOccurrenceIds.add(occurrence.occurrenceId);
+      return true;
+    })
+    .map(
+      (occurrence) =>
+        ({
+          ...occurrence,
+          eventSeries: {
+            ...event,
+          },
+        }) as MobileEventOccurrence,
+    );
 }

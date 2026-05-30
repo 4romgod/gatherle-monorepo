@@ -15,6 +15,7 @@ jest.mock('@/mongodb/dao', () => ({
     bulkUpsert: jest.fn(),
     cancelOccurrence: jest.fn(),
     clearReservedSlotCount: jest.fn(),
+    countByEventSeriesIdsInRange: jest.fn(),
     deleteByOccurrenceIds: jest.fn(),
     readByOccurrenceId: jest.fn(),
     readByEventSeriesId: jest.fn(),
@@ -720,6 +721,44 @@ describe('EventOccurrenceService', () => {
         'series-1#2026-05-07T10:00:00.000Z',
       ]);
       expect(occurrences[0].rsvpCount).toBe(5);
+    });
+  });
+
+  describe('countEventOccurrences', () => {
+    it('counts persisted occurrences for the same candidate series/date window as the occurrence list query', async () => {
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-1' }),
+        buildSeries({ eventId: 'series-2' }),
+      ]);
+      (EventOccurrenceDAO.countByEventSeriesIdsInRange as jest.Mock).mockResolvedValue(6);
+
+      const count = await EventOccurrenceService.countEventOccurrences({
+        dateRange: {
+          startDate: new Date('2026-05-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+      });
+
+      expect(EventOccurrenceDAO.countByEventSeriesIdsInRange).toHaveBeenCalledWith(
+        ['series-1', 'series-2'],
+        new Date('2026-05-01T00:00:00.000Z'),
+        new Date('2026-05-31T23:59:59.999Z'),
+      );
+      expect(count).toBe(6);
+    });
+
+    it('returns zero when no candidate series match the occurrence filters', async () => {
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([]);
+
+      const count = await EventOccurrenceService.countEventOccurrences({
+        dateRange: {
+          startDate: new Date('2026-05-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+      });
+
+      expect(EventOccurrenceDAO.countByEventSeriesIdsInRange).not.toHaveBeenCalled();
+      expect(count).toBe(0);
     });
   });
 

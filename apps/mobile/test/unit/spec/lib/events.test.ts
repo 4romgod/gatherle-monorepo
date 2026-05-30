@@ -24,7 +24,12 @@ import {
   sortCategoriesByInterest,
   sortOrganizationsByFollowers,
 } from '@/lib/events/formatters';
-import { mapEventSeriesToOccurrence } from '@/lib/events/adapters';
+import {
+  mapEventSeriesToOccurrence,
+  mapNavigableEventOccurrences,
+  mapNavigableEventToOccurrence,
+} from '@/lib/events/adapters';
+import { getOccurrencePublicAnchor } from '@/lib/events/occurrenceUrl';
 
 const baseOccurrence = {
   endAt: '2026-05-23T12:30:00.000Z',
@@ -238,5 +243,142 @@ describe('mobile event formatters', () => {
         title: 'Event title',
       },
     });
+  });
+
+  it('maps event series list items from schedule fallbacks when no representative occurrence exists yet', () => {
+    const mapped = mapEventSeriesToOccurrence({
+      description: null,
+      eventCategories: [],
+      eventId: 'event-2',
+      eventLink: null,
+      isSavedByMe: false,
+      location: { address: { city: 'Cape Town' } },
+      media: null,
+      myRsvp: { participantId: 'series-rsvp', quantity: 1, status: 'Interested' },
+      orgId: null,
+      organization: null,
+      organizers: [],
+      representativeOccurrence: null,
+      primarySchedule: {
+        anchorStartAt: '2026-06-01T08:00:00.000Z',
+        occurrenceDurationMinutes: 90,
+        timezone: 'Africa/Johannesburg',
+      },
+      rsvpCount: 8,
+      savedByCount: 4,
+      slug: 'fallback-series',
+      status: 'Published',
+      summary: 'Fallback summary',
+      title: 'Fallback Event',
+      venueId: null,
+      visibility: null,
+    } as any);
+
+    expect(mapped).toMatchObject({
+      occurrenceId: 'synthetic:event-2',
+      occurrenceKey: 'synthetic:event-2',
+      startAt: '2026-06-01T08:00:00.000Z',
+      endAt: '2026-06-01T09:30:00.000Z',
+      timezone: 'Africa/Johannesburg',
+      status: 'Scheduled',
+      myRsvp: { participantId: 'series-rsvp', quantity: 1, status: 'Interested' },
+      rsvpCount: 8,
+    });
+  });
+
+  it('maps navigable event occurrences, dedupes duplicates, and selects an explicit occurrence anchor', () => {
+    const event = {
+      eventId: 'event-nav-1',
+      slug: 'navigable-series',
+      title: 'Navigable Event',
+      upcomingOccurrences: [
+        {
+          occurrenceId: 'occ-1',
+          occurrenceKey: 'occ-1',
+          eventSeriesId: 'event-nav-1',
+          startAt: '2026-06-01T08:00:00.000Z',
+          endAt: '2026-06-01T09:00:00.000Z',
+          timezone: 'Africa/Johannesburg',
+          originalStartAt: '2026-06-01T08:00:00.000Z',
+          status: 'Scheduled',
+          isException: false,
+          rsvpCount: 4,
+          participants: null,
+          myRsvp: null,
+        },
+        {
+          occurrenceId: 'occ-2',
+          occurrenceKey: 'occ-2',
+          eventSeriesId: 'event-nav-1',
+          startAt: '2026-06-08T08:00:00.000Z',
+          endAt: '2026-06-08T09:00:00.000Z',
+          timezone: 'Africa/Johannesburg',
+          originalStartAt: '2026-06-08T08:00:00.000Z',
+          status: 'Scheduled',
+          isException: false,
+          rsvpCount: 7,
+          participants: null,
+          myRsvp: null,
+        },
+      ],
+      representativeOccurrence: {
+        occurrenceId: 'occ-2',
+        occurrenceKey: 'occ-2',
+        eventSeriesId: 'event-nav-1',
+        startAt: '2026-06-08T08:00:00.000Z',
+        endAt: '2026-06-08T09:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+        originalStartAt: '2026-06-08T08:00:00.000Z',
+        status: 'Scheduled',
+        isException: false,
+        rsvpCount: 7,
+        participants: null,
+        myRsvp: null,
+      },
+    } as any;
+
+    const occurrences = mapNavigableEventOccurrences(event);
+    expect(occurrences.map((occurrence) => occurrence.occurrenceId)).toEqual(['occ-1', 'occ-2']);
+    expect(occurrences[0].eventSeries).toMatchObject({
+      eventId: 'event-nav-1',
+      slug: 'navigable-series',
+      title: 'Navigable Event',
+    });
+
+    const selected = mapNavigableEventToOccurrence(event, getOccurrencePublicAnchor('2026-06-08T08:00:00.000Z'));
+    expect(selected?.occurrenceId).toBe('occ-2');
+  });
+
+  it('falls back to the first navigable occurrence and returns null when none exist', () => {
+    const withoutExplicitMatch = mapNavigableEventToOccurrence(
+      {
+        eventId: 'event-nav-2',
+        slug: 'fallback-nav-series',
+        title: 'Fallback Navigable Event',
+        upcomingOccurrences: [
+          {
+            occurrenceId: 'occ-3',
+            occurrenceKey: 'occ-3',
+            eventSeriesId: 'event-nav-2',
+            startAt: '2026-07-01T08:00:00.000Z',
+            endAt: '2026-07-01T09:00:00.000Z',
+            timezone: null,
+            originalStartAt: '2026-07-01T08:00:00.000Z',
+            status: 'Scheduled',
+            isException: false,
+            rsvpCount: 2,
+            participants: null,
+            myRsvp: null,
+          },
+        ],
+        representativeOccurrence: null,
+      } as any,
+      '2026-08-01T08:00:00.000Z',
+    );
+
+    expect(withoutExplicitMatch?.occurrenceId).toBe('occ-3');
+    expect(
+      mapNavigableEventToOccurrence({ upcomingOccurrences: [], representativeOccurrence: null } as any),
+    ).toBeNull();
   });
 });

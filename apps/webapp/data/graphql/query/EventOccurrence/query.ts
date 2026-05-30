@@ -104,5 +104,6 @@ export const GetEventOccurrencesDocument = graphql(`
         isSavedByMe
       }
     }
+    readEventOccurrencesCount(options: $options)
   }
 `);

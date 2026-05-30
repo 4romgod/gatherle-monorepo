@@ -286,7 +286,7 @@ export default function NotificationsPage() {
                           onDelete={handleDelete}
                           isLoading={notificationActionsLoading}
                         />
-                      ) : (
+                      ) : item.request.follower ? (
                         <PendingFollowRequestItem
                           followId={item.request.followId}
                           follower={item.request.follower}
@@ -297,7 +297,7 @@ export default function NotificationsPage() {
                           onReject={handleRejectFollowRequest}
                           isLoading={followActionsLoading}
                         />
-                      )}
+                      ) : null}
                       <Divider />
                     </React.Fragment>
                   ))}

@@ -7,7 +7,7 @@ test.describe('Forgot Password Page', () => {
   });
 
   test('renders /auth/forgot-password form', async ({ page }) => {
-    await page.goto('/auth/forgot-password');
+    await page.goto('/auth/forgot-password', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { level: 1, name: 'Reset your password' })).toBeVisible();
     await expect(page.getByLabel('Email Address')).toBeVisible();

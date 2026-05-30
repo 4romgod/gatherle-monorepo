@@ -94,6 +94,10 @@ export function UserProfileScreen() {
   });
   const profile = data?.readUserById ?? null;
   const followers = data?.readFollowers ?? [];
+  const followerPreview = useMemo(
+    () => followers.filter((follow) => Boolean(follow.follower)).slice(0, 3),
+    [followers],
+  );
   const { follow, isFollowing, isPending, unfollow } = useFollowTarget({
     authToken,
     targetId: userId,
@@ -131,7 +135,6 @@ export function UserProfileScreen() {
   const profileName = getDisplayName(profile) || routeDisplayName || routeUsername || '';
   const badges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
   const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
-  const followerPreview = followers.slice(0, 3);
   const hostedEventsCount = hostedEventsTotalCount;
   const participantActivityUnsupported = isUnsupportedUserEventOccurrencesError(participantEventsError);
   const shouldShowParticipantTabs = !participantActivityUnsupported;

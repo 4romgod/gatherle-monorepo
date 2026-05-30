@@ -51,6 +51,8 @@ const DISMISS_VELOCITY_THRESHOLD = 0.85;
 const GROUP_SWIPE_DISTANCE = 70;
 const GROUP_SWIPE_VELOCITY = 0.55;
 
+type PauseReason = 'composer' | 'gesture' | 'hold' | 'transition';
+
 type MomentLike = {
   author?: {
     family_name?: string | null;
@@ -128,7 +130,12 @@ export function MomentViewer({
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isMomentReady, setMomentReady] = useState(false);
   const [mediaError, setMediaError] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [pauseReasons, setPauseReasons] = useState<Record<PauseReason, boolean>>({
+    composer: false,
+    gesture: false,
+    hold: false,
+    transition: false,
+  });
   const [progress, setProgress] = useState(0);
   const [replySent, setReplySent] = useState(false);
   const elapsedRef = useRef(0);
@@ -146,6 +153,8 @@ export function MomentViewer({
   const groupKey = moments[0]?.authorId ?? moments[0]?.momentId ?? 'empty';
   const canInteractWithMoment = open && (!embedded || active);
   currentMomentRef.current = currentMoment;
+  const paused =
+    isMenuOpen || pauseReasons.composer || pauseReasons.gesture || pauseReasons.hold || pauseReasons.transition;
   const displayName = useMemo(() => getDisplayName(currentMoment?.author), [currentMoment?.author]);
   const { isConnected, sendChatMessage } = useChatRealtime({
     enabled: Boolean(viewerUserId),
@@ -225,6 +234,10 @@ export function MomentViewer({
     }
   };
 
+  const setPauseReason = useCallback((reason: PauseReason, value: boolean) => {
+    setPauseReasons((current) => (current[reason] === value ? current : { ...current, [reason]: value }));
+  }, []);
+
   const animateResetPosition = useCallback(
     (resumePlayback: boolean) => {
       Animated.parallel([
@@ -247,18 +260,21 @@ export function MomentViewer({
         }),
       ]).start(() => {
         if (resumePlayback) {
-          setPaused(false);
+          setPauseReason('gesture', false);
         }
       });
     },
-    [groupTranslateX, overlayOpacity, translateY],
+    [groupTranslateX, overlayOpacity, setPauseReason, translateY],
   );
 
   const requestClose = useCallback(
     (afterClose?: () => void) => {
       if (embedded) {
         setMenuOpen(false);
-        setPaused(false);
+        setPauseReason('composer', false);
+        setPauseReason('gesture', false);
+        setPauseReason('hold', false);
+        setPauseReason('transition', false);
         onClose();
         afterClose?.();
         return;
@@ -271,7 +287,7 @@ export function MomentViewer({
       closingRef.current = true;
       clearReplySentTimeout();
       setMenuOpen(false);
-      setPaused(true);
+      setPauseReason('transition', true);
 
       Animated.parallel([
         Animated.timing(translateY, {
@@ -287,6 +303,7 @@ export function MomentViewer({
       ]).start(({ finished }) => {
         if (!finished) {
           closingRef.current = false;
+          setPauseReason('transition', false);
           return;
         }
 
@@ -297,7 +314,7 @@ export function MomentViewer({
         afterClose?.();
       });
     },
-    [embedded, groupTranslateX, onClose, overlayOpacity, translateY],
+    [embedded, groupTranslateX, onClose, overlayOpacity, setPauseReason, translateY],
   );
 
   const transitionToGroup = useCallback(
@@ -314,7 +331,7 @@ export function MomentViewer({
       pendingGroupDirectionRef.current = direction;
       clearReplySentTimeout();
       setMenuOpen(false);
-      setPaused(true);
+      setPauseReason('transition', true);
 
       Animated.timing(groupTranslateX, {
         duration: 150,
@@ -325,6 +342,7 @@ export function MomentViewer({
         if (!finished) {
           groupTransitionRef.current = false;
           pendingGroupDirectionRef.current = null;
+          setPauseReason('transition', false);
           animateResetPosition(true);
           return;
         }
@@ -333,13 +351,14 @@ export function MomentViewer({
         if (!didChangeGroup) {
           groupTransitionRef.current = false;
           pendingGroupDirectionRef.current = null;
+          setPauseReason('transition', false);
           animateResetPosition(true);
         }
       });
 
       return true;
     },
-    [animateResetPosition, embedded, groupTranslateX],
+    [animateResetPosition, embedded, groupTranslateX, setPauseReason],
   );
 
   const requestNextGroup = useCallback(() => {
@@ -398,7 +417,7 @@ export function MomentViewer({
             Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2),
         onPanResponderGrant: () => {
           groupTranslateX.stopAnimation();
-          setPaused(true);
+          setPauseReason('gesture', true);
         },
         onPanResponderMove: (_event, gestureState) => {
           if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
@@ -453,6 +472,7 @@ export function MomentViewer({
       requestNextGroup,
       requestPreviousGroup,
       translateY,
+      setPauseReason,
     ],
   );
 
@@ -469,7 +489,10 @@ export function MomentViewer({
     setMenuOpen(false);
     setMediaError(false);
     setReplySent(false);
-    setPaused(Boolean(pendingGroupDirectionRef.current));
+    setPauseReason('composer', false);
+    setPauseReason('gesture', false);
+    setPauseReason('hold', false);
+    setPauseReason('transition', Boolean(pendingGroupDirectionRef.current));
     setMomentReady(startMoment.type === EventMomentType.Text);
     if (embedded) {
       translateY.setValue(0);
@@ -499,7 +522,7 @@ export function MomentViewer({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [embedded, groupTranslateX, moments, open, overlayOpacity, startIndex, translateY]);
+  }, [embedded, groupTranslateX, moments, open, overlayOpacity, setPauseReason, startIndex, translateY]);
 
   useEffect(() => {
     if (!open || embedded) {
@@ -520,9 +543,9 @@ export function MomentViewer({
     }).start(() => {
       groupTransitionRef.current = false;
       pendingGroupDirectionRef.current = null;
-      setPaused(false);
+      setPauseReason('transition', false);
     });
-  }, [embedded, groupKey, groupTranslateX, open]);
+  }, [embedded, groupKey, groupTranslateX, open, setPauseReason]);
 
   useEffect(() => {
     if (!open || !currentMoment) {
@@ -771,6 +794,9 @@ export function MomentViewer({
   const storyContent = (
     <Animated.View
       {...(embedded ? undefined : panResponder.panHandlers)}
+      onTouchCancel={() => setPauseReason('hold', false)}
+      onTouchEnd={() => setPauseReason('hold', false)}
+      onTouchStart={() => setPauseReason('hold', true)}
       style={[
         styles.viewerShell,
         embedded ? [styles.embeddedViewerShell, containerHeight ? { height: containerHeight } : null] : null,
@@ -830,7 +856,6 @@ export function MomentViewer({
               hitSlop={10}
               onPress={() => {
                 setMenuOpen(true);
-                setPaused(true);
               }}
             >
               <Feather color={theme.colors.heroText} name="more-horizontal" size={22} />
@@ -959,7 +984,6 @@ export function MomentViewer({
           <Pressable
             onPress={() => {
               setMenuOpen(false);
-              setPaused(false);
             }}
             style={styles.menuBackdrop}
           />
@@ -1032,11 +1056,9 @@ export function MomentViewer({
               pauseTimeoutRef.current = setTimeout(() => setReplySent(false), 2200);
             }}
             onBlur={() => {
-              if (!isMenuOpen) {
-                setPaused(false);
-              }
+              setPauseReason('composer', false);
             }}
-            onFocus={() => setPaused(true)}
+            onFocus={() => setPauseReason('composer', true)}
             onSend={handleReply}
             placeholder={`Reply…`}
             showStatus={false}
