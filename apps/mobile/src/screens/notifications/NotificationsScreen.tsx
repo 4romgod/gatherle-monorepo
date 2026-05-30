@@ -3,6 +3,7 @@ import { useApolloClient } from '@apollo/client';
 import { useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MobileFollowRequest } from '@data/graphql/query/Follow/types';
 import type { MobileNotification } from '@data/graphql/query/Notification/types';
 import { NotificationType } from '@data/graphql/types/graphql';
@@ -135,138 +136,149 @@ export function NotificationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer>
-        <PageHeading title="Notifications" />
-        <AuthPromptCard
-          description="Sign in to see reminders, invites, follow activity, and message nudges from your Gatherle network."
-          onPressPrimary={() => navigation.navigate('Login')}
-          onPressSecondary={() => navigation.navigate('Register')}
-          primaryLabel="Login"
-          secondaryLabel="Create account"
-          title="Notifications start after sign-in"
-        />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Notifications" />
+          <AuthPromptCard
+            description="Sign in to see reminders, invites, follow activity, and message nudges from your Gatherle network."
+            onPressPrimary={() => navigation.navigate('Login')}
+            onPressSecondary={() => navigation.navigate('Register')}
+            primaryLabel="Login"
+            secondaryLabel="Create account"
+            title="Notifications start after sign-in"
+          />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   if (!authToken) {
     return (
-      <PageContainer>
-        <PageHeading title="Notifications" />
-        <StateNotice message="Log in with a real account token to load your notifications and follow requests." />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Notifications" />
+          <StateNotice message="Log in with a real account token to load your notifications and follow requests." />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   return (
-    <PageContainer
-      onContentSizeChange={infiniteScroll.onContentSizeChange}
-      onRefresh={onRefresh}
-      onScroll={infiniteScroll.onScroll}
-      refreshing={refreshing}
-      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
-    >
-      <View style={styles.headerRow}>
-        <PageHeading title="Notifications" />
-        {unreadCount > 0 ? (
-          <InlineButton compact label="Mark all read" onPress={() => void markAllNotificationsRead()} tone="neutral" />
-        ) : null}
-      </View>
-
-      {loading && feedItems.length === 0 ? (
-        <View style={styles.feed}>
-          <View style={styles.group}>
-            <SkeletonBlock style={styles.groupTitleSkeleton} />
-            <View style={styles.groupItems}>
-              <NotificationRowSkeleton />
-              <NotificationRowSkeleton />
-            </View>
-          </View>
-          <View style={styles.group}>
-            <SkeletonBlock style={styles.groupTitleSkeleton} />
-            <View style={styles.groupItems}>
-              <NotificationRowSkeleton withActions={false} />
-              <NotificationRowSkeleton />
-            </View>
-          </View>
-        </View>
-      ) : error ? (
-        <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load your notifications."
-          onPressAction={() => void refetch()}
-        />
-      ) : groupedFeed.length > 0 ? (
-        <View style={styles.feed}>
-          {groupedFeed.map((group) => (
-            <View key={group.label} style={styles.group}>
-              <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>{group.label}</Text>
-              <View style={styles.groupItems}>
-                {group.items.map((item) =>
-                  item.kind === 'notification' ? (
-                    <SwipeableNotificationRow
-                      actionButtons={buildNotificationActions(item.notification, followBackUser)}
-                      actorImageUrl={item.notification.actor?.profile_picture}
-                      actorLabel={getDisplayName(item.notification.actor)}
-                      isRead={item.notification.isRead}
-                      key={item.id}
-                      message={item.notification.message}
-                      onDelete={() => void deleteNotification(item.notification.notificationId)}
-                      onPress={() => void handleNotificationPress(item.notification)}
-                      onToggleRead={() =>
-                        void (item.notification.isRead
-                          ? markNotificationUnread(item.notification.notificationId)
-                          : markNotificationRead(item.notification.notificationId))
-                      }
-                      secondaryLabel={formatRelativeTime(item.notification.createdAt)}
-                      title={item.notification.title}
-                    />
-                  ) : (
-                    <SwipeableNotificationRow
-                      actionButtons={[
-                        {
-                          label: 'Accept',
-                          onPress: () => void acceptFollowRequest(item.request.followId),
-                          tone: 'primary',
-                        },
-                        {
-                          label: 'Decline',
-                          onPress: () => void rejectFollowRequest(item.request.followId),
-                          tone: 'neutral',
-                        },
-                      ]}
-                      actorImageUrl={item.request.follower?.profile_picture}
-                      actorLabel={getDisplayName(item.request.follower)}
-                      isRead={false}
-                      key={item.id}
-                      message={item.request.follower?.bio || 'Requested to follow you.'}
-                      onDelete={() => void rejectFollowRequest(item.request.followId)}
-                      onPress={() =>
-                        navigation.navigate('UserProfile', {
-                          avatarUrl: item.request.follower?.profile_picture ?? undefined,
-                          displayName: getDisplayName(item.request.follower),
-                          userId: item.request.follower?.userId ?? item.request.followerUserId,
-                          username: item.request.follower?.username ?? undefined,
-                        })
-                      }
-                      secondaryLabel={formatRelativeTime(item.request.createdAt)}
-                      title={`${item.request.follower?.username ? `@${item.request.follower.username}` : getDisplayName(item.request.follower)} wants to connect`}
-                    />
-                  ),
-                )}
-              </View>
-            </View>
-          ))}
-          {loadingMore ? (
-            <View style={styles.loadingMore}>
-              <ActivityIndicator color={theme.colors.primary} size="small" />
-            </View>
+    <MainTabScreenLayout>
+      <PageContainer
+        onContentSizeChange={infiniteScroll.onContentSizeChange}
+        onRefresh={onRefresh}
+        onScroll={infiniteScroll.onScroll}
+        refreshing={refreshing}
+        scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+      >
+        <View style={styles.headerRow}>
+          <PageHeading title="Notifications" />
+          {unreadCount > 0 ? (
+            <InlineButton
+              compact
+              label="Mark all read"
+              onPress={() => void markAllNotificationsRead()}
+              tone="neutral"
+            />
           ) : null}
         </View>
-      ) : (
-        <StateNotice message="You’re all caught up." />
-      )}
-    </PageContainer>
+
+        {loading && feedItems.length === 0 ? (
+          <View style={styles.feed}>
+            <View style={styles.group}>
+              <SkeletonBlock style={styles.groupTitleSkeleton} />
+              <View style={styles.groupItems}>
+                <NotificationRowSkeleton />
+                <NotificationRowSkeleton />
+              </View>
+            </View>
+            <View style={styles.group}>
+              <SkeletonBlock style={styles.groupTitleSkeleton} />
+              <View style={styles.groupItems}>
+                <NotificationRowSkeleton withActions={false} />
+                <NotificationRowSkeleton />
+              </View>
+            </View>
+          </View>
+        ) : error ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load your notifications."
+            onPressAction={() => void refetch()}
+          />
+        ) : groupedFeed.length > 0 ? (
+          <View style={styles.feed}>
+            {groupedFeed.map((group) => (
+              <View key={group.label} style={styles.group}>
+                <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>{group.label}</Text>
+                <View style={styles.groupItems}>
+                  {group.items.map((item) =>
+                    item.kind === 'notification' ? (
+                      <SwipeableNotificationRow
+                        actionButtons={buildNotificationActions(item.notification, followBackUser)}
+                        actorImageUrl={item.notification.actor?.profile_picture}
+                        actorLabel={getDisplayName(item.notification.actor)}
+                        isRead={item.notification.isRead}
+                        key={item.id}
+                        message={item.notification.message}
+                        onDelete={() => void deleteNotification(item.notification.notificationId)}
+                        onPress={() => void handleNotificationPress(item.notification)}
+                        onToggleRead={() =>
+                          void (item.notification.isRead
+                            ? markNotificationUnread(item.notification.notificationId)
+                            : markNotificationRead(item.notification.notificationId))
+                        }
+                        secondaryLabel={formatRelativeTime(item.notification.createdAt)}
+                        title={item.notification.title}
+                      />
+                    ) : (
+                      <SwipeableNotificationRow
+                        actionButtons={[
+                          {
+                            label: 'Accept',
+                            onPress: () => void acceptFollowRequest(item.request.followId),
+                            tone: 'primary',
+                          },
+                          {
+                            label: 'Decline',
+                            onPress: () => void rejectFollowRequest(item.request.followId),
+                            tone: 'neutral',
+                          },
+                        ]}
+                        actorImageUrl={item.request.follower?.profile_picture}
+                        actorLabel={getDisplayName(item.request.follower)}
+                        isRead={false}
+                        key={item.id}
+                        message={item.request.follower?.bio || 'Requested to follow you.'}
+                        onDelete={() => void rejectFollowRequest(item.request.followId)}
+                        onPress={() =>
+                          navigation.navigate('UserProfile', {
+                            avatarUrl: item.request.follower?.profile_picture ?? undefined,
+                            displayName: getDisplayName(item.request.follower),
+                            userId: item.request.follower?.userId ?? item.request.followerUserId,
+                            username: item.request.follower?.username ?? undefined,
+                          })
+                        }
+                        secondaryLabel={formatRelativeTime(item.request.createdAt)}
+                        title={`${item.request.follower?.username ? `@${item.request.follower.username}` : getDisplayName(item.request.follower)} wants to connect`}
+                      />
+                    ),
+                  )}
+                </View>
+              </View>
+            ))}
+            {loadingMore ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator color={theme.colors.primary} size="small" />
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <StateNotice message="You’re all caught up." />
+        )}
+      </PageContainer>
+    </MainTabScreenLayout>
   );
 }
 

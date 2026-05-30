@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -660,6 +661,7 @@ export function MomentViewer({
   const currentBackground = resolveBackgroundColor(currentMoment.background);
   const isVideoMoment = currentMoment.type === EventMomentType.Video;
   const supportsMedia = currentMoment.type === EventMomentType.Image || currentMoment.type === EventMomentType.Video;
+  const showMediaLoading = supportsMedia && !isMomentReady && !mediaError;
   const momentEventId = currentMoment.event?.eventId ?? currentMoment.eventId;
   const showReplyComposer = Boolean(viewerUserId && viewerUserId !== currentMoment.authorId && currentMoment.authorId);
   const isOwnedByViewer = Boolean(viewerUserId && currentMoment.authorId === viewerUserId);
@@ -841,7 +843,7 @@ export function MomentViewer({
           </View>
         </View>
 
-        <View style={styles.mediaWrap}>
+        <View style={[styles.mediaWrap, supportsMedia ? { backgroundColor: theme.colors.background } : null]}>
           {supportsMedia && currentMoment.mediaUrl ? (
             currentMoment.type === EventMomentType.Video ? (
               <>
@@ -854,8 +856,8 @@ export function MomentViewer({
                   useExoShutter={false}
                 />
                 {mediaError ? (
-                  <View style={styles.mediaStateOverlay}>
-                    <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Video unavailable</Text>
+                  <View style={[styles.mediaStateOverlay, { backgroundColor: theme.colors.background }]}>
+                    <Text style={[styles.mediaStateText, { color: theme.colors.textPrimary }]}>Video unavailable</Text>
                   </View>
                 ) : null}
               </>
@@ -899,8 +901,8 @@ export function MomentViewer({
                   />
                 )}
                 {mediaError ? (
-                  <View style={styles.mediaStateOverlay}>
-                    <Text style={[styles.mediaStateText, { color: theme.colors.heroText }]}>Image unavailable</Text>
+                  <View style={[styles.mediaStateOverlay, { backgroundColor: theme.colors.background }]}>
+                    <Text style={[styles.mediaStateText, { color: theme.colors.textPrimary }]}>Image unavailable</Text>
                   </View>
                 ) : null}
               </>
@@ -912,6 +914,22 @@ export function MomentViewer({
               </Text>
             </View>
           )}
+
+          {showMediaLoading ? (
+            <View style={[styles.mediaStateOverlay, { backgroundColor: theme.colors.background }]}>
+              <View
+                style={[
+                  styles.loadingCard,
+                  {
+                    backgroundColor: theme.colors.surfaceRaised,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <ActivityIndicator color={theme.colors.primary} size="large" />
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {supportsMedia && currentMoment.caption ? (
@@ -1121,6 +1139,14 @@ const styles = StyleSheet.create({
     top: HEADER_ZONE_HEIGHT,
     width: SCREEN_WIDTH * 0.34,
     zIndex: 3,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 76,
+    justifyContent: 'center',
+    width: 76,
   },
   mediaFrame: {
     height: '100%',

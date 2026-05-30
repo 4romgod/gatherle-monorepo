@@ -5,19 +5,24 @@ import { MOBILE_BOTTOM_TAB_BAR_HEIGHT } from '@/lib/constants/layout';
 
 type AppLayoutContextValue = {
   bottomTabBarHeight: number;
+  mainTabsViewportHeight: number;
   setBottomTabBarHeight: (height: number) => void;
+  setMainTabsViewportHeight: (height: number) => void;
 };
 
 const AppLayoutContext = createContext<AppLayoutContextValue | null>(null);
 
 export function AppShellProvider({ children }: PropsWithChildren) {
   const [bottomTabBarHeight, setBottomTabBarHeight] = useState(MOBILE_BOTTOM_TAB_BAR_HEIGHT);
+  const [mainTabsViewportHeight, setMainTabsViewportHeight] = useState(0);
   const layoutValue = useMemo(
     () => ({
       bottomTabBarHeight,
+      mainTabsViewportHeight,
       setBottomTabBarHeight,
+      setMainTabsViewportHeight,
     }),
-    [bottomTabBarHeight],
+    [bottomTabBarHeight, mainTabsViewportHeight],
   );
 
   return (

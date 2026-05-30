@@ -1,14 +1,12 @@
-import { Feather } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BrandMark } from '@/components/core/BrandMark';
 import { BottomTabBar } from '@/app/navigation/BottomTabBar';
 import { HeaderMenuButton } from '@/app/navigation/HeaderMenuButton';
 import { StackHeader } from '@/app/navigation/StackHeader';
+import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ForgotPasswordScreen } from '@/screens/auth/ForgotPasswordScreen';
 import { LoginProvidersScreen } from '@/screens/auth/LoginProvidersScreen';
 import { LoginScreen } from '@/screens/auth/LoginScreen';
@@ -56,33 +54,21 @@ const TABLET_BREAKPOINT = 768;
 function MainTabs() {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
+  const { setMainTabsViewportHeight } = useAppShell();
   const isTabletLayout = width >= TABLET_BREAKPOINT;
-  const [activeTab, setActiveTab] = useState<keyof MainTabParamList>('Home');
 
   return (
     <SafeAreaView edges={['top']} style={[styles.mainTabsShell, { backgroundColor: theme.colors.surface }]}>
-      {activeTab !== 'Moments' ? (
-        <View style={styles.mainTabsHeader}>
-          <View style={styles.headerLeftWrap}>
-            <BrandMark />
-          </View>
-          <View style={styles.headerRightWrap}>
-            <HeaderMenuButton />
-          </View>
-        </View>
-      ) : null}
-
-      <View style={[styles.mainTabsBody, { backgroundColor: theme.colors.background }]}>
+      <View
+        onLayout={(event) => {
+          const nextHeight = Math.round(event.nativeEvent.layout.height);
+          if (nextHeight > 0) {
+            setMainTabsViewportHeight(nextHeight);
+          }
+        }}
+        style={[styles.mainTabsBody, { backgroundColor: theme.colors.background }]}
+      >
         <Tab.Navigator
-          screenListeners={{
-            state: (event) => {
-              const tabState = event.data.state as { index?: number; routes?: { name: string }[] } | undefined;
-              const nextRoute = tabState?.routes?.[tabState.index ?? 0]?.name;
-              if (nextRoute) {
-                setActiveTab(nextRoute as keyof MainTabParamList);
-              }
-            },
-          }}
           tabBarPosition="bottom"
           screenOptions={{
             lazy: true,
@@ -298,22 +284,11 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  headerLeftWrap: {
-    marginLeft: 18,
-  },
   headerRightWrap: {
     marginRight: 18,
   },
   mainTabsBody: {
     flex: 1,
-  },
-  mainTabsHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 58,
-    paddingBottom: 6,
-    paddingTop: 6,
   },
   mainTabsShell: {
     flex: 1,

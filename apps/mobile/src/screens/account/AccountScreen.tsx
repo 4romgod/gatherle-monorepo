@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ProfileEventsEmptyState } from '@/components/account/ProfileEventsEmptyState';
@@ -190,154 +191,169 @@ export function AccountScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer>
-        <PageHeading title="Join Gatherle" />
-        <AuthPromptCard
-          description="Create an account to save events, manage your profile, host organizations, and unlock messaging and notifications."
-          onPressPrimary={() => navigation.navigate('Register')}
-          onPressSecondary={() => navigation.navigate('Login')}
-          primaryLabel="Create account"
-          secondaryLabel="Login"
-          title="Your account hub starts here"
-        />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Join Gatherle" />
+          <AuthPromptCard
+            description="Create an account to save events, manage your profile, host organizations, and unlock messaging and notifications."
+            onPressPrimary={() => navigation.navigate('Register')}
+            onPressSecondary={() => navigation.navigate('Login')}
+            primaryLabel="Create account"
+            secondaryLabel="Login"
+            title="Your account hub starts here"
+          />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   if (!username) {
     return (
-      <PageContainer>
-        <PageHeading title="Account" />
-        <StateNotice message="Your account needs a username before we can load the full mobile profile." />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Account" />
+          <StateNotice message="Your account needs a username before we can load the full mobile profile." />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   if (profileLoading && !profile) {
     return (
-      <PageContainer>
-        <PageHeading title="Account" />
-        <StateNotice message="Loading your profile..." />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Account" />
+          <StateNotice message="Loading your profile..." />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   if (profileError && !profile) {
     return (
-      <PageContainer>
-        <PageHeading title="Account" />
-        <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load your profile."
-          onPressAction={() => void refetchProfile()}
-        />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Account" />
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load your profile."
+            onPressAction={() => void refetchProfile()}
+          />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   return (
-    <PageContainer
-      onContentSizeChange={infiniteScroll.onContentSizeChange}
-      onScroll={infiniteScroll.onScroll}
-      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
-    >
-      <View style={styles.profileHeaderSection}>
-        <View style={styles.profileTopRow}>
-          {userMoments.length > 0 ? (
-            <MomentAvatarTrigger author={profile} label={profileName} onPress={() => setMomentsOpen(true)} size={88} />
-          ) : (
-            <Pressable
-              accessibilityLabel="View your moments"
-              disabled={!profileUserId}
-              onPress={() => {
-                if (!profileUserId) {
-                  return;
-                }
-
-                navigation.navigate('UserProfile', {
-                  avatarUrl: profile?.profile_picture,
-                  displayName: profileName,
-                  openMoments: true,
-                  userId: profileUserId,
-                  username: profile?.username ?? username,
-                });
-              }}
-              style={styles.avatarButton}
-            >
-              <ProfileAvatar imageUrl={profile?.profile_picture} label={profileName} size={88} />
-            </Pressable>
-          )}
-
-          <View style={styles.profileTopRail}>
-            <View style={styles.profileIdentityRow}>
-              <Text numberOfLines={1} style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}>
-                @{profile?.username ?? username}
-              </Text>
-
-              {profileBadges.length > 0 ? (
-                <View style={styles.profileBadgesRow}>
-                  {profileBadges.map((badge) => (
-                    <ProfileBadge badge={badge} key={badge.label} />
-                  ))}
-                </View>
-              ) : null}
-            </View>
-
-            <View style={styles.profileStatsRow}>
-              <ProfileStat label="Events" onPress={openHostedEvents} value={String(profileEventsCount)} />
-              <ProfileStat
-                label="Followers"
-                onPress={() => openConnections('followers', profile?.followersCount ?? 0)}
-                value={String(profile?.followersCount ?? 0)}
+    <MainTabScreenLayout>
+      <PageContainer
+        onContentSizeChange={infiniteScroll.onContentSizeChange}
+        onScroll={infiniteScroll.onScroll}
+        scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+      >
+        <View style={styles.profileHeaderSection}>
+          <View style={styles.profileTopRow}>
+            {userMoments.length > 0 ? (
+              <MomentAvatarTrigger
+                author={profile}
+                label={profileName}
+                onPress={() => setMomentsOpen(true)}
+                size={88}
               />
-              <ProfileStat
-                label="Following"
-                onPress={() => openConnections('following', profile?.followingCount ?? 0)}
-                value={String(profile?.followingCount ?? 0)}
-              />
+            ) : (
+              <Pressable
+                accessibilityLabel="View your moments"
+                disabled={!profileUserId}
+                onPress={() => {
+                  if (!profileUserId) {
+                    return;
+                  }
+
+                  navigation.navigate('UserProfile', {
+                    avatarUrl: profile?.profile_picture,
+                    displayName: profileName,
+                    openMoments: true,
+                    userId: profileUserId,
+                    username: profile?.username ?? username,
+                  });
+                }}
+                style={styles.avatarButton}
+              >
+                <ProfileAvatar imageUrl={profile?.profile_picture} label={profileName} size={88} />
+              </Pressable>
+            )}
+
+            <View style={styles.profileTopRail}>
+              <View style={styles.profileIdentityRow}>
+                <Text numberOfLines={1} style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}>
+                  @{profile?.username ?? username}
+                </Text>
+
+                {profileBadges.length > 0 ? (
+                  <View style={styles.profileBadgesRow}>
+                    {profileBadges.map((badge) => (
+                      <ProfileBadge badge={badge} key={badge.label} />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.profileStatsRow}>
+                <ProfileStat label="Events" onPress={openHostedEvents} value={String(profileEventsCount)} />
+                <ProfileStat
+                  label="Followers"
+                  onPress={() => openConnections('followers', profile?.followersCount ?? 0)}
+                  value={String(profile?.followersCount ?? 0)}
+                />
+                <ProfileStat
+                  label="Following"
+                  onPress={() => openConnections('following', profile?.followingCount ?? 0)}
+                  value={String(profile?.followingCount ?? 0)}
+                />
+              </View>
             </View>
+          </View>
+
+          <View style={styles.profileTextBlock}>
+            <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
+            <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
+              {profile?.bio || 'No bio added yet.'}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.profileTextBlock}>
-          <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
-          <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
-            {profile?.bio || 'No bio added yet.'}
-          </Text>
+        <View style={styles.profileActionsRow}>
+          <ProfileActionButton
+            icon="edit-2"
+            label="Edit profile"
+            onPress={() => navigation.navigate('Settings', { initialTab: 'profile' })}
+          />
+          <ProfileActionButton
+            icon="settings"
+            label="Settings"
+            onPress={() => navigation.navigate('Settings', { initialTab: 'account' })}
+          />
         </View>
-      </View>
 
-      <View style={styles.profileActionsRow}>
-        <ProfileActionButton
-          icon="edit-2"
-          label="Edit profile"
-          onPress={() => navigation.navigate('Settings', { initialTab: 'profile' })}
-        />
-        <ProfileActionButton
-          icon="settings"
-          label="Settings"
-          onPress={() => navigation.navigate('Settings', { initialTab: 'account' })}
-        />
-      </View>
+        {eventCollectionsError ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load your account event collections."
+            onPressAction={() => void refetchEventCollections()}
+          />
+        ) : (
+          <SwipePagerTabs
+            onActiveKeyChange={(key) => setActiveTab(key as AccountTab)}
+            routes={accountRoutes}
+            variant="icon"
+          />
+        )}
 
-      {eventCollectionsError ? (
-        <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load your account event collections."
-          onPressAction={() => void refetchEventCollections()}
-        />
-      ) : (
-        <SwipePagerTabs
-          onActiveKeyChange={(key) => setActiveTab(key as AccountTab)}
-          routes={accountRoutes}
-          variant="icon"
-        />
-      )}
-
-      {momentsOpen ? (
-        <MomentViewer moments={userMoments} onClose={() => setMomentsOpen(false)} open startIndex={0} />
-      ) : null}
-    </PageContainer>
+        {momentsOpen ? (
+          <MomentViewer moments={userMoments} onClose={() => setMomentsOpen(false)} open startIndex={0} />
+        ) : null}
+      </PageContainer>
+    </MainTabScreenLayout>
   );
 }
 
