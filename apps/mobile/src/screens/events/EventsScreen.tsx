@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { MainTabParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -122,109 +123,107 @@ export function EventsScreen() {
   };
 
   return (
-    <PageContainer
-      onContentSizeChange={infiniteScroll.onContentSizeChange}
-      onRefresh={onRefresh}
-      onScroll={infiniteScroll.onScroll}
-      refreshing={refreshing}
-      scrollEventThrottle={infiniteScroll.scrollEventThrottle}
-    >
-      <EventSearchBar
-        onSelectEvent={(event) => {
-          setSearchQuery(event.title ?? '');
-          setSelectedEventId(event.eventId);
-        }}
-      />
-
-      {/* Tools row */}
-      <View style={styles.eventsToolsRow}>
-        <FilterActionButton activeCount={serverFilterCount} onPress={openSheet} />
-        {totalActiveFilterCount > 0 ? (
-          <Pressable
-            onPress={handleClearAll}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, justifyContent: 'center' }]}
-          >
-            <Text style={[styles.clearActionText, { color: theme.colors.textSecondary }]}>Clear all</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {/* Active filter chips */}
-      {serverFilterCount > 0 ? (
-        <View style={styles.activeFilterRow}>
-          {appliedFilters.dateOption ? (
-            <FilterChip
-              active
-              small
-              label={
-                {
-                  TODAY: 'Today',
-                  TOMORROW: 'Tomorrow',
-                  THIS_WEEK: 'This Week',
-                  THIS_WEEKEND: 'This Weekend',
-                  THIS_MONTH: 'This Month',
-                }[appliedFilters.dateOption] ?? appliedFilters.dateOption
-              }
-              onPress={openSheet}
-              onRemove={removeAppliedDateOption}
-            />
-          ) : null}
-          {appliedFilters.statuses.map((status) => (
-            <FilterChip
-              active
-              small
-              key={status}
-              label={status}
-              onPress={openSheet}
-              onRemove={() => removeAppliedStatus(status)}
-            />
-          ))}
-          {appliedFilters.categories.map((catName) => (
-            <FilterChip
-              active
-              small
-              key={catName}
-              label={catName}
-              onPress={openSheet}
-              onRemove={() => removeAppliedCategory(catName)}
-            />
-          ))}
-          {appliedFilters.location.city || appliedFilters.location.state || appliedFilters.location.country ? (
-            <FilterChip
-              active
-              small
-              label={[appliedFilters.location.city, appliedFilters.location.state, appliedFilters.location.country]
-                .filter(Boolean)
-                .join(', ')}
-              onPress={openSheet}
-              onRemove={removeAppliedLocation}
-            />
-          ) : null}
-        </View>
-      ) : null}
-
-      {loading && events.length === 0 ? (
-        <SkeletonBlock style={styles.eventsCountSkeleton} />
-      ) : (
-        <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-          {filteredEvents.length} Events Found
-        </Text>
-      )}
-
-      {loading && events.length === 0 ? (
-        <View style={styles.feedList}>
-          <EventCardSkeleton />
-          <EventCardSkeleton />
-          <EventCardSkeleton />
-        </View>
-      ) : error ? (
-        <StateNotice
-          actionLabel="Retry"
-          message="The event feed failed to load."
-          onPressAction={() => void refetch()}
+    <MainTabScreenLayout>
+      <PageContainer
+        onContentSizeChange={infiniteScroll.onContentSizeChange}
+        onRefresh={onRefresh}
+        onScroll={infiniteScroll.onScroll}
+        refreshing={refreshing}
+        scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+      >
+        <EventSearchBar
+          onSelectEvent={(event) => {
+            setSearchQuery(event.title ?? '');
+            setSelectedEventId(event.eventId);
+          }}
         />
-      ) : filteredEvents.length > 0 ? (
-        <>
+
+        <View style={styles.eventsToolsRow}>
+          <FilterActionButton activeCount={serverFilterCount} onPress={openSheet} />
+          {totalActiveFilterCount > 0 ? (
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, justifyContent: 'center' }]}
+            >
+              <Text style={[styles.clearActionText, { color: theme.colors.textSecondary }]}>Clear all</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {serverFilterCount > 0 ? (
+          <View style={styles.activeFilterRow}>
+            {appliedFilters.dateOption ? (
+              <FilterChip
+                active
+                small
+                label={
+                  {
+                    TODAY: 'Today',
+                    TOMORROW: 'Tomorrow',
+                    THIS_WEEK: 'This Week',
+                    THIS_WEEKEND: 'This Weekend',
+                    THIS_MONTH: 'This Month',
+                  }[appliedFilters.dateOption] ?? appliedFilters.dateOption
+                }
+                onPress={openSheet}
+                onRemove={removeAppliedDateOption}
+              />
+            ) : null}
+            {appliedFilters.statuses.map((status) => (
+              <FilterChip
+                active
+                small
+                key={status}
+                label={status}
+                onPress={openSheet}
+                onRemove={() => removeAppliedStatus(status)}
+              />
+            ))}
+            {appliedFilters.categories.map((catName) => (
+              <FilterChip
+                active
+                small
+                key={catName}
+                label={catName}
+                onPress={openSheet}
+                onRemove={() => removeAppliedCategory(catName)}
+              />
+            ))}
+            {appliedFilters.location.city || appliedFilters.location.state || appliedFilters.location.country ? (
+              <FilterChip
+                active
+                small
+                label={[appliedFilters.location.city, appliedFilters.location.state, appliedFilters.location.country]
+                  .filter(Boolean)
+                  .join(', ')}
+                onPress={openSheet}
+                onRemove={removeAppliedLocation}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {loading && events.length === 0 ? (
+          <SkeletonBlock style={styles.eventsCountSkeleton} />
+        ) : (
+          <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
+            {filteredEvents.length} Events Found
+          </Text>
+        )}
+
+        {loading && events.length === 0 ? (
+          <View style={styles.feedList}>
+            <EventCardSkeleton />
+            <EventCardSkeleton />
+            <EventCardSkeleton />
+          </View>
+        ) : error ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="The event feed failed to load."
+            onPressAction={() => void refetch()}
+          />
+        ) : filteredEvents.length > 0 ? (
           <View style={styles.feedList}>
             {paginatedEvents.map((event) => (
               <EventCard
@@ -235,25 +234,25 @@ export function EventsScreen() {
               />
             ))}
           </View>
-        </>
-      ) : (
-        <StateNotice message="No events match your current search or filter." />
-      )}
+        ) : (
+          <StateNotice message="No events match your current search or filter." />
+        )}
 
-      <EventsFilterSheet
-        categories={categories}
-        draft={draftFilters}
-        onApply={applyFilters}
-        onClearAll={handleClearAll}
-        onClearLocation={clearDraftLocation}
-        onClose={closeSheet}
-        onSetDateOption={setDraftDateOption}
-        onSetLocation={setDraftLocation}
-        onToggleCategory={toggleDraftCategory}
-        onToggleStatus={toggleDraftStatus}
-        visible={sheetVisible}
-      />
-    </PageContainer>
+        <EventsFilterSheet
+          categories={categories}
+          draft={draftFilters}
+          onApply={applyFilters}
+          onClearAll={handleClearAll}
+          onClearLocation={clearDraftLocation}
+          onClose={closeSheet}
+          onSetDateOption={setDraftDateOption}
+          onSetLocation={setDraftLocation}
+          onToggleCategory={toggleDraftCategory}
+          onToggleStatus={toggleDraftStatus}
+          visible={sheetVisible}
+        />
+      </PageContainer>
+    </MainTabScreenLayout>
   );
 }
 

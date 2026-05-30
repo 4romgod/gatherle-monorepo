@@ -377,11 +377,9 @@ export function MomentFeedPage({
         {moment.type === EventMomentType.Image && moment.mediaUrl ? (
           <>
             <RemoteImage
-              fallback={
-                <View style={[styles.mediaFallback, { backgroundColor: resolveBackgroundColor(moment.background) }]}>
-                  <Feather color={theme.colors.heroText} name="image" size={42} />
-                </View>
-              }
+              // Keep the image fallback visually quiet here; the page-level loading/error overlays
+              // are the intended user-facing states for slow or failed media.
+              fallback={<View style={[styles.mediaFallback, { backgroundColor: theme.colors.background }]} />}
               onError={() => {
                 setMediaError(true);
                 setMediaReady(true);
@@ -422,14 +420,24 @@ export function MomentFeedPage({
         ) : null}
 
         {!isMediaReady && !hasMediaError ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator color={theme.colors.heroText} size="small" />
+          <View style={[styles.loadingOverlay, { backgroundColor: theme.colors.background }]}>
+            <View
+              style={[
+                styles.loadingCard,
+                {
+                  backgroundColor: theme.colors.surfaceRaised,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <ActivityIndicator color={theme.colors.primary} size="large" />
+            </View>
           </View>
         ) : null}
 
         {hasMediaError ? (
-          <View style={styles.loadingOverlay}>
-            <Text style={[styles.errorText, { color: theme.colors.heroText }]}>
+          <View style={[styles.loadingOverlay, { backgroundColor: theme.colors.background }]}>
+            <Text style={[styles.errorText, { color: theme.colors.textPrimary }]}>
               This moment could not be displayed.
             </Text>
           </View>
@@ -533,6 +541,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 76,
+    justifyContent: 'center',
+    width: 76,
   },
   media: {
     flex: 1,

@@ -2,6 +2,7 @@ import type { ApolloError } from '@apollo/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
@@ -98,127 +99,133 @@ export function MessagesScreen() {
 
   if (!isAuthenticated) {
     return (
-      <PageContainer>
-        <PageHeading title="Messages" />
-        <AuthPromptCard
-          description="Sign in to search conversations, reply in threads, and keep your Gatherle community in one place."
-          onPressPrimary={() => navigation.navigate('Login')}
-          onPressSecondary={() => navigation.navigate('Register')}
-          primaryLabel="Login"
-          secondaryLabel="Create account"
-          title="Your inbox starts after sign-in"
-        />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Messages" />
+          <AuthPromptCard
+            description="Sign in to search conversations, reply in threads, and keep your Gatherle community in one place."
+            onPressPrimary={() => navigation.navigate('Login')}
+            onPressSecondary={() => navigation.navigate('Register')}
+            primaryLabel="Login"
+            secondaryLabel="Create account"
+            title="Your inbox starts after sign-in"
+          />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   if (!authToken) {
     return (
-      <PageContainer>
-        <PageHeading title="Messages" />
-        <StateNotice message="Log in with a real account token to load your conversations from the API." />
-      </PageContainer>
+      <MainTabScreenLayout>
+        <PageContainer>
+          <PageHeading title="Messages" />
+          <StateNotice message="Log in with a real account token to load your conversations from the API." />
+        </PageContainer>
+      </MainTabScreenLayout>
     );
   }
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      <SearchField
-        onChangeText={handleSearchChange}
-        onClear={handleClear}
-        placeholder="Search conversations"
-        value={searchQuery}
-      />
-      <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
+    <MainTabScreenLayout>
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        <SearchField
+          onChangeText={handleSearchChange}
+          onClear={handleClear}
+          placeholder="Search conversations"
+          value={searchQuery}
+        />
+        <View style={[styles.pageDivider, { backgroundColor: theme.colors.border }]} />
 
-      {searchQuery.trim().length >= 2 ? (
-        userSearchLoading ? (
-          <ActivityIndicator color={theme.colors.primary} style={styles.loader} />
-        ) : userSearchResults.length > 0 ? (
-          <View style={styles.messageList}>
-            {userSearchResults.map((user) => {
-              const displayName = getDisplayName(user);
-              const avatarFallback = (
-                <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
-                  <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
-                    {getInitials(displayName)}
-                  </Text>
-                </View>
-              );
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={user.userId}
-                  onPress={() =>
-                    navigation.navigate('MessageThread', {
-                      avatarUrl: user.profile_picture ?? undefined,
-                      displayName,
-                      username: user.username ?? undefined,
-                      withUserId: user.userId,
-                    })
-                  }
-                  style={({ pressed }) => [
-                    styles.userRow,
-                    { borderBottomColor: theme.colors.border, opacity: pressed ? 0.82 : 1 },
-                  ]}
-                >
-                  <RemoteImage fallback={avatarFallback} uri={user.profile_picture} style={styles.avatar} />
-                  <View style={styles.userInfo}>
-                    <Text numberOfLines={1} style={[styles.userDisplayName, { color: theme.colors.textPrimary }]}>
-                      {displayName}
+        {searchQuery.trim().length >= 2 ? (
+          userSearchLoading ? (
+            <ActivityIndicator color={theme.colors.primary} style={styles.loader} />
+          ) : userSearchResults.length > 0 ? (
+            <View style={styles.messageList}>
+              {userSearchResults.map((user) => {
+                const displayName = getDisplayName(user);
+                const avatarFallback = (
+                  <View style={[styles.avatarFallback, { backgroundColor: theme.colors.primarySoft }]}>
+                    <Text style={[styles.avatarFallbackText, { color: theme.colors.primary }]}>
+                      {getInitials(displayName)}
                     </Text>
-                    {user.username ? (
-                      <Text numberOfLines={1} style={[styles.userHandle, { color: theme.colors.textSecondary }]}>
-                        @{user.username}
-                      </Text>
-                    ) : null}
                   </View>
-                </Pressable>
-              );
-            })}
+                );
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={user.userId}
+                    onPress={() =>
+                      navigation.navigate('MessageThread', {
+                        avatarUrl: user.profile_picture ?? undefined,
+                        displayName,
+                        username: user.username ?? undefined,
+                        withUserId: user.userId,
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.userRow,
+                      { borderBottomColor: theme.colors.border, opacity: pressed ? 0.82 : 1 },
+                    ]}
+                  >
+                    <RemoteImage fallback={avatarFallback} uri={user.profile_picture} style={styles.avatar} />
+                    <View style={styles.userInfo}>
+                      <Text numberOfLines={1} style={[styles.userDisplayName, { color: theme.colors.textPrimary }]}>
+                        {displayName}
+                      </Text>
+                      {user.username ? (
+                        <Text numberOfLines={1} style={[styles.userHandle, { color: theme.colors.textSecondary }]}>
+                          @{user.username}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <StateNotice message="No users found." />
+          )
+        ) : loading && filteredConversations.length === 0 ? (
+          <View style={styles.messageList}>
+            <ConversationRowSkeleton />
+            <ConversationRowSkeleton />
+            <ConversationRowSkeleton />
+            <ConversationRowSkeleton />
+          </View>
+        ) : error ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load your conversations."
+            onPressAction={() => void refetch()}
+          />
+        ) : filteredConversations.length > 0 ? (
+          <View style={styles.messageList}>
+            {filteredConversations.map((conversation) => (
+              <SwipeableConversationRow
+                conversation={conversation}
+                key={conversation.conversationWithUserId}
+                onPress={() =>
+                  navigation.navigate('MessageThread', {
+                    avatarUrl: conversation.conversationWithUser?.profile_picture,
+                    displayName: getDisplayName(conversation.conversationWithUser),
+                    username: conversation.conversationWithUser?.username,
+                    withUserId: conversation.conversationWithUserId,
+                  })
+                }
+                onToggleUnread={() =>
+                  void (conversation.unreadCount > 0
+                    ? markConversationRead(conversation.conversationWithUserId)
+                    : markConversationUnread(conversation.conversationWithUserId))
+                }
+              />
+            ))}
           </View>
         ) : (
-          <StateNotice message="No users found." />
-        )
-      ) : loading && filteredConversations.length === 0 ? (
-        <View style={styles.messageList}>
-          <ConversationRowSkeleton />
-          <ConversationRowSkeleton />
-          <ConversationRowSkeleton />
-          <ConversationRowSkeleton />
-        </View>
-      ) : error ? (
-        <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load your conversations."
-          onPressAction={() => void refetch()}
-        />
-      ) : filteredConversations.length > 0 ? (
-        <View style={styles.messageList}>
-          {filteredConversations.map((conversation) => (
-            <SwipeableConversationRow
-              conversation={conversation}
-              key={conversation.conversationWithUserId}
-              onPress={() =>
-                navigation.navigate('MessageThread', {
-                  avatarUrl: conversation.conversationWithUser?.profile_picture,
-                  displayName: getDisplayName(conversation.conversationWithUser),
-                  username: conversation.conversationWithUser?.username,
-                  withUserId: conversation.conversationWithUserId,
-                })
-              }
-              onToggleUnread={() =>
-                void (conversation.unreadCount > 0
-                  ? markConversationRead(conversation.conversationWithUserId)
-                  : markConversationUnread(conversation.conversationWithUserId))
-              }
-            />
-          ))}
-        </View>
-      ) : (
-        <StateNotice message="No conversations match your search yet." />
-      )}
-    </PageContainer>
+          <StateNotice message="No conversations match your search yet." />
+        )}
+      </PageContainer>
+    </MainTabScreenLayout>
   );
 }
 

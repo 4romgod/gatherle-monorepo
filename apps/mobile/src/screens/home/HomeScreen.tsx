@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { EventPreviewCarousel } from '@/components/carousel/EventPreviewCarousel';
@@ -56,70 +57,72 @@ export function HomeScreen() {
   );
 
   return (
-    <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
+    <MainTabScreenLayout>
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
 
-      <EventSearchBar
-        onSelectEvent={(event) =>
-          navigation.navigate('Events', {
-            initialEventId: event.eventId,
-            initialSearch: event.title ?? '',
-          })
-        }
-      />
-
-      <SectionHeading
-        actionLabel="View all"
-        onPressAction={() => navigation.navigate('Events')}
-        title={isAuthenticated ? 'Your Upcoming RSVPs' : 'Featured Events'}
-      />
-
-      {loading && carouselEvents.length === 0 && !heroEvent ? (
-        <EventCardSkeleton cardWidth={cardWidth} variant="featured" />
-      ) : error ? (
-        <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load the discovery feed just now."
-          onPressAction={() => void refetch()}
+        <EventSearchBar
+          onSelectEvent={(event) =>
+            navigation.navigate('Events', {
+              initialEventId: event.eventId,
+              initialSearch: event.title ?? '',
+            })
+          }
         />
-      ) : carouselEvents.length > 0 ? (
-        <EventPreviewCarousel
-          cardWidth={cardWidth}
-          events={carouselEvents}
-          onPressEvent={(event) => navigation.navigate('EventDetails', { occurrence: event })}
-        />
-      ) : (
-        <StateNotice
-          message={isAuthenticated ? 'You have no upcoming RSVPs yet.' : 'No upcoming events are available yet.'}
-        />
-      )}
 
-      <SectionHeading
-        actionLabel="See all events"
-        onPressAction={() => navigation.navigate('Events')}
-        title="Recommended For You"
-      />
+        <SectionHeading
+          actionLabel="View all"
+          onPressAction={() => navigation.navigate('Events')}
+          title={isAuthenticated ? 'Your Upcoming RSVPs' : 'Featured Events'}
+        />
 
-      {recommendedEvents.length > 0 ? (
-        <View style={styles.feedList}>
-          {recommendedEvents.map((event) => (
-            <EventCard
-              key={event.occurrenceId}
-              occurrence={event}
-              onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
-              variant="feed"
-            />
-          ))}
-        </View>
-      ) : loading ? (
-        <View style={styles.feedList}>
-          <EventCardSkeleton />
-          <EventCardSkeleton />
-        </View>
-      ) : (
-        <StateNotice message="Recommendations will appear here once more public events are available." />
-      )}
-    </PageContainer>
+        {loading && carouselEvents.length === 0 && !heroEvent ? (
+          <EventCardSkeleton cardWidth={cardWidth} variant="featured" />
+        ) : error ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load the discovery feed just now."
+            onPressAction={() => void refetch()}
+          />
+        ) : carouselEvents.length > 0 ? (
+          <EventPreviewCarousel
+            cardWidth={cardWidth}
+            events={carouselEvents}
+            onPressEvent={(event) => navigation.navigate('EventDetails', { occurrence: event })}
+          />
+        ) : (
+          <StateNotice
+            message={isAuthenticated ? 'You have no upcoming RSVPs yet.' : 'No upcoming events are available yet.'}
+          />
+        )}
+
+        <SectionHeading
+          actionLabel="See all events"
+          onPressAction={() => navigation.navigate('Events')}
+          title="Recommended For You"
+        />
+
+        {recommendedEvents.length > 0 ? (
+          <View style={styles.feedList}>
+            {recommendedEvents.map((event) => (
+              <EventCard
+                key={event.occurrenceId}
+                occurrence={event}
+                onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
+                variant="feed"
+              />
+            ))}
+          </View>
+        ) : loading ? (
+          <View style={styles.feedList}>
+            <EventCardSkeleton />
+            <EventCardSkeleton />
+          </View>
+        ) : (
+          <StateNotice message="Recommendations will appear here once more public events are available." />
+        )}
+      </PageContainer>
+    </MainTabScreenLayout>
   );
 }
 
