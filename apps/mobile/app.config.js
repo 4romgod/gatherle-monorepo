@@ -2,7 +2,7 @@ const baseConfig = require('./app.json');
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
-function getGoogleOAuthRedirectScheme(clientId) {
+function getGoogleIosUrlScheme(clientId) {
   if (typeof clientId !== 'string') {
     return undefined;
   }
@@ -15,23 +15,27 @@ function getGoogleOAuthRedirectScheme(clientId) {
   return `com.googleusercontent.apps.${trimmedClientId.slice(0, -GOOGLE_CLIENT_ID_SUFFIX.length)}`;
 }
 
-function uniqueSchemes(schemes) {
-  return [...new Set(schemes.filter(Boolean))];
-}
+const basePlugins = (baseConfig.expo.plugins ?? []).filter((plugin) => {
+  return Array.isArray(plugin)
+    ? plugin[0] !== '@react-native-google-signin/google-signin'
+    : plugin !== '@react-native-google-signin/google-signin';
+});
 
-const androidGoogleScheme = getGoogleOAuthRedirectScheme(process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID);
-const iosGoogleScheme = getGoogleOAuthRedirectScheme(process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS);
+const iosGoogleScheme = getGoogleIosUrlScheme(process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS);
 
 module.exports = {
   expo: {
     ...baseConfig.expo,
-    android: {
-      ...baseConfig.expo.android,
-      scheme: uniqueSchemes([androidGoogleScheme]),
-    },
-    ios: {
-      ...baseConfig.expo.ios,
-      scheme: uniqueSchemes([iosGoogleScheme]),
-    },
+    plugins: iosGoogleScheme
+      ? [
+          ...basePlugins,
+          [
+            '@react-native-google-signin/google-signin',
+            {
+              iosUrlScheme: iosGoogleScheme,
+            },
+          ],
+        ]
+      : basePlugins,
   },
 };

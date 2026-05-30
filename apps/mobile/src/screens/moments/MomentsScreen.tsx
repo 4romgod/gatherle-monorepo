@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { ViewToken } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
@@ -14,6 +14,7 @@ export function MomentsScreen() {
   const isFocused = useIsFocused();
   const { theme } = useAppTheme();
   const { height: screenHeight } = useWindowDimensions();
+  const listRef = useRef<FlatList<MobileMomentsFeedMoment> | null>(null);
   const [pageHeight, setPageHeight] = useState(screenHeight);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hiddenMomentIds, setHiddenMomentIds] = useState<string[]>([]);
@@ -38,6 +39,22 @@ export function MomentsScreen() {
     }),
     [],
   );
+
+  useEffect(() => {
+    if (!isFocused || visibleMoments.length === 0 || pageHeight <= 0) {
+      return;
+    }
+
+    const targetIndex = Math.min(activeIndex, visibleMoments.length - 1);
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({
+        animated: false,
+        offset: pageHeight * targetIndex,
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [activeIndex, isFocused, pageHeight, visibleMoments.length]);
 
   if (loading && visibleMoments.length === 0) {
     return (
@@ -78,6 +95,7 @@ export function MomentsScreen() {
       style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       <FlatList
+        ref={listRef}
         data={visibleMoments}
         decelerationRate="fast"
         getItemLayout={(_data, index) => ({

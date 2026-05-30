@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image as ExpoImage } from 'expo-image';
 import {
   ActivityIndicator,
@@ -10,6 +10,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import type { ImageErrorEventData } from 'expo-image';
+
+const REMOTE_IMAGE_RETRY_DELAY_MS = 1500;
+const REMOTE_IMAGE_MAX_RETRIES = 2;
 
 type RemoteImageProps = {
   accessibilityLabel?: string;
@@ -35,18 +39,60 @@ export function RemoteImage({
   uri,
 }: RemoteImageProps) {
   const { theme } = useAppTheme();
-  const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [terminalFailure, setTerminalFailure] = useState(false);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const normalizedUri = normalizeRemoteUri(uri);
 
   useEffect(() => {
-    setFailed(false);
     setLoaded(false);
+    setRetryCount(0);
+    setTerminalFailure(false);
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
   }, [normalizedUri]);
 
-  if (!normalizedUri || failed) {
+  if (!normalizedUri || terminalFailure) {
     return <View style={[styles.container, style]}>{fallback}</View>;
   }
+
+  const imageRequestKey = `${normalizedUri}::${retryCount}`;
+
+  const scheduleRetry = (errorMessage?: string) => {
+    const nextRetry = retryCount + 1;
+
+    if (nextRetry > REMOTE_IMAGE_MAX_RETRIES) {
+      console.warn('[RemoteImage] Failed to load remote image', {
+        error: errorMessage,
+        retryCount,
+        uri: normalizedUri,
+      });
+      setTerminalFailure(true);
+      onError?.();
+      return;
+    }
+
+    console.warn('[RemoteImage] Retrying remote image load', {
+      attempt: nextRetry,
+      error: errorMessage,
+      uri: normalizedUri,
+    });
+    retryTimeoutRef.current = setTimeout(() => {
+      setLoaded(false);
+      setRetryCount(nextRetry);
+      retryTimeoutRef.current = null;
+    }, REMOTE_IMAGE_RETRY_DELAY_MS);
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -55,16 +101,24 @@ export function RemoteImage({
         accessibilityLabel={accessibilityLabel}
         cachePolicy="memory-disk"
         contentFit={toContentFit(resizeMode)}
-        onError={() => {
-          setFailed(true);
-          onError?.();
+        key={imageRequestKey}
+        onError={(event) => {
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+            retryTimeoutRef.current = null;
+          }
+          scheduleRetry(extractImageErrorMessage(event));
         }}
         onLoad={() => {
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+            retryTimeoutRef.current = null;
+          }
           setLoaded(true);
           onLoad?.();
         }}
         onDisplay={() => setLoaded(true)}
-        source={{ cacheKey: normalizedUri, uri: normalizedUri }}
+        source={{ cacheKey: imageRequestKey, uri: normalizedUri }}
         style={StyleSheet.flatten([styles.image, imageStyle, loaded ? null : styles.hidden])}
         transition={120}
       />
@@ -170,4 +224,21 @@ function normalizeRemoteUri(uri?: string | null) {
   } catch {
     return encodeURI(withScheme);
   }
+}
+
+function extractImageErrorMessage(errorEvent: unknown) {
+  if (!errorEvent) {
+    return undefined;
+  }
+
+  if (typeof errorEvent === 'object' && errorEvent !== null && 'nativeEvent' in errorEvent) {
+    const nativeEvent = (errorEvent as { nativeEvent?: ImageErrorEventData }).nativeEvent;
+    return nativeEvent?.error;
+  }
+
+  if (typeof errorEvent === 'object' && errorEvent !== null && 'error' in errorEvent) {
+    return (errorEvent as ImageErrorEventData).error;
+  }
+
+  return undefined;
 }

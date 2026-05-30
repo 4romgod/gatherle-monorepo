@@ -16,6 +16,14 @@ Or directly from this workspace:
 npm run start
 ```
 
+These `start*` scripts now target a native Gatherle development build, not Expo Go. Install a dev build first:
+
+- Android: `npm run run:android`
+- iPhone from WSL/Linux: `eas build --platform ios --profile development`
+
+After the dev build is installed, `npm run start`, `npm run start:lan`, and `npm run start:tunnel` will connect that
+installed app to Metro with fast refresh.
+
 ## APK Build And Install
 
 Generate a local Android release APK from this workspace:
@@ -77,6 +85,10 @@ Notes:
 
 - the release APK has the JavaScript bundle embedded, so it does not depend on the Expo dev server
 - `run:android` is different: it builds and installs a development build for local development
+- use `npm run apk:release` followed by `npm run apk:install` when testing the Android release signing path or Android
+  Google sign-in, because `run:android` uses the debug keystore and therefore a different Google OAuth Android client
+  identity
+- once native dependencies or native config change, rebuild the dev client before using the `start*` scripts again
 
 ## Environment Variables
 
@@ -86,7 +98,6 @@ The mobile app primarily uses:
 EXPO_PUBLIC_GRAPHQL_URL=
 EXPO_PUBLIC_WEBSOCKET_URL=
 EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB=
-EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID=
 EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS=
 EXPO_PUBLIC_ENABLE_PRIVATE_USERS=
 ```
@@ -96,7 +107,7 @@ For local development, create `apps/mobile/.env`:
 ```bash
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
 EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
-EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID=<android-google-client-id>
+EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB=<google-web-client-id>
 ```
 
 `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` is optional and defaults to disabled. Set it to `true` only when testing the
@@ -104,9 +115,10 @@ private-user privacy controls and follow-request review flow.
 
 For Google sign-in:
 
-- Android native builds require `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID`
-- iOS native builds require `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
-- Expo web/browser auth uses `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB`
+- Android native builds require `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB`
+- iOS native builds require both `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` and `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
+- The Android OAuth client still matters in Google Cloud Console, but it is identified by package name + signing SHA and
+  is not read from a public Expo env var at runtime
 
 Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
 Android `adb reverse` flow documented below.

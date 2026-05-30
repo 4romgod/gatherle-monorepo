@@ -162,18 +162,17 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `EXPO_PUBLIC_GRAPHQL_URL` (e.g., `http://10.0.2.2:9000/v1/graphql` for Android emulator or
     `http://localhost:9000/v1/graphql` when using `adb reverse`).
   - `EXPO_PUBLIC_WEBSOCKET_URL` (local or deployed websocket endpoint for realtime notifications and chat).
-  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required for Android native Google sign-in, including local
-    `apk:release` builds and Android dev clients).
-  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` (required for iOS native Google sign-in).
-  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` (used for Expo web/browser Google auth flows).
+  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` (required for native mobile Google sign-in runtime on Android and iOS).
+  - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` (required for iOS native Google sign-in so the Google Sign-In plugin can
+    register the reverse-client-ID URL scheme).
   - `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
 
 ### Production & Staging
 
 - Inject `EXPO_PUBLIC_GRAPHQL_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` from the deployed API/WebSocket outputs.
-- Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID` for Android builds and `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
-  for iOS builds.
+- Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` for Android and iOS builds.
+- Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` for iOS builds.
 - Configure Expo EAS environments (`development`, `preview`, `production`) with the required `EXPO_PUBLIC_GOOGLE_*`
   values so remote EAS builds inline the correct client IDs.
 - Set `EXPO_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.

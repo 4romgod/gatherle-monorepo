@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Image, Text, TextInput } from 'react-native';
 import { ChatComposer } from '@/components/messages/thread/ChatComposer';
 import { InlineButton } from '@/components/core/InlineButton';
@@ -92,6 +92,70 @@ describe('mobile core components', () => {
 
     fireEvent(view.UNSAFE_getByType(Image), 'load');
     expect(screen.queryByText('Image fallback')).toBeNull();
+  });
+
+  it('retries remote image failures twice before surfacing a terminal error', () => {
+    jest.useFakeTimers();
+    const onError = jest.fn();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const view = renderWithTheme(
+        <RemoteImage
+          fallback={<Text>Image fallback</Text>}
+          onError={onError}
+          uri="https://example.com/flaky-image.png"
+          style={{ height: 80, width: 120 }}
+        />,
+      );
+
+      const emitFailure = () => fireEvent(view.UNSAFE_getByType(Image), 'error');
+
+      emitFailure();
+      expect(onError).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenNthCalledWith(
+        1,
+        '[RemoteImage] Retrying remote image load',
+        expect.objectContaining({
+          attempt: 1,
+          uri: 'https://example.com/flaky-image.png',
+        }),
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+
+      emitFailure();
+      expect(onError).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenNthCalledWith(
+        2,
+        '[RemoteImage] Retrying remote image load',
+        expect.objectContaining({
+          attempt: 2,
+          uri: 'https://example.com/flaky-image.png',
+        }),
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+
+      emitFailure();
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenNthCalledWith(
+        3,
+        '[RemoteImage] Failed to load remote image',
+        expect.objectContaining({
+          retryCount: 2,
+          uri: 'https://example.com/flaky-image.png',
+        }),
+      );
+      expect(screen.getByText('Image fallback')).toBeTruthy();
+    } finally {
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
   });
 
   it('renders state notice action only when label and handler are present', () => {

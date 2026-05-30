@@ -79,18 +79,18 @@ Then start Expo in LAN mode:
 npm run start:lan -w @gatherle/mobile
 ```
 
-Scan the QR code shown in the terminal with Expo Go. Port 8081 is Metro bundler — Expo Go downloads the JS bundle from
-it. Port 9000 is the API. Both need to be proxied for the app to work.
+Open the installed Gatherle development build on the phone and connect it to the Metro server shown in the terminal.
+Port 8081 is Metro bundler for the dev client. Port 9000 is the API. Both need to be proxied for the app to work.
 
 ## Accessing from your device
 
 All services are reachable at your Windows LAN IP once the proxy is running:
 
-| Service | URL                               | Used by                         |
-| ------- | --------------------------------- | ------------------------------- |
-| Webapp  | `http://<LAN_IP>:3000`            | Browser on phone                |
-| API     | `http://<LAN_IP>:9000/v1/graphql` | Webapp + mobile app             |
-| Metro   | `http://<LAN_IP>:8081`            | Expo Go (automatic via QR code) |
+| Service | URL                               | Used by                    |
+| ------- | --------------------------------- | -------------------------- |
+| Webapp  | `http://<LAN_IP>:3000`            | Browser on phone           |
+| API     | `http://<LAN_IP>:9000/v1/graphql` | Webapp + mobile app        |
+| Metro   | `http://<LAN_IP>:8081`            | Gatherle development build |
 
 Your phone must be on the same Wi-Fi network as the laptop.
 

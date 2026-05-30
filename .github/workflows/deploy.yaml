@@ -561,9 +561,6 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
-      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
-      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
-      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -637,8 +634,6 @@ jobs:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
-      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
-      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -705,8 +700,6 @@ jobs:
           EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
           EXPO_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
           EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
-          EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
-          EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
         run:
           ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel
           -Dorg.gradle.caching=true
