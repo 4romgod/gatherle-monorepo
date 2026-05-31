@@ -10,11 +10,13 @@ import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 
 type OrganizationMemberRowProps = {
   canEditMembership: boolean;
+  canMakeOwner?: boolean;
   isCurrentUser: boolean;
   isExpanded: boolean;
   isOwnerMembership: boolean;
   membership: MobileOrganizationMember;
   onPressAvatar?: () => void;
+  onPressMakeOwner?: () => void;
   onPressManage: () => void;
   onPressRemove: () => void;
   onSelectRole: (role: OrganizationRole) => void;
@@ -27,11 +29,13 @@ function formatRoleLabel(role: OrganizationRole) {
 
 export function OrganizationMemberRow({
   canEditMembership,
+  canMakeOwner,
   isCurrentUser,
   isExpanded,
   isOwnerMembership,
   membership,
   onPressAvatar,
+  onPressMakeOwner,
   onPressManage,
   onPressRemove,
   onSelectRole,
@@ -103,11 +107,17 @@ export function OrganizationMemberRow({
         </View>
       ) : null}
 
+      {canMakeOwner && onPressMakeOwner ? (
+        <View style={styles.ownerActionRow}>
+          <InlineButton compact label="Make owner" onPress={onPressMakeOwner} tone="primary" />
+        </View>
+      ) : null}
+
       {isOwnerMembership ? (
         <View style={styles.ownerNoteRow}>
           <Feather color={theme.colors.textMuted} name="shield" size={14} />
           <Text style={[styles.ownerNote, { color: theme.colors.textSecondary }]}>
-            Owner access is managed separately from team roles.
+            To change the owner, tap “Make owner” on another member.
           </Text>
         </View>
       ) : null}
@@ -158,6 +168,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
+  },
+  ownerActionRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
   },
   roleBadge: {
     alignItems: 'center',

@@ -20,11 +20,11 @@
     "start:lan": "expo start --host lan --dev-client --clear",
     "start:web": "expo start --web",
     "test:unit": "jest --config=test/unit/jest.config.js --runInBand",
-    "run:android": "expo run:android",
-    "run:ios": "expo run:ios",
     "native:sync": "expo prebuild --no-install",
     "native:sync:clean": "expo prebuild --clean --no-install",
-    "typecheck": "tsc --project tsconfig.json --noEmit --pretty"
+    "typecheck": "tsc --project tsconfig.json --noEmit --pretty",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@apollo/client": "^3.14.1",

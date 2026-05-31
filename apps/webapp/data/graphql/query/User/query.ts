@@ -5,6 +5,7 @@ export const GetUsersDocument = graphql(`
     readUsers(options: $options) {
       userId
       email
+      emailVerified
       hasLocalPassword
       username
       bio
@@ -44,6 +45,7 @@ export const GetUserByUsernameDocument = graphql(`
     readUserByUsername(username: $username) {
       userId
       email
+      emailVerified
       hasLocalPassword
       username
       bio
@@ -83,6 +85,7 @@ export const GetUserByIdDocument = graphql(`
     readUserById(userId: $userId) {
       userId
       email
+      emailVerified
       hasLocalPassword
       username
       bio

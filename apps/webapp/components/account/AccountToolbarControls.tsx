@@ -70,10 +70,10 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
         sx={{
           color: 'text.primary',
           fontFamily: (theme) => theme.typography.body1.fontFamily,
-          fontSize: '1.5rem',
+          fontSize: { xs: '1.0625rem', sm: '1.125rem', md: '1.5rem' },
           fontWeight: 700,
-          letterSpacing: '-0.02em',
-          lineHeight: 1,
+          letterSpacing: { xs: '-0.01em', md: '-0.02em' },
+          lineHeight: 1.1,
         }}
       >
         Account
@@ -84,7 +84,7 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
 
   const toolbarAction = useMemo(
     () => (
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack direction="row" alignItems="center" sx={{ gap: { xs: 0.25, sm: 1 } }}>
         <Button
           color="secondary"
           component={Link}
@@ -93,7 +93,7 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
           sx={{
             borderRadius: WEB_RADIUS.control,
             display: { xs: 'none', sm: 'inline-flex' },
-            minHeight: 40,
+            minHeight: { sm: 38, md: 40 },
             px: 1.75,
           }}
           variant="contained"
@@ -106,12 +106,19 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
           component={Link}
           href={ROUTES.ACCOUNT.EVENTS.CREATE}
           sx={{
-            border: '1px solid',
+            borderStyle: 'solid',
+            borderWidth: { xs: 0, sm: 1 },
             borderColor: 'divider',
-            color: 'text.primary',
+            color: { xs: 'primary.main', sm: 'text.primary' },
             display: { xs: 'inline-flex', sm: 'none' },
-            height: 40,
-            width: 40,
+            height: { xs: 34, sm: 40 },
+            width: { xs: 34, sm: 40 },
+            '& .MuiSvgIcon-root': {
+              fontSize: { xs: 22, sm: 24 },
+            },
+            '&:hover': {
+              bgcolor: { xs: 'transparent', sm: 'action.hover' },
+            },
           }}
         >
           <Add />
@@ -121,11 +128,18 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
           aria-label="Open account actions"
           onClick={() => setActionsOpen(true)}
           sx={{
-            border: '1px solid',
+            borderStyle: 'solid',
+            borderWidth: { xs: 0, sm: 1 },
             borderColor: 'divider',
-            color: 'text.primary',
-            height: 40,
-            width: 40,
+            color: { xs: 'primary.main', sm: 'text.primary' },
+            height: { xs: 34, sm: 40 },
+            width: { xs: 34, sm: 40 },
+            '& .MuiSvgIcon-root': {
+              fontSize: { xs: 23, sm: 24 },
+            },
+            '&:hover': {
+              bgcolor: { xs: 'transparent', sm: 'action.hover' },
+            },
           }}
         >
           <MoreHoriz />

@@ -108,6 +108,7 @@ export const UpdateUserDocument = graphql(`
     updateUser(input: $input) {
       userId
       email
+      emailVerified
       hasLocalPassword
       username
       bio

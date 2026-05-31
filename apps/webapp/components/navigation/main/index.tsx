@@ -189,9 +189,9 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
           color="primary"
           sx={{
             position: 'relative',
-            px: { xs: 2, sm: 3, md: 4 },
-            minHeight: 64,
-            gap: 1.25,
+            px: { xs: 2.25, sm: 3, md: 4 },
+            minHeight: { xs: 58, md: 64 },
+            gap: { xs: 1, md: 1.25 },
           }}
         >
           {isMainRoute && !showMobileBackOnAccountTab ? (
@@ -204,8 +204,8 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
               onClick={handleBack}
               sx={{
                 color: 'text.primary',
-                height: 44,
-                width: 44,
+                height: { xs: 40, md: 44 },
+                width: { xs: 40, md: 44 },
                 '&:hover': { bgcolor: 'action.hover' },
               }}
             >

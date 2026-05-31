@@ -7,12 +7,12 @@ test.describe('Account Page', () => {
   });
 
   test('redirects unauthenticated users from /account to /auth/login', async ({ page }) => {
-    await page.goto('/account');
+    await page.goto('/account', { waitUntil: 'domcontentloaded' });
     await expectLoginPage(page);
   });
 
   test('redirects unauthenticated users from /account/events/create to /auth/login', async ({ page }) => {
-    await page.goto('/account/events/create');
+    await page.goto('/account/events/create', { waitUntil: 'domcontentloaded' });
     await expectLoginPage(page);
   });
 });

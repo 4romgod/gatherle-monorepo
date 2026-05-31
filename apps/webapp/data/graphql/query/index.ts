@@ -27,6 +27,8 @@ export * from '../mutation/EventSeriesParticipant/mutation';
 export * from '../mutation/EventOccurrenceParticipant/mutation';
 export * from '../mutation/Organization/mutation';
 export * from '../mutation/OrganizationMembership/mutation';
+export * from '../mutation/Venue/mutation';
 export * from '../mutation/User/block';
 export * from '../mutation/User/mute';
 export * from '../mutation/EventMoment/mutation';
+export * from '../mutation/EventOccurrence/mutation';

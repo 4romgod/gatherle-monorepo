@@ -15,6 +15,7 @@ export const GetEventsDocument = graphql(`
       summary
       description
       status
+      lifecycleStatus
       visibility
       eventLink
       orgId

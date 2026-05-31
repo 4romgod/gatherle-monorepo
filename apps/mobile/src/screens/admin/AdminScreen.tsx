@@ -1,74 +1,140 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { useQuery } from '@apollo/client';
 import { useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useQuery } from '@apollo/client';
 import { useNavigation } from '@react-navigation/native';
+import { GetEventCategoriesDocument } from '@data/graphql/query/EventCategory/query';
+import { GetEventsCountDocument } from '@data/graphql/query/Event/query';
 import { GetOrganizationsDocument } from '@data/graphql/query/Organization/query';
 import { GetUsersDocument } from '@data/graphql/query/User/query';
 import { GetVenuesDocument } from '@data/graphql/query/Venue/query';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
-import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { PageContainer } from '@/components/core/PageContainer';
+import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
-import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
-import { useAppShell } from '@/app/providers/AppShellProvider';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
+import { useAdminAccess } from '@/hooks/admin/useAdminAccess';
+import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import { getApolloAuthContext } from '@/lib/auth';
-import { useAppTheme } from '@/app/theme/AppThemeProvider';
-import { typography } from '@/app/theme/typography';
+import { AdminMetricCard } from '@/components/admin/AdminMetricCard';
+import { AdminDomainLinkCard } from '@/components/admin/AdminDomainLinkCard';
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  const { theme } = useAppTheme();
+type AdminDomainKey =
+  | 'AdminEvents'
+  | 'AdminOrganizations'
+  | 'AdminVenues'
+  | 'AdminUsers'
+  | 'AdminCategories'
+  | 'AdminCategoryGroups';
 
-  return (
-    <View style={[styles.metricCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-      <Text style={[styles.metricValue, { color: theme.colors.textPrimary }]}>{value}</Text>
-      <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
-    </View>
-  );
-}
+type AdminDomainLink = {
+  description: string;
+  icon: React.ComponentProps<typeof AdminDomainLinkCard>['icon'];
+  label: string;
+  route: AdminDomainKey;
+  title: string;
+};
+
+const ADMIN_DOMAIN_LINKS: AdminDomainLink[] = [
+  {
+    description: 'Review, moderate, and clean up event records.',
+    icon: 'calendar',
+    label: 'Events',
+    route: 'AdminEvents',
+    title: 'Events',
+  },
+  {
+    description: 'Repair org metadata and memberships.',
+    icon: 'briefcase',
+    label: 'Organizations',
+    route: 'AdminOrganizations',
+    title: 'Organizations',
+  },
+  {
+    description: 'Maintain location and ownership records.',
+    icon: 'map-pin',
+    label: 'Venues',
+    route: 'AdminVenues',
+    title: 'Venues',
+  },
+  {
+    description: 'Manage roles and account access.',
+    icon: 'users',
+    label: 'Users',
+    route: 'AdminUsers',
+    title: 'Users',
+  },
+  {
+    description: 'Maintain event category metadata.',
+    icon: 'tag',
+    label: 'Categories',
+    route: 'AdminCategories',
+    title: 'Categories',
+  },
+  {
+    description: 'Curate category groupings for discovery.',
+    icon: 'layers',
+    label: 'Groups',
+    route: 'AdminCategoryGroups',
+    title: 'Groups',
+  },
+];
 
 export function AdminScreen() {
   const navigation = useNavigation<DetailNavigation>();
-  const { authToken, isAuthenticated } = useAppShell();
-  const canLoadAdminMetrics = isAuthenticated && !!authToken;
-  const { categories, refetch: refetchDiscovery } = useMobileHomeDiscovery(authToken);
+  const {
+    authToken,
+    isAdmin,
+    isAuthenticated,
+    loading: adminAccessLoading,
+    refetch: refetchAdminAccess,
+  } = useAdminAccess();
+
+  const skip = !isAuthenticated || !authToken || !isAdmin;
+
+  const eventsCountQuery = useQuery(GetEventsCountDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip,
+    ...getApolloAuthContext(authToken ?? null),
+  });
+  const categoriesQuery = useQuery(GetEventCategoriesDocument, {
+    fetchPolicy: 'cache-and-network',
+    skip,
+    ...getApolloAuthContext(authToken ?? null),
+  });
   const organizationsQuery = useQuery(GetOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !canLoadAdminMetrics,
-    ...getApolloAuthContext(authToken),
+    skip,
+    ...getApolloAuthContext(authToken ?? null),
   });
   const usersQuery = useQuery(GetUsersDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !canLoadAdminMetrics,
-    variables: { options: { pagination: { limit: 40 } } },
-    ...getApolloAuthContext(authToken),
+    skip,
+    ...getApolloAuthContext(authToken ?? null),
   });
   const venuesQuery = useQuery(GetVenuesDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !canLoadAdminMetrics,
-    ...getApolloAuthContext(authToken),
+    skip,
+    ...getApolloAuthContext(authToken ?? null),
   });
+
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      if (!canLoadAdminMetrics) {
-        return;
-      }
-
       await Promise.all([
-        refetchDiscovery(),
+        refetchAdminAccess(),
+        eventsCountQuery.refetch(),
+        categoriesQuery.refetch(),
         organizationsQuery.refetch(),
         usersQuery.refetch(),
         venuesQuery.refetch(),
       ]);
-    }, [canLoadAdminMetrics, organizationsQuery, refetchDiscovery, usersQuery, venuesQuery]),
+    }, [categoriesQuery, eventsCountQuery, organizationsQuery, refetchAdminAccess, usersQuery, venuesQuery]),
   );
 
   if (!isAuthenticated) {
     return (
       <PageContainer>
         <AuthPromptCard
-          description="Sign in with an elevated account to review platform health and discovery inventory."
+          description="Sign in with a Gatherle admin account to access platform operations and moderation tools."
           onPressPrimary={() => navigation.navigate('Login')}
           onPressSecondary={() => navigation.navigate('Register')}
           primaryLabel="Login"
@@ -79,64 +145,78 @@ export function AdminScreen() {
     );
   }
 
-  if (
-    organizationsQuery.loading &&
-    usersQuery.loading &&
-    venuesQuery.loading &&
-    organizationsQuery.data == null &&
-    usersQuery.data == null &&
-    venuesQuery.data == null
-  ) {
+  if (adminAccessLoading && !isAdmin) {
     return (
-      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-        <View style={styles.metricsGrid}>
-          <SkeletonBlock style={styles.metricCardSkeleton} />
-          <SkeletonBlock style={styles.metricCardSkeleton} />
-          <SkeletonBlock style={styles.metricCardSkeleton} />
-          <SkeletonBlock style={styles.metricCardSkeleton} />
-        </View>
+      <PageContainer>
+        <StateNotice message="Checking your admin access..." />
+      </PageContainer>
+    );
+  }
+
+  if (!isAdmin || !authToken) {
+    return (
+      <PageContainer>
+        <StateNotice message="Only Gatherle admins can access this portal." />
       </PageContainer>
     );
   }
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      <View style={styles.metricsGrid}>
-        <MetricCard label="Categories" value={String(categories.length)} />
-        <MetricCard label="Organizations" value={String(organizationsQuery.data?.readOrganizations.length ?? 0)} />
-        <MetricCard label="Community" value={String(usersQuery.data?.readUsers.length ?? 0)} />
-        <MetricCard label="Venues" value={String(venuesQuery.data?.readVenues.length ?? 0)} />
+      <View style={styles.section}>
+        <SectionHeading title="Operations overview" />
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCell}>
+            <AdminMetricCard label="Events" tone="accent" value={eventsCountQuery.data?.readEventsCount ?? '—'} />
+          </View>
+          <View style={styles.metricCell}>
+            <AdminMetricCard label="Organizations" value={organizationsQuery.data?.readOrganizations.length ?? '—'} />
+          </View>
+          <View style={styles.metricCell}>
+            <AdminMetricCard label="Venues" value={venuesQuery.data?.readVenues.length ?? '—'} />
+          </View>
+          <View style={styles.metricCell}>
+            <AdminMetricCard label="Users" value={usersQuery.data?.readUsers.length ?? '—'} />
+          </View>
+          <View style={styles.metricCell}>
+            <AdminMetricCard label="Categories" value={categoriesQuery.data?.readEventCategories.length ?? '—'} />
+          </View>
+        </View>
       </View>
 
-      <StateNotice message="This first mobile admin pass is intentionally read-only. Moderation and mutation flows can layer on top of the same data surfaces next." />
+      <View style={styles.section}>
+        <SectionHeading title="Manage domains" />
+        <View style={styles.linkList}>
+          {ADMIN_DOMAIN_LINKS.map((link) => (
+            <AdminDomainLinkCard
+              key={link.route}
+              description={link.description}
+              icon={link.icon}
+              onPress={() => navigation.navigate(link.route)}
+              title={link.title}
+            />
+          ))}
+        </View>
+      </View>
     </PageContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  metricCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 6,
-    padding: 16,
-    width: '48.4%',
+  linkList: {
+    gap: 10,
   },
-  metricLabel: {
-    ...typography.bodySemiBold,
-    fontSize: 12,
-  },
-  metricCardSkeleton: {
-    borderRadius: 20,
-    height: 92,
-    width: '48.4%',
-  },
-  metricValue: {
-    ...typography.displayBold,
-    fontSize: 22,
+  metricCell: {
+    flexBasis: '48%',
+    flexGrow: 1,
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  section: {
+    gap: 12,
+    marginBottom: 18,
   },
 });

@@ -3,8 +3,8 @@ import type {
   CreateOrganizationMembershipInput,
   UpdateOrganizationMembershipInput,
 } from '@gatherle/commons/types';
-import { NotificationType, NotificationTargetType, OrganizationRole } from '@gatherle/commons/types';
-import { OrganizationMembershipDAO, OrganizationDAO } from '@/mongodb/dao';
+import { NotificationType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
+import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from './notification';
 import { logger } from '@/utils/logger';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
@@ -207,6 +207,12 @@ class OrganizationMembershipService {
    */
   private static async verifyOrganizationAdminAccess(orgId: string, userId: string): Promise<boolean> {
     try {
+      // Platform admins can always manage org memberships
+      const actor = await UserDAO.readUserById(userId).catch(() => null);
+      if (actor?.userRole === UserRole.Admin) {
+        return true;
+      }
+
       // Check if user is the organization owner
       const organization = await OrganizationDAO.readOrganizationById(orgId);
       if (organization.ownerId === userId) {

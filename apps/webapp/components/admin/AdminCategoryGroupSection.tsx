@@ -3,23 +3,30 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import {
-  Box,
   Button,
   Card,
   CardContent,
   Checkbox,
   CircularProgress,
-  Divider,
+  Chip,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   FormControl,
   Grid,
+  IconButton,
   ListItemText,
   MenuItem,
   Select,
+  Skeleton,
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { Add, Save, Delete } from '@mui/icons-material';
+import { Add, Delete, Edit, Save } from '@mui/icons-material';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useAppContext } from '@/hooks';
 import { AdminSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
@@ -35,6 +42,7 @@ import {
   DeleteEventCategoryGroupBySlugDocument,
 } from '@/data/graphql/query/EventCategoryGroup/mutation';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import { ADMIN_SURFACE_SX, AdminEmptyState, AdminSectionHeader } from './admin-ui';
 
 type GroupForm = {
   name: string;
@@ -47,8 +55,10 @@ const DEFAULT_GROUP_FORM: GroupForm = {
 };
 
 export default function AdminCategoryGroupSection({ token }: AdminSectionProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setToastProps } = useAppContext();
-  const { data, error, refetch } = useQuery<GetEventCategoryGroupsQuery>(GetEventCategoryGroupsDocument, {
+  const { data, loading, error, refetch } = useQuery<GetEventCategoryGroupsQuery>(GetEventCategoryGroupsDocument, {
     context: { headers: getAuthHeader(token) },
     fetchPolicy: 'cache-and-network',
   });
@@ -64,6 +74,8 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
   const [savingSlug, setSavingSlug] = useState<string | null>(null);
   const [pendingGroupDelete, setPendingGroupDelete] = useState<{ slug: string; name: string } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingGroupSlug, setEditingGroupSlug] = useState<string | null>(null);
 
   const [createGroup] = useMutation(CreateEventCategoryGroupDocument, {
     context: { headers: getAuthHeader(token) },
@@ -101,7 +113,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
   const handleCreate = async () => {
     if (!groupForm.name || groupForm.eventCategories.length === 0) {
       notify('Provide a name and at least one category.', 'error');
-      return;
+      return false;
     }
     setCreating(true);
     try {
@@ -116,8 +128,10 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
       await refetch();
       setGroupForm(DEFAULT_GROUP_FORM);
       notify('Category group created.');
+      return true;
     } catch {
       notify('Unable to create group.', 'error');
+      return false;
     } finally {
       setCreating(false);
     }
@@ -126,7 +140,7 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
   const handleUpdate = async (groupId: string, slug: string) => {
     const payload = groupState[slug];
     if (!payload) {
-      return;
+      return false;
     }
 
     setSavingSlug(slug);
@@ -142,8 +156,10 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
       });
       await refetch();
       notify('Group updated.');
+      return true;
     } catch {
       notify('Unable to update group.', 'error');
+      return false;
     } finally {
       setSavingSlug(null);
     }
@@ -177,28 +193,138 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          Category groups
-        </Typography>
-        <Typography color="text.secondary">Group related categories together to drive curated navigation.</Typography>
-      </Box>
+      <AdminSectionHeader
+        title="Category groups"
+        description="Bundle related categories together for curated browse and discovery surfaces."
+        actions={
+          <Button startIcon={<Add />} variant="contained" size="small" onClick={() => setCreateDialogOpen(true)}>
+            Create group
+          </Button>
+        }
+      />
 
-      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+      <ConfirmDialog
+        open={Boolean(pendingGroupDelete)}
+        title={`Delete ${pendingGroupDelete?.name ?? 'this group'}?`}
+        description="Removing a category group will also unassign its categories from curated groupings."
+        confirmLabel="Delete group"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingGroupDelete(null)}
+        loading={confirmLoading}
+      />
+
+      {loading && (data?.readEventCategoryGroups?.length ?? 0) === 0 ? (
+        <Stack spacing={2}>
+          {[...Array(3)].map((_, index) => (
+            <Skeleton key={index} variant="rounded" height={180} sx={{ borderRadius: 2 }} />
+          ))}
+        </Stack>
+      ) : data?.readEventCategoryGroups?.length === 0 ? (
+        <AdminEmptyState
+          title="No groups yet"
+          description="Create a group to cluster categories into curated collections."
+        />
+      ) : null}
+
+      {data?.readEventCategoryGroups?.map((group) => {
+        return (
+          <Card key={group.slug} elevation={0} sx={ADMIN_SURFACE_SX}>
+            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              <Stack spacing={2}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={{ xs: 1.5, sm: 0 }}
+                >
+                  <Stack spacing={0.4}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {group.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {group.slug}
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`${group.eventCategories?.length ?? 0} categor${group.eventCategories?.length === 1 ? 'y' : 'ies'}`}
+                      />
+                    </Stack>
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Edit />}
+                      onClick={() => setEditingGroupSlug(group.slug)}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<Delete />}
+                      onClick={() => requestDelete(group.slug, group.name ?? 'group')}
+                      disabled={Boolean(pendingGroupDelete)}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </Stack>
+                {group.eventCategories?.length ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {group.eventCategories.map((category) => category.name).join(', ')}
+                  </Typography>
+                ) : null}
+              </Stack>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        fullScreen={isMobile}
+        slotProps={{ paper: { sx: { borderRadius: { xs: 0, md: 2 } } } }}
+      >
+        <DialogTitle
+          sx={{ px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 2 }, borderBottom: '1px solid', borderColor: 'divider' }}
+        >
+          <Stack direction="row" justifyContent="space-between" spacing={2} alignItems="flex-start">
+            <Stack spacing={0.6}>
+              <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: '0.12em' }}>
+                Create group
+              </Typography>
+              <Typography variant="h6" fontWeight={900}>
+                New category group
+              </Typography>
+            </Stack>
+            <IconButton onClick={() => setCreateDialogOpen(false)} aria-label="Close create group">
+              <CloseRoundedIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ p: { xs: 2, md: 3 }, mt: 2 }}>
           <Stack spacing={2}>
-            <Typography variant="h6">Create group</Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   label="Name"
                   value={groupForm.name}
                   fullWidth
+                  size="small"
                   onChange={(event) => setGroupForm((prev) => ({ ...prev, name: event.target.value }))}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
+              <Grid size={{ xs: 12 }}>
+                <FormControl fullWidth size="small">
                   <Select
                     multiple
                     displayEmpty
@@ -227,135 +353,140 @@ export default function AdminCategoryGroupSection({ token }: AdminSectionProps) 
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Button
-                  startIcon={creating ? <CircularProgress size={16} /> : <Add />}
-                  variant="contained"
-                  color="secondary"
-                  onClick={handleCreate}
-                  disabled={creating}
-                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                >
-                  Create group
-                </Button>
-              </Grid>
             </Grid>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <Button variant="outlined" onClick={() => setCreateDialogOpen(false)} fullWidth={isMobile}>
+                Cancel
+              </Button>
+              <Button
+                startIcon={creating ? <CircularProgress size={16} /> : <Add />}
+                variant="contained"
+                onClick={async () => {
+                  const success = await handleCreate();
+                  if (success) {
+                    setCreateDialogOpen(false);
+                  }
+                }}
+                disabled={creating}
+                fullWidth={isMobile}
+              >
+                {creating ? 'Creating…' : 'Create group'}
+              </Button>
+            </Stack>
           </Stack>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
-      <ConfirmDialog
-        open={Boolean(pendingGroupDelete)}
-        title={`Delete ${pendingGroupDelete?.name ?? 'this group'}?`}
-        description="Removing a category group will also unassign its categories from curated groupings."
-        confirmLabel="Delete group"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setPendingGroupDelete(null)}
-        loading={confirmLoading}
-      />
-
-      {data?.readEventCategoryGroups?.map((group) => {
-        const state = groupState[group.slug];
-        return (
-          <Card
-            key={group.slug}
-            elevation={0}
-            sx={{ borderRadius: 3, border: '1px solid', borderColor: 'primary.light' }}
-          >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Stack spacing={2}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
-                  spacing={{ xs: 1.5, sm: 0 }}
-                >
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={700}>
-                      {group.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {group.slug}
-                    </Typography>
-                  </Box>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      startIcon={<Delete />}
-                      onClick={() => requestDelete(group.slug, group.name ?? 'group')}
-                      disabled={Boolean(pendingGroupDelete)}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      Delete
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<Save />}
-                      onClick={() => handleUpdate(group.eventCategoryGroupId, group.slug)}
-                      disabled={!state || savingSlug === group.slug}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {savingSlug === group.slug ? 'Saving' : 'Save'}
-                    </Button>
-                  </Stack>
-                </Stack>
-                <Divider />
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      label="Name"
-                      value={state?.name ?? ''}
-                      fullWidth
+      <Dialog
+        open={Boolean(editingGroupSlug)}
+        onClose={() => setEditingGroupSlug(null)}
+        fullWidth
+        maxWidth="sm"
+        fullScreen={isMobile}
+        slotProps={{ paper: { sx: { borderRadius: { xs: 0, md: 2 } } } }}
+      >
+        <DialogTitle
+          sx={{ px: { xs: 2, md: 3 }, py: { xs: 1.5, md: 2 }, borderBottom: '1px solid', borderColor: 'divider' }}
+        >
+          <Stack direction="row" justifyContent="space-between" spacing={2} alignItems="flex-start">
+            <Stack spacing={0.6}>
+              <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 800, letterSpacing: '0.12em' }}>
+                Edit group
+              </Typography>
+              <Typography variant="h6" fontWeight={900}>
+                {editingGroupSlug
+                  ? data?.readEventCategoryGroups?.find((group) => group.slug === editingGroupSlug)?.name
+                  : 'Group'}
+              </Typography>
+            </Stack>
+            <IconButton onClick={() => setEditingGroupSlug(null)} aria-label="Close edit group">
+              <CloseRoundedIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ p: { xs: 2, md: 3 }, mt: 2 }}>
+          {editingGroupSlug ? (
+            <Stack spacing={2}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    label="Name"
+                    value={groupState[editingGroupSlug]?.name ?? ''}
+                    fullWidth
+                    size="small"
+                    onChange={(event) =>
+                      setGroupState((prev) => ({
+                        ...prev,
+                        [editingGroupSlug]: {
+                          ...(prev[editingGroupSlug] ?? DEFAULT_GROUP_FORM),
+                          name: event.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      multiple
+                      value={groupState[editingGroupSlug]?.eventCategories ?? []}
                       onChange={(event) =>
                         setGroupState((prev) => ({
                           ...prev,
-                          [group.slug]: {
-                            ...(prev[group.slug] ?? state ?? DEFAULT_GROUP_FORM),
-                            name: event.target.value,
+                          [editingGroupSlug]: {
+                            ...(prev[editingGroupSlug] ?? DEFAULT_GROUP_FORM),
+                            eventCategories: event.target.value as string[],
                           },
                         }))
                       }
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 8 }}>
-                    <FormControl fullWidth>
-                      <Select
-                        multiple
-                        value={state?.eventCategories ?? []}
-                        onChange={(event) =>
-                          setGroupState((prev) => ({
-                            ...prev,
-                            [group.slug]: {
-                              ...(prev[group.slug] ?? state ?? DEFAULT_GROUP_FORM),
-                              eventCategories: event.target.value as string[],
-                            },
-                          }))
-                        }
-                        renderValue={(selected) =>
-                          categories
-                            .filter((cat) => (selected as string[]).includes(cat.eventCategoryId))
-                            .map((cat) => cat.name)
-                            .join(', ')
-                        }
-                      >
-                        {categories.map((category) => (
-                          <MenuItem key={category.eventCategoryId} value={category.eventCategoryId}>
-                            <Checkbox checked={(state?.eventCategories ?? []).includes(category.eventCategoryId)} />
-                            <ListItemText primary={category.name} />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
+                      renderValue={(selected) =>
+                        categories
+                          .filter((cat) => (selected as string[]).includes(cat.eventCategoryId))
+                          .map((cat) => cat.name)
+                          .join(', ')
+                      }
+                    >
+                      {categories.map((category) => (
+                        <MenuItem key={category.eventCategoryId} value={category.eventCategoryId}>
+                          <Checkbox
+                            checked={(groupState[editingGroupSlug]?.eventCategories ?? []).includes(
+                              category.eventCategoryId,
+                            )}
+                          />
+                          <ListItemText primary={category.name} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
+              </Grid>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button variant="outlined" onClick={() => setEditingGroupSlug(null)} fullWidth={isMobile}>
+                  Cancel
+                </Button>
+                <Button
+                  startIcon={savingSlug === editingGroupSlug ? <CircularProgress size={16} /> : <Save />}
+                  variant="contained"
+                  onClick={async () => {
+                    const group = data?.readEventCategoryGroups?.find((entry) => entry.slug === editingGroupSlug);
+                    if (!group) {
+                      return;
+                    }
+                    const success = await handleUpdate(group.eventCategoryGroupId, editingGroupSlug);
+                    if (success) {
+                      setEditingGroupSlug(null);
+                    }
+                  }}
+                  disabled={savingSlug === editingGroupSlug}
+                  fullWidth={isMobile}
+                >
+                  {savingSlug === editingGroupSlug ? 'Saving…' : 'Save group'}
+                </Button>
               </Stack>
-            </CardContent>
-          </Card>
-        );
-      })}
+            </Stack>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Stack>
   );
 }

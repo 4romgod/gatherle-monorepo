@@ -98,6 +98,16 @@ export type RootStackParamList = {
     venueName?: string;
   };
   Admin: undefined;
+  AdminEvents: undefined;
+  AdminUsers: undefined;
+  AdminCategories: undefined;
+  AdminCategoryGroups: undefined;
+  AdminOrganizations: undefined;
+  AdminVenues: undefined;
+  AdminEventSessions: {
+    eventId: string;
+    title?: string;
+  };
   Login:
     | {
         redirectTab?: keyof MainTabParamList;
@@ -327,7 +337,49 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
   Admin: {
     sectionLabel: 'Operations',
     title: 'Admin',
-    description: 'The mobile app may need a trimmed-down admin surface for oversight, moderation, and diagnostics.',
+    description: 'A native admin dashboard for operations, moderation, inventory repair, and platform oversight.',
+    category: 'account',
+  },
+  AdminEvents: {
+    sectionLabel: 'Operations',
+    title: 'Admin events',
+    description: 'Moderate event series, inspect sessions, and repair event lifecycle state on mobile.',
+    category: 'account',
+  },
+  AdminUsers: {
+    sectionLabel: 'Operations',
+    title: 'Admin users',
+    description: 'Search members, adjust access, repair verification state, and remove accounts on mobile.',
+    category: 'account',
+  },
+  AdminCategories: {
+    sectionLabel: 'Operations',
+    title: 'Admin categories',
+    description: 'Maintain the event taxonomy that powers discovery and interest selection.',
+    category: 'account',
+  },
+  AdminCategoryGroups: {
+    sectionLabel: 'Operations',
+    title: 'Admin category groups',
+    description: 'Curate category groupings for browse surfaces and settings flows.',
+    category: 'account',
+  },
+  AdminOrganizations: {
+    sectionLabel: 'Operations',
+    title: 'Admin organizations',
+    description: 'Manage organization metadata, ownership, and member access.',
+    category: 'account',
+  },
+  AdminVenues: {
+    sectionLabel: 'Operations',
+    title: 'Admin venues',
+    description: 'Correct venue metadata, ownership, and operational place data.',
+    category: 'account',
+  },
+  AdminEventSessions: {
+    sectionLabel: 'Operations',
+    title: 'Admin event sessions',
+    description: 'Inspect generated sessions for a recurring event series and apply operational fixes.',
     category: 'account',
   },
   Login: {

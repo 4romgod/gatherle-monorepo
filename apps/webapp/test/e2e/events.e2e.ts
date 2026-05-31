@@ -20,7 +20,7 @@ test.describe('Events Page', () => {
   });
 
   test('renders /events route', async ({ page }) => {
-    await page.goto('/events');
+    await page.goto('/events', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
 
     const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
@@ -28,7 +28,7 @@ test.describe('Events Page', () => {
   });
 
   test('shows search and filter controls when events data loads', async ({ page }) => {
-    await page.goto('/events');
+    await page.goto('/events', { waitUntil: 'domcontentloaded' });
 
     const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
 
@@ -46,7 +46,7 @@ test.describe('Events Page', () => {
   });
 
   test('opens share dialog from an event card with supported actions only', async ({ page }) => {
-    await page.goto('/events');
+    await page.goto('/events', { waitUntil: 'domcontentloaded' });
 
     const { loadError, loadedWithError } = await waitForEventsSurface(page);
 

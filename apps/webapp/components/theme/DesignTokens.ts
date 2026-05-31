@@ -4,6 +4,8 @@ import darkModeColors from '@/components/theme/colors/DarkMode';
 import lightModeColors from '@/components/theme/colors/LightMode';
 import { WEB_RADIUS_PX } from '@/lib/constants/radius';
 
+const MOBILE_QUERY = '@media (max-width:599.95px)';
+
 /**
  * Color Scheme: https://m2.material.io/design/color/the-color-system.html#tools-for-picking-colors
  */
@@ -17,6 +19,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.05,
       letterSpacing: '-0.04em',
+      [MOBILE_QUERY]: {
+        fontSize: '1.75rem',
+      },
     },
     h2: {
       fontFamily: spaceGrotesk.style.fontFamily,
@@ -24,6 +29,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.08,
       letterSpacing: '-0.03em',
+      [MOBILE_QUERY]: {
+        fontSize: '1.5rem',
+      },
     },
     h3: {
       fontFamily: spaceGrotesk.style.fontFamily,
@@ -31,6 +39,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.12,
       letterSpacing: '-0.02em',
+      [MOBILE_QUERY]: {
+        fontSize: '1.3125rem',
+      },
     },
     h4: {
       fontFamily: spaceGrotesk.style.fontFamily,
@@ -38,6 +49,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.15,
       letterSpacing: '-0.03em',
+      [MOBILE_QUERY]: {
+        fontSize: '1.1875rem',
+      },
     },
     h5: {
       fontFamily: spaceGrotesk.style.fontFamily,
@@ -45,6 +59,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.18,
       letterSpacing: '-0.025em',
+      [MOBILE_QUERY]: {
+        fontSize: '1.0625rem',
+      },
     },
     h6: {
       fontFamily: spaceGrotesk.style.fontFamily,
@@ -52,6 +69,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.22,
       letterSpacing: '-0.02em',
+      [MOBILE_QUERY]: {
+        fontSize: '1rem',
+      },
     },
     subtitle1: {
       fontFamily: plusJakarta.style.fontFamily,
@@ -59,30 +79,47 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       fontWeight: 700,
       lineHeight: 1.35,
       letterSpacing: '-0.01em',
+      [MOBILE_QUERY]: {
+        fontSize: '0.875rem',
+      },
     },
     subtitle2: {
       fontFamily: plusJakarta.style.fontFamily,
       fontSize: '0.8125rem',
       fontWeight: 600,
       lineHeight: 1.35,
+      [MOBILE_QUERY]: {
+        fontSize: '0.78125rem',
+      },
     },
     body1: {
       fontFamily: plusJakarta.style.fontFamily,
       fontSize: '0.875rem',
       fontWeight: 400,
       lineHeight: 1.5,
+      [MOBILE_QUERY]: {
+        fontSize: '0.8125rem',
+        lineHeight: 1.45,
+      },
     },
     body2: {
       fontFamily: plusJakarta.style.fontFamily,
       fontSize: '0.8125rem',
       fontWeight: 400,
       lineHeight: 1.5,
+      [MOBILE_QUERY]: {
+        fontSize: '0.78125rem',
+        lineHeight: 1.45,
+      },
     },
     caption: {
       fontFamily: plusJakarta.style.fontFamily,
       fontSize: '0.75rem',
       fontWeight: 400,
       lineHeight: 1.35,
+      [MOBILE_QUERY]: {
+        fontSize: '0.6875rem',
+      },
     },
     overline: {
       fontFamily: plusJakarta.style.fontFamily,
@@ -91,6 +128,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       letterSpacing: '0.08em',
       lineHeight: 1.2,
       textTransform: 'uppercase',
+      [MOBILE_QUERY]: {
+        fontSize: '0.625rem',
+      },
     },
     button: {
       fontFamily: plusJakarta.style.fontFamily,
@@ -99,6 +139,9 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       lineHeight: 1.2,
       letterSpacing: 0,
       textTransform: 'none',
+      [MOBILE_QUERY]: {
+        fontSize: '0.78125rem',
+      },
     },
   },
   palette: {
@@ -151,6 +194,20 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           minHeight: 38,
           paddingInline: 14,
           paddingBlock: 8,
+          [MOBILE_QUERY]: {
+            minHeight: 36,
+            paddingInline: 12,
+            paddingBlock: 7,
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          [MOBILE_QUERY]: {
+            padding: 7,
+          },
         },
       },
     },
@@ -161,11 +218,58 @@ export const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         },
       },
     },
+    MuiToolbar: {
+      styleOverrides: {
+        regular: {
+          [MOBILE_QUERY]: {
+            minHeight: 58,
+          },
+        },
+      },
+    },
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: WEB_RADIUS_PX.card,
         },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          [MOBILE_QUERY]: {
+            fontSize: '0.78125rem',
+            minHeight: 40,
+            paddingTop: 8,
+            paddingBottom: 8,
+          },
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        sizeSmall: {
+          [MOBILE_QUERY]: {
+            height: 22,
+          },
+        },
+        labelSmall: {
+          [MOBILE_QUERY]: {
+            fontSize: '0.6875rem',
+            paddingLeft: 8,
+            paddingRight: 8,
+          },
+        },
+        outlined: ({ theme }) => ({
+          backgroundColor: theme.palette.action.hover,
+          '&.MuiChip-colorDefault': {
+            borderColor:
+              theme.palette.mode === 'dark'
+                ? alpha(theme.palette.text.primary, 0.24)
+                : alpha(theme.palette.text.primary, 0.16),
+            color: theme.palette.text.primary,
+          },
+        }),
       },
     },
     MuiInputBase: {

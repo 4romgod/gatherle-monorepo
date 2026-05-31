@@ -469,6 +469,8 @@ export const RESOLVER_DESCRIPTIONS = {
     updateOrganization: 'Update the metadata or policies for an existing organization.',
     deleteOrganizationById:
       'Delete an organization by its ID. Requires the org ID and returns the deleted organization.',
+    transferOrganizationOwnership:
+      'Transfer organization ownership to another user. Restricted to the current owner or a platform admin. The previous owner is demoted to Admin and the new owner is promoted (or created) as Owner.',
     readOrganizationById: 'Read an organization by its ID. Returns the organization or a 404 Error if not found.',
     readOrganizationBySlug: 'Read an organization by its slug. Returns the organization or a 404 Error if not found.',
     readOrganizations: 'Read a list of organizations. Supports optional query options for filtering and pagination.',

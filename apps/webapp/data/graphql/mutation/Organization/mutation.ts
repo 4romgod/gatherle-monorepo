@@ -68,3 +68,14 @@ export const DeleteOrganizationDocument = graphql(`
     }
   }
 `);
+
+export const TransferOrganizationOwnershipDocument = graphql(`
+  mutation TransferOrganizationOwnership($orgId: String!, $newOwnerUserId: String!) {
+    transferOrganizationOwnership(orgId: $orgId, newOwnerUserId: $newOwnerUserId) {
+      orgId
+      ownerId
+      name
+      slug
+    }
+  }
+`);

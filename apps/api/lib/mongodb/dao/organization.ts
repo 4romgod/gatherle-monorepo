@@ -97,6 +97,27 @@ class OrganizationDAO {
     }
   }
 
+  static async updateOwnerId(orgId: string, ownerId: string): Promise<Organization> {
+    let organization;
+    try {
+      organization = await OrganizationModel.findById(orgId).exec();
+    } catch (error) {
+      logDaoError(`Error finding organization for owner update ${orgId}`, { error });
+      throw KnownCommonError(error);
+    }
+    if (!organization) {
+      throw CustomError(`Organization with id ${orgId} not found`, ErrorTypes.NOT_FOUND);
+    }
+    try {
+      organization.ownerId = ownerId;
+      await organization.save();
+      return organization.toObject();
+    } catch (error) {
+      logDaoError(`Error updating organization owner ${orgId}`, { error });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async deleteOrganizationById(orgId: string): Promise<Organization> {
     let deletedOrganization;
     try {

@@ -103,21 +103,21 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
         size="small"
         sx={{
           position: 'absolute',
-          top: 8,
-          left: 8,
+          top: { xs: 6, md: 8 },
+          left: { xs: 6, md: 8 },
           zIndex: 1,
-          height: 22,
+          height: { xs: 20, md: 22 },
           borderRadius: 999,
           bgcolor: 'background.paper',
           color: 'primary.main',
           border: '1px solid',
           borderColor: 'divider',
           fontWeight: 700,
-          fontSize: '0.62rem',
+          fontSize: { xs: '0.55rem', md: '0.62rem' },
           letterSpacing: 0.15,
           textTransform: 'uppercase',
           '& .MuiChip-label': {
-            px: 1,
+            px: { xs: 0.875, md: 1 },
           },
         }}
       />
@@ -125,18 +125,18 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
       <Box
         sx={{
           position: 'absolute',
-          left: 10,
-          right: 10,
-          bottom: 10,
+          left: { xs: 8, md: 10 },
+          right: { xs: 8, md: 10 },
+          bottom: { xs: 8, md: 10 },
           zIndex: 1,
         }}
       >
         <Typography
           sx={{
             color: 'common.white',
-            fontSize: { xs: '0.82rem', md: '0.9rem' },
+            fontSize: { xs: '0.74rem', md: '0.9rem' },
             fontWeight: 700,
-            lineHeight: 1.2,
+            lineHeight: { xs: 1.18, md: 1.2 },
             textShadow: '0 1px 4px rgba(15,23,42,0.84)',
             display: '-webkit-box',
             overflow: 'hidden',
@@ -149,9 +149,9 @@ export default function ProfileEventTile({ event }: ProfileEventTileProps) {
         </Typography>
         <Typography
           sx={{
-            mt: 0.5,
+            mt: { xs: 0.25, md: 0.5 },
             color: 'rgba(255,255,255,0.82)',
-            fontSize: '0.72rem',
+            fontSize: { xs: '0.68rem', md: '0.72rem' },
             fontWeight: 500,
             textShadow: '0 1px 3px rgba(15,23,42,0.84)',
           }}

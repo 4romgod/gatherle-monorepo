@@ -1,8 +1,8 @@
 import { graphql } from '../../types';
 
 export const GetVenuesDocument = graphql(`
-  query GetVenues {
-    readVenues {
+  query GetVenues($options: QueryOptionsInput) {
+    readVenues(options: $options) {
       slug
       venueId
       orgId

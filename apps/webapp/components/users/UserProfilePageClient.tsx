@@ -211,9 +211,9 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Box sx={{ maxWidth: 935, mx: 'auto', width: '100%', overflowX: 'hidden' }}>
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 4 }, pb: 2 }}>
+        <Box sx={{ px: { xs: 2.5, md: 3 }, pt: { xs: 1.25, md: 4 }, pb: { xs: 1.5, md: 2 } }}>
           <Box sx={{ maxWidth: 560, mx: 'auto' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2.5, md: 3 }, mb: 1.75 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 }, mb: { xs: 1.5, md: 1.75 } }}>
               <UserAvatarMomentsRing
                 userId={user.userId}
                 avatarSrc={getAvatarSrc(user) || undefined}
@@ -229,16 +229,16 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                   minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 1.5,
+                  gap: { xs: 1.125, md: 1.5 },
                   justifyContent: 'center',
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: { xs: 0.75, md: 1 } }}>
                   <Typography
                     sx={(theme) => ({
                       color: theme.palette.text.primary,
                       fontFamily: theme.typography.body1.fontFamily,
-                      fontSize: '1rem',
+                      fontSize: { xs: '0.95rem', md: '1rem' },
                       fontWeight: 700,
                       letterSpacing: '-0.01em',
                       lineHeight: 1.2,
@@ -248,7 +248,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                   </Typography>
 
                   {profileBadges.length > 0 ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                       {profileBadges.map((badge) => (
                         <ProfileBadge badge={badge} key={badge.label} />
                       ))}
@@ -256,7 +256,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                   ) : null}
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', gap: { xs: 0.5, md: 1 }, justifyContent: 'space-between' }}>
                   <ProfileStat
                     href={ROUTES.USERS.USER_EVENTS(user.username)}
                     label="Events"
@@ -281,7 +281,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                 sx={(theme) => ({
                   color: theme.palette.text.primary,
                   fontFamily: theme.typography.h4.fontFamily,
-                  fontSize: { xs: '1.125rem', md: '1.1875rem' },
+                  fontSize: { xs: '1.05rem', md: '1.1875rem' },
                   fontWeight: 700,
                   letterSpacing: '-0.03em',
                   lineHeight: 1.2,
@@ -294,9 +294,9 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                 sx={(theme) => ({
                   color: theme.palette.text.primary,
                   fontFamily: theme.typography.body1.fontFamily,
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.8125rem', md: '0.875rem' },
                   fontWeight: 400,
-                  lineHeight: 1.5,
+                  lineHeight: { xs: 1.45, md: 1.5 },
                   maxWidth: 480,
                 })}
               >
@@ -305,7 +305,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
             </Box>
 
             {(!isOwnProfile || !hideOwnProfileActions) && (
-              <Box sx={{ display: 'flex', gap: 1.25, mt: 1.75 }}>
+              <Box sx={{ display: 'flex', gap: 1, mt: { xs: 1.5, md: 1.75 } }}>
                 {isOwnProfile ? (
                   <>
                     <ProfileActionButton href={ROUTES.ACCOUNT.TAB('profile')} icon={FiEdit2} label="Edit profile" />

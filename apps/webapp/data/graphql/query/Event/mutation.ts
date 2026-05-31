@@ -67,3 +67,20 @@ export const UpdateEventDocument = graphql(`
     }
   }
 `);
+
+export const SplitEventSeriesAtOccurrenceDocument = graphql(`
+  mutation SplitEventSeriesAtOccurrence($input: SplitEventSeriesInput!) {
+    splitEventSeriesAtOccurrence(input: $input) {
+      eventId
+      slug
+      title
+      splitFromEventSeriesId
+      representativeOccurrence {
+        occurrenceId
+        startAt
+        endAt
+        timezone
+      }
+    }
+  }
+`);
