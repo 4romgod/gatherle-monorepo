@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { useSession } from 'next-auth/react';
 import { Box, Button, Stack, Typography } from '@mui/material';
@@ -32,13 +32,19 @@ import { ProfileBadge } from '@/components/users/ProfileBadge';
 import { ProfileStat } from '@/components/users/ProfileStat';
 import { buildProfileBadges } from '@/lib/profileBadges';
 import { FiEdit2, FiSettings } from 'react-icons/fi';
+import type { ProfileEventsTabKey } from '@/components/users/ProfileEventsTabs';
 
 interface UserProfilePageClientProps {
   hideOwnProfileActions?: boolean;
+  initialEventsTabKey?: ProfileEventsTabKey | null;
   username: string;
 }
 
-export default function UserProfilePageClient({ hideOwnProfileActions = false, username }: UserProfilePageClientProps) {
+export default function UserProfilePageClient({
+  hideOwnProfileActions = false,
+  initialEventsTabKey = null,
+  username,
+}: UserProfilePageClientProps) {
   const { data: session } = useSession();
   const token = session?.user?.token;
   const isOwnProfile = session?.user?.username === username;
@@ -76,6 +82,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
   });
 
   const user = userData?.readUserByUsername ?? null;
+  const [hostedEventsSearchTerm, setHostedEventsSearchTerm] = useState('');
   const {
     error: hostedEventsError,
     hostedEvents,
@@ -84,7 +91,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
     loadingMore: hostedEventsLoadingMore,
     loadMore: loadMoreHostedEvents,
     totalCount: hostedEventsTotalCount,
-  } = useHostedEventsByUser(user?.userId, token);
+  } = useHostedEventsByUser(user?.userId, token, { searchTerm: hostedEventsSearchTerm });
   const {
     error: participantEventsError,
     loading: participantEventsLoading,
@@ -152,7 +159,7 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
 
   const isLoading =
     userLoading ||
-    hostedEventsLoading ||
+    (hostedEventsLoading && hostedEvents.length === 0) ||
     participantEventsLoading ||
     (isOwnProfile && (savedLoading || myRsvpsLoading || myOccurrenceRsvpsLoading));
   const hasError =
@@ -335,12 +342,16 @@ export default function UserProfilePageClient({ hideOwnProfileActions = false, u
                 </Typography>
               ) : (
                 <ProfileEventsTabs
+                  initialTabKey={initialEventsTabKey}
+                  hostedEventsSearchTerm={hostedEventsSearchTerm}
+                  hostedEventsTotalCount={hostedEventsTotalCount}
                   upcomingRsvpdEvents={upcomingRsvpdEvents}
                   pastRsvpdEvents={pastRsvpdEvents}
                   organizedEvents={hostedEvents}
                   organizedEventsHasMore={hostedEventsHasMore}
                   organizedEventsLoadingMore={hostedEventsLoadingMore}
                   onLoadMoreOrganized={loadMoreHostedEvents}
+                  onHostedEventsSearchChange={setHostedEventsSearchTerm}
                   savedEvents={savedEvents}
                   isOwnProfile={isOwnProfile}
                   emptyCreatedCta={emptyCreatedCTA}

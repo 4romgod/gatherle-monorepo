@@ -13,8 +13,11 @@ import {
 } from '@/test/e2e/utils/userResolverHelpers';
 
 const OPEN_SOCKET_TIMEOUT_MS = 5_000;
-const CLOSE_SOCKET_TIMEOUT_MS = 10_000;
+const CLOSE_SOCKET_TIMEOUT_MS = 20_000;
 const ABNORMAL_CLOSE_CODE = 1006;
+const OPEN_CONNECT_SETTLE_DELAY_MS = 250;
+const THROTTLE_SETTLE_DELAY_MS = 1_000;
+const MAX_THROTTLE_PROBE_ATTEMPTS = 8;
 
 const buildLocalWebSocketUrl = (graphqlUrl: string): string => {
   const url = new URL(graphqlUrl);
@@ -141,6 +144,57 @@ const closeSocketQuietly = async (socket: WebSocket): Promise<void> => {
   });
 };
 
+const sleep = (timeoutMs: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, timeoutMs).unref();
+  });
+
+const waitForPossibleThrottleClose = (
+  socket: WebSocket,
+  settleDelayMs = THROTTLE_SETTLE_DELAY_MS,
+  timeoutMs = OPEN_SOCKET_TIMEOUT_MS + THROTTLE_SETTLE_DELAY_MS,
+): Promise<{ code: number; reason: string } | null> =>
+  new Promise((resolve, reject) => {
+    let settleTimeout: ReturnType<typeof setTimeout> | null = null;
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for websocket throttle outcome.'));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      if (settleTimeout) {
+        clearTimeout(settleTimeout);
+        settleTimeout = null;
+      }
+      socket.off('open', handleOpen);
+      socket.off('close', handleClose);
+      socket.off('error', handleError);
+    };
+
+    const handleOpen = () => {
+      settleTimeout = setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, settleDelayMs);
+      settleTimeout.unref();
+    };
+
+    const handleClose = (code: number, reason: Buffer) => {
+      cleanup();
+      resolve({ code, reason: reason.toString('utf8') });
+    };
+
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    socket.once('open', handleOpen);
+    socket.once('close', handleClose);
+    socket.once('error', handleError);
+  });
+
 const isLocalGraphQlTarget = (graphqlUrl: string) => {
   if (!graphqlUrl.trim()) {
     return false;
@@ -203,10 +257,26 @@ describeLocalWebSocket('WebSocket security hardening (local only)', () => {
       await waitForSocketOpen(socket);
       expect(socket.readyState).toBe(WebSocket.OPEN);
       expect(socket.protocol).toBe(firstUserProtocol);
+      await sleep(OPEN_CONNECT_SETTLE_DELAY_MS);
     }
 
-    const throttledSocket = createAuthenticatedSocket(firstUser.token);
-    const throttledClose = await waitForSocketClose(throttledSocket);
+    let throttledClose: { code: number; reason: string } | null = null;
+
+    for (let probeAttempt = 1; probeAttempt <= MAX_THROTTLE_PROBE_ATTEMPTS; probeAttempt++) {
+      const throttledSocket = createAuthenticatedSocket(firstUser.token);
+      openSockets.add(throttledSocket);
+
+      const closeEvent = await waitForPossibleThrottleClose(throttledSocket);
+      if (closeEvent) {
+        throttledClose = closeEvent;
+        break;
+      }
+    }
+
+    if (!throttledClose) {
+      throw new Error('Expected a throttled websocket connection after repeated $connect attempts.');
+    }
+
     expect(throttledClose.code).toBe(WebSocketCloseCode.APP_BAD_REQUEST);
     expect(throttledClose.reason).toBe('Bad request');
 

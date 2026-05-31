@@ -1,8 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Box, Button, Card, CircularProgress, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { Add, Search } from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  CircularProgress,
+  InputAdornment,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { FiBookmark, FiCalendar, FiCheckSquare, FiClock } from 'react-icons/fi';
 import {
   ROUTES,
@@ -15,30 +29,65 @@ import { AnyEventPreview, getEventPreviewKey } from '@/components/events/event-p
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import ProfileEventTile from './ProfileEventTile';
 
+export type ProfileEventsTabKey = 'going' | 'attended' | 'hosted' | 'saved';
+
+const PROFILE_EVENTS_TAB_INDEX: Record<ProfileEventsTabKey, number> = {
+  going: 0,
+  attended: 1,
+  hosted: 2,
+  saved: 3,
+};
+
+function resolveInitialTab(initialTabKey: ProfileEventsTabKey | null | undefined, isOwnProfile: boolean) {
+  if (!initialTabKey) {
+    return 0;
+  }
+
+  if (!isOwnProfile && initialTabKey === 'saved') {
+    return 0;
+  }
+
+  return PROFILE_EVENTS_TAB_INDEX[initialTabKey];
+}
+
 interface ProfileEventsTabsProps {
+  initialTabKey?: ProfileEventsTabKey | null;
+  hostedEventsSearchTerm?: string;
+  hostedEventsTotalCount?: number;
   upcomingRsvpdEvents: AnyEventPreview[];
   pastRsvpdEvents: AnyEventPreview[];
   organizedEvents: AnyEventPreview[];
   organizedEventsHasMore?: boolean;
   organizedEventsLoadingMore?: boolean;
   onLoadMoreOrganized?: () => void;
+  onHostedEventsSearchChange?: (value: string) => void;
   savedEvents?: AnyEventPreview[];
   isOwnProfile: boolean;
   emptyCreatedCta?: React.ReactNode;
 }
 
 export default function ProfileEventsTabs({
+  initialTabKey = null,
+  hostedEventsSearchTerm = '',
+  hostedEventsTotalCount = 0,
   upcomingRsvpdEvents,
   pastRsvpdEvents,
   organizedEvents,
   organizedEventsHasMore = false,
   organizedEventsLoadingMore = false,
   onLoadMoreOrganized,
+  onHostedEventsSearchChange,
   savedEvents = [],
   isOwnProfile,
   emptyCreatedCta,
 }: ProfileEventsTabsProps) {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => resolveInitialTab(initialTabKey, isOwnProfile));
+  const perspectivePronoun = isOwnProfile ? 'you' : 'they';
+  const perspectivePossessive = isOwnProfile ? 'your' : 'their';
+
+  useEffect(() => {
+    setActiveTab(resolveInitialTab(initialTabKey, isOwnProfile));
+  }, [initialTabKey, isOwnProfile]);
 
   const tabIconSx = {
     alignItems: 'center',
@@ -113,7 +162,7 @@ export default function ProfileEventsTabs({
         <Tab
           aria-label="Going"
           icon={
-            <Tooltip title="Going — events you've RSVPed to" placement="bottom" arrow>
+            <Tooltip title={`Going — events ${perspectivePronoun}'ve RSVPed to`} placement="bottom" arrow>
               <Box component="span" sx={tabIconSx}>
                 <FiCheckSquare />
               </Box>
@@ -123,7 +172,7 @@ export default function ProfileEventsTabs({
         <Tab
           aria-label="Attended"
           icon={
-            <Tooltip title="Attended — past events you went to" placement="bottom" arrow>
+            <Tooltip title={`Attended — past events ${perspectivePronoun} went to`} placement="bottom" arrow>
               <Box component="span" sx={tabIconSx}>
                 <FiClock />
               </Box>
@@ -133,7 +182,7 @@ export default function ProfileEventsTabs({
         <Tab
           aria-label="Hosted"
           icon={
-            <Tooltip title="Hosted — events you've created or co-hosted" placement="bottom" arrow>
+            <Tooltip title={`Hosted — events ${perspectivePronoun}'ve created or co-hosted`} placement="bottom" arrow>
               <Box component="span" sx={tabIconSx}>
                 <FiCalendar />
               </Box>
@@ -211,10 +260,62 @@ export default function ProfileEventsTabs({
                 <FiCalendar />
               </Box>
             }
-            emptyTitle="No events hosted yet"
-            emptyDescription="Start hosting events and they'll appear here"
+            emptyTitle={
+              isOwnProfile && hostedEventsSearchTerm.trim().length >= 2
+                ? 'No hosted events match that search'
+                : 'No events hosted yet'
+            }
+            emptyDescription={
+              isOwnProfile && hostedEventsSearchTerm.trim().length >= 2
+                ? 'Try a different title, slug, location, or category.'
+                : `Start hosting events and ${perspectivePossessive} events will appear here`
+            }
             emptyCta={defaultEmptyCreatedCta}
             hasMore={organizedEventsHasMore}
+            header={
+              isOwnProfile ? (
+                <Stack spacing={1.25} sx={{ mb: 2 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} justifyContent="space-between">
+                    <TextField
+                      value={hostedEventsSearchTerm}
+                      onChange={(event) => onHostedEventsSearchChange?.(event.target.value)}
+                      placeholder="Search hosted events by title, slug, location, or category"
+                      size="small"
+                      fullWidth
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search fontSize="small" />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                    />
+                    <Button
+                      component={Link}
+                      href={ROUTES.ACCOUNT.EVENTS.CREATE}
+                      variant="contained"
+                      startIcon={<Add />}
+                      sx={{ whiteSpace: 'nowrap', alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
+                    >
+                      Create event
+                    </Button>
+                  </Stack>
+                  <Chip
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    sx={{ width: 'fit-content' }}
+                    label={
+                      hostedEventsSearchTerm.trim().length >= 2
+                        ? `${organizedEvents.length} of ${hostedEventsTotalCount} matching hosted events`
+                        : `${organizedEvents.length} of ${hostedEventsTotalCount} hosted events`
+                    }
+                  />
+                </Stack>
+              ) : undefined
+            }
             loadingMore={organizedEventsLoadingMore}
             onLoadMore={onLoadMoreOrganized}
           />
@@ -254,6 +355,7 @@ function EventTabPanel({
   emptyTitle,
   emptyDescription,
   emptyCta,
+  header,
   hasMore = false,
   loadingMore = false,
   onLoadMore,
@@ -263,6 +365,7 @@ function EventTabPanel({
   emptyTitle: string;
   emptyDescription: string;
   emptyCta?: React.ReactNode;
+  header?: React.ReactNode;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
@@ -275,21 +378,25 @@ function EventTabPanel({
 
   if (events.length === 0) {
     return (
-      <Box sx={EMPTY_STATE_STYLES}>
-        <Box sx={EMPTY_STATE_ICON_STYLES}>{emptyIcon}</Box>
-        <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
-          {emptyTitle}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
-          {emptyDescription}
-        </Typography>
-        {emptyCta}
+      <Box>
+        {header}
+        <Box sx={EMPTY_STATE_STYLES}>
+          <Box sx={EMPTY_STATE_ICON_STYLES}>{emptyIcon}</Box>
+          <Typography variant="h6" sx={SECTION_TITLE_STYLES}>
+            {emptyTitle}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>
+            {emptyDescription}
+          </Typography>
+          {emptyCta}
+        </Box>
       </Box>
     );
   }
 
   return (
     <Box>
+      {header}
       <Box
         sx={{
           display: 'grid',

@@ -14,6 +14,7 @@ const PAGE_SIZE = 18;
 type UseHostedEventsOptions = {
   enabled?: boolean;
   pageSize?: number;
+  searchTerm?: string;
 };
 
 export function useHostedEventsByUser(
@@ -21,7 +22,7 @@ export function useHostedEventsByUser(
   token?: string | null,
   options: UseHostedEventsOptions = {},
 ) {
-  const { enabled = true, pageSize = PAGE_SIZE } = options;
+  const { enabled = true, pageSize = PAGE_SIZE, searchTerm = '' } = options;
   const [events, setEvents] = useState<EventPreview[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -49,13 +50,13 @@ export function useHostedEventsByUser(
       const response = await loadEvents({
         context: { headers: getAuthHeader(token) },
         variables: {
-          options: buildHostedEventsQueryOptions(userId, SortOrderInput.Desc, pageSize, page * pageSize),
+          options: buildHostedEventsQueryOptions(userId, SortOrderInput.Desc, pageSize, page * pageSize, searchTerm),
         },
       });
 
       return (response.data?.readEvents ?? []) as EventPreview[];
     },
-    [loadEvents, pageSize, token, userId],
+    [loadEvents, pageSize, searchTerm, token, userId],
   );
 
   const refresh = useCallback(async () => {
@@ -77,7 +78,7 @@ export function useHostedEventsByUser(
         loadEventsCount({
           context: { headers: getAuthHeader(token) },
           variables: {
-            options: buildHostedEventsCountQueryOptions(userId),
+            options: buildHostedEventsCountQueryOptions(userId, searchTerm),
           },
         }),
       ]);
@@ -110,7 +111,7 @@ export function useHostedEventsByUser(
       setTotalCount(0);
       totalCountKnownRef.current = false;
     }
-  }, [enabled, loadEventsCount, loadPage, token, userId]);
+  }, [enabled, loadEventsCount, loadPage, pageSize, searchTerm, token, userId]);
 
   useEffect(() => {
     void refresh();

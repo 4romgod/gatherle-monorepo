@@ -1,12 +1,10 @@
 import { Metadata } from 'next';
-import { Box, Container, Typography, Button, Stack } from '@mui/material';
-import { ArrowBack, AddCircleOutline } from '@mui/icons-material';
+import { Box, Container, Typography, Stack } from '@mui/material';
+import { AddCircleOutline } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
 import { GetEventCategoriesDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
-import { ROUTES } from '@/lib/constants';
 import { buildPageMetadata } from '@/lib/metadata';
-import { auth } from '@/auth';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Create Event',
@@ -15,10 +13,6 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function CreateEvent() {
-  const session = await auth();
-  const username = session?.user?.username;
-  const profileUrl = username ? ROUTES.USERS.USER(username) : ROUTES.ACCOUNT.ROOT;
-
   const { data: eventCategories } = await getClient().query({
     query: GetEventCategoriesDocument,
   });
@@ -42,24 +36,9 @@ export default async function CreateEvent() {
           mb: 4,
         }}
       >
-        <Container>
+        <Container maxWidth="md">
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
             <Box>
-              <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-                <Button
-                  href={profileUrl}
-                  startIcon={<ArrowBack />}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  Back to Profile
-                </Button>
-              </Stack>
-              <Typography variant="overline" color="primary" fontWeight={700} sx={{ letterSpacing: '0.1em' }}>
-                EVENT MANAGEMENT
-              </Typography>
               <Typography variant="h3" fontWeight={800} sx={{ fontSize: { xs: '1.75rem', md: '2.5rem' } }}>
                 <AddCircleOutline sx={{ mr: 1, verticalAlign: 'middle', fontSize: 'inherit' }} />
                 Create New Event

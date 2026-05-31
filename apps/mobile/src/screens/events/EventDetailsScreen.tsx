@@ -40,6 +40,8 @@ import {
   openEventLocationInMaps,
   openEventSourceLink,
   shareEvent,
+  shareEventSeriesLink,
+  shareEventSessionLink,
 } from '@/lib/events/deviceActions';
 import { getApolloAuthContext } from '@/lib/auth';
 import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
@@ -53,10 +55,13 @@ type EventOptionsModalProps = {
   canEditEvent: boolean;
   hasEventSource: boolean;
   onClose: () => void;
-  onDeleteEvent: () => void;
-  onEditEvent: () => void;
+  onDeleteEventSeries: () => void;
+  onEditEventSeries: () => void;
+  onEditEventSession: () => void;
+  onManageEventSessions: () => void;
   onOpenEventSource: () => void;
-  onShareEvent: () => void;
+  onShareEventSeriesLink: () => void;
+  onShareEventSessionLink: () => void;
   visible: boolean;
 };
 
@@ -86,10 +91,13 @@ function EventOptionsModal({
   canEditEvent,
   hasEventSource,
   onClose,
-  onDeleteEvent,
-  onEditEvent,
+  onDeleteEventSeries,
+  onEditEventSeries,
+  onEditEventSession,
+  onManageEventSessions,
   onOpenEventSource,
-  onShareEvent,
+  onShareEventSeriesLink,
+  onShareEventSessionLink,
   visible,
 }: EventOptionsModalProps) {
   const { theme } = useAppTheme();
@@ -107,27 +115,43 @@ function EventOptionsModal({
             },
           ]}
         >
-          <Text style={[styles.optionsTitle, { color: theme.colors.textPrimary }]}>Event Options</Text>
+          <Text style={[styles.optionsTitle, { color: theme.colors.textPrimary }]}>Event Tools</Text>
 
-          <Pressable onPress={onShareEvent} style={styles.optionRow}>
-            <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Share Event</Text>
+          <Pressable onPress={onShareEventSessionLink} style={styles.optionRow}>
+            <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Share Event Session Link</Text>
+          </Pressable>
+
+          <Pressable onPress={onShareEventSeriesLink} style={styles.optionRow}>
+            <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Share Event Series Link</Text>
           </Pressable>
 
           {hasEventSource ? (
             <Pressable onPress={onOpenEventSource} style={styles.optionRow}>
-              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Open Source</Text>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Open Event Source</Text>
             </Pressable>
           ) : null}
 
           {canEditEvent ? (
-            <Pressable onPress={onEditEvent} style={styles.optionRow}>
-              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Edit Event</Text>
+            <Pressable onPress={onManageEventSessions} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Manage Event Sessions</Text>
             </Pressable>
           ) : null}
 
           {canEditEvent ? (
-            <Pressable onPress={onDeleteEvent} style={styles.optionRow}>
-              <Text style={[styles.optionLabel, { color: theme.colors.error }]}>Delete Event</Text>
+            <Pressable onPress={onEditEventSession} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Edit Event Session</Text>
+            </Pressable>
+          ) : null}
+
+          {canEditEvent ? (
+            <Pressable onPress={onEditEventSeries} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.textPrimary }]}>Edit Event Series</Text>
+            </Pressable>
+          ) : null}
+
+          {canEditEvent ? (
+            <Pressable onPress={onDeleteEventSeries} style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: theme.colors.error }]}>Delete Event Series</Text>
             </Pressable>
           ) : null}
 
@@ -422,46 +446,88 @@ export function EventDetailsScreen() {
     });
   };
 
-  const handleEditEvent = () => {
+  const navigateToOrganizerSessions = (initialAction: 'edit' | 'view') => {
     setEventOptionsVisible(false);
 
     if (!eventId) {
-      Alert.alert('Edit unavailable', 'We could not find the event details needed to edit this event.');
+      Alert.alert('Sessions unavailable', 'We could not find the event details needed to manage this event.');
+      return;
+    }
+
+    navigation.navigate('OrganizerEventSessions', {
+      eventId,
+      initialAction,
+      initialOccurrenceId: occurrence.occurrenceId,
+      title: occurrence.eventSeries?.title ?? title,
+    });
+  };
+
+  const handleEditEventSeries = () => {
+    setEventOptionsVisible(false);
+
+    if (!eventId) {
+      Alert.alert('Edit unavailable', 'We could not find the event details needed to edit this event series.');
       return;
     }
 
     navigation.navigate('EditEvent', { eventId });
   };
 
-  const handleDeleteEvent = () => {
+  const handleDeleteEventSeries = () => {
     setEventOptionsVisible(false);
 
     if (!eventId) {
-      Alert.alert('Delete unavailable', 'We could not find the event details needed to delete this event.');
+      Alert.alert('Delete unavailable', 'We could not find the event details needed to delete this event series.');
       return;
     }
 
-    Alert.alert('Delete Event', 'This event will be permanently removed. This action cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void withBlockingLoader('Deleting event…', async () => {
-            try {
-              await deleteEventById({ variables: { eventId } });
-              showToast({ message: 'Event deleted successfully.', tone: 'success' });
-              navigation.navigate('MainTabs', { screen: 'Events' });
-            } catch (error) {
-              showToast({
-                message: error instanceof Error ? error.message : 'We could not delete this event.',
-                tone: 'error',
-              });
-            }
-          });
+    Alert.alert(
+      'Delete Event Series',
+      'This series and all of its generated sessions will be permanently removed. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete series',
+          style: 'destructive',
+          onPress: () => {
+            void withBlockingLoader('Deleting event series…', async () => {
+              try {
+                await deleteEventById({ variables: { eventId } });
+                showToast({ message: 'Event series deleted successfully.', tone: 'success' });
+                navigation.navigate('MainTabs', { screen: 'Events' });
+              } catch (error) {
+                showToast({
+                  message: error instanceof Error ? error.message : 'We could not delete this event.',
+                  tone: 'error',
+                });
+              }
+            });
+          },
         },
-      },
-    ]);
+      ],
+    );
+  };
+
+  const handleShareEventSeriesLink = () => {
+    setEventOptionsVisible(false);
+
+    void shareEventSeriesLink(occurrence).catch((error: unknown) => {
+      Alert.alert(
+        'Share failed',
+        error instanceof Error ? error.message : 'We could not open the share sheet for this event series.',
+      );
+    });
+  };
+
+  const handleShareEventSessionLink = () => {
+    setEventOptionsVisible(false);
+
+    void shareEventSessionLink(occurrence).catch((error: unknown) => {
+      Alert.alert(
+        'Share failed',
+        error instanceof Error ? error.message : 'We could not open the share sheet for this event session.',
+      );
+    });
   };
 
   const handleMessageGatherle = () => {
@@ -813,16 +879,16 @@ export function EventDetailsScreen() {
         canEditEvent={canEditEvent}
         hasEventSource={Boolean(eventSourceLink)}
         onClose={() => setEventOptionsVisible(false)}
-        onDeleteEvent={handleDeleteEvent}
-        onEditEvent={handleEditEvent}
+        onDeleteEventSeries={handleDeleteEventSeries}
+        onEditEventSeries={handleEditEventSeries}
+        onEditEventSession={() => navigateToOrganizerSessions('edit')}
+        onManageEventSessions={() => navigateToOrganizerSessions('view')}
         onOpenEventSource={() => {
           setEventOptionsVisible(false);
           handleOpenEventSource();
         }}
-        onShareEvent={() => {
-          setEventOptionsVisible(false);
-          handleShare();
-        }}
+        onShareEventSeriesLink={handleShareEventSeriesLink}
+        onShareEventSessionLink={handleShareEventSessionLink}
         visible={eventOptionsVisible}
       />
 

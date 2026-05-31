@@ -89,6 +89,7 @@ describe('AdminDashboard', () => {
 
     expect(screen.getAllByText('Overview content').length).toBeGreaterThan(0);
     expect(screen.getByText('Manage domains')).toBeTruthy();
+    expect(screen.getByText('Choose a domain to manage, or review the platform snapshot below.')).toBeTruthy();
   });
 
   it('navigates via router.push when a desktop tab is selected', () => {

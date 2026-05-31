@@ -1,10 +1,12 @@
 export const ROUTES = {
   ACCOUNT: {
     TAB: (tab: string) => `/account?tab=${encodeURIComponent(tab)}`,
+    PROFILE_EVENTS_TAB: (tab: string) => `/account?eventsTab=${encodeURIComponent(tab)}`,
     EVENTS: {
       EVENT: (slug: string) => `/account/events/${slug}`,
       EDIT_EVENT: (slug: string) => `/account/events/${slug}/edit`,
-      ROOT: '/account/events',
+      SESSIONS: (slug: string) => `/account/events/${slug}/sessions`,
+      ROOT: '/account?eventsTab=hosted',
       CREATE: '/account/events/create',
     },
     ORGANIZATIONS: {

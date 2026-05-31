@@ -403,6 +403,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
         event={event}
         redirectOnDelete={ROUTES.EVENTS.ROOT}
         canEditEvent={canEditEvent}
+        selectedOccurrence={hasExplicitOccurrenceSelection ? selectedOccurrence : null}
         buttonSx={{
           color: 'text.primary',
           p: 0.75,
@@ -413,7 +414,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     return () => {
       setToolbarAction(null);
     };
-  }, [canEditEvent, event, setToolbarAction]);
+  }, [canEditEvent, event, hasExplicitOccurrenceSelection, selectedOccurrence, setToolbarAction]);
 
   if (notFoundError) {
     return (

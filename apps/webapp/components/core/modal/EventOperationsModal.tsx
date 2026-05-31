@@ -28,21 +28,29 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 import Link from 'next/link';
 import { deleteEventAction } from '@/data/actions/server/events/delete-event';
-import { EventDetail } from '@/data/graphql/query/Event/types';
+import type { EventDetail } from '@/data/graphql/query/Event/types';
 import { ROUTES } from '@/lib/constants';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useSession } from 'next-auth/react';
+import { buildEventOccurrenceHref } from '@/components/events/occurrence-url';
+
+type EventOperationsOccurrenceTarget = {
+  originalStartAt?: Date | string | null;
+  startAt?: Date | string | null;
+};
 
 const EventOperationsModal = ({
   event,
   redirectOnDelete,
   canEditEvent = true,
   buttonSx,
+  selectedOccurrence,
 }: {
   event: EventDetail;
   redirectOnDelete?: string;
   canEditEvent?: boolean;
   buttonSx?: SxProps<Theme>;
+  selectedOccurrence?: EventOperationsOccurrenceTarget | null;
 }) => {
   const router = useRouter();
   const { data: session } = useSession();
@@ -61,6 +69,37 @@ const EventOperationsModal = ({
     };
   }, []);
 
+  const appendActionParam = (href: string, action: 'cancel' | 'edit') => {
+    const [pathname, search = ''] = href.split('?');
+    const searchParams = new URLSearchParams(search);
+    searchParams.set('action', action);
+    const query = searchParams.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  };
+
+  const buildSessionsHref = (action?: 'cancel' | 'edit') => {
+    const baseHref = selectedOccurrence
+      ? buildEventOccurrenceHref(ROUTES.ACCOUNT.EVENTS.SESSIONS(event.slug), selectedOccurrence)
+      : ROUTES.ACCOUNT.EVENTS.SESSIONS(event.slug);
+
+    if (!selectedOccurrence || !action) {
+      return baseHref;
+    }
+
+    return appendActionParam(baseHref, action);
+  };
+
+  const sessionsHref = buildSessionsHref();
+  const editSessionHref = buildSessionsHref('edit');
+  const cancelSessionHref = buildSessionsHref('cancel');
+  const publicEventHref = selectedOccurrence
+    ? buildEventOccurrenceHref(ROUTES.EVENTS.EVENT(event.slug), selectedOccurrence)
+    : ROUTES.EVENTS.EVENT(event.slug);
+  const copyLinkLabel = selectedOccurrence ? 'Copy Event Session Link' : 'Copy Event Series Link';
+  const copyLinkDescription = selectedOccurrence
+    ? 'Share the public link for this session'
+    : 'Share the public link for this series';
+
   const handleMenuClose = () => {
     if (linkCopiedTimeoutRef.current) {
       clearTimeout(linkCopiedTimeoutRef.current);
@@ -71,10 +110,7 @@ const EventOperationsModal = ({
   };
 
   const handleCopyLink = async () => {
-    const url =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}${ROUTES.EVENTS.EVENT(event.slug)}`
-        : ROUTES.EVENTS.EVENT(event.slug);
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${publicEventHref}` : publicEventHref;
     try {
       await navigator.clipboard.writeText(url);
       setLinkCopied(true);
@@ -142,7 +178,7 @@ const EventOperationsModal = ({
           }}
         >
           <Typography variant="subtitle1" fontWeight={700}>
-            Event Options
+            Event Tools
           </Typography>
           <IconButton size="small" onClick={handleMenuClose} aria-label="Close menu">
             <CloseIcon fontSize="small" />
@@ -151,6 +187,74 @@ const EventOperationsModal = ({
 
         <DialogContent sx={{ p: 0 }}>
           <List disablePadding>
+            {canEditEvent ? (
+              <ListItemButton
+                component={Link}
+                href={sessionsHref}
+                onClick={handleMenuClose}
+                sx={{ px: 2.5, py: 1.5, gap: 2 }}
+              >
+                <ListItemIcon sx={{ minWidth: 'unset' }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: 'secondary.main',
+                      color: 'secondary.contrastText',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary="Manage Event Sessions"
+                  secondary="Inspect, reschedule, cancel, or split sessions"
+                  slotProps={{
+                    primary: { fontWeight: 600 },
+                    secondary: { variant: 'caption' },
+                  }}
+                />
+              </ListItemButton>
+            ) : null}
+
+            {canEditEvent && selectedOccurrence ? (
+              <ListItemButton
+                component={Link}
+                href={editSessionHref}
+                onClick={handleMenuClose}
+                sx={{ px: 2.5, py: 1.5, gap: 2 }}
+              >
+                <ListItemIcon sx={{ minWidth: 'unset' }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: 'secondary.main',
+                      color: 'secondary.contrastText',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary="Edit Event Session"
+                  secondary="Adjust the currently selected session"
+                  slotProps={{
+                    primary: { fontWeight: 600 },
+                    secondary: { variant: 'caption' },
+                  }}
+                />
+              </ListItemButton>
+            ) : null}
+
             {canEditEvent ? (
               <ListItemButton
                 component={Link}
@@ -175,8 +279,8 @@ const EventOperationsModal = ({
                   </Box>
                 </ListItemIcon>
                 <ListItemText
-                  primary="Edit Event"
-                  secondary="Update event details"
+                  primary="Edit Event Series"
+                  secondary="Update series details and recurrence"
                   slotProps={{
                     primary: { fontWeight: 600 },
                     secondary: { variant: 'caption' },
@@ -205,14 +309,50 @@ const EventOperationsModal = ({
                 </Box>
               </ListItemIcon>
               <ListItemText
-                primary={linkCopied ? 'Link Copied!' : 'Copy Link'}
-                secondary="Share the event URL"
+                primary={linkCopied ? 'Link Copied!' : copyLinkLabel}
+                secondary={copyLinkDescription}
                 slotProps={{
                   primary: { fontWeight: 600 },
                   secondary: { variant: 'caption' },
                 }}
               />
             </ListItemButton>
+
+            {canEditEvent && selectedOccurrence ? <Divider sx={{ my: 0.5 }} /> : null}
+
+            {canEditEvent && selectedOccurrence ? (
+              <ListItemButton
+                component={Link}
+                href={cancelSessionHref}
+                onClick={handleMenuClose}
+                sx={{ px: 2.5, py: 1.5, gap: 2 }}
+              >
+                <ListItemIcon sx={{ minWidth: 'unset' }}>
+                  <Box
+                    sx={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 2,
+                      bgcolor: 'warning.main',
+                      color: 'warning.contrastText',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText
+                  primary="Cancel Event Session"
+                  secondary="Cancel only the selected session"
+                  slotProps={{
+                    primary: { sx: { fontWeight: 600, color: 'warning.dark' } },
+                    secondary: { variant: 'caption' },
+                  }}
+                />
+              </ListItemButton>
+            ) : null}
 
             {canEditEvent ? <Divider sx={{ my: 0.5 }} /> : null}
 
@@ -241,8 +381,8 @@ const EventOperationsModal = ({
                   </Box>
                 </ListItemIcon>
                 <ListItemText
-                  primary="Delete Event"
-                  secondary="Permanently remove this event"
+                  primary="Delete Event Series"
+                  secondary="Permanently remove this series and all generated sessions"
                   slotProps={{
                     primary: { sx: { fontWeight: 600, color: 'error.main' } },
                     secondary: { variant: 'caption' },
@@ -264,10 +404,11 @@ const EventOperationsModal = ({
           paper: { sx: { borderRadius: 3 } },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Delete this event?</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Delete this event series?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            <strong>{event.title}</strong> will be permanently removed. This action cannot be undone.
+            <strong>{event.title}</strong> and all of its generated sessions will be permanently removed. This action
+            cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
