@@ -67,7 +67,7 @@ export function EditEventScreen() {
   const { showToast, withBlockingLoader } = useAppFeedback();
   const route = useRoute<EditEventRouteProps>();
   const { eventId } = route.params;
-  const { authToken, isAuthenticated } = useAppShell();
+  const { authToken, isAuthenticated, userId, username } = useAppShell();
   const { theme } = useAppTheme();
 
   const eventQuery = useQuery(GetEventByIdDocument, {
@@ -212,7 +212,14 @@ export function EditEventScreen() {
         });
 
         showToast({ message: 'Event updated successfully.', tone: 'success' });
-        navigation.navigate('MyEvents');
+        if (userId) {
+          navigation.navigate('UserHostedEvents', {
+            userId,
+            username,
+          });
+        } else {
+          navigation.navigate('MyEvents');
+        }
       });
     } catch (error) {
       showToast({

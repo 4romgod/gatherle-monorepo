@@ -104,7 +104,7 @@ const initialFormState: EventFormState = {
 export function CreateEventScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const { showToast, withBlockingLoader } = useAppFeedback();
-  const { authToken, isAuthenticated, userId } = useAppShell();
+  const { authToken, isAuthenticated, userId, username } = useAppShell();
   const { theme } = useAppTheme();
   const { categories, refetch: refetchDiscovery } = useMobileHomeDiscovery(authToken);
   const organizationsQuery = useQuery(GetMyOrganizationsDocument, {
@@ -300,7 +300,14 @@ export function CreateEventScreen() {
         });
 
         if (result.data?.createEvent) {
-          navigation.navigate('MyEvents');
+          if (userId) {
+            navigation.navigate('UserHostedEvents', {
+              userId,
+              username,
+            });
+          } else {
+            navigation.navigate('MyEvents');
+          }
         }
       });
     } catch (error) {

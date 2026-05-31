@@ -4,6 +4,7 @@ import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types'
 import { formatLocationLabel, getEventTitle } from '@/lib/events/formatters';
 
 const DEFAULT_WEBAPP_URL = 'https://gatherle.com';
+const PUBLIC_OCCURRENCE_QUERY_PARAM = 'occurs';
 
 function trimSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -13,9 +14,33 @@ function getWebappBaseUrl() {
   return trimSlash(process.env.EXPO_PUBLIC_WEBAPP_URL?.trim() || DEFAULT_WEBAPP_URL);
 }
 
-export function buildEventWebUrl(occurrence: MobileEventOccurrence) {
+export function buildEventSeriesWebUrl(occurrence: MobileEventOccurrence) {
   const slug = occurrence.eventSeries?.slug;
   return slug ? `${getWebappBaseUrl()}/events/${slug}` : `${getWebappBaseUrl()}/events`;
+}
+
+function getOccurrencePublicAnchor(occurrence: MobileEventOccurrence) {
+  const rawValue = occurrence.originalStartAt ?? occurrence.startAt;
+
+  if (!rawValue) {
+    return null;
+  }
+
+  const parsed = new Date(rawValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+export function buildEventSessionWebUrl(occurrence: MobileEventOccurrence) {
+  const baseUrl = buildEventSeriesWebUrl(occurrence);
+  const occurrenceAnchor = getOccurrencePublicAnchor(occurrence);
+
+  return occurrenceAnchor
+    ? `${baseUrl}?${PUBLIC_OCCURRENCE_QUERY_PARAM}=${encodeURIComponent(occurrenceAnchor)}`
+    : baseUrl;
+}
+
+export function buildEventWebUrl(occurrence: MobileEventOccurrence) {
+  return buildEventSeriesWebUrl(occurrence);
 }
 
 function getAddressQuery(occurrence: MobileEventOccurrence) {
@@ -109,7 +134,7 @@ function formatCalendarDateInTimeZone(date: Date, timeZone: string) {
 function buildGoogleCalendarUrl(occurrence: MobileEventOccurrence) {
   const title = encodeURIComponent(getEventTitle(occurrence));
   const details = encodeURIComponent(
-    `${occurrence.eventSeries?.summary || occurrence.eventSeries?.description || ''}\n\n${buildEventWebUrl(occurrence)}`.trim(),
+    `${occurrence.eventSeries?.summary || occurrence.eventSeries?.description || ''}\n\n${buildEventSeriesWebUrl(occurrence)}`.trim(),
   );
   const location = encodeURIComponent(getAddressQuery(occurrence));
   const startDate = occurrence.startAt ? new Date(occurrence.startAt) : new Date();
@@ -141,7 +166,7 @@ export async function addEventToCalendar(occurrence: MobileEventOccurrence) {
     endDate,
     location: getAddressQuery(occurrence),
     notes:
-      `${occurrence.eventSeries?.summary || occurrence.eventSeries?.description || ''}\n\n${buildEventWebUrl(occurrence)}`.trim(),
+      `${occurrence.eventSeries?.summary || occurrence.eventSeries?.description || ''}\n\n${buildEventSeriesWebUrl(occurrence)}`.trim(),
     startDate,
     timeZone: occurrence.timezone,
     title: getEventTitle(occurrence),
@@ -154,6 +179,26 @@ export async function shareEvent(occurrence: MobileEventOccurrence) {
   await Share.share({
     message: `${eventTitle}\n${eventUrl}`,
     title: eventTitle,
+    url: eventUrl,
+  });
+}
+
+export async function shareEventSeriesLink(occurrence: MobileEventOccurrence) {
+  const eventUrl = buildEventSeriesWebUrl(occurrence);
+  const eventTitle = getEventTitle(occurrence);
+  await Share.share({
+    message: `${eventTitle}\n${eventUrl}`,
+    title: `${eventTitle} series`,
+    url: eventUrl,
+  });
+}
+
+export async function shareEventSessionLink(occurrence: MobileEventOccurrence) {
+  const eventUrl = buildEventSessionWebUrl(occurrence);
+  const eventTitle = getEventTitle(occurrence);
+  await Share.share({
+    message: `${eventTitle}\n${eventUrl}`,
+    title: `${eventTitle} session`,
     url: eventUrl,
   });
 }

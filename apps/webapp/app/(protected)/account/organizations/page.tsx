@@ -40,24 +40,8 @@ export default async function AccountOrganizationsPage() {
           py: { xs: 6, md: 8 },
         }}
       >
-        <Container>
-          <Box sx={{ maxWidth: '800px' }}>
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'primary.main',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                letterSpacing: '0.1em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                mb: 2,
-              }}
-            >
-              <Business sx={{ fontSize: 20 }} />
-              MY ORGANIZATIONS
-            </Typography>
+        <Container maxWidth="md">
+          <Box>
             <Typography
               variant="h3"
               fontWeight={800}
@@ -94,11 +78,11 @@ export default async function AccountOrganizationsPage() {
       </Box>
 
       {/* Organizations Grid */}
-      <Container sx={{ py: 6 }}>
+      <Container sx={{ py: 6 }} maxWidth="md">
         {userOrganizations.length > 0 ? (
           <Grid container spacing={3}>
             {userOrganizations.map(({ organization, role }) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={organization.orgId}>
+              <Grid size={{ xs: 12, md: 6 }} key={organization.orgId}>
                 <OrganizationCard organization={organization} userRole={role} />
               </Grid>
             ))}

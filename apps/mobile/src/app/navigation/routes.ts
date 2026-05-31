@@ -86,6 +86,12 @@ export type RootStackParamList = {
   EditEvent: {
     eventId: string;
   };
+  OrganizerEventSessions: {
+    eventId: string;
+    initialAction?: 'cancel' | 'edit' | 'view';
+    initialOccurrenceId?: string;
+    title?: string;
+  };
   MyOrganizations: undefined;
   CreateOrganization: undefined;
   EditOrganization: {
@@ -302,6 +308,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     sectionLabel: 'Creator',
     title: 'Edit event',
     description: "Edit an existing event's details, schedule, and media.",
+    category: 'account',
+  },
+  OrganizerEventSessions: {
+    sectionLabel: 'Creator',
+    title: 'Event sessions',
+    description: 'Inspect, reschedule, cancel, and split the concrete sessions for an event series that you manage.',
     category: 'account',
   },
   MyOrganizations: {

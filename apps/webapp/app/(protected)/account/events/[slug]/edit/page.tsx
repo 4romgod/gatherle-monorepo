@@ -1,12 +1,11 @@
-import React from 'react';
 import { redirect } from 'next/navigation';
-import { Box, Container, Typography, Button, Stack } from '@mui/material';
-import { ArrowBack, Edit } from '@mui/icons-material';
+import { Box, Container, Typography, Stack } from '@mui/material';
+import { Edit } from '@mui/icons-material';
 import { getClient } from '@/data/graphql';
 import { GetEventCategoriesDocument, GetEventBySlugDocument } from '@/data/graphql/types/graphql';
 import EventMutationForm from '@/components/forms/eventMutation';
 import { EventDetail } from '@/data/graphql/query/Event/types';
-import { ROUTES, BUTTON_STYLES, SECTION_TITLE_STYLES } from '@/lib/constants';
+import { ROUTES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { auth } from '@/auth';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -74,9 +73,6 @@ export default async function Page(props: Props) {
         }}
       >
         <Container maxWidth="md">
-          <Button href={ROUTES.EVENTS.EVENT(params.slug)} startIcon={<ArrowBack />} sx={{ ...BUTTON_STYLES, mb: 2 }}>
-            Back to Event
-          </Button>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Box
               sx={{

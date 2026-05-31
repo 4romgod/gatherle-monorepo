@@ -203,7 +203,7 @@ class OrganizationMembershipService {
    *
    * @param orgId - Organization ID to check
    * @param userId - User ID to verify
-   * @returns true if user is owner or has Owner/Admin role, false otherwise
+   * @returns true if user is a platform admin, organization owner, or has Owner/Admin membership, false otherwise
    */
   private static async verifyOrganizationAdminAccess(orgId: string, userId: string): Promise<boolean> {
     try {

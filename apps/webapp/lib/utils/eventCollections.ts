@@ -55,17 +55,58 @@ export function buildHostedEventsQueryOptions<TOrder extends EventQuerySortOrder
   order: TOrder,
   limit: number,
   skip = 0,
+  searchTerm = '',
 ): HostedEventsQueryOptions<TOrder> {
+  const trimmedQuery = searchTerm.trim();
+
   return {
     filters: [{ field: 'organizers.user.userId', value: userId }],
     pagination: { limit, skip },
     sort: [{ field: 'createdAt', order }],
+    ...(trimmedQuery.length >= 2
+      ? {
+          search: {
+            fields: [
+              'title',
+              'slug',
+              'summary',
+              'description',
+              'organization.name',
+              'eventCategories.name',
+              'location.address.city',
+              'location.address.state',
+              'location.address.country',
+            ],
+            value: trimmedQuery,
+          },
+        }
+      : {}),
   };
 }
 
-export function buildHostedEventsCountQueryOptions(userId: string) {
+export function buildHostedEventsCountQueryOptions(userId: string, searchTerm = '') {
+  const trimmedQuery = searchTerm.trim();
+
   return {
     filters: [{ field: 'organizers.user.userId', value: userId }],
+    ...(trimmedQuery.length >= 2
+      ? {
+          search: {
+            fields: [
+              'title',
+              'slug',
+              'summary',
+              'description',
+              'organization.name',
+              'eventCategories.name',
+              'location.address.city',
+              'location.address.state',
+              'location.address.country',
+            ],
+            value: trimmedQuery,
+          },
+        }
+      : {}),
   };
 }
 

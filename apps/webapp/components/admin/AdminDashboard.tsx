@@ -120,7 +120,7 @@ export default function AdminDashboard({ token, currentUserId }: AdminDashboardP
 
   const activeTabId = normalizeAdminTab(requestedTab, tabs);
   const currentTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
-  const isHubMobile = !requestedTab || requestedTab === OVERVIEW_TAB_ID;
+  const isHubMobile = activeTabId === OVERVIEW_TAB_ID;
 
   const navigateToTab = (tabId: string) => {
     const href = tabId === OVERVIEW_TAB_ID ? ROUTES.ADMIN.ROOT : ROUTES.ADMIN.TAB(tabId);

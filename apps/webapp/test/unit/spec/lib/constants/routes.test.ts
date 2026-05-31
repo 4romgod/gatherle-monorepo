@@ -20,4 +20,9 @@ describe('ROUTES constants', () => {
   it('keeps account messages root route unchanged', () => {
     expect(ROUTES.ACCOUNT.MESSAGES).toBe('/account/messages');
   });
+
+  it('maps hosted-event account root to the hosted tab on account', () => {
+    expect(ROUTES.ACCOUNT.EVENTS.ROOT).toBe('/account?eventsTab=hosted');
+    expect(ROUTES.ACCOUNT.PROFILE_EVENTS_TAB('saved')).toBe('/account?eventsTab=saved');
+  });
 });

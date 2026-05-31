@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { typography } from '@/app/theme/typography';
 import { ProfileEventsEmptyState } from '@/components/account/ProfileEventsEmptyState';
 import { PageContainer } from '@/components/core/PageContainer';
 import { PageHeading } from '@/components/core/PageHeading';
+import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
 import { EventTileGridSkeleton } from '@/components/skeleton/EventTileGridSkeleton';
@@ -25,13 +26,27 @@ export function UserHostedEventsScreen() {
   const { authToken, userId: viewerUserId } = useAppShell();
   const { theme } = useAppTheme();
   const { displayName, totalCount: initialTotalCount = 0, userId, username } = route.params;
+  const [query, setQuery] = useState('');
   const { error, hasMore, hostedEvents, loading, loadingMore, loadMore, refetch, totalCount } = useHostedEventsByUser(
     userId,
     authToken,
+    { searchTerm: query },
   );
   const resolvedName = displayName ?? username ?? 'This member';
   const resolvedTotalCount = totalCount || initialTotalCount;
   const isOwnProfile = viewerUserId === userId;
+  const trimmedQuery = query.trim();
+  const subtitle = useMemo(() => {
+    const basePrefix = isOwnProfile ? 'You have' : `${resolvedName} has`;
+    const countLabel = `${resolvedTotalCount} event${resolvedTotalCount === 1 ? '' : 's'}`;
+
+    if (trimmedQuery.length >= 2) {
+      const resultLabel = `${hostedEvents.length} match${hostedEvents.length === 1 ? '' : 'es'}`;
+      return `${resultLabel} across ${countLabel} hosted by ${isOwnProfile ? 'you' : resolvedName}.`;
+    }
+
+    return resolvedTotalCount > 0 ? `${basePrefix} hosted ${countLabel}.` : `${basePrefix} not hosted any events yet.`;
+  }, [hostedEvents.length, isOwnProfile, resolvedName, resolvedTotalCount, trimmedQuery.length]);
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
       await refetch();
@@ -48,7 +63,7 @@ export function UserHostedEventsScreen() {
     return (
       <PageContainer>
         <PageHeading
-          subtitle={`Loading hosted events for ${resolvedName}.`}
+          subtitle={`Loading hosted events for ${isOwnProfile ? 'you' : resolvedName}.`}
           title={isOwnProfile ? 'Your hosted events' : 'Hosted events'}
         />
         <EventTileGridSkeleton count={6} />
@@ -60,7 +75,7 @@ export function UserHostedEventsScreen() {
     return (
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         <PageHeading
-          subtitle={`We couldn’t load hosted events for ${resolvedName}.`}
+          subtitle={`We couldn’t load hosted events for ${isOwnProfile ? 'you' : resolvedName}.`}
           title={isOwnProfile ? 'Your hosted events' : 'Hosted events'}
         />
         <StateNotice actionLabel="Retry" message="Try reloading this list." onPressAction={() => void refetch()} />
@@ -76,24 +91,27 @@ export function UserHostedEventsScreen() {
       refreshing={refreshing}
       scrollEventThrottle={infiniteScroll.scrollEventThrottle}
     >
-      <PageHeading
-        subtitle={
-          resolvedTotalCount > 0
-            ? `${resolvedName} has hosted ${resolvedTotalCount} event${resolvedTotalCount === 1 ? '' : 's'}.`
-            : `${resolvedName} has not hosted any events yet.`
-        }
-        title={isOwnProfile ? 'Your hosted events' : 'Hosted events'}
+      <PageHeading subtitle={subtitle} title={isOwnProfile ? 'Your hosted events' : 'Hosted events'} />
+      <SearchField
+        onChangeText={setQuery}
+        onClear={() => setQuery('')}
+        placeholder="Search hosted events"
+        value={query}
       />
 
       {hostedEvents.length === 0 ? (
         <ProfileEventsEmptyState
           ctaLabel={isOwnProfile ? 'Create Your First Event' : 'Explore Events'}
-          description="Start hosting events and they'll appear here"
+          description={
+            trimmedQuery.length >= 2
+              ? 'Try a different title, slug, location, or category.'
+              : "Start hosting events and they'll appear here"
+          }
           icon="calendar"
           onPressCta={() =>
             isOwnProfile ? navigation.navigate('CreateEvent') : navigation.navigate('MainTabs', { screen: 'Events' })
           }
-          title="No events hosted yet"
+          title={trimmedQuery.length >= 2 ? 'No hosted events match that search' : 'No events hosted yet'}
         />
       ) : (
         <View style={styles.section}>

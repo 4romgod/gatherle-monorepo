@@ -12,7 +12,7 @@
     "dev": "npm-run-all codegen start:dev",
     "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
-    "start:dev": "next dev --webpack",
+    "start:dev": "next dev --turbopack",
     "start:prod": "next start",
     "test:unit": "jest --config=test/unit/jest.config.ts --runInBand",
     "test:e2e": "playwright test",

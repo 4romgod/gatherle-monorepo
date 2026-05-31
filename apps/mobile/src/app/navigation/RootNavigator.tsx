@@ -26,6 +26,7 @@ import { AccountScreen } from '@/screens/account/AccountScreen';
 import { CreateEventScreen } from '@/screens/account/CreateEventScreen';
 import { EditEventScreen } from '@/screens/account/EditEventScreen';
 import { MyEventsScreen } from '@/screens/account/MyEventsScreen';
+import { OrganizerEventSessionsScreen } from '@/screens/account/OrganizerEventSessionsScreen';
 import { MyOrganizationsScreen } from '@/screens/account/MyOrganizationsScreen';
 import { CreateOrganizationScreen } from '@/screens/account/CreateOrganizationScreen';
 import { EditOrganizationScreen } from '@/screens/account/EditOrganizationScreen';
@@ -244,6 +245,14 @@ export function RootNavigator() {
         component={EditEventScreen}
         name="EditEvent"
         options={{ presentation: 'card', title: 'Edit event' }}
+      />
+      <Stack.Screen
+        component={OrganizerEventSessionsScreen}
+        name="OrganizerEventSessions"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.title ? `${route.params.title} sessions` : 'Sessions',
+        })}
       />
       <Stack.Screen
         component={MyOrganizationsScreen}

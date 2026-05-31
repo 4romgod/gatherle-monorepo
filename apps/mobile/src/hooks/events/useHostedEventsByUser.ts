@@ -13,6 +13,7 @@ const PAGE_SIZE = 18;
 type UseHostedEventsOptions = {
   enabled?: boolean;
   pageSize?: number;
+  searchTerm?: string;
 };
 
 export function useHostedEventsByUser(
@@ -20,7 +21,7 @@ export function useHostedEventsByUser(
   authToken: string | null,
   options: UseHostedEventsOptions = {},
 ) {
-  const { enabled = true, pageSize = PAGE_SIZE } = options;
+  const { enabled = true, pageSize = PAGE_SIZE, searchTerm = '' } = options;
   const [events, setEvents] = useState<MobileEventOccurrence[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -53,13 +54,13 @@ export function useHostedEventsByUser(
       const response = await loadEvents({
         context: getApolloAuthContext(authToken),
         variables: {
-          options: buildHostedEventsQueryOptions(userId, SortOrderInput.Desc, pageSize, page * pageSize),
+          options: buildHostedEventsQueryOptions(userId, SortOrderInput.Desc, pageSize, page * pageSize, searchTerm),
         },
       });
 
       return (response.data?.readEvents ?? []) as MobileEventSeriesListItem[];
     },
-    [authToken, loadEvents, pageSize, userId],
+    [authToken, loadEvents, pageSize, searchTerm, userId],
   );
 
   const refresh = useCallback(async () => {
@@ -81,7 +82,7 @@ export function useHostedEventsByUser(
         loadEventsCount({
           context: getApolloAuthContext(authToken),
           variables: {
-            options: buildHostedEventsCountQueryOptions(userId),
+            options: buildHostedEventsCountQueryOptions(userId, searchTerm),
           },
         }),
       ]);
@@ -112,7 +113,7 @@ export function useHostedEventsByUser(
       setTotalCount(0);
       totalCountKnownRef.current = false;
     }
-  }, [authToken, enabled, loadEventsCount, loadPage, mapSeriesPage, userId]);
+  }, [authToken, enabled, loadEventsCount, loadPage, mapSeriesPage, searchTerm, userId]);
 
   useEffect(() => {
     void refresh();
