@@ -10,7 +10,11 @@ import {
   SortOrderInput,
 } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
-import { buildDefaultOccurrenceDateRange, sortCategoriesByInterest } from '@/lib/events/formatters';
+import {
+  buildDefaultOccurrenceDateRange,
+  buildSelectedEventOccurrenceDateRange,
+  sortCategoriesByInterest,
+} from '@/lib/events/formatters';
 import type { EventsFilterState } from './useEventsFilters';
 
 const EVENTS_PAGE_SIZE = 20;
@@ -19,6 +23,9 @@ const EVENTS_PAGE_SIZE = 20;
 // The API requires at least one of customDate, dateFilterOption, or a full dateRange,
 // so this is always sent as a fallback when no other date filter is active.
 const stableDefaultDateRange = buildDefaultOccurrenceDateRange();
+// Exact event selection should not disappear just because the chosen series only
+// has past occurrences outside the normal discovery window.
+const stableSelectedEventDateRange = buildSelectedEventOccurrenceDateRange();
 
 function buildQueryOptions(filters: EventsFilterState, selectedEventId?: string) {
   const filterInputs: FilterInput[] = [];
@@ -59,7 +66,7 @@ function buildQueryOptions(filters: EventsFilterState, selectedEventId?: string)
   return {
     ...(filters.dateOption
       ? { dateFilterOption: filters.dateOption as DateFilterOption }
-      : { dateRange: stableDefaultDateRange }),
+      : { dateRange: selectedEventId ? stableSelectedEventDateRange : stableDefaultDateRange }),
     ...(filterInputs.length > 0 ? { filters: filterInputs } : {}),
     ...(locationFilter ? { location: locationFilter } : {}),
     sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
@@ -153,6 +160,9 @@ export function useFilteredMobileEvents(
           };
         },
       });
+    } catch (caughtError) {
+      const resolvedError = caughtError instanceof Error ? caughtError : new Error('Unable to load more events.');
+      console.error('Failed to load more filtered mobile events', resolvedError);
     } finally {
       isFetchingMoreRef.current = false;
       setFetchingMore(false);

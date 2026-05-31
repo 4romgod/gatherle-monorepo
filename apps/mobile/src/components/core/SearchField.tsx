@@ -17,13 +17,14 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 }
 
 type SearchFieldProps = {
+  autoFocus?: boolean;
   onChangeText: (value: string) => void;
   onClear?: () => void;
   placeholder: string;
   value: string;
 };
 
-export function SearchField({ onChangeText, onClear, placeholder, value }: SearchFieldProps) {
+export function SearchField({ autoFocus = false, onChangeText, onClear, placeholder, value }: SearchFieldProps) {
   const { theme } = useAppTheme();
   const elevatedShadow =
     theme.mode === 'light'
@@ -49,6 +50,7 @@ export function SearchField({ onChangeText, onClear, placeholder, value }: Searc
     >
       <Feather color={theme.colors.textMuted} name="search" size={18} />
       <TextInput
+        autoFocus={autoFocus}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.textMuted}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -10,6 +11,8 @@ import { PageContainer } from '@/components/core/PageContainer';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventCard } from '@/components/events/EventCard';
+import { HomeBrowseSection } from '@/components/home/HomeBrowseSection';
+import type { HomeBrowseItem } from '@/components/home/HomeBrowseSection';
 import { FollowedMomentsStrip } from '@/components/moments/FollowedMomentsStrip';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
@@ -63,13 +66,47 @@ export function HomeScreen() {
     () => buildRecommendedEvents(trendingEvents, upcomingEvents).slice(0, 4),
     [trendingEvents, upcomingEvents],
   );
+  const browseItems = useMemo<HomeBrowseItem[]>(
+    () => [
+      {
+        icon: 'grid',
+        label: 'Categories',
+        onPress: () => navigation.navigate('Categories'),
+      },
+      {
+        icon: 'briefcase',
+        label: 'Organizations',
+        onPress: () => navigation.navigate('Organizations'),
+      },
+      {
+        icon: 'map-pin',
+        label: 'Venues',
+        onPress: () => navigation.navigate('Venues'),
+      },
+      {
+        badgeLabel: isAuthenticated ? undefined : 'Login',
+        icon: 'users',
+        label: 'People',
+        onPress: () => navigation.navigate('Community'),
+      },
+    ],
+    [isAuthenticated, navigation],
+  );
+  const homeToolbarProps = {
+    right: (
+      <EventSearchBar
+        onSelectEvent={(event) => navigateToEventSeriesResults(navigation, event)}
+        renderTrigger={({ open }) => (
+          <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={open} />
+        )}
+      />
+    ),
+  };
 
   return (
-    <MainTabScreenLayout>
+    <MainTabScreenLayout toolbarProps={homeToolbarProps}>
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
-
-        <EventSearchBar onSelectEvent={(event) => navigateToEventSeriesResults(navigation, event)} />
 
         <SectionHeading
           actionLabel="View all"
@@ -122,6 +159,8 @@ export function HomeScreen() {
         ) : (
           <StateNotice message="Recommendations will appear here once more public events are available." />
         )}
+
+        <HomeBrowseSection items={browseItems} />
       </PageContainer>
     </MainTabScreenLayout>
   );

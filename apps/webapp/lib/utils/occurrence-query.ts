@@ -1,4 +1,8 @@
 const DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS = 6;
+// Exact event selection should be able to reveal a series across its realistic
+// history and future, instead of disappearing outside the discovery feed window.
+const SELECTED_EVENT_OCCURRENCE_LOOKBACK_YEARS = 10;
+const SELECTED_EVENT_OCCURRENCE_LOOKAHEAD_YEARS = 10;
 
 export function buildDefaultOccurrenceDateRange(fromDate: Date = new Date()) {
   const startDate = new Date(fromDate);
@@ -6,6 +10,21 @@ export function buildDefaultOccurrenceDateRange(fromDate: Date = new Date()) {
 
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS);
+  endDate.setHours(23, 59, 59, 999);
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+}
+
+export function buildSelectedEventOccurrenceDateRange(fromDate: Date = new Date()) {
+  const startDate = new Date(fromDate);
+  startDate.setFullYear(startDate.getFullYear() - SELECTED_EVENT_OCCURRENCE_LOOKBACK_YEARS);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(fromDate);
+  endDate.setFullYear(endDate.getFullYear() + SELECTED_EVENT_OCCURRENCE_LOOKAHEAD_YEARS);
   endDate.setHours(23, 59, 59, 999);
 
   return {

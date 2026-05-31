@@ -29,9 +29,7 @@ export default function ProfilesMenu({
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const { themeMode, setThemeMode } = useAppContext();
-  const { data: session } = useSession();
   const { logout } = useLogout();
-  const profileUrl = session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT;
 
   const handleNavClick = (targetPath: string) => {
     // Only start progress bar if navigating to a different page
@@ -65,7 +63,7 @@ export default function ProfilesMenu({
         },
       }}
     >
-      <MenuItem component={Link} href={profileUrl} onClick={() => handleNavClick(profileUrl)}>
+      <MenuItem component={Link} href={ROUTES.ACCOUNT.ROOT} onClick={() => handleNavClick(ROUTES.ACCOUNT.ROOT)}>
         <ListItemIcon>
           <AccountCircle fontSize="medium" />
         </ListItemIcon>

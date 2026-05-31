@@ -27,6 +27,8 @@ type CustomAppContextType = {
   setToastProps: React.Dispatch<React.SetStateAction<ToastProps>>;
   toolbarAction: ReactNode | null;
   setToolbarAction: Dispatch<SetStateAction<ReactNode | null>>;
+  toolbarTitle: ReactNode | null;
+  setToolbarTitle: Dispatch<SetStateAction<ReactNode | null>>;
 };
 
 const toastDefaultProps: ToastProps = {
@@ -53,6 +55,8 @@ export const CustomAppContext = createContext<CustomAppContextType>({
   setToastProps: () => {},
   toolbarAction: null,
   setToolbarAction: () => {},
+  toolbarTitle: null,
+  setToolbarTitle: () => {},
 });
 
 export const CustomAppContextProvider = ({ children }: { children: ReactNode }) => {
@@ -87,6 +91,7 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
   );
   const [toastProps, setToastProps] = useState<ToastProps>(toastDefaultProps);
   const [toolbarAction, setToolbarAction] = useState<ReactNode | null>(null);
+  const [toolbarTitle, setToolbarTitle] = useState<ReactNode | null>(null);
 
   return createElement(
     CustomAppContext.Provider,
@@ -99,6 +104,8 @@ export const CustomAppContextProvider = ({ children }: { children: ReactNode }) 
         setToastProps,
         toolbarAction,
         setToolbarAction,
+        toolbarTitle,
+        setToolbarTitle,
       },
     },
     children,

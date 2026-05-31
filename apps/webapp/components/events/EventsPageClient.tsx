@@ -22,8 +22,11 @@ import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import EventSearchBar from '@/components/search/EventSearchBar';
+import { getEventPreviewEventId, getEventPreviewTitle } from '@/components/events/event-preview-utils';
 import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import ToolbarEventSearchAction from '@/components/navigation/ToolbarEventSearchAction';
+import { useToolbarAction } from '@/hooks/useToolbarAction';
 
 const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.Asc }];
 const DEFAULT_PAGE_SIZE = 10;
@@ -138,6 +141,11 @@ function EventsContent({
   stats,
   userId,
 }: EventsContentProps) {
+  const toolbarAction = useMemo(
+    () => <ToolbarEventSearchAction placeholder="Search events by title, location, or category..." />,
+    [],
+  );
+  useToolbarAction(toolbarAction);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -172,14 +180,25 @@ function EventsContent({
     clearSavedLocation();
   }, [clearFilterLocation, clearSavedLocation]);
 
+  const clearSeriesSelection = useCallback(() => {
+    if (!hasSeriesSelection) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('eventId');
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [hasSeriesSelection, pathname, router, searchParams]);
+
   const clearAllFilters = useCallback(() => {
     resetFilters();
     clearSavedLocation();
     if (hasSeriesSelection) {
-      router.replace(pathname, { scroll: false });
+      clearSeriesSelection();
       return;
     }
-  }, [clearSavedLocation, hasSeriesSelection, pathname, resetFilters, router]);
+  }, [clearSavedLocation, clearSeriesSelection, hasSeriesSelection, resetFilters]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -265,6 +284,14 @@ function EventsContent({
     );
   }, [serverEvents, filters.searchQuery]);
   const visibleEventCount = filters.searchQuery.trim() ? filteredEvents.length : totalEvents;
+  const activeSearchLabel = useMemo(() => {
+    if (!hasSeriesSelection) {
+      return '';
+    }
+
+    const selectedEvent = serverEvents.find((event) => getEventPreviewEventId(event) === selectedEventId);
+    return selectedEvent ? getEventPreviewTitle(selectedEvent).trim() : 'Selected event';
+  }, [hasSeriesSelection, selectedEventId, serverEvents]);
 
   const statuses = Object.values(EventStatus);
   const dateOptions = Object.values(DATE_FILTER_OPTIONS);
@@ -315,7 +342,9 @@ function EventsContent({
               </Box>
             </Stack>
 
-            <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />
+            </Box>
           </Box>
 
           {/* Mobile filter sheet trigger (xs/sm only) */}
@@ -360,6 +389,8 @@ function EventsContent({
               onApplyLocation={setLocation}
               onClearLocation={clearLocation}
               onClearAll={clearAllFilters}
+              activeSearchLabel={activeSearchLabel}
+              onClearSearch={clearSeriesSelection}
               activeFilterCount={activeFilterCount}
             />
             {(hasActiveFilters || hasSeriesSelection) && (

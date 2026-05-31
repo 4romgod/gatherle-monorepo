@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import React, { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -21,7 +21,6 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import ProfilesMenu from '@/components/navigation/main/NavigationProfileItems';
-import TemporaryDrawer from '@/components/navigation/main/NavigationTemporaryDrawer';
 import { Button } from '@mui/material';
 import { ROUTES, APP_NAME } from '@/lib/constants';
 import NavLinksList from '@/components/navigation/main/NavLinksList';
@@ -62,15 +61,12 @@ function isOwnProfileRoute(pathname: string, username?: string | null) {
   return Boolean(username) && pathname === ROUTES.USERS.USER(username!);
 }
 
-function isMainShellRoute(pathname: string, username?: string | null) {
-  if (mainShellRoutes.has(pathname)) {
-    return true;
-  }
-
-  return isOwnProfileRoute(pathname, username);
+function isMainShellRoute(pathname: string) {
+  return mainShellRoutes.has(pathname);
 }
 
-function getBackFallback(pathname: string) {
+function getBackFallback(pathname: string, username?: string | null) {
+  if (isOwnProfileRoute(pathname, username)) return ROUTES.ACCOUNT.ROOT;
   if (pathname.startsWith('/account/messages/')) return ROUTES.ACCOUNT.MESSAGES;
   if (pathname === ROUTES.VENUES.ROOT) return ROUTES.ROOT;
   if (pathname === ROUTES.VENUES.ADD || pathname.startsWith('/venues/')) return ROUTES.VENUES.ROOT;
@@ -108,8 +104,9 @@ function getSubPageAction(pathname: string): SubPageAction | null {
  */
 export default function MainNavigation({ isAuthN }: MainNavigationProps) {
   const { data: session } = useSession();
-  const { themeMode, setThemeMode, toolbarAction } = useAppContext();
+  const { themeMode, setThemeMode, toolbarAction, toolbarTitle } = useAppContext();
   const pathname = normalizePathname(usePathname());
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   // Unread badges are primarily websocket-driven; queries provide initial/fallback state.
@@ -121,11 +118,17 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
 
   const [profilesMenuAnchorEl, setProfilesMenuAnchorEl] = useState<null | HTMLElement>(null);
 
+  const hasAccountTabParam = pathname === ROUTES.ACCOUNT.ROOT && Boolean(searchParams.get('tab'));
+  const showMobileBackOnAccountTab = !isMdUp && hasAccountTabParam;
   const isProfilesMenuOpen = Boolean(profilesMenuAnchorEl);
-  const isMainRoute = isMainShellRoute(pathname, session?.user?.username);
-  const backFallback = getBackFallback(pathname);
+  const isMainRoute = isMainShellRoute(pathname);
+  const backFallback = hasAccountTabParam ? ROUTES.ACCOUNT.ROOT : getBackFallback(pathname, session?.user?.username);
   const subPageAction = !isMainRoute ? getSubPageAction(pathname) : null;
-  const hasToolbarAction = !isMainRoute && Boolean(toolbarAction);
+  const hasToolbarAction = Boolean(toolbarAction);
+  const hasToolbarTitle = Boolean(toolbarTitle);
+  const showDesktopDefaultActions = !hasToolbarAction || isMainRoute;
+  const showToolbarAction = hasToolbarAction && (!isMainRoute || !isMdUp);
+  const showMobileMainTitle = isMainRoute && !isMdUp && hasToolbarTitle;
 
   const handleProfilesMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProfilesMenuAnchorEl(event.currentTarget);
@@ -185,12 +188,13 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
           disableGutters
           color="primary"
           sx={{
+            position: 'relative',
             px: { xs: 2, sm: 3, md: 4 },
             minHeight: 64,
             gap: 1.25,
           }}
         >
-          {isMainRoute ? (
+          {isMainRoute && !showMobileBackOnAccountTab ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Logo />
             </Box>
@@ -209,6 +213,23 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </IconButton>
           )}
 
+          {showMobileMainTitle ? (
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                pointerEvents: 'none',
+                maxWidth: { xs: 'calc(100% - 180px)', sm: 'calc(100% - 280px)' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {toolbarTitle}
+            </Box>
+          ) : null}
+
           <Box
             sx={{
               display: { xs: 'none', md: 'flex' },
@@ -221,7 +242,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
 
           <Box sx={{ flexGrow: 1 }} />
 
-          {!isAuthN && !hasToolbarAction && (
+          {!isAuthN && showDesktopDefaultActions && (
             <Box
               component="div"
               sx={{
@@ -257,7 +278,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </Box>
           )}
 
-          {isAuthN && !hasToolbarAction && (
+          {isAuthN && showDesktopDefaultActions && (
             <Box
               component="div"
               sx={{
@@ -369,7 +390,7 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             </Box>
           )}
 
-          {hasToolbarAction ? (
+          {showToolbarAction ? (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>{toolbarAction}</Box>
           ) : null}
 
@@ -395,12 +416,6 @@ export default function MainNavigation({ isAuthN }: MainNavigationProps) {
             >
               <Add fontSize="small" />
             </IconButton>
-          ) : null}
-
-          {isMainRoute ? (
-            <Box component="div" sx={{ display: { xs: 'flex', md: 'none' }, ml: 'auto' }}>
-              <TemporaryDrawer isAuthN={isAuthN} />
-            </Box>
           ) : null}
         </Toolbar>
       </AppBar>

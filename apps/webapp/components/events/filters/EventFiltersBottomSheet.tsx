@@ -46,6 +46,8 @@ interface EventFiltersBottomSheetProps {
   onApplyLocation: (location: LocationFilter) => void;
   onClearLocation: () => void;
   onClearAll: () => void;
+  activeSearchLabel?: string | null;
+  onClearSearch?: () => void;
 
   activeFilterCount: number;
 }
@@ -70,10 +72,14 @@ export default function EventFiltersBottomSheet({
   onApplyLocation,
   onClearLocation,
   onClearAll,
+  activeSearchLabel,
+  onClearSearch,
   activeFilterCount,
 }: EventFiltersBottomSheetProps) {
   const [open, setOpen] = useState(false);
   const [showCustomDateCalendar, setShowCustomDateCalendar] = useState(false);
+  const resolvedSearchLabel = activeSearchLabel?.trim() ?? '';
+  const hasActiveSearch = resolvedSearchLabel.length > 0;
 
   // Location local state (mirrors LocationMenu logic)
   const { setToastProps, toastProps } = useAppContext();
@@ -251,6 +257,35 @@ export default function EventFiltersBottomSheet({
 
         {/* Scrollable content */}
         <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, py: 2 }}>
+          {hasActiveSearch && (
+            <>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                  Search
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
+                  <Chip
+                    label={resolvedSearchLabel}
+                    onDelete={onClearSearch}
+                    color="primary"
+                    variant="filled"
+                    size="medium"
+                    sx={{
+                      maxWidth: '100%',
+                      fontWeight: 700,
+                      '& .MuiChip-label': {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      },
+                    }}
+                  />
+                </Stack>
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+            </>
+          )}
+
           {/* Categories */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em' }}>

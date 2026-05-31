@@ -20,7 +20,6 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AppFeedbackProvider } from '@/app/providers/AppFeedbackProvider';
 import { AppShellProvider } from '@/app/providers/AppShellProvider';
 import { RealtimeInboxProvider } from '@/app/providers/RealtimeInboxProvider';
-import { AppDrawer } from '@/app/navigation/AppDrawer';
 import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
 import { AppThemeProvider } from '@/app/theme/AppThemeProvider';
@@ -45,7 +44,6 @@ function AppContent() {
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <RootNavigator />
       </NavigationContainer>
-      <AppDrawer />
     </View>
   );
 }

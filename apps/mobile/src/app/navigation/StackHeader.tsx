@@ -3,7 +3,6 @@ import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
-import { HeaderMenuButton } from '@/app/navigation/HeaderMenuButton';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontFamily } from '@/app/theme/typography';
 
@@ -13,16 +12,24 @@ export function StackHeader({ back, navigation, options, route }: NativeStackHea
   const tintColor = typeof options.headerTintColor === 'string' ? options.headerTintColor : theme.colors.textPrimary;
   const title = getHeaderTitle(options, route.name);
   const canGoBack = Boolean(back);
-  const headerLeft = options.headerLeft?.({
-    canGoBack,
-    href: back?.href,
-    label: back?.title,
-    tintColor,
-  });
-  const headerRight = options.headerRight?.({
-    canGoBack,
-    tintColor,
-  });
+  const headerLeftRenderer = options.headerLeft;
+  const headerRightRenderer = options.headerRight;
+  const hasCustomHeaderLeft = typeof headerLeftRenderer === 'function';
+  const hasCustomHeaderRight = typeof headerRightRenderer === 'function';
+  const headerLeft = hasCustomHeaderLeft
+    ? headerLeftRenderer({
+        canGoBack,
+        href: back?.href,
+        label: back?.title,
+        tintColor,
+      })
+    : undefined;
+  const headerRight = hasCustomHeaderRight
+    ? headerRightRenderer({
+        canGoBack,
+        tintColor,
+      })
+    : undefined;
   const headerTitle =
     typeof options.headerTitle === 'function' ? (
       options.headerTitle({
@@ -42,23 +49,22 @@ export function StackHeader({ back, navigation, options, route }: NativeStackHea
     <View style={[styles.shell, { backgroundColor: theme.colors.surface, paddingTop: insets.top + 4 }]}>
       <View style={styles.row}>
         <View style={styles.sideWrap}>
-          {headerLeft ??
-            (canGoBack ? (
-              <HeaderIconButton
-                accessibilityLabel="Go back"
-                icon="chevron-left"
-                onPress={() => navigation.goBack()}
-                size={28}
-                tintColor={tintColor}
-              />
-            ) : null)}
+          {hasCustomHeaderLeft ? (
+            headerLeft
+          ) : canGoBack ? (
+            <HeaderIconButton
+              accessibilityLabel="Go back"
+              icon="chevron-left"
+              onPress={() => navigation.goBack()}
+              size={28}
+              tintColor={tintColor}
+            />
+          ) : null}
         </View>
 
         <View style={styles.titleWrap}>{headerTitle}</View>
 
-        <View style={[styles.sideWrap, styles.sideWrapRight]}>
-          {headerRight ?? <HeaderMenuButton tintColor={tintColor} />}
-        </View>
+        <View style={[styles.sideWrap, styles.sideWrapRight]}>{hasCustomHeaderRight ? headerRight : null}</View>
       </View>
     </View>
   );

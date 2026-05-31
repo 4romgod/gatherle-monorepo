@@ -32,11 +32,13 @@ const DATE_OPTIONS: { label: string; value: DateFilterOption }[] = [
 
 type EventsFilterSheetProps = {
   visible: boolean;
+  activeSearchLabel?: string | null;
   categories: EventCategory[];
   draft: EventsFilterState;
   onClose: () => void;
   onApply: () => void;
   onClearAll: () => void;
+  onClearSearch?: () => void;
   onToggleCategory: (categoryName: string) => void;
   onToggleStatus: (status: EventStatus) => void;
   onSetDateOption: (option: DateFilterOption | null) => void;
@@ -46,11 +48,13 @@ type EventsFilterSheetProps = {
 
 export function EventsFilterSheet({
   visible,
+  activeSearchLabel,
   categories,
   draft,
   onClose,
   onApply,
   onClearAll,
+  onClearSearch,
   onToggleCategory,
   onToggleStatus,
   onSetDateOption,
@@ -151,6 +155,9 @@ export function EventsFilterSheet({
     return null;
   }
 
+  const resolvedSearchLabel = activeSearchLabel?.trim() ?? '';
+  const hasActiveSearch = resolvedSearchLabel.length > 0;
+
   return (
     <BottomSheetModal
       ref={sheetRef}
@@ -183,6 +190,19 @@ export function EventsFilterSheet({
           showsVerticalScrollIndicator={false}
           style={styles.scrollArea}
         >
+          {hasActiveSearch ? (
+            <>
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>SEARCH</Text>
+                <View style={styles.chipWrap}>
+                  <FilterChip active label={resolvedSearchLabel} onRemove={onClearSearch} small />
+                </View>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+            </>
+          ) : null}
+
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>CATEGORIES</Text>
             <View style={styles.chipWrap}>

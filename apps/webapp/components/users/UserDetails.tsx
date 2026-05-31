@@ -176,7 +176,7 @@ export default function UserDetails({ user, isOwnProfile = false }: UserDetailsP
           )}
 
         {/* Interests */}
-        {user.interests && user.interests.length > 0 && (
+        {isOwnProfile && user.interests && user.interests.length > 0 && (
           <Box>
             <Typography variant="subtitle2" fontWeight={600} gutterBottom>
               Interests

@@ -20,8 +20,7 @@ function resolveNavValue(pathname: string): string {
   if (pathname.startsWith('/moments')) return 'moments';
   if (pathname.startsWith('/account/notifications')) return 'notifications';
   if (pathname.startsWith('/account/messages')) return 'messages';
-  if (pathname.startsWith('/account')) return 'profile';
-  if (pathname.startsWith('/users/')) return 'profile';
+  if (pathname.startsWith('/account')) return 'account';
   return '';
 }
 
@@ -56,8 +55,6 @@ export default function MobileBottomNav() {
 
   const currentValue = resolveNavValue(pathname);
   const guestProtectedHref = ROUTES.AUTH.LOGIN;
-  const profileHref = session?.user?.username ? ROUTES.USERS.USER(session.user.username) : ROUTES.ACCOUNT.ROOT;
-
   const navItems: MobileNavItem[] = [
     {
       label: 'Home',
@@ -112,9 +109,9 @@ export default function MobileBottomNav() {
       ),
     },
     {
-      label: 'Profile',
-      value: 'profile',
-      href: isAuthN ? profileHref : guestProtectedHref,
+      label: 'Account',
+      value: 'account',
+      href: isAuthN ? ROUTES.ACCOUNT.ROOT : guestProtectedHref,
       icon: isAuthN ? (
         <Avatar
           src={session?.user.profile_picture ?? undefined}
@@ -123,7 +120,7 @@ export default function MobileBottomNav() {
             height: 28,
             fontSize: '0.8rem',
             border: '2px solid',
-            borderColor: currentValue === 'profile' ? 'primary.main' : 'transparent',
+            borderColor: currentValue === 'account' ? 'primary.main' : 'transparent',
             bgcolor: 'text.disabled',
           }}
         >

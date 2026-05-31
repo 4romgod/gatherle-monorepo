@@ -1,5 +1,6 @@
 import {
   buildDefaultOccurrenceDateRange,
+  buildSelectedEventOccurrenceDateRange,
   dedupeOccurrencesBySeries,
   formatCountLabel,
   formatDateGroupLabel,
@@ -60,6 +61,12 @@ describe('mobile event formatters', () => {
     const range = buildDefaultOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
     expect(range.startDate).toBe(new Date(2026, 0, 15, 0, 0, 0, 0).toISOString());
     expect(range.endDate).toBe(new Date(2026, 6, 15, 23, 59, 59, 999).toISOString());
+  });
+
+  it('builds a wide selected-event occurrence range so exact series matches include past occurrences', () => {
+    const range = buildSelectedEventOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
+    expect(range.startDate).toBe(new Date(2016, 0, 15, 0, 0, 0, 0).toISOString());
+    expect(range.endDate).toBe(new Date(2036, 0, 15, 23, 59, 59, 999).toISOString());
   });
 
   it('deduplicates occurrences by event series and respects a limit', () => {
@@ -169,6 +176,12 @@ describe('mobile event formatters', () => {
     expect(getEventStatusLabel(null)).toBe('Upcoming');
     expect(getEventStatusLabel({ startAt: '2026-05-22T12:00:00.000Z' } as any)).toBe('Past');
     expect(getEventStatusLabel({ startAt: '2026-05-23T18:00:00.000Z' } as any)).toBe('Today');
+    expect(
+      getEventStatusLabel({
+        startAt: '2026-05-22T12:00:00.000Z',
+        endAt: '2026-05-24T12:00:00.000Z',
+      } as any),
+    ).toBe('Ongoing');
     expect(getEventStatusLabel({ startAt: '2026-05-30T12:00:00.000Z' } as any)).toBe('Upcoming');
 
     expect(

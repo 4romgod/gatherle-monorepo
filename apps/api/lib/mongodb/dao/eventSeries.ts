@@ -19,7 +19,7 @@ import {
   logDaoError,
   areEventSchedulesEqual,
 } from '@/utils';
-import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus } from '@gatherle/commons';
+import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus, EventStatus } from '@gatherle/commons';
 import { logger } from '@/utils/logger';
 import { getDateRangeForFilter } from '@/utils/rrule';
 
@@ -136,6 +136,14 @@ class EventSeriesDAO {
         },
       },
     ];
+  }
+
+  private static buildHasActiveOccurrenceMatchStage() {
+    return {
+      $match: {
+        '_activeOccurrences.0': { $exists: true },
+      },
+    };
   }
 
   private static async createWithSlug(
@@ -511,12 +519,12 @@ class EventSeriesDAO {
         {
           $match: {
             lifecycleStatus: 'Published',
-            status: { $in: ['Upcoming', 'Ongoing'] },
+            status: { $ne: EventStatus.Cancelled },
             visibility: { $in: ['Public', 'Unlisted'] },
-            $or: [{ status: 'Upcoming', 'primarySchedule.anchorStartAt': { $gte: now } }, { status: 'Ongoing' }],
           },
         },
         ...this.buildOccurrenceRsvpLookupStages(now),
+        this.buildHasActiveOccurrenceMatchStage(),
         ...this.buildSavedByLookupStages(),
         {
           $addFields: {
@@ -550,11 +558,12 @@ class EventSeriesDAO {
         {
           $match: {
             lifecycleStatus: 'Published',
-            status: { $in: ['Upcoming', 'Ongoing'] },
+            status: { $ne: EventStatus.Cancelled },
             visibility: { $in: ['Public', 'Unlisted'] },
           },
         },
         ...this.buildOccurrenceRsvpLookupStages(now),
+        this.buildHasActiveOccurrenceMatchStage(),
         ...this.buildSavedByLookupStages(),
         { $sort: { 'primarySchedule.anchorStartAt': 1 as const } },
         { $limit: limit },

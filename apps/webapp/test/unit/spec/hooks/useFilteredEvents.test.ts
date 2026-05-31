@@ -419,6 +419,10 @@ describe('useFilteredEvents', () => {
         variables: {
           options: expect.objectContaining({
             filters: [{ field: 'eventId', operator: FilterOperatorInput.Eq, value: ['series-1'] }],
+            dateRange: expect.objectContaining({
+              startDate: expect.stringContaining('201'),
+              endDate: expect.stringContaining('203'),
+            }),
           }),
         },
       }),

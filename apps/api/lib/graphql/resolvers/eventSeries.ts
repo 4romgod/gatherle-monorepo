@@ -17,6 +17,7 @@ import {
   Organization,
   OrganizationRole,
   EventLifecycleStatus,
+  EventStatus,
 } from '@gatherle/commons/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import {
@@ -38,6 +39,8 @@ import EventOccurrenceService from '@/services/eventOccurrence';
 import {
   buildMyEventOccurrenceParticipantLoadKey,
   projectOccurrenceParticipantToSeriesParticipant,
+  resolveEventStatusFromOccurrence,
+  resolveEventStatusFromSchedule,
   sanitizeQueryLimit,
 } from '@/utils';
 
@@ -300,6 +303,23 @@ export class EventSeriesResolver {
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrence | null> {
     return context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+  }
+
+  @FieldResolver(() => EventStatus, {
+    description: EVENT_DESCRIPTIONS.EVENT.STATUS,
+  })
+  async status(@Root() event: EventSeries, @Ctx() context: ServerContext): Promise<EventStatus> {
+    if (event.status === EventStatus.Cancelled) {
+      return EventStatus.Cancelled;
+    }
+
+    const representativeOccurrence = await context.loaders.eventOccurrenceByEventSeries.load(event.eventId);
+
+    if (representativeOccurrence) {
+      return resolveEventStatusFromOccurrence(representativeOccurrence);
+    }
+
+    return resolveEventStatusFromSchedule(event.primarySchedule, event.status);
   }
 
   /**

@@ -30,6 +30,8 @@ import {
 } from '@/components/messages/chatUiUtils';
 import { ConversationUnreadToggleButton } from '@/components/messages/ConversationUnreadToggleButton';
 import { WEB_RADIUS } from '@/lib/constants/radius';
+import ToolbarTextSearchAction from '@/components/navigation/ToolbarTextSearchAction';
+import { useToolbarAction } from '@/hooks/useToolbarAction';
 
 const CHAT_CONVERSATIONS_LIMIT = 100;
 
@@ -48,6 +50,18 @@ export default function MessagesPanel() {
   } = useChatConversations({ limit: CHAT_CONVERSATIONS_LIMIT });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const toolbarAction = useMemo(
+    () => (
+      <ToolbarTextSearchAction
+        onChange={setSearchQuery}
+        onClear={() => setSearchQuery('')}
+        placeholder="Search conversations"
+        value={searchQuery}
+      />
+    ),
+    [searchQuery],
+  );
+  useToolbarAction(toolbarAction);
   const resolvedUsersByConversationId = useResolveConversationUsers(conversations);
 
   const conversationItems = useMemo(() => {
@@ -131,6 +145,7 @@ export default function MessagesPanel() {
               },
             }}
             sx={(muiTheme) => ({
+              display: { xs: 'none', md: 'block' },
               '& .MuiOutlinedInput-root': {
                 borderRadius: 4,
                 boxShadow:

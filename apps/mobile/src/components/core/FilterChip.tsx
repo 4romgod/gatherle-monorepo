@@ -7,7 +7,7 @@ import { typography } from '@/app/theme/typography';
 type FilterChipProps = {
   active?: boolean;
   label: string;
-  onPress: () => void;
+  onPress?: () => void;
   onRemove?: () => void;
   small?: boolean;
   tone?: 'primary' | 'success';
@@ -24,6 +24,7 @@ export function FilterChip({ active, label, onPress, onRemove, small, tone = 'pr
 
   return (
     <Pressable
+      disabled={!onPress}
       onPress={onPress}
       style={
         /* istanbul ignore next: visual pressed-state styling is owned by React Native. */
@@ -33,7 +34,7 @@ export function FilterChip({ active, label, onPress, onRemove, small, tone = 'pr
           {
             backgroundColor: active ? soft : theme.colors.surfaceRaised,
             borderColor: active ? accent : 'transparent',
-            opacity: pressed ? 0.86 : 1,
+            opacity: pressed && onPress ? 0.86 : 1,
           },
         ]
       }

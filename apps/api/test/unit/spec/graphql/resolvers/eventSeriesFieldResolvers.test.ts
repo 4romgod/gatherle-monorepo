@@ -9,7 +9,7 @@ import type {
   EventOccurrenceParticipant,
   OrganizationMembership,
 } from '@gatherle/commons/types';
-import { ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
+import { EventStatus, ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
@@ -301,6 +301,85 @@ describe('EventSeriesResolver Field Resolvers', () => {
     });
   });
 
+  describe('status field resolver', () => {
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-30T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('derives Completed from the representative occurrence when the stored series status is stale', async () => {
+      const event = {
+        eventId: 'event1',
+        status: EventStatus.Upcoming,
+        primarySchedule: {
+          anchorStartAt: new Date('2020-05-07T10:00:00.000Z'),
+          occurrenceDurationMinutes: 120,
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+          timezone: 'Africa/Johannesburg',
+        },
+      } as unknown as EventSeries;
+      const context = {
+        ...mockContext,
+        loaders: {
+          ...mockContext.loaders,
+          eventOccurrenceByEventSeries: {
+            load: jest.fn().mockResolvedValue(singleOccurrence),
+          },
+        },
+      } as unknown as ServerContext;
+
+      const result = await resolver.status(event, context);
+
+      expect(result).toBe(EventStatus.Completed);
+    });
+
+    it('derives Upcoming from schedule data when no representative occurrence exists', async () => {
+      const event = {
+        eventId: 'missing-event',
+        status: EventStatus.Upcoming,
+        primarySchedule: {
+          anchorStartAt: new Date('2026-06-07T10:00:00.000Z'),
+          occurrenceDurationMinutes: 120,
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+          timezone: 'Africa/Johannesburg',
+        },
+      } as unknown as EventSeries;
+      const context = {
+        ...mockContext,
+        loaders: {
+          ...mockContext.loaders,
+          eventOccurrenceByEventSeries: {
+            load: jest.fn().mockResolvedValue(null),
+          },
+        },
+      } as unknown as ServerContext;
+
+      const result = await resolver.status(event, context);
+
+      expect(result).toBe(EventStatus.Upcoming);
+    });
+
+    it('preserves Cancelled as a manual override', async () => {
+      const event = {
+        eventId: 'event1',
+        status: EventStatus.Cancelled,
+        primarySchedule: {
+          anchorStartAt: new Date('2026-06-07T10:00:00.000Z'),
+          occurrenceDurationMinutes: 120,
+          recurrenceRule: 'FREQ=DAILY;COUNT=1',
+          timezone: 'Africa/Johannesburg',
+        },
+      } as unknown as EventSeries;
+
+      const result = await resolver.status(event, mockContext);
+
+      expect(result).toBe(EventStatus.Cancelled);
+    });
+  });
+
   describe('isSavedByMe field resolver', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -353,7 +432,7 @@ describe('EventSeriesResolver Field Resolvers', () => {
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
         },
-      } as EventSeries;
+      } as unknown as EventSeries;
       const result = await resolver.rsvpCount(event, mockContext);
 
       expect(result).toBe(25);
@@ -377,7 +456,7 @@ describe('EventSeriesResolver Field Resolvers', () => {
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
         },
-      } as EventSeries;
+      } as unknown as EventSeries;
 
       const result = await resolver.rsvpCount(event, mockContext);
 
@@ -415,7 +494,7 @@ describe('EventSeriesResolver Field Resolvers', () => {
           timezone: 'Africa/Johannesburg',
           recurrenceRule: 'DTSTART:20260507T100000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=TH',
         },
-      } as EventSeries;
+      } as unknown as EventSeries;
       const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
 
       const result = await resolver.myRsvp(event, contextWithUser);

@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabBar } from '@/app/navigation/BottomTabBar';
-import { HeaderMenuButton } from '@/app/navigation/HeaderMenuButton';
 import { StackHeader } from '@/app/navigation/StackHeader';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { ForgotPasswordScreen } from '@/screens/auth/ForgotPasswordScreen';
@@ -98,14 +97,6 @@ export function RootNavigator() {
           backgroundColor: theme.colors.background,
         },
         header: Platform.OS === 'ios' ? (props) => <StackHeader {...props} /> : undefined,
-        headerRight:
-          Platform.OS === 'ios'
-            ? undefined
-            : () => (
-                <View style={styles.headerRightWrap}>
-                  <HeaderMenuButton />
-                </View>
-              ),
         headerShadowVisible: false,
         headerStyle: {
           backgroundColor: theme.colors.surface,
@@ -284,9 +275,6 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  headerRightWrap: {
-    marginRight: 18,
-  },
   mainTabsBody: {
     flex: 1,
   },
