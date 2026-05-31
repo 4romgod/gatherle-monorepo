@@ -60,6 +60,7 @@ export const ROUTES = {
   },
   ADMIN: {
     ROOT: '/admin',
+    TAB: (tab: string) => `/admin?tab=${encodeURIComponent(tab)}`,
   },
 };
 

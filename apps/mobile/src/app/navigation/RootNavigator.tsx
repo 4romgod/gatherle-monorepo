@@ -13,7 +13,14 @@ import { RegisterScreen } from '@/screens/auth/RegisterScreen';
 import { ResetPasswordScreen } from '@/screens/auth/ResetPasswordScreen';
 import { VerifyEmailScreen } from '@/screens/auth/VerifyEmailScreen';
 import { VerifyPendingScreen } from '@/screens/auth/VerifyPendingScreen';
+import { AdminCategoriesScreen } from '@/screens/admin/AdminCategoriesScreen';
+import { AdminCategoryGroupsScreen } from '@/screens/admin/AdminCategoryGroupsScreen';
+import { AdminEventSessionsScreen } from '@/screens/admin/AdminEventSessionsScreen';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
+import { AdminEventsScreen } from '@/screens/admin/AdminEventsScreen';
+import { AdminOrganizationsScreen } from '@/screens/admin/AdminOrganizationsScreen';
+import { AdminUsersScreen } from '@/screens/admin/AdminUsersScreen';
+import { AdminVenuesScreen } from '@/screens/admin/AdminVenuesScreen';
 import { EditProfileScreen } from '@/screens/account/EditProfileScreen';
 import { AccountScreen } from '@/screens/account/AccountScreen';
 import { CreateEventScreen } from '@/screens/account/CreateEventScreen';
@@ -270,6 +277,40 @@ export function RootNavigator() {
         })}
       />
       <Stack.Screen component={AdminScreen} name="Admin" options={{ presentation: 'card', title: 'Admin' }} />
+      <Stack.Screen
+        component={AdminEventsScreen}
+        name="AdminEvents"
+        options={{ presentation: 'card', title: 'Events' }}
+      />
+      <Stack.Screen
+        component={AdminEventSessionsScreen}
+        name="AdminEventSessions"
+        options={({ route }) => ({
+          presentation: 'card',
+          title: route.params.title ? `${route.params.title} sessions` : 'Sessions',
+        })}
+      />
+      <Stack.Screen component={AdminUsersScreen} name="AdminUsers" options={{ presentation: 'card', title: 'Users' }} />
+      <Stack.Screen
+        component={AdminCategoriesScreen}
+        name="AdminCategories"
+        options={{ presentation: 'card', title: 'Categories' }}
+      />
+      <Stack.Screen
+        component={AdminCategoryGroupsScreen}
+        name="AdminCategoryGroups"
+        options={{ presentation: 'card', title: 'Category groups' }}
+      />
+      <Stack.Screen
+        component={AdminOrganizationsScreen}
+        name="AdminOrganizations"
+        options={{ presentation: 'card', title: 'Organizations' }}
+      />
+      <Stack.Screen
+        component={AdminVenuesScreen}
+        name="AdminVenues"
+        options={{ presentation: 'card', title: 'Venues' }}
+      />
     </Stack.Navigator>
   );
 }

@@ -64,6 +64,7 @@ export const OPERATIONS = {
     CREATE_ORGANIZATION: 'createOrganization',
     UPDATE_ORGANIZATION: 'updateOrganization',
     DELETE_ORGANIZATION: 'deleteOrganizationById',
+    TRANSFER_ORGANIZATION_OWNERSHIP: 'transferOrganizationOwnership',
     READ_ORGANIZATION_BY_ID: 'readOrganizationById',
     READ_ORGANIZATION_BY_SLUG: 'readOrganizationBySlug',
     READ_ORGANIZATIONS: 'readOrganizations',

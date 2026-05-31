@@ -20,11 +20,11 @@ export default function Logo() {
         display: 'flex',
         alignItems: 'center',
         textDecoration: 'none',
-        px: 1,
+        px: { xs: 0.5, md: 1 },
         py: 0.5,
       }}
     >
-      <Box sx={{ width: 36, height: 36, position: 'relative' }}>
+      <Box sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, position: 'relative' }}>
         <Image alt={APP_NAME} fill priority sizes="36px" src={logoPath} />
       </Box>
     </Box>

@@ -39,6 +39,7 @@ export function EventsScreen() {
   const route = useRoute<RouteProp<MainTabParamList, 'Events'>>();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
   const [selectedEventId, setSelectedEventId] = useState(route.params?.initialEventId ?? '');
+  const [searchVisible, setSearchVisible] = useState(false);
   const appliedSeriesSelectionRef = useRef<string | null>(null);
 
   const {
@@ -152,15 +153,7 @@ export function EventsScreen() {
     center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Events</Text>,
     right: (
       <View style={styles.toolbarActions}>
-        <EventSearchBar
-          onSelectEvent={(event) => {
-            clearAllFilters();
-            applySeriesSelection(event, setSearchQuery, setSelectedEventId);
-          }}
-          renderTrigger={({ open }) => (
-            <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={open} />
-          )}
-        />
+        <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={() => setSearchVisible(true)} />
         <HeaderIconButton
           accessibilityLabel="Open filters"
           badgeCount={totalActiveFilterCount}
@@ -172,7 +165,19 @@ export function EventsScreen() {
   };
 
   return (
-    <MainTabScreenLayout toolbarProps={eventsToolbarProps}>
+    <MainTabScreenLayout
+      overlay={
+        <EventSearchBar
+          onClose={() => setSearchVisible(false)}
+          onSelectEvent={(event) => {
+            clearAllFilters();
+            applySeriesSelection(event, setSearchQuery, setSelectedEventId);
+          }}
+          visible={searchVisible}
+        />
+      }
+      toolbarProps={eventsToolbarProps}
+    >
       <PageContainer
         onContentSizeChange={infiniteScroll.onContentSizeChange}
         onRefresh={onRefresh}

@@ -127,6 +127,7 @@ const operationsRequiringOwnership = new Set<string>([
   OPERATIONS.ORGANIZATION.CREATE_ORGANIZATION,
   OPERATIONS.ORGANIZATION.UPDATE_ORGANIZATION,
   OPERATIONS.ORGANIZATION.DELETE_ORGANIZATION,
+  OPERATIONS.ORGANIZATION.TRANSFER_ORGANIZATION_OWNERSHIP,
   // Organization membership operations
   OPERATIONS.ORGANIZATION_MEMBERSHIP.CREATE_ORGANIZATION_MEMBERSHIP,
   OPERATIONS.ORGANIZATION_MEMBERSHIP.UPDATE_ORGANIZATION_MEMBERSHIP,
@@ -273,6 +274,8 @@ export const isAuthorizedByOperation = async (
       return await isAuthorizedToManageOrganization(args.input?.orgId, user);
     case OPERATIONS.ORGANIZATION.DELETE_ORGANIZATION:
       return await isAuthorizedToManageOrganization(args.orgId, user);
+    case OPERATIONS.ORGANIZATION.TRANSFER_ORGANIZATION_OWNERSHIP:
+      return await isAuthorizedToTransferOrganizationOwnership(args.orgId, user);
     // Organization membership operations
     case OPERATIONS.ORGANIZATION_MEMBERSHIP.CREATE_ORGANIZATION_MEMBERSHIP:
       return await isAuthorizedToManageOrganization(args.input?.orgId, user);
@@ -395,6 +398,29 @@ const isAuthorizedToManageOrganization = async (orgId: string | undefined, user:
     return userMembership?.role === OrganizationRole.Owner || userMembership?.role === OrganizationRole.Admin;
   } catch (error) {
     logger.debug(`Error checking organization authorization for user ${user.userId} on org ${orgId}`, { error });
+    return false;
+  }
+};
+
+/**
+ * Check if a user is authorized to transfer organization ownership.
+ *
+ * Restricted to the current org owner. Platform admins are already short-circuited
+ * by the authChecker before this helper is reached.
+ */
+const isAuthorizedToTransferOrganizationOwnership = async (
+  orgId: string | undefined,
+  user: AuthClaims,
+): Promise<boolean> => {
+  if (!orgId) {
+    return false;
+  }
+
+  try {
+    const organization = await OrganizationDAO.readOrganizationById(orgId);
+    return organization.ownerId === user.userId;
+  } catch (error) {
+    logger.debug(`Error checking ownership transfer authorization for user ${user.userId} on org ${orgId}`, { error });
     return false;
   }
 };

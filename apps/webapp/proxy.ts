@@ -50,7 +50,14 @@ export const proxy = auth(async (req: { nextUrl: any; auth?: any }) => {
   // Deny only protected routes for unauthenticated users
   if (!isLoggedIn && isProtectedPath) {
     logger.warn('[Proxy] Redirecting to login - token invalid or expired');
-    return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, nextUrl));
+    const loginUrl = new URL(ROUTES.AUTH.LOGIN, nextUrl);
+    const requestedPath = `${nextUrl.pathname}${nextUrl.search}`;
+
+    if (requestedPath.startsWith('/') && !requestedPath.startsWith('//')) {
+      loginUrl.searchParams.set('redirectTo', requestedPath);
+    }
+
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

@@ -56,6 +56,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers,
+  // Local dev server compiles routes on first hit, which can blow the default
+  // 30s timeout. Give localhost runs more headroom.
+  timeout: baseUrlIsLocalhost ? 60_000 : 30_000,
   reporter: [['list'], ['html', { outputFolder: 'test/e2e/reports/playwright-html', open: 'never' }]],
   outputDir: 'test/e2e/reports/test-results',
   use: {

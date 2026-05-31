@@ -134,6 +134,21 @@ export class OrganizationResolver {
     return organization;
   }
 
+  @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
+  @Mutation(() => Organization, {
+    description: RESOLVER_DESCRIPTIONS.ORGANIZATION.transferOrganizationOwnership,
+  })
+  async transferOrganizationOwnership(
+    @Arg('orgId', () => String) orgId: string,
+    @Arg('newOwnerUserId', () => String) newOwnerUserId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<Organization> {
+    validateMongodbId(orgId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', orgId));
+    validateMongodbId(newOwnerUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', newOwnerUserId));
+    const user = getAuthenticatedUser(context);
+    return OrganizationService.transferOwnership(orgId, newOwnerUserId, user.userId);
+  }
+
   @Query(() => Organization, { description: RESOLVER_DESCRIPTIONS.ORGANIZATION.readOrganizationById })
   async readOrganizationById(@Arg('orgId', () => String) orgId: string): Promise<Organization> {
     validateMongodbId(orgId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', orgId));

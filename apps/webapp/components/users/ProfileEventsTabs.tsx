@@ -43,14 +43,14 @@ export default function ProfileEventsTabs({
   const tabIconSx = {
     alignItems: 'center',
     display: 'inline-flex',
-    fontSize: 19,
+    fontSize: { xs: 18, md: 19 },
     justifyContent: 'center',
     lineHeight: 0,
   } as const;
   const emptyIconSx = {
     color: 'text.secondary',
     display: 'inline-flex',
-    fontSize: 48,
+    fontSize: { xs: 42, md: 48 },
     lineHeight: 0,
   } as const;
 
@@ -82,10 +82,10 @@ export default function ProfileEventsTabs({
             display: 'none',
           },
           '& .MuiTab-root': {
-            minHeight: 42,
+            minHeight: { xs: 38, md: 42 },
             minWidth: 'auto',
             position: 'relative',
-            py: 1.5,
+            py: { xs: 1.125, md: 1.5 },
             color: 'text.secondary',
             '&::after': {
               content: '""',
@@ -93,7 +93,7 @@ export default function ProfileEventsTabs({
               bottom: 0,
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 56,
+              width: { xs: 52, md: 56 },
               height: 2.5,
               borderRadius: 999,
               backgroundColor: 'transparent',
@@ -154,7 +154,7 @@ export default function ProfileEventsTabs({
         )}
       </Tabs>
 
-      <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Box sx={{ p: { xs: 2.5, md: 3 } }}>
         {activeTab === 0 && (
           <EventTabPanel
             events={upcomingRsvpdEvents}
@@ -299,7 +299,7 @@ function EventTabPanel({
             md: 'repeat(4, minmax(0, 1fr))',
             xl: 'repeat(5, minmax(0, 1fr))',
           },
-          gap: { xs: 0.75, md: 1 },
+          gap: { xs: 0.625, md: 1 },
         }}
       >
         {events.map((event) => (

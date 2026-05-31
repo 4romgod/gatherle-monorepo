@@ -73,6 +73,9 @@ jest.mock('@/mongodb/dao', () => ({
   OrganizationDAO: {
     readOrganizationById: jest.fn(),
   },
+  UserDAO: {
+    readUserById: jest.fn(),
+  },
 }));
 
 jest.mock('@/services/notification', () => ({
@@ -89,7 +92,7 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import { OrganizationMembershipService } from '@/services';
-import { OrganizationMembershipDAO, OrganizationDAO } from '@/mongodb/dao';
+import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import type { OrganizationMembership, Organization } from '@gatherle/commons/types';
 import { OrganizationRole, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
@@ -118,6 +121,8 @@ describe('OrganizationMembershipService', () => {
       { ...mockMembership, userId: 'admin-user', role: OrganizationRole.Admin },
       mockMembership,
     ]);
+    // Default actor lookup returns a non-platform-admin user
+    (UserDAO.readUserById as jest.Mock).mockResolvedValue({ userId: 'admin-user', userRole: 'User' });
   });
 
   afterEach(() => {
@@ -398,6 +403,23 @@ describe('OrganizationMembershipService', () => {
       );
 
       expect(OrganizationMembershipDAO.delete).not.toHaveBeenCalled();
+    });
+
+    it('allows a platform admin to remove a member even without org-level membership', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue(mockMembership);
+      (OrganizationMembershipDAO.delete as jest.Mock).mockResolvedValue(mockMembership);
+      // Platform admin actor is not a member of the org
+      (OrganizationMembershipDAO.readMembershipsByOrgId as jest.Mock).mockResolvedValue([mockMembership]);
+      (OrganizationDAO.readOrganizationById as jest.Mock).mockResolvedValue({
+        ...mockOrganization,
+        ownerId: 'someone-else',
+      });
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue({ userId: 'platform-admin', userRole: 'Admin' });
+
+      const result = await OrganizationMembershipService.removeMember('membership-1', 'platform-admin');
+
+      expect(OrganizationMembershipDAO.delete).toHaveBeenCalledWith('membership-1');
+      expect(result).toEqual(mockMembership);
     });
   });
 });

@@ -20,7 +20,7 @@ import { PullToRefreshShell } from '@/components/core/PullToRefreshShell';
 import { Box } from '@mui/material';
 import { Session } from 'next-auth';
 import { logger } from '@/lib/utils';
-import { isIndividualChatRoute } from '@/lib/constants';
+import { ROUTES, isIndividualChatRoute } from '@/lib/constants';
 
 const TopProgressBar = dynamic(() => import('@/components/core/progress/TopProgressBar'), { ssr: false });
 
@@ -32,6 +32,7 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
   const pathname = usePathname();
   const isIndividualChatThreadRoute = isIndividualChatRoute(pathname);
   const isMomentsRoute = pathname === '/moments' || pathname?.startsWith('/moments/');
+  const isAdminRoute = pathname === ROUTES.ADMIN.ROOT || pathname?.startsWith('/admin/');
 
   const isAuthN = Boolean(session?.user?.userId && session?.user?.token);
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
                     >
                       {children}
                     </Box>
-                    {!isIndividualChatThreadRoute && !isMomentsRoute && (
+                    {!isIndividualChatThreadRoute && !isMomentsRoute && !isAdminRoute && (
                       <Box sx={{ pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 } }}>
                         <Footer />
                       </Box>

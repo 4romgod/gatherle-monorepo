@@ -30,6 +30,7 @@ import {
 } from '@/data/graphql/mutation/SessionState/mutation';
 import { getAuthHeader } from '@/lib/utils/auth';
 import ConfirmDialog from './ConfirmDialog';
+import { ADMIN_SURFACE_SX, AdminEmptyState, AdminSectionHeader } from './admin-ui';
 
 interface SessionState {
   key: string;
@@ -133,28 +134,29 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h6" fontWeight={600}>
-          Session State Manager
-        </Typography>
-        <Stack direction="row" spacing={2}>
-          <Tooltip title="Refresh data">
-            <IconButton onClick={() => refetch()} disabled={loading} size="small">
-              <Refresh />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            onClick={handleClearAll}
-            disabled={sessionStates.length === 0 || clearAllLoading}
-            startIcon={clearAllLoading ? <CircularProgress size={16} /> : <Delete />}
-          >
-            Clear all
-          </Button>
-        </Stack>
-      </Stack>
+      <AdminSectionHeader
+        title="Session state manager"
+        description="Inspect persisted client state, clear broken keys, and troubleshoot session hydration issues."
+        actions={
+          <>
+            <Tooltip title="Refresh data">
+              <IconButton onClick={() => refetch()} disabled={loading} size="small">
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={handleClearAll}
+              disabled={sessionStates.length === 0 || clearAllLoading}
+              startIcon={clearAllLoading ? <CircularProgress size={16} /> : <Delete />}
+            >
+              Clear all
+            </Button>
+          </>
+        }
+      />
 
       <TextField
         fullWidth
@@ -177,15 +179,16 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
           <CircularProgress />
         </Box>
       ) : filteredStates.length === 0 ? (
-        <Card elevation={0}>
-          <CardContent>
-            <Typography color="text.secondary" textAlign="center">
-              {searchQuery ? 'No session states match your search.' : 'No session states found.'}
-            </Typography>
-          </CardContent>
-        </Card>
+        <AdminEmptyState
+          title={searchQuery ? 'No matching session states' : 'No session states found'}
+          description={
+            searchQuery
+              ? 'Try a different key fragment to narrow the lookup.'
+              : 'This user does not currently have persisted session state records.'
+          }
+        />
       ) : (
-        <TableContainer component={Card} elevation={0}>
+        <TableContainer component={Card} elevation={0} sx={ADMIN_SURFACE_SX}>
           <Table>
             <TableHead>
               <TableRow>
@@ -253,9 +256,9 @@ export default function SessionStateManager({ token, userId }: SessionStateManag
                           <Box
                             component="pre"
                             sx={{
-                              bgcolor: 'grey.100',
+                              bgcolor: 'background.default',
                               p: 2,
-                              borderRadius: 1,
+                              borderRadius: 2,
                               overflow: 'auto',
                               maxHeight: 400,
                               fontSize: '0.75rem',

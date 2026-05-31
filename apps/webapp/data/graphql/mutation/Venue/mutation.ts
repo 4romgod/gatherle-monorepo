@@ -43,3 +43,14 @@ export const UpdateVenueDocument = graphql(`
     }
   }
 `);
+
+export const DeleteVenueByIdDocument = graphql(`
+  mutation DeleteVenueById($venueId: String!) {
+    deleteVenueById(venueId: $venueId) {
+      venueId
+      slug
+      name
+      type
+    }
+  }
+`);

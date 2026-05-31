@@ -18,7 +18,7 @@ npm run start
 
 These `start*` scripts now target a native Gatherle development build, not Expo Go. Install a dev build first:
 
-- Android: `npm run run:android`
+- Android: `npm run android`
 - iPhone from WSL/Linux: `eas build --platform ios --profile development`
 
 After the dev build is installed, `npm run start`, `npm run start:lan`, and `npm run start:tunnel` will connect that
@@ -84,9 +84,9 @@ ANDROID_SERIAL=<device-id> npm run apk:install
 Notes:
 
 - the release APK has the JavaScript bundle embedded, so it does not depend on the Expo dev server
-- `run:android` is different: it builds and installs a development build for local development
+- `android` is different: it builds and installs a development build for local development
 - use `npm run apk:release` followed by `npm run apk:install` when testing the Android release signing path or Android
-  Google sign-in, because `run:android` uses the debug keystore and therefore a different Google OAuth Android client
+  Google sign-in, because `android` uses the debug keystore and therefore a different Google OAuth Android client
   identity
 - once native dependencies or native config change, rebuild the dev client before using the `start*` scripts again
 

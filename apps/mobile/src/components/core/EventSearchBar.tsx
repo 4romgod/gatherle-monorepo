@@ -1,11 +1,10 @@
-import type { ReactNode } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,14 +15,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 import { useEventSearch } from '@/hooks/search/useEventSearch';
-import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 import { RemoteImage } from '@/components/core/RemoteImage';
 
 type EventSearchBarProps = {
+  onClose: () => void;
   onSelectEvent: (event: MobileSearchResult) => void;
-  renderTrigger?: (controls: { open: () => void }) => ReactNode;
+  visible: boolean;
 };
 
 function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPress: () => void }) {
@@ -74,13 +73,11 @@ function SearchResultRow({ event, onPress }: { event: MobileSearchResult; onPres
   );
 }
 
-export function EventSearchBar({ onSelectEvent, renderTrigger }: EventSearchBarProps) {
+export function EventSearchBar({ onClose, onSelectEvent, visible }: EventSearchBarProps) {
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
   const { clear, loading, results, search } = useEventSearch();
-  const openSearch = () => setModalVisible(true);
 
   const handleChangeText = (text: string) => {
     setQuery(text);
@@ -93,119 +90,119 @@ export function EventSearchBar({ onSelectEvent, renderTrigger }: EventSearchBarP
   };
 
   const handleSelect = (event: MobileSearchResult) => {
-    setModalVisible(false);
     setQuery('');
     clear();
+    onClose();
     onSelectEvent(event);
   };
 
-  const handleClose = () => {
-    setModalVisible(false);
+  const handleClose = useCallback(() => {
     setQuery('');
     clear();
-  };
+    onClose();
+  }, [clear, onClose]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handleClose, visible]);
+
+  if (!visible) {
+    return null;
+  }
 
   return (
-    <>
-      {renderTrigger ? (
-        renderTrigger({ open: openSearch })
-      ) : (
-        <Pressable
-          accessibilityRole="search"
-          onPress={openSearch}
-          style={[styles.pill, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
+    <View
+      style={[
+        styles.overlay,
+        {
+          backgroundColor: theme.colors.background,
+        },
+      ]}
+    >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.colors.surface,
+              borderBottomColor: theme.colors.border,
+              paddingTop: insets.top + 6,
+            },
+          ]}
         >
-          <Feather color={theme.colors.textSecondary} name="search" size={18} />
-          <Text style={[styles.pillPlaceholder, { color: theme.colors.textSecondary }]}>
-            Search events, categories...
-          </Text>
-        </Pressable>
-      )}
-
-      {/* Full-screen search modal */}
-      <Modal animationType="slide" onRequestClose={handleClose} statusBarTranslucent visible={modalVisible}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : 0}
-          style={[styles.modalRoot, { backgroundColor: theme.colors.background }]}
-        >
-          {/* Header: input + cancel */}
           <View
-            style={[
-              styles.modalHeader,
-              {
-                borderBottomColor: theme.colors.border,
-                paddingTop: insets.top + 12,
-              },
-            ]}
+            style={[styles.inputRow, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border }]}
           >
-            <View
+            <Feather color={theme.colors.textSecondary} name="search" size={18} />
+            <TextInput
+              autoFocus
+              onChangeText={handleChangeText}
+              placeholder="Search events, categories..."
+              placeholderTextColor={theme.colors.textSecondary}
+              returnKeyType="search"
+              selectionColor={theme.colors.primary}
               style={[
-                styles.inputRow,
-                { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border },
+                styles.input,
+                {
+                  color: theme.colors.textPrimary,
+                  paddingRight: query.length > 0 ? 36 : 0,
+                },
               ]}
-            >
-              <Feather color={theme.colors.textSecondary} name="search" size={18} />
-              <TextInput
-                autoFocus
-                onChangeText={handleChangeText}
-                placeholder="Search events, categories..."
-                placeholderTextColor={theme.colors.textSecondary}
-                returnKeyType="search"
-                selectionColor={theme.colors.primary}
-                style={[
-                  styles.input,
-                  {
-                    color: theme.colors.textPrimary,
-                    paddingRight: query.length > 0 ? 36 : 0,
-                  },
-                ]}
-                value={query}
-              />
-              {query.length > 0 ? (
-                <Pressable
-                  hitSlop={8}
-                  onPress={handleClear}
-                  style={[styles.clearButton, { backgroundColor: theme.colors.textMuted }]}
-                >
-                  <Feather color={theme.colors.surface} name="x" size={11} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            <Pressable hitSlop={8} onPress={handleClose} style={styles.cancelButton}>
-              <Text style={[styles.cancelText, { color: theme.colors.primary }]}>Cancel</Text>
-            </Pressable>
+              value={query}
+            />
+            {query.length > 0 ? (
+              <Pressable
+                hitSlop={8}
+                onPress={handleClear}
+                style={[styles.clearButton, { backgroundColor: theme.colors.textMuted }]}
+              >
+                <Feather color={theme.colors.surface} name="x" size={11} />
+              </Pressable>
+            ) : null}
           </View>
 
-          {/* Results area */}
-          {loading ? (
-            <View style={styles.centeredState}>
-              <ActivityIndicator color={theme.colors.primary} size="small" />
-            </View>
-          ) : results.length > 0 ? (
-            <FlatList
-              contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-              data={results}
-              keyboardShouldPersistTaps="handled"
-              keyExtractor={(item) => item.eventId}
-              renderItem={({ item }) => <SearchResultRow event={item} onPress={() => handleSelect(item)} />}
-            />
-          ) : query.length >= 2 ? (
-            <View style={styles.centeredState}>
-              <Feather color={theme.colors.textMuted} name="search" size={36} />
-              <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>No events found</Text>
-            </View>
-          ) : (
-            <View style={styles.centeredState}>
-              <Text style={[styles.hintText, { color: theme.colors.textMuted }]}>
-                Type at least 2 characters to search
-              </Text>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-      </Modal>
-    </>
+          <Pressable hitSlop={8} onPress={handleClose} style={styles.cancelButton}>
+            <Text style={[styles.cancelText, { color: theme.colors.primary }]}>Cancel</Text>
+          </Pressable>
+        </View>
+
+        {loading ? (
+          <View style={styles.centeredState}>
+            <ActivityIndicator color={theme.colors.primary} size="small" />
+          </View>
+        ) : results.length > 0 ? (
+          <FlatList
+            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            data={results}
+            keyboardShouldPersistTaps="handled"
+            keyExtractor={(item) => item.eventId}
+            renderItem={({ item }) => <SearchResultRow event={item} onPress={() => handleSelect(item)} />}
+          />
+        ) : query.length >= 2 ? (
+          <View style={styles.centeredState}>
+            <Feather color={theme.colors.textMuted} name="search" size={36} />
+            <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>No events found</Text>
+          </View>
+        ) : (
+          <View style={styles.centeredState}>
+            <Text style={[styles.hintText, { color: theme.colors.textMuted }]}>
+              Type at least 2 characters to search
+            </Text>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -218,6 +215,13 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: fontSize.base,
   },
+  centeredState: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+    justifyContent: 'center',
+    paddingBottom: 60,
+  },
   clearButton: {
     alignItems: 'center',
     borderRadius: 999,
@@ -227,16 +231,21 @@ const styles = StyleSheet.create({
     right: 12,
     width: 20,
   },
-  centeredState: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-    justifyContent: 'center',
-    paddingBottom: 60,
-  },
   emptyText: {
     ...typography.bodyRegular,
     fontSize: fontSize.base,
+  },
+  flex: {
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 58,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
   },
   hintText: {
     ...typography.bodyRegular,
@@ -270,29 +279,9 @@ const styles = StyleSheet.create({
     ...typography.bodyRegular,
     fontSize: fontSize.xs,
   },
-  modalHeader: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-  },
-  modalRoot: {
-    flex: 1,
-  },
-  pill: {
-    alignItems: 'center',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: 44,
-    paddingHorizontal: 16,
-  },
-  pillPlaceholder: {
-    ...typography.bodyRegular,
-    flex: 1,
-    fontSize: fontSize.base,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
   },
   resultImage: {
     borderRadius: 6,

@@ -23,7 +23,7 @@ const statContentSx = {
 const interactiveStatSx = {
   ...statContentSx,
   borderRadius: 2,
-  py: 0.25,
+  py: { xs: 0, md: 0.25 },
   transition: 'opacity 0.2s ease, transform 0.2s ease',
   '&:hover': {
     opacity: 0.82,
@@ -37,7 +37,7 @@ function ProfileStatContent({ label, value }: Omit<ProfileStatProps, 'href' | 'o
         sx={(theme) => ({
           color: theme.palette.text.primary,
           fontFamily: theme.typography.h4.fontFamily,
-          fontSize: { xs: '1.3125rem', md: '1.375rem' },
+          fontSize: { xs: '1.2rem', md: '1.375rem' },
           fontWeight: 700,
           letterSpacing: '-0.03em',
           lineHeight: 1.1,
@@ -48,7 +48,7 @@ function ProfileStatContent({ label, value }: Omit<ProfileStatProps, 'href' | 'o
       <Typography
         sx={{
           color: 'text.secondary',
-          fontSize: '0.75rem',
+          fontSize: { xs: '0.72rem', md: '0.75rem' },
           fontWeight: 400,
           lineHeight: 1.2,
         }}

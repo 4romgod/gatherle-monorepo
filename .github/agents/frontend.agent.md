@@ -459,7 +459,7 @@ Webapp notes:
 ```bash
 npm run start -w @gatherle/mobile
 npm run start:lan -w @gatherle/mobile
-npm run run:android -w @gatherle/mobile
+npm run android -w @gatherle/mobile
 npm run typecheck -w @gatherle/mobile
 npm run codegen -w @gatherle/mobile
 npm run apk:release -w @gatherle/mobile

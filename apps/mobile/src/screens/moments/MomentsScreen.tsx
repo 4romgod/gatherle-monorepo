@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent, ViewToken } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
@@ -24,7 +24,7 @@ export function MomentsScreen() {
   const previousFocusRef = useRef(isFocused);
   const previousPageHeightRef = useRef(pageHeight);
   const previousVisibleLengthRef = useRef(0);
-  const { error, hasMore, isFetchingMore, loadMore, loading, moments, refresh } = useMomentsFeed(authToken, {
+  const { error, hasMore, isFetchingMore, loadMore, loading, moments } = useMomentsFeed(authToken, {
     enableAutoRefresh: isFocused,
   });
   const visibleMoments = useMemo(
@@ -138,7 +138,9 @@ export function MomentsScreen() {
       <MainTabScreenLayout {...chromeProps}>
         <View style={[styles.centeredState, { backgroundColor: theme.colors.background }]}>
           <Text style={[styles.stateTitle, { color: theme.colors.heroText }]}>Moments are unavailable right now.</Text>
-          <Text style={[styles.stateBody, { color: 'rgba(255,255,255,0.72)' }]}>Pull down to try again.</Text>
+          <Text style={[styles.stateBody, { color: 'rgba(255,255,255,0.72)' }]}>
+            We'll retry automatically in a moment.
+          </Text>
         </View>
       </MainTabScreenLayout>
     );
@@ -180,17 +182,6 @@ export function MomentsScreen() {
           onScrollEndDrag={handleScrollEndDrag}
           onViewableItemsChanged={onViewableItemsChanged}
           pagingEnabled
-          refreshControl={
-            <RefreshControl
-              colors={[theme.colors.primary]}
-              onRefresh={() => {
-                void refresh();
-              }}
-              progressBackgroundColor={theme.colors.surfaceRaised}
-              refreshing={loading && visibleMoments.length > 0}
-              tintColor={theme.colors.primary}
-            />
-          }
           renderItem={({ index, item }) => (
             <MomentFeedPage
               active={isFocused && index === activeIndex}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
@@ -45,6 +45,7 @@ export function HomeScreen() {
     refetch: refetchFollowedMoments,
     error: followedMomentsError,
   } = useFollowedMoments(authToken);
+  const [searchVisible, setSearchVisible] = useState(false);
   const cardWidth = Math.max(width - 40, 280);
 
   useEffect(() => {
@@ -93,18 +94,20 @@ export function HomeScreen() {
     [isAuthenticated, navigation],
   );
   const homeToolbarProps = {
-    right: (
-      <EventSearchBar
-        onSelectEvent={(event) => navigateToEventSeriesResults(navigation, event)}
-        renderTrigger={({ open }) => (
-          <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={open} />
-        )}
-      />
-    ),
+    right: <HeaderIconButton accessibilityLabel="Search events" icon="search" onPress={() => setSearchVisible(true)} />,
   };
 
   return (
-    <MainTabScreenLayout toolbarProps={homeToolbarProps}>
+    <MainTabScreenLayout
+      overlay={
+        <EventSearchBar
+          onClose={() => setSearchVisible(false)}
+          onSelectEvent={(event) => navigateToEventSeriesResults(navigation, event)}
+          visible={searchVisible}
+        />
+      }
+      toolbarProps={homeToolbarProps}
+    >
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
 

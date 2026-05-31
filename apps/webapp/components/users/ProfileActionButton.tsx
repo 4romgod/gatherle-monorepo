@@ -23,11 +23,11 @@ const profileActionButtonSx = {
   cursor: 'pointer',
   display: 'flex',
   flex: 1,
-  gap: 0.75,
+  gap: { xs: 0.625, md: 0.75 },
   justifyContent: 'center',
-  minHeight: 38,
+  minHeight: { xs: 36, md: 38 },
   minWidth: 0,
-  px: 1.5,
+  px: { xs: 1.25, md: 1.5 },
   textDecoration: 'none',
   transition: 'opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease',
   '&:hover': {
@@ -41,7 +41,7 @@ const profileActionButtonSx = {
 } as const;
 
 const labelSx = {
-  fontSize: '0.8125rem',
+  fontSize: { xs: '0.78rem', md: '0.8125rem' },
   fontWeight: 600,
   lineHeight: 1.2,
   overflow: 'hidden',
@@ -52,7 +52,7 @@ const labelSx = {
 export function ProfileActionButton({ href, icon: Icon, label, onClick }: ProfileActionButtonProps) {
   const content = (
     <>
-      <Icon size={14} />
+      <Icon size={13} />
       <Box component="span" sx={labelSx}>
         {label}
       </Box>

@@ -1,19 +1,28 @@
 import { graphql } from '@/data/graphql/types';
 
 export const GetOrganizationsDocument = graphql(`
-  query GetOrganizations {
-    readOrganizations {
+  query GetOrganizations($options: QueryOptionsInput) {
+    readOrganizations(options: $options) {
       orgId
       ownerId
       slug
       name
       description
       logo
+      billingEmail
       defaultVisibility
       followersCount
       isFollowable
       tags
       domainsAllowed
+      memberRoles {
+        membershipId
+        orgId
+        userId
+        username
+        role
+        joinedAt
+      }
       links {
         label
         url

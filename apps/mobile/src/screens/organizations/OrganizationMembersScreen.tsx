@@ -8,6 +8,7 @@ import {
   DeleteOrganizationMembershipDocument,
   UpdateOrganizationMembershipDocument,
 } from '@data/graphql/mutation/OrganizationMembership/mutation';
+import { TransferOrganizationOwnershipDocument } from '@data/graphql/mutation/Organization/mutation';
 import { GetOrganizationByIdDocument, GetMyOrganizationsDocument } from '@data/graphql/query/Organization/query';
 import { GetOrganizationMembershipsByOrgIdDocument } from '@data/graphql/query/OrganizationMembership/query';
 import { GetUsersDocument } from '@data/graphql/query/User/query';
@@ -31,6 +32,7 @@ import { OrganizationMemberRow } from '@/components/organizations/OrganizationMe
 import { DirectoryRowSkeleton } from '@/components/skeleton/DirectoryRowSkeleton';
 import { OrganizationMemberRowSkeleton } from '@/components/skeleton/OrganizationMemberRowSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useAdminAccess } from '@/hooks/admin/useAdminAccess';
 import { getApolloAuthContext } from '@/lib/auth';
 import { getDisplayName } from '@/lib/events/formatters';
 
@@ -60,6 +62,7 @@ export function OrganizationMembersScreen() {
   const route = useRoute<OrganizationMembersRoute>();
   const { orgId } = route.params;
   const { authToken, isAuthenticated, userId } = useAppShell();
+  const { isAdmin } = useAdminAccess();
   const { showToast, withBlockingLoader } = useAppFeedback();
   const { theme } = useAppTheme();
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,12 +93,14 @@ export function OrganizationMembersScreen() {
   const [createMembership] = useMutation(CreateOrganizationMembershipDocument, getApolloAuthContext(authToken));
   const [updateMembership] = useMutation(UpdateOrganizationMembershipDocument, getApolloAuthContext(authToken));
   const [deleteMembership] = useMutation(DeleteOrganizationMembershipDocument, getApolloAuthContext(authToken));
+  const [transferOwnership] = useMutation(TransferOrganizationOwnershipDocument, getApolloAuthContext(authToken));
 
   const organization = organizationQuery.data?.readOrganizationById ?? null;
   const currentMembership =
     myOrganizationsQuery.data?.readMyOrganizations?.find((membership) => membership.organization.orgId === orgId) ??
     null;
   const canManageMembers =
+    isAdmin ||
     organization?.ownerId === userId ||
     currentMembership?.role === OrganizationRole.Owner ||
     currentMembership?.role === OrganizationRole.Admin;
@@ -254,11 +259,59 @@ export function OrganizationMembersScreen() {
     [deleteMembership, membershipsQuery, showToast, withBlockingLoader],
   );
 
+  const canTransferOwnership = isAdmin || organization?.ownerId === userId;
+
+  const handleTransferOwnership = useCallback(
+    (newOwnerUserId: string, username?: string | null) => {
+      const label = username ? `@${username}` : 'this member';
+      Alert.alert('Transfer ownership', `Make ${label} the new owner? The current owner will be demoted to Admin.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Transfer',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await withBlockingLoader('Transferring ownership…', async () => {
+                  await transferOwnership({
+                    variables: { orgId, newOwnerUserId },
+                  });
+                  await Promise.all([
+                    membershipsQuery.refetch(),
+                    organizationQuery.refetch(),
+                    myOrganizationsQuery.refetch(),
+                  ]);
+                });
+
+                setExpandedMembershipId(null);
+                showToast({ message: `Ownership transferred to ${label}.`, tone: 'success' });
+              } catch (error) {
+                showToast({
+                  message: error instanceof Error ? error.message : "We couldn't transfer ownership.",
+                  tone: 'error',
+                });
+              }
+            })();
+          },
+        },
+      ]);
+    },
+    [
+      membershipsQuery,
+      myOrganizationsQuery,
+      orgId,
+      organizationQuery,
+      showToast,
+      transferOwnership,
+      withBlockingLoader,
+    ],
+  );
+
   if (!isAuthenticated) {
     return (
       <PageContainer>
         <AuthPromptCard
-          description="Sign in with an organization owner or admin account to manage team members."
+          description="Sign in with a Gatherle admin account or an organization owner/admin account to manage team members."
           onPressPrimary={() => navigation.navigate('Login')}
           onPressSecondary={() => navigation.navigate('Register')}
           primaryLabel="Login"
@@ -296,7 +349,7 @@ export function OrganizationMembersScreen() {
   if (!canManageMembers) {
     return (
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-        <StateNotice message="Only organization owners and admins can manage team members." />
+        <StateNotice message="Only Gatherle admins or organization owners/admins can manage team members." />
       </PageContainer>
     );
   }
@@ -376,7 +429,11 @@ export function OrganizationMembersScreen() {
 
       <View style={styles.sectionWrap}>
         <AccountSectionCard
-          description="Owner transfers stay out of this surface. Owners and your own membership are view-only here."
+          description={
+            canTransferOwnership
+              ? 'Tap “Make owner” on a member to transfer ownership. The current owner will be demoted to Admin.'
+              : 'Owners and your own membership are view-only here.'
+          }
           title={`${memberships.length} team member${memberships.length === 1 ? '' : 's'}`}
         >
           {memberships.length > 0 ? (
@@ -390,6 +447,7 @@ export function OrganizationMembersScreen() {
                 return (
                   <OrganizationMemberRow
                     canEditMembership={canEditMembership}
+                    canMakeOwner={canTransferOwnership && !isOwnerMembership && !isCurrentUser}
                     isCurrentUser={isCurrentUser}
                     isExpanded={isExpanded}
                     isOwnerMembership={isOwnerMembership}
@@ -403,6 +461,7 @@ export function OrganizationMembersScreen() {
                         username: membership.username,
                       })
                     }
+                    onPressMakeOwner={() => handleTransferOwnership(membership.userId, membership.username)}
                     onPressManage={() =>
                       setExpandedMembershipId((current) =>
                         current === membership.membershipId ? null : membership.membershipId,
