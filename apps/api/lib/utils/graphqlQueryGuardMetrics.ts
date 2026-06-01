@@ -1,4 +1,4 @@
-import { AWS_REGION, STAGE } from '@/constants';
+import { AWS_REGION, INVALID_GRAPHQL_REQUEST_OPERATION, STAGE, UNKNOWN_GRAPHQL_OPERATION_TYPE } from '@/constants';
 
 export const GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE = 'Gatherle/GraphQLQueryGuards';
 const GRAPHQL_QUERY_GUARD_METRIC_DIMENSIONS = ['Stage', 'Region'] as const;
@@ -46,8 +46,8 @@ export function emitGraphqlQueryGuardMetrics({
       },
       Stage: STAGE,
       Region: AWS_REGION,
-      Operation: operation ?? '<unresolved>',
-      OperationType: operationType ?? '<unknown>',
+      Operation: operation ?? INVALID_GRAPHQL_REQUEST_OPERATION,
+      OperationType: operationType ?? UNKNOWN_GRAPHQL_OPERATION_TYPE,
       ...metrics,
     }),
   );

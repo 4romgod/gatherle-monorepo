@@ -3,7 +3,12 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import type { Express, Request, Response } from 'express';
 import type { GraphQLError, GraphQLFormattedError } from 'graphql';
 import { createHash } from 'crypto';
-import { STAGE } from '@/constants';
+import {
+  INVALID_GRAPHQL_REQUEST_OPERATION,
+  STAGE,
+  UNKNOWN_GRAPHQL_OPERATION_TYPE,
+  UNNAMED_GRAPHQL_OPERATION,
+} from '@/constants';
 import { logger } from '@/utils/logger';
 import type { ApolloServerPlugin } from '@apollo/server';
 import { ApolloServer } from '@apollo/server';
@@ -16,6 +21,7 @@ import createSchema from '@/graphql/schema';
 import {
   assertQuerySelectionMetricsWithinLimits,
   collectQuerySelectionMetrics,
+  QUERY_GUARD_ERROR_CODES,
   resolveQueryGuardLimits,
 } from '@/graphql/security';
 import type DataLoader from 'dataloader';
@@ -89,6 +95,20 @@ const getHttpStatusFromError = (errorCode: string, error: GraphQLError) => {
 
 const useInvalidQueryMessage = (code: string) => GRAPHQL_CLIENT_ERROR_CODES.has(code);
 
+const QUERY_GUARD_WARNING_CODES = new Set<string>(Object.values(QUERY_GUARD_ERROR_CODES));
+
+export const shouldWarnForGraphqlClientError = (
+  errorCode: string,
+  status: number,
+  queryGuardCode?: string,
+): boolean => {
+  if (status === 429 || errorCode === 'TOO_MANY_REQUESTS') {
+    return true;
+  }
+
+  return Boolean(queryGuardCode && QUERY_GUARD_WARNING_CODES.has(queryGuardCode));
+};
+
 type GraphQLQueryValue =
   | string
   | {
@@ -139,7 +159,7 @@ export const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerCo
     if (!isIntrospectionOperation(startOperationName, startQuery)) {
       logger.debug('GraphQL request started', {
         stage: 'requestDidStart',
-        operation: startOperationName ?? '<unresolved>',
+        operation: startOperationName ?? INVALID_GRAPHQL_REQUEST_OPERATION,
       });
     }
 
@@ -156,8 +176,8 @@ export const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerCo
         }
 
         logger.graphql({
-          operation: operationName ?? '<unnamed>',
-          operationType: requestContext.operation?.operation,
+          operation: operationName ?? UNNAMED_GRAPHQL_OPERATION,
+          operationType: requestContext.operation?.operation ?? UNKNOWN_GRAPHQL_OPERATION_TYPE,
           queryFingerprint: getQueryFingerprint(query),
           variableKeys: Object.keys(variables),
         });
@@ -189,9 +209,9 @@ export const createGraphQLRequestLoggingPlugin = (): ApolloServerPlugin<ServerCo
           })
           .filter((code): code is string => Boolean(code));
 
-        logger.warn('GraphQL request failed before operation resolution', {
+        logger.debug('GraphQL request failed before operation resolution', {
           stage: 'parse_or_validation',
-          operation: operationName ?? '<unresolved>',
+          operation: operationName ?? INVALID_GRAPHQL_REQUEST_OPERATION,
           queryFingerprint: getQueryFingerprint(query),
           queryLength: query.length,
           variableKeys: Object.keys(variables),
@@ -266,20 +286,29 @@ export const createApolloServer = async (expressApp?: Express) => {
           ? extensionsWithoutException.code
           : ApolloServerErrorCode.INTERNAL_SERVER_ERROR;
       const resolvedErrorCode = baseErrorCode;
+      const queryGuardCode =
+        typeof extensionsWithoutException.queryGuardCode === 'string'
+          ? extensionsWithoutException.queryGuardCode
+          : typeof graphQLError.extensions?.queryGuardCode === 'string'
+            ? graphQLError.extensions.queryGuardCode
+            : undefined;
       const message = useInvalidQueryMessage(resolvedErrorCode) ? ERROR_MESSAGES.INVALID_QUERY : formattedError.message;
       const status = getHttpStatusFromError(resolvedErrorCode, graphQLError);
       const logContext = {
         code: resolvedErrorCode,
         status,
         message,
+        queryGuardCode,
         path: formattedError.path,
         locations: formattedError.locations,
       };
 
       if (status >= HttpStatusCode.INTERNAL_SERVER_ERROR) {
         logger.error('GraphQL Error:', { ...logContext, error });
-      } else {
+      } else if (shouldWarnForGraphqlClientError(resolvedErrorCode, status, queryGuardCode)) {
         logger.warn('GraphQL client error', logContext);
+      } else {
+        logger.debug('GraphQL client error', logContext);
       }
 
       return {
@@ -288,6 +317,7 @@ export const createApolloServer = async (expressApp?: Express) => {
         extensions: {
           ...extensionsWithoutException,
           code: resolvedErrorCode,
+          ...(queryGuardCode ? { queryGuardCode } : {}),
           http: {
             status,
           },

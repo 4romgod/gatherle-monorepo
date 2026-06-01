@@ -44,6 +44,7 @@ async function loadAll() {
     emitOccurrenceMaintenanceHealthMetrics,
     emitOccurrenceMaintenanceRunMetrics,
   } = await import('@/utils/occurrenceMaintenanceMetrics');
+  const { logger } = await import('@/utils/logger');
   const { maintainEventOccurrencesHandler } = await import('@/lambdaHandlers/maintainEventOccurrences');
 
   return {
@@ -53,6 +54,7 @@ async function loadAll() {
     emitOccurrenceMaintenanceFailureMetric,
     emitOccurrenceMaintenanceHealthMetrics,
     emitOccurrenceMaintenanceRunMetrics,
+    logger,
     maintainEventOccurrencesHandler,
   };
 }
@@ -77,6 +79,7 @@ describe('maintainEventOccurrencesHandler', () => {
       emitOccurrenceMaintenanceFailureMetric,
       emitOccurrenceMaintenanceHealthMetrics,
       emitOccurrenceMaintenanceRunMetrics,
+      logger,
       maintainEventOccurrencesHandler,
     } = await loadAll();
     (EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows as jest.Mock)
@@ -126,6 +129,19 @@ describe('maintainEventOccurrencesHandler', () => {
     expect(emitOccurrenceMaintenanceRunMetrics).toHaveBeenCalledTimes(1);
     expect(emitOccurrenceMaintenanceHealthMetrics).toHaveBeenCalledTimes(1);
     expect(emitOccurrenceMaintenanceFailureMetric).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      'Scheduled event occurrence maintenance completed',
+      expect.objectContaining({
+        limit: 250,
+        thresholdDays: 21,
+        durationMs: expect.any(Number),
+        batchesProcessed: 1,
+        processedSeriesCount: 5,
+        syncedSeriesCount: 2,
+        remainingMissingSeriesCount: 0,
+        remainingDriftedOccurrenceCount: 0,
+      }),
+    );
   });
 
   it('emits a failure metric and rethrows when the maintenance run fails', async () => {
@@ -134,6 +150,7 @@ describe('maintainEventOccurrencesHandler', () => {
       emitOccurrenceMaintenanceFailureMetric,
       emitOccurrenceMaintenanceHealthMetrics,
       emitOccurrenceMaintenanceRunMetrics,
+      logger,
       maintainEventOccurrencesHandler,
     } = await loadAll();
     (EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows as jest.Mock).mockRejectedValueOnce(
@@ -145,5 +162,8 @@ describe('maintainEventOccurrencesHandler', () => {
     expect(emitOccurrenceMaintenanceFailureMetric).toHaveBeenCalledTimes(1);
     expect(emitOccurrenceMaintenanceRunMetrics).not.toHaveBeenCalled();
     expect(emitOccurrenceMaintenanceHealthMetrics).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith('Scheduled event occurrence maintenance failed', {
+      error: expect.any(Error),
+    });
   });
 });

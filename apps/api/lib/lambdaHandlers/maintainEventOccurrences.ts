@@ -3,6 +3,7 @@ import type { Context } from 'aws-lambda';
 import { MongoDbClient, getConfigValue } from '@/clients';
 import { SECRET_KEYS, validateEnv } from '@/constants';
 import EventOccurrenceMaintenanceService from '@/services/eventOccurrenceMaintenance';
+import type { MaintainAllOccurrenceWindowsResult } from '@/services/eventOccurrenceMaintenance';
 import { logger } from '@/utils/logger';
 import {
   emitOccurrenceMaintenanceFailureMetric,
@@ -14,6 +15,34 @@ const DEFAULT_THRESHOLD_DAYS = 30;
 const DEFAULT_BATCH_LIMIT = 100;
 
 let isDbConnected = false;
+
+function summarizeRunResult(result: MaintainAllOccurrenceWindowsResult) {
+  return {
+    batchesProcessed: result.batchesProcessed,
+    processedSeriesCount: result.processedSeriesCount,
+    syncedSeriesCount: result.syncedSeriesCount,
+    missingSeriesCount: result.missingSeriesCount,
+    toppedUpSeriesCount: result.toppedUpSeriesCount,
+    metadataRepairSeriesCount: result.metadataRepairSeriesCount,
+    driftedOccurrenceCount: result.driftedOccurrenceCount,
+    reconciledOccurrenceCount: result.reconciledOccurrenceCount,
+    skippedSeriesCount: result.skippedSeriesCount,
+    lastCursor: result.lastCursor,
+  };
+}
+
+function summarizeHealthSnapshot(result: MaintainAllOccurrenceWindowsResult) {
+  return {
+    remainingMissingSeriesCount: result.missingSeriesCount,
+    remainingLowHorizonSeriesCount: result.toppedUpSeriesCount,
+    remainingMetadataRepairSeriesCount: result.metadataRepairSeriesCount,
+    remainingDriftedOccurrenceCount: result.driftedOccurrenceCount,
+  };
+}
+
+function hasOutstandingMaintenanceDebt(summary: ReturnType<typeof summarizeHealthSnapshot>): boolean {
+  return Object.values(summary).some((value) => value > 0);
+}
 
 function parsePositiveIntegerEnvVar(name: string, defaultValue: number): number {
   const value = process.env[name];
@@ -46,6 +75,7 @@ export const maintainEventOccurrencesHandler = async (_event: unknown, context?:
   }
 
   try {
+    const startedAt = Date.now();
     await ensureDbConnected();
 
     const limit = parsePositiveIntegerEnvVar('OCCURRENCE_MAINTENANCE_BATCH_LIMIT', DEFAULT_BATCH_LIMIT);
@@ -54,6 +84,7 @@ export const maintainEventOccurrencesHandler = async (_event: unknown, context?:
     logger.info('Starting scheduled event occurrence maintenance run', {
       limit,
       thresholdDays,
+      worker: 'OccurrenceMaintenance',
     });
 
     const runResult = await EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows({
@@ -72,10 +103,23 @@ export const maintainEventOccurrencesHandler = async (_event: unknown, context?:
 
     emitOccurrenceMaintenanceHealthMetrics(healthSnapshot);
 
+    const runSummary = summarizeRunResult(runResult);
+    const healthSummary = summarizeHealthSnapshot(healthSnapshot);
+
     logger.info('Scheduled event occurrence maintenance completed', {
-      runResult,
-      healthSnapshot,
+      durationMs: Date.now() - startedAt,
+      limit,
+      thresholdDays,
+      ...runSummary,
+      ...healthSummary,
     });
+
+    if (hasOutstandingMaintenanceDebt(healthSummary)) {
+      logger.info('Occurrence maintenance residual backlog detected', {
+        thresholdDays,
+        ...healthSummary,
+      });
+    }
   } catch (error) {
     emitOccurrenceMaintenanceFailureMetric();
     logger.error('Scheduled event occurrence maintenance failed', { error });

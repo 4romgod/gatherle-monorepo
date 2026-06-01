@@ -46,6 +46,7 @@ export class FeedResolver {
     @Ctx() context: ServerContext,
   ): Promise<UserFeedItem[]> {
     const user = getAuthenticatedUser(context);
+    const feedUser = await RecommendationService.assertFeedUserExists(user.userId);
 
     const safeLimit = Math.min(Math.max(limit, 0), MAX_FEED_LIMIT);
     const safeSkip = Math.max(skip, 0);
@@ -53,12 +54,12 @@ export class FeedResolver {
     const existing = await UserFeedDAO.readFeedForUser(user.userId, safeLimit, safeSkip);
 
     if (existing.length === 0) {
-      await RecommendationService.computeFeedForUser(user.userId);
+      await RecommendationService.computeFeedForUser(user.userId, feedUser);
       return UserFeedDAO.readFeedForUser(user.userId, safeLimit, safeSkip);
     }
 
     if (RecommendationService.isFeedStale(existing)) {
-      RecommendationService.computeFeedForUser(user.userId).catch((err) => {
+      RecommendationService.computeFeedForUser(user.userId, feedUser).catch((err) => {
         logger.warn('[FeedResolver] Background feed refresh failed', { error: err });
       });
     }
@@ -74,7 +75,8 @@ export class FeedResolver {
   @Mutation(() => Boolean, { description: RESOLVER_DESCRIPTIONS.FEED.refreshFeed })
   async refreshFeed(@Ctx() context: ServerContext): Promise<boolean> {
     const user = getAuthenticatedUser(context);
-    await RecommendationService.computeFeedForUser(user.userId);
+    const feedUser = await RecommendationService.assertFeedUserExists(user.userId);
+    await RecommendationService.computeFeedForUser(user.userId, feedUser);
     return true;
   }
 }

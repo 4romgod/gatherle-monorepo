@@ -17,6 +17,7 @@ jest.mock('@/mongodb/dao', () => {
 jest.mock('@/services/recommendation', () => ({
   __esModule: true,
   default: {
+    assertFeedUserExists: jest.fn(),
     computeFeedForUser: jest.fn(),
     isFeedStale: jest.fn(),
   },
@@ -31,6 +32,7 @@ jest.mock('@/utils/logger', () => ({
 
 import { UserFeedDAO } from '@/mongodb/dao';
 import RecommendationService from '@/services/recommendation';
+import { CustomError, ErrorTypes } from '@/utils';
 
 const mockUser: User = {
   userId: 'user-1',
@@ -64,6 +66,7 @@ describe('FeedResolver', () => {
     jest.clearAllMocks();
 
     // Default stubs
+    (RecommendationService.assertFeedUserExists as jest.Mock).mockResolvedValue(mockUser);
     (UserFeedDAO.readFeedForUser as jest.Mock).mockResolvedValue([]);
     (RecommendationService.computeFeedForUser as jest.Mock).mockResolvedValue(undefined);
     (RecommendationService.isFeedStale as jest.Mock).mockReturnValue(false);
@@ -77,7 +80,8 @@ describe('FeedResolver', () => {
 
       const result = await resolver.readRecommendedFeed(50, 0, ctx);
 
-      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.assertFeedUserExists).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1', mockUser);
       expect(UserFeedDAO.readFeedForUser).toHaveBeenCalledTimes(2);
       expect(result).toEqual(freshItems);
     });
@@ -89,6 +93,7 @@ describe('FeedResolver', () => {
 
       const result = await resolver.readRecommendedFeed(50, 0, ctx);
 
+      expect(RecommendationService.assertFeedUserExists).toHaveBeenCalledWith('user-1');
       expect(RecommendationService.computeFeedForUser).not.toHaveBeenCalled();
       expect(result).toEqual(cachedItems);
     });
@@ -104,7 +109,20 @@ describe('FeedResolver', () => {
       expect(result).toEqual(staleItems);
       // Fires background refresh (fire-and-forget — may not have run yet)
       await new Promise((r) => setTimeout(r, 0));
-      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.assertFeedUserExists).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1', mockUser);
+    });
+
+    it('rejects with UNAUTHENTICATED when the authenticated feed user no longer exists', async () => {
+      (RecommendationService.assertFeedUserExists as jest.Mock).mockRejectedValue(
+        CustomError('You must be logged in to access this resource.', ErrorTypes.UNAUTHENTICATED),
+      );
+
+      await expect(resolver.readRecommendedFeed(50, 0, ctx)).rejects.toMatchObject({
+        extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+      });
+      expect(UserFeedDAO.readFeedForUser).not.toHaveBeenCalled();
+      expect(RecommendationService.computeFeedForUser).not.toHaveBeenCalled();
     });
 
     it('passes limit and skip to the DAO', async () => {
@@ -149,7 +167,8 @@ describe('FeedResolver', () => {
 
       const result = await resolver.refreshFeed(ctx);
 
-      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.assertFeedUserExists).toHaveBeenCalledWith('user-1');
+      expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith('user-1', mockUser);
       expect(result).toBe(true);
     });
 
@@ -158,6 +177,17 @@ describe('FeedResolver', () => {
       (RecommendationService.computeFeedForUser as jest.Mock).mockRejectedValue(err);
 
       await expect(resolver.refreshFeed(ctx)).rejects.toThrow(err);
+    });
+
+    it('rejects refreshFeed with UNAUTHENTICATED when the user no longer exists', async () => {
+      (RecommendationService.assertFeedUserExists as jest.Mock).mockRejectedValue(
+        CustomError('You must be logged in to access this resource.', ErrorTypes.UNAUTHENTICATED),
+      );
+
+      await expect(resolver.refreshFeed(ctx)).rejects.toMatchObject({
+        extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+      });
+      expect(RecommendationService.computeFeedForUser).not.toHaveBeenCalled();
     });
   });
 

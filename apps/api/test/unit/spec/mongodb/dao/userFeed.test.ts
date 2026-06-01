@@ -110,7 +110,7 @@ describe('UserFeedDAO', () => {
       expect(ops[0].updateOne.upsert).toBe(true);
     });
 
-    it('sets _id and feedItemId to the same value on insert', async () => {
+    it('sets a deterministic feedItemId on insert', async () => {
       (UserFeedModel.bulkWrite as jest.Mock).mockResolvedValue({});
 
       await UserFeedDAO.bulkUpsertFeedItems([
@@ -126,7 +126,8 @@ describe('UserFeedDAO', () => {
 
       const ops = (UserFeedModel.bulkWrite as jest.Mock).mock.calls[0][0];
       const { _id, feedItemId } = ops[0].updateOne.update.$setOnInsert;
-      expect(feedItemId).toBe(_id.toString());
+      expect(feedItemId).toBe('user-1:event-1');
+      expect(_id).toBeDefined();
     });
 
     it('wraps errors', async () => {

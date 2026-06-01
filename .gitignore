@@ -47,3 +47,6 @@ packages/commons/schema.graphql
 
 # System files
 .DS_Store
+
+# Ignore the entire scratch folder and all its contents
+.scratch/

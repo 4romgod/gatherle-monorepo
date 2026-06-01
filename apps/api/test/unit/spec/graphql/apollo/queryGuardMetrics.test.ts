@@ -59,7 +59,7 @@ describe('createGraphqlQueryGuardMetricsPlugin', () => {
   it('emits rejected metrics before throwing when the query exceeds guard limits', async () => {
     const aliasedFields = Array.from({ length: 900 }, (_, index) => `field${index}: username`).join('\n');
     const query = `
-      query TooComplex {
+      query SyntheticQueryGuardComplexityProbe {
         readUserByUsername(username: "seeded-user") {
           ${aliasedFields}
         }
@@ -74,13 +74,13 @@ describe('createGraphqlQueryGuardMetricsPlugin', () => {
         document,
         operation,
         request: { query, variables: {} },
-        operationName: 'TooComplex',
+        operationName: 'SyntheticQueryGuardComplexityProbe',
       } as any),
     ).rejects.toThrow('maximum allowed complexity');
 
     expect(emitGraphqlQueryGuardMetrics).toHaveBeenCalledWith(
       expect.objectContaining({
-        operation: 'TooComplex',
+        operation: 'SyntheticQueryGuardComplexityProbe',
         operationType: 'query',
         accepted: false,
       }),

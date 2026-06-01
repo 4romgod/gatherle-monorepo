@@ -18,8 +18,16 @@ const managementClientCache = new Map<string, ApiGatewayManagementApiClient>();
 
 const toManagementEndpoint = (domainName: string, stage: string): string => {
   const normalizedDomain = domainName.startsWith('http') ? domainName : `https://${domainName}`;
-  const withoutTrailingSlash = normalizedDomain.replace(/\/+$/, '');
-  return `${withoutTrailingSlash}/${stage}`;
+  const endpointUrl = new URL(normalizedDomain);
+  const normalizedStage = stage.replace(/^\/+|\/+$/g, '');
+  const pathSegments = endpointUrl.pathname.split('/').filter(Boolean);
+
+  if (normalizedStage && pathSegments[pathSegments.length - 1] !== normalizedStage) {
+    pathSegments.push(normalizedStage);
+  }
+
+  const normalizedPath = pathSegments.length > 0 ? `/${pathSegments.join('/')}` : '';
+  return `${endpointUrl.origin}${normalizedPath}`;
 };
 
 const getManagementClient = (domainName: string, stage: string): ApiGatewayManagementApiClient => {

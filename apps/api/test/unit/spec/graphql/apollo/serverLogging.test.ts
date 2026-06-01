@@ -1,7 +1,9 @@
-import { createGraphQLRequestLoggingPlugin } from '@/graphql/apollo/server';
+import { createGraphQLRequestLoggingPlugin, shouldWarnForGraphqlClientError } from '@/graphql/apollo/server';
+import { QUERY_GUARD_ERROR_CODES } from '@/graphql/security';
 import { logger } from '@/utils/logger';
 
 describe('createGraphQLRequestLoggingPlugin', () => {
+  const getDebugCallsFor = (message: string) => debugSpy.mock.calls.filter(([entry]) => entry === message);
   let graphqlSpy: jest.SpyInstance;
   let warnSpy: jest.SpyInstance;
   let debugSpy: jest.SpyInstance;
@@ -59,36 +61,37 @@ describe('createGraphQLRequestLoggingPlugin', () => {
   });
 
   it('avoids raw query and variable values in pre-resolution error logs', async () => {
-    const query = 'query Broken($token: String!) { broken(token: $token) }';
+    const query = 'query SyntheticInvalidGraphqlSyntax($token: String!) { broken(token: $token) }';
     const variables = { token: 'secret-token' };
     const plugin = createGraphQLRequestLoggingPlugin();
 
     const hooks = await plugin.requestDidStart?.({
       request: {
         query,
-        operationName: 'Broken',
+        operationName: 'SyntheticInvalidGraphqlSyntax',
       },
     } as any);
 
     await hooks?.didEncounterErrors?.({
-      request: { query, operationName: 'Broken', variables },
-      operationName: 'Broken',
+      request: { query, operationName: 'SyntheticInvalidGraphqlSyntax', variables },
+      operationName: 'SyntheticInvalidGraphqlSyntax',
       operation: undefined,
       errors: [{ extensions: { code: 'GRAPHQL_PARSE_FAILED' } }],
     } as any);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
+    const preResolutionCalls = getDebugCallsFor('GraphQL request failed before operation resolution');
+    expect(preResolutionCalls).toHaveLength(1);
+    expect(debugSpy).toHaveBeenCalledWith(
       'GraphQL request failed before operation resolution',
       expect.objectContaining({
-        operation: 'Broken',
+        operation: 'SyntheticInvalidGraphqlSyntax',
         queryFingerprint: expect.stringMatching(/^[a-f0-9]{16}$/),
         queryLength: query.length,
         variableKeys: ['token'],
       }),
     );
 
-    const warnContext = warnSpy.mock.calls[0][1] as {
+    const warnContext = preResolutionCalls[0][1] as {
       query?: string;
       variables?: Record<string, unknown>;
     };
@@ -174,23 +177,24 @@ describe('createGraphQLRequestLoggingPlugin', () => {
     } as any);
 
     expect(graphqlSpy).toHaveBeenCalledTimes(1);
+    expect(getDebugCallsFor('GraphQL request failed before operation resolution')).toHaveLength(0);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('logs a pre-resolution warning only once even if multiple early errors are reported', async () => {
-    const query = 'query Broken($token: String!) { broken(token: $token) }';
+  it('logs a pre-resolution debug entry only once even if multiple early errors are reported', async () => {
+    const query = 'query SyntheticInvalidGraphqlSyntax($token: String!) { broken(token: $token) }';
     const plugin = createGraphQLRequestLoggingPlugin();
 
     const hooks = await plugin.requestDidStart?.({
       request: {
         query,
-        operationName: 'Broken',
+        operationName: 'SyntheticInvalidGraphqlSyntax',
       },
     } as any);
 
     const requestContext = {
-      request: { query, operationName: 'Broken', variables: { token: 'secret-token' } },
-      operationName: 'Broken',
+      request: { query, operationName: 'SyntheticInvalidGraphqlSyntax', variables: { token: 'secret-token' } },
+      operationName: 'SyntheticInvalidGraphqlSyntax',
       operation: undefined,
       errors: [{ extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } }],
     } as any;
@@ -198,6 +202,30 @@ describe('createGraphQLRequestLoggingPlugin', () => {
     await hooks?.didEncounterErrors?.(requestContext);
     await hooks?.didEncounterErrors?.(requestContext);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(getDebugCallsFor('GraphQL request failed before operation resolution')).toHaveLength(1);
+  });
+
+  describe('shouldWarnForGraphqlClientError', () => {
+    it('keeps query guard violations at warn level', () => {
+      expect(shouldWarnForGraphqlClientError('BAD_REQUEST', 400, QUERY_GUARD_ERROR_CODES.MAX_COMPLEXITY_EXCEEDED)).toBe(
+        true,
+      );
+      expect(shouldWarnForGraphqlClientError('BAD_REQUEST', 400, QUERY_GUARD_ERROR_CODES.MAX_DEPTH_EXCEEDED)).toBe(
+        true,
+      );
+      expect(shouldWarnForGraphqlClientError('BAD_REQUEST', 400, QUERY_GUARD_ERROR_CODES.INTROSPECTION_DISABLED)).toBe(
+        true,
+      );
+    });
+
+    it('keeps throttle-style client rejections at warn level', () => {
+      expect(shouldWarnForGraphqlClientError('TOO_MANY_REQUESTS', 429)).toBe(true);
+    });
+
+    it('downgrades ordinary client/business errors out of the warn stream', () => {
+      expect(shouldWarnForGraphqlClientError('NOT_FOUND', 404)).toBe(false);
+      expect(shouldWarnForGraphqlClientError('UNAUTHENTICATED', 401)).toBe(false);
+      expect(shouldWarnForGraphqlClientError('GRAPHQL_VALIDATION_FAILED', 400)).toBe(false);
+    });
   });
 });

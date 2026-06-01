@@ -125,6 +125,8 @@ Important rule:
 - detailed DAO or resolver behavior
 - temporary instrumentation during investigations
 - local-only state inspection
+- expected client and business-logic failures that are useful during local debugging but too noisy for CloudWatch
+  warnings
 
 `info`
 
@@ -138,12 +140,20 @@ Important rule:
 - abuse-control events
 - retry paths
 - missing optional configuration
+- query guard rejections and throttle-style client rejections that operators may want to trend
 
 `error`
 
 - unhandled exceptions
 - downstream service failures
 - request failures that require operator attention
+
+Important distinction:
+
+- ordinary GraphQL client outcomes such as `UNAUTHENTICATED`, `NOT_FOUND`, `BAD_USER_INPUT`, and `CONFLICT` should not
+  pollute the CloudWatch warning stream
+- reserve `warn` for signals an operator may actually care about, such as throttling, abuse-control events, and query
+  guard rejections
 
 ---
 
@@ -235,6 +245,13 @@ https://console.aws.amazon.com/cloudwatch/home?region=<region>#dashboards:name=G
 - `QueryGuardRejected`
 - high-complexity operation table
 
+Operational note:
+
+- production-facing operation widgets should use real product operation names from web and mobile clients
+- synthetic probes and guard tests should use a `Synthetic...` prefix and be excluded from the dashboard leaderboards
+- malformed requests that fail before operation resolution should use a readable fallback such as
+  `InvalidGraphQLRequest`, not placeholder strings like `<unresolved>`
+
 #### Event occurrence maintenance
 
 - remaining missing series
@@ -242,6 +259,31 @@ https://console.aws.amazon.com/cloudwatch/home?region=<region>#dashboards:name=G
 - remaining metadata-repair series
 - remaining drifted occurrences
 - maintenance alarm widget
+
+Operational note:
+
+- the occurrence-maintenance log widget should filter out EMF-only metric records so operators see the structured
+  lifecycle and summary logs rather than empty rows
+- operator-facing run summaries should include batch counts, sync counts, remaining maintenance debt, and duration
+
+### Alarm naming and threshold philosophy
+
+CloudWatch alarm names should be concise and stable.
+
+Examples:
+
+- `GraphqlApi4xxSpike`
+- `GraphqlLoginLockouts`
+- `OccurrenceMaintenanceDrift`
+- `WebSocketExecutionErrorSpike`
+
+Avoid generated CloudFormation-style names in the CloudWatch UI whenever a plain `alarmName` is sufficient.
+
+Threshold guidance:
+
+- use thresholds that catch sustained abnormal behavior, not ordinary product traffic
+- prefer `2 of 3` datapoints for spiky transport and abuse metrics
+- reserve `1 of 1` alarms for low-volume but high-signal conditions such as maintenance jobs failing to run
 
 ### What the dashboard is for
 

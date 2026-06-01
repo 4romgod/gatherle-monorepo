@@ -24,6 +24,14 @@ export type SelectionMetrics = {
   usesIntrospection: boolean;
 };
 
+export const QUERY_GUARD_ERROR_CODES = {
+  INTROSPECTION_DISABLED: 'QUERY_GUARD_INTROSPECTION_DISABLED',
+  MAX_DEPTH_EXCEEDED: 'QUERY_GUARD_MAX_DEPTH_EXCEEDED',
+  MAX_COMPLEXITY_EXCEEDED: 'QUERY_GUARD_MAX_COMPLEXITY_EXCEEDED',
+} as const;
+
+export type QueryGuardErrorCode = (typeof QUERY_GUARD_ERROR_CODES)[keyof typeof QUERY_GUARD_ERROR_CODES];
+
 const DEFAULT_QUERY_DEPTH_LIMITS: Record<string, number> = {
   [APPLICATION_STAGES.DEV]: 14,
   [APPLICATION_STAGES.BETA]: 10,
@@ -231,6 +239,7 @@ export const assertQuerySelectionMetricsWithinLimits = (metrics: SelectionMetric
   if (!limits.allowIntrospection && metrics.usesIntrospection) {
     throw CustomError('Schema introspection is disabled for this stage.', ErrorTypes.BAD_REQUEST, {
       http: { status: QUERY_LIMIT_HTTP_STATUS },
+      queryGuardCode: QUERY_GUARD_ERROR_CODES.INTROSPECTION_DISABLED,
     });
   }
 
@@ -240,6 +249,7 @@ export const assertQuerySelectionMetricsWithinLimits = (metrics: SelectionMetric
       ErrorTypes.BAD_REQUEST,
       {
         http: { status: QUERY_LIMIT_HTTP_STATUS },
+        queryGuardCode: QUERY_GUARD_ERROR_CODES.MAX_DEPTH_EXCEEDED,
       },
     );
   }
@@ -250,6 +260,7 @@ export const assertQuerySelectionMetricsWithinLimits = (metrics: SelectionMetric
       ErrorTypes.BAD_REQUEST,
       {
         http: { status: QUERY_LIMIT_HTTP_STATUS },
+        queryGuardCode: QUERY_GUARD_ERROR_CODES.MAX_COMPLEXITY_EXCEEDED,
       },
     );
   }

@@ -1,5 +1,6 @@
 import RecommendationService from '@/services/recommendation';
 import { FeedReason, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import { CustomError, ErrorTypes } from '@/utils';
 
 jest.mock('@/services/eventOccurrence', () => ({
   __esModule: true,
@@ -34,6 +35,9 @@ jest.mock('@/mongodb/dao', () => ({
 
 jest.mock('@/utils/logger', () => ({
   logger: { debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+  LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
+  LogLevel: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, NONE: 4 },
+  initLogger: jest.fn(),
 }));
 
 import {
@@ -45,6 +49,7 @@ import {
   UserFeedDAO,
 } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
+import { logger } from '@/utils/logger';
 
 const makeUser = (overrides: Record<string, unknown> = {}) => ({
   userId: 'user-1',
@@ -143,6 +148,16 @@ describe('RecommendationService', () => {
 
       expect(UserFeedDAO.clearFeedForUser).toHaveBeenCalledWith('user-1');
       expect(UserFeedDAO.bulkUpsertFeedItems).not.toHaveBeenCalled();
+    });
+
+    it('reuses a preloaded feed user instead of reading the same user again', async () => {
+      const preloadedUser = makeUser({ interests: [] });
+      (EventSeriesDAO.readUpcomingPublished as jest.Mock).mockResolvedValue([]);
+
+      await RecommendationService.computeFeedForUser('user-1', preloadedUser as any);
+
+      expect(UserDAO.readUserById).not.toHaveBeenCalled();
+      expect(UserFeedDAO.clearFeedForUser).toHaveBeenCalledWith('user-1');
     });
 
     it('excludes events the user has already RSVPd to', async () => {
@@ -372,6 +387,39 @@ describe('RecommendationService', () => {
       (UserDAO.readUserById as jest.Mock).mockRejectedValue(new Error('DB exploded'));
 
       await expect(RecommendationService.computeFeedForUser('user-1')).resolves.toBeUndefined();
+    });
+
+    it('downgrades deleted users to a warning instead of logging an internal error', async () => {
+      (UserDAO.readUserById as jest.Mock).mockRejectedValue(
+        CustomError('User with id user-1 does not exist', ErrorTypes.NOT_FOUND),
+      );
+
+      await expect(RecommendationService.computeFeedForUser('user-1')).resolves.toBeUndefined();
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[RecommendationService] Skipping feed compute because user no longer exists',
+        { userId: 'user-1' },
+      );
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assertFeedUserExists', () => {
+    it('returns the user when the backing record exists', async () => {
+      const user = makeUser();
+      (UserDAO.readUserById as jest.Mock).mockResolvedValue(user);
+
+      await expect(RecommendationService.assertFeedUserExists('user-1')).resolves.toEqual(user);
+    });
+
+    it('throws UNAUTHENTICATED when the user has been deleted but the token is still presented', async () => {
+      (UserDAO.readUserById as jest.Mock).mockRejectedValue(
+        CustomError('User with id user-1 does not exist', ErrorTypes.NOT_FOUND),
+      );
+
+      await expect(RecommendationService.assertFeedUserExists('user-1')).rejects.toMatchObject({
+        extensions: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+      });
     });
   });
 

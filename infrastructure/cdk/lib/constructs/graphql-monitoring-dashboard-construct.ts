@@ -21,6 +21,9 @@ import {
   DEFAULT_GRAPHQL_API_CLIENT_ERROR_ALARM_THRESHOLDS,
   DEFAULT_GRAPHQL_API_SERVER_ERROR_ALARM_THRESHOLDS,
   DEFAULT_GRAPHQL_API_THROTTLE_ALARM_THRESHOLDS,
+  DEFAULT_OCCURRENCE_DRIFT_ALARM_THRESHOLDS,
+  DEFAULT_OCCURRENCE_LOW_HORIZON_ALARM_THRESHOLDS,
+  DEFAULT_OCCURRENCE_MISSING_SERIES_ALARM_THRESHOLDS,
   DEFAULT_GRAPHQL_QUERY_GUARD_REJECTION_ALARM_THRESHOLDS,
 } from '../constants';
 
@@ -39,6 +42,11 @@ export interface GraphqlMonitoringDashboardConstructProps {
 const OCCURRENCE_MAINTENANCE_METRIC_NAMESPACE = 'Gatherle/EventOccurrenceMaintenance';
 const GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE = 'Gatherle/GraphQLQueryGuards';
 const AUTH_ABUSE_METRIC_NAMESPACE = 'Gatherle/AuthAbuse';
+const SYNTHETIC_OPERATION_PREFIX = 'Synthetic';
+
+function scopedAlarmName(baseName: string, targetSuffix: string): string {
+  return `${baseName}-${targetSuffix}`;
+}
 
 export class GraphqlMonitoringDashboardConstruct extends Construct {
   readonly dashboard: Dashboard;
@@ -130,6 +138,9 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       'sort @timestamp desc',
       'limit 100',
     ];
+
+    const hasSyntheticOperationQueryLine = `filter operation not like /^${SYNTHETIC_OPERATION_PREFIX}/`;
+    const hasSyntheticMetricOperationQueryLine = `filter Operation not like /^${SYNTHETIC_OPERATION_PREFIX}/`;
 
     this.dashboard = new Dashboard(this, 'GatherleGraphqlDashboard', {
       dashboardName: `Gatherle-GraphQL-${targetSuffix}`,
@@ -229,9 +240,10 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new TextWidget({
-        markdown: '## GraphQL Operations',
+        markdown:
+          '## GraphQL Operations\n\nTables in this section focus on product traffic. Synthetic test probes are excluded so the leaderboard reflects real web and mobile usage patterns.',
         width: 24,
-        height: 1,
+        height: 2,
       }),
     );
 
@@ -244,6 +256,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
           'fields context.operation as operation',
           'filter level = "INFO" and message = "GraphQL request received"',
           'filter ispresent(operation)',
+          hasSyntheticOperationQueryLine,
           'stats count() as requests by operation',
           'sort requests desc',
           'limit 15',
@@ -258,6 +271,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         queryLines: [
           'fields context.operation as operation',
           'filter (level = "ERROR" or level = "WARN") and ispresent(operation)',
+          hasSyntheticOperationQueryLine,
           'stats count() as errors by operation',
           'sort errors desc',
           'limit 15',
@@ -307,6 +321,10 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       }),
       new GraphWidget({
         title: 'GraphQL API Error Signals',
+        leftYAxis: {
+          label: 'HTTP transport errors / throttles',
+          showUnits: false,
+        },
         left: [
           graphqlApi.metricClientError({ statistic: 'Sum', period: Duration.minutes(5), label: '4xx' }),
           graphqlApi.metricServerError({
@@ -344,6 +362,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         queryLines: [
           'fields Operation, OperationType, QueryComplexity, QueryDepth',
           'filter ispresent(QueryComplexity) and ispresent(Operation)',
+          hasSyntheticMetricOperationQueryLine,
           'stats max(QueryComplexity) as maxComplexity, avg(QueryComplexity) as avgComplexity, max(QueryDepth) as maxDepth by Operation, OperationType',
           'sort maxComplexity desc',
           'limit 15',
@@ -355,9 +374,10 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new TextWidget({
-        markdown: '## Error Patterns',
+        markdown:
+          '## Error Patterns\n\nThis breakdown mixes GraphQL application error families and raw runtime exception classes.\n\n- `GraphQLError`: typed API responses such as auth failures, not-found, conflicts, bad input, and query-guard rejections.\n- `MongoServerError`: database execution or duplicate-key failures that escaped translation.\n- `ValidationError`: model/schema validation failures before persistence.\n- `AccessDeniedException`: AWS permission or integration configuration issue.\n- `OperationResolutionError` / `SyntaxError`: malformed GraphQL documents sent by a client or synthetic probe.\n- `Error`: uncategorized runtime failure that needs investigation.',
         width: 24,
-        height: 1,
+        height: 4,
       }),
     );
 
@@ -377,6 +397,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
     );
 
     const maintenanceFailureAlarm = new Alarm(this, 'OccurrenceMaintenanceFailureAlarm', {
+      alarmName: scopedAlarmName('OccurrenceMaintenanceRunFailure', targetSuffix),
       metric: occurrenceMaintenanceLambdaFunction.metricErrors({
         statistic: 'Sum',
         period: Duration.hours(6),
@@ -385,92 +406,116 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       evaluationPeriods: 1,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when the scheduled occurrence maintenance Lambda errors.',
+      alarmDescription:
+        'Triggers when the scheduled event occurrence maintenance Lambda records one or more execution errors during a 6-hour maintenance window.',
     });
 
     const graphqlApiClientErrorAlarm = new Alarm(this, 'GraphqlApiClientErrorAlarm', {
+      alarmName: scopedAlarmName('GraphqlApi4xxSpike', targetSuffix),
       metric: graphqlApi.metricClientError({ statistic: 'Sum', period: Duration.minutes(5) }),
-      threshold: DEFAULT_GRAPHQL_API_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 20,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_GRAPHQL_API_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 150,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when GraphQL API 4xx responses spike, indicating abuse or a broken client rollout.',
+      alarmDescription:
+        'Triggers when GraphQL 4xx responses stay elevated for at least 2 of 3 consecutive 5-minute periods, signalling sustained client breakage, abuse, or an unhealthy rollout rather than isolated bad requests.',
     });
 
     const graphqlApiServerErrorAlarm = new Alarm(this, 'GraphqlApiServerErrorAlarm', {
+      alarmName: scopedAlarmName('GraphqlApi5xxSpike', targetSuffix),
       metric: graphqlApi.metricServerError({ statistic: 'Sum', period: Duration.minutes(5) }),
-      threshold: DEFAULT_GRAPHQL_API_SERVER_ERROR_ALARM_THRESHOLDS[stageName] ?? 5,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_GRAPHQL_API_SERVER_ERROR_ALARM_THRESHOLDS[stageName] ?? 10,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when GraphQL API 5xx responses spike.',
+      alarmDescription:
+        'Triggers when GraphQL 5xx responses stay elevated for at least 2 of 3 consecutive 5-minute periods, indicating a sustained server-side failure rather than a single transient burst.',
     });
 
     const graphqlApiThrottleAlarm = new Alarm(this, 'GraphqlApiThrottleAlarm', {
+      alarmName: scopedAlarmName('GraphqlApiThrottleSpike', targetSuffix),
       metric: graphqlApi.metric('ThrottleCount', { statistic: 'Sum', period: Duration.minutes(5) }),
-      threshold: DEFAULT_GRAPHQL_API_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 1,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when API Gateway throttles GraphQL requests.',
-    });
-
-    const graphqlQueryGuardRejectionAlarm = new Alarm(this, 'GraphqlQueryGuardRejectionAlarm', {
-      metric: queryGuardMetric('QueryGuardRejected', 'Rejected queries', 'Sum'),
-      threshold: DEFAULT_GRAPHQL_QUERY_GUARD_REJECTION_ALARM_THRESHOLDS[stageName] ?? 10,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when GraphQL query guards reject an unusual volume of requests.',
-    });
-
-    const authFailureAlarm = new Alarm(this, 'GraphqlAuthFailureAlarm', {
-      metric: authAbuseMetric('LoginFailure', 'Login failures'),
-      threshold: DEFAULT_AUTH_FAILURE_ALARM_THRESHOLDS[stageName] ?? 10,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when login failures spike, indicating potential credential stuffing or client breakage.',
-    });
-
-    const authLockoutAlarm = new Alarm(this, 'GraphqlAuthLockoutAlarm', {
-      metric: authAbuseMetric('LoginLockout', 'Login lockouts'),
-      threshold: DEFAULT_AUTH_LOCKOUT_ALARM_THRESHOLDS[stageName] ?? 2,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when login lockouts trigger, indicating active brute-force pressure.',
-    });
-
-    const missingOccurrencesAlarm = new Alarm(this, 'OccurrenceMaintenanceMissingOccurrencesAlarm', {
-      metric: occurrenceMaintenanceMetric('RemainingMissingSeriesCount', 'Missing series remaining'),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when event series still have missing occurrences after maintenance.',
-    });
-
-    const lowHorizonAlarm = new Alarm(this, 'OccurrenceMaintenanceLowHorizonAlarm', {
-      metric: occurrenceMaintenanceMetric('RemainingLowHorizonSeriesCount', 'Low-horizon series remaining'),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when recurring series remain below the maintenance horizon after a maintenance run.',
-    });
-
-    const driftAlarm = new Alarm(this, 'OccurrenceMaintenanceDriftAlarm', {
-      metric: occurrenceMaintenanceMetric('RemainingDriftedOccurrenceCount', 'Drifted occurrences remaining'),
-      threshold: 1,
+      threshold: DEFAULT_GRAPHQL_API_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 3,
       evaluationPeriods: 1,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
       alarmDescription:
-        'Alert when reserved-slot counters remain out of sync with occurrence participants after maintenance.',
+        'Triggers when API Gateway throttles GraphQL requests in a 5-minute window, indicating traffic that is outpacing configured capacity or a misconfigured client burst.',
+    });
+
+    const graphqlQueryGuardRejectionAlarm = new Alarm(this, 'GraphqlQueryGuardRejectionAlarm', {
+      alarmName: scopedAlarmName('GraphqlQueryGuardRejections', targetSuffix),
+      metric: queryGuardMetric('QueryGuardRejected', 'Rejected queries', 'Sum'),
+      threshold: DEFAULT_GRAPHQL_QUERY_GUARD_REJECTION_ALARM_THRESHOLDS[stageName] ?? 20,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when GraphQL complexity/depth guards reject an unusual volume of requests across 2 of 3 consecutive 5-minute periods, which usually points to probing, abuse, or a broken client query shape.',
+    });
+
+    const authFailureAlarm = new Alarm(this, 'GraphqlAuthFailureAlarm', {
+      alarmName: scopedAlarmName('GraphqlLoginFailureSpike', targetSuffix),
+      metric: authAbuseMetric('LoginFailure', 'Login failures'),
+      threshold: DEFAULT_AUTH_FAILURE_ALARM_THRESHOLDS[stageName] ?? 25,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when login failures remain elevated across 2 of 3 consecutive 5-minute periods, which is a stronger signal for credential stuffing or login UX breakage than one-off invalid passwords.',
+    });
+
+    const authLockoutAlarm = new Alarm(this, 'GraphqlAuthLockoutAlarm', {
+      alarmName: scopedAlarmName('GraphqlLoginLockouts', targetSuffix),
+      metric: authAbuseMetric('LoginLockout', 'Login lockouts'),
+      threshold: DEFAULT_AUTH_LOCKOUT_ALARM_THRESHOLDS[stageName] ?? 5,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when account lockouts are recorded in 2 of 3 consecutive 5-minute periods, signalling sustained brute-force pressure rather than isolated user mistakes.',
+    });
+
+    const missingOccurrencesAlarm = new Alarm(this, 'OccurrenceMaintenanceMissingOccurrencesAlarm', {
+      alarmName: scopedAlarmName('OccurrenceMaintenanceMissingSeries', targetSuffix),
+      metric: occurrenceMaintenanceMetric('RemainingMissingSeriesCount', 'Missing series remaining'),
+      threshold: DEFAULT_OCCURRENCE_MISSING_SERIES_ALARM_THRESHOLDS[stageName] ?? 10,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when a maintenance run still leaves a meaningful backlog of event series without persisted occurrences. This is intended to catch operational drift, not single-series noise.',
+    });
+
+    const lowHorizonAlarm = new Alarm(this, 'OccurrenceMaintenanceLowHorizonAlarm', {
+      alarmName: scopedAlarmName('OccurrenceMaintenanceLowHorizon', targetSuffix),
+      metric: occurrenceMaintenanceMetric('RemainingLowHorizonSeriesCount', 'Low-horizon series remaining'),
+      threshold: DEFAULT_OCCURRENCE_LOW_HORIZON_ALARM_THRESHOLDS[stageName] ?? 10,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when a maintenance run still leaves a meaningful backlog of recurring series whose persisted occurrence window falls below the configured horizon.',
+    });
+
+    const driftAlarm = new Alarm(this, 'OccurrenceMaintenanceDriftAlarm', {
+      alarmName: scopedAlarmName('OccurrenceMaintenanceDrift', targetSuffix),
+      metric: occurrenceMaintenanceMetric('RemainingDriftedOccurrenceCount', 'Drifted occurrences remaining'),
+      threshold: DEFAULT_OCCURRENCE_DRIFT_ALARM_THRESHOLDS[stageName] ?? 25,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription:
+        'Triggers when a maintenance run still leaves a meaningful backlog of occurrences whose reserved-slot counters remain out of sync with participant state after reconciliation.',
     });
 
     const maintenanceSuccessMissingAlarm = new Alarm(this, 'OccurrenceMaintenanceMissingSuccessAlarm', {
+      alarmName: scopedAlarmName('OccurrenceMaintenanceMissingSuccess', targetSuffix),
       metric: occurrenceMaintenanceMetric(
         'MaintenanceRunSuccess',
         'Successful maintenance runs',
@@ -481,14 +526,16 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       evaluationPeriods: 1,
       comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
       treatMissingData: TreatMissingData.BREACHING,
-      alarmDescription: 'Alert when no successful occurrence maintenance run is recorded in the last 24 hours.',
+      alarmDescription:
+        'Triggers when no successful occurrence maintenance run is recorded in the last 24 hours, indicating the scheduled worker may be failing to run at all.',
     });
 
     this.dashboard.addWidgets(
       new TextWidget({
-        markdown: '## Security Alarms',
+        markdown:
+          '## Security Alarms\n\nThese alarms are tuned for sustained spikes, not ordinary product traffic. Client 4xxs, login failures, and query-guard rejections must stay elevated before an alarm opens.',
         width: 24,
-        height: 1,
+        height: 2,
       }),
     );
 
@@ -598,6 +645,7 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
         logGroupNames: [occurrenceMaintenanceLambdaLogGroup.logGroupName],
         queryLines: [
           'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, context',
+          'filter ispresent(level) or ispresent(message)',
           'sort @timestamp desc',
           'limit 100',
         ],

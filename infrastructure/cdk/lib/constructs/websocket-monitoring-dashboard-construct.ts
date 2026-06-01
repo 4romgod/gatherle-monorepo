@@ -25,6 +25,10 @@ import {
   DEFAULT_WEBSOCKET_MESSAGE_SPIKE_ALARM_THRESHOLDS,
 } from '../constants';
 
+function scopedAlarmName(baseName: string, targetSuffix: string): string {
+  return `${baseName}-${targetSuffix}`;
+}
+
 export interface WebsocketMonitoringDashboardConstructProps {
   stageName: string;
   targetSuffix: string;
@@ -70,66 +74,86 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
       });
 
     const websocketLambdaErrorAlarm = new Alarm(this, 'WebsocketLambdaErrorAlarm', {
+      alarmName: scopedAlarmName('WebSocketLambdaErrors', targetSuffix),
       metric: websocketLambdaFunction.metricErrors({ statistic: 'Sum', period: Duration.minutes(5) }),
-      threshold: DEFAULT_WEBSOCKET_LAMBDA_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_LAMBDA_ERROR_ALARM_THRESHOLDS[stageName] ?? 3,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when the WebSocket Lambda errors.',
+      alarmDescription:
+        'Triggers when the WebSocket Lambda records execution errors in at least 2 of 3 consecutive 5-minute periods, so short-lived blips do not leave the alarm permanently open.',
     });
 
     const websocketLambdaThrottleAlarm = new Alarm(this, 'WebsocketLambdaThrottleAlarm', {
+      alarmName: scopedAlarmName('WebSocketLambdaThrottles', targetSuffix),
       metric: websocketLambdaFunction.metricThrottles({ statistic: 'Sum', period: Duration.minutes(5) }),
-      threshold: DEFAULT_WEBSOCKET_LAMBDA_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 1,
+      threshold: DEFAULT_WEBSOCKET_LAMBDA_THROTTLE_ALARM_THRESHOLDS[stageName] ?? 2,
       evaluationPeriods: 1,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when the WebSocket Lambda is throttled.',
+      alarmDescription:
+        'Triggers when the WebSocket Lambda is throttled in a 5-minute window, indicating burst pressure that exceeds configured capacity.',
     });
 
     const websocketClientErrorAlarm = new Alarm(this, 'WebsocketClientErrorAlarm', {
+      alarmName: scopedAlarmName('WebSocketClientErrorSpike', targetSuffix),
       metric: webSocketMetric('ClientError', 'ClientError', '#d62728'),
-      threshold: DEFAULT_WEBSOCKET_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 12,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_CLIENT_ERROR_ALARM_THRESHOLDS[stageName] ?? 40,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when WebSocket client-side rejections spike.',
+      alarmDescription:
+        'Triggers when client-side WebSocket rejections stay elevated across 2 of 3 consecutive 5-minute periods, which usually points to auth or payload drift rather than isolated reconnect noise.',
     });
 
     const websocketIntegrationErrorAlarm = new Alarm(this, 'WebsocketIntegrationErrorAlarm', {
+      alarmName: scopedAlarmName('WebSocketIntegrationErrorSpike', targetSuffix),
       metric: webSocketMetric('IntegrationError', 'IntegrationError', '#9467bd'),
-      threshold: DEFAULT_WEBSOCKET_INTEGRATION_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_INTEGRATION_ERROR_ALARM_THRESHOLDS[stageName] ?? 3,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when API Gateway WebSocket integration errors spike.',
+      alarmDescription:
+        'Triggers when API Gateway integration errors stay elevated across 2 of 3 consecutive 5-minute periods, indicating backend integration instability rather than a single failed invocation.',
     });
 
     const websocketExecutionErrorAlarm = new Alarm(this, 'WebsocketExecutionErrorAlarm', {
+      alarmName: scopedAlarmName('WebSocketExecutionErrorSpike', targetSuffix),
       metric: webSocketMetric('ExecutionError', 'ExecutionError', '#8c564b'),
-      threshold: DEFAULT_WEBSOCKET_EXECUTION_ERROR_ALARM_THRESHOLDS[stageName] ?? 1,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_EXECUTION_ERROR_ALARM_THRESHOLDS[stageName] ?? 15,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when API Gateway WebSocket execution errors spike.',
+      alarmDescription:
+        'Triggers when API Gateway execution errors remain elevated across 2 of 3 consecutive 5-minute periods. This filters out isolated disconnect churn and focuses on sustained protocol failures.',
     });
 
     const websocketConnectSpikeAlarm = new Alarm(this, 'WebsocketConnectSpikeAlarm', {
+      alarmName: scopedAlarmName('WebSocketConnectSpike', targetSuffix),
       metric: webSocketMetric('ConnectCount', 'ConnectCount'),
-      threshold: DEFAULT_WEBSOCKET_CONNECT_SPIKE_ALARM_THRESHOLDS[stageName] ?? 20,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_CONNECT_SPIKE_ALARM_THRESHOLDS[stageName] ?? 100,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when WebSocket connection attempts spike unexpectedly.',
+      alarmDescription:
+        'Triggers when WebSocket connection attempts stay elevated across 2 of 3 consecutive 5-minute periods, capturing sustained surges rather than brief reconnect bursts.',
     });
 
     const websocketMessageSpikeAlarm = new Alarm(this, 'WebsocketMessageSpikeAlarm', {
+      alarmName: scopedAlarmName('WebSocketMessageSpike', targetSuffix),
       metric: webSocketMetric('MessageCount', 'MessageCount', '#2ca02c'),
-      threshold: DEFAULT_WEBSOCKET_MESSAGE_SPIKE_ALARM_THRESHOLDS[stageName] ?? 60,
-      evaluationPeriods: 1,
+      threshold: DEFAULT_WEBSOCKET_MESSAGE_SPIKE_ALARM_THRESHOLDS[stageName] ?? 250,
+      evaluationPeriods: 3,
+      datapointsToAlarm: 2,
       comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: TreatMissingData.NOT_BREACHING,
-      alarmDescription: 'Alert when WebSocket message volume spikes unexpectedly.',
+      alarmDescription:
+        'Triggers when WebSocket message volume stays materially above baseline across 2 of 3 consecutive 5-minute periods.',
     });
 
     const runtimeAwareErrorQueryLines = [
@@ -222,9 +246,10 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new TextWidget({
-        markdown: '## Security Alarms',
+        markdown:
+          '## Security Alarms\n\nThese alarms are tuned for sustained spikes, not incidental reconnects or one-off gateway noise. Thresholds intentionally require repeated elevated periods before the alarm opens.',
         width: 24,
-        height: 1,
+        height: 2,
       }),
     );
 
@@ -317,11 +342,12 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new LogQueryWidget({
-        title: 'Delivery Outcome Samples',
+        title: 'Delivery Anomalies',
         logGroupNames: [websocketLambdaLogGroup.logGroupName],
         queryLines: [
-          'fields @timestamp, message, context.messageDeliveredCount as messageDeliveredCount, context.readEventDeliveredCount as readEventDeliveredCount, context.conversationDeliveredCount as conversationDeliveredCount, context.failedCount as failedCount, context.staleCount as staleCount',
+          'fields @timestamp, message, context.messageId as messageId, context.senderUserId as senderUserId, context.recipientUserId as recipientUserId, context.readerUserId as readerUserId, context.withUserId as withUserId, context.messageDeliveredCount as messageDeliveredCount, context.readEventDeliveredCount as readEventDeliveredCount, context.conversationDeliveredCount as conversationDeliveredCount, context.failedCount as failedCount, context.staleCount as staleCount',
           'filter message = "Chat message sent and delivered" or message = "Chat conversation marked as read"',
+          'filter failedCount > 0 or staleCount > 0',
           'sort @timestamp desc',
           'limit 100',
         ],
