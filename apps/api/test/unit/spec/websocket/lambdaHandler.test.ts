@@ -107,6 +107,11 @@ describe('websocketLambdaHandler', () => {
       retryAfterSeconds: 120,
     });
     expect(logger.warn).toHaveBeenCalledWith('WebSocket request rejected', {
+      routeKey: 'ping',
+      eventType: 'MESSAGE',
+      connectionId: 'conn-123',
+      domainName: 'example.com',
+      stage: 'beta',
       error: expect.any(GraphQLError),
       code: 'BAD_REQUEST',
       status: 429,
@@ -128,6 +133,11 @@ describe('websocketLambdaHandler', () => {
       message: 'Internal server error',
     });
     expect(logger.error).toHaveBeenCalledWith('Error handling WebSocket request', {
+      routeKey: 'unknown.route',
+      eventType: 'MESSAGE',
+      connectionId: 'conn-123',
+      domainName: 'example.com',
+      stage: 'beta',
       error: unexpectedError,
     });
     expect(logger.clearRequestId).toHaveBeenCalledTimes(1);

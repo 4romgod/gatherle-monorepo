@@ -273,7 +273,7 @@ function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): Eve
   };
 }
 
-function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean, endDate: Date): void {
+function logIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean, endDate: Date): void {
   if (!hasRecurringCandidates) {
     return;
   }
@@ -283,7 +283,7 @@ function warnIfQueryExceedsMaterializationWindow(hasRecurringCandidates: boolean
     return;
   }
 
-  logger.warn('Occurrence query exceeds the current recurring materialization window.', {
+  logger.debug('Occurrence query exceeds the current recurring materialization window.', {
     requestedEndDate: endDate,
     materializationWindowEnd,
   });
@@ -585,7 +585,7 @@ class EventOccurrenceService {
     )) as OccurrenceQuerySeries[];
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
-    warnIfQueryExceedsMaterializationWindow(
+    logIfQueryExceedsMaterializationWindow(
       candidateEventSeries.some((eventSeries) => this.isRecurringSeries(eventSeries)),
       endDate,
     );
@@ -622,7 +622,7 @@ class EventOccurrenceService {
       | [];
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
-    warnIfQueryExceedsMaterializationWindow(
+    logIfQueryExceedsMaterializationWindow(
       candidateEventSeries.some((eventSeries) => this.isRecurringSeries(eventSeries)),
       endDate,
     );

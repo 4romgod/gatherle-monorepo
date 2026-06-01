@@ -73,7 +73,7 @@ const inflatedHomeDiscoveryQuery = getHomeDiscoveryQuery.replace(
     readEventCategories {`,
 );
 const tooDeepNonIntrospectionQuery = `
-  query TooDeep {
+  query SyntheticQueryGuardDepthProbe {
     readEvents(options: { pagination: { limit: 1 } }) {
       representativeOccurrence {
         eventSeries {
@@ -129,7 +129,7 @@ describe('GraphQL API hardening', () => {
 
   it('returns a generic client-safe message for parse failures', async () => {
     const response = await request(url).post('').send({
-      query: 'query Broken { __typename ',
+      query: 'query SyntheticInvalidGraphqlSyntax { __typename ',
     });
 
     expect(response.status).toBe(400);
@@ -139,7 +139,7 @@ describe('GraphQL API hardening', () => {
 
   it('returns a generic client-safe message for validation failures', async () => {
     const response = await request(url).post('').send({
-      query: 'query InvalidField { doesNotExist }',
+      query: 'query SyntheticInvalidGraphqlValidation { doesNotExist }',
     });
 
     expect(response.status).toBe(400);
@@ -173,7 +173,7 @@ describe('GraphQL API hardening', () => {
       .post('')
       .send({
         query: `
-        query TooComplex {
+        query SyntheticQueryGuardComplexityProbe {
           readUserByUsername(username: "${testUserSystemUser.username}") {
             ${aliasedFields}
           }

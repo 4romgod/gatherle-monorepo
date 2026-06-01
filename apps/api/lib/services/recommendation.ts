@@ -1,5 +1,11 @@
-import { FeedReason, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
-import type { EventOccurrence } from '@gatherle/commons/types';
+import {
+  FeedReason,
+  FollowApprovalStatus,
+  FollowTargetType,
+  type EventOccurrence,
+  type User,
+} from '@gatherle/commons/types';
+import { GraphQLError } from 'graphql';
 import {
   EventOccurrenceDAO,
   EventOccurrenceParticipantDAO,
@@ -8,9 +14,11 @@ import {
   UserDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
+import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 import { getScheduleAnchorStartAt } from '@/utils/eventSchedule';
+import { ERROR_MESSAGES } from '@/validation';
 
 const SCORE_WEIGHTS = {
   CATEGORY_MATCH: 30,
@@ -32,6 +40,9 @@ const FEED_STALE_AFTER_HOURS = 24;
 const MAX_CANDIDATE_EVENTS = 500;
 const COLD_START_FALLBACK_LIMIT = 20;
 
+const isNotFoundError = (error: unknown): boolean =>
+  error instanceof GraphQLError && error.extensions?.code === ErrorTypes.NOT_FOUND.errorCode;
+
 function daysBetween(earlier: Date, later: Date): number {
   return (later.getTime() - earlier.getTime()) / (1_000 * 60 * 60 * 24);
 }
@@ -41,13 +52,25 @@ function hoursSince(past: Date): number {
 }
 
 class RecommendationService {
-  async computeFeedForUser(userId: string): Promise<void> {
+  async assertFeedUserExists(userId: string): Promise<User> {
+    try {
+      return await UserDAO.readUserById(userId);
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        throw CustomError(ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+      }
+
+      throw error;
+    }
+  }
+
+  async computeFeedForUser(userId: string, preloadedUser?: User): Promise<void> {
     try {
       logger.debug('[RecommendationService] Computing feed', { userId });
 
       // Parallelise all four independent queries to reduce round-trip latency.
       const [user, activeOccurrenceParticipations, following, candidateEvents] = await Promise.all([
-        UserDAO.readUserById(userId),
+        preloadedUser ? Promise.resolve(preloadedUser) : UserDAO.readUserById(userId),
         EventOccurrenceParticipantDAO.readByUser(userId),
         FollowDAO.readFollowingForUser(userId),
         EventSeriesDAO.readUpcomingPublished(MAX_CANDIDATE_EVENTS),
@@ -269,6 +292,11 @@ class RecommendationService {
         fallbackCount,
       });
     } catch (error) {
+      if (isNotFoundError(error)) {
+        logger.warn('[RecommendationService] Skipping feed compute because user no longer exists', { userId });
+        return;
+      }
+
       logger.error('[RecommendationService] Failed to compute feed', { userId, error });
     }
   }

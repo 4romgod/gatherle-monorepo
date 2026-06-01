@@ -148,12 +148,14 @@ class EventOccurrenceMaintenanceService {
     ]);
 
     if (seriesToSync.length > 0) {
-      logger.info('[EventOccurrenceMaintenanceService] Occurrence maintenance batch classified', {
+      logger.info('Occurrence maintenance batch requires work', {
+        afterEventId: options.afterEventId,
         processedSeriesCount: seriesBatch.length,
         missingSeriesCount: missingSeries.length,
         toppedUpSeriesCount: toppedUpSeries.length,
         metadataRepairSeriesCount: metadataRepairSeries.length,
         driftedOccurrenceCount: driftedOccurrences.length,
+        skippedSeriesCount: Math.max(0, seriesBatch.length - maintainedSeriesIds.size),
         dryRun,
         thresholdDate,
       });

@@ -213,15 +213,15 @@ const isExpectedClientError = (error: unknown): boolean => {
  * Smart DAO error logger that differentiates between expected client errors
  * and unexpected server errors.
  *
- * - Client errors (NOT_FOUND, duplicate key, validation) → `logger.warn`
+ * - Client errors (NOT_FOUND, duplicate key, validation) → `logger.debug`
  * - Unexpected server errors (connection failures, timeouts) → `logger.error`
  *
- * This prevents expected validation responses from polluting the
- * Error Logs monitoring dashboard.
+ * This keeps expected validation responses out of the CloudWatch warning
+ * stream while preserving them for local and investigation sessions.
  */
 export const logDaoError = (message: string, context: { error?: unknown; [key: string]: unknown }): void => {
   if (isExpectedClientError(context.error)) {
-    logger.warn(message, context);
+    logger.debug(message, context);
   } else {
     logger.error(message, context);
   }

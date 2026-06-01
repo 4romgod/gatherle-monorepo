@@ -127,7 +127,7 @@ export const graphqlLambdaHandler = async (
     if (event.httpMethod === 'OPTIONS') {
       logger.info('Handling OPTIONS preflight request');
       if (requestOrigin && !isOriginAllowed(requestOrigin)) {
-        logger.warn('Rejected CORS preflight request from disallowed origin', { requestOrigin });
+        logger.debug('Rejected CORS preflight request from disallowed origin', { requestOrigin });
         return {
           statusCode: 403,
           body: JSON.stringify({ error: 'Origin is not allowed' }),

@@ -13,6 +13,10 @@ export interface FeedItemInput {
   expiresAt: Date;
 }
 
+function buildStableFeedItemId(userId: string, eventId: string): string {
+  return `${userId}:${eventId}`;
+}
+
 class UserFeedDAO {
   /**
    * Read the scored feed for a user, sorted by relevance score descending.
@@ -45,7 +49,10 @@ class UserFeedDAO {
             filter: { userId: item.userId, eventId: item.eventId },
             update: {
               $set: item,
-              $setOnInsert: { _id: id, feedItemId: id.toString() },
+              $setOnInsert: {
+                _id: id,
+                feedItemId: buildStableFeedItemId(item.userId, item.eventId),
+              },
             },
             upsert: true,
           },

@@ -39,12 +39,19 @@ export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
   }
 
   logger.setRequestId(context.awsRequestId);
+  const requestLogContext = {
+    routeKey: event.requestContext?.routeKey,
+    eventType: event.requestContext?.eventType,
+    connectionId: event.requestContext?.connectionId,
+    domainName: event.requestContext?.domainName,
+    stage: event.requestContext?.stage,
+  };
 
   try {
     const routeKey = event.requestContext.routeKey;
     logger.info('WebSocket lambda handler invoked', {
+      ...requestLogContext,
       routeKey,
-      eventType: event.requestContext.eventType,
     });
 
     switch (routeKey) {
@@ -67,6 +74,7 @@ export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
   } catch (error) {
     if (error instanceof GraphQLError) {
       logger.warn('WebSocket request rejected', {
+        ...requestLogContext,
         error,
         code: error.extensions?.code,
         status: (error.extensions?.http as { status?: number } | undefined)?.status,
@@ -74,7 +82,7 @@ export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
       return buildClientErrorResponse(error);
     }
 
-    logger.error('Error handling WebSocket request', { error });
+    logger.error('Error handling WebSocket request', { ...requestLogContext, error });
     return response(HttpStatusCode.INTERNAL_SERVER_ERROR, {
       message: 'Internal server error',
     });

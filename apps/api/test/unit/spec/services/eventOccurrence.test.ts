@@ -655,8 +655,8 @@ describe('EventOccurrenceService', () => {
       expect(EventSeriesDAO.readCandidateEventSeriesForOccurrences).toHaveBeenCalled();
     });
 
-    it('warns when a recurring occurrence query exceeds the recurring materialization horizon', async () => {
-      const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    it('logs at debug when a recurring occurrence query exceeds the recurring materialization horizon', async () => {
+      const debugSpy = jest.spyOn(logger, 'debug').mockImplementation(() => undefined);
       (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([buildSeries()]);
       (EventOccurrenceDAO.readByEventSeriesIdsInRange as jest.Mock).mockResolvedValue([]);
 
@@ -667,7 +667,7 @@ describe('EventOccurrenceService', () => {
         },
       });
 
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(debugSpy).toHaveBeenCalledWith(
         'Occurrence query exceeds the current recurring materialization window.',
         expect.objectContaining({
           requestedEndDate: new Date('2099-12-31T23:59:59.999Z'),
@@ -675,7 +675,7 @@ describe('EventOccurrenceService', () => {
         }),
       );
 
-      warnSpy.mockRestore();
+      debugSpy.mockRestore();
     });
 
     it('supports sorting by derived occurrence rsvpCount before pagination', async () => {

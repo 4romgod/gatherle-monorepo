@@ -191,7 +191,7 @@ class Logger {
 
       this.info('GraphQL request received', {
         operation: payload.operation,
-        operationType: payload.operationType ?? '<unknown>',
+        operationType: payload.operationType ?? 'unknown',
         queryFingerprint: payload.queryFingerprint ?? '<missing>',
         variableKeys,
         ...(safeVariables ? { variables: safeVariables } : {}),
