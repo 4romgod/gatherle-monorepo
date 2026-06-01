@@ -45,6 +45,36 @@ test.describe('Events Page', () => {
     await expect(page.getByRole('button', { name: /^Location/ })).toBeVisible();
   });
 
+  test('switches between list, week, and month event views', async ({ page }) => {
+    await page.goto('/events', { waitUntil: 'domcontentloaded' });
+
+    const { loadError, loadedWithError } = await waitForEventsSurface(page);
+
+    if (loadedWithError) {
+      await expect(loadError).toBeVisible();
+      return;
+    }
+
+    const listTab = page.getByRole('tab', { name: 'List' });
+    const weekTab = page.getByRole('tab', { name: 'Week' });
+    const monthTab = page.getByRole('tab', { name: 'Month' });
+
+    await expect(listTab).toBeVisible();
+    await expect(weekTab).toBeVisible();
+    await expect(monthTab).toBeVisible();
+
+    await weekTab.click();
+    await expect(page).toHaveURL(/\/events\?view=week(&date=\d{4}-\d{2}-\d{2})?/, { timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /Show previous week/i })).toBeVisible();
+
+    await monthTab.click();
+    await expect(page).toHaveURL(/\/events\?view=month(&date=\d{4}-\d{2}-\d{2})?/, { timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /Show previous month/i })).toBeVisible();
+
+    await listTab.click();
+    await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
+  });
+
   test('opens share dialog from an event card with supported actions only', async ({ page }) => {
     await page.goto('/events', { waitUntil: 'domcontentloaded' });
 

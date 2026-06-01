@@ -33,6 +33,7 @@ interface EventFiltersBottomSheetProps {
   categories: EventCategory[];
   statuses: EventStatus[];
   dateOptions: string[];
+  showDateFilter?: boolean;
 
   selectedCategories: string[];
   selectedStatuses: EventStatus[];
@@ -61,6 +62,7 @@ export default function EventFiltersBottomSheet({
   categories,
   statuses,
   dateOptions,
+  showDateFilter = true,
   selectedCategories,
   selectedStatuses,
   selectedDateOption,
@@ -343,55 +345,63 @@ export default function EventFiltersBottomSheet({
             </Stack>
           </Box>
 
-          <Divider sx={{ mb: 3 }} />
+          {showDateFilter ? (
+            <>
+              <Divider sx={{ mb: 3 }} />
 
-          {/* Date */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
-              Date
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
-              {dateOptions.map((option) => {
-                const isSelected = selectedDateOption === option;
-                const label = DATE_FILTER_LABELS[option as keyof typeof DATE_FILTER_LABELS] || option;
-                return (
-                  <Chip
-                    key={option}
-                    label={label}
-                    icon={option === DATE_FILTER_OPTIONS.CUSTOM ? <CalendarToday sx={{ fontSize: 14 }} /> : undefined}
-                    onClick={() => {
-                      if (option === DATE_FILTER_OPTIONS.CUSTOM) {
-                        setShowCustomDateCalendar(true);
-                      }
-                      onChangeDateOption(option);
-                    }}
-                    variant={isSelected ? 'filled' : 'outlined'}
-                    color={isSelected ? 'primary' : 'default'}
-                    size="medium"
-                    sx={{ fontWeight: isSelected ? 700 : 500, cursor: 'pointer' }}
-                  />
-                );
-              })}
-            </Stack>
-            {(selectedDateOption === DATE_FILTER_OPTIONS.CUSTOM || showCustomDateCalendar) && (
-              <Box sx={{ mt: 2 }}>
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <DateCalendar
-                    onChange={(newValue) => {
-                      onCustomDateChange(newValue);
-                      setShowCustomDateCalendar(false);
-                    }}
-                    sx={{
-                      width: '100%',
-                      '& .MuiPickersDay-root.Mui-selected': { bgcolor: 'primary.main' },
-                    }}
-                  />
-                </LocalizationProvider>
+              {/* Date */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="overline" fontWeight={700} color="text.secondary" sx={{ letterSpacing: '0.08em' }}>
+                  Date
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1.5 }}>
+                  {dateOptions.map((option) => {
+                    const isSelected = selectedDateOption === option;
+                    const label = DATE_FILTER_LABELS[option as keyof typeof DATE_FILTER_LABELS] || option;
+                    return (
+                      <Chip
+                        key={option}
+                        label={label}
+                        icon={
+                          option === DATE_FILTER_OPTIONS.CUSTOM ? <CalendarToday sx={{ fontSize: 14 }} /> : undefined
+                        }
+                        onClick={() => {
+                          if (option === DATE_FILTER_OPTIONS.CUSTOM) {
+                            setShowCustomDateCalendar(true);
+                          }
+                          onChangeDateOption(option);
+                        }}
+                        variant={isSelected ? 'filled' : 'outlined'}
+                        color={isSelected ? 'primary' : 'default'}
+                        size="medium"
+                        sx={{ fontWeight: isSelected ? 700 : 500, cursor: 'pointer' }}
+                      />
+                    );
+                  })}
+                </Stack>
+                {(selectedDateOption === DATE_FILTER_OPTIONS.CUSTOM || showCustomDateCalendar) && (
+                  <Box sx={{ mt: 2 }}>
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                      <DateCalendar
+                        onChange={(newValue) => {
+                          onCustomDateChange(newValue);
+                          setShowCustomDateCalendar(false);
+                        }}
+                        sx={{
+                          width: '100%',
+                          '& .MuiPickersDay-root.Mui-selected': { bgcolor: 'primary.main' },
+                        }}
+                      />
+                    </LocalizationProvider>
+                  </Box>
+                )}
               </Box>
-            )}
-          </Box>
 
-          <Divider sx={{ mb: 3 }} />
+              <Divider sx={{ mb: 3 }} />
+            </>
+          ) : (
+            <Divider sx={{ mb: 3 }} />
+          )}
 
           {/* Location */}
           <Box sx={{ mb: 2 }}>

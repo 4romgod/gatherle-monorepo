@@ -97,3 +97,23 @@ export const formatOccurrenceSessionTime = (startAt?: string | Date | null, time
     timeZone: timezone ?? undefined,
   }).format(start);
 };
+
+export const formatOccurrenceTimeRange = (
+  startAt?: string | Date | null,
+  endAt?: string | Date | null,
+  timezone?: string | null,
+): string => {
+  const start = toDate(startAt);
+  if (!start) {
+    return 'Time TBD';
+  }
+
+  const startLabel = formatOccurrenceSessionTime(start, timezone);
+  const end = toDate(endAt);
+  if (!end) {
+    return startLabel;
+  }
+
+  const endLabel = formatOccurrenceSessionTime(end, timezone);
+  return `${startLabel} - ${endLabel}`;
+};

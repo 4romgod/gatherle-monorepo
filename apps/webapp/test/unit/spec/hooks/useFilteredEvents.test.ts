@@ -428,4 +428,28 @@ describe('useFilteredEvents', () => {
       }),
     );
   });
+
+  it('does not fetch when the hook is disabled', async () => {
+    const loadEvents = jest.fn().mockResolvedValue({ data: { readEventOccurrences: [] } });
+    mockUseLazyQuery.mockReturnValue([loadEvents, { loading: false }]);
+
+    const filters: EventFilters = {
+      ...baseFilters,
+      categories: ['Music'],
+    };
+
+    const { result } = renderHook(() =>
+      useFilteredEvents(filters, initialEvents, undefined, undefined, initialEvents.length, undefined, false),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(loadEvents).not.toHaveBeenCalled();
+    expect(result.current.events).toEqual(initialEvents);
+    expect(result.current.totalEvents).toBe(initialEvents.length);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.error).toBeNull();
+  });
 });

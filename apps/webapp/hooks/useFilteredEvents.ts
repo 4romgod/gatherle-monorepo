@@ -18,6 +18,7 @@ import { logger } from '@/lib/utils';
 import { buildDefaultOccurrenceDateRange, buildSelectedEventOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 
 const DEFAULT_PAGE_SIZE = 10;
+type OccurrenceQueryDateRange = { startDate: string; endDate: string };
 
 /**
  * Builds GraphQL filter inputs from event filters.
@@ -45,7 +46,7 @@ export const buildFilterInputs = (filters: EventFilters): FilterInput[] => {
   return inputs;
 };
 
-const buildSelectedEventFilter = (selectedEventId?: string): FilterInput[] => {
+export const buildSelectedEventFilter = (selectedEventId?: string): FilterInput[] => {
   if (!selectedEventId) {
     return [];
   }
@@ -118,6 +119,40 @@ export const buildOccurrenceDateInput = (
   return input;
 };
 
+interface BuildOccurrenceQueryOptionsArgs {
+  filters: EventFilters;
+  sort?: SortInput[];
+  selectedEventId?: string;
+  pagination?: { limit: number; skip: number };
+  dateRangeOverride?: OccurrenceQueryDateRange;
+}
+
+export const buildOccurrenceQueryOptions = ({
+  filters,
+  sort,
+  selectedEventId,
+  pagination,
+  dateRangeOverride,
+}: BuildOccurrenceQueryOptionsArgs): EventsQueryOptionsInput => {
+  const filterInputs = buildFilterInputs(filters);
+  const selectedEventFilter = buildSelectedEventFilter(selectedEventId);
+  const queryFilters = [...filterInputs, ...selectedEventFilter];
+  const occurrenceDateInput = dateRangeOverride
+    ? { dateRange: dateRangeOverride }
+    : buildOccurrenceDateInput(filters, selectedEventId);
+  const locationFilter = buildLocationFilter(filters.location);
+
+  return {
+    filters: queryFilters.length > 0 ? queryFilters : undefined,
+    dateFilterOption: occurrenceDateInput.dateFilterOption,
+    customDate: occurrenceDateInput.customDate,
+    dateRange: occurrenceDateInput.dateRange,
+    location: locationFilter,
+    sort,
+    pagination,
+  };
+};
+
 export const useFilteredEvents = (
   filters: EventFilters,
   initialEvents: EventOccurrencePreview[],
@@ -125,6 +160,7 @@ export const useFilteredEvents = (
   sort?: SortInput[],
   initialTotalEvents: number = initialEvents.length,
   selectedEventId?: string,
+  enabled: boolean = true,
 ) => {
   const [events, setEvents] = useState<EventOccurrencePreview[]>(initialEvents);
   const [error, setError] = useState<string | null>(null);
@@ -153,16 +189,14 @@ export const useFilteredEvents = (
     queryFilters.length > 0 || !!filters.dateRange.start || !!filters.dateRange.end || !!locationFilter;
 
   const buildQueryOptions = useCallback(
-    (skip: number) => ({
-      filters: queryFilters.length > 0 ? queryFilters : undefined,
-      dateFilterOption: occurrenceDateInput.dateFilterOption,
-      customDate: occurrenceDateInput.customDate,
-      dateRange: occurrenceDateInput.dateRange,
-      location: locationFilter,
-      sort,
-      pagination: { limit: DEFAULT_PAGE_SIZE, skip },
-    }),
-    [locationFilter, occurrenceDateInput, queryFilters, sort],
+    (skip: number) =>
+      buildOccurrenceQueryOptions({
+        filters,
+        sort,
+        selectedEventId,
+        pagination: { limit: DEFAULT_PAGE_SIZE, skip },
+      }),
+    [filters, selectedEventId, sort],
   );
 
   // When initialEvents change (fresh SSR/cache data), reset only if user hasn't paginated
@@ -175,6 +209,15 @@ export const useFilteredEvents = (
 
   // When filters change, fetch page 0
   useEffect(() => {
+    if (!enabled) {
+      setEvents(initialEvents);
+      setTotalEvents(initialTotalEvents);
+      setHasMore(false);
+      setError(null);
+      pageRef.current = 0;
+      return;
+    }
+
     if (!hasActiveBackendFilters) {
       setEvents(initialEvents);
       setTotalEvents(initialTotalEvents);
@@ -216,6 +259,7 @@ export const useFilteredEvents = (
       isCurrent = false;
     };
   }, [
+    enabled,
     queryFilters,
     occurrenceDateInput,
     locationFilter,
@@ -226,7 +270,7 @@ export const useFilteredEvents = (
   ]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMoreRef.current || !hasMore) {
+    if (!enabled || loadingMoreRef.current || !hasMore) {
       return;
     }
 
@@ -258,7 +302,7 @@ export const useFilteredEvents = (
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [buildQueryOptions, events, hasMore, loadEvents, token, totalEvents]);
+  }, [buildQueryOptions, enabled, events, hasMore, loadEvents, token, totalEvents]);
 
   return {
     events,

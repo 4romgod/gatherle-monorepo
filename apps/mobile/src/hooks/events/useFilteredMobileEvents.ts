@@ -4,6 +4,7 @@ import { GetEventsFeedDocument } from '@data/graphql/query/Discovery/query';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import {
   DateFilterOption,
+  EventsQueryOptionsInput,
   FilterInput,
   FilterOperatorInput,
   LocationFilterInput,
@@ -27,7 +28,26 @@ const stableDefaultDateRange = buildDefaultOccurrenceDateRange();
 // has past occurrences outside the normal discovery window.
 const stableSelectedEventDateRange = buildSelectedEventOccurrenceDateRange();
 
-function buildQueryOptions(filters: EventsFilterState, selectedEventId?: string) {
+export type MobileOccurrenceDateRange = {
+  startDate: string;
+  endDate: string;
+};
+
+type BuildMobileEventsQueryOptionsArgs = {
+  filters: EventsFilterState;
+  selectedEventId?: string;
+  dateRangeOverride?: MobileOccurrenceDateRange;
+  pagination?: { limit: number; skip: number };
+  ignoreStoredDateOption?: boolean;
+};
+
+export function buildMobileEventsQueryOptions({
+  filters,
+  selectedEventId,
+  dateRangeOverride,
+  pagination = { limit: EVENTS_PAGE_SIZE, skip: 0 },
+  ignoreStoredDateOption = false,
+}: BuildMobileEventsQueryOptionsArgs): EventsQueryOptionsInput {
   const filterInputs: FilterInput[] = [];
 
   if (selectedEventId) {
@@ -64,13 +84,15 @@ function buildQueryOptions(filters: EventsFilterState, selectedEventId?: string)
     : undefined;
 
   return {
-    ...(filters.dateOption
-      ? { dateFilterOption: filters.dateOption as DateFilterOption }
-      : { dateRange: selectedEventId ? stableSelectedEventDateRange : stableDefaultDateRange }),
+    ...(dateRangeOverride
+      ? { dateRange: dateRangeOverride }
+      : !ignoreStoredDateOption && filters.dateOption
+        ? { dateFilterOption: filters.dateOption as DateFilterOption }
+        : { dateRange: selectedEventId ? stableSelectedEventDateRange : stableDefaultDateRange }),
     ...(filterInputs.length > 0 ? { filters: filterInputs } : {}),
     ...(locationFilter ? { location: locationFilter } : {}),
     sort: [{ field: 'startAt', order: SortOrderInput.Asc }],
-    pagination: { limit: EVENTS_PAGE_SIZE, skip: 0 },
+    pagination,
   };
 }
 
@@ -81,7 +103,10 @@ export function useDraftResultCount(
   selectedEventId?: string,
 ): number {
   const draftKey = JSON.stringify(draft);
-  const options = useMemo(() => buildQueryOptions(draft, selectedEventId), [draftKey, selectedEventId]);
+  const options = useMemo(
+    () => buildMobileEventsQueryOptions({ filters: draft, selectedEventId }),
+    [draftKey, selectedEventId],
+  );
 
   const { data } = useQuery(GetEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
@@ -97,17 +122,22 @@ export function useFilteredMobileEvents(
   filters: EventsFilterState,
   authToken?: string | null,
   selectedEventId?: string,
+  enabled: boolean = true,
 ) {
   // Serialize filters to a stable string key so useMemo reliably detects
   // any content change regardless of object reference identity.
   const filtersKey = JSON.stringify(filters);
-  const options = useMemo(() => buildQueryOptions(filters, selectedEventId), [filtersKey, selectedEventId]);
+  const options = useMemo(
+    () => buildMobileEventsQueryOptions({ filters, selectedEventId }),
+    [filtersKey, selectedEventId],
+  );
 
   const [isFetchingMore, setFetchingMore] = useState(false);
   const isFetchingMoreRef = useRef(false);
   const { data, loading, error, refetch, fetchMore } = useQuery(GetEventsFeedDocument, {
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
+    skip: !enabled,
     variables: { options },
     ...getApolloAuthContext(authToken),
   });
@@ -118,10 +148,10 @@ export function useFilteredMobileEvents(
   const categories = useMemo(() => sortCategoriesByInterest(categorySource), [categorySource]);
   const events = useMemo(() => eventSource as MobileEventOccurrence[], [eventSource]);
   const totalEvents = data?.readEventOccurrencesCount ?? events.length;
-  const hasMore = events.length < totalEvents;
+  const hasMore = enabled && events.length < totalEvents;
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || isFetchingMoreRef.current) {
+    if (!enabled || !hasMore || isFetchingMoreRef.current) {
       return;
     }
 
@@ -167,7 +197,15 @@ export function useFilteredMobileEvents(
       isFetchingMoreRef.current = false;
       setFetchingMore(false);
     }
-  }, [events.length, fetchMore, hasMore, options]);
+  }, [enabled, events.length, fetchMore, hasMore, options]);
+
+  const refetchEvents = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
+
+    await refetch();
+  }, [enabled, refetch]);
 
   return {
     categories,
@@ -176,8 +214,8 @@ export function useFilteredMobileEvents(
     hasMore,
     isFetchingMore,
     loadMore,
-    loading,
-    refetch,
+    loading: enabled ? loading : false,
+    refetch: refetchEvents,
     totalEvents,
   };
 }

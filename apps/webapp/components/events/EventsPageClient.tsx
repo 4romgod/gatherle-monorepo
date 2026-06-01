@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box, Button, Grid, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Grid, Stack, Typography } from '@mui/material';
 import dayjs from 'dayjs';
 import { useQuery } from '@apollo/client';
 import { EventCategory, EventStatus, Organization, SortInput, SortOrderInput } from '@/data/graphql/types/graphql';
@@ -20,6 +20,7 @@ import EventFiltersBottomSheet from '@/components/events/filters/EventFiltersBot
 import { EventFilterProvider, initialFilters } from '@/components/events/filters/EventFilterContext';
 import { useEventFilters } from '@/hooks/useEventFilters';
 import { useFilteredEvents } from '@/hooks/useFilteredEvents';
+import { useOccurrenceCalendarEvents } from '@/hooks/useOccurrenceCalendarEvents';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import EventSearchBar from '@/components/search/EventSearchBar';
 import { getEventPreviewEventId, getEventPreviewTitle } from '@/components/events/event-preview-utils';
@@ -27,21 +28,35 @@ import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ToolbarEventSearchAction from '@/components/navigation/ToolbarEventSearchAction';
 import { useToolbarAction } from '@/hooks/useToolbarAction';
+import EventsViewTabs from '@/components/events/calendar/EventsViewTabs';
+import EventsCalendarNavigator from '@/components/events/calendar/EventsCalendarNavigator';
+import EventsWeekView from '@/components/events/calendar/EventsWeekView';
+import EventsMonthView from '@/components/events/calendar/EventsMonthView';
+import {
+  buildOccurrenceCalendarRange,
+  coerceEventsCalendarViewMode,
+  resolveEventsCalendarAnchorDate,
+  shiftOccurrenceCalendarAnchor,
+} from '@/components/events/calendar/calendar-utils';
 
 const DEFAULT_EVENTS_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.Asc }];
 const DEFAULT_PAGE_SIZE = 10;
 
 export default function EventsPageClient() {
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const token = session?.user?.token;
   const userId = session?.user?.userId;
   const authContext = { headers: getAuthHeader(token) };
+  const viewMode = coerceEventsCalendarViewMode(searchParams.get('view'));
+  const shouldLoadListView = viewMode === 'list';
 
   const {
     data: eventsData,
     loading: eventsLoading,
     error: eventsError,
   } = useQuery(GetEventOccurrencesDocument, {
+    skip: !shouldLoadListView,
     context: authContext,
     fetchPolicy: 'cache-and-network',
     variables: {
@@ -66,9 +81,10 @@ export default function EventsPageClient() {
     loading: organizationsLoading,
     error: organizationsError,
   } = useQuery(GetPopularOrganizationsDocument, {
+    skip: !shouldLoadListView,
     fetchPolicy: 'cache-and-network',
   });
-  const eventsList = (eventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[];
+  const eventsList = shouldLoadListView ? ((eventsData?.readEventOccurrences ?? []) as EventOccurrencePreview[]) : [];
   const categories = (categoriesData?.readEventCategories ?? []) as EventCategory[];
   const orgs = organizationsData?.readOrganizations ?? [];
 
@@ -83,7 +99,7 @@ export default function EventsPageClient() {
     }, orgs[0]);
   }, [orgs]);
 
-  const totalEventsCount = eventsData?.readEventOccurrencesCount ?? eventsList.length;
+  const totalEventsCount = shouldLoadListView ? (eventsData?.readEventOccurrencesCount ?? eventsList.length) : 0;
 
   const stats = useMemo(
     () => ({
@@ -93,8 +109,12 @@ export default function EventsPageClient() {
     [totalEventsCount, orgs.length],
   );
 
-  const isLoading = eventsLoading || categoriesLoading || organizationsLoading;
-  const hasError = eventsError || categoriesError || organizationsError;
+  const isLoading =
+    (shouldLoadListView ? eventsLoading : false) ||
+    categoriesLoading ||
+    (shouldLoadListView ? organizationsLoading : false);
+  const hasError =
+    (shouldLoadListView ? eventsError : null) || categoriesError || (shouldLoadListView ? organizationsError : null);
 
   if (hasError) {
     return (
@@ -151,6 +171,10 @@ function EventsContent({
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const token = session?.user?.token;
+  const viewMode = coerceEventsCalendarViewMode(searchParams.get('view'));
+  const isListView = viewMode === 'list';
+  const calendarViewMode = isListView ? null : viewMode;
+  const calendarAnchor = resolveEventsCalendarAnchorDate(searchParams.get('date'));
   const selectedEventId = searchParams.get('eventId')?.trim() ?? '';
   const hasSeriesSelection = selectedEventId.length > 0;
   const seriesSelectionKey = hasSeriesSelection ? selectedEventId : '';
@@ -158,7 +182,6 @@ function EventsContent({
   const {
     filters,
     resetFilters,
-    hasActiveFilters,
     removeCategory,
     removeStatus,
     setCategories,
@@ -200,6 +223,59 @@ function EventsContent({
     }
   }, [clearSavedLocation, clearSeriesSelection, hasSeriesSelection, resetFilters]);
 
+  const replaceSearchParams = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      mutate(nextParams);
+      const nextQuery = nextParams.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const handleChangeViewMode = useCallback(
+    (nextViewMode: 'list' | 'week' | 'month') => {
+      replaceSearchParams((params) => {
+        if (nextViewMode === 'list') {
+          params.delete('view');
+          params.delete('date');
+          return;
+        }
+
+        params.set('view', nextViewMode);
+        params.set('date', calendarAnchor.format('YYYY-MM-DD'));
+      });
+    },
+    [calendarAnchor, replaceSearchParams],
+  );
+
+  const handleShiftCalendar = useCallback(
+    (direction: -1 | 1) => {
+      if (!calendarViewMode) {
+        return;
+      }
+
+      const nextAnchor = shiftOccurrenceCalendarAnchor(calendarViewMode, calendarAnchor, direction);
+      replaceSearchParams((params) => {
+        params.set('view', calendarViewMode);
+        params.set('date', nextAnchor.format('YYYY-MM-DD'));
+      });
+    },
+    [calendarAnchor, calendarViewMode, replaceSearchParams],
+  );
+
+  const handleResetCalendarToToday = useCallback(() => {
+    if (!calendarViewMode) {
+      return;
+    }
+
+    const nextAnchor = dayjs().startOf('day');
+    replaceSearchParams((params) => {
+      params.set('view', calendarViewMode);
+      params.set('date', nextAnchor.format('YYYY-MM-DD'));
+    });
+  }, [calendarViewMode, replaceSearchParams]);
+
   useEffect(() => {
     if (!isHydrated) {
       return;
@@ -223,15 +299,44 @@ function EventsContent({
     !isHydrated || (hasSeriesSelection && appliedSeriesSelectionRef.current !== seriesSelectionKey)
       ? initialFilters
       : filters;
+  const calendarRange = useMemo(
+    () => (calendarViewMode ? buildOccurrenceCalendarRange(calendarViewMode, calendarAnchor) : null),
+    [calendarAnchor, calendarViewMode],
+  );
   const {
-    events: serverEvents,
-    loading,
-    error,
+    events: listEvents,
+    loading: listLoading,
+    error: listError,
     hasMore,
     loadMore,
     loadingMore,
-    totalEvents,
-  } = useFilteredEvents(filtersToUse, initialEvents, token, DEFAULT_EVENTS_SORT, initialTotalEvents, selectedEventId);
+    totalEvents: listTotalEvents,
+  } = useFilteredEvents(
+    filtersToUse,
+    initialEvents,
+    token,
+    DEFAULT_EVENTS_SORT,
+    initialTotalEvents,
+    selectedEventId,
+    isListView,
+  );
+  const {
+    events: calendarEvents,
+    loading: calendarLoading,
+    error: calendarError,
+    totalEvents: calendarTotalEvents,
+  } = useOccurrenceCalendarEvents(
+    filtersToUse,
+    token,
+    DEFAULT_EVENTS_SORT,
+    calendarRange ?? buildDefaultOccurrenceDateRange(),
+    selectedEventId,
+    !isListView,
+  );
+  const serverEvents = isListView ? listEvents : calendarEvents;
+  const loading = isListView ? listLoading : calendarLoading;
+  const error = isListView ? listError : calendarError;
+  const totalEvents = isListView ? listTotalEvents : calendarTotalEvents;
 
   const hasCoordinates =
     typeof filters.location?.latitude === 'number' && typeof filters.location?.longitude === 'number';
@@ -295,12 +400,16 @@ function EventsContent({
 
   const statuses = Object.values(EventStatus);
   const dateOptions = Object.values(DATE_FILTER_OPTIONS);
+  const hasDateFilter = Boolean(filters.dateRange?.filterOption || filters.dateRange.start || filters.dateRange.end);
+  const hasVisibleFilters =
+    filters.categories.length > 0 || filters.statuses.length > 0 || hasLocation || (isListView && hasDateFilter);
+  const hasVisibleActiveFilters = hasVisibleFilters || hasSeriesSelection;
 
   // Count active filters for bottom sheet badge
   const activeFilterCount =
     filters.categories.length +
     filters.statuses.length +
-    (filters.dateRange?.filterOption ? 1 : 0) +
+    (isListView && filters.dateRange?.filterOption ? 1 : 0) +
     (hasLocation ? 1 : 0) +
     (hasSeriesSelection ? 1 : 0);
 
@@ -327,7 +436,7 @@ function EventsContent({
   return (
     <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 8 }}>
+        <Grid size={{ xs: 12, lg: calendarViewMode ? 12 : 8 }}>
           <Box mb={4}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
               <Box>
@@ -347,12 +456,27 @@ function EventsContent({
             </Box>
           </Box>
 
+          <Box sx={{ mb: 3 }}>
+            <EventsViewTabs value={viewMode} onChange={handleChangeViewMode} />
+          </Box>
+
+          {calendarViewMode ? (
+            <EventsCalendarNavigator
+              anchorDate={calendarAnchor}
+              viewMode={calendarViewMode}
+              onPrevious={() => handleShiftCalendar(-1)}
+              onNext={() => handleShiftCalendar(1)}
+              onToday={handleResetCalendarToToday}
+            />
+          ) : null}
+
           {/* Mobile filter sheet trigger (xs/sm only) */}
           <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 1, mb: 2, alignItems: 'center' }}>
             <EventFiltersBottomSheet
               categories={categories}
               statuses={statuses}
               dateOptions={dateOptions}
+              showDateFilter={isListView}
               selectedCategories={filters.categories}
               selectedStatuses={filters.statuses}
               selectedDateOption={filters.dateRange?.filterOption || null}
@@ -393,7 +517,7 @@ function EventsContent({
               onClearSearch={clearSeriesSelection}
               activeFilterCount={activeFilterCount}
             />
-            {(hasActiveFilters || hasSeriesSelection) && (
+            {hasVisibleActiveFilters && (
               <Button
                 size="small"
                 onClick={clearAllFilters}
@@ -409,7 +533,7 @@ function EventsContent({
             )}
           </Box>
 
-          {(hasActiveFilters || hasSeriesSelection) && (
+          {hasVisibleActiveFilters && (
             <Box sx={{ mb: 2, display: { xs: 'none', md: 'block' } }}>
               <Button
                 onClick={clearAllFilters}
@@ -469,44 +593,48 @@ function EventsContent({
                 }
               }}
             />
-            <DateMenu
-              dateOptions={dateOptions}
-              selectedOption={filters.dateRange?.filterOption || null}
-              onChange={(option) => {
-                if (option === DATE_FILTER_OPTIONS.CUSTOM) {
-                  setDateRange(null, null, option);
-                } else {
-                  const { start, end, filterOption } = getDateRangeForOption(option);
-                  setDateRange(start, end, filterOption);
-                }
-              }}
-              onCustomDateChange={(date) => {
-                if (date) {
-                  setDateRange(date, date, DATE_FILTER_OPTIONS.CUSTOM);
-                } else {
-                  setDateRange(null, null, DATE_FILTER_OPTIONS.CUSTOM);
-                }
-              }}
-            />
+            {isListView ? (
+              <DateMenu
+                dateOptions={dateOptions}
+                selectedOption={filters.dateRange?.filterOption || null}
+                onChange={(option) => {
+                  if (option === DATE_FILTER_OPTIONS.CUSTOM) {
+                    setDateRange(null, null, option);
+                  } else {
+                    const { start, end, filterOption } = getDateRangeForOption(option);
+                    setDateRange(start, end, filterOption);
+                  }
+                }}
+                onCustomDateChange={(date) => {
+                  if (date) {
+                    setDateRange(date, date, DATE_FILTER_OPTIONS.CUSTOM);
+                  } else {
+                    setDateRange(null, null, DATE_FILTER_OPTIONS.CUSTOM);
+                  }
+                }}
+              />
+            ) : null}
             <LocationMenu currentLocation={filters.location} onApply={setLocation} onClear={clearLocation} />
           </Box>
 
-          {hasActiveFilters && (
+          {hasVisibleFilters && (
             <ActiveFiltersPills
               categories={filters.categories}
               statuses={filters.statuses}
               dateLabel={
-                filters.dateRange?.filterOption === DATE_FILTER_OPTIONS.CUSTOM &&
-                filters.dateRange.start &&
-                filters.dateRange.end &&
-                filters.dateRange.start.isSame(filters.dateRange.end, 'day')
-                  ? filters.dateRange.start.format('MMM D, YYYY')
-                  : filters.dateRange && filters.dateRange.filterOption
-                    ? DATE_FILTER_LABELS[filters.dateRange.filterOption as keyof typeof DATE_FILTER_LABELS] ||
-                      filters.dateRange.filterOption
-                    : filters.dateRange && filters.dateRange.start && filters.dateRange.end
-                      ? `${filters.dateRange.start.format('MMM D')} - ${filters.dateRange.end.format('MMM D')}`
-                      : null
+                isListView
+                  ? filters.dateRange?.filterOption === DATE_FILTER_OPTIONS.CUSTOM &&
+                    filters.dateRange.start &&
+                    filters.dateRange.end &&
+                    filters.dateRange.start.isSame(filters.dateRange.end, 'day')
+                    ? filters.dateRange.start.format('MMM D, YYYY')
+                    : filters.dateRange && filters.dateRange.filterOption
+                      ? DATE_FILTER_LABELS[filters.dateRange.filterOption as keyof typeof DATE_FILTER_LABELS] ||
+                        filters.dateRange.filterOption
+                      : filters.dateRange && filters.dateRange.start && filters.dateRange.end
+                        ? `${filters.dateRange.start.format('MMM D')} - ${filters.dateRange.end.format('MMM D')}`
+                        : null
+                  : null
               }
               locationLabel={
                 filters.location && (filters.location.city || filters.location.state || filters.location.country)
@@ -522,44 +650,58 @@ function EventsContent({
             />
           )}
 
-          <EventsList
-            events={filteredEvents}
-            loading={loading}
-            error={error}
-            hasActiveFilters={hasActiveFilters || hasSeriesSelection}
-            onClearFilters={clearAllFilters}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
-            loadingMore={loadingMore}
-            totalCount={visibleEventCount}
-          />
+          {isListView ? (
+            <EventsList
+              events={filteredEvents}
+              loading={loading}
+              error={error}
+              hasActiveFilters={hasVisibleActiveFilters}
+              onClearFilters={clearAllFilters}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              loadingMore={loadingMore}
+              totalCount={visibleEventCount}
+            />
+          ) : error ? (
+            <Alert severity="error">{error}</Alert>
+          ) : loading && filteredEvents.length === 0 ? (
+            <Typography variant="body1" color="text.secondary">
+              Loading calendar…
+            </Typography>
+          ) : calendarViewMode === 'week' ? (
+            <EventsWeekView anchorDate={calendarAnchor} occurrences={filteredEvents} />
+          ) : (
+            <EventsMonthView anchorDate={calendarAnchor} occurrences={filteredEvents} />
+          )}
         </Grid>
 
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Box
-            sx={{
-              position: { lg: 'sticky' },
-              top: { lg: 80 },
-              maxHeight: { lg: 'calc(100vh - 96px)' },
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              paddingBottom: 2,
-              '&::-webkit-scrollbar': {
-                display: 'none',
-              },
-              msOverflowStyle: 'none',
-              scrollbarWidth: 'none',
-              overflowY: { lg: 'auto' },
-            }}
-          >
-            <EventsSidebar
-              popularOrganization={popularOrganization}
-              stats={stats}
-              trendingCategories={categories.slice(0, 6)}
-            />
-          </Box>
-        </Grid>
+        {isListView ? (
+          <Grid size={{ xs: 12, lg: 4 }}>
+            <Box
+              sx={{
+                position: { lg: 'sticky' },
+                top: { lg: 80 },
+                maxHeight: { lg: 'calc(100vh - 96px)' },
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                paddingBottom: 2,
+                '&::-webkit-scrollbar': {
+                  display: 'none',
+                },
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+                overflowY: { lg: 'auto' },
+              }}
+            >
+              <EventsSidebar
+                popularOrganization={popularOrganization}
+                stats={stats}
+                trendingCategories={categories.slice(0, 6)}
+              />
+            </Box>
+          </Grid>
+        ) : null}
       </Grid>
     </Box>
   );

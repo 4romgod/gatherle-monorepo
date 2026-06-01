@@ -8,6 +8,10 @@ import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import type { MainTabParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
+import { EventsCalendarNavigator } from '@/components/events/calendar/EventsCalendarNavigator';
+import { EventsMonthView } from '@/components/events/calendar/EventsMonthView';
+import { EventsViewTabs } from '@/components/events/calendar/EventsViewTabs';
+import { EventsWeekView } from '@/components/events/calendar/EventsWeekView';
 import { FilterChip } from '@/components/core/FilterChip';
 import { PageContainer } from '@/components/core/PageContainer';
 import { StateNotice } from '@/components/core/StateNotice';
@@ -16,12 +20,18 @@ import { EventCard } from '@/components/events/EventCard';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
+import { useOccurrenceCalendarEvents } from '@/hooks/events/useOccurrenceCalendarEvents';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
+import {
+  buildOccurrenceCalendarRange,
+  shiftOccurrenceCalendarAnchor,
+  type EventsCalendarViewMode,
+} from '@/lib/events/occurrenceCalendar';
 
 function applySeriesSelection(
   event: MobileSearchResult,
@@ -40,7 +50,11 @@ export function EventsScreen() {
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
   const [selectedEventId, setSelectedEventId] = useState(route.params?.initialEventId ?? '');
   const [searchVisible, setSearchVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<EventsCalendarViewMode>('list');
+  const [calendarAnchor, setCalendarAnchor] = useState(() => new Date());
   const appliedSeriesSelectionRef = useRef<string | null>(null);
+  const isListView = viewMode === 'list';
+  const calendarViewMode = viewMode === 'list' ? null : viewMode;
 
   const {
     appliedFilters,
@@ -62,12 +76,31 @@ export function EventsScreen() {
     removeAppliedLocation,
   } = useEventsFilters(userId);
 
-  const { categories, error, events, hasMore, isFetchingMore, loadMore, loading, refetch, totalEvents } =
-    useFilteredMobileEvents(appliedFilters, authToken, selectedEventId || undefined);
+  const listQuery = useFilteredMobileEvents(appliedFilters, authToken, selectedEventId || undefined, isListView);
+  const calendarRange = useMemo(
+    () => buildOccurrenceCalendarRange(calendarViewMode ?? 'week', calendarAnchor),
+    [calendarAnchor, calendarViewMode],
+  );
+  const calendarQuery = useOccurrenceCalendarEvents(
+    appliedFilters,
+    authToken,
+    calendarRange,
+    selectedEventId || undefined,
+    !isListView,
+  );
+  const categories = isListView ? listQuery.categories : calendarQuery.categories;
+  const error = isListView ? listQuery.error : calendarQuery.error;
+  const events = isListView ? listQuery.events : calendarQuery.events;
+  const hasMore = isListView ? listQuery.hasMore : false;
+  const isFetchingMore = isListView ? listQuery.isFetchingMore : false;
+  const loadMore = isListView ? listQuery.loadMore : async () => {};
+  const loading = isListView ? listQuery.loading : calendarQuery.loading;
+  const totalEvents = isListView ? listQuery.totalEvents : calendarQuery.totalEvents;
+  const refetchActive = isListView ? listQuery.refetch : calendarQuery.refetch;
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
-      await refetch();
-    }, [refetch]),
+      await refetchActive();
+    }, [refetchActive]),
   );
 
   // Client-side text search applied on top of server-side filtered results
@@ -130,16 +163,16 @@ export function EventsScreen() {
     });
   }, [events, searchQuery, selectedEventId]);
 
-  const serverFilterCount = countActiveFilters(appliedFilters);
+  const visibleFilterCount = countActiveFilters(isListView ? appliedFilters : { ...appliedFilters, dateOption: null });
   const totalActiveFilterCount =
-    serverFilterCount + Number(Boolean(searchQuery.trim() && !selectedEventId)) + Number(Boolean(selectedEventId));
+    visibleFilterCount + Number(Boolean(searchQuery.trim() && !selectedEventId)) + Number(Boolean(selectedEventId));
 
   const filtersKey = JSON.stringify(appliedFilters);
   const infiniteScroll = useInfiniteScroll({
-    enabled: hasMore && (!Boolean(searchQuery.trim()) || Boolean(selectedEventId)),
-    loading: loading || isFetchingMore,
+    enabled: isListView && hasMore && (!Boolean(searchQuery.trim()) || Boolean(selectedEventId)),
+    loading: (isListView ? loading : false) || isFetchingMore,
     onEndReached: () => void loadMore(),
-    resetKey: `${filtersKey}:${searchQuery}:${selectedEventId}`,
+    resetKey: `${filtersKey}:${searchQuery}:${selectedEventId}:${viewMode}`,
   });
   const visibleEventCount = selectedEventId ? totalEvents : searchQuery.trim() ? filteredEvents.length : totalEvents;
 
@@ -149,6 +182,10 @@ export function EventsScreen() {
     clearAllFilters();
   };
   const activeSearchLabel = searchQuery.trim();
+  const calendarSummaryLabel =
+    calendarViewMode === 'week'
+      ? `${visibleEventCount} occurrence${visibleEventCount === 1 ? '' : 's'} in this week`
+      : `${visibleEventCount} occurrence${visibleEventCount === 1 ? '' : 's'} in this month`;
   const eventsToolbarProps = {
     center: <Text style={[styles.toolbarTitle, { color: theme.colors.textPrimary }]}>Events</Text>,
     right: (
@@ -162,6 +199,21 @@ export function EventsScreen() {
         />
       </View>
     ),
+  };
+  const handleShiftCalendar = (direction: -1 | 1) => {
+    if (!calendarViewMode) {
+      return;
+    }
+
+    setCalendarAnchor((current) => shiftOccurrenceCalendarAnchor(calendarViewMode, current, direction));
+  };
+
+  const handleResetCalendarToToday = () => {
+    setCalendarAnchor(new Date());
+  };
+
+  const handlePressOccurrence = (occurrence: (typeof filteredEvents)[number]) => {
+    navigation.navigate('EventDetails', { occurrence });
   };
 
   return (
@@ -179,12 +231,24 @@ export function EventsScreen() {
       toolbarProps={eventsToolbarProps}
     >
       <PageContainer
-        onContentSizeChange={infiniteScroll.onContentSizeChange}
+        onContentSizeChange={isListView ? infiniteScroll.onContentSizeChange : undefined}
         onRefresh={onRefresh}
-        onScroll={infiniteScroll.onScroll}
+        onScroll={isListView ? infiniteScroll.onScroll : undefined}
         refreshing={refreshing}
-        scrollEventThrottle={infiniteScroll.scrollEventThrottle}
+        scrollEventThrottle={isListView ? infiniteScroll.scrollEventThrottle : undefined}
       >
+        <EventsViewTabs onChange={setViewMode} value={viewMode} />
+
+        {calendarViewMode ? (
+          <EventsCalendarNavigator
+            anchorDate={calendarAnchor}
+            onNext={() => handleShiftCalendar(1)}
+            onPrevious={() => handleShiftCalendar(-1)}
+            onToday={handleResetCalendarToToday}
+            viewMode={calendarViewMode}
+          />
+        ) : null}
+
         {totalActiveFilterCount > 0 ? (
           <View style={styles.clearActionRow}>
             <Pressable
@@ -196,9 +260,9 @@ export function EventsScreen() {
           </View>
         ) : null}
 
-        {serverFilterCount > 0 ? (
+        {visibleFilterCount > 0 ? (
           <View style={styles.activeFilterRow}>
-            {appliedFilters.dateOption ? (
+            {isListView && appliedFilters.dateOption ? (
               <FilterChip
                 active
                 small
@@ -251,38 +315,66 @@ export function EventsScreen() {
 
         {loading && events.length === 0 ? (
           <SkeletonBlock style={styles.eventsCountSkeleton} />
-        ) : (
+        ) : viewMode === 'month' ? null : (
           <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-            {visibleEventCount} Events Found
+            {isListView ? `${visibleEventCount} Events Found` : calendarSummaryLabel}
           </Text>
         )}
 
         {loading && events.length === 0 ? (
-          <View style={styles.feedList}>
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-            <EventCardSkeleton />
-          </View>
+          isListView ? (
+            <View style={styles.feedList}>
+              <EventCardSkeleton />
+              <EventCardSkeleton />
+              <EventCardSkeleton />
+            </View>
+          ) : (
+            <View style={styles.calendarLoadingStack}>
+              <SkeletonBlock style={styles.calendarSkeletonHeader} />
+              <SkeletonBlock style={styles.calendarSkeletonSurface} />
+              <SkeletonBlock style={styles.calendarSkeletonSurface} />
+            </View>
+          )
         ) : error ? (
           <StateNotice
             actionLabel="Retry"
-            message="The event feed failed to load."
-            onPressAction={() => void refetch()}
+            message={isListView ? 'The event feed failed to load.' : 'The calendar failed to load.'}
+            onPressAction={() => void refetchActive()}
           />
         ) : filteredEvents.length > 0 ? (
-          <View style={styles.feedList}>
-            {filteredEvents.map((event) => (
-              <EventCard
-                key={event.occurrenceId}
-                occurrence={event}
-                onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
-                variant="feed"
-              />
-            ))}
-            {isFetchingMore ? <EventCardSkeleton /> : null}
-          </View>
+          isListView ? (
+            <View style={styles.feedList}>
+              {filteredEvents.map((event) => (
+                <EventCard
+                  key={event.occurrenceId}
+                  occurrence={event}
+                  onPress={() => navigation.navigate('EventDetails', { occurrence: event })}
+                  variant="feed"
+                />
+              ))}
+              {isFetchingMore ? <EventCardSkeleton /> : null}
+            </View>
+          ) : calendarViewMode === 'week' ? (
+            <EventsWeekView
+              anchorDate={calendarAnchor}
+              occurrences={filteredEvents}
+              onPressOccurrence={handlePressOccurrence}
+            />
+          ) : (
+            <EventsMonthView
+              anchorDate={calendarAnchor}
+              occurrences={filteredEvents}
+              onPressOccurrence={handlePressOccurrence}
+            />
+          )
         ) : (
-          <StateNotice message="No events match your current search or filter." />
+          <StateNotice
+            message={
+              isListView
+                ? 'No events match your current search or filter.'
+                : 'No occurrences match your current search or filter in this calendar window.'
+            }
+          />
         )}
 
         <EventsFilterSheet
@@ -301,6 +393,7 @@ export function EventsScreen() {
           onSetLocation={setDraftLocation}
           onToggleCategory={toggleDraftCategory}
           onToggleStatus={toggleDraftStatus}
+          showDateFilter={isListView}
           visible={sheetVisible}
         />
       </PageContainer>
@@ -313,6 +406,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  calendarLoadingStack: {
+    gap: 14,
+  },
+  calendarSkeletonHeader: {
+    height: 52,
+    width: '72%',
+  },
+  calendarSkeletonSurface: {
+    borderRadius: 18,
+    height: 240,
   },
   clearActionText: {
     ...typography.bodyMedium,

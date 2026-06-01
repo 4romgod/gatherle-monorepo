@@ -26,6 +26,15 @@ import {
   sortOrganizationsByFollowers,
 } from '@/lib/events/formatters';
 import {
+  buildDayKeyFromDate,
+  buildMonthGridDays,
+  buildOccurrenceCalendarLabel,
+  buildOccurrenceCalendarRange,
+  buildWeekDays,
+  groupOccurrencesByCalendarDay,
+  shiftOccurrenceCalendarAnchor,
+} from '@/lib/events/occurrenceCalendar';
+import {
   mapEventSeriesToOccurrence,
   mapNavigableEventOccurrences,
   mapNavigableEventToOccurrence,
@@ -67,6 +76,60 @@ describe('mobile event formatters', () => {
     const range = buildSelectedEventOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
     expect(range.startDate).toBe(new Date(2016, 0, 15, 0, 0, 0, 0).toISOString());
     expect(range.endDate).toBe(new Date(2036, 0, 15, 23, 59, 59, 999).toISOString());
+  });
+
+  it('builds calendar ranges, labels, and shifted anchors for week and month views', () => {
+    const anchorDate = new Date('2026-06-03T10:00:00.000Z');
+    const weekRange = buildOccurrenceCalendarRange('week', anchorDate);
+    const monthRange = buildOccurrenceCalendarRange('month', anchorDate);
+
+    expect(buildDayKeyFromDate(new Date(weekRange.startDate))).toBe('2026-05-31');
+    expect(buildDayKeyFromDate(new Date(weekRange.endDate))).toBe('2026-06-06');
+    expect(buildDayKeyFromDate(new Date(monthRange.startDate))).toBe('2026-05-31');
+    expect(buildDayKeyFromDate(new Date(monthRange.endDate))).toBe('2026-07-04');
+
+    expect(buildOccurrenceCalendarLabel('week', anchorDate)).toBe('May 31 - Jun 6, 2026');
+    expect(buildOccurrenceCalendarLabel('month', anchorDate)).toBe('June 2026');
+    expect(buildDayKeyFromDate(shiftOccurrenceCalendarAnchor('week', anchorDate, 1))).toBe('2026-06-10');
+    expect(buildDayKeyFromDate(shiftOccurrenceCalendarAnchor('month', anchorDate, -1))).toBe('2026-05-03');
+  });
+
+  it('builds week and month day collections and groups occurrences by their calendar day', () => {
+    const anchorDate = new Date('2026-06-03T10:00:00.000Z');
+    const weekDays = buildWeekDays(anchorDate);
+    const monthGridDays = buildMonthGridDays(anchorDate);
+
+    expect(weekDays).toHaveLength(7);
+    expect(buildDayKeyFromDate(weekDays[0])).toBe('2026-05-31');
+    expect(buildDayKeyFromDate(weekDays[6])).toBe('2026-06-06');
+
+    expect(monthGridDays).toHaveLength(35);
+    expect(buildDayKeyFromDate(monthGridDays[0])).toBe('2026-05-31');
+    expect(buildDayKeyFromDate(monthGridDays[34])).toBe('2026-07-04');
+
+    const grouped = groupOccurrencesByCalendarDay([
+      {
+        ...baseOccurrence,
+        occurrenceId: 'occ-2',
+        startAt: '2026-05-23T08:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+      },
+      {
+        ...baseOccurrence,
+        occurrenceId: 'occ-1',
+        startAt: '2026-05-23T06:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+      },
+      {
+        ...baseOccurrence,
+        occurrenceId: 'occ-3',
+        startAt: '2026-05-24T06:00:00.000Z',
+        timezone: 'Africa/Johannesburg',
+      },
+    ] as any);
+
+    expect(Object.keys(grouped)).toEqual(['2026-05-23', '2026-05-24']);
+    expect(grouped['2026-05-23'].map((item) => item.occurrenceId)).toEqual(['occ-1', 'occ-2']);
   });
 
   it('deduplicates occurrences by event series and respects a limit', () => {

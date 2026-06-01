@@ -35,6 +35,7 @@ type EventsFilterSheetProps = {
   activeSearchLabel?: string | null;
   categories: EventCategory[];
   draft: EventsFilterState;
+  showDateFilter?: boolean;
   onClose: () => void;
   onApply: () => void;
   onClearAll: () => void;
@@ -51,6 +52,7 @@ export function EventsFilterSheet({
   activeSearchLabel,
   categories,
   draft,
+  showDateFilter = true,
   onClose,
   onApply,
   onClearAll,
@@ -236,22 +238,26 @@ export function EventsFilterSheet({
             </View>
           </View>
 
-          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+          {showDateFilter ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>DATE</Text>
-            <View style={styles.chipWrap}>
-              {DATE_OPTIONS.map((opt) => (
-                <FilterChip
-                  active={draft.dateOption === opt.value}
-                  key={opt.value}
-                  label={opt.label}
-                  onPress={() => onSetDateOption(draft.dateOption === opt.value ? null : opt.value)}
-                  small
-                />
-              ))}
-            </View>
-          </View>
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>DATE</Text>
+                <View style={styles.chipWrap}>
+                  {DATE_OPTIONS.map((opt) => (
+                    <FilterChip
+                      active={draft.dateOption === opt.value}
+                      key={opt.value}
+                      label={opt.label}
+                      onPress={() => onSetDateOption(draft.dateOption === opt.value ? null : opt.value)}
+                      small
+                    />
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : null}
 
           <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
