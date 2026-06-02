@@ -12,6 +12,7 @@ import { logger } from '@/utils/logger';
 import NotificationService from './notification';
 import RecommendationService from './recommendation';
 import {
+  publishEventSaveUpdated,
   publishFollowRequestCreated,
   publishFollowRequestUpdated,
   type FollowRequestRealtimeSnapshot,
@@ -134,6 +135,21 @@ class FollowService {
       });
     }
 
+    if (follow.targetType === FollowTargetType.EventSeries) {
+      publishEventSaveUpdated(followerUserId, {
+        eventId: follow.targetId,
+        isSaved: true,
+        followId: follow.followId,
+      }).catch((err) => {
+        logger.warn('Failed to publish event save updated realtime event', {
+          error: err,
+          followId: follow.followId,
+          followerUserId,
+          eventId: follow.targetId,
+        });
+      });
+    }
+
     return follow;
   }
 
@@ -142,7 +158,24 @@ class FollowService {
    */
   static async unfollow(params: UnfollowParams): Promise<boolean> {
     const { followerUserId, targetType, targetId } = params;
-    return FollowDAO.remove({ followerUserId, targetType, targetId });
+    const wasRemoved = await FollowDAO.remove({ followerUserId, targetType, targetId });
+
+    if (wasRemoved && targetType === FollowTargetType.EventSeries) {
+      publishEventSaveUpdated(followerUserId, {
+        eventId: targetId,
+        isSaved: false,
+        followId: null,
+      }).catch((err) => {
+        logger.warn('Failed to publish event save updated realtime event', {
+          error: err,
+          followerUserId,
+          eventId: targetId,
+          isSaved: false,
+        });
+      });
+    }
+
+    return wasRemoved;
   }
 
   /**

@@ -6,6 +6,21 @@ export const { getClient, query, PreloadQuery } = registerApolloClient(() => {
   return new ApolloClient({
     cache: new InMemoryCache({
       typePolicies: {
+        User: {
+          keyFields: ['userId'],
+        },
+        EventSeries: {
+          keyFields: ['eventId'],
+        },
+        EventOccurrence: {
+          keyFields: ['occurrenceId'],
+        },
+        Follow: {
+          keyFields: ['followId'],
+        },
+        EventMoment: {
+          keyFields: ['momentId'],
+        },
         Query: {
           fields: {
             readEvents: {

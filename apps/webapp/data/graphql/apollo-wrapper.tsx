@@ -15,6 +15,21 @@ const makeClient = () => {
   return new ApolloClient({
     cache: new InMemoryCache({
       typePolicies: {
+        User: {
+          keyFields: ['userId'],
+        },
+        EventSeries: {
+          keyFields: ['eventId'],
+        },
+        EventOccurrence: {
+          keyFields: ['occurrenceId'],
+        },
+        Follow: {
+          keyFields: ['followId'],
+        },
+        EventMoment: {
+          keyFields: ['momentId'],
+        },
         Query: {
           fields: {
             readEvents: {

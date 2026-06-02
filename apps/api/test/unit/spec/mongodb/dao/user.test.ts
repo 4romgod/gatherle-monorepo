@@ -1672,7 +1672,7 @@ describe('UserDAO', () => {
       const mockUser = makeSessionUser();
       (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
 
-      await UserDAO.saveSessionState('user-1', { key: 'theme', value: 'dark', version: 1 });
+      await UserDAO.saveSessionState('user-1', { key: 'theme', value: { theme: 'dark' }, version: 1 });
 
       expect(mockUser.preferences?.sessionState).toHaveLength(1);
       expect(mockUser.preferences?.sessionState[0].key).toBe('theme');
@@ -1687,26 +1687,26 @@ describe('UserDAO', () => {
       });
       (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockUser));
 
-      await UserDAO.saveSessionState('user-1', { key: 'theme', value: 'dark', version: 2 });
+      await UserDAO.saveSessionState('user-1', { key: 'theme', value: { theme: 'dark' }, version: 2 });
 
       expect(mockUser.preferences?.sessionState).toHaveLength(1);
-      expect(mockUser.preferences?.sessionState[0].value).toBe('dark');
+      expect(mockUser.preferences?.sessionState[0].value).toEqual({ theme: 'dark' });
       expect(mockUser.preferences?.sessionState[0].version).toBe(2);
     });
 
     it('throws NOT_FOUND when user does not exist', async () => {
       (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
 
-      await expect(UserDAO.saveSessionState('nonExisting', { key: 'k', value: 'v', version: 1 })).rejects.toThrow(
-        CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND),
-      );
+      await expect(
+        UserDAO.saveSessionState('nonExisting', { key: 'k', value: { value: 'v' }, version: 1 }),
+      ).rejects.toThrow(CustomError(ERROR_MESSAGES.NOT_FOUND('User', 'ID', 'nonExisting'), ErrorTypes.NOT_FOUND));
     });
 
     it('throws on findById error', async () => {
       const mockError = new Error('DB error');
       (User.findById as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(mockError));
 
-      await expect(UserDAO.saveSessionState('user-1', { key: 'k', value: 'v', version: 1 })).rejects.toThrow(
+      await expect(UserDAO.saveSessionState('user-1', { key: 'k', value: { value: 'v' }, version: 1 })).rejects.toThrow(
         KnownCommonError(mockError),
       );
     });

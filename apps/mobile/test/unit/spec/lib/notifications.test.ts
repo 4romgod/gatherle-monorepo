@@ -1,6 +1,9 @@
 import {
+  isMobileRealtimeEventSavePayload,
   isMobileRealtimeEventRsvpPayload,
   isMobileRealtimeFollowRequestPayload,
+  isMobileRealtimeMomentCreatedPayload,
+  isMobileRealtimeMomentDeletedPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
   isMobileRealtimeNotificationsAllReadPayload,
@@ -43,6 +46,50 @@ const eventRsvpPayload = {
   },
   previousStatus: null,
   rsvpCount: 4,
+};
+
+const eventSavePayload = {
+  eventId: 'event-1',
+  isSaved: true,
+  followId: 'follow-1',
+};
+
+const momentCreatedPayload = {
+  moment: {
+    momentId: 'moment-1',
+    eventId: 'event-1',
+    occurrenceId: 'occurrence-1',
+    authorId: 'user-1',
+    type: 'text',
+    state: 'Ready',
+    caption: null,
+    mediaUrl: null,
+    thumbnailUrl: null,
+    imageDisplayMode: null,
+    background: null,
+    durationSeconds: null,
+    expiresAt: '2026-05-27T10:00:00.000Z',
+    createdAt: '2026-05-26T10:00:00.000Z',
+    author: {
+      userId: 'user-1',
+      username: 'alice',
+      given_name: 'Alice',
+      family_name: 'Smith',
+      profile_picture: null,
+    },
+    event: {
+      eventId: 'event-1',
+      slug: 'event-1',
+      title: 'Event 1',
+    },
+  },
+};
+
+const momentDeletedPayload = {
+  momentId: 'moment-1',
+  eventId: 'event-1',
+  occurrenceId: 'occurrence-1',
+  authorId: 'user-1',
 };
 
 describe('mobile notification realtime protocol', () => {
@@ -91,6 +138,15 @@ describe('mobile notification realtime protocol', () => {
         },
       }),
     ).toBe(false);
+
+    expect(isMobileRealtimeEventSavePayload(eventSavePayload)).toBe(true);
+    expect(isMobileRealtimeEventSavePayload({ eventId: 'event-1', isSaved: 'yes' })).toBe(false);
+
+    expect(isMobileRealtimeMomentCreatedPayload(momentCreatedPayload)).toBe(true);
+    expect(isMobileRealtimeMomentCreatedPayload({ moment: { eventId: 'event-1' } })).toBe(false);
+
+    expect(isMobileRealtimeMomentDeletedPayload(momentDeletedPayload)).toBe(true);
+    expect(isMobileRealtimeMomentDeletedPayload({ momentId: 'moment-1', eventId: 'event-1' })).toBe(false);
   });
 
   it('parses only known notification realtime envelopes', () => {
@@ -113,6 +169,24 @@ describe('mobile notification realtime protocol', () => {
     ).toEqual({
       payload: eventRsvpPayload,
       type: 'event.rsvp.updated',
+    });
+    expect(
+      parseNotificationRealtimeEvent(JSON.stringify({ type: 'event.save.updated', payload: eventSavePayload })),
+    ).toEqual({
+      payload: eventSavePayload,
+      type: 'event.save.updated',
+    });
+    expect(
+      parseNotificationRealtimeEvent(JSON.stringify({ type: 'moment.created', payload: momentCreatedPayload })),
+    ).toEqual({
+      payload: momentCreatedPayload,
+      type: 'moment.created',
+    });
+    expect(
+      parseNotificationRealtimeEvent(JSON.stringify({ type: 'moment.deleted', payload: momentDeletedPayload })),
+    ).toEqual({
+      payload: momentDeletedPayload,
+      type: 'moment.deleted',
     });
     expect(parseNotificationRealtimeEvent('{bad json')).toBeNull();
     expect(parseNotificationRealtimeEvent(JSON.stringify({ type: 'unknown.event', payload: {} }))).toBeNull();

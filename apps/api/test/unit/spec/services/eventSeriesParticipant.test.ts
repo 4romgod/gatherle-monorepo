@@ -81,8 +81,8 @@ describe('EventSeriesParticipantService', () => {
     title: 'One Time Meetup',
     description: 'Single event',
     primarySchedule: {
-      startAt: new Date('2026-05-10T10:00:00.000Z'),
-      endAt: new Date('2026-05-10T12:00:00.000Z'),
+      anchorStartAt: new Date('2026-05-10T10:00:00.000Z'),
+      occurrenceDurationMinutes: 120,
       timezone: 'Africa/Johannesburg',
       recurrenceRule: 'DTSTART:20260510T100000Z\nRRULE:FREQ=DAILY;COUNT=1',
     },

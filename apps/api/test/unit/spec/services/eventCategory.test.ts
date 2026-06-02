@@ -34,9 +34,15 @@ describe('EventCategoryService', () => {
     eventCategoryId: 'cat-1',
     name: 'Music',
     slug: 'music',
+    iconName: 'music-note',
+    description: 'Music events',
   };
 
-  const createInput: CreateEventCategoryInput = { name: 'Music', slug: 'music' };
+  const createInput: CreateEventCategoryInput = {
+    name: 'Music',
+    iconName: 'music-note',
+    description: 'Music events',
+  };
 
   afterEach(() => {
     jest.clearAllMocks();

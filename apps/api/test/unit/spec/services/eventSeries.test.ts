@@ -74,6 +74,18 @@ import EventOccurrenceService from '@/services/eventOccurrence';
 import { logger } from '@/utils/logger';
 import { UserRole } from '@gatherle/commons/types';
 
+const makePrimarySchedule = (
+  anchorStartAt = new Date('2026-05-01T18:00:00.000Z'),
+  occurrenceDurationMinutes = 120,
+  timezone = 'Africa/Johannesburg',
+  recurrenceRule = 'FREQ=WEEKLY;BYDAY=FR',
+) => ({
+  anchorStartAt,
+  occurrenceDurationMinutes,
+  timezone,
+  recurrenceRule,
+});
+
 const makeEvent = (overrides: Partial<EventSeries> = {}): EventSeries =>
   ({
     eventId: 'event-1',
@@ -89,11 +101,7 @@ const makeCreateInput = (overrides: Partial<CreateEventInput> = {}): CreateEvent
     description: 'Test description',
     status: EventStatus.Upcoming,
     location: { locationType: 'tba' },
-    primarySchedule: {
-      startAt: new Date('2026-05-01T18:00:00.000Z'),
-      timezone: 'Africa/Johannesburg',
-      recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-    },
+    primarySchedule: makePrimarySchedule(),
     organizers: [],
     eventCategories: [],
     ...overrides,
@@ -126,8 +134,9 @@ describe('EventSeriesService', () => {
 
   describe('create', () => {
     it('creates the series via the DAO and then syncs occurrences', async () => {
-      const input = makeCreateInput();
-      const createdEvent = makeEvent({ primarySchedule: input.primarySchedule, status: input.status });
+      const primarySchedule = makePrimarySchedule();
+      const input = makeCreateInput({ primarySchedule });
+      const createdEvent = makeEvent({ primarySchedule, status: input.status });
       (EventSeriesDAO.create as jest.Mock).mockResolvedValue(createdEvent);
 
       const result = await EventSeriesService.create(input);
@@ -169,21 +178,15 @@ describe('EventSeriesService', () => {
 
   describe('update', () => {
     it('syncs occurrences after a schedule update', async () => {
+      const existingSchedule = makePrimarySchedule(new Date('2026-05-01T18:00:00.000Z'));
+      const updatedSchedule = makePrimarySchedule(new Date('2026-05-08T18:00:00.000Z'));
       const existingEvent = makeEvent({
-        primarySchedule: {
-          startAt: new Date('2026-05-01T18:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        } as any,
+        primarySchedule: existingSchedule,
       });
       const input = makeUpdateInput({
-        primarySchedule: {
-          startAt: new Date('2026-05-08T18:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        },
+        primarySchedule: updatedSchedule,
       });
-      const updatedEvent = makeEvent({ scheduleVersion: 2, primarySchedule: input.primarySchedule });
+      const updatedEvent = makeEvent({ scheduleVersion: 2, primarySchedule: updatedSchedule });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
       const result = await EventSeriesService.update(input, existingEvent);
@@ -215,12 +218,9 @@ describe('EventSeriesService', () => {
     });
 
     it('does not sync occurrences when the provided schedule is identical', async () => {
+      const existingSchedule = makePrimarySchedule(new Date('2026-05-01T18:00:00.000Z'));
       const existingEvent = makeEvent({
-        primarySchedule: {
-          startAt: new Date('2026-05-01T18:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        } as any,
+        primarySchedule: existingSchedule,
       });
       const input = makeUpdateInput({ primarySchedule: existingEvent.primarySchedule });
       const updatedEvent = makeEvent({ primarySchedule: existingEvent.primarySchedule });
@@ -245,22 +245,16 @@ describe('EventSeriesService', () => {
     });
 
     it('clears future exception rows before re-syncing after a schedule update', async () => {
+      const existingSchedule = makePrimarySchedule(new Date('2026-05-01T18:00:00.000Z'));
+      const updatedSchedule = makePrimarySchedule(new Date('2026-05-08T18:00:00.000Z'));
       const existingEvent = makeEvent({
         eventId: 'event-1',
-        primarySchedule: {
-          startAt: new Date('2026-05-01T18:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        } as any,
+        primarySchedule: existingSchedule,
       });
       const input = makeUpdateInput({
-        primarySchedule: {
-          startAt: new Date('2026-05-08T18:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        },
+        primarySchedule: updatedSchedule,
       });
-      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: input.primarySchedule });
+      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: updatedSchedule });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
       await EventSeriesService.update(input, existingEvent);
@@ -270,24 +264,26 @@ describe('EventSeriesService', () => {
     });
 
     it('preserves future exception rows when only non-anchor schedule fields change', async () => {
+      const existingSchedule = makePrimarySchedule(
+        new Date('2026-05-01T18:00:00.000Z'),
+        120,
+        'Africa/Johannesburg',
+        'FREQ=WEEKLY;BYDAY=FR',
+      );
+      const updatedSchedule = makePrimarySchedule(
+        new Date('2026-05-01T18:00:00.000Z'),
+        180,
+        'UTC',
+        'FREQ=WEEKLY;BYDAY=FR',
+      );
       const existingEvent = makeEvent({
         eventId: 'event-1',
-        primarySchedule: {
-          startAt: new Date('2026-05-01T18:00:00.000Z'),
-          endAt: new Date('2026-05-01T20:00:00.000Z'),
-          timezone: 'Africa/Johannesburg',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        } as any,
+        primarySchedule: existingSchedule,
       });
       const input = makeUpdateInput({
-        primarySchedule: {
-          startAt: new Date('2026-05-01T18:00:00.000Z'),
-          endAt: new Date('2026-05-01T21:00:00.000Z'),
-          timezone: 'UTC',
-          recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
-        },
+        primarySchedule: updatedSchedule,
       });
-      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: input.primarySchedule });
+      const updatedEvent = makeEvent({ eventId: 'event-1', primarySchedule: updatedSchedule });
       (EventSeriesDAO.updateEvent as jest.Mock).mockResolvedValue(updatedEvent);
 
       await EventSeriesService.update(input, existingEvent);
@@ -401,12 +397,12 @@ describe('EventSeriesService', () => {
           slug: 'weekly-yoga',
           title: 'Weekly Yoga',
           description: 'Original series',
-          primarySchedule: {
-            startAt: new Date('2026-05-06T16:00:00.000Z'),
-            endAt: new Date('2026-05-06T18:00:00.000Z'),
-            timezone: 'Africa/Johannesburg',
-            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
-          },
+          primarySchedule: makePrimarySchedule(
+            new Date('2026-05-06T16:00:00.000Z'),
+            120,
+            'Africa/Johannesburg',
+            'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          ),
           eventCategories: ['cat-1'] as any,
           organizers: [{ user: 'user-1', role: 'Host' }] as any,
           location: { locationType: 'tba' } as any,
@@ -430,8 +426,8 @@ describe('EventSeriesService', () => {
         slug: 'weekly-yoga-from-2026-05-20',
         primarySchedule: {
           ...sourceEvent.primarySchedule,
-          startAt: new Date('2026-05-20T16:00:00.000Z'),
-          endAt: new Date('2026-05-20T18:00:00.000Z'),
+          anchorStartAt: new Date('2026-05-20T16:00:00.000Z'),
+          occurrenceDurationMinutes: 120,
           recurrenceRule: 'DTSTART:20260520T160000Z\nRRULE:FREQ=WEEKLY;COUNT=2;BYDAY=WE',
         },
         splitFromEventSeriesId: 'event-1',
@@ -495,12 +491,12 @@ describe('EventSeriesService', () => {
           slug: 'weekly-yoga',
           title: 'Weekly Yoga',
           description: 'Original series',
-          primarySchedule: {
-            startAt: new Date('2026-05-06T16:00:00.000Z'),
-            endAt: new Date('2026-05-06T18:00:00.000Z'),
-            timezone: 'Africa/Johannesburg',
-            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
-          },
+          primarySchedule: makePrimarySchedule(
+            new Date('2026-05-06T16:00:00.000Z'),
+            120,
+            'Africa/Johannesburg',
+            'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          ),
           eventCategories: ['cat-1'] as any,
           organizers: [{ user: { username: 'broken-shape' }, role: 'Host' }] as any,
           location: { locationType: 'tba' } as any,
@@ -542,12 +538,12 @@ describe('EventSeriesService', () => {
           slug: 'weekly-yoga',
           title: 'Weekly Yoga',
           description: 'Original series',
-          primarySchedule: {
-            startAt: new Date('2026-05-06T16:00:00.000Z'),
-            endAt: new Date('2026-05-06T18:00:00.000Z'),
-            timezone: 'Africa/Johannesburg',
-            recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
-          },
+          primarySchedule: makePrimarySchedule(
+            new Date('2026-05-06T16:00:00.000Z'),
+            120,
+            'Africa/Johannesburg',
+            'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+          ),
           eventCategories: [{ slug: 'broken-shape' }] as any,
           organizers: [{ user: 'user-1', role: 'Host' }] as any,
           location: { locationType: 'tba' } as any,

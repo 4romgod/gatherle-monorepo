@@ -1,4 +1,5 @@
 import { createEventSeriesLoader } from '@/graphql/loaders';
+import { FollowDAO } from '@/mongodb/dao';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import type { EventSeries } from '@gatherle/commons/types';
 
@@ -8,9 +9,18 @@ jest.mock('@/mongodb/models', () => ({
   },
 }));
 
+jest.mock('@/mongodb/dao', () => ({
+  FollowDAO: {
+    countSavesForEvents: jest.fn(),
+    readSavedEventIdsForUser: jest.fn(),
+  },
+}));
+
 describe('EventSeriesLoader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (FollowDAO.countSavesForEvents as jest.Mock).mockResolvedValue(new Map());
+    (FollowDAO.readSavedEventIdsForUser as jest.Mock).mockResolvedValue(new Set());
   });
 
   it('should batch load events by ID', async () => {
@@ -35,9 +45,53 @@ describe('EventSeriesLoader', () => {
     const results = await Promise.all([loader.load('event1'), loader.load('event2'), loader.load('event3')]);
     expect(EventSeriesModel.find).toHaveBeenCalledTimes(1);
     expect(EventSeriesModel.find).toHaveBeenCalledWith({ _id: { $in: ['event1', 'event2', 'event3'] } });
-    expect(results[0]).toEqual(mockEvents[0]);
-    expect(results[1]).toEqual(mockEvents[1]);
+    expect(results[0]).toMatchObject(mockEvents[0]);
+    expect(results[1]).toMatchObject(mockEvents[1]);
     expect(results[2]).toBeNull();
+  });
+
+  it('preloads savedByCount and isSavedByMe for the authenticated user', async () => {
+    const mockEvents: Array<Partial<EventSeries> & { _id: string }> = [
+      {
+        _id: 'event1',
+        eventId: 'event1',
+        title: 'EventSeries 1',
+      },
+      {
+        _id: 'event2',
+        eventId: 'event2',
+        title: 'EventSeries 2',
+      },
+    ];
+    const mockQuery = {
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(mockEvents),
+    };
+
+    (EventSeriesModel.find as jest.Mock).mockReturnValue(mockQuery);
+    (FollowDAO.countSavesForEvents as jest.Mock).mockResolvedValue(
+      new Map([
+        ['event1', 4],
+        ['event2', 1],
+      ]),
+    );
+    (FollowDAO.readSavedEventIdsForUser as jest.Mock).mockResolvedValue(new Set(['event2']));
+
+    const loader = createEventSeriesLoader('user-1');
+    const [first, second] = await Promise.all([loader.load('event1'), loader.load('event2')]);
+
+    expect(FollowDAO.countSavesForEvents).toHaveBeenCalledWith(['event1', 'event2']);
+    expect(FollowDAO.readSavedEventIdsForUser).toHaveBeenCalledWith('user-1', ['event1', 'event2']);
+    expect(first).toMatchObject({
+      eventId: 'event1',
+      savedByCount: 4,
+      isSavedByMe: false,
+    });
+    expect(second).toMatchObject({
+      eventId: 'event2',
+      savedByCount: 1,
+      isSavedByMe: true,
+    });
   });
 
   it('should handle empty input', async () => {

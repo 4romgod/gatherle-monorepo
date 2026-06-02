@@ -83,7 +83,7 @@ async function initializeResources() {
               user: createUserLoader(),
               eventCategory: createEventCategoryLoader(),
               eventCategoryInterestCount: createEventCategoryInterestCountLoader(),
-              eventSeries: createEventSeriesLoader(),
+              eventSeries: createEventSeriesLoader(user?.userId),
               eventOccurrence: createEventOccurrenceLoader(),
               eventOccurrenceByEventSeries: createEventOccurrenceByEventSeriesLoader(),
               organization: createOrganizationLoader(),

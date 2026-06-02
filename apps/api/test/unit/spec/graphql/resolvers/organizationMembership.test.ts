@@ -107,7 +107,7 @@ describe('OrganizationMembershipResolver', () => {
       expect(OrganizationMembershipService.updateMemberRole).toHaveBeenCalledWith(
         updateInput,
         'admin-user-001',
-        mockContext.user.userRole,
+        UserRole.Admin,
         undefined,
       );
       expect(result.role).toBe(OrganizationRole.Host);

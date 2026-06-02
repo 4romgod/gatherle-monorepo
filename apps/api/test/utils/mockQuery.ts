@@ -1,4 +1,4 @@
-type ChainMethod = 'lean' | 'limit' | 'sort' | 'populate' | 'select' | 'skip';
+type ChainMethod = 'and' | 'lean' | 'limit' | 'sort' | 'populate' | 'select' | 'skip';
 
 export interface MockQueryOptions {
   chainMethods?: ChainMethod[];

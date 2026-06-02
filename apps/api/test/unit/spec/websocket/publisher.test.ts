@@ -2,9 +2,12 @@ import type { Notification } from '@gatherle/commons/types';
 import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
 import { NotificationDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import {
+  publishEventSaveUpdated,
   publishEventRsvpUpdated,
   publishFollowRequestCreated,
   publishFollowRequestUpdated,
+  publishMomentCreated,
+  publishMomentDeleted,
   publishNotificationDeleted,
   publishNotificationsMarkedAllRead,
   publishNotificationCreated,
@@ -109,6 +112,35 @@ describe('websocket publisher', () => {
     rsvpCount: 3,
   };
 
+  const moment = {
+    momentId: 'moment-1',
+    eventId: 'event-1',
+    occurrenceId: 'event-1#2026-02-16T00:00:00.000Z',
+    authorId: 'user-1',
+    type: 'text',
+    state: 'Ready',
+    caption: null,
+    mediaUrl: null,
+    thumbnailUrl: null,
+    imageDisplayMode: null,
+    background: null,
+    durationSeconds: null,
+    createdAt: '2026-02-16T00:00:00.000Z',
+    expiresAt: '2026-02-17T00:00:00.000Z',
+    author: {
+      userId: 'user-1',
+      username: 'alice',
+      given_name: 'Alice',
+      family_name: 'Smith',
+      profile_picture: null,
+    },
+    event: {
+      eventId: 'event-1',
+      slug: 'test-event',
+      title: 'Test EventSeries',
+    },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -207,5 +239,52 @@ describe('websocket publisher', () => {
       'user-2',
     ]);
     expect(postToConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes event.save.updated to the recipient connections', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishEventSaveUpdated('user-1', {
+      eventId: 'event-1',
+      isSaved: true,
+      followId: 'follow-1',
+    });
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.EVENT_SAVE_UPDATED, {
+      eventId: 'event-1',
+      isSaved: true,
+      followId: 'follow-1',
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes moment.created to the recipient connections', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishMomentCreated('user-1', { moment } as any);
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.MOMENT_CREATED, {
+      moment,
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes moment.deleted to the recipient connections', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+
+    await publishMomentDeleted('user-1', {
+      momentId: 'moment-1',
+      eventId: 'event-1',
+      occurrenceId: 'event-1#2026-02-16T00:00:00.000Z',
+      authorId: 'user-1',
+    });
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.MOMENT_DELETED, {
+      momentId: 'moment-1',
+      eventId: 'event-1',
+      occurrenceId: 'event-1#2026-02-16T00:00:00.000Z',
+      authorId: 'user-1',
+    });
+    expect(postToConnection).toHaveBeenCalledTimes(1);
   });
 });

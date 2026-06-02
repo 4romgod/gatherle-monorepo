@@ -116,6 +116,50 @@ export type RealtimeEventRsvpPayload = {
   rsvpCount: number;
 };
 
+export type RealtimeEventSavePayload = {
+  eventId: string;
+  isSaved: boolean;
+  followId?: string | null;
+};
+
+export type RealtimeMomentCreatedPayload = {
+  moment: {
+    momentId: string;
+    eventId: string;
+    occurrenceId?: string | null;
+    authorId: string;
+    type: string;
+    state: string;
+    caption?: string | null;
+    mediaUrl?: string | null;
+    thumbnailUrl?: string | null;
+    imageDisplayMode?: string | null;
+    background?: string | null;
+    durationSeconds?: number | null;
+    expiresAt: string;
+    createdAt: string;
+    author: {
+      userId: string;
+      username: string;
+      given_name: string;
+      family_name: string;
+      profile_picture?: string | null;
+    };
+    event: {
+      eventId: string;
+      slug: string;
+      title: string;
+    };
+  };
+};
+
+export type RealtimeMomentDeletedPayload = {
+  momentId: string;
+  eventId: string;
+  occurrenceId?: string | null;
+  authorId: string;
+};
+
 export const parseRealtimeEnvelope = (data: string): RealtimeEnvelope | null => {
   try {
     return JSON.parse(data) as RealtimeEnvelope;
@@ -240,6 +284,70 @@ export const isRealtimeEventRsvpPayload = (value: unknown): value is RealtimeEve
     typeof actor.given_name === 'string' &&
     typeof actor.family_name === 'string' &&
     (typeof actor.profile_picture === 'string' || actor.profile_picture === null || actor.profile_picture === undefined)
+  );
+};
+
+export const isRealtimeEventSavePayload = (value: unknown): value is RealtimeEventSavePayload => {
+  return (
+    isRecord(value) &&
+    typeof value.eventId === 'string' &&
+    typeof value.isSaved === 'boolean' &&
+    (typeof value.followId === 'string' || value.followId === null || value.followId === undefined)
+  );
+};
+
+export const isRealtimeMomentCreatedPayload = (value: unknown): value is RealtimeMomentCreatedPayload => {
+  return (
+    isRecord(value) &&
+    isRecord(value.moment) &&
+    typeof value.moment.momentId === 'string' &&
+    typeof value.moment.eventId === 'string' &&
+    (typeof value.moment.occurrenceId === 'string' ||
+      value.moment.occurrenceId === null ||
+      value.moment.occurrenceId === undefined) &&
+    typeof value.moment.authorId === 'string' &&
+    typeof value.moment.type === 'string' &&
+    typeof value.moment.state === 'string' &&
+    (typeof value.moment.caption === 'string' || value.moment.caption === null || value.moment.caption === undefined) &&
+    (typeof value.moment.mediaUrl === 'string' ||
+      value.moment.mediaUrl === null ||
+      value.moment.mediaUrl === undefined) &&
+    (typeof value.moment.thumbnailUrl === 'string' ||
+      value.moment.thumbnailUrl === null ||
+      value.moment.thumbnailUrl === undefined) &&
+    (typeof value.moment.imageDisplayMode === 'string' ||
+      value.moment.imageDisplayMode === null ||
+      value.moment.imageDisplayMode === undefined) &&
+    (typeof value.moment.background === 'string' ||
+      value.moment.background === null ||
+      value.moment.background === undefined) &&
+    (typeof value.moment.durationSeconds === 'number' ||
+      value.moment.durationSeconds === null ||
+      value.moment.durationSeconds === undefined) &&
+    typeof value.moment.expiresAt === 'string' &&
+    typeof value.moment.createdAt === 'string' &&
+    isRecord(value.moment.author) &&
+    typeof value.moment.author.userId === 'string' &&
+    typeof value.moment.author.username === 'string' &&
+    typeof value.moment.author.given_name === 'string' &&
+    typeof value.moment.author.family_name === 'string' &&
+    (typeof value.moment.author.profile_picture === 'string' ||
+      value.moment.author.profile_picture === null ||
+      value.moment.author.profile_picture === undefined) &&
+    isRecord(value.moment.event) &&
+    typeof value.moment.event.eventId === 'string' &&
+    typeof value.moment.event.slug === 'string' &&
+    typeof value.moment.event.title === 'string'
+  );
+};
+
+export const isRealtimeMomentDeletedPayload = (value: unknown): value is RealtimeMomentDeletedPayload => {
+  return (
+    isRecord(value) &&
+    typeof value.momentId === 'string' &&
+    typeof value.eventId === 'string' &&
+    typeof value.authorId === 'string' &&
+    (typeof value.occurrenceId === 'string' || value.occurrenceId === null || value.occurrenceId === undefined)
   );
 };
 

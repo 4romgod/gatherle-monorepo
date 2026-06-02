@@ -126,14 +126,14 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       });
 
     const runtimeAwareErrorQueryLines = [
-      'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, @message',
+      'fields @timestamp, message, coalesce(context.message, error.message, context.errorMessage) as errorMessage, error.name as errorName, @message',
       'filter level = "ERROR" or @message like /Task timed out/ or @message like /Process exited before completing request/ or @message like /Runtime\\./ or @message like /Unhandled/',
       'sort @timestamp desc',
       'limit 100',
     ];
 
     const warningQueryLines = [
-      'fields @timestamp, level, message, error.name as errorName, error.message as errorMessage, @message',
+      'fields @timestamp, message, coalesce(context.message, error.message, context.errorMessage) as errorMessage, error.name as errorName, @message',
       'filter level = "WARN"',
       'sort @timestamp desc',
       'limit 100',
