@@ -16,13 +16,6 @@ export default function EventsPageSkeleton() {
         <Grid size={{ xs: 12, lg: 8 }}>
           {/* Header section */}
           <Box mb={4}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-              <Box>
-                {/* "Discover Events" heading */}
-                <Skeleton variant="text" width={280} height={52} sx={{ mb: 1 }} />
-              </Box>
-            </Stack>
-
             {/* Search bar skeleton */}
             <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: WEB_RADIUS.panel }} />
           </Box>

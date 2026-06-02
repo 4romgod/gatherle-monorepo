@@ -10,6 +10,8 @@ import {
 import { EventCategoryDAO } from '@/mongodb/dao';
 import { CreateEventCategorySchema, UpdateEventCategorySchema, validateInput, validateMongodbId } from '@/validation';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
+import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
+import EventCategoryService from '@/services/eventCategory';
 import type { ServerContext } from '@/graphql';
 
 @Resolver(() => EventCategory)
@@ -26,9 +28,11 @@ export class EventCategoryResolver {
   @Mutation(() => EventCategory, { description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.createEventCategory })
   async createEventCategory(
     @Arg('input', () => CreateEventCategoryInput) input: CreateEventCategoryInput,
+    @Ctx() context: ServerContext,
   ): Promise<EventCategory> {
     validateInput<CreateEventCategoryInput>(CreateEventCategorySchema, input);
-    return EventCategoryDAO.create(input);
+    const actor = getAuthenticatedUser(context);
+    return EventCategoryService.create(input, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin])
@@ -42,15 +46,28 @@ export class EventCategoryResolver {
 
   @Authorized([UserRole.Admin])
   @Mutation(() => EventCategory, { description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryById })
-  async deleteEventCategoryById(@Arg('eventCategoryId', () => String) eventCategoryId: string): Promise<EventCategory> {
+  async deleteEventCategoryById(
+    @Arg('eventCategoryId', () => String) eventCategoryId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventCategory> {
     validateMongodbId(eventCategoryId);
-    return EventCategoryDAO.deleteEventCategoryById(eventCategoryId);
+    const actor = getAuthenticatedUser(context);
+    return EventCategoryService.deleteById(
+      eventCategoryId,
+      actor.userId,
+      actor.userRole,
+      getRequestIpFromContext(context),
+    );
   }
 
   @Authorized([UserRole.Admin])
   @Mutation(() => EventCategory, { description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.deleteEventCategoryBySlug })
-  async deleteEventCategoryBySlug(@Arg('slug', () => String) slug: string): Promise<EventCategory> {
-    return EventCategoryDAO.deleteEventCategoryBySlug(slug);
+  async deleteEventCategoryBySlug(
+    @Arg('slug', () => String) slug: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventCategory> {
+    const actor = getAuthenticatedUser(context);
+    return EventCategoryService.deleteBySlug(slug, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Query(() => EventCategory, { description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY.readEventCategoryById })

@@ -163,4 +163,23 @@ describe('WebSocketRequestThrottleDAO', () => {
       scopeKeys: ['ping:connection:conn-1'],
     });
   });
+
+  it('re-throws a GraphQLError that is not a 429 throttle error without retrying', async () => {
+    const nonThrottleError = new GraphQLError('forbidden', { extensions: { code: 'FORBIDDEN' } });
+    (WebSocketRequestThrottleModel.findOneAndUpdate as jest.Mock).mockReturnValue(
+      createExecQuery(nonThrottleError, true),
+    );
+
+    await expect(
+      WebSocketRequestThrottleDAO.assertAllowed('ping', ['ping:user:user-1'], {
+        maxRequests: 10,
+        windowMs: 60_000,
+      }),
+    ).rejects.toBeInstanceOf(GraphQLError);
+    expect(logDaoError).toHaveBeenCalledWith('Error enforcing websocket request throttle', {
+      error: nonThrottleError,
+      routeKey: 'ping',
+      scopeKeys: ['ping:user:user-1'],
+    });
+  });
 });

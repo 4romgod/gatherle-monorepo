@@ -187,23 +187,29 @@ export class UserResolver {
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserById })
-  async deleteUserById(@Arg('userId', () => String) userId: string): Promise<User> {
+  async deleteUserById(@Arg('userId', () => String) userId: string, @Ctx() context: ServerContext): Promise<User> {
     validateMongodbId(userId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', userId));
-    return UserService.deleteById(userId);
+    const actor = getAuthenticatedUser(context);
+    return UserService.deleteById(userId, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserByEmail })
-  async deleteUserByEmail(@Arg('email', () => String) email: string): Promise<User> {
+  async deleteUserByEmail(@Arg('email', () => String) email: string, @Ctx() context: ServerContext): Promise<User> {
     validateEmail(email);
-    return UserService.deleteByEmail(email);
+    const actor = getAuthenticatedUser(context);
+    return UserService.deleteByEmail(email, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.deleteUserByUsername })
-  async deleteUserByUsername(@Arg('username', () => String) username: string): Promise<User> {
+  async deleteUserByUsername(
+    @Arg('username', () => String) username: string,
+    @Ctx() context: ServerContext,
+  ): Promise<User> {
     validateUsername(username);
-    return UserService.deleteByUsername(username);
+    const actor = getAuthenticatedUser(context);
+    return UserService.deleteByUsername(username, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Query(() => User, { description: RESOLVER_DESCRIPTIONS.USER.readUserById })

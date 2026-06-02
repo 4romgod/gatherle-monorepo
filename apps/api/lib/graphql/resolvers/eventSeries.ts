@@ -28,7 +28,7 @@ import {
   UpdateEventOccurrenceInputSchema,
 } from '@/validation/zod';
 import { EVENT_DESCRIPTIONS, HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
-import { EventSeriesDAO, FollowDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { EventSeriesDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
 import { getAuthenticatedUser } from '@/utils/auth';
@@ -38,6 +38,7 @@ import EventSeriesService from '@/services/eventSeries';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import {
   buildMyEventOccurrenceParticipantLoadKey,
+  getRequestIpFromContext,
   projectOccurrenceParticipantToSeriesParticipant,
   resolveEventStatusFromOccurrence,
   resolveEventStatusFromSchedule,
@@ -104,7 +105,7 @@ export class EventSeriesResolver {
     const user = getAuthenticatedUser(context);
     const event = await EventSeriesDAO.readEventById(eventId);
     await this.ensureUserCanManageEventSeries(event, user.userId, user.userRole);
-    return EventSeriesService.deleteById(eventId);
+    return EventSeriesService.deleteById(eventId, user.userId, user.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -116,7 +117,7 @@ export class EventSeriesResolver {
     const user = getAuthenticatedUser(context);
     const event = await EventSeriesDAO.readEventBySlug(slug);
     await this.ensureUserCanManageEventSeries(event, user.userId, user.userRole);
-    return EventSeriesService.deleteBySlug(slug);
+    return EventSeriesService.deleteBySlug(slug, user.userId, user.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -326,12 +327,12 @@ export class EventSeriesResolver {
    * Field resolver to get the count of users who have saved this event.
    */
   @FieldResolver(() => Int, { description: 'Number of users who have saved this event' })
-  async savedByCount(@Root() event: EventSeries): Promise<number> {
+  async savedByCount(@Root() event: EventSeries, @Ctx() context: ServerContext): Promise<number> {
     if (typeof event.savedByCount === 'number') {
       return event.savedByCount;
     }
 
-    return FollowDAO.countSavesForEvent(event.eventId);
+    return context.loaders.eventSaveCount.load(event.eventId);
   }
 
   /**
@@ -343,7 +344,7 @@ export class EventSeriesResolver {
     if (!context.user?.userId) {
       return false;
     }
-    return FollowDAO.isEventSavedByUser(event.eventId, context.user.userId);
+    return context.loaders.eventSavedByMe.load(event.eventId);
   }
 
   /**

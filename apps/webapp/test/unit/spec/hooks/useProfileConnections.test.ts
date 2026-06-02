@@ -193,6 +193,47 @@ describe('useProfileConnections', () => {
       expect(secondHook.result.current.error).toBe(loadMoreError);
       expect(loggerErrorMock).toHaveBeenCalled();
     });
+
+    it('returns an empty array when readFollowers is absent from the response', async () => {
+      const loadFollowers = jest.fn().mockResolvedValue({ data: {} });
+      useLazyQueryMock.mockImplementation(() => [loadFollowers, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedFollowers('user-1', 'token'));
+
+      await waitFor(() => expect(loadFollowers).toHaveBeenCalled());
+      expect(result.current.followers).toEqual([]);
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('preserves an Error instance thrown during refresh', async () => {
+      const refreshError = new Error('network failure');
+      const loadFollowers = jest.fn().mockRejectedValue(refreshError);
+      useLazyQueryMock.mockImplementation(() => [loadFollowers, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedFollowers('user-1', 'token'));
+
+      await waitFor(() => expect(result.current.error).toBe(refreshError));
+    });
+
+    it('wraps a non-Error load-more rejection in a generic Error', async () => {
+      const loadFollowers = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: { readFollowers: [createFollow('follow-1'), createFollow('follow-2')] },
+        })
+        .mockRejectedValueOnce('string rejection');
+      useLazyQueryMock.mockImplementation(() => [loadFollowers, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedFollowers('user-1', 'token', { pageSize: 2, totalCount: 4 }));
+
+      await waitFor(() => expect(result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.error?.message).toBe('Unable to load more followers right now.');
+    });
   });
 
   describe('usePaginatedUserFollowing', () => {
@@ -305,6 +346,47 @@ describe('useProfileConnections', () => {
 
       expect(secondHook.result.current.error).toBe(loadMoreError);
       expect(loggerErrorMock).toHaveBeenCalled();
+    });
+
+    it('returns an empty array when readUserFollowing is absent from the response', async () => {
+      const loadFollowing = jest.fn().mockResolvedValue({ data: {} });
+      useLazyQueryMock.mockImplementation(() => [loadFollowing, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedUserFollowing('user-1', 'token'));
+
+      await waitFor(() => expect(loadFollowing).toHaveBeenCalled());
+      expect(result.current.following).toEqual([]);
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('preserves an Error instance thrown during refresh', async () => {
+      const refreshError = new Error('network failure');
+      const loadFollowing = jest.fn().mockRejectedValue(refreshError);
+      useLazyQueryMock.mockImplementation(() => [loadFollowing, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedUserFollowing('user-1', 'token'));
+
+      await waitFor(() => expect(result.current.error).toBe(refreshError));
+    });
+
+    it('wraps a non-Error load-more rejection in a generic Error', async () => {
+      const loadFollowing = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: { readUserFollowing: [createFollow('follow-1'), createFollow('follow-2')] },
+        })
+        .mockRejectedValueOnce('string rejection');
+      useLazyQueryMock.mockImplementation(() => [loadFollowing, { loading: false }]);
+
+      const { result } = renderHook(() => usePaginatedUserFollowing('user-1', 'token', { pageSize: 2, totalCount: 4 }));
+
+      await waitFor(() => expect(result.current.hasMore).toBe(true));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(result.current.error?.message).toBe('Unable to load more following right now.');
     });
   });
 });

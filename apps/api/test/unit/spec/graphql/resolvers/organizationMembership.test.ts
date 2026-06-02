@@ -8,7 +8,7 @@ import type {
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
 } from '@gatherle/commons/types';
-import { OrganizationRole } from '@gatherle/commons/types';
+import { OrganizationRole, UserRole } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 
@@ -57,8 +57,8 @@ describe('OrganizationMembershipResolver', () => {
   };
 
   const mockContext = {
-    user: { userId: 'admin-user-001', email: 'admin@test.com' },
-  } as ServerContext;
+    user: { userId: 'admin-user-001', email: 'admin@test.com', userRole: UserRole.Admin },
+  } as unknown as ServerContext;
 
   beforeEach(() => {
     resolver = new OrganizationMembershipResolver();
@@ -80,7 +80,10 @@ describe('OrganizationMembershipResolver', () => {
       const result = await resolver.createOrganizationMembership(createInput, mockContext);
 
       expect(validation.validateInput).toHaveBeenCalled();
-      expect(OrganizationMembershipService.addMember).toHaveBeenCalledWith(createInput, 'admin-user-001');
+      expect(OrganizationMembershipService.addMember).toHaveBeenCalledWith(createInput, 'admin-user-001', {
+        actorRole: UserRole.Admin,
+        ipAddress: undefined,
+      });
       expect(result).toEqual(mockMembership);
     });
   });
@@ -101,7 +104,12 @@ describe('OrganizationMembershipResolver', () => {
 
       expect(validation.validateInput).toHaveBeenCalled();
       expect(validation.validateMongodbId).toHaveBeenCalledWith(updateInput.membershipId, expect.any(String));
-      expect(OrganizationMembershipService.updateMemberRole).toHaveBeenCalledWith(updateInput, 'admin-user-001');
+      expect(OrganizationMembershipService.updateMemberRole).toHaveBeenCalledWith(
+        updateInput,
+        'admin-user-001',
+        mockContext.user.userRole,
+        undefined,
+      );
       expect(result.role).toBe(OrganizationRole.Host);
     });
   });
@@ -121,6 +129,8 @@ describe('OrganizationMembershipResolver', () => {
       expect(OrganizationMembershipService.removeMember).toHaveBeenCalledWith(
         deleteInput.membershipId,
         'admin-user-001',
+        UserRole.Admin,
+        undefined,
       );
       expect(result).toEqual(mockMembership);
     });

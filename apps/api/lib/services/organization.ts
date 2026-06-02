@@ -1,4 +1,10 @@
-import { FollowTargetType, NotificationTargetType, OrganizationRole, type Organization } from '@gatherle/commons/types';
+import {
+  FollowTargetType,
+  NotificationTargetType,
+  OrganizationRole,
+  UserRole,
+  type Organization,
+} from '@gatherle/commons/types';
 import {
   ActivityDAO,
   FollowDAO,
@@ -7,6 +13,7 @@ import {
   OrganizationMembershipDAO,
   UserDAO,
 } from '@/mongodb/dao';
+import AuditLogService from './auditLog';
 import { logger } from '@/utils/logger';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
@@ -35,11 +42,30 @@ class OrganizationService {
     });
   }
 
-  static async deleteById(orgId: string): Promise<Organization> {
+  static async deleteById(
+    orgId: string,
+    actorId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<Organization> {
     logger.debug(`[OrganizationService.deleteById] Deleting organization ${orgId}`);
 
     const deletedOrganization = await OrganizationDAO.deleteOrganizationById(orgId);
     await this.cleanupDeletedOrganizationData(orgId, deletedOrganization.slug);
+
+    if (actorId && actorRole) {
+      AuditLogService.logOrgDeleted({
+        actorId,
+        actorRole,
+        orgId: deletedOrganization.orgId,
+        orgSnapshot: {
+          orgId: deletedOrganization.orgId,
+          name: deletedOrganization.name,
+          ownerId: deletedOrganization.ownerId,
+        },
+        ipAddress,
+      });
+    }
 
     return deletedOrganization;
   }
@@ -59,7 +85,13 @@ class OrganizationService {
    * @param newOwnerUserId - User who should become the new owner
    * @param actorUserId - User performing the transfer (for audit logging)
    */
-  static async transferOwnership(orgId: string, newOwnerUserId: string, actorUserId?: string): Promise<Organization> {
+  static async transferOwnership(
+    orgId: string,
+    newOwnerUserId: string,
+    actorUserId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<Organization> {
     logger.debug(
       `[OrganizationService.transferOwnership] Transferring ownership of org ${orgId} to user ${newOwnerUserId} (actor: ${actorUserId ?? 'unknown'})`,
     );
@@ -129,7 +161,19 @@ class OrganizationService {
     }
 
     try {
-      return await OrganizationDAO.updateOwnerId(orgId, newOwnerUserId);
+      const updatedOrg = await OrganizationDAO.updateOwnerId(orgId, newOwnerUserId);
+      if (actorUserId && actorRole) {
+        AuditLogService.logOrgOwnershipTransferred({
+          actorId: actorUserId,
+          actorRole,
+          orgId: updatedOrg.orgId,
+          orgName: updatedOrg.name,
+          previousOwnerId: organization.ownerId,
+          newOwnerId: newOwnerUserId,
+          ipAddress,
+        });
+      }
+      return updatedOrg;
     } catch (error) {
       try {
         if (createdNewOwnerMembershipId) {

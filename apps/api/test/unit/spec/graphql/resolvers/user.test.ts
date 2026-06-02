@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { GraphQLError } from 'graphql';
 import { UserResolver } from '@/graphql/resolvers/user';
 import { AuthAttemptDAO, EmailVerificationTokenDAO, UserDAO } from '@/mongodb/dao';
-import { EmailService } from '@/services';
+import { EmailService, UserService } from '@/services';
 import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { logger } from '@/utils/logger';
+import type { ServerContext } from '@/graphql';
+import { UserRole } from '@gatherle/commons/types';
 
 jest.mock('@/mongodb/dao', () => ({
   AuthAttemptDAO: {
@@ -31,7 +33,11 @@ jest.mock('@/services', () => ({
   EmailService: {
     sendEmailVerification: jest.fn(),
   },
-  UserService: {},
+  UserService: {
+    deleteById: jest.fn(),
+    deleteByEmail: jest.fn(),
+    deleteByUsername: jest.fn(),
+  },
 }));
 
 jest.mock('@/utils/authAbuseMetrics', () => ({
@@ -230,6 +236,66 @@ describe('UserResolver login hardening', () => {
       expect(UserDAO.readUserById).not.toHaveBeenCalled();
       expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('UserResolver delete mutations', () => {
+  let resolver: UserResolver;
+
+  const validUserId = '507f1f77bcf86cd799439011';
+
+  const mockUser = {
+    userId: validUserId,
+    username: 'testuser',
+    email: 'test@example.com',
+    userRole: UserRole.User,
+  };
+
+  const mockContext = {
+    user: { userId: 'admin-001', userRole: UserRole.Admin },
+  } as unknown as ServerContext;
+
+  beforeEach(() => {
+    resolver = new UserResolver();
+    jest.clearAllMocks();
+  });
+
+  describe('deleteUserById', () => {
+    it('calls UserService.deleteById with actor context', async () => {
+      (UserService.deleteById as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await resolver.deleteUserById(validUserId, mockContext);
+
+      expect(UserService.deleteById).toHaveBeenCalledWith(validUserId, 'admin-001', UserRole.Admin, undefined);
+      expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('deleteUserByEmail', () => {
+    it('calls UserService.deleteByEmail with actor context', async () => {
+      (UserService.deleteByEmail as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await resolver.deleteUserByEmail('test@example.com', mockContext);
+
+      expect(UserService.deleteByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+        'admin-001',
+        UserRole.Admin,
+        undefined,
+      );
+      expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('deleteUserByUsername', () => {
+    it('calls UserService.deleteByUsername with actor context', async () => {
+      (UserService.deleteByUsername as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await resolver.deleteUserByUsername('testuser', mockContext);
+
+      expect(UserService.deleteByUsername).toHaveBeenCalledWith('testuser', 'admin-001', UserRole.Admin, undefined);
+      expect(result).toEqual(mockUser);
     });
   });
 });

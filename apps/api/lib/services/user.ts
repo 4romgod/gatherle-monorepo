@@ -1,5 +1,5 @@
 import type { User } from '@gatherle/commons/types';
-import { FollowTargetType } from '@gatherle/commons/types';
+import { FollowTargetType, UserRole } from '@gatherle/commons/types';
 import {
   ActivityDAO,
   EmailVerificationTokenDAO,
@@ -11,6 +11,7 @@ import {
   UserDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
+import AuditLogService from './auditLog';
 import { logger } from '@/utils/logger';
 
 /**
@@ -140,22 +141,54 @@ class UserService {
     return UserDAO.unmuteOrganization(userId, organizationId);
   }
 
-  static async deleteById(userId: string): Promise<User> {
+  static async deleteById(userId: string, actorId?: string, actorRole?: UserRole, ipAddress?: string): Promise<User> {
     logger.debug(`[UserService.deleteById] Deleting user ${userId}`);
     const deletedUser = await UserDAO.deleteUserById(userId);
     await this.cleanupDeletedUserData(deletedUser.userId);
+    if (actorId && actorRole) {
+      AuditLogService.logUserDeleted({
+        actorId,
+        actorRole,
+        targetUserId: deletedUser.userId,
+        userSnapshot: { userId: deletedUser.userId, username: deletedUser.username, email: deletedUser.email },
+        ipAddress,
+      });
+    }
     return deletedUser;
   }
 
-  static async deleteByEmail(email: string): Promise<User> {
+  static async deleteByEmail(email: string, actorId?: string, actorRole?: UserRole, ipAddress?: string): Promise<User> {
     const deletedUser = await UserDAO.deleteUserByEmail(email);
     await this.cleanupDeletedUserData(deletedUser.userId);
+    if (actorId && actorRole) {
+      AuditLogService.logUserDeleted({
+        actorId,
+        actorRole,
+        targetUserId: deletedUser.userId,
+        userSnapshot: { userId: deletedUser.userId, username: deletedUser.username, email: deletedUser.email },
+        ipAddress,
+      });
+    }
     return deletedUser;
   }
 
-  static async deleteByUsername(username: string): Promise<User> {
+  static async deleteByUsername(
+    username: string,
+    actorId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<User> {
     const deletedUser = await UserDAO.deleteUserByUsername(username);
     await this.cleanupDeletedUserData(deletedUser.userId);
+    if (actorId && actorRole) {
+      AuditLogService.logUserDeleted({
+        actorId,
+        actorRole,
+        targetUserId: deletedUser.userId,
+        userSnapshot: { userId: deletedUser.userId, username: deletedUser.username, email: deletedUser.email },
+        ipAddress,
+      });
+    }
     return deletedUser;
   }
 }

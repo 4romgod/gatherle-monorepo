@@ -1,8 +1,11 @@
 import 'reflect-metadata';
-import { Arg, Mutation, Resolver, Query, Authorized } from 'type-graphql';
+import { Arg, Ctx, Mutation, Resolver, Query, Authorized } from 'type-graphql';
 import { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, UserRole, Venue } from '@gatherle/commons/types';
 import { VenueDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
+import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
+import VenueService from '@/services/venue';
+import type { ServerContext } from '@/graphql';
 import { validateInput, validateMongodbId } from '@/validation';
 import { CreateVenueInputSchema, UpdateVenueInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES } from '@/validation';
@@ -26,9 +29,10 @@ export class VenueResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.deleteVenueById })
-  async deleteVenueById(@Arg('venueId', () => String) venueId: string): Promise<Venue> {
+  async deleteVenueById(@Arg('venueId', () => String) venueId: string, @Ctx() context: ServerContext): Promise<Venue> {
     validateMongodbId(venueId, ERROR_MESSAGES.NOT_FOUND('Venue', 'ID', venueId));
-    return VenueDAO.delete(venueId);
+    const actor = getAuthenticatedUser(context);
+    return VenueService.deleteById(venueId, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Query(() => Venue, { description: RESOLVER_DESCRIPTIONS.VENUE.readVenueById })

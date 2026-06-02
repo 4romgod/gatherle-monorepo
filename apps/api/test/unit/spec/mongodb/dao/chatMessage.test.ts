@@ -189,6 +189,21 @@ describe('ChatMessageDAO', () => {
     expect(result.count).toBe(2);
   });
 
+  it('readConversation sets hasMore=false and nextCursor=undefined when all results fit in the page', async () => {
+    const m1Date = new Date('2026-02-15T11:59:00.000Z');
+    const docs = [{ toObject: () => ({ chatMessageId: 'm1', isRead: undefined }), createdAt: m1Date }];
+
+    const findQuery = createFindQuery(docs);
+    (ChatMessageModel.find as jest.Mock).mockReturnValue(findQuery);
+
+    const result = await ChatMessageDAO.readConversation('user-1', 'user-2', { limit: 5 });
+
+    expect(result.messages).toHaveLength(1);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeUndefined();
+    expect(result.messages[0]?.isRead).toBe(false);
+  });
+
   it('readConversations maps aggregation rows to chat conversations', async () => {
     const updatedAt = new Date('2026-02-15T11:59:00.000Z');
     (ChatMessageModel.aggregate as jest.Mock).mockReturnValue(
@@ -255,6 +270,32 @@ describe('ChatMessageDAO', () => {
     const result = await ChatMessageDAO.readConversations('user-1', 10);
 
     expect(result[0]?.unreadCount).toBe(1);
+  });
+
+  it('readConversations returns unreadCount=0 when message count is zero and conversation is not marked unread', async () => {
+    const updatedAt = new Date('2026-02-15T11:59:00.000Z');
+    (ChatMessageModel.aggregate as jest.Mock).mockReturnValue(
+      createExecQuery([
+        {
+          _id: 'user-2',
+          unreadCount: 0,
+          updatedAt,
+          lastMessage: {
+            chatMessageId: 'm1',
+            senderUserId: 'user-1',
+            recipientUserId: 'user-2',
+            message: 'see you later',
+            isRead: true,
+            createdAt: updatedAt,
+          },
+        },
+      ]),
+    );
+    (ChatConversationUnreadStateDAO.readMarkedUnreadConversationIds as jest.Mock).mockResolvedValue(new Set<string>());
+
+    const result = await ChatMessageDAO.readConversations('user-1', 10);
+
+    expect(result[0]?.unreadCount).toBe(0);
   });
 
   it('markConversationRead updates unread incoming messages and returns modified count', async () => {

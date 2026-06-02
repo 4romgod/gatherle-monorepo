@@ -292,6 +292,30 @@ describe('OrganizationDAO', () => {
     });
   });
 
+  describe('updateOwnerId', () => {
+    it('throws NOT_FOUND when the organization does not exist', async () => {
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(null));
+
+      await expect(OrganizationDAO.updateOwnerId('missing-org', 'new-owner')).rejects.toThrow(
+        CustomError('Organization with id missing-org not found', ErrorTypes.NOT_FOUND),
+      );
+    });
+
+    it('updates ownerId and returns the updated organization', async () => {
+      const mockOrg = {
+        ownerId: 'old-owner',
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({ ...mockOrganization, ownerId: 'new-owner' }),
+      };
+      (OrganizationModel.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockOrg));
+
+      const result = await OrganizationDAO.updateOwnerId('org-1', 'new-owner');
+
+      expect(mockOrg.save).toHaveBeenCalled();
+      expect(result.ownerId).toBe('new-owner');
+    });
+  });
+
   describe('deleteOrganizationById', () => {
     it('deletes organization', async () => {
       (OrganizationModel.findByIdAndDelete as jest.Mock).mockReturnValue(

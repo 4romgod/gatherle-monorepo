@@ -91,6 +91,8 @@ describe('EventOccurrenceResolver field resolvers', () => {
         const expectedKey = buildMyEventOccurrenceParticipantLoadKey(occurrence.occurrenceId, user.userId);
         return keys.map((key) => (key === expectedKey ? occurrenceParticipant : null));
       }),
+      eventSaveCount: new DataLoader(async (keys: readonly string[]) => keys.map(() => 0)),
+      eventSavedByMe: new DataLoader(async (keys: readonly string[]) => keys.map(() => false)),
     },
   } as ServerContext;
 

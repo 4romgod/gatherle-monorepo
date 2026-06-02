@@ -323,10 +323,11 @@ describe('event collection hooks', () => {
   });
 
   describe('useMyEventOccurrenceRsvps', () => {
-    const futureStart = '2026-06-01T10:00:00.000Z';
-    const futureEnd = '2026-06-01T12:00:00.000Z';
-    const pastStart = '2026-04-01T10:00:00.000Z';
-    const pastEnd = '2026-04-01T12:00:00.000Z';
+    const now = new Date();
+    const futureStart = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const futureEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString();
+    const pastStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const pastEnd = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString();
 
     const makeRsvp = (occurrenceId: string, startAt: string, endAt: string, includeEventSeries = true) =>
       ({

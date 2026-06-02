@@ -8,7 +8,7 @@ import type {
   QueryOptionsInput,
   UpdateOrganizationInput,
 } from '@gatherle/commons/types';
-import { FollowTargetType, OrganizationRole } from '@gatherle/commons/types';
+import { FollowTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { OrganizationMembershipService, OrganizationService } from '@/services';
@@ -73,8 +73,8 @@ describe('OrganizationResolver', () => {
   };
 
   const mockContext = {
-    user: { userId: 'user-001', email: 'test@test.com' },
-  } as ServerContext;
+    user: { userId: 'user-001', email: 'test@test.com', userRole: UserRole.Admin },
+  } as unknown as ServerContext;
 
   beforeEach(() => {
     resolver = new OrganizationResolver();
@@ -200,13 +200,18 @@ describe('OrganizationResolver', () => {
     it('validates id and calls service', async () => {
       (OrganizationService.deleteById as jest.Mock).mockResolvedValue(mockOrganization);
 
-      const result = await resolver.deleteOrganizationById(mockOrganization.orgId);
+      const result = await resolver.deleteOrganizationById(mockOrganization.orgId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(
         mockOrganization.orgId,
         expect.stringContaining('Organization'),
       );
-      expect(OrganizationService.deleteById).toHaveBeenCalledWith(mockOrganization.orgId);
+      expect(OrganizationService.deleteById).toHaveBeenCalledWith(
+        mockOrganization.orgId,
+        'user-001',
+        UserRole.Admin,
+        undefined,
+      );
       expect(result).toEqual(mockOrganization);
     });
   });

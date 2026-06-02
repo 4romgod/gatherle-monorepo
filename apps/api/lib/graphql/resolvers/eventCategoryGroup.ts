@@ -10,6 +10,8 @@ import {
 } from '@gatherle/commons/types';
 import { EventCategoryGroupDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
+import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
+import EventCategoryGroupService from '@/services/eventCategoryGroup';
 import type { ServerContext } from '@/graphql';
 
 @Resolver(() => EventCategoryGroup)
@@ -20,8 +22,10 @@ export class EventCategoryGroupResolver {
   })
   async createEventCategoryGroup(
     @Arg('input', () => CreateEventCategoryGroupInput) input: CreateEventCategoryGroupInput,
+    @Ctx() context: ServerContext,
   ): Promise<EventCategoryGroup> {
-    return EventCategoryGroupDAO.create(input);
+    const actor = getAuthenticatedUser(context);
+    return EventCategoryGroupService.create(input, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Authorized([UserRole.Admin])
@@ -38,8 +42,12 @@ export class EventCategoryGroupResolver {
   @Mutation(() => EventCategoryGroup, {
     description: RESOLVER_DESCRIPTIONS.EVENT_CATEGORY_GROUP.deleteEventCategoryGroupBySlug,
   })
-  async deleteEventCategoryGroupBySlug(@Arg('slug', () => String) slug: string): Promise<EventCategoryGroup> {
-    return EventCategoryGroupDAO.deleteEventCategoryGroupBySlug(slug);
+  async deleteEventCategoryGroupBySlug(
+    @Arg('slug', () => String) slug: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventCategoryGroup> {
+    const actor = getAuthenticatedUser(context);
+    return EventCategoryGroupService.deleteBySlug(slug, actor.userId, actor.userRole, getRequestIpFromContext(context));
   }
 
   @Query(() => EventCategoryGroup, {

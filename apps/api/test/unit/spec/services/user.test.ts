@@ -103,6 +103,13 @@ jest.mock('@/mongodb/dao', () => ({
   },
 }));
 
+jest.mock('@/services/auditLog', () => ({
+  __esModule: true,
+  default: {
+    logUserDeleted: jest.fn(),
+  },
+}));
+
 jest.mock('@/utils/logger', () => ({
   logger: {
     debug: jest.fn(),
@@ -124,9 +131,10 @@ import {
   UserDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
+import AuditLogService from '@/services/auditLog';
 import { logger } from '@/utils/logger';
 import type { User } from '@gatherle/commons/types';
-import { FollowTargetType } from '@gatherle/commons/types';
+import { FollowTargetType, UserRole } from '@gatherle/commons/types';
 
 describe('UserService', () => {
   const mockUser: Partial<User> = {
@@ -333,6 +341,56 @@ describe('UserService', () => {
         }),
       );
       expect(result).toEqual(mockUser);
+    });
+
+    it('fires audit log for deleteById when actor params are provided', async () => {
+      (UserDAO.deleteUserById as jest.Mock).mockResolvedValue(mockUser);
+
+      await UserService.deleteById('user-1', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logUserDeleted).toHaveBeenCalledWith({
+        actorId: 'actor-1',
+        actorRole: UserRole.Admin,
+        targetUserId: mockUser.userId,
+        userSnapshot: { userId: mockUser.userId, username: mockUser.username, email: mockUser.email },
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('does not fire audit log for deleteById when actor params are absent', async () => {
+      (UserDAO.deleteUserById as jest.Mock).mockResolvedValue(mockUser);
+
+      await UserService.deleteById('user-1');
+
+      expect(AuditLogService.logUserDeleted).not.toHaveBeenCalled();
+    });
+
+    it('fires audit log for deleteByEmail when actor params are provided', async () => {
+      (UserDAO.deleteUserByEmail as jest.Mock).mockResolvedValue(mockUser);
+
+      await UserService.deleteByEmail('test@example.com', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logUserDeleted).toHaveBeenCalledWith({
+        actorId: 'actor-1',
+        actorRole: UserRole.Admin,
+        targetUserId: mockUser.userId,
+        userSnapshot: { userId: mockUser.userId, username: mockUser.username, email: mockUser.email },
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('fires audit log for deleteByUsername when actor params are provided', async () => {
+      (UserDAO.deleteUserByUsername as jest.Mock).mockResolvedValue(mockUser);
+
+      await UserService.deleteByUsername('testuser', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logUserDeleted).toHaveBeenCalledWith({
+        actorId: 'actor-1',
+        actorRole: UserRole.Admin,
+        targetUserId: mockUser.userId,
+        userSnapshot: { userId: mockUser.userId, username: mockUser.username, email: mockUser.email },
+        ipAddress: '1.2.3.4',
+      });
     });
   });
 });

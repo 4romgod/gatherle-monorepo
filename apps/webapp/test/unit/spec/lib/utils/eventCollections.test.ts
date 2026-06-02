@@ -1,5 +1,6 @@
 import {
   buildCollectionPagination,
+  buildHostedEventsCountQueryOptions,
   buildHostedEventsQueryOptions,
   isUpcomingEventTime,
   sortItemsByEventTime,
@@ -39,6 +40,40 @@ describe('eventCollections utils', () => {
         sort: [{ field: 'createdAt', order: 'desc' }],
       });
     });
+
+    it('defaults skip to 0 when not provided', () => {
+      expect(buildHostedEventsQueryOptions('user-1', 'desc', 18)).toEqual({
+        filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+        pagination: { limit: 18, skip: 0 },
+        sort: [{ field: 'createdAt', order: 'desc' }],
+      });
+    });
+
+    it('includes a search object when searchTerm is at least 2 characters', () => {
+      const result = buildHostedEventsQueryOptions('user-1', 'desc', 18, 0, 'jazz festival');
+      expect(result).toMatchObject({
+        filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+        pagination: { limit: 18, skip: 0 },
+        sort: [{ field: 'createdAt', order: 'desc' }],
+        search: { fields: expect.any(Array), value: 'jazz festival' },
+      });
+    });
+  });
+
+  describe('buildHostedEventsCountQueryOptions', () => {
+    it('returns only filters when no searchTerm is provided', () => {
+      expect(buildHostedEventsCountQueryOptions('user-1')).toEqual({
+        filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+      });
+    });
+
+    it('includes a search object when searchTerm is at least 2 characters', () => {
+      const result = buildHostedEventsCountQueryOptions('user-1', 'jazz festival');
+      expect(result).toMatchObject({
+        filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
+        search: { fields: expect.any(Array), value: 'jazz festival' },
+      });
+    });
   });
 
   describe('isUpcomingEventTime', () => {
@@ -58,6 +93,10 @@ describe('eventCollections utils', () => {
 
     it('treats invalid timestamps as not upcoming', () => {
       expect(isUpcomingEventTime('not-a-date', undefined, fromDate)).toBe(false);
+    });
+
+    it('uses the current date when fromDate is not provided', () => {
+      expect(isUpcomingEventTime('2099-01-01T00:00:00.000Z')).toBe(true);
     });
   });
 

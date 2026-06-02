@@ -58,6 +58,12 @@ describe('useChatRealtimeListener', () => {
     expect(capturedChatRealtimeOptions.enabled).toBe(false);
   });
 
+  it('defaults enabled to true when no argument is provided', () => {
+    renderHook(() => useChatRealtimeListener());
+
+    expect(capturedChatRealtimeOptions.enabled).toBe(true);
+  });
+
   it('disables useChatRealtime when session has no userId', () => {
     mockUseSession.mockReturnValue({ data: { user: { userId: null } } });
 

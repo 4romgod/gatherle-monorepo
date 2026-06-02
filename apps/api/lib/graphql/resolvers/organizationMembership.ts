@@ -18,7 +18,7 @@ import {
 import { ERROR_MESSAGES } from '@/validation';
 import { OrganizationMembershipService } from '@/services';
 import type { ServerContext } from '@/graphql';
-import { getAuthenticatedUser } from '@/utils';
+import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
 
 @Resolver(() => OrganizationMembership)
 export class OrganizationMembershipResolver {
@@ -38,7 +38,10 @@ export class OrganizationMembershipResolver {
   ): Promise<OrganizationMembership> {
     validateInput<CreateOrganizationMembershipInput>(CreateOrganizationMembershipInputSchema, input);
     const user = getAuthenticatedUser(context);
-    return OrganizationMembershipService.addMember(input, user.userId);
+    return OrganizationMembershipService.addMember(input, user.userId, {
+      actorRole: user.userRole,
+      ipAddress: getRequestIpFromContext(context),
+    });
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -55,7 +58,13 @@ export class OrganizationMembershipResolver {
       ERROR_MESSAGES.NOT_FOUND('Organization membership', 'ID', input.membershipId),
     );
     const user = getAuthenticatedUser(context);
-    return OrganizationMembershipService.updateMemberRole(input, user.userId);
+    const updated = await OrganizationMembershipService.updateMemberRole(
+      input,
+      user.userId,
+      user.userRole,
+      getRequestIpFromContext(context),
+    );
+    return updated;
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -72,7 +81,12 @@ export class OrganizationMembershipResolver {
       ERROR_MESSAGES.NOT_FOUND('Organization membership', 'ID', input.membershipId),
     );
     const user = getAuthenticatedUser(context);
-    return OrganizationMembershipService.removeMember(input.membershipId, user.userId);
+    return OrganizationMembershipService.removeMember(
+      input.membershipId,
+      user.userId,
+      user.userRole,
+      getRequestIpFromContext(context),
+    );
   }
 
   @Query(() => OrganizationMembership, {

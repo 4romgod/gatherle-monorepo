@@ -604,6 +604,16 @@ describe('FollowDAO', () => {
       expect(result[0].targetId).toBe('event-1');
     });
 
+    it('uses caller-supplied sort order when provided', async () => {
+      (FollowModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
+
+      await FollowDAO.readSavedEventsForUser('user-1', {
+        sort: [{ field: 'createdAt', order: SortOrderInput.asc }],
+      });
+
+      expect(FollowModel.find).toHaveBeenCalled();
+    });
+
     it('returns empty array when user has no saved events', async () => {
       (FollowModel.find as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery([]));
 
@@ -732,6 +742,24 @@ describe('FollowDAO', () => {
       await expect(FollowDAO.isEventSavedByUser('event-1', 'user-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
+    });
+  });
+
+  describe('countSavesForEvents', () => {
+    it('returns an empty map without querying when eventIds is empty', async () => {
+      const result = await FollowDAO.countSavesForEvents([]);
+
+      expect(FollowModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual(new Map());
+    });
+  });
+
+  describe('readSavedEventIdsForUser', () => {
+    it('returns an empty set without querying when eventIds is empty', async () => {
+      const result = await FollowDAO.readSavedEventIdsForUser('user-1', []);
+
+      expect(FollowModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual(new Set());
     });
   });
 

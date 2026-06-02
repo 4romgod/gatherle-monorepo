@@ -23,3 +23,4 @@ export * from './eventMoment';
 export * from './organizationMembership';
 export * from './venue';
 export * from './myOrganization';
+export * from './auditLog';
