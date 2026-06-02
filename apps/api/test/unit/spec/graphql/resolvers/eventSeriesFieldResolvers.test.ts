@@ -1,5 +1,5 @@
 import { EventSeriesResolver } from '@/graphql/resolvers/eventSeries';
-import { FollowDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { OrganizationMembershipDAO } from '@/mongodb/dao';
 import EventSeriesService from '@/services/eventSeries';
 import type {
   EventSeries,
@@ -15,10 +15,7 @@ import DataLoader from 'dataloader';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
-  FollowDAO: {
-    countSavesForEvent: jest.fn(),
-    isEventSavedByUser: jest.fn(),
-  },
+  FollowDAO: {},
   OrganizationMembershipDAO: {
     readMembershipByOrgIdAndUser: jest.fn(),
   },
@@ -39,6 +36,8 @@ describe('EventSeriesResolver Field Resolvers', () => {
   let mockOccurrenceByEventSeriesLoader: DataLoader<string, EventOccurrence | null>;
   let mockOccurrenceParticipantCountLoader: DataLoader<string, number>;
   let mockMyOccurrenceParticipantLoader: DataLoader<string, EventOccurrenceParticipant | null>;
+  let mockEventSaveCountLoader: DataLoader<string, number>;
+  let mockEventSavedByMeLoader: DataLoader<string, boolean>;
 
   const singleOccurrence: EventOccurrence = {
     occurrenceId: 'event1#2026-05-07T10:00:00.000Z',
@@ -98,6 +97,9 @@ describe('EventSeriesResolver Field Resolvers', () => {
       );
     });
 
+    mockEventSaveCountLoader = new DataLoader<string, number>(async (ids) => ids.map(() => 0));
+    mockEventSavedByMeLoader = new DataLoader<string, boolean>(async (ids) => ids.map(() => false));
+
     mockContext = {
       loaders: {
         eventCategory: mockEventCategoryLoader,
@@ -105,6 +107,8 @@ describe('EventSeriesResolver Field Resolvers', () => {
         eventOccurrenceByEventSeries: mockOccurrenceByEventSeriesLoader,
         eventOccurrenceParticipantCountByOccurrence: mockOccurrenceParticipantCountLoader,
         myEventOccurrenceParticipant: mockMyOccurrenceParticipantLoader,
+        eventSaveCount: mockEventSaveCountLoader,
+        eventSavedByMe: mockEventSavedByMeLoader,
       },
     } as ServerContext;
   });
@@ -247,36 +251,41 @@ describe('EventSeriesResolver Field Resolvers', () => {
   });
 
   describe('savedByCount field resolver', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should return the count of users who saved the event', async () => {
+    it('delegates to the eventSaveCount loader when no pipeline-supplied count is present', async () => {
       const event = { eventId: 'event1' } as EventSeries;
-      (FollowDAO.countSavesForEvent as jest.Mock).mockResolvedValue(42);
+      mockEventSaveCountLoader = new DataLoader<string, number>(async (ids) => ids.map(() => 42));
+      const ctx = {
+        ...mockContext,
+        loaders: { ...mockContext.loaders, eventSaveCount: mockEventSaveCountLoader },
+      } as ServerContext;
+      const loadSpy = jest.spyOn(mockEventSaveCountLoader, 'load');
 
-      const result = await resolver.savedByCount(event);
+      const result = await resolver.savedByCount(event, ctx);
 
-      expect(FollowDAO.countSavesForEvent).toHaveBeenCalledWith('event1');
+      expect(loadSpy).toHaveBeenCalledWith('event1');
       expect(result).toBe(42);
     });
 
-    it('should return 0 when no users have saved the event', async () => {
+    it('returns 0 when no users have saved the event', async () => {
       const event = { eventId: 'event1' } as EventSeries;
-      (FollowDAO.countSavesForEvent as jest.Mock).mockResolvedValue(0);
+      mockEventSaveCountLoader = new DataLoader<string, number>(async (ids) => ids.map(() => 0));
+      const ctx = {
+        ...mockContext,
+        loaders: { ...mockContext.loaders, eventSaveCount: mockEventSaveCountLoader },
+      } as ServerContext;
 
-      const result = await resolver.savedByCount(event);
+      const result = await resolver.savedByCount(event, ctx);
 
-      expect(FollowDAO.countSavesForEvent).toHaveBeenCalledWith('event1');
       expect(result).toBe(0);
     });
 
-    it('prefers pipeline-supplied savedByCount when available', async () => {
+    it('prefers pipeline-supplied savedByCount and skips the loader', async () => {
       const event = { eventId: 'event1', savedByCount: 13 } as EventSeries;
+      const loadSpy = jest.spyOn(mockEventSaveCountLoader, 'load');
 
-      const result = await resolver.savedByCount(event);
+      const result = await resolver.savedByCount(event, mockContext);
 
-      expect(FollowDAO.countSavesForEvent).not.toHaveBeenCalled();
+      expect(loadSpy).not.toHaveBeenCalled();
       expect(result).toBe(13);
     });
   });
@@ -381,39 +390,30 @@ describe('EventSeriesResolver Field Resolvers', () => {
   });
 
   describe('isSavedByMe field resolver', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it('should return true when user has saved the event', async () => {
+    it('delegates to the eventSavedByMe loader when user is authenticated', async () => {
       const event = { eventId: 'event1' } as EventSeries;
-      const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (FollowDAO.isEventSavedByUser as jest.Mock).mockResolvedValue(true);
+      mockEventSavedByMeLoader = new DataLoader<string, boolean>(async (ids) => ids.map(() => true));
+      const contextWithUser = {
+        ...mockContext,
+        user: { userId: 'user1' } as User,
+        loaders: { ...mockContext.loaders, eventSavedByMe: mockEventSavedByMeLoader },
+      } as ServerContext;
+      const loadSpy = jest.spyOn(mockEventSavedByMeLoader, 'load');
 
       const result = await resolver.isSavedByMe(event, contextWithUser);
 
-      expect(FollowDAO.isEventSavedByUser).toHaveBeenCalledWith('event1', 'user1');
+      expect(loadSpy).toHaveBeenCalledWith('event1');
       expect(result).toBe(true);
     });
 
-    it('should return false when user has not saved the event', async () => {
+    it('returns false without calling the loader when user is not authenticated', async () => {
       const event = { eventId: 'event1' } as EventSeries;
-      const contextWithUser = { ...mockContext, user: { userId: 'user1' } as User };
-      (FollowDAO.isEventSavedByUser as jest.Mock).mockResolvedValue(false);
-
-      const result = await resolver.isSavedByMe(event, contextWithUser);
-
-      expect(FollowDAO.isEventSavedByUser).toHaveBeenCalledWith('event1', 'user1');
-      expect(result).toBe(false);
-    });
-
-    it('should return false when user is not authenticated', async () => {
-      const event = { eventId: 'event1' } as EventSeries;
+      const loadSpy = jest.spyOn(mockEventSavedByMeLoader, 'load');
       const contextWithoutUser = { ...mockContext, user: undefined };
 
       const result = await resolver.isSavedByMe(event, contextWithoutUser);
 
-      expect(FollowDAO.isEventSavedByUser).not.toHaveBeenCalled();
+      expect(loadSpy).not.toHaveBeenCalled();
       expect(result).toBe(false);
     });
   });

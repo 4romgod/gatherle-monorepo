@@ -2,8 +2,21 @@ import 'reflect-metadata';
 import { VenueResolver } from '@/graphql/resolvers/venue';
 import { VenueDAO } from '@/mongodb/dao';
 import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/types';
-import { VenueType } from '@gatherle/commons/types';
+import { UserRole, VenueType } from '@gatherle/commons/types';
 import * as validation from '@/validation';
+import type { ServerContext } from '@/graphql';
+
+jest.mock('@/services/auditLog', () => ({
+  __esModule: true,
+  default: {
+    logVenueDeleted: jest.fn(),
+  },
+}));
+
+jest.mock('@/utils', () => ({
+  getAuthenticatedUser: jest.fn().mockReturnValue({ userId: 'user-001', userRole: 'Admin' }),
+  getRequestIpFromContext: jest.fn().mockReturnValue('127.0.0.1'),
+}));
 
 jest.mock('@/mongodb/dao', () => ({
   VenueDAO: {
@@ -85,10 +98,14 @@ describe('VenueResolver', () => {
   });
 
   describe('deleteVenueById', () => {
+    const mockContext = {
+      user: { userId: 'user-001', userRole: UserRole.Admin },
+    } as unknown as ServerContext;
+
     it('validates id and deletes the venue', async () => {
       (VenueDAO.delete as jest.Mock).mockResolvedValue(mockVenue);
 
-      const result = await resolver.deleteVenueById(mockVenue.venueId);
+      const result = await resolver.deleteVenueById(mockVenue.venueId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(mockVenue.venueId, expect.any(String));
       expect(VenueDAO.delete).toHaveBeenCalledWith(mockVenue.venueId);

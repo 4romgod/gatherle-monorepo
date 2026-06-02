@@ -46,6 +46,13 @@ jest.mock('@/services/eventOccurrence', () => ({
   },
 }));
 
+jest.mock('@/services/auditLog', () => ({
+  __esModule: true,
+  default: {
+    logEventDeleted: jest.fn(),
+  },
+}));
+
 jest.mock('@/utils/logger', () => ({
   logger: { debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
   LOG_LEVEL_MAP: { debug: 0, info: 1, warn: 2, error: 3, none: 4 },
@@ -53,6 +60,7 @@ jest.mock('@/utils/logger', () => ({
   initLogger: jest.fn(),
 }));
 
+import AuditLogService from '@/services/auditLog';
 import {
   ActivityDAO,
   EventOccurrenceDAO,
@@ -64,6 +72,7 @@ import {
 } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import { logger } from '@/utils/logger';
+import { UserRole } from '@gatherle/commons/types';
 
 const makeEvent = (overrides: Partial<EventSeries> = {}): EventSeries =>
   ({
@@ -571,6 +580,78 @@ describe('EventSeriesService', () => {
         } as SplitEventSeriesInput),
       ).rejects.toThrow('Unable to normalize event category reference.');
       expect(EventSeriesDAO.createSplitSuccessor).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteById', () => {
+    it('deletes by ID and cascades side effects', async () => {
+      const event = makeEvent({ orgId: 'org-1' });
+      (EventSeriesDAO.deleteEventById as jest.Mock).mockResolvedValue(event);
+
+      const result = await EventSeriesService.deleteById('event-1');
+
+      expect(EventSeriesDAO.deleteEventById).toHaveBeenCalledWith('event-1');
+      expect(result).toEqual(event);
+    });
+
+    it('fires audit log when actor params are provided', async () => {
+      const event = makeEvent({ orgId: 'org-1' });
+      (EventSeriesDAO.deleteEventById as jest.Mock).mockResolvedValue(event);
+
+      await EventSeriesService.deleteById('event-1', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logEventDeleted).toHaveBeenCalledWith({
+        actorId: 'actor-1',
+        actorRole: UserRole.Admin,
+        eventId: event.eventId,
+        eventTitle: event.title,
+        orgId: 'org-1',
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('does not fire audit log when actor params are absent', async () => {
+      (EventSeriesDAO.deleteEventById as jest.Mock).mockResolvedValue(makeEvent());
+
+      await EventSeriesService.deleteById('event-1');
+
+      expect(AuditLogService.logEventDeleted).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteBySlug', () => {
+    it('deletes by slug and cascades side effects', async () => {
+      const event = makeEvent({ orgId: 'org-1' });
+      (EventSeriesDAO.deleteEventBySlug as jest.Mock).mockResolvedValue(event);
+
+      const result = await EventSeriesService.deleteBySlug('test-event-series');
+
+      expect(EventSeriesDAO.deleteEventBySlug).toHaveBeenCalledWith('test-event-series');
+      expect(result).toEqual(event);
+    });
+
+    it('fires audit log when actor params are provided', async () => {
+      const event = makeEvent({ orgId: 'org-1' });
+      (EventSeriesDAO.deleteEventBySlug as jest.Mock).mockResolvedValue(event);
+
+      await EventSeriesService.deleteBySlug('test-event-series', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logEventDeleted).toHaveBeenCalledWith({
+        actorId: 'actor-1',
+        actorRole: UserRole.Admin,
+        eventId: event.eventId,
+        eventTitle: event.title,
+        orgId: 'org-1',
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('does not fire audit log when actor params are absent', async () => {
+      (EventSeriesDAO.deleteEventBySlug as jest.Mock).mockResolvedValue(makeEvent());
+
+      await EventSeriesService.deleteBySlug('test-event-series');
+
+      expect(AuditLogService.logEventDeleted).not.toHaveBeenCalled();
     });
   });
 });

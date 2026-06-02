@@ -353,6 +353,34 @@ class FollowDAO {
   }
 
   /**
+   * Count how many users have saved each of a set of events.
+   * Returns a map of eventId → save count. Missing events default to 0.
+   */
+  static async countSavesForEvents(eventIds: string[]): Promise<Map<string, number>> {
+    if (eventIds.length === 0) return new Map();
+    try {
+      const results = await FollowModel.aggregate<{ _id: string; count: number }>([
+        {
+          $match: {
+            targetType: FollowTargetType.EventSeries,
+            targetId: { $in: eventIds },
+            approvalStatus: FollowApprovalStatus.Accepted,
+          },
+        },
+        { $group: { _id: '$targetId', count: { $sum: 1 } } },
+      ]).exec();
+      const map = new Map<string, number>();
+      for (const { _id, count } of results) {
+        map.set(_id, count);
+      }
+      return map;
+    } catch (error) {
+      logDaoError('Error counting saves for events', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
    * Check if a user has saved a specific event.
    * @param eventId - The event to check
    * @param userId - The user to check
@@ -369,6 +397,29 @@ class FollowDAO {
       return follow !== null;
     } catch (error) {
       logDaoError('Error checking if event is saved', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  /**
+   * Returns the set of eventIds (from the supplied list) that a given user has saved.
+   * Used for batching isSavedByMe lookups across a list of events in one request.
+   */
+  static async readSavedEventIdsForUser(userId: string, eventIds: string[]): Promise<Set<string>> {
+    if (eventIds.length === 0) return new Set();
+    try {
+      const follows = await FollowModel.find({
+        followerUserId: userId,
+        targetType: FollowTargetType.EventSeries,
+        targetId: { $in: eventIds },
+        approvalStatus: FollowApprovalStatus.Accepted,
+      })
+        .select('targetId')
+        .lean()
+        .exec();
+      return new Set(follows.map((f) => f.targetId));
+    } catch (error) {
+      logDaoError('Error reading saved event IDs for user', { error });
       throw KnownCommonError(error);
     }
   }

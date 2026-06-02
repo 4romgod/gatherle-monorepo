@@ -2,15 +2,15 @@ import { expect, test, type Page } from '@playwright/test';
 import { holdForDebug } from './helpers';
 
 async function waitForEventsSurface(page: Page) {
-  const discoverEventsHeading = page.getByRole('heading', { name: 'Discover Events' });
+  const eventsSearchField = page.getByPlaceholder('Search events by title, location, or category...');
   const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
 
   try {
-    await expect(discoverEventsHeading).toBeVisible({ timeout: 20_000 });
-    return { discoverEventsHeading, loadError, loadedWithError: false };
+    await expect(eventsSearchField).toBeVisible({ timeout: 20_000 });
+    return { eventsSearchField, loadError, loadedWithError: false };
   } catch {
     await expect(loadError).toBeVisible({ timeout: 20_000 });
-    return { discoverEventsHeading, loadError, loadedWithError: true };
+    return { eventsSearchField, loadError, loadedWithError: true };
   }
 }
 
@@ -23,22 +23,21 @@ test.describe('Events Page', () => {
     await page.goto('/events', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/events\/?$/, { timeout: 20_000 });
 
-    const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
-    await expect(loadedWithError ? loadError : discoverEventsHeading).toBeVisible();
+    const { eventsSearchField, loadError, loadedWithError } = await waitForEventsSurface(page);
+    await expect(loadedWithError ? loadError : eventsSearchField).toBeVisible();
   });
 
   test('shows search and filter controls when events data loads', async ({ page }) => {
     await page.goto('/events', { waitUntil: 'domcontentloaded' });
 
-    const { discoverEventsHeading, loadError, loadedWithError } = await waitForEventsSurface(page);
+    const { eventsSearchField, loadError, loadedWithError } = await waitForEventsSurface(page);
 
     if (loadedWithError) {
       await expect(loadError).toBeVisible();
       return;
     }
 
-    await expect(discoverEventsHeading).toBeVisible();
-    await expect(page.getByPlaceholder('Search events by title, location, or category...')).toBeVisible();
+    await expect(eventsSearchField).toBeVisible();
     await expect(page.getByRole('button', { name: /^Categories/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Status/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Date/ })).toBeVisible();

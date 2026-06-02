@@ -5,6 +5,7 @@ import type {
 } from '@gatherle/commons/types';
 import { NotificationType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
 import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
+import AuditLogService from './auditLog';
 import NotificationService from './notification';
 import { logger } from '@/utils/logger';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
@@ -32,7 +33,7 @@ class OrganizationMembershipService {
   static async addMember(
     input: CreateOrganizationMembershipInput,
     addedByUserId?: string,
-    options?: { allowOwnerAssignment?: boolean },
+    options?: { allowOwnerAssignment?: boolean; actorRole?: UserRole; ipAddress?: string },
   ): Promise<OrganizationMembership> {
     logger.debug(`[OrganizationMembershipService.addMember] Adding user ${input.userId} to org ${input.orgId}`);
 
@@ -45,6 +46,20 @@ class OrganizationMembershipService {
 
     // Create the membership
     const membership = await OrganizationMembershipDAO.create(input);
+
+    if (addedByUserId && options?.actorRole) {
+      AuditLogService.logOrgMembershipCreated({
+        actorId: addedByUserId,
+        actorRole: options.actorRole,
+        membershipSnapshot: {
+          membershipId: membership.membershipId,
+          orgId: membership.orgId,
+          userId: membership.userId,
+          role: membership.role,
+        },
+        ipAddress: options.ipAddress,
+      });
+    }
 
     // Send notification to the new member (async, don't block)
     const sendNotification = async () => {
@@ -80,6 +95,8 @@ class OrganizationMembershipService {
   static async updateMemberRole(
     input: UpdateOrganizationMembershipInput,
     updatedByUserId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
   ): Promise<OrganizationMembership> {
     logger.debug(`[OrganizationMembershipService.updateMemberRole] Updating membership ${input.membershipId}`);
 
@@ -123,6 +140,20 @@ class OrganizationMembershipService {
     // Update the membership
     const updatedMembership = await OrganizationMembershipDAO.update(input);
 
+    // Audit log (fire-and-forget, uses already-fetched existingMembership to avoid a second DB lookup)
+    if (updatedByUserId && actorRole) {
+      AuditLogService.logOrgMembershipRoleChanged({
+        actorId: updatedByUserId,
+        actorRole,
+        membershipId: updatedMembership.membershipId,
+        orgId: updatedMembership.orgId,
+        targetUserId: updatedMembership.userId,
+        previousRole: existingMembership.role,
+        newRole: updatedMembership.role,
+        ipAddress,
+      });
+    }
+
     // Send notification to the member (async, don't block)
     // Don't notify if the member is updating their own role
     if (existingMembership.userId !== updatedByUserId) {
@@ -159,7 +190,12 @@ class OrganizationMembershipService {
    * @param membershipId - ID of the membership to remove
    * @param removedByUserId - Optional user ID of who is removing the member
    */
-  static async removeMember(membershipId: string, removedByUserId?: string): Promise<OrganizationMembership> {
+  static async removeMember(
+    membershipId: string,
+    removedByUserId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<OrganizationMembership> {
     logger.debug(`[OrganizationMembershipService.removeMember] Removing membership ${membershipId}`);
 
     // Get the existing membership to find the userId
@@ -193,7 +229,21 @@ class OrganizationMembershipService {
       }
     }
 
-    return OrganizationMembershipDAO.delete(membershipId);
+    const deleted = await OrganizationMembershipDAO.delete(membershipId);
+    if (removedByUserId && actorRole) {
+      AuditLogService.logOrgMembershipDeleted({
+        actorId: removedByUserId,
+        actorRole,
+        membershipSnapshot: {
+          membershipId: deleted.membershipId,
+          orgId: deleted.orgId,
+          userId: deleted.userId,
+          role: deleted.role,
+        },
+        ipAddress,
+      });
+    }
+    return deleted;
   }
 
   /**

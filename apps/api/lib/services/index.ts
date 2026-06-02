@@ -13,3 +13,7 @@ export { default as MediaService } from './media';
 export { default as EventMomentService } from './eventMoment';
 export { chatMessagingService, ChatMessagingService } from './chatMessaging';
 export { default as EmailService } from './email';
+export { default as AuditLogService } from './auditLog';
+export { default as VenueService } from './venue';
+export { default as EventCategoryService } from './eventCategory';
+export { default as EventCategoryGroupService } from './eventCategoryGroup';

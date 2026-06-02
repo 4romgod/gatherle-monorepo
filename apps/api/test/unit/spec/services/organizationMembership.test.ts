@@ -82,6 +82,15 @@ jest.mock('@/services/notification', () => ({
   notify: jest.fn().mockResolvedValue({}),
 }));
 
+jest.mock('@/services/auditLog', () => ({
+  __esModule: true,
+  default: {
+    logOrgMembershipCreated: jest.fn(),
+    logOrgMembershipRoleChanged: jest.fn(),
+    logOrgMembershipDeleted: jest.fn(),
+  },
+}));
+
 jest.mock('@/utils/logger', () => ({
   logger: {
     debug: jest.fn(),
@@ -93,9 +102,10 @@ jest.mock('@/utils/logger', () => ({
 
 import { OrganizationMembershipService } from '@/services';
 import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
+import AuditLogService from '@/services/auditLog';
 import NotificationService from '@/services/notification';
 import type { OrganizationMembership, Organization } from '@gatherle/commons/types';
-import { OrganizationRole, NotificationType, NotificationTargetType } from '@gatherle/commons/types';
+import { OrganizationRole, NotificationType, NotificationTargetType, UserRole } from '@gatherle/commons/types';
 
 describe('OrganizationMembershipService', () => {
   const mockMembership: OrganizationMembership = {
@@ -206,6 +216,39 @@ describe('OrganizationMembershipService', () => {
       });
 
       expect(result.role).toEqual(OrganizationRole.Admin);
+    });
+
+    it('fires audit log when actor and actorRole are provided', async () => {
+      (OrganizationMembershipDAO.create as jest.Mock).mockResolvedValue(mockMembership);
+
+      await OrganizationMembershipService.addMember(
+        { orgId: 'org-1', userId: 'user-1', role: OrganizationRole.Member },
+        'admin-user',
+        { actorRole: UserRole.Admin, ipAddress: '1.2.3.4' },
+      );
+
+      expect(AuditLogService.logOrgMembershipCreated).toHaveBeenCalledWith({
+        actorId: 'admin-user',
+        actorRole: UserRole.Admin,
+        membershipSnapshot: {
+          membershipId: mockMembership.membershipId,
+          orgId: mockMembership.orgId,
+          userId: mockMembership.userId,
+          role: mockMembership.role,
+        },
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('does not fire audit log when actorRole is absent', async () => {
+      (OrganizationMembershipDAO.create as jest.Mock).mockResolvedValue(mockMembership);
+
+      await OrganizationMembershipService.addMember(
+        { orgId: 'org-1', userId: 'user-1', role: OrganizationRole.Member },
+        'admin-user',
+      );
+
+      expect(AuditLogService.logOrgMembershipCreated).not.toHaveBeenCalled();
     });
 
     it('rejects assigning Owner role through member management', async () => {
@@ -420,6 +463,34 @@ describe('OrganizationMembershipService', () => {
 
       expect(OrganizationMembershipDAO.delete).toHaveBeenCalledWith('membership-1');
       expect(result).toEqual(mockMembership);
+    });
+
+    it('fires audit log when actor and actorRole are provided', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue(mockMembership);
+      (OrganizationMembershipDAO.delete as jest.Mock).mockResolvedValue(mockMembership);
+
+      await OrganizationMembershipService.removeMember('membership-1', 'admin-user', UserRole.Admin, '1.2.3.4');
+
+      expect(AuditLogService.logOrgMembershipDeleted).toHaveBeenCalledWith({
+        actorId: 'admin-user',
+        actorRole: UserRole.Admin,
+        membershipSnapshot: {
+          membershipId: mockMembership.membershipId,
+          orgId: mockMembership.orgId,
+          userId: mockMembership.userId,
+          role: mockMembership.role,
+        },
+        ipAddress: '1.2.3.4',
+      });
+    });
+
+    it('does not fire audit log when actorRole is absent', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue(mockMembership);
+      (OrganizationMembershipDAO.delete as jest.Mock).mockResolvedValue(mockMembership);
+
+      await OrganizationMembershipService.removeMember('membership-1', 'admin-user');
+
+      expect(AuditLogService.logOrgMembershipDeleted).not.toHaveBeenCalled();
     });
   });
 });

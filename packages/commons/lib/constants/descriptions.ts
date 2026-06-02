@@ -373,6 +373,7 @@ export const VENUE_DESCRIPTIONS = {
 export const RESOLVER_DESCRIPTIONS = {
   ADMIN: {
     readAdminDashboardStats: 'Read high-level admin dashboard statistics (events, categories, users).',
+    readAuditLogs: 'Read a paginated, filterable audit trail of privileged actions (admin only).',
   },
   EVENT: {
     createEvent: 'Create a new event. Requires input data for creating a new event and returns the created event.',
@@ -504,6 +505,33 @@ export const RESOLVER_DESCRIPTIONS = {
       'Enforces event existence, posting window, RSVP (Going/CheckedIn), and per-user rate limit ' +
       'before issuing the URL — preventing unauthorized MediaConvert job submissions.',
   },
+};
+
+export const AUDIT_LOG_DESCRIPTIONS = {
+  TYPE: 'An append-only record of an admin or privileged action.',
+  PAGE_TYPE: 'A paginated page of audit log entries.',
+  INPUT_TYPE: 'Filters for querying the audit log (admin only).',
+  AUDIT_ID: 'Unique identifier for this audit log entry.',
+  ACTOR_ID: 'ID of the user who performed the action.',
+  ACTOR_ROLE: 'Role of the actor at the time of the action.',
+  ACTION: 'The type of audited action.',
+  TARGET_TYPE: 'The type of entity that was acted upon.',
+  TARGET_ID: 'ID of the entity that was acted upon.',
+  BEFORE: 'Snapshot of the entity before the action.',
+  AFTER: 'Snapshot of the entity after the action.',
+  METADATA: 'Additional contextual metadata.',
+  IP_ADDRESS: 'IP address of the actor at the time of the action.',
+  CREATED_AT: 'Timestamp when this audit log entry was created.',
+  FILTER_ACTOR_ID: 'Filter by actor user ID.',
+  FILTER_TARGET_TYPE: 'Filter by target entity type.',
+  FILTER_TARGET_ID: 'Filter by target entity ID.',
+  FILTER_ACTION: 'Filter by audit action.',
+  FILTER_FROM_DATE: 'Return entries created at or after this date.',
+  FILTER_TO_DATE: 'Return entries created before this date.',
+  FILTER_LIMIT: 'Maximum number of entries to return (default 25, max 100).',
+  FILTER_CURSOR: 'Cursor for keyset pagination (createdAt of last item).',
+  PAGE_NEXT_CURSOR: 'Cursor to fetch the next page.',
+  PAGE_HAS_MORE: 'Whether there are more entries beyond this page.',
 };
 
 export const QUERY_DESCRIPTIONS = {

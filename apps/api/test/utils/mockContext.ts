@@ -102,6 +102,10 @@ export const createMockContext = (
     return keys.map((key) => mockData?.occurrenceParticipants?.get(key) ?? null);
   });
 
+  const eventSaveCountLoader = new DataLoader<string, number>(async (keys) => keys.map(() => 0));
+
+  const eventSavedByMeLoader = new DataLoader<string, boolean>(async (keys) => keys.map(() => false));
+
   return {
     token: undefined,
     req: undefined,
@@ -118,6 +122,8 @@ export const createMockContext = (
       eventOccurrenceParticipantsByOccurrence: eventOccurrenceParticipantsByOccurrenceLoader,
       eventOccurrenceParticipantCountByOccurrence: eventOccurrenceParticipantCountByOccurrenceLoader,
       myEventOccurrenceParticipant: myEventOccurrenceParticipantLoader,
+      eventSaveCount: eventSaveCountLoader,
+      eventSavedByMe: eventSavedByMeLoader,
     },
     ...overrides,
   };

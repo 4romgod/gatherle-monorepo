@@ -5,3 +5,5 @@ export * from './eventSeriesLoader';
 export * from './eventOccurrenceLoader';
 export * from './organizationLoader';
 export * from './eventOccurrenceParticipantLoader';
+export * from './eventSaveCountLoader';
+export * from './eventSavedByMeLoader';

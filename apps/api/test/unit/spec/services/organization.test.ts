@@ -54,6 +54,14 @@ jest.mock('@/utils/logger', () => ({
   },
 }));
 
+jest.mock('@/services/auditLog', () => ({
+  __esModule: true,
+  default: {
+    logOrgOwnershipTransferred: jest.fn(),
+    logOrgDeleted: jest.fn(),
+  },
+}));
+
 import {
   ActivityDAO,
   FollowDAO,
@@ -62,10 +70,11 @@ import {
   OrganizationMembershipDAO,
   UserDAO,
 } from '@/mongodb/dao';
+import AuditLogService from '@/services/auditLog';
 import OrganizationService from '@/services/organization';
 import { logger } from '@/utils/logger';
 import type { Organization, OrganizationMembership } from '@gatherle/commons/types';
-import { FollowTargetType, NotificationTargetType, OrganizationRole } from '@gatherle/commons/types';
+import { FollowTargetType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
 
 describe('OrganizationService', () => {
   const mockOrganization: Partial<Organization> = {
@@ -96,6 +105,32 @@ describe('OrganizationService', () => {
       'test-org',
     );
     expect(result).toEqual(mockOrganization);
+  });
+
+  it('fires audit log for deleteById when actor params are provided', async () => {
+    (OrganizationDAO.deleteOrganizationById as jest.Mock).mockResolvedValue(mockOrganization);
+
+    await OrganizationService.deleteById('org-1', 'actor-1', UserRole.Admin, '1.2.3.4');
+
+    expect(AuditLogService.logOrgDeleted).toHaveBeenCalledWith({
+      actorId: 'actor-1',
+      actorRole: UserRole.Admin,
+      orgId: mockOrganization.orgId,
+      orgSnapshot: {
+        orgId: mockOrganization.orgId,
+        name: mockOrganization.name,
+        ownerId: mockOrganization.ownerId,
+      },
+      ipAddress: '1.2.3.4',
+    });
+  });
+
+  it('does not fire audit log for deleteById when actor params are absent', async () => {
+    (OrganizationDAO.deleteOrganizationById as jest.Mock).mockResolvedValue(mockOrganization);
+
+    await OrganizationService.deleteById('org-1');
+
+    expect(AuditLogService.logOrgDeleted).not.toHaveBeenCalled();
   });
 
   it('returns the deleted organization even when a cleanup step fails', async () => {
@@ -161,7 +196,7 @@ describe('OrganizationService', () => {
     });
 
     it('promotes an existing member to Owner and demotes the previous owner to Admin', async () => {
-      const result = await OrganizationService.transferOwnership('org-1', 'new-owner', 'old-owner');
+      const result = await OrganizationService.transferOwnership('org-1', 'new-owner', 'old-owner', UserRole.Admin);
 
       expect(UserDAO.readUserById).toHaveBeenCalledWith('new-owner');
       expect(OrganizationMembershipDAO.update).toHaveBeenCalledWith({
@@ -175,6 +210,12 @@ describe('OrganizationService', () => {
       expect(OrganizationMembershipDAO.create).not.toHaveBeenCalled();
       expect(OrganizationDAO.updateOwnerId).toHaveBeenCalledWith('org-1', 'new-owner');
       expect(result.ownerId).toBe('new-owner');
+      expect(AuditLogService.logOrgOwnershipTransferred).toHaveBeenCalledWith(
+        expect.objectContaining({
+          previousOwnerId: 'old-owner',
+          newOwnerId: 'new-owner',
+        }),
+      );
     });
 
     it('creates an Owner membership when the new owner is not yet a member', async () => {

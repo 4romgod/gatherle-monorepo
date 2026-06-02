@@ -21,6 +21,8 @@ import {
   createEventOccurrenceParticipantsByOccurrenceLoader,
   createEventOccurrenceParticipantCountByOccurrenceLoader,
   createMyEventOccurrenceParticipantLoader,
+  createEventSaveCountLoader,
+  createEventSavedByMeLoader,
 } from '@/graphql/loaders';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
@@ -95,6 +97,8 @@ export const startExpressApolloServer = async (
             eventOccurrenceParticipantsByOccurrence: createEventOccurrenceParticipantsByOccurrenceLoader(),
             eventOccurrenceParticipantCountByOccurrence: createEventOccurrenceParticipantCountByOccurrenceLoader(),
             myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
+            eventSaveCount: createEventSaveCountLoader(),
+            eventSavedByMe: createEventSavedByMeLoader(user?.userId),
           },
         };
       },

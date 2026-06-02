@@ -56,6 +56,8 @@ export interface ServerContext {
     eventOccurrenceParticipantsByOccurrence: DataLoader<string, EventOccurrenceParticipant[]>;
     eventOccurrenceParticipantCountByOccurrence: DataLoader<string, number>;
     myEventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
+    eventSaveCount: DataLoader<string, number>;
+    eventSavedByMe: DataLoader<string, boolean>;
   };
 }
 

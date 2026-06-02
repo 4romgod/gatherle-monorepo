@@ -329,19 +329,6 @@ function EventsContent({
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
           <Box mb={4}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-              <Box>
-                <Typography
-                  variant="h3"
-                  fontWeight={700}
-                  className="glow-text"
-                  sx={{ mb: 1, fontSize: { xs: '1.75rem', md: '2.5rem' } }}
-                >
-                  Discover Events
-                </Typography>
-              </Box>
-            </Stack>
-
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
               <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />
             </Box>

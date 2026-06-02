@@ -16,7 +16,7 @@ import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { validateInput, validateMongodbId } from '@/validation';
 import { CreateOrganizationInputSchema, UpdateOrganizationInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES } from '@/validation';
-import { getAuthenticatedUser } from '@/utils';
+import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';
 import { OrganizationMembershipService, OrganizationService } from '@/services';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
@@ -106,9 +106,18 @@ export class OrganizationResolver {
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Mutation(() => Organization, { description: RESOLVER_DESCRIPTIONS.ORGANIZATION.deleteOrganizationById })
-  async deleteOrganizationById(@Arg('orgId', () => String) orgId: string): Promise<Organization> {
+  async deleteOrganizationById(
+    @Arg('orgId', () => String) orgId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<Organization> {
     validateMongodbId(orgId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', orgId));
-    const organization = await OrganizationService.deleteById(orgId);
+    const actor = getAuthenticatedUser(context);
+    const organization = await OrganizationService.deleteById(
+      orgId,
+      actor.userId,
+      actor.userRole,
+      getRequestIpFromContext(context),
+    );
     const keysToDelete = new Set<string>();
 
     if (organization.logo) {
@@ -146,7 +155,14 @@ export class OrganizationResolver {
     validateMongodbId(orgId, ERROR_MESSAGES.NOT_FOUND('Organization', 'ID', orgId));
     validateMongodbId(newOwnerUserId, ERROR_MESSAGES.NOT_FOUND('User', 'ID', newOwnerUserId));
     const user = getAuthenticatedUser(context);
-    return OrganizationService.transferOwnership(orgId, newOwnerUserId, user.userId);
+    const org = await OrganizationService.transferOwnership(
+      orgId,
+      newOwnerUserId,
+      user.userId,
+      user.userRole,
+      getRequestIpFromContext(context),
+    );
+    return org;
   }
 
   @Query(() => Organization, { description: RESOLVER_DESCRIPTIONS.ORGANIZATION.readOrganizationById })

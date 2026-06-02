@@ -171,6 +171,18 @@ describe('AuthAttemptDAO', () => {
       expect(AuthAttemptModelMock.findOneAndUpdate).toHaveBeenCalledTimes(2);
     });
 
+    it('throws when findOneAndUpdate returns null (upsert acknowledgment missing)', async () => {
+      AuthAttemptModelMock.findOneAndUpdate.mockReturnValue(createExecQuery(null));
+
+      await expect(AuthAttemptDAO.recordFailureForScopes(['email:user@example.com'])).rejects.toBeInstanceOf(
+        GraphQLError,
+      );
+      expect(logDaoError).toHaveBeenCalledWith('Error recording auth failure attempt', {
+        error: expect.objectContaining({ message: expect.stringContaining('Failed to update auth attempt record') }),
+        scopeKeys: ['email:user@example.com'],
+      });
+    });
+
     it('wraps unexpected persistence failures', async () => {
       const error = new Error('upsert failed');
       AuthAttemptModelMock.findOneAndUpdate.mockReturnValue(createExecQuery(error, true));

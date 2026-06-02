@@ -6,6 +6,7 @@ import type {
   SplitEventSeriesInput,
   UpdateEventInput,
 } from '@gatherle/commons/types';
+import { UserRole } from '@gatherle/commons/types';
 import {
   ActivityDAO,
   EventOccurrenceDAO,
@@ -15,6 +16,7 @@ import {
   NotificationDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
+import AuditLogService from './auditLog';
 import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual, getScheduleAnchorStartAt } from '@/utils';
 import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
 import { logger } from '@/utils/logger';
@@ -180,15 +182,45 @@ class EventSeriesService {
     return updatedEvent;
   }
 
-  static async deleteById(eventId: string): Promise<EventSeries> {
+  static async deleteById(
+    eventId: string,
+    actorId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<EventSeries> {
     const deletedEvent = await EventSeriesDAO.deleteEventById(eventId);
     await this.cleanupDeletedEventSideEffects(deletedEvent);
+    if (actorId && actorRole) {
+      AuditLogService.logEventDeleted({
+        actorId,
+        actorRole,
+        eventId: deletedEvent.eventId,
+        eventTitle: deletedEvent.title,
+        orgId: deletedEvent.orgId ?? undefined,
+        ipAddress,
+      });
+    }
     return deletedEvent;
   }
 
-  static async deleteBySlug(slug: string): Promise<EventSeries> {
+  static async deleteBySlug(
+    slug: string,
+    actorId?: string,
+    actorRole?: UserRole,
+    ipAddress?: string,
+  ): Promise<EventSeries> {
     const deletedEvent = await EventSeriesDAO.deleteEventBySlug(slug);
     await this.cleanupDeletedEventSideEffects(deletedEvent);
+    if (actorId && actorRole) {
+      AuditLogService.logEventDeleted({
+        actorId,
+        actorRole,
+        eventId: deletedEvent.eventId,
+        eventTitle: deletedEvent.title,
+        orgId: deletedEvent.orgId ?? undefined,
+        ipAddress,
+      });
+    }
     return deletedEvent;
   }
 

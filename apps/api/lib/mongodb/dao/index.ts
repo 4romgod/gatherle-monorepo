@@ -19,3 +19,4 @@ export { default as UserFeedDAO } from '@/mongodb/dao/userFeed';
 export { default as EmailVerificationTokenDAO } from '@/mongodb/dao/emailVerificationToken';
 export { default as PasswordResetTokenDAO } from '@/mongodb/dao/passwordResetToken';
 export { default as AuthAttemptDAO } from '@/mongodb/dao/authAttempt';
+export { default as AuditLogDAO } from '@/mongodb/dao/auditLog';

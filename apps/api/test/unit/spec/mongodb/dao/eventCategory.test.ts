@@ -18,6 +18,7 @@ jest.mock('@/mongodb/models', () => ({
     findByIdAndUpdate: jest.fn(),
     findByIdAndDelete: jest.fn(),
     findOneAndDelete: jest.fn(),
+    countDocuments: jest.fn(),
     find: jest.fn(),
   },
 }));
@@ -287,6 +288,30 @@ describe('EventCategoryDAO', () => {
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
       expect(EventCategoryModel.findByIdAndDelete).toHaveBeenCalledWith(eventCategoryId);
+    });
+  });
+
+  describe('count', () => {
+    it('counts all event categories when no filter is provided', async () => {
+      (EventCategoryModel.countDocuments as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(7),
+      });
+
+      const result = await EventCategoryDAO.count();
+
+      expect(EventCategoryModel.countDocuments).toHaveBeenCalledWith({});
+      expect(result).toBe(7);
+    });
+
+    it('applies a filter when provided', async () => {
+      (EventCategoryModel.countDocuments as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(3),
+      });
+
+      const result = await EventCategoryDAO.count({ active: true });
+
+      expect(EventCategoryModel.countDocuments).toHaveBeenCalledWith({ active: true });
+      expect(result).toBe(3);
     });
   });
 

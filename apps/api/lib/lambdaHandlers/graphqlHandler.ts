@@ -16,6 +16,8 @@ import {
   createEventOccurrenceParticipantsByOccurrenceLoader,
   createEventOccurrenceParticipantCountByOccurrenceLoader,
   createMyEventOccurrenceParticipantLoader,
+  createEventSaveCountLoader,
+  createEventSavedByMeLoader,
 } from '@/graphql/loaders';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
@@ -89,6 +91,8 @@ async function initializeResources() {
               eventOccurrenceParticipantsByOccurrence: createEventOccurrenceParticipantsByOccurrenceLoader(),
               eventOccurrenceParticipantCountByOccurrence: createEventOccurrenceParticipantCountByOccurrenceLoader(),
               myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
+              eventSaveCount: createEventSaveCountLoader(),
+              eventSavedByMe: createEventSavedByMeLoader(user?.userId),
             },
           };
         },
