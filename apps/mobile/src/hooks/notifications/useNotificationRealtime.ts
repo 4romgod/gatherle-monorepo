@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { createMobileNotificationRealtimeCacheHandlers } from '@/lib/notifications/notificationRealtimeCache';
 import {
+  isMobileRealtimeEventSavePayload,
   isMobileRealtimeEventRsvpPayload,
   isMobileRealtimeFollowRequestPayload,
+  isMobileRealtimeMomentCreatedPayload,
+  isMobileRealtimeMomentDeletedPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
   isMobileRealtimeNotificationsAllReadPayload,
@@ -37,6 +40,9 @@ export function useNotificationRealtime(enabled = true) {
   const handleNotificationsAllReadRef = useRef<((payload: unknown) => void) | null>(null);
   const handleFollowRequestRef = useRef<((payload: unknown) => void) | null>(null);
   const handleEventRsvpRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleEventSaveRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleMomentCreatedRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleMomentDeletedRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -45,15 +51,21 @@ export function useNotificationRealtime(enabled = true) {
       handleNotificationsAllReadRef.current = null;
       handleFollowRequestRef.current = null;
       handleEventRsvpRef.current = null;
+      handleEventSaveRef.current = null;
+      handleMomentCreatedRef.current = null;
+      handleMomentDeletedRef.current = null;
       return;
     }
 
     const {
+      handleRealtimeEventSave,
       handleRealtimeNotification,
       handleRealtimeNotificationDeleted,
       handleRealtimeNotificationsAllRead,
       handleRealtimeFollowRequest,
       handleRealtimeEventRsvp,
+      handleRealtimeMomentCreated,
+      handleRealtimeMomentDeleted,
     } = createMobileNotificationRealtimeCacheHandlers({
       client,
       userId,
@@ -98,6 +110,30 @@ export function useNotificationRealtime(enabled = true) {
 
       handleRealtimeEventRsvp(payload);
     };
+
+    handleEventSaveRef.current = (payload: unknown) => {
+      if (!isMobileRealtimeEventSavePayload(payload)) {
+        return;
+      }
+
+      handleRealtimeEventSave(payload);
+    };
+
+    handleMomentCreatedRef.current = (payload: unknown) => {
+      if (!isMobileRealtimeMomentCreatedPayload(payload)) {
+        return;
+      }
+
+      handleRealtimeMomentCreated(payload);
+    };
+
+    handleMomentDeletedRef.current = (payload: unknown) => {
+      if (!isMobileRealtimeMomentDeletedPayload(payload)) {
+        return;
+      }
+
+      handleRealtimeMomentDeleted(payload);
+    };
   }, [client, userId]);
 
   const sendNotificationSubscribe = useCallback(() => {
@@ -135,6 +171,22 @@ export function useNotificationRealtime(enabled = true) {
 
     if (realtimeEvent.type === 'event.rsvp.updated') {
       handleEventRsvpRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'event.save.updated') {
+      handleEventSaveRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'moment.created') {
+      handleMomentCreatedRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'moment.deleted') {
+      handleMomentDeletedRef.current?.(realtimeEvent.payload);
+      return;
     }
   }, []);
 

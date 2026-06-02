@@ -39,8 +39,11 @@ jest.mock('@/lib/utils/realtime', () => ({
 }));
 
 const mockCacheHandlers = {
+  handleRealtimeEventSave: jest.fn(),
   handleRealtimeEventRsvp: jest.fn(),
   handleRealtimeFollowRequest: jest.fn(),
+  handleRealtimeMomentCreated: jest.fn(),
+  handleRealtimeMomentDeleted: jest.fn(),
   handleRealtimeNotificationDeleted: jest.fn(),
   handleRealtimeNotification: jest.fn(),
   handleRealtimeNotificationUpdated: jest.fn(),
@@ -127,6 +130,50 @@ const validRsvpPayload = {
   },
   previousStatus: null,
   rsvpCount: 4,
+};
+
+const validEventSavePayload = {
+  eventId: 'event-1',
+  isSaved: true,
+  followId: 'follow-1',
+};
+
+const validMomentCreatedPayload = {
+  moment: {
+    momentId: 'moment-1',
+    eventId: 'event-1',
+    occurrenceId: 'occurrence-1',
+    authorId: 'user-1',
+    type: 'text',
+    state: 'Ready',
+    caption: null,
+    mediaUrl: null,
+    thumbnailUrl: null,
+    imageDisplayMode: null,
+    background: null,
+    durationSeconds: null,
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    createdAt: new Date().toISOString(),
+    author: {
+      userId: 'user-1',
+      username: 'alice',
+      given_name: 'Alice',
+      family_name: 'Smith',
+      profile_picture: null,
+    },
+    event: {
+      eventId: 'event-1',
+      slug: 'event-1',
+      title: 'Event 1',
+    },
+  },
+};
+
+const validMomentDeletedPayload = {
+  momentId: 'moment-1',
+  eventId: 'event-1',
+  occurrenceId: 'occurrence-1',
+  authorId: 'user-1',
 };
 
 describe('useNotificationRealtime', () => {
@@ -298,6 +345,42 @@ describe('useNotificationRealtime', () => {
     expect(mockCacheHandlers.handleRealtimeEventRsvp).toHaveBeenCalledWith(validRsvpPayload);
   });
 
+  it('dispatches event.save.updated event to event save handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'event.save.updated', payload: validEventSavePayload }));
+    });
+
+    expect(mockCacheHandlers.handleRealtimeEventSave).toHaveBeenCalledWith(validEventSavePayload);
+  });
+
+  it('dispatches moment.created event to moment created handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'moment.created', payload: validMomentCreatedPayload }));
+    });
+
+    expect(mockCacheHandlers.handleRealtimeMomentCreated).toHaveBeenCalledWith(validMomentCreatedPayload);
+  });
+
+  it('dispatches moment.deleted event to moment deleted handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'moment.deleted', payload: validMomentDeletedPayload }));
+    });
+
+    expect(mockCacheHandlers.handleRealtimeMomentDeleted).toHaveBeenCalledWith(validMomentDeletedPayload);
+  });
+
   it('ignores malformed JSON', () => {
     renderHook(() => useNotificationRealtime(true));
 
@@ -408,6 +491,45 @@ describe('useNotificationRealtime', () => {
 
     const { logger } = require('@/lib/utils');
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed event RSVP'));
+  });
+
+  it('warns when malformed event save payload received', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'event.save.updated', payload: { bad: 'data' } }));
+    });
+
+    const { logger } = require('@/lib/utils');
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed event save'));
+  });
+
+  it('warns when malformed moment created payload received', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'moment.created', payload: { bad: 'data' } }));
+    });
+
+    const { logger } = require('@/lib/utils');
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed moment created'));
+  });
+
+  it('warns when malformed moment deleted payload received', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'moment.deleted', payload: { bad: 'data' } }));
+    });
+
+    const { logger } = require('@/lib/utils');
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('malformed moment deleted'));
   });
 
   it('warns when malformed notification deletion payload received', () => {

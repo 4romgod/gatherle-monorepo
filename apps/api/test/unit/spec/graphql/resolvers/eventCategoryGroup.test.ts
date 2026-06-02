@@ -28,6 +28,7 @@ describe('EventCategoryGroupResolver mutations', () => {
     eventCategoryGroupId: 'group-001',
     name: 'Arts',
     slug: 'arts',
+    eventCategories: [],
   };
 
   const mockContext = {
@@ -41,7 +42,7 @@ describe('EventCategoryGroupResolver mutations', () => {
 
   describe('createEventCategoryGroup', () => {
     it('calls EventCategoryGroupService.create with actor context', async () => {
-      const input: CreateEventCategoryGroupInput = { name: 'Arts', slug: 'arts' };
+      const input: CreateEventCategoryGroupInput = { name: 'Arts', eventCategories: [] };
       (EventCategoryGroupService.create as jest.Mock).mockResolvedValue(mockGroup);
 
       const result = await resolver.createEventCategoryGroup(input, mockContext);

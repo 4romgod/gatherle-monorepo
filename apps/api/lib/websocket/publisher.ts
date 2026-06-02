@@ -1,5 +1,6 @@
 import type {
   Notification,
+  EventMoment,
   FollowApprovalStatus,
   FollowTargetType,
   ParticipantStatus,
@@ -78,6 +79,52 @@ interface EventRsvpUpdatedPayload {
   participant: EventRsvpRealtimeSnapshot;
   previousStatus: ParticipantStatus | null;
   rsvpCount: number;
+}
+
+interface EventSaveUpdatedPayload {
+  eventId: string;
+  isSaved: boolean;
+  followId?: string | null;
+}
+
+export interface RealtimeMomentSnapshot {
+  momentId: string;
+  eventId: string;
+  occurrenceId?: string | null;
+  authorId: string;
+  type: EventMoment['type'];
+  state: EventMoment['state'];
+  caption?: string | null;
+  mediaUrl?: string | null;
+  thumbnailUrl?: string | null;
+  imageDisplayMode?: EventMoment['imageDisplayMode'] | null;
+  background?: string | null;
+  durationSeconds?: number | null;
+  expiresAt: string;
+  createdAt: string;
+  author: {
+    userId: string;
+    username: string;
+    given_name: string;
+    family_name: string;
+    profile_picture?: string | null;
+  };
+  event: {
+    eventId: string;
+    slug: string;
+    title: string;
+  };
+}
+
+interface MomentCreatedPayload {
+  moment: RealtimeMomentSnapshot;
+}
+
+interface MomentDeletedPayload {
+  momentId: string;
+  eventId: string;
+  occurrenceId?: string | null;
+  authorId: string;
 }
 
 const publishToUserConnections = async <TPayload>(
@@ -293,6 +340,75 @@ export const publishEventRsvpUpdated = async (
       error,
       eventId: payload.participant.eventId,
       participantId: payload.participant.participantId,
+    });
+  }
+};
+
+export const publishEventSaveUpdated = async (
+  recipientUserId: string,
+  payload: EventSaveUpdatedPayload,
+): Promise<void> => {
+  try {
+    const eventPayload: RealtimeEventEnvelope<EventSaveUpdatedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.EVENT_SAVE_UPDATED,
+      payload,
+    );
+
+    await publishToUserConnections(recipientUserId, eventPayload, {
+      eventId: payload.eventId,
+      isSaved: payload.isSaved,
+      followId: payload.followId ?? null,
+    });
+  } catch (error) {
+    logger.error('Failed to publish event.save.updated event', {
+      error,
+      recipientUserId,
+      eventId: payload.eventId,
+      isSaved: payload.isSaved,
+    });
+  }
+};
+
+export const publishMomentCreated = async (recipientUserId: string, payload: MomentCreatedPayload): Promise<void> => {
+  try {
+    const eventPayload: RealtimeEventEnvelope<MomentCreatedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.MOMENT_CREATED,
+      payload,
+    );
+
+    await publishToUserConnections(recipientUserId, eventPayload, {
+      momentId: payload.moment.momentId,
+      eventId: payload.moment.eventId,
+      authorId: payload.moment.authorId,
+    });
+  } catch (error) {
+    logger.error('Failed to publish moment.created event', {
+      error,
+      recipientUserId,
+      momentId: payload.moment.momentId,
+      eventId: payload.moment.eventId,
+    });
+  }
+};
+
+export const publishMomentDeleted = async (recipientUserId: string, payload: MomentDeletedPayload): Promise<void> => {
+  try {
+    const eventPayload: RealtimeEventEnvelope<MomentDeletedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.MOMENT_DELETED,
+      payload,
+    );
+
+    await publishToUserConnections(recipientUserId, eventPayload, {
+      momentId: payload.momentId,
+      eventId: payload.eventId,
+      authorId: payload.authorId,
+    });
+  } catch (error) {
+    logger.error('Failed to publish moment.deleted event', {
+      error,
+      recipientUserId,
+      momentId: payload.momentId,
+      eventId: payload.eventId,
     });
   }
 };

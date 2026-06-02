@@ -103,6 +103,11 @@ jest.mock('@/utils/logger', () => ({
   initLogger: jest.fn(),
 }));
 
+jest.mock('@/websocket/publisher', () => ({
+  publishMomentCreated: jest.fn().mockResolvedValue(undefined),
+  publishMomentDeleted: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('@/clients/AWS/s3Client', () => ({
   getS3ObjectSize: jest.fn().mockResolvedValue(1000),
 }));
@@ -117,6 +122,7 @@ import {
   UserDAO,
 } from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
+import { publishMomentCreated, publishMomentDeleted } from '@/websocket/publisher';
 import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
@@ -134,8 +140,17 @@ describe('EventMomentService', () => {
   /** EventSeries ended 74 h ago — 72 h window has closed */
   const closedEndDate = new Date(now - 74 * 60 * 60 * 1000);
 
+  const mockAuthor = {
+    userId: 'user-1',
+    username: 'alice',
+    given_name: 'Alice',
+    family_name: 'Smith',
+    profile_picture: null,
+  };
+
   const mockEvent = {
     eventId: 'event-1',
+    slug: 'test-eventseries',
     title: 'Test EventSeries',
     primarySchedule: { endAt: futureEndDate },
     organizers: [{ user: 'organizer-1' }],
@@ -185,6 +200,31 @@ describe('EventMomentService', () => {
     endAt: futureEndDate,
   };
 
+  const createRealtimeMomentPayload = (moment: EventMoment) => ({
+    moment: {
+      momentId: moment.momentId,
+      eventId: moment.eventId,
+      occurrenceId: moment.occurrenceId ?? null,
+      authorId: moment.authorId,
+      type: moment.type,
+      state: moment.state,
+      caption: moment.caption ?? null,
+      mediaUrl: moment.mediaUrl ?? null,
+      thumbnailUrl: moment.thumbnailUrl ?? null,
+      imageDisplayMode: moment.imageDisplayMode ?? null,
+      background: moment.background ?? null,
+      durationSeconds: moment.durationSeconds ?? null,
+      expiresAt: moment.expiresAt.toISOString(),
+      createdAt: moment.createdAt.toISOString(),
+      author: mockAuthor,
+      event: {
+        eventId: mockEvent.eventId,
+        slug: mockEvent.slug,
+        title: mockEvent.title,
+      },
+    },
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -203,6 +243,7 @@ describe('EventMomentService', () => {
     (EventMomentDAO.readById as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
     (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(mockReservedVideoMoment);
     (EventMomentDAO.publishVideoMoment as jest.Mock).mockResolvedValue(mockPublishedVideoMoment);
+    (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockAuthor);
     (UserDAO.readUsersByIds as jest.Mock).mockResolvedValue([]);
     (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([]);
     (getS3ObjectSize as jest.Mock).mockResolvedValue(1000);
@@ -213,6 +254,7 @@ describe('EventMomentService', () => {
 
     it('creates a text moment successfully', async () => {
       const result = await EventMomentService.create(textInput, 'user-1');
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(EventMomentDAO.create).toHaveBeenCalledWith(
         textInput,
@@ -222,6 +264,7 @@ describe('EventMomentService', () => {
         mockOccurrence.occurrenceId,
       );
       expect(result).toEqual(mockMoment);
+      expect(publishMomentCreated).toHaveBeenCalledWith('user-1', createRealtimeMomentPayload(mockMoment));
     });
 
     it('builds a CloudFront mediaUrl for an image moment', async () => {
@@ -254,6 +297,7 @@ describe('EventMomentService', () => {
       };
 
       const result = await EventMomentService.create(videoInput, 'user-1');
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(getS3ObjectSize).toHaveBeenCalledWith('uploads/clip.mp4');
       expect(EventMomentDAO.publishVideoMoment).toHaveBeenCalledWith('video-moment-1', {
@@ -264,6 +308,10 @@ describe('EventMomentService', () => {
       });
       expect(EventMomentDAO.create).not.toHaveBeenCalled();
       expect(result).toEqual(mockPublishedVideoMoment);
+      expect(publishMomentCreated).toHaveBeenCalledWith(
+        'user-1',
+        createRealtimeMomentPayload(mockPublishedVideoMoment),
+      );
     });
 
     it('rejects a video moment without a reserved momentId', async () => {
@@ -571,6 +619,12 @@ describe('EventMomentService', () => {
 
       expect(EventMomentDAO.delete).toHaveBeenCalledWith('moment-1');
       expect(result).toBe(true);
+      expect(publishMomentDeleted).toHaveBeenCalledWith('user-1', {
+        momentId: 'moment-1',
+        eventId: 'event-1',
+        occurrenceId: mockMoment.occurrenceId,
+        authorId: 'user-1',
+      });
     });
 
     it('throws NOT_FOUND when moment does not exist', async () => {
@@ -593,6 +647,12 @@ describe('EventMomentService', () => {
 
       expect(EventMomentDAO.delete).toHaveBeenCalledWith('moment-1');
       expect(result).toBe(true);
+      expect(publishMomentDeleted).toHaveBeenCalledWith('organizer-1', {
+        momentId: 'moment-1',
+        eventId: 'event-1',
+        occurrenceId: othersMoment.occurrenceId,
+        authorId: 'other-user',
+      });
     });
 
     it('throws UNAUTHORIZED when caller is neither author nor organizer', async () => {

@@ -19,6 +19,7 @@ import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import { logger } from '@/utils/logger';
+import { publishMomentCreated, publishMomentDeleted, type RealtimeMomentSnapshot } from '@/websocket/publisher';
 import EventOccurrenceService from './eventOccurrence';
 
 const ALLOWED_RSVP_STATUSES: ParticipantStatus[] = [ParticipantStatus.Going, ParticipantStatus.CheckedIn];
@@ -90,6 +91,42 @@ function normalizeRefId(value: unknown): string | null {
 
 function isNonEmptyString(value: string | null | undefined): value is string {
   return typeof value === 'string' && value.length > 0;
+}
+
+async function buildRealtimeMomentSnapshot(moment: EventMoment): Promise<RealtimeMomentSnapshot> {
+  const [author, event] = await Promise.all([
+    UserDAO.readUserById(moment.authorId),
+    EventSeriesDAO.readEventById(moment.eventId),
+  ]);
+
+  return {
+    momentId: moment.momentId,
+    eventId: moment.eventId,
+    occurrenceId: moment.occurrenceId ?? null,
+    authorId: moment.authorId,
+    type: moment.type,
+    state: moment.state,
+    caption: moment.caption ?? null,
+    mediaUrl: moment.mediaUrl ?? null,
+    thumbnailUrl: moment.thumbnailUrl ?? null,
+    imageDisplayMode: moment.imageDisplayMode ?? null,
+    background: moment.background ?? null,
+    durationSeconds: moment.durationSeconds ?? null,
+    expiresAt: moment.expiresAt.toISOString(),
+    createdAt: moment.createdAt.toISOString(),
+    author: {
+      userId: author.userId,
+      username: author.username,
+      given_name: author.given_name,
+      family_name: author.family_name,
+      profile_picture: author.profile_picture ?? null,
+    },
+    event: {
+      eventId: event.eventId,
+      slug: event.slug,
+      title: event.title,
+    },
+  };
 }
 
 function rankMomentCandidate(params: {
@@ -414,6 +451,20 @@ class EventMomentService {
       rawS3Key: input.mediaKey,
     });
 
+    void (async () => {
+      try {
+        const realtimeMoment = await buildRealtimeMomentSnapshot(moment);
+        await publishMomentCreated(callerId, { moment: realtimeMoment });
+      } catch (error) {
+        logger.warn('[EventMomentService] Failed to publish moment created realtime event', {
+          error,
+          callerId,
+          momentId: moment.momentId,
+          eventId: moment.eventId,
+        });
+      }
+    })();
+
     return moment;
   }
 
@@ -495,6 +546,20 @@ class EventMomentService {
       rawS3Key,
     });
 
+    void (async () => {
+      try {
+        const realtimeMoment = await buildRealtimeMomentSnapshot(moment);
+        await publishMomentCreated(callerId, { moment: realtimeMoment });
+      } catch (error) {
+        logger.warn('[EventMomentService] Failed to publish moment created realtime event', {
+          error,
+          callerId,
+          momentId: moment.momentId,
+          eventId: moment.eventId,
+        });
+      }
+    })();
+
     return moment;
   }
 
@@ -509,7 +574,25 @@ class EventMomentService {
     }
 
     if (moment.authorId === callerId) {
-      return EventMomentDAO.delete(momentId);
+      const wasDeleted = await EventMomentDAO.delete(momentId);
+
+      if (wasDeleted) {
+        publishMomentDeleted(callerId, {
+          momentId: moment.momentId,
+          eventId: moment.eventId,
+          occurrenceId: moment.occurrenceId ?? null,
+          authorId: moment.authorId,
+        }).catch((error) => {
+          logger.warn('[EventMomentService] Failed to publish moment deleted realtime event', {
+            error,
+            callerId,
+            momentId: moment.momentId,
+            eventId: moment.eventId,
+          });
+        });
+      }
+
+      return wasDeleted;
     }
 
     // Allow event organizers to remove moments from their event.
@@ -532,7 +615,25 @@ class EventMomentService {
       throw CustomError('You are not authorized to delete this moment', ErrorTypes.UNAUTHORIZED);
     }
 
-    return EventMomentDAO.delete(momentId);
+    const wasDeleted = await EventMomentDAO.delete(momentId);
+
+    if (wasDeleted) {
+      publishMomentDeleted(callerId, {
+        momentId: moment.momentId,
+        eventId: moment.eventId,
+        occurrenceId: moment.occurrenceId ?? null,
+        authorId: moment.authorId,
+      }).catch((error) => {
+        logger.warn('[EventMomentService] Failed to publish moment deleted realtime event', {
+          error,
+          callerId,
+          momentId: moment.momentId,
+          eventId: moment.eventId,
+        });
+      });
+    }
+
+    return wasDeleted;
   }
 
   /**

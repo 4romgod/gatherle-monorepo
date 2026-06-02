@@ -142,7 +142,7 @@ describe('EventSeries', () => {
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },
         location: { locationType: 'unknown' },
-        status: EventStatus.Scheduled,
+        status: EventStatus.Upcoming,
         eventCategories: [mockID],
         organizers: [{ user: mockID, role: 'Host' }],
       });
@@ -162,7 +162,7 @@ describe('EventSeries', () => {
           recurrenceRule: 'FREQ=DAILY;COUNT=1',
         },
         location: { locationType: 'venue' },
-        status: EventStatus.Scheduled,
+        status: EventStatus.Upcoming,
         eventCategories: [mockID],
         organizers: [{ user: mockID, role: 'Host' }],
       });

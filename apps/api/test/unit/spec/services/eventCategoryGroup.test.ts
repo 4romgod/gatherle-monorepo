@@ -33,9 +33,10 @@ describe('EventCategoryGroupService', () => {
     eventCategoryGroupId: 'group-1',
     name: 'Arts',
     slug: 'arts',
+    eventCategories: [],
   };
 
-  const createInput: CreateEventCategoryGroupInput = { name: 'Arts', slug: 'arts' };
+  const createInput: CreateEventCategoryGroupInput = { name: 'Arts', eventCategories: [] };
 
   afterEach(() => {
     jest.clearAllMocks();

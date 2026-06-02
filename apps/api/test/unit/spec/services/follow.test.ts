@@ -97,6 +97,7 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 jest.mock('@/websocket/publisher', () => ({
+  publishEventSaveUpdated: jest.fn().mockResolvedValue(undefined),
   publishFollowRequestCreated: jest.fn().mockResolvedValue(undefined),
   publishFollowRequestUpdated: jest.fn().mockResolvedValue(undefined),
 }));
@@ -104,7 +105,11 @@ jest.mock('@/websocket/publisher', () => ({
 import { FollowService } from '@/services';
 import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
-import { publishFollowRequestCreated, publishFollowRequestUpdated } from '@/websocket/publisher';
+import {
+  publishEventSaveUpdated,
+  publishFollowRequestCreated,
+  publishFollowRequestUpdated,
+} from '@/websocket/publisher';
 import { CustomError, ErrorTypes } from '@/utils';
 import type { Follow, User, Organization, EventSeries } from '@gatherle/commons/types';
 import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@gatherle/commons/types';
@@ -366,6 +371,27 @@ describe('FollowService', () => {
         );
       });
 
+      it('publishes event.save.updated for cross-device sync', async () => {
+        const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
+
+        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
+
+        await FollowService.follow({
+          followerUserId: 'user-1',
+          targetType: FollowTargetType.EventSeries,
+          targetId: 'event-1',
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(publishEventSaveUpdated).toHaveBeenCalledWith('user-1', {
+          eventId: 'event-1',
+          isSaved: true,
+          followId: eventFollow.followId,
+        });
+      });
+
       it('does not send notification for event saves', async () => {
         const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
@@ -403,6 +429,25 @@ describe('FollowService', () => {
         targetId: 'user-2',
       });
       expect(result).toBe(true);
+    });
+
+    it('publishes event.save.updated=false when an event is unsaved', async () => {
+      (FollowDAO.remove as jest.Mock).mockResolvedValue(true);
+
+      const result = await FollowService.unfollow({
+        followerUserId: 'user-1',
+        targetType: FollowTargetType.EventSeries,
+        targetId: 'event-1',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(result).toBe(true);
+      expect(publishEventSaveUpdated).toHaveBeenCalledWith('user-1', {
+        eventId: 'event-1',
+        isSaved: false,
+        followId: null,
+      });
     });
   });
 

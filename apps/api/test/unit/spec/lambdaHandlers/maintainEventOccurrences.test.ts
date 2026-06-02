@@ -82,7 +82,10 @@ describe('maintainEventOccurrencesHandler', () => {
       logger,
       maintainEventOccurrencesHandler,
     } = await loadAll();
-    (EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows as jest.Mock)
+    const maintenanceServiceMock = EventOccurrenceMaintenanceService as unknown as {
+      maintainAllOccurrenceWindows: jest.Mock;
+    };
+    maintenanceServiceMock.maintainAllOccurrenceWindows
       .mockResolvedValueOnce({
         processedSeriesCount: 5,
         syncedSeriesCount: 2,
@@ -116,12 +119,12 @@ describe('maintainEventOccurrencesHandler', () => {
 
     expect(getConfigValue).toHaveBeenCalledWith('MONGO_DB_URL');
     expect(MongoDbClient.connectToDatabase).toHaveBeenCalledWith('mongodb://test');
-    expect(EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows).toHaveBeenNthCalledWith(1, {
+    expect(maintenanceServiceMock.maintainAllOccurrenceWindows).toHaveBeenNthCalledWith(1, {
       limit: 250,
       thresholdDays: 21,
       dryRun: false,
     });
-    expect(EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows).toHaveBeenNthCalledWith(2, {
+    expect(maintenanceServiceMock.maintainAllOccurrenceWindows).toHaveBeenNthCalledWith(2, {
       limit: 250,
       thresholdDays: 21,
       dryRun: true,
@@ -153,9 +156,10 @@ describe('maintainEventOccurrencesHandler', () => {
       logger,
       maintainEventOccurrencesHandler,
     } = await loadAll();
-    (EventOccurrenceMaintenanceService.maintainAllOccurrenceWindows as jest.Mock).mockRejectedValueOnce(
-      new Error('maintenance failed'),
-    );
+    const maintenanceServiceMock = EventOccurrenceMaintenanceService as unknown as {
+      maintainAllOccurrenceWindows: jest.Mock;
+    };
+    maintenanceServiceMock.maintainAllOccurrenceWindows.mockRejectedValueOnce(new Error('maintenance failed'));
 
     await expect(maintainEventOccurrencesHandler({}, context)).rejects.toThrow('maintenance failed');
 

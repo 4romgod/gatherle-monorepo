@@ -78,6 +78,7 @@ describe('EventSeriesResolver delete mutations', () => {
     eventId: 'event-001',
     slug: 'test-event',
     title: 'Test Event',
+    description: 'Test event description',
     status: 'Upcoming' as any,
     eventCategories: [],
     organizers: [],
@@ -85,6 +86,7 @@ describe('EventSeriesResolver delete mutations', () => {
       anchorStartAt: new Date(),
       occurrenceDurationMinutes: 60,
       timezone: 'UTC',
+      recurrenceRule: 'FREQ=DAILY;COUNT=1',
     },
     location: { type: 'Online', coordinates: [0, 0] } as any,
   } as EventSeries;

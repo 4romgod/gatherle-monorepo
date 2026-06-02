@@ -169,12 +169,14 @@ describe('EventOccurrenceParticipantResolver', () => {
         keys.map(() => [participant]),
       ),
       eventOccurrenceParticipantCountByOccurrence: new DataLoader(async (keys: readonly string[]) => keys.map(() => 1)),
+      eventSaveCount: new DataLoader(async (keys: readonly string[]) => keys.map(() => 0)),
+      eventSavedByMe: new DataLoader(async (keys: readonly string[]) => keys.map(() => false)),
       myEventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => {
         const expectedKey = buildMyEventOccurrenceParticipantLoadKey(occurrence.occurrenceId, user.userId);
         return keys.map((key) => (key === expectedKey ? participant : null));
       }),
     },
-  } as ServerContext;
+  } as unknown as ServerContext;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -232,7 +234,7 @@ describe('EventOccurrenceParticipantResolver', () => {
         ...context.loaders,
         myEventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => keys.map(() => null)),
       },
-    } as ServerContext;
+    } as unknown as ServerContext;
 
     const result = await resolver.myEventOccurrenceRsvpStatus(occurrence.occurrenceId, emptyContext);
 

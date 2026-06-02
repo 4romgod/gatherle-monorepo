@@ -15,8 +15,11 @@ import { WEBSOCKET_URL } from '@/lib/constants';
 import { logger, normalizeWebSocketBaseUrl } from '@/lib/utils';
 import { createNotificationRealtimeCacheHandlers } from './notificationRealtimeCache';
 import {
+  isRealtimeEventSavePayload,
   isRealtimeEventRsvpPayload,
   isRealtimeFollowRequestPayload,
+  isRealtimeMomentCreatedPayload,
+  isRealtimeMomentDeletedPayload,
   isRealtimeNotificationDeletedPayload,
   isRealtimeNotificationPayload,
   isRealtimeNotificationsAllReadPayload,
@@ -41,6 +44,9 @@ export function useNotificationRealtime(enabled: boolean = true) {
   const handleRealtimeNotificationRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeNotificationDeletedRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeNotificationsAllReadRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeEventSaveRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeMomentCreatedRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeMomentDeletedRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -49,6 +55,9 @@ export function useNotificationRealtime(enabled: boolean = true) {
       handleRealtimeNotificationRef.current = null;
       handleRealtimeNotificationDeletedRef.current = null;
       handleRealtimeNotificationsAllReadRef.current = null;
+      handleRealtimeEventSaveRef.current = null;
+      handleRealtimeMomentCreatedRef.current = null;
+      handleRealtimeMomentDeletedRef.current = null;
       return;
     }
 
@@ -59,6 +68,9 @@ export function useNotificationRealtime(enabled: boolean = true) {
       handleRealtimeNotificationDeleted,
       handleRealtimeNotificationUpdated,
       handleRealtimeNotificationsAllRead,
+      handleRealtimeEventSave,
+      handleRealtimeMomentCreated,
+      handleRealtimeMomentDeleted,
     } = createNotificationRealtimeCacheHandlers({
       client,
       userId,
@@ -113,6 +125,33 @@ export function useNotificationRealtime(enabled: boolean = true) {
 
       handleRealtimeNotificationsAllRead(payload);
     };
+
+    handleRealtimeEventSaveRef.current = (payload: unknown) => {
+      if (!isRealtimeEventSavePayload(payload)) {
+        logger.warn('Received malformed event save websocket payload');
+        return;
+      }
+
+      handleRealtimeEventSave(payload);
+    };
+
+    handleRealtimeMomentCreatedRef.current = (payload: unknown) => {
+      if (!isRealtimeMomentCreatedPayload(payload)) {
+        logger.warn('Received malformed moment created websocket payload');
+        return;
+      }
+
+      handleRealtimeMomentCreated(payload);
+    };
+
+    handleRealtimeMomentDeletedRef.current = (payload: unknown) => {
+      if (!isRealtimeMomentDeletedPayload(payload)) {
+        logger.warn('Received malformed moment deleted websocket payload');
+        return;
+      }
+
+      handleRealtimeMomentDeleted(payload);
+    };
   }, [client, userId]);
 
   const sendNotificationSubscribe = useCallback(() => {
@@ -154,6 +193,21 @@ export function useNotificationRealtime(enabled: boolean = true) {
 
     if (parsed.type === 'event.rsvp.updated') {
       handleRealtimeEventRsvpRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'event.save.updated') {
+      handleRealtimeEventSaveRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'moment.created') {
+      handleRealtimeMomentCreatedRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'moment.deleted') {
+      handleRealtimeMomentDeletedRef.current?.(parsed.payload);
     }
   }, []);
 

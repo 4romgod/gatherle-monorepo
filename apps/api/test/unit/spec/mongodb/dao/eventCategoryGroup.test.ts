@@ -31,7 +31,9 @@ const EventCategoryGroupModelMock = EventCategoryGroupModel as unknown as jest.M
   find: jest.Mock;
 };
 
-const mockConstructedEventCategoryGroup = (payload: { toObject: jest.Mock; save?: jest.Mock }) => {
+const mockConstructedEventCategoryGroup = (
+  payload: Record<string, unknown> & { toObject: jest.Mock; save?: jest.Mock },
+) => {
   const document = {
     save: jest.fn().mockResolvedValue(undefined),
     ...payload,

@@ -77,7 +77,7 @@ const waitForSocketClose = (
     };
 
     // Fast rejection paths can close the socket before the caller attaches listeners.
-    if (socket.readyState === WebSocket.CLOSED) {
+    if ((socket.readyState as number) === WebSocket.CLOSED) {
       resolveFromSocketState();
       return;
     }
@@ -106,7 +106,7 @@ const waitForSocketClose = (
     socket.once('close', handleClose);
     socket.once('error', handleError);
 
-    if (socket.readyState === WebSocket.CLOSED) {
+    if ((socket.readyState as number) === WebSocket.CLOSED) {
       cleanup();
       resolveFromSocketState();
     }

@@ -41,6 +41,8 @@ describe('EventCategoryResolver mutations', () => {
     eventCategoryId: 'cat-001',
     name: 'Music',
     slug: 'music',
+    iconName: 'music-note',
+    description: 'Music events',
   };
 
   const mockContext = {
@@ -56,7 +58,11 @@ describe('EventCategoryResolver mutations', () => {
 
   describe('createEventCategory', () => {
     it('validates input and calls EventCategoryService.create with actor context', async () => {
-      const input: CreateEventCategoryInput = { name: 'Music', slug: 'music' };
+      const input: CreateEventCategoryInput = {
+        name: 'Music',
+        iconName: 'music-note',
+        description: 'Music events',
+      };
       (EventCategoryService.create as jest.Mock).mockResolvedValue(mockCategory);
 
       const result = await resolver.createEventCategory(input, mockContext);

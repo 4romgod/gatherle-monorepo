@@ -140,8 +140,8 @@ describe('EventOccurrenceParticipantService', () => {
     waitlistEnabled: true,
     allowGuestPlusOnes: false,
     primarySchedule: {
-      startAt: new Date('2026-05-06T16:00:00.000Z'),
-      endAt: new Date('2026-05-06T18:00:00.000Z'),
+      anchorStartAt: new Date('2026-05-06T16:00:00.000Z'),
+      occurrenceDurationMinutes: 120,
       timezone: 'Africa/Johannesburg',
       recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
     },
