@@ -502,6 +502,7 @@ jobs:
           NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url || needs.resolve-deploy-context.outputs.media_cdn_url }}
           GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
           GOOGLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_WEB }}
+          APPLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.APPLE_OAUTH_CLIENT_SECRET_WEB }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
@@ -511,6 +512,7 @@ jobs:
             --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
             --env GOOGLE_OAUTH_CLIENT_ID_WEB="$GOOGLE_OAUTH_CLIENT_ID_WEB" \
             --env GOOGLE_OAUTH_CLIENT_SECRET_WEB="$GOOGLE_OAUTH_CLIENT_SECRET_WEB" \
+            --env APPLE_OAUTH_CLIENT_SECRET_WEB="$APPLE_OAUTH_CLIENT_SECRET_WEB" \
             --env NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
             > deployment-url.txt
           DEPLOYMENT_URL=$(grep -Eo 'https://[^[:space:]]+' deployment-url.txt | grep -Ev '^https://vercel\.com/' | tail -n 1)
@@ -672,14 +674,14 @@ jobs:
           mkdir -p credentials/android
           printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > credentials/android/ci-release.keystore.jks
 
-      - name: Prepare Android Release Signing
+      - name: Prepare Android Signing
         working-directory: ./apps/mobile
         env:
           ANDROID_RELEASE_KEYSTORE_PATH: credentials/android/ci-release.keystore.jks
           ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
           ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
           ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
-        run: npm run android:prepare:release-signing
+        run: npm run android:prepare:signing
 
       - name: Cache Gradle Packages
         uses: actions/cache@v4

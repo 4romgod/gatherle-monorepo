@@ -127,6 +127,53 @@ export const GetUserProfileByIdDocument = graphql(`
   }
 `);
 
+export const GetAccountProfileByIdDocument = graphql(`
+  query GetAccountProfileById($userId: String!) {
+    readUserById(userId: $userId) {
+      userId
+      email
+      emailVerified
+      hasLocalPassword
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      userRole
+      followersCount
+      followingCount
+      defaultVisibility
+      followPolicy
+      followersListVisibility
+      followingListVisibility
+      shareRSVPByDefault
+      shareCheckinsByDefault
+      preferences {
+        communicationPrefs {
+          emailEnabled
+          pushEnabled
+        }
+      }
+      location {
+        city
+        state
+        country
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
+
 export const GetUserByUsernameDocument = graphql(`
   query GetUserByUsername($username: String!) {
     readUserByUsername(username: $username) {

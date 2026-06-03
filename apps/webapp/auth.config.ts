@@ -3,7 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { LoginUserInputSchema } from './data/validation';
 import { loginUserGlobalAction } from './data/actions/global/auth/login';
-import { NEXTAUTH_SECRET } from '@/lib/constants';
+import { APPLE_OAUTH_CLIENT_ID_WEB, NEXTAUTH_SECRET } from '@/lib/constants';
 import type { NextAuthConfig } from 'next-auth';
 
 export default {
@@ -38,8 +38,8 @@ export default {
       userinfo: 'https://openidconnect.googleapis.com/v1/userinfo',
     }),
     AppleProvider({
-      clientId: process.env.APPLE_CLIENT_ID,
-      clientSecret: process.env.APPLE_CLIENT_SECRET,
+      clientId: APPLE_OAUTH_CLIENT_ID_WEB,
+      clientSecret: process.env.APPLE_OAUTH_CLIENT_SECRET_WEB,
       authorization: {
         params: {
           scope: 'name email',

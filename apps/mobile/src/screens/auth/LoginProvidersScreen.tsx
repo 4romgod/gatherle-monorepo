@@ -11,9 +11,11 @@ import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
+import { signInWithApple, type AppleOAuthIdentity } from '@/lib/auth/appleSignIn';
 import { getApolloErrorMessage } from '@/lib/auth/apolloErrors';
 import {
   configureMobileGoogleSignIn,
+  getGoogleSignInDeveloperErrorMessage,
   getGoogleSignInUnavailableMessage,
   isGoogleSignInConfiguredForPlatform,
 } from '@/lib/auth/googleSignIn';
@@ -60,6 +62,7 @@ export function LoginProvidersScreen() {
   const { theme } = useAppTheme();
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [loginWithOAuth] = useMutation(LoginWithOAuthDocument);
   const redirectTab = route.params?.redirectTab;
   const googleConfigured = isGoogleSignInConfiguredForPlatform();
@@ -78,6 +81,37 @@ export function LoginProvidersScreen() {
   const openEmailLogin = () => {
     setProviderNotice(null);
     navigation.navigate('EmailLogin', redirectTab ? { redirectTab } : undefined);
+  };
+
+  const completeOAuthLogin = async ({
+    provider,
+    identity,
+  }: {
+    provider: OAuthProvider;
+    identity: AppleOAuthIdentity & { profile_picture?: string | null };
+  }) => {
+    const response = await loginWithOAuth({
+      variables: {
+        input: {
+          idToken: identity.idToken,
+          provider,
+          ...(identity.email ? { email: identity.email } : {}),
+          ...(identity.given_name ? { given_name: identity.given_name } : {}),
+          ...(identity.family_name ? { family_name: identity.family_name } : {}),
+          ...(identity.profile_picture ? { profile_picture: identity.profile_picture } : {}),
+        },
+      },
+    });
+
+    if (!response.data?.loginWithOAuth) {
+      throw new Error(`${provider} sign-in failed. Please try again.`);
+    }
+
+    signIn(response.data.loginWithOAuth);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
+    });
   };
 
   const handleGoogleLogin = async () => {
@@ -106,24 +140,11 @@ export function LoginProvidersScreen() {
         return;
       }
 
-      const response = await loginWithOAuth({
-        variables: {
-          input: {
-            idToken,
-            provider: OAuthProvider.Google,
-          },
+      await completeOAuthLogin({
+        identity: {
+          idToken,
         },
-      });
-
-      if (!response.data?.loginWithOAuth) {
-        setProviderNotice('Google sign-in failed. Please try again.');
-        return;
-      }
-
-      signIn(response.data.loginWithOAuth);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
+        provider: OAuthProvider.Google,
       });
     } catch (error) {
       if (isErrorWithCode(error)) {
@@ -138,9 +159,7 @@ export function LoginProvidersScreen() {
         }
 
         if (error.code === GOOGLE_DEVELOPER_ERROR_CODE || error.message.includes('DEVELOPER_ERROR')) {
-          setProviderNotice(
-            'Google sign-in is misconfigured for this Android build. Confirm the Android OAuth client matches this app package name and signing SHA.',
-          );
+          setProviderNotice(getGoogleSignInDeveloperErrorMessage());
           return;
         }
       }
@@ -150,6 +169,27 @@ export function LoginProvidersScreen() {
       return;
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setProviderNotice(null);
+    setAppleLoading(true);
+
+    try {
+      const identity = await signInWithApple();
+      if (!identity) {
+        return;
+      }
+
+      await completeOAuthLogin({
+        identity,
+        provider: OAuthProvider.Apple,
+      });
+    } catch (error) {
+      setProviderNotice(getApolloErrorMessage(error as ApolloError) ?? 'Apple sign-in failed. Please try again.');
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -175,9 +215,10 @@ export function LoginProvidersScreen() {
           onPress={() => void handleGoogleLogin()}
         />
         <ProviderOption
+          disabled={appleLoading}
           icon={<AntDesign color={theme.colors.textPrimary} name="apple" size={22} />}
-          label="Continue with Apple"
-          onPress={() => setProviderNotice('Apple sign-in UI is ready. OAuth wiring is the next step.')}
+          label={appleLoading ? 'Connecting to Apple...' : 'Continue with Apple'}
+          onPress={() => void handleAppleLogin()}
         />
       </View>
 

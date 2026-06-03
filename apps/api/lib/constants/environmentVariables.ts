@@ -23,7 +23,6 @@ const BaseEnvSchema = z.object({
   GOOGLE_OAUTH_CLIENT_ID_WEB: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_ANDROID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_IOS: z.string().optional(),
-  APPLE_CLIENT_ID: z.string().optional(),
   LOG_LEVEL: z
     .string()
     .toLowerCase()
@@ -150,5 +149,4 @@ export const GOOGLE_CLIENT_IDS = [
       .map((clientId) => clientId.trim()),
   ),
 ];
-export const APPLE_CLIENT_ID = env.APPLE_CLIENT_ID;
 export const LOG_LEVEL = env.LOG_LEVEL;

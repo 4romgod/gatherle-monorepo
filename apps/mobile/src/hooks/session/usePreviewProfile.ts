@@ -1,19 +1,21 @@
 import { useQuery } from '@apollo/client';
-import { GetUserByUsernameDocument } from '@data/graphql/query/User/query';
+import { GetUserByIdDocument } from '@data/graphql/query/User/query';
+import { getApolloAuthContext } from '@/lib/auth';
 
-export function usePreviewProfile(username: string | null, enabled = true) {
-  const { data, error, loading, refetch } = useQuery(GetUserByUsernameDocument, {
+export function usePreviewProfile(userId: string | null, authToken: string | null, enabled = true) {
+  const { data, error, loading, refetch } = useQuery(GetUserByIdDocument, {
     fetchPolicy: 'cache-and-network',
-    skip: !enabled || !username,
+    skip: !enabled || !userId,
     variables: {
-      username: username ?? '',
+      userId: userId ?? '',
     },
+    ...getApolloAuthContext(authToken),
   });
 
   return {
     error,
     loading,
-    profile: data?.readUserByUsername ?? null,
+    profile: data?.readUserById ?? null,
     refetch,
   };
 }

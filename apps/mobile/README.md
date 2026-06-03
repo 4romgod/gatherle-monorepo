@@ -84,10 +84,12 @@ ANDROID_SERIAL=<device-id> npm run apk:install
 Notes:
 
 - the release APK has the JavaScript bundle embedded, so it does not depend on the Expo dev server
-- `android` is different: it builds and installs a development build for local development
-- use `npm run apk:release` followed by `npm run apk:install` when testing the Android release signing path or Android
-  Google sign-in, because `android` uses the debug keystore and therefore a different Google OAuth Android client
-  identity
+- `android` still builds a development client for local development, but the repo script now prepares the same release
+  keystore used by `apk:release` before installing it
+- `npm run android` and `npm run apk:release` now share the same signing key when release credentials are configured, so
+  Android Google OAuth only needs one active package/SHA registration for the repo-managed build path
+- run `npm run android:oauth:doctor` to print the package name and the SHA1 fingerprint used by the repo-managed Android
+  build scripts
 - once native dependencies or native config change, rebuild the dev client before using the `start*` scripts again
 
 ## Environment Variables
@@ -99,6 +101,7 @@ EXPO_PUBLIC_GRAPHQL_URL=
 EXPO_PUBLIC_WEBSOCKET_URL=
 EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB=
 EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS=
+EXPO_PUBLIC_WEBAPP_URL=
 EXPO_PUBLIC_ENABLE_PRIVATE_USERS=
 ```
 
@@ -108,6 +111,7 @@ For local development, create `apps/mobile/.env`:
 EXPO_PUBLIC_GRAPHQL_URL=http://localhost:9000/v1/graphql
 EXPO_PUBLIC_WEBSOCKET_URL=ws://localhost:9000/local
 EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB=<google-web-client-id>
+EXPO_PUBLIC_WEBAPP_URL=https://beta.gatherle.com
 ```
 
 `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` is optional and defaults to disabled. Set it to `true` only when testing the
@@ -119,6 +123,21 @@ For Google sign-in:
 - iOS native builds require both `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` and `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS`
 - The Android OAuth client still matters in Google Cloud Console, but it is identified by package name + signing SHA and
   is not read from a public Expo env var at runtime
+- If Android returns `DEVELOPER_ERROR`, run `npm run android:oauth:doctor` and make sure the registered Android OAuth
+  client uses package `com.gatherle.mobile` with the repo signing SHA1 reported for `npm run android` and
+  `npm run apk:release`
+
+For Apple sign-in:
+
+- iOS uses the native `expo-apple-authentication` module, so rebuild the iOS dev client or release build after pulling
+  this change before testing Apple sign-in
+- Android uses Apple’s browser-based web flow and returns to the app through `gatherle://auth/apple`
+- Set `EXPO_PUBLIC_WEBAPP_URL` to a real HTTPS Gatherle host that is registered in the Apple Services ID return URLs,
+  for example `https://beta.gatherle.com`
+- The webapp callback bridge route is `/auth/mobile/apple/callback`, so the matching Apple return URL looks like
+  `https://beta.gatherle.com/auth/mobile/apple/callback`
+- There is no mobile Apple client ID env var; Android reuses the fixed Apple Services ID `com.gatherle.web`, while
+  native iOS uses the app bundle ID `com.gatherle.mobile`
 
 Important: on a physical phone, `localhost` normally means the phone itself, not your laptop. The exception is the
 Android `adb reverse` flow documented below.

@@ -1,6 +1,7 @@
 import type { ApolloError } from '@apollo/client';
 import { getApolloAuthContext, getAuthHeader } from '@/lib/auth';
 import { getApolloErrorCode, getApolloErrorMessage } from '@/lib/auth/apolloErrors';
+import { isInvalidSessionError, validateStoredSession } from '@/lib/auth/sessionValidation';
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -11,19 +12,25 @@ import {
 
 type MobilePlatform = 'android' | 'ios' | 'web';
 
+type AppleSignInModule = typeof import('@/lib/auth/appleSignIn');
 type GoogleSignInModule = typeof import('@/lib/auth/googleSignIn');
 
 function loadGoogleSignInModule({
+  applicationId = 'com.gatherle.mobile',
+  isDev = false,
   iosClientId,
   platform,
   webClientId,
 }: {
+  applicationId?: string;
+  isDev?: boolean;
   iosClientId?: string;
   platform: MobilePlatform;
   webClientId?: string;
 }) {
   const configureMock = jest.fn();
   const nextEnv = { ...process.env };
+  const originalDev = global.__DEV__;
 
   if (webClientId === undefined) {
     delete nextEnv.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB;
@@ -44,11 +51,15 @@ function loadGoogleSignInModule({
       configure: configureMock,
     },
   }));
+  jest.doMock('expo-application', () => ({
+    applicationId,
+  }));
   jest.doMock('react-native', () => ({
     Platform: {
       OS: platform,
     },
   }));
+  global.__DEV__ = isDev;
 
   let googleSignInModule: GoogleSignInModule;
   jest.isolateModules(() => {
@@ -58,6 +69,61 @@ function loadGoogleSignInModule({
   return {
     configureMock,
     googleSignInModule: googleSignInModule!,
+    resetDevFlag() {
+      global.__DEV__ = originalDev;
+    },
+  };
+}
+
+function loadAppleSignInModule({
+  appleAvailable = true,
+  platform,
+  webappUrl,
+}: {
+  appleAvailable?: boolean;
+  platform: MobilePlatform;
+  webappUrl?: string;
+}) {
+  const isAvailableAsync = jest.fn().mockResolvedValue(appleAvailable);
+  const signInAsync = jest.fn();
+  const openAuthSessionAsync = jest.fn();
+  const nextEnv = { ...process.env };
+
+  if (webappUrl === undefined) {
+    delete nextEnv.EXPO_PUBLIC_WEBAPP_URL;
+  } else {
+    nextEnv.EXPO_PUBLIC_WEBAPP_URL = webappUrl;
+  }
+
+  process.env = nextEnv;
+  jest.resetModules();
+  jest.doMock('expo-apple-authentication', () => ({
+    AppleAuthenticationScope: {
+      FULL_NAME: 0,
+      EMAIL: 1,
+    },
+    isAvailableAsync,
+    signInAsync,
+  }));
+  jest.doMock('expo-web-browser', () => ({
+    openAuthSessionAsync,
+  }));
+  jest.doMock('react-native', () => ({
+    Platform: {
+      OS: platform,
+    },
+  }));
+
+  let appleSignInModule: AppleSignInModule;
+  jest.isolateModules(() => {
+    appleSignInModule = require('@/lib/auth/appleSignIn') as AppleSignInModule;
+  });
+
+  return {
+    appleSignInModule: appleSignInModule!,
+    isAvailableAsync,
+    openAuthSessionAsync,
+    signInAsync,
   };
 }
 
@@ -138,32 +204,389 @@ describe('mobile auth helpers', () => {
     expect(getApolloErrorMessage(plainError)).toBe('Plain failure');
   });
 
+  it('recognizes invalid-session GraphQL errors', () => {
+    const notFoundError = {
+      graphQLErrors: [{ message: 'User missing', extensions: { code: 'NOT_FOUND' } }],
+      message: 'GraphQL error',
+    } as unknown as ApolloError;
+    const unauthenticatedError = {
+      graphQLErrors: [{ message: 'Unauthenticated', extensions: { code: 'UNAUTHENTICATED' } }],
+      message: 'GraphQL error',
+    } as unknown as ApolloError;
+    const forbiddenError = {
+      graphQLErrors: [{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } }],
+      message: 'GraphQL error',
+    } as unknown as ApolloError;
+
+    expect(isInvalidSessionError(notFoundError)).toBe(true);
+    expect(isInvalidSessionError(unauthenticatedError)).toBe(true);
+    expect(isInvalidSessionError(forbiddenError)).toBe(false);
+  });
+
+  it('invalidates restored sessions when the API user is missing or mismatched', async () => {
+    const apolloClient = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            readUserById: {
+              email: 'updated@example.com',
+              userId: 'user-123',
+              username: 'updated-person',
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            readUserById: {
+              email: 'person@example.com',
+              userId: 'other-user',
+              username: 'person',
+            },
+          },
+        })
+        .mockRejectedValueOnce({
+          graphQLErrors: [{ message: 'User missing', extensions: { code: 'NOT_FOUND' } }],
+          message: 'GraphQL error',
+        })
+        .mockRejectedValueOnce(new Error('Temporary network issue')),
+    };
+
+    await expect(
+      validateStoredSession(apolloClient as never, {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      }),
+    ).resolves.toEqual({
+      kind: 'valid',
+      session: {
+        email: 'updated@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'updated-person',
+      },
+    });
+
+    await expect(
+      validateStoredSession(apolloClient as never, {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      }),
+    ).resolves.toEqual({ kind: 'invalid' });
+
+    await expect(
+      validateStoredSession(apolloClient as never, {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      }),
+    ).resolves.toEqual({ kind: 'invalid' });
+
+    await expect(
+      validateStoredSession(apolloClient as never, {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      }),
+    ).resolves.toEqual({
+      kind: 'unverified',
+      session: {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      },
+    });
+  });
+
+  it('uses native Apple Authentication on iOS and forwards the identity token and profile fields', async () => {
+    const { appleSignInModule, isAvailableAsync, signInAsync } = loadAppleSignInModule({
+      platform: 'ios',
+    });
+
+    signInAsync.mockImplementation(async (options: { nonce: string; state: string }) => ({
+      email: 'ios@example.com',
+      fullName: {
+        familyName: 'User',
+        givenName: 'iOS',
+      },
+      identityToken: 'ios-apple-id-token',
+      state: options.state,
+    }));
+
+    await expect(appleSignInModule.signInWithApple()).resolves.toEqual({
+      email: 'ios@example.com',
+      family_name: 'User',
+      given_name: 'iOS',
+      idToken: 'ios-apple-id-token',
+    });
+
+    expect(isAvailableAsync).toHaveBeenCalledTimes(1);
+    expect(signInAsync).toHaveBeenCalledWith({
+      nonce: expect.any(String),
+      requestedScopes: [0, 1],
+      state: expect.any(String),
+    });
+
+    const [{ nonce, state }] = signInAsync.mock.calls.map(([options]) => options);
+    expect(nonce).toBe(state);
+  });
+
+  it('uses the web callback bridge for Apple sign-in on Android', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+      webappUrl: 'https://beta.gatherle.com',
+    });
+
+    openAuthSessionAsync.mockImplementation(async (authorizationUrl: string) => {
+      const authUrl = new URL(authorizationUrl);
+      const state = authUrl.searchParams.get('state');
+
+      return {
+        type: 'success',
+        url: `gatherle://auth/apple?state=${encodeURIComponent(state ?? '')}&id_token=android-apple-id-token&email=android%40example.com&given_name=Android&family_name=User`,
+      };
+    });
+
+    await expect(appleSignInModule.signInWithApple()).resolves.toEqual({
+      email: 'android@example.com',
+      family_name: 'User',
+      given_name: 'Android',
+      idToken: 'android-apple-id-token',
+    });
+
+    expect(openAuthSessionAsync).toHaveBeenCalledWith(
+      expect.stringContaining('client_id=com.gatherle.web'),
+      'gatherle://auth/apple',
+    );
+
+    const [authorizationUrl] = openAuthSessionAsync.mock.calls[0];
+    const parsedUrl = new URL(authorizationUrl);
+    expect(parsedUrl.searchParams.get('redirect_uri')).toBe('https://beta.gatherle.com/auth/mobile/apple/callback');
+    expect(parsedUrl.searchParams.get('response_mode')).toBe('form_post');
+    expect(parsedUrl.searchParams.get('response_type')).toBe('code id_token');
+    expect(parsedUrl.searchParams.get('scope')).toBe('name email');
+  });
+
+  it('treats an iOS Apple sign-in cancellation as a no-op', async () => {
+    const { appleSignInModule, signInAsync } = loadAppleSignInModule({
+      platform: 'ios',
+    });
+
+    signInAsync.mockRejectedValue({ code: 'ERR_REQUEST_CANCELED' });
+
+    await expect(appleSignInModule.signInWithApple()).resolves.toBeNull();
+  });
+
+  it('rejects Apple sign-in on iOS when the native module is unavailable', async () => {
+    const { appleSignInModule } = loadAppleSignInModule({
+      appleAvailable: false,
+      platform: 'ios',
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple sign-in is not available on this iPhone build. Rebuild the app and try again.',
+    );
+  });
+
+  it('rejects Apple sign-in on iOS when Apple returns the wrong state', async () => {
+    const { appleSignInModule, signInAsync } = loadAppleSignInModule({
+      platform: 'ios',
+    });
+
+    signInAsync.mockResolvedValue({
+      email: 'ios@example.com',
+      fullName: {
+        familyName: 'User',
+        givenName: 'iOS',
+      },
+      identityToken: 'ios-apple-id-token',
+      state: 'wrong-state',
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple sign-in state mismatch. Please try again.',
+    );
+  });
+
+  it('rejects Apple sign-in on iOS when no identity token is returned', async () => {
+    const { appleSignInModule, signInAsync } = loadAppleSignInModule({
+      platform: 'ios',
+    });
+
+    signInAsync.mockImplementation(async (options: { state: string }) => ({
+      email: 'ios@example.com',
+      fullName: null,
+      identityToken: null,
+      state: options.state,
+    }));
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple did not return an identity token. Please try again.',
+    );
+  });
+
+  it('rethrows non-cancellation Apple sign-in errors on iOS', async () => {
+    const { appleSignInModule, signInAsync } = loadAppleSignInModule({
+      platform: 'ios',
+    });
+
+    signInAsync.mockRejectedValue('unexpected-ios-error');
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toBe('unexpected-ios-error');
+  });
+
+  it('treats a dismissed Android Apple browser session as a no-op', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+    });
+
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'dismiss',
+    });
+
+    await expect(appleSignInModule.signInWithApple()).resolves.toBeNull();
+  });
+
+  it('treats an access-denied Android Apple callback as a no-op', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+    });
+
+    openAuthSessionAsync.mockImplementation(async (authorizationUrl: string) => {
+      const authUrl = new URL(authorizationUrl);
+      const state = authUrl.searchParams.get('state');
+
+      return {
+        type: 'success',
+        url: `gatherle://auth/apple?state=${encodeURIComponent(state ?? '')}&error=access_denied`,
+      };
+    });
+
+    await expect(appleSignInModule.signInWithApple()).resolves.toBeNull();
+  });
+
+  it('rejects Android Apple callbacks that return an explicit error', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+    });
+
+    openAuthSessionAsync.mockImplementation(async (authorizationUrl: string) => {
+      const authUrl = new URL(authorizationUrl);
+      const state = authUrl.searchParams.get('state');
+
+      return {
+        type: 'success',
+        url: `gatherle://auth/apple?state=${encodeURIComponent(state ?? '')}&error=server_error&error_description=Apple%20callback%20failed`,
+      };
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow('Apple callback failed');
+  });
+
+  it('rejects Android Apple callbacks with a missing or mismatched state', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+    });
+
+    openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'gatherle://auth/apple?id_token=android-apple-id-token&state=wrong-state',
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple sign-in state mismatch. Please try again.',
+    );
+  });
+
+  it('rejects Android Apple callbacks that omit the identity token', async () => {
+    const { appleSignInModule, openAuthSessionAsync } = loadAppleSignInModule({
+      platform: 'android',
+    });
+
+    openAuthSessionAsync.mockImplementation(async (authorizationUrl: string) => {
+      const authUrl = new URL(authorizationUrl);
+      const state = authUrl.searchParams.get('state');
+
+      return {
+        type: 'success',
+        url: `gatherle://auth/apple?state=${encodeURIComponent(state ?? '')}`,
+      };
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple did not return an identity token. Please try again.',
+    );
+  });
+
+  it('rejects Apple sign-in on non-native platforms', async () => {
+    const { appleSignInModule } = loadAppleSignInModule({
+      platform: 'web',
+    });
+
+    await expect(appleSignInModule.signInWithApple()).rejects.toThrow(
+      'Apple sign-in is only available in native mobile builds.',
+    );
+  });
+
   it('reports Google Sign-In availability and messages per platform', () => {
     const androidModule = loadGoogleSignInModule({
       platform: 'android',
       webClientId: 'android-web-client.apps.googleusercontent.com',
-    }).googleSignInModule;
-    expect(androidModule.isGoogleSignInConfiguredForPlatform()).toBe(true);
-    expect(androidModule.getGoogleSignInUnavailableMessage()).toBe(
+    });
+    expect(androidModule.googleSignInModule.isGoogleSignInConfiguredForPlatform()).toBe(true);
+    expect(androidModule.googleSignInModule.getGoogleSignInUnavailableMessage()).toBe(
       'Google sign-in is not configured for this Android build.',
     );
+    expect(androidModule.googleSignInModule.getGoogleSignInDeveloperErrorMessage()).toContain(
+      'package com.gatherle.mobile',
+    );
+    androidModule.resetDevFlag();
 
     const iosModule = loadGoogleSignInModule({
       iosClientId: 'ios-client.apps.googleusercontent.com',
       platform: 'ios',
       webClientId: 'ios-web-client.apps.googleusercontent.com',
-    }).googleSignInModule;
-    expect(iosModule.isGoogleSignInConfiguredForPlatform()).toBe(true);
-    expect(iosModule.getGoogleSignInUnavailableMessage()).toBe('Google sign-in is not configured for this iOS build.');
+    });
+    expect(iosModule.googleSignInModule.isGoogleSignInConfiguredForPlatform()).toBe(true);
+    expect(iosModule.googleSignInModule.getGoogleSignInUnavailableMessage()).toBe(
+      'Google sign-in is not configured for this iOS build.',
+    );
+    expect(iosModule.googleSignInModule.getGoogleSignInDeveloperErrorMessage()).toBe(
+      'Google sign-in is misconfigured for this build.',
+    );
+    iosModule.resetDevFlag();
 
     const webModule = loadGoogleSignInModule({
       platform: 'web',
       webClientId: 'web-client.apps.googleusercontent.com',
-    }).googleSignInModule;
-    expect(webModule.isGoogleSignInConfiguredForPlatform()).toBe(false);
-    expect(webModule.getGoogleSignInUnavailableMessage()).toBe(
+    });
+    expect(webModule.googleSignInModule.isGoogleSignInConfiguredForPlatform()).toBe(false);
+    expect(webModule.googleSignInModule.getGoogleSignInUnavailableMessage()).toBe(
       'Google sign-in is only available in native mobile builds.',
     );
+    webModule.resetDevFlag();
+  });
+
+  it('surfaces a debug-signing hint for Android developer errors in dev builds', () => {
+    const androidDevModule = loadGoogleSignInModule({
+      applicationId: 'com.gatherle.mobile',
+      isDev: true,
+      platform: 'android',
+      webClientId: 'android-web-client.apps.googleusercontent.com',
+    });
+
+    expect(androidDevModule.googleSignInModule.getGoogleSignInDeveloperErrorMessage()).toContain(
+      'Run `npm run android:oauth:doctor` to confirm whether this installed dev build is using the shared release keystore or the fallback Expo debug keystore.',
+    );
+
+    androidDevModule.resetDevFlag();
   });
 
   it('skips Google Sign-In setup when the current platform is missing required configuration', () => {

@@ -2,6 +2,7 @@
   "name": "@gatherle/webapp",
   "private": true,
   "scripts": {
+    "apple:oauth:client-secret": "node ./scripts/generate-apple-oauth-client-secret.mjs",
     "build": "npm-run-all codegen lint:check build:ts build:next",
     "build:ts": "tsc --project tsconfig.json --pretty",
     "build:next": "NEXT_SKIP_ESLINT=1 next build --webpack",
