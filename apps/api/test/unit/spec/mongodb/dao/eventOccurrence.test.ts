@@ -206,6 +206,103 @@ describe('EventOccurrenceDAO', () => {
     });
   });
 
+  describe('readRepresentativeByEventSeriesIds', () => {
+    it('returns upcoming representatives first and falls back to the latest candidate occurrence per series', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock)
+        .mockReturnValueOnce(createMockSuccessMongooseQuery([{ _id: 'series-1' }]))
+        .mockReturnValueOnce(
+          createMockSuccessMongooseQuery([
+            {
+              ...occurrence,
+              eventSeriesId: 'series-1',
+            },
+          ]),
+        )
+        .mockReturnValueOnce(
+          createMockSuccessMongooseQuery([
+            {
+              ...occurrence,
+              occurrenceId: 'series-2#2026-04-30T16:00:00.000Z',
+              eventSeriesId: 'series-2',
+              occurrenceKey: 'series-2#2026-04-30T16:00:00.000Z',
+              originalStartAt: new Date('2026-04-30T16:00:00.000Z'),
+              startAt: new Date('2026-04-30T16:00:00.000Z'),
+            },
+          ]),
+        );
+
+      const fromDate = new Date('2026-05-01T00:00:00.000Z');
+      const result = await EventOccurrenceDAO.readRepresentativeByEventSeriesIds(['series-1', 'series-2'], fromDate);
+
+      expect(result).toEqual(
+        new Map([
+          ['series-1', expect.objectContaining({ eventSeriesId: 'series-1' })],
+          ['series-2', expect.objectContaining({ eventSeriesId: 'series-2' })],
+        ]),
+      );
+      expect(EventOccurrenceModel.aggregate).toHaveBeenNthCalledWith(
+        1,
+        expect.arrayContaining([
+          {
+            $match: {
+              eventSeriesId: { $in: ['series-1', 'series-2'] },
+              status: { $ne: EventOccurrenceStatus.Cancelled },
+            },
+          },
+        ]),
+      );
+      expect(EventOccurrenceModel.aggregate).toHaveBeenNthCalledWith(
+        2,
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              $and: [
+                {
+                  $or: [
+                    {
+                      eventSeriesId: { $in: ['series-1'] },
+                      status: { $ne: EventOccurrenceStatus.Cancelled },
+                    },
+                    {
+                      eventSeriesId: { $in: ['series-2'] },
+                    },
+                  ],
+                },
+                { status: { $ne: EventOccurrenceStatus.Completed } },
+              ],
+              $or: [{ endAt: { $gte: fromDate } }, { endAt: { $exists: false }, startAt: { $gte: fromDate } }],
+            }),
+          }),
+        ]),
+      );
+      expect(EventOccurrenceModel.aggregate).toHaveBeenNthCalledWith(
+        3,
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: {
+              eventSeriesId: { $in: ['series-2'] },
+            },
+          }),
+        ]),
+      );
+    });
+
+    it('returns an empty map when no event series ids are provided', async () => {
+      const result = await EventOccurrenceDAO.readRepresentativeByEventSeriesIds([]);
+
+      expect(result).toEqual(new Map());
+      expect(EventOccurrenceModel.aggregate).not.toHaveBeenCalled();
+    });
+
+    it('wraps aggregate failures when reading representative occurrences', async () => {
+      (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(
+        createMockFailedMongooseQuery(new Error('aggregate failed')),
+      );
+
+      await expect(EventOccurrenceDAO.readRepresentativeByEventSeriesIds(['series-1'])).rejects.toThrow(GraphQLError);
+    });
+  });
+
   describe('readSeriesIdsMissingSlug', () => {
     it('returns the set of series ids whose occurrences are missing the readable slug snapshot', async () => {
       (EventOccurrenceModel.aggregate as jest.Mock).mockReturnValue(

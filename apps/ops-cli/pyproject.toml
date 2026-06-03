@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gatherle"
+version = "1.0.0"
+description = "Gatherle operations CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0",
+]
+
+[project.scripts]
+gatherle = "gatherle:cli_entry"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.setuptools.packages.find]
+include = ["gatherle*"]

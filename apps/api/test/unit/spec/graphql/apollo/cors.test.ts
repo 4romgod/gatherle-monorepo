@@ -12,7 +12,6 @@ describe('Apollo CORS helpers', () => {
       STAGE: process.env.STAGE,
     }));
     jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       mod = require('@/graphql/apollo/cors');
     });
     return mod!;

@@ -1,5 +1,5 @@
 import type { Venue } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { UserRole } from '@gatherle/commons/types';
 import { VenueDAO } from '@/mongodb/dao';
 import AuditLogService from './auditLog';
 

@@ -1,4 +1,4 @@
-const DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS = 6;
+const DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS = 12;
 // Exact event selection should be able to reveal a series across its realistic
 // history and future, instead of disappearing outside the discovery feed window.
 const SELECTED_EVENT_OCCURRENCE_LOOKBACK_YEARS = 10;

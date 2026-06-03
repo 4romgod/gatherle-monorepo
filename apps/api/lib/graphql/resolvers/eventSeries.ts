@@ -47,8 +47,11 @@ import {
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 type EventSeriesWithPreloadedMyRsvp = EventSeries & { myRsvp?: EventSeriesParticipant | null };
+type EventSeriesWithPreloadedSaveState = EventSeries & { isSavedByMe?: boolean | null };
 
 const hasPreloadedMyRsvp = (event: EventSeries): event is EventSeriesWithPreloadedMyRsvp => 'myRsvp' in event;
+const hasPreloadedSaveState = (event: EventSeries): event is EventSeriesWithPreloadedSaveState =>
+  'isSavedByMe' in event;
 
 @Resolver(() => EventSeries)
 export class EventSeriesResolver {
@@ -344,6 +347,11 @@ export class EventSeriesResolver {
     if (!context.user?.userId) {
       return false;
     }
+
+    if (hasPreloadedSaveState(event) && typeof event.isSavedByMe === 'boolean') {
+      return event.isSavedByMe;
+    }
+
     return context.loaders.eventSavedByMe.load(event.eventId);
   }
 

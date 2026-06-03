@@ -19,17 +19,19 @@ export class EventOccurrenceResolver {
   @Query(() => [EventOccurrence], { description: RESOLVER_DESCRIPTIONS.EVENT.readEventOccurrences })
   async readEventOccurrences(
     @Arg('options', () => EventsQueryOptionsInput) options: EventsQueryOptionsInput,
+    @Ctx() context: ServerContext,
   ): Promise<EventOccurrence[]> {
     logger.debug('[readEventOccurrences] GraphQL query options:', { options });
-    return EventOccurrenceService.readEventOccurrences(options);
+    return EventOccurrenceService.readEventOccurrences(options, context.requestCache?.eventOccurrenceQuery);
   }
 
   @Query(() => Int, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventOccurrencesCount })
   async readEventOccurrencesCount(
     @Arg('options', () => EventsQueryOptionsInput) options: EventsQueryOptionsInput,
+    @Ctx() context: ServerContext,
   ): Promise<number> {
     logger.debug('[readEventOccurrencesCount] GraphQL query options:', { options });
-    return EventOccurrenceService.countEventOccurrences(options);
+    return EventOccurrenceService.countEventOccurrences(options, context.requestCache?.eventOccurrenceQuery);
   }
 
   @Query(() => [EventOccurrence], { description: 'Read event occurrences linked to a specific user participant' })

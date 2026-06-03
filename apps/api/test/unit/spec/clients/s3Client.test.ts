@@ -128,6 +128,16 @@ describe('s3Client', () => {
       await expect(getS3ObjectSize('media/video.mp4')).resolves.toBeUndefined();
     });
 
+    it('returns undefined for missing objects when not found logging is suppressed', async () => {
+      const notFoundError = Object.assign(new Error('not found'), {
+        name: 'NotFound',
+        $metadata: { httpStatusCode: 404 },
+      });
+      mockSend.mockRejectedValue(notFoundError);
+
+      await expect(getS3ObjectSize('media/missing.jpg', { suppressNotFoundLog: true })).resolves.toBeUndefined();
+    });
+
     it('re-throws when HeadObject fails', async () => {
       mockSend.mockRejectedValue(new Error('head error'));
 

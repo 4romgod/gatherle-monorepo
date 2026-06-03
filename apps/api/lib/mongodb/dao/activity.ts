@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { Types } from 'mongoose';
-import { ActivityObjectType } from '@gatherle/commons/types';
+import { ActivityObjectType, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
 import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/types';
-import { Activity as ActivityModel } from '@/mongodb/models';
+import { Activity as ActivityModel, Follow as FollowModel } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 
 class ActivityDAO {
@@ -58,6 +58,52 @@ class ActivityDAO {
       return activities.map((activity) => activity.toObject());
     } catch (error) {
       logDaoError('Error reading feed activities', { error });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readFeedForUser(userId: string, limit = 25): Promise<ActivityEntity[]> {
+    try {
+      const sanitizedLimit = Math.max(1, Math.min(limit, 100));
+      const activities = await ActivityModel.aggregate<ActivityEntity>([
+        { $match: { actorId: userId } },
+        {
+          $unionWith: {
+            coll: FollowModel.collection.name,
+            pipeline: [
+              {
+                $match: {
+                  followerUserId: userId,
+                  targetType: FollowTargetType.User,
+                  approvalStatus: FollowApprovalStatus.Accepted,
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  actorId: '$targetId',
+                },
+              },
+              {
+                $lookup: {
+                  from: ActivityModel.collection.name,
+                  localField: 'actorId',
+                  foreignField: 'actorId',
+                  as: 'activities',
+                },
+              },
+              { $unwind: '$activities' },
+              { $replaceRoot: { newRoot: '$activities' } },
+            ],
+          },
+        },
+        { $sort: { eventAt: -1, createdAt: -1 } },
+        { $limit: sanitizedLimit },
+      ]).exec();
+
+      return activities;
+    } catch (error) {
+      logDaoError('Error reading feed for user', { error, userId, limit });
       throw KnownCommonError(error);
     }
   }

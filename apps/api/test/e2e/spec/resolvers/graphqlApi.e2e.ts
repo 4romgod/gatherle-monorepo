@@ -115,7 +115,7 @@ const buildMobileOccurrenceDateRange = (fromDate: Date = new Date()) => {
   startDate.setHours(0, 0, 0, 0);
 
   const endDate = new Date(startDate);
-  endDate.setMonth(endDate.getMonth() + 6);
+  endDate.setMonth(endDate.getMonth() + 12);
   endDate.setHours(23, 59, 59, 999);
 
   return {

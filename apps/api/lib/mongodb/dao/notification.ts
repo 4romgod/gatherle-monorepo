@@ -4,7 +4,8 @@ import type {
   CreateNotificationInput,
   NotificationConnection,
 } from '@gatherle/commons/types';
-import { NotificationTargetType, NotificationType } from '@gatherle/commons';
+import type { NotificationTargetType } from '@gatherle/commons';
+import { NotificationType } from '@gatherle/commons';
 import { Notification as NotificationModel } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 

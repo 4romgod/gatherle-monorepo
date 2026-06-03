@@ -1,13 +1,6 @@
 import { EventOccurrenceParticipantDAO, EventSeriesDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
 import { importedEventsSystemUser } from '@/mongodb/data/system';
-import {
-  importedGautengEvents,
-  importedGautengOrganizations,
-  importedEventFeaturedImagesByExternalId,
-  importedOrganizationLogosByKey,
-  type ImportedEventSeedData,
-  type ImportedOrganizationSeedData,
-} from '@/mongodb/data/seed';
+import type { ImportedEventSeedData, ImportedOrganizationSeedData } from '@/mongodb/data/seed/types';
 import { buildPrimarySchedule } from '@/mongodb/data/utils';
 import EventSeriesService from '@/services/eventSeries';
 import { logger } from '@/utils/logger';
@@ -36,6 +29,8 @@ import {
 import { readSeededCatalogOrThrow } from '../catalog/run';
 import { ensureOwnerMembershipForOrganization } from '../shared/organizations';
 import { markSeedUserVerified } from '../shared/users';
+import { loadImportedPublicSeedData, resolvePublicSeedDataDir, type ImportedPublicSeedData } from './data';
+import { mirrorImportedEventFeaturedImage, mirrorImportedOrganizationLogo } from './media';
 
 const HOWLER_CDN_HOST = 'https://d1as2iufift1z3.cloudfront.net';
 
@@ -99,6 +94,23 @@ function buildImportedOrganizationSlug(organization: ImportedOrganizationSeedDat
   return kebabCase(organization.name);
 }
 
+function isNotFoundError(error: unknown) {
+  const maybeGraphQlError = error as { extensions?: { code?: unknown } };
+  return maybeGraphQlError.extensions?.code === 'NOT_FOUND';
+}
+
+async function readOrganizationBySlugIfExists(slug: string): Promise<Organization | null> {
+  try {
+    return await OrganizationDAO.readOrganizationBySlug(slug);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 function normalizeImportedImageUrl(imageUrl?: string) {
   if (!imageUrl) {
     return undefined;
@@ -124,32 +136,39 @@ function normalizeImportedImageUrl(imageUrl?: string) {
   }
 }
 
-function buildImportedOrganizationLogoUrl(organization: ImportedOrganizationSeedData) {
-  const explicitLogo = importedOrganizationLogosByKey[organization.key];
+function buildImportedOrganizationLogoUrl(
+  organization: ImportedOrganizationSeedData,
+  seedData: ImportedPublicSeedData,
+) {
+  const explicitLogo = seedData.organizationMediaByKey[organization.key];
   if (explicitLogo) {
     return normalizeImportedImageUrl(explicitLogo);
   }
 
-  const fallbackEvent = importedGautengEvents.find((eventSeed) => eventSeed.orgKey === organization.key);
+  const fallbackEvent = seedData.events.find((eventSeed) => eventSeed.orgKey === organization.key);
   if (!fallbackEvent) {
     return undefined;
   }
 
-  return normalizeImportedImageUrl(importedEventFeaturedImagesByExternalId[fallbackEvent.externalId]);
+  return normalizeImportedImageUrl(seedData.eventMediaByExternalId[fallbackEvent.externalId]);
 }
 
-async function ensureImportedOrganizations(systemUser: User) {
+async function ensureImportedOrganizations(systemUser: User, seedData: ImportedPublicSeedData) {
   logger.info('Ensuring imported organizations exist...');
 
   const organizationsByKey = new Map<string, Organization>();
 
-  for (const organizationSeed of importedGautengOrganizations) {
+  for (const organizationSeed of seedData.organizations) {
     const organizationSlug = buildImportedOrganizationSlug(organizationSeed);
+    const mirroredLogoUrl = await mirrorImportedOrganizationLogo({
+      organizationKey: organizationSeed.key,
+      imageUrl: buildImportedOrganizationLogoUrl(organizationSeed, seedData),
+    });
     const createPayload: CreateOrganizationInput = {
       name: organizationSeed.name,
       description:
         organizationSeed.description ?? 'Imported public host profile created from curated Gauteng event listings.',
-      logo: buildImportedOrganizationLogoUrl(organizationSeed),
+      logo: mirroredLogoUrl,
       ownerId: systemUser.userId,
       defaultVisibility: EventVisibility.Public,
       billingEmail: importedEventsSystemUser.email,
@@ -158,8 +177,9 @@ async function ensureImportedOrganizations(systemUser: User) {
       tags: Array.from(new Set(['imported', 'gauteng', ...(organizationSeed.tags ?? [])])),
     };
 
-    try {
-      const existing = await OrganizationDAO.readOrganizationBySlug(organizationSlug);
+    const existing = await readOrganizationBySlugIfExists(organizationSlug);
+
+    if (existing) {
       const updated = await OrganizationDAO.updateOrganization({
         orgId: existing.orgId,
         name: createPayload.name,
@@ -177,17 +197,17 @@ async function ensureImportedOrganizations(systemUser: User) {
       organizationsByKey.set(organizationSeed.key, updated);
       await ensureOwnerMembershipForOrganization(updated);
       continue;
-    } catch {
-      const created = await OrganizationDAO.create({
-        ...createPayload,
-        followPolicy: FollowPolicy.Public,
-        followersListVisibility: SocialVisibility.Public,
-      } as CreateOrganizationInput);
-
-      organizationsByKey.set(organizationSeed.key, created);
-      await ensureOwnerMembershipForOrganization(created);
-      logger.info(`   Created imported organization "${organizationSeed.name}".`);
     }
+
+    const created = await OrganizationDAO.create({
+      ...createPayload,
+      followPolicy: FollowPolicy.Public,
+      followersListVisibility: SocialVisibility.Public,
+    } as CreateOrganizationInput);
+
+    organizationsByKey.set(organizationSeed.key, created);
+    await ensureOwnerMembershipForOrganization(created);
+    logger.info(`   Created imported organization "${organizationSeed.name}".`);
   }
 
   return organizationsByKey;
@@ -267,6 +287,7 @@ function buildImportedEventInput(
   systemUser: User,
   organization: Organization,
   eventCategoryIdsByName: Map<string, string>,
+  mirroredFeaturedImageUrl: string | undefined,
   existingEvent?: EventSeries,
 ): CreateEventInput {
   const eventCategoryIds = [...new Set(eventSeed.categoryNames)].map((categoryName) => {
@@ -282,14 +303,11 @@ function buildImportedEventInput(
     claimStatus !== 'unclaimed' && preservedOrganizers.length > 0
       ? preservedOrganizers
       : [{ user: systemUser.userId, role: EventOrganizerRole.Host }];
-  const seededFeaturedImageUrl = normalizeImportedImageUrl(
-    importedEventFeaturedImagesByExternalId[eventSeed.externalId],
-  );
   const media =
     claimStatus !== 'unclaimed' && existingEvent?.media
       ? existingEvent.media
-      : seededFeaturedImageUrl
-        ? { featuredImageUrl: seededFeaturedImageUrl }
+      : mirroredFeaturedImageUrl
+        ? { featuredImageUrl: mirroredFeaturedImageUrl }
         : existingEvent?.media;
 
   return {
@@ -326,6 +344,41 @@ function buildImportedEventInput(
   };
 }
 
+async function readEventBySlugIfExists(slug: string): Promise<EventSeries | null> {
+  try {
+    return await EventSeriesDAO.readEventBySlug(slug);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function readImportMetadata(event: EventSeries): Record<string, unknown> {
+  const metadata = event.additionalDetails?.importMetadata;
+  return metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : {};
+}
+
+function readEventTags(event: EventSeries): Record<string, unknown> {
+  return event.tags && typeof event.tags === 'object' ? (event.tags as Record<string, unknown>) : {};
+}
+
+function isReusableImportedEventSlugMatch(event: EventSeries, eventSeed: ImportedEventSeedData) {
+  const metadata = readImportMetadata(event);
+  if (metadata.externalId === eventSeed.externalId && metadata.sourcePlatform === eventSeed.sourcePlatform) {
+    return true;
+  }
+
+  if (metadata.sourceUrl === eventSeed.sourceUrl || event.eventLink === eventSeed.sourceUrl) {
+    return true;
+  }
+
+  const tags = readEventTags(event);
+  return tags.imported === true && tags.sourcePlatform === eventSeed.sourcePlatform;
+}
+
 async function readImportedEventByMetadata(eventSeed: ImportedEventSeedData) {
   const options: EventsQueryOptionsInput = {
     filters: [
@@ -344,16 +397,31 @@ async function readImportedEventByMetadata(eventSeed: ImportedEventSeedData) {
   return matches[0] ?? null;
 }
 
+async function readExistingImportedEvent(eventSeed: ImportedEventSeedData) {
+  const metadataMatch = await readImportedEventByMetadata(eventSeed);
+  if (metadataMatch) {
+    return metadataMatch;
+  }
+
+  const slugMatch = await readEventBySlugIfExists(kebabCase(eventSeed.title));
+  if (!slugMatch) {
+    return null;
+  }
+
+  return isReusableImportedEventSlugMatch(slugMatch, eventSeed) ? slugMatch : null;
+}
+
 async function seedImportedEvents(
   systemUser: User,
   organizationsByKey: Map<string, Organization>,
   eventCategoryIdsByName: Map<string, string>,
+  seedData: ImportedPublicSeedData,
 ) {
   logger.info('Ensuring imported Gauteng events exist...');
 
   const seededEvents: EventSeries[] = [];
 
-  for (const eventSeed of importedGautengEvents) {
+  for (const eventSeed of seedData.events) {
     const organization = organizationsByKey.get(eventSeed.orgKey);
 
     if (!organization) {
@@ -361,12 +429,18 @@ async function seedImportedEvents(
       continue;
     }
 
-    const existingEvent = await readImportedEventByMetadata(eventSeed);
+    const existingEvent = await readExistingImportedEvent(eventSeed);
+    const mirroredFeaturedImageUrl = await mirrorImportedEventFeaturedImage({
+      sourcePlatform: eventSeed.sourcePlatform,
+      externalId: eventSeed.externalId,
+      imageUrl: normalizeImportedImageUrl(seedData.eventMediaByExternalId[eventSeed.externalId]),
+    });
     const createInput = buildImportedEventInput(
       eventSeed,
       systemUser,
       organization,
       eventCategoryIdsByName,
+      mirroredFeaturedImageUrl,
       existingEvent ?? undefined,
     );
 
@@ -380,9 +454,39 @@ async function seedImportedEvents(
       continue;
     }
 
-    const createdEvent = await EventSeriesService.create(createInput);
-    seededEvents.push(createdEvent);
-    logger.info(`   Created imported event "${eventSeed.title}".`);
+    try {
+      const createdEvent = await EventSeriesService.create(createInput);
+      seededEvents.push(createdEvent);
+      logger.info(`   Created imported event "${eventSeed.title}".`);
+    } catch (error) {
+      const slug = kebabCase(eventSeed.title);
+      const slugMatch = await readEventBySlugIfExists(slug);
+      if (slugMatch && isReusableImportedEventSlugMatch(slugMatch, eventSeed)) {
+        const updatedEvent = await EventSeriesService.update({
+          eventId: slugMatch.eventId,
+          ...buildImportedEventInput(
+            eventSeed,
+            systemUser,
+            organization,
+            eventCategoryIdsByName,
+            mirroredFeaturedImageUrl,
+            slugMatch,
+          ),
+        } as UpdateEventInput);
+        seededEvents.push(updatedEvent);
+        logger.info(`   Updated imported event "${eventSeed.title}" after resolving existing slug "${slug}".`);
+        continue;
+      }
+
+      if (slugMatch) {
+        logger.warn(
+          `   Skipping imported event "${eventSeed.title}" because slug "${slug}" already belongs to another event.`,
+        );
+        continue;
+      }
+
+      throw error;
+    }
   }
 
   return seededEvents;
@@ -391,15 +495,17 @@ async function seedImportedEvents(
 export async function runPublicEventSeed() {
   logger.info('Starting imported-event seed...');
 
+  const seedDataDir = resolvePublicSeedDataDir();
+  const importedSeedData = loadImportedPublicSeedData(seedDataDir);
   const eventCategories = await readSeededCatalogOrThrow();
 
   const systemUser = await ensureImportedSystemUser();
   await EventOccurrenceParticipantDAO.deleteByUserId(systemUser.userId);
-  const organizationsByKey = await ensureImportedOrganizations(systemUser);
+  const organizationsByKey = await ensureImportedOrganizations(systemUser, importedSeedData);
   const eventCategoryIdsByName = new Map(
     eventCategories.map((category) => [category.name, category.eventCategoryId as string]),
   );
 
-  await seedImportedEvents(systemUser, organizationsByKey, eventCategoryIdsByName);
+  await seedImportedEvents(systemUser, organizationsByKey, eventCategoryIdsByName, importedSeedData);
   logger.info('Completed imported-event seed.');
 }

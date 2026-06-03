@@ -1,4 +1,11 @@
-export type ImportedSourcePlatform = 'Howler' | 'Quicket' | 'Webtickets' | 'WhatsOnInJoburg';
+export type ImportedSourcePlatform =
+  | 'Computicket'
+  | 'Howler'
+  | 'Joburg'
+  | 'Quicket'
+  | 'Ticketpro'
+  | 'Webtickets'
+  | 'WhatsOnInJoburg';
 
 export type ImportedOrganizationSeedData = {
   key: string;

@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import type { UserFeedItem as UserFeedItemEntity } from '@gatherle/commons/types';
-import { FeedReason } from '@gatherle/commons/types';
+import type { FeedReason } from '@gatherle/commons/types';
 import { UserFeed as UserFeedModel } from '@/mongodb/models';
 import { logDaoError, KnownCommonError } from '@/utils';
 

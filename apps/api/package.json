@@ -10,7 +10,6 @@
     "build:node": "node -r ts-node/register -r tsconfig-paths/register",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "emit-schema": "ts-node lib/scripts/emit-schema.ts",
-    "build:image": "docker build -t gatherle-backend .",
     "dev": "nodemon lib/scripts/startServer.ts",
     "start:ts": "ts-node lib/scripts/startServer.ts",
     "start:js": "node -r ts-node/register -r tsconfig-paths/register dist/lib/scripts/startServer.js",

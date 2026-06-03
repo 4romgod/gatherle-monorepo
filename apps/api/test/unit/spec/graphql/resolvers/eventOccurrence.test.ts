@@ -72,6 +72,12 @@ describe('EventOccurrenceResolver field resolvers', () => {
 
   const context: ServerContext = {
     user,
+    requestCache: {
+      eventOccurrenceQuery: {
+        candidateSeriesByOptionsKey: new Map(),
+        occurrencesByRangeKey: new Map(),
+      },
+    },
     loaders: {
       user: new DataLoader(async (keys: readonly string[]) => keys.map(() => user)),
       eventCategory: new DataLoader(async (keys: readonly string[]) => keys.map(() => null)),
@@ -148,9 +154,12 @@ describe('EventOccurrenceResolver field resolvers', () => {
     } as any;
     (EventOccurrenceService.readEventOccurrences as jest.Mock).mockResolvedValue([occurrence]);
 
-    const result = await resolver.readEventOccurrences(options);
+    const result = await resolver.readEventOccurrences(options, context);
 
-    expect(EventOccurrenceService.readEventOccurrences).toHaveBeenCalledWith(options);
+    expect(EventOccurrenceService.readEventOccurrences).toHaveBeenCalledWith(
+      options,
+      context.requestCache?.eventOccurrenceQuery,
+    );
     expect(result).toEqual([occurrence]);
   });
 
@@ -163,9 +172,12 @@ describe('EventOccurrenceResolver field resolvers', () => {
     } as any;
     (EventOccurrenceService.countEventOccurrences as jest.Mock).mockResolvedValue(6);
 
-    const result = await resolver.readEventOccurrencesCount(options);
+    const result = await resolver.readEventOccurrencesCount(options, context);
 
-    expect(EventOccurrenceService.countEventOccurrences).toHaveBeenCalledWith(options);
+    expect(EventOccurrenceService.countEventOccurrences).toHaveBeenCalledWith(
+      options,
+      context.requestCache?.eventOccurrenceQuery,
+    );
     expect(result).toBe(6);
   });
 });
