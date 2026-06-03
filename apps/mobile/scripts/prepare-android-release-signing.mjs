@@ -104,10 +104,17 @@ const patchAndroidBuildGradle = () => {
 
   const updatedSigningBlock = `    signingConfigs {
         debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            if (releaseSigningReady) {
+                storeFile file(project.findProperty('android.release.storeFile'))
+                storePassword project.findProperty('android.release.storePassword')
+                keyAlias project.findProperty('android.release.keyAlias')
+                keyPassword project.findProperty('android.release.keyPassword')
+            } else {
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
         }
         if (releaseSigningReady) {
             release {
@@ -153,4 +160,4 @@ gradleProperties = upsertGradleProperty(gradleProperties, 'android.release.keyPa
 
 writeFileSync(androidGradlePath, gradleProperties);
 
-console.log(`[android signing] Prepared release signing using ${releaseSigning.keystorePath}`);
+console.log(`[android signing] Prepared shared Android signing using ${releaseSigning.keystorePath}`);

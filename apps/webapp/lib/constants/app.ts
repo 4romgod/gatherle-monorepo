@@ -1,6 +1,7 @@
 export const APP_NAME = 'Gatherle';
 export const COMPANY_LEGAL_NAME = 'Mapapa Solutions (Pty) Ltd';
 export const APP_DOMAIN = 'gatherle.com';
+export const APPLE_OAUTH_CLIENT_ID_WEB = 'com.gatherle.web';
 export const APP_LOGO_LIGHT_PATH = '/orbit-light.svg';
 export const APP_LOGO_DARK_PATH = '/orbit-dark.svg';
 export const APP_LOGO_PATH = APP_LOGO_LIGHT_PATH;

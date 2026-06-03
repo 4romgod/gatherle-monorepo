@@ -1,4 +1,4 @@
-import { APPLE_CLIENT_ID, GOOGLE_CLIENT_IDS } from '@/constants';
+import { APPLE_OAUTH_CLIENT_IDS, GOOGLE_CLIENT_IDS } from '@/constants';
 import type { ExchangeOAuthInput } from '@gatherle/commons/types';
 import { OAuthProvider } from '@gatherle/commons/types';
 import { CustomError, ErrorTypes } from './exceptions';
@@ -73,16 +73,22 @@ const getAppleJwks = (): Promise<RemoteJwkSet> => {
 };
 
 const requireAudience = (provider: OAuthProvider): string | string[] => {
-  const audience =
-    provider === OAuthProvider.Google
-      ? GOOGLE_CLIENT_IDS.length <= 1
-        ? GOOGLE_CLIENT_IDS[0]
-        : GOOGLE_CLIENT_IDS
-      : APPLE_CLIENT_ID;
-  if (!audience) {
-    throw CustomError(`${provider} sign-in is not configured.`, ErrorTypes.INTERNAL_SERVER_ERROR);
+  switch (provider) {
+    case OAuthProvider.Google: {
+      const googleAudience = GOOGLE_CLIENT_IDS.length <= 1 ? GOOGLE_CLIENT_IDS[0] : GOOGLE_CLIENT_IDS;
+      if (!googleAudience) {
+        throw CustomError(`${provider} sign-in is not configured.`, ErrorTypes.INTERNAL_SERVER_ERROR);
+      }
+      return googleAudience;
+    }
+    case OAuthProvider.Apple:
+      if (APPLE_OAUTH_CLIENT_IDS.length === 0) {
+        throw CustomError(`${provider} sign-in is not configured.`, ErrorTypes.INTERNAL_SERVER_ERROR);
+      }
+      return APPLE_OAUTH_CLIENT_IDS.length === 1 ? APPLE_OAUTH_CLIENT_IDS[0] : [...APPLE_OAUTH_CLIENT_IDS];
+    default:
+      throw CustomError('Unsupported authentication provider.', ErrorTypes.BAD_USER_INPUT);
   }
-  return audience;
 };
 
 const verifyIdentityToken = async ({

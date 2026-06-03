@@ -27,11 +27,11 @@ type BottomTabBarProps = MaterialTopTabBarProps & {
 };
 
 export function BottomTabBar({ isTabletLayout, navigation, state }: BottomTabBarProps) {
-  const { authToken, isAuthenticated, setBottomTabBarHeight, username } = useAppShell();
+  const { authToken, isAuthenticated, setBottomTabBarHeight, userId } = useAppShell();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 12);
-  const { profile } = usePreviewProfile(username, isAuthenticated);
+  const { profile } = usePreviewProfile(userId, authToken, isAuthenticated);
   const profileLabel = getDisplayName(profile);
   const { unreadCount: unreadMessages } = useUnreadChatCount(authToken, isAuthenticated);
   const { unreadCount: unreadNotifications } = useUnreadNotificationCount(authToken, isAuthenticated);

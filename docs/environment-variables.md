@@ -47,7 +47,10 @@ The following commands work without any environment variables:
   - `GOOGLE_OAUTH_CLIENT_ID_WEB` (required to verify web Google OAuth identity tokens in the API).
   - `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when testing Android mobile Google sign-in against the local API).
   - `GOOGLE_OAUTH_CLIENT_ID_IOS` (required when testing iOS mobile Google sign-in against the local API).
-  - `APPLE_CLIENT_ID` (required to verify Apple OAuth identity tokens in the API).
+  - Apple OAuth verification uses fixed Apple client identifiers in code: `com.gatherle.web` for web/browser flows and
+    `com.gatherle.mobile` for native iOS. No separate API env vars are required for Apple client IDs.
+  - Legacy `APPLE_CLIENT_ID` has no env-var replacement for the API and is no longer read; remove it from local env
+    files instead of renaming it.
 - `GRAPHQL_URL` defaults to `http://localhost:9000/v1/graphql`, so you no longer need to supply `API_DOMAIN`/`API_PORT`
   locally.
 - Change the dev server port via `PORT` if you need something other than 9000; the default URL will follow that port
@@ -80,8 +83,10 @@ The following commands work without any environment variables:
     audience too).
   - `GOOGLE_OAUTH_CLIENT_ID_IOS` (optional until iOS mobile Google sign-in is enabled; when set, the API accepts this
     audience too).
-  - `APPLE_CLIENT_ID` (required when Apple sign-in is enabled; the API validates Apple `id_token` audience against this
-    value).
+  - Apple OAuth verification uses fixed Apple client identifiers in code: `com.gatherle.web` for web/browser flows and
+    `com.gatherle.mobile` for native iOS. No deployed API env vars are required for Apple client IDs.
+  - Legacy `APPLE_CLIENT_ID` has no deployed env-var replacement for the API and is no longer read; do not add it to
+    Secrets Manager, Lambda configuration, or GitHub environment vars.
   - `NODE_OPTIONS` (handled in CDK, no manual change).
 
 ### E2E tests
@@ -114,8 +119,10 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `NEXT_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
   - `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` (required for Google OAuth in NextAuth).
-  - `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` (required for Apple OAuth in NextAuth; the secret is the server-side Apple
-    credential used by NextAuth).
+  - `APPLE_OAUTH_CLIENT_SECRET_WEB` (required for Apple OAuth in NextAuth; the web client ID is fixed in code as
+    `com.gatherle.web`).
+  - Generate `APPLE_OAUTH_CLIENT_SECRET_WEB` from the downloaded Apple `.p8` key with
+    `npm run apple:oauth:client-secret -w @gatherle/webapp -- --key-file /secure/path/AuthKey_XXXXXXXXXX.p8 --team-id <APPLE_TEAM_ID> --key-id <APPLE_KEY_ID>`.
   - `NEXT_DEV_ALLOWED_ORIGINS` (optional; comma-separated hostnames/IPs to allow cross-origin `/_next/*` requests in dev
     mode, e.g. `192.168.0.7` for LAN testing from a phone). Not needed for standard `localhost` development.
   - `NEXT_PUBLIC_S3_MEDIA_URL` — required when testing media uploads locally. Point at the Beta bucket:
@@ -131,7 +138,7 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
 - Set `NEXT_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 - Inject `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` when Google sign-in is enabled.
-- Inject `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` when Apple sign-in is enabled.
+- Inject `APPLE_OAUTH_CLIENT_SECRET_WEB` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
 - `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
   reads come back from the API as stable CloudFront URLs in deployed environments.
@@ -165,6 +172,9 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
   - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` (required for native mobile Google sign-in runtime on Android and iOS).
   - `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` (required for iOS native Google sign-in so the Google Sign-In plugin can
     register the reverse-client-ID URL scheme).
+  - `EXPO_PUBLIC_WEBAPP_URL` (recommended when testing Apple sign-in on Android; set this to a real HTTPS Gatherle host
+    whose Apple Services ID return URL includes `/auth/mobile/apple/callback`, for example `https://beta.gatherle.com`.
+    Defaults to `https://gatherle.com` if omitted.)
   - `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
 
@@ -173,8 +183,17 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Inject `EXPO_PUBLIC_GRAPHQL_URL` and `EXPO_PUBLIC_WEBSOCKET_URL` from the deployed API/WebSocket outputs.
 - Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB` for Android and iOS builds.
 - Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` for iOS builds.
+- Inject `EXPO_PUBLIC_WEBAPP_URL` for Android/iOS builds when Apple sign-in should use a non-production HTTPS web host
+  such as `https://beta.gatherle.com`.
 - Configure Expo EAS environments (`development`, `preview`, `production`) with the required `EXPO_PUBLIC_GOOGLE_*`
   values so remote EAS builds inline the correct client IDs.
+- Native iOS Apple sign-in does not use a public Expo client ID env var. The app uses the bundle ID
+  `com.gatherle.mobile`, and the API accepts that audience in addition to the fixed Apple Services ID `com.gatherle.web`
+  used by web and Android browser flows.
+- Register the Android OAuth client in Google Cloud Console with package `com.gatherle.mobile` and the SHA1 for the
+  signing identity used by the installed build. The repo-managed local build path now shares one keystore between
+  `npm run android` and `npm run apk:release`; from `apps/mobile`, run `npm run android:oauth:doctor` to print that
+  shared SHA1 and any fallback debug-only fingerprint if you bypass the repo script.
 - Set `EXPO_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 
 ## CI/CD (`.github/workflows/deploy-trigger.yaml` + reusable deploy workflows)
@@ -210,7 +229,14 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `VERCEL_TOKEN` (required if web deploy is enabled).
 - `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (treat as secrets if your org requires it).
 - `NEXTAUTH_SECRET` (used by NextAuth session signing in the webapp deployment environment).
-- `GOOGLE_OAUTH_CLIENT_ID_WEB` (required for web Google OAuth and API verification of web Google `id_token` audiences).
+- `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` (required for web Google OAuth; the API also uses the
+  web client ID to verify Google `id_token` audiences).
+- `APPLE_OAUTH_CLIENT_SECRET_WEB` (required for web Apple OAuth in NextAuth; the Apple web client ID is fixed in code as
+  `com.gatherle.web` and the API verifies Apple `id_token` audiences against that constant).
+- There is no GitHub secret or variable replacement for legacy `APPLE_CLIENT_ID`; the Apple web client ID is fixed in
+  code, so only `APPLE_OAUTH_CLIENT_SECRET_WEB` needs to be configured for Apple web OAuth.
+- `APPLE_OAUTH_CLIENT_SECRET_WEB` is a signed JWT generated from your Apple Sign in with Apple `.p8` key, `Team ID`,
+  `Key ID`, and Services ID; rotate it before it expires.
 - `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when building the Android mobile release in CI/CD and for API verification
   of Android Google `id_token` audiences).
 - `GOOGLE_OAUTH_CLIENT_ID_IOS` (required once iOS mobile Google sign-in is enabled and for API verification of iOS

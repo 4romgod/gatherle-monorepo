@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "apk:release": "expo prebuild --no-install && npm run android:prepare:release-signing && ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true",
+    "apk:release": "expo prebuild --no-install && npm run android:prepare:signing && ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true",
     "apk:install": "sh -c 'if [ -n \"$ANDROID_SERIAL\" ]; then adb -s \"$ANDROID_SERIAL\" install -r android/app/build/outputs/apk/release/app-release.apk; else adb install -r android/app/build/outputs/apk/release/app-release.apk; fi'",
-    "android:prepare:release-signing": "node ./scripts/prepare-android-release-signing.mjs",
+    "android:oauth:doctor": "node ./scripts/android-google-oauth-doctor.mjs",
+    "android:prepare:signing": "node ./scripts/prepare-android-release-signing.mjs",
     "build": "npm-run-all codegen typecheck export",
     "build:android": "expo export --platform android --output-dir dist/android",
     "build:ios": "expo export --platform ios --output-dir dist/ios",
@@ -23,7 +24,7 @@
     "native:sync": "expo prebuild --no-install",
     "native:sync:clean": "expo prebuild --clean --no-install",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty",
-    "android": "expo run:android",
+    "android": "expo prebuild --no-install && npm run android:prepare:signing && expo run:android --no-install",
     "ios": "expo run:ios"
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "@react-navigation/native": "^7.2.4",
     "@react-navigation/native-stack": "^7.15.0",
     "expo": "~54.0.35",
+    "expo-apple-authentication": "~8.0.8",
     "expo-application": "~7.0.8",
     "expo-calendar": "~15.0.8",
     "expo-crypto": "~15.0.9",
@@ -52,6 +54,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-video": "~3.0.16",
+    "expo-web-browser": "~15.0.11",
     "graphql": "^16.13.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",

@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import type { ApolloError } from '@apollo/client';
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client';
 import { DeleteUserByIdDocument, LoginUserDocument, UpdateUserDocument } from '@data/graphql/mutation/User/mutation';
 import { GetMediaUploadUrlDocument } from '@data/graphql/query/Media/query';
@@ -48,6 +49,7 @@ import {
 } from '@/lib/account/forms';
 import { resetPasswordSchema } from '@/lib/auth/validation';
 import { getApolloAuthContext } from '@/lib/auth';
+import { isInvalidSessionError } from '@/lib/auth/sessionValidation';
 import { featureFlags } from '@/lib/featureFlags';
 import { MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
@@ -142,10 +144,10 @@ export function SettingsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<SettingsRoute>();
   const { showToast, withBlockingLoader } = useAppFeedback();
-  const { authToken, isAuthenticated, setPendingVerificationEmail, signOut, updateSessionIdentity, userId, username } =
+  const { authToken, isAuthenticated, setPendingVerificationEmail, signOut, updateSessionIdentity, userId } =
     useAppShell();
   const { preference, setPreference, theme } = useAppTheme();
-  const { error, loading, profile, refetch } = useAccountProfile(username, authToken, isAuthenticated);
+  const { error, loading, profile, refetch } = useAccountProfile(userId, authToken, isAuthenticated);
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
   const [verifyPassword] = useMutation(LoginUserDocument);
   const [deleteUserById, { loading: deletingAccount }] = useMutation(DeleteUserByIdDocument);
@@ -179,6 +181,8 @@ export function SettingsScreen() {
       await refetch();
     }, [refetch]),
   );
+  const hasInvalidSessionProfileError = Boolean(error && isInvalidSessionError(error as ApolloError));
+  const hasMismatchedSessionIdentity = Boolean(profile?.userId && userId && profile.userId !== userId);
 
   useEffect(() => {
     if (!profile) {
@@ -204,6 +208,19 @@ export function SettingsScreen() {
   useEffect(() => {
     setSelectedInterestIds(extractInterestIds(profile?.interests));
   }, [profile?.interests]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (!hasInvalidSessionProfileError && !hasMismatchedSessionIdentity) {
+      return;
+    }
+
+    signOut();
+    navigation.navigate('Login', { redirectTab: 'Account' });
+  }, [hasInvalidSessionProfileError, hasMismatchedSessionIdentity, isAuthenticated, navigation, signOut]);
 
   const visibilityCopy = useMemo(
     () => ({
@@ -1320,9 +1337,21 @@ export function SettingsScreen() {
     return (
       <PageContainer>
         <StateNotice
-          actionLabel="Retry"
-          message="We couldn’t load your settings."
-          onPressAction={() => void refetch()}
+          actionLabel={hasInvalidSessionProfileError ? 'Continue to login' : 'Retry'}
+          message={
+            hasInvalidSessionProfileError
+              ? 'Your saved session no longer points at an active account. Please sign in again.'
+              : 'We couldn’t load your settings.'
+          }
+          onPressAction={() => {
+            if (hasInvalidSessionProfileError) {
+              signOut();
+              navigation.navigate('Login', { redirectTab: 'Account' });
+              return;
+            }
+
+            void refetch();
+          }}
         />
       </PageContainer>
     );

@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import type { ApolloError } from '@apollo/client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
@@ -28,6 +29,7 @@ import { useSavedEvents } from '@/hooks/events/useSavedEvents';
 import { useUserMoments } from '@/hooks/moments/useUserMoments';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
+import { isInvalidSessionError } from '@/lib/auth/sessionValidation';
 import { getDisplayName } from '@/lib/events/formatters';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
@@ -36,7 +38,7 @@ type AccountTab = 'going' | 'past' | 'hosting' | 'saved';
 
 export function AccountScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, isAuthenticated, signOut, userId, username } = useAppShell();
+  const { authToken, hasLiveSession, isAuthenticated, signOut, userId, username } = useAppShell();
   const { theme } = useAppTheme();
   const [activeTab, setActiveTab] = useState<AccountTab>('going');
   const [accountSheetVisible, setAccountSheetVisible] = useState(false);
@@ -46,7 +48,7 @@ export function AccountScreen() {
     loading: profileLoading,
     profile,
     refetch: refetchProfile,
-  } = usePreviewProfile(username, isAuthenticated);
+  } = usePreviewProfile(userId, authToken, isAuthenticated);
   const profileUserId = profile?.userId ?? userId ?? undefined;
   const { moments: userMoments } = useUserMoments(isAuthenticated ? profileUserId : undefined, authToken);
   const {
@@ -76,6 +78,21 @@ export function AccountScreen() {
   const isAdmin = profile?.userRole === UserRole.Admin;
   const profileEventsCount = hostedEventsTotalCount;
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
+  const hasInvalidSessionProfileError = Boolean(profileError && isInvalidSessionError(profileError as ApolloError));
+  const hasMismatchedSessionIdentity = Boolean(profile?.userId && userId && profile.userId !== userId);
+
+  useEffect(() => {
+    if (!hasLiveSession) {
+      return;
+    }
+
+    if (!hasInvalidSessionProfileError && !hasMismatchedSessionIdentity) {
+      return;
+    }
+
+    signOut();
+    navigation.navigate('Login', { redirectTab: 'Account' });
+  }, [hasInvalidSessionProfileError, hasLiveSession, hasMismatchedSessionIdentity, navigation, signOut]);
   const openHostedEvents = useCallback(() => {
     if (!profileUserId) {
       return;
@@ -230,12 +247,12 @@ export function AccountScreen() {
     );
   }
 
-  if (!username) {
+  if (!userId) {
     return (
       <MainTabScreenLayout toolbarProps={accountToolbarProps}>
         <PageContainer>
           <PageHeading title="Account" />
-          <StateNotice message="Your account needs a username before we can load the full mobile profile." />
+          <StateNotice message="Your account session is missing profile identity. Please sign in again." />
         </PageContainer>
       </MainTabScreenLayout>
     );
@@ -258,9 +275,21 @@ export function AccountScreen() {
         <PageContainer>
           <PageHeading title="Account" />
           <StateNotice
-            actionLabel="Retry"
-            message="We couldn’t load your profile."
-            onPressAction={() => void refetchProfile()}
+            actionLabel={hasInvalidSessionProfileError ? 'Continue to login' : 'Retry'}
+            message={
+              hasInvalidSessionProfileError
+                ? 'Your saved session no longer points at an active account. Please sign in again.'
+                : 'We couldn’t load your profile.'
+            }
+            onPressAction={() => {
+              if (hasInvalidSessionProfileError) {
+                signOut();
+                navigation.navigate('Login', { redirectTab: 'Account' });
+                return;
+              }
+
+              void refetchProfile();
+            }}
           />
         </PageContainer>
       </MainTabScreenLayout>

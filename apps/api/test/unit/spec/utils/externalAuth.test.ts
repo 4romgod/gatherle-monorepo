@@ -13,11 +13,13 @@ jest.mock('@/constants', () => {
   const actual = jest.requireActual('@/constants');
   return {
     ...actual,
+    APPLE_OAUTH_CLIENT_ID_IOS: 'com.gatherle.mobile',
+    APPLE_OAUTH_CLIENT_IDS: ['com.gatherle.web', 'com.gatherle.mobile'],
+    APPLE_OAUTH_CLIENT_ID_WEB: 'com.gatherle.web',
     GOOGLE_OAUTH_CLIENT_ID_WEB: 'google-web-client-id',
     GOOGLE_OAUTH_CLIENT_ID_ANDROID: 'google-android-client-id',
     GOOGLE_OAUTH_CLIENT_ID_IOS: 'google-ios-client-id',
     GOOGLE_CLIENT_IDS: ['google-web-client-id', 'google-android-client-id', 'google-ios-client-id'],
-    APPLE_CLIENT_ID: 'apple-client-id',
   };
 });
 
@@ -90,6 +92,39 @@ describe('externalAuth utilities', () => {
       givenName: 'OAuth',
       familyName: 'User',
       profilePicture: 'https://example.com/avatar.png',
+    });
+  });
+
+  it('accepts Apple identity tokens for both the web service ID and the native iOS bundle ID audiences', async () => {
+    mockJwtVerify.mockResolvedValue({
+      payload: {
+        sub: 'apple-user-1',
+        email: 'apple-user@example.com',
+        email_verified: true,
+      },
+    });
+
+    const { verifyExternalIdentityToken } = await loadExternalAuth();
+    const result = await verifyExternalIdentityToken({
+      provider: OAuthProvider.Apple,
+      idToken: 'apple-id-token',
+      given_name: 'Apple',
+      family_name: 'User',
+    });
+
+    expect(mockCreateRemoteJWKSet).toHaveBeenCalledTimes(1);
+    expect(mockJwtVerify).toHaveBeenCalledWith('apple-id-token', 'jwks:https://appleid.apple.com/auth/keys', {
+      audience: ['com.gatherle.web', 'com.gatherle.mobile'],
+      issuer: 'https://appleid.apple.com',
+    });
+    expect(result).toEqual({
+      provider: OAuthProvider.Apple,
+      providerUserId: 'apple-user-1',
+      email: 'apple-user@example.com',
+      emailVerified: true,
+      givenName: 'Apple',
+      familyName: 'User',
+      profilePicture: undefined,
     });
   });
 

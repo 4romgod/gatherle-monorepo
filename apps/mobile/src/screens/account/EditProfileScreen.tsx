@@ -27,8 +27,8 @@ import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 export function EditProfileScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { showToast, withBlockingLoader } = useAppFeedback();
-  const { authToken, isAuthenticated, updateSessionIdentity, userId, username } = useAppShell();
-  const { error, loading, profile, refetch } = useAccountProfile(username, authToken, isAuthenticated);
+  const { authToken, isAuthenticated, updateSessionIdentity, userId } = useAppShell();
+  const { error, loading, profile, refetch } = useAccountProfile(userId, authToken, isAuthenticated);
   const [updateUser, { loading: saving }] = useMutation(UpdateUserDocument);
   const [getUploadUrl] = useLazyQuery(GetMediaUploadUrlDocument, {
     fetchPolicy: 'no-cache',
