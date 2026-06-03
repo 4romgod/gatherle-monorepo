@@ -1,4 +1,4 @@
-import EventOccurrenceService from '@/services/eventOccurrence';
+import EventOccurrenceService, { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
   EventOccurrenceStatus,
@@ -25,6 +25,7 @@ jest.mock('@/mongodb/dao', () => ({
     readByEventSeriesIdsInRange: jest.fn(),
     readByEventSeriesIdFromOriginalStart: jest.fn(),
     readExceptionOccurrenceKeysByEventSeriesId: jest.fn(),
+    readRepresentativeByEventSeriesIds: jest.fn(),
     readUpcomingByEventSeriesId: jest.fn(),
     reassignOccurrencesToSeries: jest.fn(),
     deleteMissingGeneratedOccurrences: jest.fn(),
@@ -231,6 +232,24 @@ describe('EventOccurrenceService', () => {
 
       expect(result).toBeNull();
       expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('readRepresentativeOccurrencesForSeriesIds', () => {
+    it('delegates batched representative occurrence selection to the DAO', async () => {
+      const representativeMap = new Map<string, EventOccurrence | null>([['series-1', buildOccurrence()]]);
+      (EventOccurrenceDAO.readRepresentativeByEventSeriesIds as jest.Mock).mockResolvedValue(representativeMap);
+
+      const result = await EventOccurrenceService.readRepresentativeOccurrencesForSeriesIds(
+        ['series-1'],
+        new Date('2026-05-01T00:00:00.000Z'),
+      );
+
+      expect(EventOccurrenceDAO.readRepresentativeByEventSeriesIds).toHaveBeenCalledWith(
+        ['series-1'],
+        new Date('2026-05-01T00:00:00.000Z'),
+      );
+      expect(result).toBe(representativeMap);
     });
   });
 
@@ -844,6 +863,77 @@ describe('EventOccurrenceService', () => {
 
       expect(EventOccurrenceDAO.countByEventSeriesIdsInRange).not.toHaveBeenCalled();
       expect(count).toBe(1);
+    });
+
+    it('reuses candidate series reads across list and count calls in the same request', async () => {
+      const requestCache = createEventOccurrenceQueryRequestCache();
+      const options = {
+        dateRange: {
+          startDate: new Date('2026-05-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+      };
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-1' }),
+        buildSeries({ eventId: 'series-2' }),
+      ]);
+      (EventOccurrenceDAO.readByEventSeriesIdsInRange as jest.Mock).mockResolvedValue([
+        buildOccurrence(),
+        buildOccurrence({
+          occurrenceId: 'series-2#2026-05-08T10:00:00.000Z',
+          eventSeriesId: 'series-2',
+          occurrenceKey: 'series-2#2026-05-08T10:00:00.000Z',
+          originalStartAt: new Date('2026-05-08T10:00:00.000Z'),
+          startAt: new Date('2026-05-08T10:00:00.000Z'),
+        }),
+      ]);
+      (EventOccurrenceDAO.countByEventSeriesIdsInRange as jest.Mock).mockResolvedValue(2);
+
+      await EventOccurrenceService.readEventOccurrences(options, requestCache);
+      await EventOccurrenceService.countEventOccurrences(options, requestCache);
+
+      expect(EventSeriesDAO.readCandidateEventSeriesForOccurrences).toHaveBeenCalledTimes(1);
+    });
+
+    it('reuses persisted occurrence range reads for derived status filters in the same request', async () => {
+      const requestCache = createEventOccurrenceQueryRequestCache();
+      const options = {
+        dateRange: {
+          startDate: new Date('2026-04-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-31T23:59:59.999Z'),
+        },
+        filters: [
+          {
+            field: 'status',
+            operator: FilterOperatorInput.eq,
+            value: [EventStatus.Upcoming],
+          },
+        ],
+      };
+      (EventSeriesDAO.readCandidateEventSeriesForOccurrences as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-1', status: EventStatus.Upcoming }),
+      ]);
+      (EventOccurrenceDAO.readByEventSeriesIdsInRange as jest.Mock).mockResolvedValue([
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-04-20T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-04-20T10:00:00.000Z',
+          originalStartAt: new Date('2026-04-20T10:00:00.000Z'),
+          startAt: new Date('2026-04-20T10:00:00.000Z'),
+          endAt: new Date('2026-04-20T12:00:00.000Z'),
+        }),
+        buildOccurrence({
+          occurrenceId: 'series-1#2026-05-08T10:00:00.000Z',
+          occurrenceKey: 'series-1#2026-05-08T10:00:00.000Z',
+          originalStartAt: new Date('2026-05-08T10:00:00.000Z'),
+          startAt: new Date('2026-05-08T10:00:00.000Z'),
+          endAt: new Date('2026-05-08T12:00:00.000Z'),
+        }),
+      ]);
+
+      await EventOccurrenceService.readEventOccurrences(options, requestCache);
+      await EventOccurrenceService.countEventOccurrences(options, requestCache);
+
+      expect(EventOccurrenceDAO.readByEventSeriesIdsInRange).toHaveBeenCalledTimes(1);
     });
   });
 

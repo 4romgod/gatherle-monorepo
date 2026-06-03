@@ -6,7 +6,7 @@ import type {
   SplitEventSeriesInput,
   UpdateEventInput,
 } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { UserRole } from '@gatherle/commons/types';
 import {
   ActivityDAO,
   EventOccurrenceDAO,

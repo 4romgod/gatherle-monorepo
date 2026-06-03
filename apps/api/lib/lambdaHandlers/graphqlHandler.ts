@@ -19,6 +19,7 @@ import {
   createEventSaveCountLoader,
   createEventSavedByMeLoader,
 } from '@/graphql/loaders';
+import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
 import { createCorsHeaders, isOriginAllowed } from '@/graphql/apollo';
@@ -79,6 +80,9 @@ async function initializeResources() {
             user,
             lambdaEvent: event,
             lambdaContext: context,
+            requestCache: {
+              eventOccurrenceQuery: createEventOccurrenceQueryRequestCache(),
+            },
             loaders: {
               user: createUserLoader(),
               eventCategory: createEventCategoryLoader(),

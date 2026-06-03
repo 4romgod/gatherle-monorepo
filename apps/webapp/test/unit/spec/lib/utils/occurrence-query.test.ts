@@ -5,7 +5,7 @@ import {
 } from '@/lib/utils/occurrence-query';
 
 describe('occurrence-query utilities', () => {
-  it('builds a discovery range that extends six months from the start date', () => {
+  it('builds a discovery range that extends one year from the start date', () => {
     const range = buildDefaultOccurrenceDateRange(new Date('2026-05-02T11:45:00.000Z'));
     const startDate = new Date(range.startDate);
     const endDate = new Date(range.endDate);
@@ -18,8 +18,8 @@ describe('occurrence-query utilities', () => {
     expect(startDate.getSeconds()).toBe(0);
     expect(startDate.getMilliseconds()).toBe(0);
 
-    expect(endDate.getFullYear()).toBe(2026);
-    expect(endDate.getMonth()).toBe(10);
+    expect(endDate.getFullYear()).toBe(2027);
+    expect(endDate.getMonth()).toBe(4);
     expect(endDate.getDate()).toBe(2);
     expect(endDate.getHours()).toBe(23);
     expect(endDate.getMinutes()).toBe(59);

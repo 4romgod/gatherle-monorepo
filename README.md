@@ -26,7 +26,6 @@ Unified workspace for the Gatherle stack: GraphQL API, web app, shared commons, 
 ## Prerequisites
 
 - Node 22.x and npm (workspace-aware). No pnpm needed.
-- Docker (only if you build the API image).
 - AWS creds + CDK bootstrap if you want to synth/deploy infra.
 
 ## Install

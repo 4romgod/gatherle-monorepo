@@ -69,6 +69,12 @@ const EVENT_MOMENT_CACHE_FRAGMENT = gql`
   }
 `;
 
+type SavedEventsModifierArgs = {
+  options?: {
+    skip?: number | null;
+  } | null;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -452,8 +458,11 @@ export const createMobileNotificationRealtimeCacheHandlers = ({
     client.cache.modify({
       id: 'ROOT_QUERY',
       fields: {
-        readSavedEvents(existing: unknown = [], { readField, toReference }) {
+        readSavedEvents(existing: unknown = [], details) {
+          const { readField, toReference } = details;
           const currentItems = Array.isArray(existing) ? existing : [];
+          const args = (details as typeof details & { args?: SavedEventsModifierArgs }).args;
+          const skip = typeof args?.options?.skip === 'number' ? args.options.skip : 0;
 
           if (!Array.isArray(existing)) {
             return existing;
@@ -461,6 +470,10 @@ export const createMobileNotificationRealtimeCacheHandlers = ({
 
           if (!payload.isSaved) {
             return currentItems.filter((item) => readField('targetId', item as any) !== payload.eventId);
+          }
+
+          if (skip > 0) {
+            return existing;
           }
 
           const alreadySaved = currentItems.some((item) => readField('targetId', item as any) === payload.eventId);

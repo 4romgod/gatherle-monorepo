@@ -26,19 +26,22 @@ import {
 describe('readTrendingEvents e2e', () => {
   const url = process.env.GRAPHQL_URL!;
   const TRENDING_HOOK_TIMEOUT_MS = 180_000;
+  const TRENDING_FIXTURE_LIMIT = 1_000;
   let adminUser: UserWithToken;
   let actorUser: UserWithToken;
+  let rankingParticipantUser: UserWithToken;
+  let countParticipantUser: UserWithToken;
   const createdEventIds: string[] = [];
   const createdUserIds: string[] = [];
   const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const upsertParticipantWithRetry = async (eventId: string) => {
+  const upsertParticipantWithRetry = async (eventId: string, participantUser: UserWithToken) => {
     for (let attempt = 1; attempt <= 5; attempt++) {
       const response = await request(url)
         .post('')
         .timeout({ response: 30_000, deadline: 40_000 })
-        .set('Authorization', 'Bearer ' + actorUser.token)
-        .send(getUpsertEventParticipantMutation({ userId: actorUser.userId, eventId, status: 'Going' }));
+        .set('Authorization', 'Bearer ' + participantUser.token)
+        .send(getUpsertEventParticipantMutation({ userId: participantUser.userId, eventId, status: 'Going' }));
 
       if (response.status === 200 && !response.body.errors) {
         return response;
@@ -60,17 +63,30 @@ describe('readTrendingEvents e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [seededAdmin, createdActorUser, category] = await Promise.all([
+    const setup = await Promise.all([
       loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
       createUserOnServer(
         url,
         buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'trending-actor-password', uniqueSuffix()),
         createdUserIds,
       ),
+      createUserOnServer(
+        url,
+        buildCreateUserInput(usersMockData.at(1)! as CreateUserInput, 'trending-ranking-password', uniqueSuffix()),
+        createdUserIds,
+      ),
+      createUserOnServer(
+        url,
+        buildCreateUserInput(usersMockData.at(2)! as CreateUserInput, 'trending-count-password', uniqueSuffix()),
+        createdUserIds,
+      ),
       readFirstEventCategory(url),
     ]);
+    const [seededAdmin, createdActorUser, createdRankingParticipantUser, createdCountParticipantUser, category] = setup;
     adminUser = seededAdmin;
     actorUser = createdActorUser;
+    rankingParticipantUser = createdRankingParticipantUser;
+    countParticipantUser = createdCountParticipantUser;
     const { orgSlug: _orgSlug, venueSlug: _venueSlug, ...baseEventData } = eventSeriesMockData[0];
 
     // Create a Published, Public, Upcoming event to ensure at least one result
@@ -203,7 +219,11 @@ describe('readTrendingEvents e2e', () => {
   });
 
   it('includes the created Published event in the results', async () => {
-    const response = await request(url).post('').send(getReadTrendingEventsQuery(50));
+    const rsvpResponse = await upsertParticipantWithRetry(createdEventIds[0], rankingParticipantUser);
+    expect(rsvpResponse.status).toBe(200);
+    expect(rsvpResponse.body.errors).toBeUndefined();
+
+    const response = await request(url).post('').send(getReadTrendingEventsQuery(TRENDING_FIXTURE_LIMIT));
 
     expect(response.status).toBe(200);
     const eventIds = response.body.data.readTrendingEvents.map((e: { eventId: string }) => e.eventId);
@@ -229,20 +249,23 @@ describe('readTrendingEvents e2e', () => {
     const eventId = createdEventIds[0];
     if (!eventId) return;
 
-    // Get baseline count
-    const before = await request(url).post('').send(getReadTrendingEventsQuery(50));
-    const beforeEvent = before.body.data.readTrendingEvents.find((e: { eventId: string }) => e.eventId === eventId);
-    const baselineRsvp = beforeEvent?.rsvpCount ?? 0;
+    const rankingRsvpResponse = await upsertParticipantWithRetry(eventId, rankingParticipantUser);
+    expect(rankingRsvpResponse.status).toBe(200);
+    expect(rankingRsvpResponse.body.errors).toBeUndefined();
 
-    // RSVP
-    const rsvpResponse = await upsertParticipantWithRetry(eventId);
+    const before = await request(url).post('').send(getReadTrendingEventsQuery(TRENDING_FIXTURE_LIMIT));
+    const beforeEvent = before.body.data.readTrendingEvents.find((e: { eventId: string }) => e.eventId === eventId);
+    expect(beforeEvent).toBeDefined();
+    const baselineRsvp = beforeEvent.rsvpCount;
+
+    const rsvpResponse = await upsertParticipantWithRetry(eventId, countParticipantUser);
     expect(rsvpResponse.status).toBe(200);
     expect(rsvpResponse.body.errors).toBeUndefined();
 
-    // Verify count increased
-    const after = await request(url).post('').send(getReadTrendingEventsQuery(50));
+    const after = await request(url).post('').send(getReadTrendingEventsQuery(TRENDING_FIXTURE_LIMIT));
     const afterEvent = after.body.data.readTrendingEvents.find((e: { eventId: string }) => e.eventId === eventId);
 
+    expect(afterEvent).toBeDefined();
     expect(afterEvent?.rsvpCount).toBe(baselineRsvp + 1);
   });
 });

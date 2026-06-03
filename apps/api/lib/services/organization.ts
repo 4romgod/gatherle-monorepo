@@ -1,10 +1,5 @@
-import {
-  FollowTargetType,
-  NotificationTargetType,
-  OrganizationRole,
-  UserRole,
-  type Organization,
-} from '@gatherle/commons/types';
+import type { UserRole } from '@gatherle/commons/types';
+import { FollowTargetType, NotificationTargetType, OrganizationRole, type Organization } from '@gatherle/commons/types';
 import {
   ActivityDAO,
   FollowDAO,

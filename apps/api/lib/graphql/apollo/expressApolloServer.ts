@@ -24,6 +24,7 @@ import {
   createEventSaveCountLoader,
   createEventSavedByMeLoader,
 } from '@/graphql/loaders';
+import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
@@ -85,6 +86,9 @@ export const startExpressApolloServer = async (
           user,
           req,
           res,
+          requestCache: {
+            eventOccurrenceQuery: createEventOccurrenceQueryRequestCache(),
+          },
           loaders: {
             user: createUserLoader(),
             eventCategory: createEventCategoryLoader(),

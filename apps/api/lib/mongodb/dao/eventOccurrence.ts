@@ -15,6 +15,36 @@ type OccurrenceReadOptions = {
 };
 
 class EventOccurrenceDAO {
+  private static buildRepresentativeCandidateMatch(eventSeriesIds: string[], nonCancelledEventSeriesIds: Set<string>) {
+    const withNonCancelled = eventSeriesIds.filter((eventSeriesId) => nonCancelledEventSeriesIds.has(eventSeriesId));
+    const onlyCancelled = eventSeriesIds.filter((eventSeriesId) => !nonCancelledEventSeriesIds.has(eventSeriesId));
+
+    if (withNonCancelled.length > 0 && onlyCancelled.length > 0) {
+      return {
+        $or: [
+          {
+            eventSeriesId: { $in: withNonCancelled },
+            status: { $ne: EventOccurrenceStatus.Cancelled },
+          },
+          {
+            eventSeriesId: { $in: onlyCancelled },
+          },
+        ],
+      };
+    }
+
+    if (withNonCancelled.length > 0) {
+      return {
+        eventSeriesId: { $in: withNonCancelled },
+        status: { $ne: EventOccurrenceStatus.Cancelled },
+      };
+    }
+
+    return {
+      eventSeriesId: { $in: onlyCancelled },
+    };
+  }
+
   static async readEventSeriesIdsInRange(startDate: Date, endDate: Date): Promise<string[]> {
     try {
       return await EventOccurrenceModel.distinct('eventSeriesId', {
@@ -257,6 +287,105 @@ class EventOccurrenceDAO {
         .exec();
     } catch (error) {
       logDaoError('Error reading first event occurrence by eventSeriesId', { error, eventSeriesId });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readRepresentativeByEventSeriesIds(
+    eventSeriesIds: string[],
+    fromDate: Date = new Date(),
+  ): Promise<Map<string, EventOccurrence | null>> {
+    if (eventSeriesIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const nonCancelledRows = await EventOccurrenceModel.aggregate<{ _id: string }>([
+        {
+          $match: {
+            eventSeriesId: { $in: eventSeriesIds },
+            status: { $ne: EventOccurrenceStatus.Cancelled },
+          },
+        },
+        {
+          $group: {
+            _id: '$eventSeriesId',
+          },
+        },
+      ]).exec();
+
+      const nonCancelledEventSeriesIds = new Set(nonCancelledRows.map((row) => row._id));
+      const candidateMatch = this.buildRepresentativeCandidateMatch(eventSeriesIds, nonCancelledEventSeriesIds);
+
+      const upcomingRows = await EventOccurrenceModel.aggregate<EventOccurrence>([
+        {
+          $match: {
+            $and: [candidateMatch, { status: { $ne: EventOccurrenceStatus.Completed } }],
+            $or: [{ endAt: { $gte: fromDate } }, { endAt: { $exists: false }, startAt: { $gte: fromDate } }],
+          },
+        },
+        {
+          $sort: {
+            eventSeriesId: 1,
+            startAt: 1,
+            originalStartAt: 1,
+            occurrenceKey: 1,
+          },
+        },
+        {
+          $group: {
+            _id: '$eventSeriesId',
+            occurrence: { $first: '$$ROOT' },
+          },
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$occurrence',
+          },
+        },
+      ]).exec();
+
+      const upcomingMap = new Map(upcomingRows.map((occurrence) => [occurrence.eventSeriesId, occurrence]));
+      const remainingEventSeriesIds = eventSeriesIds.filter((eventSeriesId) => !upcomingMap.has(eventSeriesId));
+
+      const fallbackRows =
+        remainingEventSeriesIds.length === 0
+          ? []
+          : await EventOccurrenceModel.aggregate<EventOccurrence>([
+              {
+                $match: this.buildRepresentativeCandidateMatch(remainingEventSeriesIds, nonCancelledEventSeriesIds),
+              },
+              {
+                $sort: {
+                  eventSeriesId: 1,
+                  startAt: -1,
+                  originalStartAt: -1,
+                  occurrenceKey: -1,
+                },
+              },
+              {
+                $group: {
+                  _id: '$eventSeriesId',
+                  occurrence: { $first: '$$ROOT' },
+                },
+              },
+              {
+                $replaceRoot: {
+                  newRoot: '$occurrence',
+                },
+              },
+            ]).exec();
+
+      const fallbackMap = new Map(fallbackRows.map((occurrence) => [occurrence.eventSeriesId, occurrence]));
+
+      return new Map(
+        eventSeriesIds.map((eventSeriesId) => [
+          eventSeriesId,
+          upcomingMap.get(eventSeriesId) ?? fallbackMap.get(eventSeriesId) ?? null,
+        ]),
+      );
+    } catch (error) {
+      logDaoError('Error reading representative occurrences by eventSeriesIds', { error, eventSeriesIds, fromDate });
       throw KnownCommonError(error);
     }
   }

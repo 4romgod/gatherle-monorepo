@@ -57,10 +57,10 @@ describe('mobile event formatters', () => {
     jest.useRealTimers();
   });
 
-  it('builds the default six-month occurrence query range from local day bounds', () => {
+  it('builds the default one-year occurrence query range from local day bounds', () => {
     const range = buildDefaultOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
     expect(range.startDate).toBe(new Date(2026, 0, 15, 0, 0, 0, 0).toISOString());
-    expect(range.endDate).toBe(new Date(2026, 6, 15, 23, 59, 59, 999).toISOString());
+    expect(range.endDate).toBe(new Date(2027, 0, 15, 23, 59, 59, 999).toISOString());
   });
 
   it('builds a wide selected-event occurrence range so exact series matches include past occurrences', () => {

@@ -11,6 +11,11 @@ jest.mock('@/mongodb/models', () => ({
   Activity: {
     create: jest.fn(),
     find: jest.fn(),
+    aggregate: jest.fn(),
+    collection: { name: 'activities' },
+  },
+  Follow: {
+    collection: { name: 'follows' },
   },
 }));
 
@@ -167,6 +172,63 @@ describe('ActivityDAO', () => {
       (ActivityModel.find as jest.Mock).mockReturnValue(createMockFailedMongooseQuery(new MockMongoError(0)));
 
       await expect(ActivityDAO.readByActorIds(['actor-1'])).rejects.toThrow(
+        CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe('readFeedForUser', () => {
+    it('reads feed activities for a user and clamps limit', async () => {
+      (ActivityModel.aggregate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockActivity]),
+      });
+
+      const result = await ActivityDAO.readFeedForUser('actor-1', 200);
+
+      expect(ActivityModel.aggregate).toHaveBeenCalledWith([
+        { $match: { actorId: 'actor-1' } },
+        {
+          $unionWith: {
+            coll: 'follows',
+            pipeline: [
+              {
+                $match: {
+                  followerUserId: 'actor-1',
+                  targetType: 'User',
+                  approvalStatus: 'Accepted',
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  actorId: '$targetId',
+                },
+              },
+              {
+                $lookup: {
+                  from: 'activities',
+                  localField: 'actorId',
+                  foreignField: 'actorId',
+                  as: 'activities',
+                },
+              },
+              { $unwind: '$activities' },
+              { $replaceRoot: { newRoot: '$activities' } },
+            ],
+          },
+        },
+        { $sort: { eventAt: -1, createdAt: -1 } },
+        { $limit: 100 },
+      ]);
+      expect(result).toEqual([mockActivity]);
+    });
+
+    it('wraps errors when reading a user feed', async () => {
+      (ActivityModel.aggregate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
+      });
+
+      await expect(ActivityDAO.readFeedForUser('actor-1')).rejects.toThrow(
         CustomError(ERROR_MESSAGES.INTERNAL_SERVER_ERROR, ErrorTypes.INTERNAL_SERVER_ERROR),
       );
     });

@@ -36,6 +36,11 @@ import type {
 import type { AuthClaims } from '@/utils/auth';
 import type { APIGatewayProxyEvent, Context as LambdaContext } from 'aws-lambda';
 import { emitGraphqlQueryGuardMetrics } from '@/utils/graphqlQueryGuardMetrics';
+import type { EventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
+
+type ServerRequestCache = {
+  eventOccurrenceQuery: EventOccurrenceQueryRequestCache;
+};
 
 export interface ServerContext {
   token?: string;
@@ -44,6 +49,7 @@ export interface ServerContext {
   res?: Response;
   lambdaEvent?: APIGatewayProxyEvent;
   lambdaContext?: LambdaContext;
+  requestCache?: ServerRequestCache;
   loaders: {
     user: DataLoader<string, User | null>;
     eventCategory: DataLoader<string, EventCategory | null>;

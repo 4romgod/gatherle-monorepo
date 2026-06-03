@@ -2,13 +2,7 @@ import 'reflect-metadata';
 import { ActivityResolver } from '@/graphql/resolvers/activity';
 import { ActivityDAO, FollowDAO } from '@/mongodb/dao';
 import type { Activity, CreateActivityInput, User } from '@gatherle/commons/types';
-import {
-  ActivityObjectType,
-  ActivityVerb,
-  ActivityVisibility,
-  FollowTargetType,
-  UserRole,
-} from '@gatherle/commons/types';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility, UserRole } from '@gatherle/commons/types';
 import { Types } from 'mongoose';
 import type { ServerContext } from '@/graphql';
 
@@ -17,6 +11,7 @@ jest.mock('@/mongodb/dao', () => ({
     create: jest.fn(),
     readByActor: jest.fn(),
     readByActorIds: jest.fn(),
+    readFeedForUser: jest.fn(),
   },
   FollowDAO: {
     readFollowingForUser: jest.fn(),
@@ -82,18 +77,12 @@ describe('ActivityResolver', () => {
   });
 
   it('reads feed including follow relationships', async () => {
-    const follows = [
-      { targetType: FollowTargetType.User, targetId: 'friend-1' },
-      { targetType: FollowTargetType.Organization, targetId: 'org-1' },
-    ];
     const feed: Activity[] = [];
-    (FollowDAO.readFollowingForUser as jest.Mock).mockResolvedValue(follows);
-    (ActivityDAO.readByActorIds as jest.Mock).mockResolvedValue(feed);
+    (ActivityDAO.readFeedForUser as jest.Mock).mockResolvedValue(feed);
 
     const result = await resolver.readFeed(mockContext as ServerContext, 10);
 
-    expect(FollowDAO.readFollowingForUser).toHaveBeenCalledWith(mockUser.userId);
-    expect(ActivityDAO.readByActorIds).toHaveBeenCalledWith(['friend-1', mockUser.userId], 10);
+    expect(ActivityDAO.readFeedForUser).toHaveBeenCalledWith(mockUser.userId, 10);
     expect(result).toBe(feed);
   });
 });

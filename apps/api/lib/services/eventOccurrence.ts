@@ -31,7 +31,7 @@ import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
 import { logger } from '@/utils/logger';
 
 /** Maximum look-ahead window for materialising occurrence rows. Balances pre-computation cost with enough runway for schedulers and calendar integrations. */
-const MATERIALIZATION_WINDOW_MONTHS = 6;
+const MATERIALIZATION_WINDOW_MONTHS = 12;
 /** Hard cap on occurrences generated per sync run. Guards against runaway infinite RRULE expansions exhausting database write capacity. */
 const MAX_WINDOW_OCCURRENCES = 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -43,6 +43,16 @@ type OccurrenceQuerySeries = Pick<
   createdAt?: Date;
   updatedAt?: Date;
 };
+
+export type EventOccurrenceQueryRequestCache = {
+  candidateSeriesByOptionsKey: Map<string, OccurrenceQuerySeries[]>;
+  occurrencesByRangeKey: Map<string, EventOccurrence[]>;
+};
+
+export const createEventOccurrenceQueryRequestCache = (): EventOccurrenceQueryRequestCache => ({
+  candidateSeriesByOptionsKey: new Map(),
+  occurrencesByRangeKey: new Map(),
+});
 
 const DEFAULT_OCCURRENCE_SORT: SortInput[] = [{ field: 'startAt', order: SortOrderInput.asc }];
 const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
@@ -60,6 +70,29 @@ const SUPPORTED_OCCURRENCE_SORT_FIELDS = new Set([
   'updatedAt',
 ]);
 const SUPPORTED_USER_OCCURRENCE_SORT_FIELDS = new Set(['startAt']);
+
+function stableSerialize(value: unknown): string {
+  if (value === null || value === undefined) {
+    return String(value);
+  }
+
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`;
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+    return `{${entries.map(([key, nestedValue]) => `${key}:${stableSerialize(nestedValue)}`).join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
 
 function parseRule(rruleString: string): RRule | null {
   try {
@@ -352,6 +385,45 @@ function splitOccurrenceStatusFilters(options: EventsQueryOptionsInput) {
 }
 
 class EventOccurrenceService {
+  private static async readCandidateEventSeriesForOccurrenceQuery(
+    options: EventsQueryOptionsInput | undefined,
+    requestCache?: EventOccurrenceQueryRequestCache,
+  ): Promise<OccurrenceQuerySeries[]> {
+    const cacheKey = stableSerialize(options ?? null);
+    const cached = requestCache?.candidateSeriesByOptionsKey.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
+      options,
+    )) as OccurrenceQuerySeries[];
+
+    requestCache?.candidateSeriesByOptionsKey.set(cacheKey, candidateEventSeries);
+    return candidateEventSeries;
+  }
+
+  private static async readPersistedOccurrencesInRange(
+    eventSeriesIds: string[],
+    startDate: Date,
+    endDate: Date,
+    requestCache?: EventOccurrenceQueryRequestCache,
+  ): Promise<EventOccurrence[]> {
+    const cacheKey = stableSerialize({
+      eventSeriesIds,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+    const cached = requestCache?.occurrencesByRangeKey.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const occurrences = await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate);
+    requestCache?.occurrencesByRangeKey.set(cacheKey, occurrences);
+    return occurrences;
+  }
+
   private static groupOccurrencesBySeriesId(occurrences: EventOccurrence[]): Map<string, EventOccurrence[]> {
     const occurrencesBySeriesId = new Map<string, EventOccurrence[]>();
 
@@ -368,16 +440,7 @@ class EventOccurrenceService {
     eventSeriesIds: string[],
     fromDate: Date = new Date(),
   ): Promise<Map<string, EventOccurrence | null>> {
-    const occurrencesBySeriesId = this.groupOccurrencesBySeriesId(
-      await EventOccurrenceDAO.readByEventSeriesIds(eventSeriesIds),
-    );
-
-    return new Map(
-      eventSeriesIds.map((eventSeriesId) => [
-        eventSeriesId,
-        pickRepresentativeOccurrence(occurrencesBySeriesId.get(eventSeriesId) ?? [], fromDate),
-      ]),
-    );
+    return EventOccurrenceDAO.readRepresentativeByEventSeriesIds(eventSeriesIds, fromDate);
   }
 
   static buildOccurrenceKey(eventSeriesId: string, originalStartAt: Date): string {
@@ -576,13 +639,14 @@ class EventOccurrenceService {
     });
   }
 
-  static async readEventOccurrences(options: EventsQueryOptionsInput): Promise<EventOccurrence[]> {
+  static async readEventOccurrences(
+    options: EventsQueryOptionsInput,
+    requestCache?: EventOccurrenceQueryRequestCache,
+  ): Promise<EventOccurrence[]> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
     const sortInput = getOccurrenceSortInput(options.sort);
     const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
-    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
-      seriesOptions,
-    )) as OccurrenceQuerySeries[];
+    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(seriesOptions, requestCache);
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
     logIfQueryExceedsMaterializationWindow(
@@ -604,22 +668,26 @@ class EventOccurrenceService {
       });
     }
 
-    const occurrences = filterOccurrencesByDerivedStatus(
-      await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate),
-      statusFilters,
+    const persistedOccurrences = await this.readPersistedOccurrencesInRange(
+      eventSeriesIds,
+      startDate,
+      endDate,
+      requestCache,
     );
+    const occurrences = filterOccurrencesByDerivedStatus(persistedOccurrences, statusFilters);
     const occurrencesWithSortFields =
       occurrences.length > 0 ? await this.attachOccurrenceRsvpCounts(occurrences) : occurrences;
 
     return paginateOccurrences(sortOccurrences(occurrencesWithSortFields, sortInput), options);
   }
 
-  static async countEventOccurrences(options: EventsQueryOptionsInput): Promise<number> {
+  static async countEventOccurrences(
+    options: EventsQueryOptionsInput,
+    requestCache?: EventOccurrenceQueryRequestCache,
+  ): Promise<number> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
     const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
-    const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(seriesOptions)) as
-      | OccurrenceQuerySeries[]
-      | [];
+    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(seriesOptions, requestCache);
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
     logIfQueryExceedsMaterializationWindow(
@@ -633,7 +701,7 @@ class EventOccurrenceService {
 
     if (statusFilters.length > 0) {
       return filterOccurrencesByDerivedStatus(
-        await EventOccurrenceDAO.readByEventSeriesIdsInRange(eventSeriesIds, startDate, endDate),
+        await this.readPersistedOccurrencesInRange(eventSeriesIds, startDate, endDate, requestCache),
         statusFilters,
       ).length;
     }

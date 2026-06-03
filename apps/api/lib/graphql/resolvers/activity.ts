@@ -123,15 +123,6 @@ export class ActivityResolver {
     @Arg('limit', () => Int, { nullable: true }) limit?: number,
   ): Promise<Activity[]> {
     const user = getAuthenticatedUser(context);
-    const follows = await FollowDAO.readFollowingForUser(user.userId);
-    const actorIds = Array.from(
-      new Set(
-        follows
-          .filter((follow) => follow.targetType === FollowTargetType.User)
-          .map((follow) => follow.targetId)
-          .concat(user.userId),
-      ),
-    );
-    return ActivityDAO.readByActorIds(actorIds, limit ?? 25);
+    return ActivityDAO.readFeedForUser(user.userId, limit ?? 25);
   }
 }

@@ -79,7 +79,16 @@ export async function deleteFromS3(key: string): Promise<void> {
   }
 }
 
-export async function getS3ObjectSize(key: string): Promise<number | undefined> {
+type GetS3ObjectSizeOptions = {
+  suppressNotFoundLog?: boolean;
+};
+
+function isS3ObjectNotFoundError(error: unknown): boolean {
+  const maybeAwsError = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return maybeAwsError.name === 'NotFound' || maybeAwsError.$metadata?.httpStatusCode === 404;
+}
+
+export async function getS3ObjectSize(key: string, options: GetS3ObjectSizeOptions = {}): Promise<number | undefined> {
   if (!S3_BUCKET_NAME) {
     throw new Error('S3_BUCKET_NAME is not configured');
   }
@@ -93,6 +102,10 @@ export async function getS3ObjectSize(key: string): Promise<number | undefined> 
     const response = await getS3Client().send(command);
     return response.ContentLength;
   } catch (error) {
+    if (options.suppressNotFoundLog && isS3ObjectNotFoundError(error)) {
+      return undefined;
+    }
+
     logger.error('Error reading S3 object metadata:', { key, error });
     throw error;
   }
