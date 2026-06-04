@@ -3,8 +3,8 @@
 import { signOut } from '@/auth';
 import { logger } from '@/lib/utils/logger';
 
-export async function logoutUserAction() {
+export async function logoutUserAction(redirectTo?: string) {
   logger.action('logoutUserAction');
-  await signOut();
+  await signOut({ redirect: false, redirectTo });
   logger.info('User logged out successfully');
 }

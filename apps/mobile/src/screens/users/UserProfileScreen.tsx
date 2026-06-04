@@ -335,7 +335,7 @@ export function UserProfileScreen() {
 
   const handleMessagePress = () => {
     if (isOwnProfile) {
-      navigation.navigate('Settings', { initialTab: 'account' });
+      navigation.navigate('Settings');
       return;
     }
 
@@ -519,6 +519,7 @@ export function UserProfileScreen() {
       ) : (
         <SwipePagerTabs
           onActiveKeyChange={(key) => setActiveTab(key as PublicProfileTab)}
+          persistenceKey={`user-profile-events:${viewerUserId ?? 'guest'}:${userId}`}
           routes={profileRoutes}
           variant="icon"
         />

@@ -16,6 +16,7 @@ import { featureFlags } from '@/lib/constants/feature-flags';
 
 type AccountSettingsHubClientProps = {
   eventCategoryGroups: EventCategoryGroup[];
+  hasExplicitTab: boolean;
   hasLocalPassword: boolean | null;
   initialTabKey: string;
   token: string;
@@ -28,6 +29,7 @@ type AccountSettingsTab = CustomTabItem & {
 
 export default function AccountSettingsHubClient({
   eventCategoryGroups,
+  hasExplicitTab,
   hasLocalPassword,
   initialTabKey,
   token,
@@ -120,7 +122,7 @@ export default function AccountSettingsHubClient({
           <CustomTabs
             tabsProps={{
               defaultTab: initialTabIndex,
-              forceDefaultTab: true,
+              forceDefaultTab: hasExplicitTab,
               layout: 'mobile',
               tabsTitle: 'Settings',
               tabs,

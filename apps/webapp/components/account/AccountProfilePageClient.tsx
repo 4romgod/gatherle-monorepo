@@ -28,6 +28,7 @@ export default function AccountProfilePageClient({ user }: AccountProfilePageCli
 
       {user.username ? (
         <UserProfilePageClient
+          eventsTabPersistenceKey="account-profile-events"
           hideOwnProfileActions
           initialEventsTabKey={initialEventsTabKey}
           username={user.username}

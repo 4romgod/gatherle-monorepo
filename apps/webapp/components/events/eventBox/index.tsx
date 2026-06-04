@@ -21,6 +21,7 @@ import {
   getEventPreviewOccurrenceId,
   getEventPreviewParticipantCount,
   getEventPreviewParticipants,
+  isEventPreviewRsvpClosed,
   getEventPreviewSaveCount,
   getEventPreviewScheduleText,
   getEventPreviewSlug,
@@ -44,6 +45,7 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
   const nextRsvpStatus = getEventPreviewMyRsvpStatus(event);
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
+  const rsvpClosed = isEventPreviewRsvpClosed(event);
   const saveCount = getEventPreviewSaveCount(event);
   const isTrending = participantCount >= 20 || saveCount >= 12;
 
@@ -269,6 +271,7 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
               eventId={eventId}
               occurrenceId={occurrenceId}
               currentStatus={rsvpStatus}
+              rsvpClosed={rsvpClosed}
               size="small"
               onRsvpChange={setRsvpStatus}
             />

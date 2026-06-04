@@ -2,6 +2,7 @@ import { ROUTES } from '@/lib/constants';
 import type { EventOccurrencePreview, EventPreview } from '@/data/graphql/query/Event/types';
 import type { RecommendedFeedEventPreview, RecommendedFeedOccurrencePreview } from '@/data/graphql/query/Feed/types';
 import { EventOccurrenceStatus, ParticipantStatus } from '@/data/graphql/types/graphql';
+import { isUpcomingEventTime } from '@/lib/utils/eventCollections';
 import { isEventUpcoming } from '@/lib/utils/rrule';
 import { formatOccurrenceDateTime, formatRecurrenceRule } from './date-utils';
 import { buildEventOccurrenceHref } from './occurrence-url';
@@ -161,6 +162,15 @@ export function getEventPreviewStartAt(event: AnyEventPreview): string | Date | 
   return getStandaloneSeriesPreview(event).primarySchedule?.anchorStartAt ?? null;
 }
 
+export function getEventPreviewEndAt(event: AnyEventPreview): string | Date | null {
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+  if (occurrenceBackedPreview) {
+    return occurrenceBackedPreview.endAt ?? occurrenceBackedPreview.startAt ?? null;
+  }
+
+  return buildSeriesScheduleEndAt(getStandaloneSeriesPreview(event));
+}
+
 export function getEventPreviewStatusLabel(event: AnyEventPreview): string | null {
   const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
   if (occurrenceBackedPreview && occurrenceBackedPreview.status !== EventOccurrenceStatus.Scheduled) {
@@ -219,12 +229,21 @@ export function getEventPreviewIsSavedByMe(event: AnyEventPreview): boolean {
 export function isEventPreviewUpcoming(event: AnyEventPreview, fromDate = new Date()): boolean {
   const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
   if (occurrenceBackedPreview) {
-    const comparisonValue = occurrenceBackedPreview.endAt ?? occurrenceBackedPreview.startAt;
-    return new Date(comparisonValue).getTime() >= fromDate.getTime();
+    return isUpcomingEventTime(occurrenceBackedPreview.startAt, occurrenceBackedPreview.endAt, fromDate);
   }
 
   const schedule = getStandaloneSeriesPreview(event).primarySchedule;
   return isEventUpcoming(schedule?.anchorStartAt, schedule?.recurrenceRule);
+}
+
+export function isEventPreviewRsvpClosed(event: AnyEventPreview, fromDate = new Date()): boolean {
+  const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
+
+  if (!occurrenceBackedPreview?.occurrenceId) {
+    return false;
+  }
+
+  return !isUpcomingEventTime(occurrenceBackedPreview.startAt, occurrenceBackedPreview.endAt, fromDate);
 }
 
 export function projectOccurrenceRsvpToEventPreview(rsvp: OccurrenceRsvpPreviewSource): EventOccurrencePreview | null {

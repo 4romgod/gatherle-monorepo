@@ -34,7 +34,7 @@ function loadGoogleSignInModule({
 }) {
   const configureMock = jest.fn();
   const getCurrentUserMock = jest.fn(() => currentUser);
-  const hasPreviousSignInMock = jest.fn(() => hasPreviousSignIn);
+  const hasPreviousSignInMock = jest.fn().mockResolvedValue(hasPreviousSignIn);
   const revokeAccessMock = jest.fn().mockResolvedValue(null);
   const signOutMock = jest.fn().mockResolvedValue(null);
   const nextEnv = { ...process.env };
@@ -689,7 +689,7 @@ describe('mobile auth helpers', () => {
   });
 
   it('skips Google session clearing when no native Google user is cached', async () => {
-    const { configureMock, googleSignInModule, signOutMock } = loadGoogleSignInModule({
+    const { configureMock, googleSignInModule, hasPreviousSignInMock, signOutMock } = loadGoogleSignInModule({
       hasPreviousSignIn: false,
       platform: 'android',
       webClientId: 'android-web-client.apps.googleusercontent.com',
@@ -698,6 +698,7 @@ describe('mobile auth helpers', () => {
     await googleSignInModule.clearMobileGoogleSignInSession();
 
     expect(configureMock).toHaveBeenCalledTimes(1);
+    expect(hasPreviousSignInMock).toHaveBeenCalledTimes(1);
     expect(signOutMock).not.toHaveBeenCalled();
   });
 });

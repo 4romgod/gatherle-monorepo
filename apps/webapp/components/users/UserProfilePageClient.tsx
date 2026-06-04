@@ -35,12 +35,14 @@ import { FiEdit2, FiSettings } from 'react-icons/fi';
 import type { ProfileEventsTabKey } from '@/components/users/ProfileEventsTabs';
 
 interface UserProfilePageClientProps {
+  eventsTabPersistenceKey?: string;
   hideOwnProfileActions?: boolean;
   initialEventsTabKey?: ProfileEventsTabKey | null;
   username: string;
 }
 
 export default function UserProfilePageClient({
+  eventsTabPersistenceKey,
   hideOwnProfileActions = false,
   initialEventsTabKey = null,
   username,
@@ -345,7 +347,7 @@ export default function UserProfilePageClient({
                 {isOwnProfile ? (
                   <>
                     <ProfileActionButton href={ROUTES.ACCOUNT.TAB('profile')} icon={FiEdit2} label="Edit profile" />
-                    <ProfileActionButton href={ROUTES.ACCOUNT.TAB('account')} icon={FiSettings} label="Settings" />
+                    <ProfileActionButton href={ROUTES.ACCOUNT.SETTINGS} icon={FiSettings} label="Settings" />
                   </>
                 ) : (
                   <UserProfileActions
@@ -372,6 +374,10 @@ export default function UserProfilePageClient({
               ) : (
                 <ProfileEventsTabs
                   initialTabKey={initialEventsTabKey}
+                  tabPersistence={{
+                    key: eventsTabPersistenceKey ?? `user-profile-events:${username}`,
+                    userId: viewerUserId ?? undefined,
+                  }}
                   hostedEventsSearchTerm={hostedEventsSearchTerm}
                   hostedEventsTotalCount={hostedEventsTotalCount}
                   upcomingRsvpdEvents={upcomingRsvpdEvents}

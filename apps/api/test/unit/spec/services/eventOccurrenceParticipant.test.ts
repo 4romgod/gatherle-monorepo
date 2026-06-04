@@ -117,12 +117,12 @@ import {
 
 describe('EventOccurrenceParticipantService', () => {
   const occurrence: EventOccurrence = {
-    occurrenceId: 'series-1#2026-05-06T16:00:00.000Z',
+    occurrenceId: 'series-1#2099-05-06T16:00:00.000Z',
     eventSeriesId: 'series-1',
-    occurrenceKey: 'series-1#2026-05-06T16:00:00.000Z',
-    originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
-    startAt: new Date('2026-05-06T16:00:00.000Z'),
-    endAt: new Date('2026-05-06T18:00:00.000Z'),
+    occurrenceKey: 'series-1#2099-05-06T16:00:00.000Z',
+    originalStartAt: new Date('2099-05-06T16:00:00.000Z'),
+    startAt: new Date('2099-05-06T16:00:00.000Z'),
+    endAt: new Date('2099-05-06T18:00:00.000Z'),
     timezone: 'Africa/Johannesburg',
     status: EventOccurrenceStatus.Scheduled,
     isException: false,
@@ -140,10 +140,10 @@ describe('EventOccurrenceParticipantService', () => {
     waitlistEnabled: true,
     allowGuestPlusOnes: false,
     primarySchedule: {
-      anchorStartAt: new Date('2026-05-06T16:00:00.000Z'),
+      anchorStartAt: new Date('2099-05-06T16:00:00.000Z'),
       occurrenceDurationMinutes: 120,
       timezone: 'Africa/Johannesburg',
-      recurrenceRule: 'DTSTART:20260506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
+      recurrenceRule: 'DTSTART:20990506T160000Z\nRRULE:FREQ=WEEKLY;COUNT=4;BYDAY=WE',
     },
     organizers: [{ user: 'host-user-id' as any, role: EventOrganizerRole.Host }],
   };
@@ -195,7 +195,7 @@ describe('EventOccurrenceParticipantService', () => {
         actorUserId: actor.userId,
         targetType: NotificationTargetType.EventSeries,
         targetSlug: 'weekly-yoga',
-        actionUrl: '/events/weekly-yoga?occurs=2026-05-06T16%3A00%3A00.000Z',
+        actionUrl: '/events/weekly-yoga?occurs=2099-05-06T16%3A00%3A00.000Z',
         rsvpStatus: ParticipantStatus.Going,
       }),
     );
@@ -358,6 +358,37 @@ describe('EventOccurrenceParticipantService', () => {
       expect.any(Array),
       expect.objectContaining({ type: NotificationType.EVENT_RSVP }),
     );
+  });
+
+  it('rejects RSVP updates for occurrences that have already ended', async () => {
+    (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue({
+      ...occurrence,
+      startAt: new Date('2026-05-06T16:00:00.000Z'),
+      endAt: new Date('2026-05-06T18:00:00.000Z'),
+      originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+    });
+
+    await expect(
+      EventOccurrenceParticipantService.rsvp(
+        { occurrenceId: occurrence.occurrenceId, status: ParticipantStatus.Going },
+        actor.userId,
+      ),
+    ).rejects.toThrow('This occurrence has already ended. RSVPs are closed.');
+    expect(EventOccurrenceParticipantDAO.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects RSVP cancellations for occurrences that have already ended', async () => {
+    (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue({
+      ...occurrence,
+      startAt: new Date('2026-05-06T16:00:00.000Z'),
+      endAt: new Date('2026-05-06T18:00:00.000Z'),
+      originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+    });
+
+    await expect(EventOccurrenceParticipantService.cancel(occurrence.occurrenceId, actor.userId)).rejects.toThrow(
+      'This occurrence has already ended. RSVPs are closed.',
+    );
+    expect(EventOccurrenceParticipantDAO.cancel).not.toHaveBeenCalled();
   });
 
   it('rejects check-in when the user does not already have a reserved RSVP', async () => {

@@ -66,6 +66,14 @@ function toIsoDateString(value?: Date | string | null): string | null {
   return new Date(value).toISOString();
 }
 
+function assertOccurrenceRsvpOpen(occurrence: Pick<EventOccurrence, 'startAt' | 'endAt'>): void {
+  const comparisonTime = new Date(occurrence.endAt ?? occurrence.startAt).getTime();
+
+  if (!Number.isNaN(comparisonTime) && comparisonTime < Date.now()) {
+    throw CustomError('This occurrence has already ended. RSVPs are closed.', ErrorTypes.BAD_REQUEST);
+  }
+}
+
 function isReservedStatus(status: ParticipantStatus): boolean {
   return status === ParticipantStatus.Going || status === ParticipantStatus.CheckedIn;
 }
@@ -270,6 +278,7 @@ class EventOccurrenceParticipantService {
 
   static async rsvp(input: UpsertEventOccurrenceParticipantInput, userId: string): Promise<EventOccurrenceParticipant> {
     const { occurrence, eventSeries } = await this.loadOccurrenceContext(input.occurrenceId);
+    assertOccurrenceRsvpOpen(occurrence);
     const requestedStatus: ParticipantStatus = input.status ?? ParticipantStatus.Going;
 
     if (requestedStatus !== ParticipantStatus.Going && requestedStatus !== ParticipantStatus.Interested) {
@@ -365,6 +374,7 @@ class EventOccurrenceParticipantService {
 
   static async cancel(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
     const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId);
+    assertOccurrenceRsvpOpen(occurrence);
     const existingParticipant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
     const participant = await EventOccurrenceParticipantDAO.cancel(occurrenceId, userId);
 

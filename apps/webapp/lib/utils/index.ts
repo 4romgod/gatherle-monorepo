@@ -5,6 +5,7 @@ export * from './auth';
 export * from './birthdate';
 export * from './general';
 export * from './logger';
+export * from './logout';
 export * from './performance';
 export * from './json-parse';
 export * from './websocket';

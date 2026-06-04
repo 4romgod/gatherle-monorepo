@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react-native';
 import { EventCard } from '@/components/events/EventCard';
 
+const mockUseEventCardActions = jest.fn();
+
 jest.mock('@/app/providers/AppShellProvider', () => ({
   useAppShell: () => ({
     authToken: 'token',
@@ -39,16 +41,7 @@ jest.mock('@/app/theme/AppThemeProvider', () => ({
 }));
 
 jest.mock('@/hooks/events/useEventCardActions', () => ({
-  useEventCardActions: () => ({
-    cancelRsvp: jest.fn(),
-    goingToEvent: jest.fn(),
-    interestedInEvent: jest.fn(),
-    isSaved: false,
-    loading: false,
-    participantCount: 3,
-    rsvpStatus: null,
-    toggleSave: jest.fn(),
-  }),
+  useEventCardActions: () => mockUseEventCardActions(),
 }));
 
 jest.mock('@/components/events/card/EventCardActionButton', () => ({
@@ -64,6 +57,21 @@ jest.mock('@/lib/events/deviceActions', () => ({
 }));
 
 describe('EventCard', () => {
+  beforeEach(() => {
+    mockUseEventCardActions.mockReturnValue({
+      cancelRsvp: jest.fn(),
+      goingToEvent: jest.fn(),
+      interestedInEvent: jest.fn(),
+      isSaved: false,
+      loading: false,
+      participantCount: 3,
+      rsvpLoading: false,
+      rsvpStatus: null,
+      saveLoading: false,
+      toggleSave: jest.fn(),
+    });
+  });
+
   it('renders participant avatar fallbacks on featured cards when RSVP previews exist', () => {
     render(
       <EventCard
@@ -131,5 +139,57 @@ describe('EventCard', () => {
 
     expect(screen.getByText('AL')).toBeTruthy();
     expect(screen.getByText('GH')).toBeTruthy();
+  });
+
+  it('does not render a zero-going social proof pill when there is no social proof yet', () => {
+    mockUseEventCardActions.mockReturnValue({
+      cancelRsvp: jest.fn(),
+      goingToEvent: jest.fn(),
+      interestedInEvent: jest.fn(),
+      isSaved: false,
+      loading: false,
+      participantCount: 0,
+      rsvpLoading: false,
+      rsvpStatus: null,
+      saveLoading: false,
+      toggleSave: jest.fn(),
+    });
+
+    render(
+      <EventCard
+        occurrence={
+          {
+            occurrenceId: 'occ-2',
+            occurrenceKey: 'occ-2',
+            eventSeriesId: 'series-2',
+            startAt: '2026-06-10T18:00:00.000Z',
+            endAt: '2026-06-10T20:00:00.000Z',
+            timezone: 'Africa/Johannesburg',
+            originalStartAt: '2026-06-10T18:00:00.000Z',
+            status: 'Scheduled',
+            isException: false,
+            rsvpCount: 0,
+            participants: [],
+            eventSeries: {
+              title: 'Quiet Event',
+              savedByCount: 0,
+              location: {
+                address: {
+                  city: 'Johannesburg',
+                  state: 'Gauteng',
+                  country: 'South Africa',
+                },
+              },
+              media: {
+                featuredImageUrl: null,
+              },
+            },
+          } as any
+        }
+        variant="featured"
+      />,
+    );
+
+    expect(screen.getAllByText('0 goings')).toHaveLength(1);
   });
 });

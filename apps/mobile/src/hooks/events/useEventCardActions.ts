@@ -8,6 +8,7 @@ import {
 } from '@data/graphql/mutation';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { FollowTargetType, ParticipantStatus } from '@data/graphql/types/graphql';
+import { isUpcomingEventTime } from '@/lib/events/eventCollections';
 import { getOccurrenceParticipantCount } from '@/lib/events/formatters';
 import { getApolloAuthContext } from '@/lib/auth';
 
@@ -18,6 +19,7 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
   const initialSaved = occurrence.eventSeries?.isSavedByMe ?? false;
   const initialRsvpStatus = occurrence.myRsvp?.status ?? null;
   const initialParticipantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
+  const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
 
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [participantCount, setParticipantCount] = useState(initialParticipantCount);
@@ -93,6 +95,10 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
       throw new Error('Authentication is required to RSVP to this event.');
     }
 
+    if (rsvpClosed) {
+      throw new Error('This event has already ended. RSVPs are closed.');
+    }
+
     if (status === null) {
       await cancelRsvpMutation({
         variables: {
@@ -120,10 +126,9 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
     return status;
   };
 
-  const loading = useMemo(
-    () => followLoading || unfollowLoading || upsertRsvpLoading || cancelRsvpLoading,
-    [cancelRsvpLoading, followLoading, unfollowLoading, upsertRsvpLoading],
-  );
+  const saveLoading = useMemo(() => followLoading || unfollowLoading, [followLoading, unfollowLoading]);
+  const rsvpLoading = useMemo(() => upsertRsvpLoading || cancelRsvpLoading, [cancelRsvpLoading, upsertRsvpLoading]);
+  const loading = useMemo(() => saveLoading || rsvpLoading, [rsvpLoading, saveLoading]);
 
   return {
     cancelRsvp: async () => updateRsvp(null),
@@ -132,7 +137,9 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
     isSaved,
     loading,
     participantCount,
+    rsvpLoading,
     rsvpStatus,
+    saveLoading,
     toggleSave,
   };
 }

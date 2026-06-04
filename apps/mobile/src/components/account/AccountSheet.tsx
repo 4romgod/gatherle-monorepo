@@ -27,9 +27,10 @@ type AccountSheetActionProps = {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   onPress: () => void;
+  secondaryText?: string;
 };
 
-function AccountSheetAction({ destructive = false, icon, label, onPress }: AccountSheetActionProps) {
+function AccountSheetAction({ destructive = false, icon, label, onPress, secondaryText }: AccountSheetActionProps) {
   const { theme } = useAppTheme();
 
   return (
@@ -53,9 +54,14 @@ function AccountSheetAction({ destructive = false, icon, label, onPress }: Accou
       >
         <Feather color={destructive ? theme.colors.error : theme.colors.textPrimary} name={icon} size={18} />
       </View>
-      <Text style={[styles.actionLabel, { color: destructive ? theme.colors.error : theme.colors.textPrimary }]}>
-        {label}
-      </Text>
+      <View style={styles.actionTextWrap}>
+        <Text style={[styles.actionLabel, { color: destructive ? theme.colors.error : theme.colors.textPrimary }]}>
+          {label}
+        </Text>
+        {secondaryText ? (
+          <Text style={[styles.actionDescription, { color: theme.colors.textSecondary }]}>{secondaryText}</Text>
+        ) : null}
+      </View>
       <Feather color={theme.colors.textSecondary} name="chevron-right" size={18} />
     </Pressable>
   );
@@ -72,7 +78,7 @@ export function AccountSheet({
 }: AccountSheetProps) {
   const { isDark, theme, toggleMode } = useAppTheme();
   const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['58%'], []);
+  const snapPoints = useMemo(() => ['64%'], []);
   const [mounted, setMounted] = useState(visible);
 
   useEffect(() => {
@@ -137,17 +143,35 @@ export function AccountSheet({
               icon="briefcase"
               label="My organizations"
               onPress={() => runAction(onOpenOrganizations)}
+              secondaryText="Manage your hosted spaces"
             />
-            <AccountSheetAction icon="settings" label="Settings" onPress={() => runAction(onOpenSettings)} />
+            <AccountSheetAction
+              icon="settings"
+              label="Settings"
+              onPress={() => runAction(onOpenSettings)}
+              secondaryText="Update account details and preferences"
+            />
             {isAdmin && onOpenAdmin ? (
-              <AccountSheetAction icon="shield" label="Admin portal" onPress={() => runAction(onOpenAdmin)} />
+              <AccountSheetAction
+                icon="shield"
+                label="Admin portal"
+                onPress={() => runAction(onOpenAdmin)}
+                secondaryText="Open moderation and admin tools"
+              />
             ) : null}
             <AccountSheetAction
               icon={isDark ? 'sun' : 'moon'}
               label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               onPress={() => runAction(toggleMode)}
+              secondaryText="Apply immediately on this device"
             />
-            <AccountSheetAction destructive icon="log-out" label="Logout" onPress={() => runAction(onLogout)} />
+            <AccountSheetAction
+              destructive
+              icon="log-out"
+              label="Logout"
+              onPress={() => runAction(onLogout)}
+              secondaryText="End this browser session"
+            />
           </View>
         </BottomSheetScrollView>
       </SafeAreaView>
@@ -165,17 +189,25 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     ...typography.bodySemiBold,
-    flex: 1,
     fontSize: fontSize.base,
+  },
+  actionDescription: {
+    ...typography.bodyRegular,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: 2,
   },
   actionRow: {
     alignItems: 'center',
     borderRadius: MOBILE_RADIUS.control,
     flexDirection: 'row',
     gap: 12,
-    minHeight: 54,
+    minHeight: 62,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  actionTextWrap: {
+    flex: 1,
   },
   actions: {
     gap: 4,

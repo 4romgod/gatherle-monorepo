@@ -25,6 +25,7 @@ import {
   getParticipantKey,
 } from '@/lib/events/formatters';
 import { shareEvent } from '@/lib/events/deviceActions';
+import { isUpcomingEventTime } from '@/lib/events/eventCollections';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 
@@ -64,16 +65,26 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
   const { theme } = useAppTheme();
   const { authToken, isAuthenticated } = useAppShell();
   const imageUrl = getEventImageUrl(occurrence);
-  const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, loading, participantCount, rsvpStatus, toggleSave } =
-    useEventCardActions(occurrence, authToken);
+  const {
+    cancelRsvp,
+    goingToEvent,
+    interestedInEvent,
+    isSaved,
+    participantCount,
+    rsvpLoading,
+    rsvpStatus,
+    saveLoading,
+    toggleSave,
+  } = useEventCardActions(occurrence, authToken);
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
   const participants = getOccurrenceParticipantPreview(occurrence);
   const isFeatured = variant === 'featured';
+  const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
   const overlayLabel = isFeatured ? getEventCityLabel(occurrence).toUpperCase() : getEventStatusLabel(occurrence);
   const saveCount = occurrence.eventSeries?.savedByCount ?? 0;
   const isTrending = participantCount >= 20 || saveCount >= 12;
   const socialSignals = [
-    formatCountLabel(participantCount, 'going'),
+    participantCount > 0 ? formatCountLabel(participantCount, 'going') : null,
     saveCount > 0 ? formatCountLabel(saveCount, 'save') : null,
     isTrending ? `Trending in ${getEventCityLabel(occurrence)}` : null,
   ].filter((value): value is string => Boolean(value));
@@ -111,6 +122,10 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
     event.stopPropagation?.();
 
     if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    if (rsvpClosed) {
       return;
     }
 
@@ -255,14 +270,15 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
             <View style={styles.actionsRow}>
               <EventCardActionButton
                 active={!!rsvpStatus}
-                disabled={loading}
+                disabled={rsvpClosed}
                 icon={rsvpStatus === ParticipantStatus.Interested ? 'star' : 'check-square'}
+                loading={rsvpLoading}
                 onPress={handleRsvpPress}
                 tone="success"
               />
               <EventCardActionButton
                 active={isSaved}
-                disabled={loading}
+                loading={saveLoading}
                 icon="bookmark"
                 onPress={handleToggleSave}
                 tone="primary"
@@ -274,7 +290,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
       </Pressable>
       <EventRsvpSheet
         currentStatus={rsvpStatus}
-        loading={loading}
+        loading={rsvpLoading}
         onCancelRsvp={() => {
           void cancelRsvp()
             .then(() => {

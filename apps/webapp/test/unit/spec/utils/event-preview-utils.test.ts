@@ -1,11 +1,13 @@
 import { ParticipantStatus } from '@/data/graphql/types/graphql';
 import {
+  getEventPreviewEndAt,
   getEventPreviewHref,
   getEventPreviewOccurrenceId,
-  getEventPreviewScheduleText,
-  getEventPreviewParticipantCount,
   getEventPreviewMyRsvpStatus,
+  getEventPreviewParticipantCount,
+  getEventPreviewScheduleText,
   isEventPreviewUpcoming,
+  isEventPreviewRsvpClosed,
   projectOccurrenceRsvpToEventPreview,
 } from '@/components/events/event-preview-utils';
 
@@ -117,6 +119,8 @@ describe('event-preview-utils', () => {
 
     expect(isEventPreviewUpcoming(futureOccurrence, pivot)).toBe(true);
     expect(isEventPreviewUpcoming(pastOccurrence, pivot)).toBe(false);
+    expect(isEventPreviewRsvpClosed(futureOccurrence, pivot)).toBe(false);
+    expect(isEventPreviewRsvpClosed(pastOccurrence, pivot)).toBe(true);
   });
 
   it('prefers representative occurrences for series-backed previews', () => {
@@ -162,6 +166,7 @@ describe('event-preview-utils', () => {
     expect(getEventPreviewOccurrenceId(seriesPreview)).toBe('event-1#2026-06-08T18:00:00.000Z');
     expect(getEventPreviewHref(seriesPreview)).toBe('/events/weekly-yoga?occurs=2026-06-08T18%3A00%3A00.000Z');
     expect(getEventPreviewScheduleText(seriesPreview)).toContain('June');
+    expect(getEventPreviewEndAt(seriesPreview)).toBe('2026-06-08T20:00:00.000Z');
     expect(getEventPreviewParticipantCount(seriesPreview)).toBe(7);
     expect(getEventPreviewMyRsvpStatus(seriesPreview)).toBe(ParticipantStatus.Going);
   });

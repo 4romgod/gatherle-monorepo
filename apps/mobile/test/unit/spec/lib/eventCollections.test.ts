@@ -1,4 +1,8 @@
-import { buildHostedEventsCountQueryOptions, buildHostedEventsQueryOptions } from '@/lib/events/eventCollections';
+import {
+  buildHostedEventsCountQueryOptions,
+  buildHostedEventsQueryOptions,
+  isUpcomingEventTime,
+} from '@/lib/events/eventCollections';
 import { SortOrderInput } from '@data/graphql/types/graphql';
 
 describe('mobile hosted event collection query helpers', () => {
@@ -60,5 +64,13 @@ describe('mobile hosted event collection query helpers', () => {
     expect(buildHostedEventsCountQueryOptions('user-1', 'x')).toEqual({
       filters: [{ field: 'organizers.user.userId', value: 'user-1' }],
     });
+  });
+
+  it('treats ongoing and future occurrence windows as RSVP-open, but closes past ones', () => {
+    const pivot = new Date('2026-06-04T12:00:00.000Z');
+
+    expect(isUpcomingEventTime('2026-06-04T18:00:00.000Z', '2026-06-04T20:00:00.000Z', pivot)).toBe(true);
+    expect(isUpcomingEventTime('2026-06-04T10:00:00.000Z', '2026-06-04T13:00:00.000Z', pivot)).toBe(true);
+    expect(isUpcomingEventTime('2026-06-04T08:00:00.000Z', '2026-06-04T09:00:00.000Z', pivot)).toBe(false);
   });
 });

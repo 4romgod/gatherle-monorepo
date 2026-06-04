@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { Add, Search } from '@mui/icons-material';
 import {
@@ -27,6 +27,7 @@ import {
 } from '@/lib/constants';
 import { AnyEventPreview, getEventPreviewKey } from '@/components/events/event-preview-utils';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { usePersistentState } from '@/hooks/usePersistentState';
 import ProfileEventTile from './ProfileEventTile';
 
 export type ProfileEventsTabKey = 'going' | 'attended' | 'hosted' | 'saved';
@@ -52,6 +53,10 @@ function resolveInitialTab(initialTabKey: ProfileEventsTabKey | null | undefined
 
 interface ProfileEventsTabsProps {
   initialTabKey?: ProfileEventsTabKey | null;
+  tabPersistence?: {
+    key: string;
+    userId?: string;
+  };
   hostedEventsSearchTerm?: string;
   hostedEventsTotalCount?: number;
   upcomingRsvpdEvents: AnyEventPreview[];
@@ -68,6 +73,7 @@ interface ProfileEventsTabsProps {
 
 export default function ProfileEventsTabs({
   initialTabKey = null,
+  tabPersistence,
   hostedEventsSearchTerm = '',
   hostedEventsTotalCount = 0,
   upcomingRsvpdEvents,
@@ -81,13 +87,27 @@ export default function ProfileEventsTabs({
   isOwnProfile,
   emptyCreatedCta,
 }: ProfileEventsTabsProps) {
-  const [activeTab, setActiveTab] = useState(() => resolveInitialTab(initialTabKey, isOwnProfile));
+  const { value: activeTab, setValue: setActiveTab } = usePersistentState<number>(
+    tabPersistence?.key ?? 'profile-events-tab-index',
+    resolveInitialTab(initialTabKey, isOwnProfile),
+    {
+      disabled: !Boolean(tabPersistence?.key),
+      userId: tabPersistence?.userId,
+    },
+  );
   const perspectivePronoun = isOwnProfile ? 'you' : 'they';
   const perspectivePossessive = isOwnProfile ? 'your' : 'their';
 
   useEffect(() => {
-    setActiveTab(resolveInitialTab(initialTabKey, isOwnProfile));
-  }, [initialTabKey, isOwnProfile]);
+    if (!initialTabKey) {
+      return;
+    }
+
+    const resolvedTab = resolveInitialTab(initialTabKey, isOwnProfile);
+    if (activeTab !== resolvedTab) {
+      setActiveTab(resolvedTab);
+    }
+  }, [activeTab, initialTabKey, isOwnProfile, setActiveTab]);
 
   const tabIconSx = {
     alignItems: 'center',
@@ -153,6 +173,13 @@ export default function ProfileEventsTabs({
         ]
       : []),
   ] as const;
+  const clampedActiveTab = Math.min(activeTab, Math.max(tabItems.length - 1, 0));
+
+  useEffect(() => {
+    if (clampedActiveTab !== activeTab) {
+      setActiveTab(clampedActiveTab);
+    }
+  }, [activeTab, clampedActiveTab, setActiveTab]);
 
   return (
     <Card
@@ -160,7 +187,7 @@ export default function ProfileEventsTabs({
       sx={{ p: 0, overflow: 'hidden', borderRadius: 0, border: 'none', bgcolor: 'background.default' }}
     >
       <Tabs
-        value={activeTab}
+        value={clampedActiveTab}
         onChange={(_, v) => setActiveTab(v)}
         variant="fullWidth"
         sx={{
@@ -244,7 +271,7 @@ export default function ProfileEventsTabs({
       </Tabs>
 
       <Box sx={{ p: { xs: 2.5, md: 3 } }}>
-        {activeTab === 0 && (
+        {clampedActiveTab === 0 && (
           <EventTabPanel
             events={upcomingRsvpdEvents}
             emptyIcon={
@@ -268,7 +295,7 @@ export default function ProfileEventsTabs({
           />
         )}
 
-        {activeTab === 1 && (
+        {clampedActiveTab === 1 && (
           <EventTabPanel
             events={pastRsvpdEvents}
             emptyIcon={
@@ -292,7 +319,7 @@ export default function ProfileEventsTabs({
           />
         )}
 
-        {activeTab === 2 && (
+        {clampedActiveTab === 2 && (
           <EventTabPanel
             events={organizedEvents}
             emptyIcon={
@@ -361,7 +388,7 @@ export default function ProfileEventsTabs({
           />
         )}
 
-        {isOwnProfile && activeTab === 3 && (
+        {isOwnProfile && clampedActiveTab === 3 && (
           <EventTabPanel
             events={savedEvents ?? []}
             emptyIcon={

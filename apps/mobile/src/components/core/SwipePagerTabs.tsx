@@ -9,6 +9,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
+import { DEVICE_STORAGE_KEYS } from '@/lib/deviceStorage';
+import { usePersistedTabKey } from '@/hooks/core/usePersistedTabKey';
 
 export type SwipePagerTabRoute = {
   count?: number;
@@ -21,6 +23,7 @@ export type SwipePagerTabRoute = {
 type SwipePagerTabsProps = {
   initialKey?: string;
   onActiveKeyChange?: (key: string) => void;
+  persistenceKey?: string;
   routes: SwipePagerTabRoute[];
   scrollableTabs?: boolean;
   variant?: 'icon' | 'label';
@@ -29,6 +32,7 @@ type SwipePagerTabsProps = {
 export function SwipePagerTabs({
   initialKey,
   onActiveKeyChange,
+  persistenceKey,
   routes,
   scrollableTabs = false,
   variant = 'icon',
@@ -37,35 +41,53 @@ export function SwipePagerTabs({
   const { width } = useWindowDimensions();
   const pagerRef = useRef<RNScrollView>(null);
   const tabsRef = useRef<RNScrollView>(null);
-  const previousInitialKeyRef = useRef(initialKey);
-  const routeIndex = useMemo(() => routes.findIndex((route) => route.key === initialKey), [initialKey, routes]);
-  const [activeIndex, setActiveIndex] = useState(routeIndex >= 0 ? routeIndex : 0);
+  const hasScrolledToPersistedKeyRef = useRef(false);
+  const pendingScrollIndexRef = useRef<number | null>(null);
+  const previousPersistedKeyRef = useRef<string | null>(null);
   const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
   const [tabLayouts, setTabLayouts] = useState<Record<string, { width: number; x: number }>>({});
   const [containerWidth, setContainerWidth] = useState(width);
   const pageWidth = containerWidth || width;
+  const routeKeys = useMemo(() => routes.map((route) => route.key), [routes]);
+  const { activeKey, isHydrated, setActiveKey } = usePersistedTabKey({
+    availableKeys: routeKeys,
+    initialKey,
+    storageKey: persistenceKey ? `${DEVICE_STORAGE_KEYS.tabSelection}:${persistenceKey}` : null,
+  });
+  const [activeIndex, setActiveIndex] = useState(() => {
+    const index = routes.findIndex((route) => route.key === activeKey);
+    return index >= 0 ? index : 0;
+  });
 
   useEffect(() => {
-    if (previousInitialKeyRef.current === initialKey) {
+    if (!isHydrated) {
       return;
     }
 
-    previousInitialKeyRef.current = initialKey;
-
-    if (routeIndex < 0 || routeIndex === activeIndex) {
+    const nextIndex = routes.findIndex((route) => route.key === activeKey);
+    if (nextIndex < 0 || previousPersistedKeyRef.current === activeKey) {
       return;
     }
 
-    setActiveIndex(routeIndex);
-    pagerRef.current?.scrollTo({ animated: false, x: pageWidth * routeIndex });
-  }, [activeIndex, initialKey, pageWidth, routeIndex]);
+    previousPersistedKeyRef.current = activeKey;
+    setActiveIndex(nextIndex);
+
+    const nextScrollX = pageWidth * nextIndex;
+    const shouldAnimate = hasScrolledToPersistedKeyRef.current;
+    pendingScrollIndexRef.current = shouldAnimate ? nextIndex : null;
+    pagerRef.current?.scrollTo({ animated: shouldAnimate, x: nextScrollX });
+    hasScrolledToPersistedKeyRef.current = true;
+  }, [activeKey, isHydrated, pageWidth, routes]);
 
   useEffect(() => {
-    const activeRoute = routes[activeIndex];
-    if (activeRoute) {
-      onActiveKeyChange?.(activeRoute.key);
+    if (!isHydrated || !activeKey) {
+      return;
     }
-  }, [activeIndex, onActiveKeyChange, routes]);
+
+    if (activeKey) {
+      onActiveKeyChange?.(activeKey);
+    }
+  }, [activeKey, isHydrated, onActiveKeyChange]);
 
   useEffect(() => {
     if (!scrollableTabs) {
@@ -85,12 +107,37 @@ export function SwipePagerTabs({
   const pagerHeight = routes.reduce((maxHeight, route) => Math.max(maxHeight, measuredHeights[route.key] ?? 0), 0);
 
   const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
-    setActiveIndex(Math.max(0, Math.min(nextIndex, routes.length - 1)));
+    const nextIndex = Math.max(
+      0,
+      Math.min(Math.round(event.nativeEvent.contentOffset.x / pageWidth), routes.length - 1),
+    );
+    const pendingScrollIndex = pendingScrollIndexRef.current;
+
+    if (pendingScrollIndex !== null && nextIndex !== pendingScrollIndex) {
+      return;
+    }
+
+    pendingScrollIndexRef.current = null;
+    const nextRoute = routes[nextIndex];
+    if (!nextRoute) {
+      return;
+    }
+
+    setActiveIndex(nextIndex);
+    previousPersistedKeyRef.current = nextRoute.key;
+    setActiveKey(nextRoute.key);
   };
 
   const handleTabPress = (index: number) => {
+    const nextRoute = routes[index];
+    if (!nextRoute) {
+      return;
+    }
+
     setActiveIndex(index);
+    previousPersistedKeyRef.current = nextRoute.key;
+    pendingScrollIndexRef.current = index;
+    setActiveKey(nextRoute.key);
     pagerRef.current?.scrollTo({ animated: true, x: pageWidth * index });
   };
 
@@ -107,6 +154,7 @@ export function SwipePagerTabs({
 
     setContainerWidth(nextWidth);
     requestAnimationFrame(() => {
+      pendingScrollIndexRef.current = null;
       pagerRef.current?.scrollTo({ animated: false, x: nextWidth * activeIndex });
     });
   };

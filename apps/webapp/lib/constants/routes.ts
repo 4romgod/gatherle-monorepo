@@ -1,5 +1,6 @@
 export const ROUTES = {
   ACCOUNT: {
+    SETTINGS: '/account?tab=settings',
     TAB: (tab: string) => `/account?tab=${encodeURIComponent(tab)}`,
     PROFILE_EVENTS_TAB: (tab: string) => `/account?eventsTab=${encodeURIComponent(tab)}`,
     EVENTS: {

@@ -9,6 +9,7 @@ type ResponsiveAccountPageProps = {
   hasExplicitTab: boolean;
   hasLocalPassword: boolean | null;
   requestedTabKey: string;
+  showSettingsHub: boolean;
   token: string;
   user: User;
 };
@@ -18,10 +19,11 @@ export default function ResponsiveAccountPage({
   hasExplicitTab,
   hasLocalPassword,
   requestedTabKey,
+  showSettingsHub,
   token,
   user,
 }: ResponsiveAccountPageProps) {
-  const showAccountProfile = !hasExplicitTab && Boolean(user.username);
+  const showAccountProfile = !showSettingsHub && Boolean(user.username);
 
   if (showAccountProfile) {
     return <AccountProfilePageClient user={user} />;
@@ -30,6 +32,7 @@ export default function ResponsiveAccountPage({
   return (
     <AccountSettingsHubClient
       eventCategoryGroups={eventCategoryGroups}
+      hasExplicitTab={hasExplicitTab}
       hasLocalPassword={hasLocalPassword}
       initialTabKey={requestedTabKey}
       token={token}

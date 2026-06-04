@@ -279,7 +279,15 @@ export function SettingsScreen() {
   const requiresCurrentPassword = profile?.hasLocalPassword !== false;
   const isSetPasswordMode = !requiresCurrentPassword;
 
-  const resolvedInitialTab = route.params?.initialTab ?? 'account';
+  const requestedInitialTab = route.params?.initialTab;
+
+  useEffect(() => {
+    if (!requestedInitialTab) {
+      return;
+    }
+
+    navigation.setParams({ initialTab: undefined });
+  }, [navigation, requestedInitialTab]);
 
   const handleAvatarPress = async () => {
     if (!userId) {
@@ -1359,7 +1367,13 @@ export function SettingsScreen() {
 
   return (
     <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
-      <SwipePagerTabs initialKey={resolvedInitialTab} routes={settingsRoutes} scrollableTabs variant="label" />
+      <SwipePagerTabs
+        initialKey={requestedInitialTab}
+        persistenceKey={`account-settings:${userId ?? 'guest'}`}
+        routes={settingsRoutes}
+        scrollableTabs
+        variant="label"
+      />
     </PageContainer>
   );
 }
