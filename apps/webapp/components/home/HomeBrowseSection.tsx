@@ -36,8 +36,11 @@ export default function HomeBrowseSection({ isAuthenticated }: HomeBrowseSection
   return (
     <Stack spacing={1.5}>
       <Box>
-        <Typography variant="subtitle2" color="text.secondary" fontWeight={800} sx={{ letterSpacing: '0.04em' }}>
+        <Typography variant="subtitle2" color="text.secondary" fontWeight={800} sx={{ letterSpacing: '0.08em' }}>
           Explore more
+        </Typography>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+          Jump sideways into the people, places, and categories that shape what happens next.
         </Typography>
       </Box>
 

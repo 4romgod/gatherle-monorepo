@@ -55,7 +55,8 @@ describe('TrendingEventsSection', () => {
 
     render(<TrendingEventsSection />);
 
-    expect(screen.getByText('Trending Events')).toBeTruthy();
+    expect(screen.getByText('Momentum watch')).toBeTruthy();
+    expect(screen.getByText('Trending events')).toBeTruthy();
   });
 
   it('renders skeleton placeholders while loading and no data is available yet', () => {
@@ -82,7 +83,7 @@ describe('TrendingEventsSection', () => {
 
     render(<TrendingEventsSection />);
 
-    expect(screen.getByText(/no trending events/i)).toBeTruthy();
+    expect(screen.getByText(/nothing has broken away from the pack yet/i)).toBeTruthy();
   });
 
   it('renders an error message when the query fails', () => {

@@ -14,6 +14,7 @@ type NotificationRowProps = {
   }>;
   actorImageUrl?: string | null;
   actorLabel?: string;
+  eyebrow?: string;
   isRead?: boolean;
   message: string;
   onPress?: () => void;
@@ -25,6 +26,7 @@ export function NotificationRow({
   actionButtons,
   actorImageUrl,
   actorLabel,
+  eyebrow,
   isRead = true,
   message,
   onPress,
@@ -61,6 +63,11 @@ export function NotificationRow({
 
       <View style={styles.bodyRow}>
         <View style={styles.content}>
+          {eyebrow ? (
+            <Text numberOfLines={1} style={[styles.eyebrow, { color: theme.colors.textSecondary }]}>
+              {eyebrow}
+            </Text>
+          ) : null}
           <Text numberOfLines={1} style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
@@ -117,6 +124,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
     minHeight: 34,
+  },
+  eyebrow: {
+    ...typography.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   leading: {
     alignItems: 'center',

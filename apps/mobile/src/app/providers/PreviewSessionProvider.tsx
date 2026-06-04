@@ -1,6 +1,7 @@
 import type { AuthenticatedMobileUser } from '@data/graphql/mutation/User/types';
 import { useApolloClient } from '@apollo/client';
 import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { clearMobileGoogleSignInSession } from '@/lib/auth/googleSignIn';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/lib/sessionStorage';
 import { validateStoredSession } from '@/lib/auth/sessionValidation';
 
@@ -117,6 +118,9 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(() => {
     clearSession();
+    void clearMobileGoogleSignInSession().catch((error) => {
+      console.warn('[PreviewSessionProvider] Failed to clear Google sign-in session', error);
+    });
   }, [clearSession]);
 
   const updateSessionIdentity = useCallback((input: { email?: string | null; username?: string | null }) => {

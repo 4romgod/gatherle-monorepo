@@ -156,6 +156,7 @@ export default function UserProfilePageClient({
   }, [organizedEventsForMoments, allRsvpdEventsForMoments]);
 
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: user?.userRole }), [user?.userRole]);
+  const interestLabels = useMemo(() => user?.interests?.filter(Boolean) ?? [], [user?.interests]);
 
   const isLoading =
     userLoading ||
@@ -307,9 +308,37 @@ export default function UserProfilePageClient({
                   maxWidth: 480,
                 })}
               >
-                {user.bio || 'No bio added yet.'}
+                {user.bio || 'Add a short intro so people know what kinds of experiences and communities pull you in.'}
               </Typography>
             </Box>
+
+            {interestLabels.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: '0.08em' }}>
+                  Interests
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {interestLabels.map((interest) => (
+                    <Box
+                      key={interest.eventCategoryId}
+                      sx={{
+                        px: 1.5,
+                        py: 0.9,
+                        borderRadius: 999,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        color: 'text.primary',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {interest.name}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            ) : null}
 
             {(!isOwnProfile || !hideOwnProfileActions) && (
               <Box sx={{ display: 'flex', gap: 1, mt: { xs: 1.5, md: 1.75 } }}>

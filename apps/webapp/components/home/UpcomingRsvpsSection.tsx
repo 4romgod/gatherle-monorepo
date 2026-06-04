@@ -17,15 +17,25 @@ export default function UpcomingRsvpsSection() {
 
   return (
     <Box sx={{ mt: 4, mb: 2 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-        Your Upcoming RSVPs
-      </Typography>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: '0.08em' }}>
+          Your plans
+        </Typography>
+        <Typography variant="h6" fontWeight={700}>
+          Your upcoming RSVPs
+        </Typography>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+          The events you already committed to should stay visible without hunting for them.
+        </Typography>
+      </Box>
       {loading ? (
         <CarouselSkeleton itemCount={3} renderSkeletonItem={() => <EventBoxSmSkeleton />} />
       ) : error ? (
         <Typography color="error">Failed to load your RSVPs.</Typography>
       ) : upcomingEvents.length === 0 ? (
-        <Typography color="text.secondary">No upcoming RSVPs. RSVP to events to see them here!</Typography>
+        <Typography color="text.secondary">
+          Nothing is locked in yet. RSVP to an event you want to keep close and it will live here.
+        </Typography>
       ) : (
         <Stack gap={{ xs: 1.5, md: 2 }}>
           <Carousel

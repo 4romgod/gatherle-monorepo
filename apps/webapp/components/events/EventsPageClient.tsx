@@ -328,6 +328,28 @@ function EventsContent({
     <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }}>
+          <Box
+            sx={{
+              mb: 3,
+              p: { xs: 2.25, md: 3 },
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            }}
+          >
+            <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: '0.08em' }}>
+              Explore is wide open
+            </Typography>
+            <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
+              Search, filter, and browse the full event map.
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 1 }}>
+              Unlike Home, this page is built for broad discovery. Use it when you want categories, timing, location,
+              and search to shape the night instead of relying on your feed alone.
+            </Typography>
+          </Box>
+
           <Box mb={4}>
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
               <EventSearchBar placeholder="Search events by title, location, or category..." size="medium" />

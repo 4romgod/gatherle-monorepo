@@ -37,6 +37,22 @@ export const GetMyEventOccurrenceRsvpsDocument = graphql(`
         status
         isException
         rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          quantity
+          sharedVisibility
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
         eventSeries {
           venueId
           eventId

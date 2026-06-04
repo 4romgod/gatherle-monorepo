@@ -62,14 +62,14 @@ export default function EventsList({
         }}
       >
         <Typography variant="h5" fontWeight={600} sx={{ color: 'text.primary', mb: 2 }}>
-          No Events Found
+          Nothing matches this explore view
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
-          Try adjusting your filters or search criteria
+          Widen the date range, remove a filter, or clear the search to reopen the map of what is happening.
         </Typography>
         {hasActiveFilters && (
           <Button variant="contained" onClick={onClearFilters} startIcon={<ClearIcon />}>
-            Clear All Filters
+            Clear all filters
           </Button>
         )}
       </Box>
@@ -82,7 +82,7 @@ export default function EventsList({
         <Typography variant="h6" fontWeight={600} sx={{ color: 'text.primary', marginTop: 5 }}>
           {showSkeletons
             ? 'Loading events…'
-            : `${totalCount ?? events.length} Event${(totalCount ?? events.length) !== 1 ? 's' : ''} Found`}
+            : `${totalCount ?? events.length} event${(totalCount ?? events.length) !== 1 ? 's' : ''} in play`}
         </Typography>
       </Stack>
       <EventTileGrid events={events} loading={showSkeletons} />

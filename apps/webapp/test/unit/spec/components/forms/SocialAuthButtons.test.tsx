@@ -27,7 +27,11 @@ describe('SocialAuthButtons', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
 
-    expect(mockSignIn).toHaveBeenCalledWith('google', { redirectTo: DEFAULT_LOGIN_REDIRECT });
+    expect(mockSignIn).toHaveBeenCalledWith(
+      'google',
+      { redirectTo: DEFAULT_LOGIN_REDIRECT },
+      { prompt: 'select_account' },
+    );
   });
 
   it('starts Apple sign-in with the default redirect target', () => {
@@ -53,7 +57,11 @@ describe('SocialAuthButtons', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
 
-    expect(mockSignIn).toHaveBeenCalledWith('google', { redirectTo: '/account/messages/gatherle-imports' });
+    expect(mockSignIn).toHaveBeenCalledWith(
+      'google',
+      { redirectTo: '/account/messages/gatherle-imports' },
+      { prompt: 'select_account' },
+    );
     expect(screen.getByRole('link', { name: 'Sign up with Email' }).getAttribute('href')).toBe(
       '/auth/register?redirectTo=%2Faccount%2Fmessages%2Fgatherle-imports',
     );

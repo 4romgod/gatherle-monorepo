@@ -70,6 +70,13 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
   const participants = getOccurrenceParticipantPreview(occurrence);
   const isFeatured = variant === 'featured';
   const overlayLabel = isFeatured ? getEventCityLabel(occurrence).toUpperCase() : getEventStatusLabel(occurrence);
+  const saveCount = occurrence.eventSeries?.savedByCount ?? 0;
+  const isTrending = participantCount >= 20 || saveCount >= 12;
+  const socialSignals = [
+    formatCountLabel(participantCount, 'going'),
+    saveCount > 0 ? formatCountLabel(saveCount, 'save') : null,
+    isTrending ? `Trending in ${getEventCityLabel(occurrence)}` : null,
+  ].filter((value): value is string => Boolean(value));
   const imageFallback = (
     <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
       <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
@@ -190,6 +197,27 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
             {getEventTitle(occurrence)}
           </Text>
 
+          {socialSignals.length > 0 ? (
+            <View style={styles.socialProofRow}>
+              {socialSignals.slice(0, 2).map((signal) => (
+                <View
+                  key={signal}
+                  style={[
+                    styles.socialProofPill,
+                    {
+                      backgroundColor: theme.colors.surfaceMuted,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text numberOfLines={1} style={[styles.socialProofText, { color: theme.colors.textSecondary }]}>
+                    {signal}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.metaList}>
             <View style={styles.metaRow}>
               <Feather color={theme.colors.textSecondary} name="calendar" size={17} />
@@ -214,7 +242,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
           </View>
 
           <View style={isFeatured ? styles.featuredFooter : styles.feedFooter}>
-            {isFeatured ? null : (
+            {participants.length > 0 ? (
               <View style={styles.participantsRow}>
                 <View style={styles.participantsStack}>
                   {participants.map((participant, index) => (
@@ -222,7 +250,7 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
                   ))}
                 </View>
               </View>
-            )}
+            ) : null}
 
             <View style={styles.actionsRow}>
               <EventCardActionButton
@@ -308,7 +336,7 @@ const styles = StyleSheet.create({
   featuredFooter: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     paddingTop: 2,
   },
   feedFooter: {
@@ -386,6 +414,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     height: 30,
     width: 30,
+  },
+  socialProofPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  socialProofRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  socialProofText: {
+    ...typography.bodyMedium,
+    fontSize: fontSize.xxs,
+    lineHeight: 14,
   },
   participantsRow: {
     alignItems: 'center',

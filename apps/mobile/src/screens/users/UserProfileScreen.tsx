@@ -169,37 +169,40 @@ export function UserProfileScreen() {
                 {
                   emptyState: {
                     ctaLabel: 'Explore Events',
-                    description: "RSVP to events and they'll appear here",
+                    description: 'RSVP to the events that matter and they will start building this activity trail.',
                     icon: 'check-square',
                     title: 'No upcoming events',
                   },
                   icon: 'check-square',
                   key: 'going',
                   label: 'RSVPs',
+                  count: upcomingEvents.length,
                 },
                 {
                   emptyState: {
                     ctaLabel: 'Explore Events',
-                    description: "Events you've attended will show up here",
+                    description: 'Real-world attendance turns into visible history once this member starts showing up.',
                     icon: 'clock',
                     title: 'No attended events',
                   },
                   icon: 'clock',
                   key: 'past',
-                  label: 'Past',
+                  label: 'Attended',
+                  count: pastEvents.length,
                 },
               ] as const)
             : []),
           {
             emptyState: {
               ctaLabel: isOwnProfile ? 'Create Your First Event' : 'Explore Events',
-              description: "Start hosting events and they'll appear here",
+              description: 'Hosted events will appear here once this member starts pulling people together.',
               icon: 'calendar',
               title: 'No events hosted yet',
             },
             icon: 'calendar',
             key: 'hosting',
-            label: 'Hosting',
+            label: 'Hosted',
+            count: hostedEventsTotalCount,
           },
         ] as const
       ).map((route) => ({
@@ -227,6 +230,9 @@ export function UserProfileScreen() {
       profileTabs,
       shouldShowParticipantTabs,
       isOwnProfile,
+      hostedEventsTotalCount,
+      pastEvents.length,
+      upcomingEvents.length,
     ],
   );
   const shouldShowEventActivityError =
@@ -435,7 +441,7 @@ export function UserProfileScreen() {
         <View style={styles.profileTextBlock}>
           <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
           <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
-            {profile.bio || 'This member has not added a bio yet.'}
+            {profile.bio || 'This member has not added a short intro yet.'}
           </Text>
         </View>
       </View>

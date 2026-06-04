@@ -185,6 +185,25 @@ export function EventsScreen() {
         refreshing={refreshing}
         scrollEventThrottle={infiniteScroll.scrollEventThrottle}
       >
+        <View
+          style={[
+            styles.introCard,
+            {
+              backgroundColor: theme.colors.surfaceMuted,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.introEyebrow, { color: theme.colors.textSecondary }]}>Explore is broad</Text>
+          <Text style={[styles.introTitle, { color: theme.colors.textPrimary }]}>
+            Search, filter, and browse every event.
+          </Text>
+          <Text style={[styles.introBody, { color: theme.colors.textSecondary }]}>
+            Use Explore when you want the whole map of what is happening, not just the events already tuned to your
+            feed.
+          </Text>
+        </View>
+
         {totalActiveFilterCount > 0 ? (
           <View style={styles.clearActionRow}>
             <Pressable
@@ -253,7 +272,7 @@ export function EventsScreen() {
           <SkeletonBlock style={styles.eventsCountSkeleton} />
         ) : (
           <Text style={[styles.eventsCount, { color: theme.colors.textPrimary }]}>
-            {visibleEventCount} Events Found
+            {visibleEventCount} events in play
           </Text>
         )}
 
@@ -282,7 +301,12 @@ export function EventsScreen() {
             {isFetchingMore ? <EventCardSkeleton /> : null}
           </View>
         ) : (
-          <StateNotice message="No events match your current search or filter." />
+          <StateNotice
+            actionLabel="Clear all"
+            message="Try widening the time window, removing a filter, or browsing a category to spot a better fit."
+            onPressAction={handleClearAll}
+            title="Nothing matches this explore view"
+          />
         )}
 
         <EventsFilterSheet
@@ -313,6 +337,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  introBody: {
+    ...typography.bodyRegular,
+    fontSize: fontSize.sm,
+    lineHeight: 21,
+  },
+  introCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  introEyebrow: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xxs,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  introTitle: {
+    ...typography.displayBold,
+    fontSize: 22,
+    letterSpacing: -0.7,
+    lineHeight: 27,
   },
   clearActionText: {
     ...typography.bodyMedium,

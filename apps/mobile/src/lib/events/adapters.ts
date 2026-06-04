@@ -102,3 +102,37 @@ export function mapNavigableEventOccurrences(
         }) as MobileEventOccurrence,
     );
 }
+
+export function mergeNavigableOccurrences(
+  routeOccurrence: MobileEventOccurrence,
+  fetchedOccurrences: MobileEventOccurrence[],
+): MobileEventOccurrence[] {
+  const mergedByOccurrenceId = new Map<string, MobileEventOccurrence>();
+
+  for (const candidate of [routeOccurrence, ...fetchedOccurrences]) {
+    if (!candidate?.occurrenceId) {
+      continue;
+    }
+
+    const existing = mergedByOccurrenceId.get(candidate.occurrenceId);
+    if (!existing) {
+      mergedByOccurrenceId.set(candidate.occurrenceId, candidate);
+      continue;
+    }
+
+    mergedByOccurrenceId.set(candidate.occurrenceId, {
+      ...existing,
+      ...candidate,
+      eventSeries: {
+        ...(existing.eventSeries ?? {}),
+        ...(candidate.eventSeries ?? {}),
+      },
+      myRsvp: candidate.myRsvp ?? existing.myRsvp ?? null,
+      participants: candidate.participants ?? existing.participants ?? null,
+    } as MobileEventOccurrence);
+  }
+
+  return [...mergedByOccurrenceId.values()].sort(
+    (left, right) => new Date(left.startAt ?? 0).getTime() - new Date(right.startAt ?? 0).getTime(),
+  );
+}

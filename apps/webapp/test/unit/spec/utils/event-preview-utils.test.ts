@@ -27,6 +27,17 @@ describe('event-preview-utils', () => {
         status: 'Scheduled',
         isException: false,
         rsvpCount: 4,
+        participants: [
+          {
+            participantId: 'participant-2',
+            userId: 'user-2',
+            status: ParticipantStatus.Going,
+            quantity: 1,
+            user: {
+              username: 'ada',
+            },
+          },
+        ],
         eventSeries: {
           eventId: 'event-1',
           slug: 'weekly-yoga',
@@ -46,7 +57,13 @@ describe('event-preview-utils', () => {
     expect(preview).toEqual(
       expect.objectContaining({
         occurrenceId: 'event-1#2026-06-01T18:00:00.000Z',
-        participants: [],
+        participants: [
+          expect.objectContaining({
+            participantId: 'participant-2',
+            userId: 'user-2',
+            status: ParticipantStatus.Going,
+          }),
+        ],
         myRsvp: expect.objectContaining({
           participantId: 'participant-1',
           occurrenceId: 'event-1#2026-06-01T18:00:00.000Z',

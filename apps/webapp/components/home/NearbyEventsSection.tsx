@@ -292,6 +292,9 @@ export default function NearbyEventsSection() {
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
       <Box sx={{ mb: { xs: 0.5, md: 1 } }}>
+        <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: '0.08em' }}>
+          Around you
+        </Typography>
         <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
           {locationLabel ? `Events near ${locationLabel}` : 'Events near you'}
         </Typography>
@@ -299,6 +302,12 @@ export default function NearbyEventsSection() {
       {permissionState === 'granted' && isLocationHydrated && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {helperText}
+        </Typography>
+      )}
+      {permissionState !== 'granted' && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          This lane is for hyper-local decisions, especially when you want something for the weekend without a long
+          search.
         </Typography>
       )}
       {renderContent()}

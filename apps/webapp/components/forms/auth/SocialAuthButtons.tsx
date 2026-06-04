@@ -27,6 +27,11 @@ export default function SocialAuthButtons({ showEmailSignupButton = false }: Soc
 
   const handleProviderSignIn = (provider: 'google' | 'apple') => {
     startTransition(() => {
+      if (provider === 'google') {
+        void signIn(provider, { redirectTo }, { prompt: 'select_account' });
+        return;
+      }
+
       void signIn(provider, { redirectTo });
     });
   };

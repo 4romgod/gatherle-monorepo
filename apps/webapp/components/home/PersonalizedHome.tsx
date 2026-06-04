@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, Container, Grid } from '@mui/material';
+import { Box, Container, Grid, Stack } from '@mui/material';
 import RecommendedSection from './RecommendedSection';
 import TrendingEventsSection from './TrendingEventsSection';
 import NearbyEventsSection from './NearbyEventsSection';
@@ -35,28 +35,30 @@ export default function PersonalizedHome({ user }: PersonalizedHomeProps) {
 
       <Box sx={{ py: { xs: 2, md: 4 } }}>
         <Container maxWidth="md" sx={{ pb: 2 }}>
-          <Grid container spacing={{ xs: 2, md: 3 }}>
-            <Grid size={{ xs: 12 }}>
-              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                <HomeSearchBar />
-              </Box>
+          <Stack spacing={{ xs: 2, md: 3 }}>
+            <Grid container spacing={{ xs: 2, md: 3 }}>
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                  <HomeSearchBar />
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <UpcomingRsvpsSection />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <RecommendedSection />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <NearbyEventsSection />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <TrendingEventsSection />
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <HomeBrowseSection isAuthenticated />
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12 }}>
-              <UpcomingRsvpsSection />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <RecommendedSection />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <NearbyEventsSection />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TrendingEventsSection />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <HomeBrowseSection isAuthenticated />
-            </Grid>
-          </Grid>
+          </Stack>
         </Container>
       </Box>
     </Box>

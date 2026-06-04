@@ -353,6 +353,26 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     });
     return set;
   }, [following]);
+  const followedParticipantPreview = useMemo(() => {
+    const seenUserIds = new Set<string>();
+
+    return participantList
+      .filter(
+        (
+          participant,
+        ): participant is EventParticipantRecord & { user: NonNullable<EventParticipantRecord['user']> } => {
+          const nextUserId = participant.user?.userId;
+
+          if (!nextUserId || !followingUserIds.has(nextUserId) || seenUserIds.has(nextUserId)) {
+            return false;
+          }
+
+          seenUserIds.add(nextUserId);
+          return true;
+        },
+      )
+      .slice(0, 3);
+  }, [followingUserIds, participantList]);
   const canViewAttendee = (user?: EventParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
@@ -1142,6 +1162,33 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 display: participantList.length === 0 ? { xs: 'none', md: 'block' } : 'block',
               }}
             >
+              {followedParticipantPreview.length > 0 ? (
+                <Box sx={{ display: { xs: 'none', md: 'block' }, mb: 3 }}>
+                  <Typography
+                    variant="overline"
+                    color="text.secondary"
+                    fontWeight={700}
+                    sx={{ letterSpacing: '0.08em' }}
+                  >
+                    People you follow
+                  </Typography>
+                  <Stack spacing={2} sx={{ mt: 1 }}>
+                    {followedParticipantPreview.map((participant) => (
+                      <UserPreviewItem
+                        key={participant.participantId}
+                        paperProps={previewPaperProps}
+                        name={getParticipantDisplayName(participant)}
+                        username={participant.user.username}
+                        avatarUrl={participant.user.profile_picture || undefined}
+                        chipLabel={getParticipantStatusLabel(participant)}
+                        chipColor={getParticipantChipColor(participant.status)}
+                        chipVariant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              ) : null}
+
               <Typography
                 variant="h6"
                 component="h2"

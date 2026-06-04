@@ -100,6 +100,43 @@ native/runtime upgrade.
 
 ---
 
+## BUG-009: Mobile Google Logout Did Not Clear The Native Google Session
+
+**Date Discovered:** June 4, 2026 **Severity:** Medium **Status:** ✅ Fixed
+
+### Symptoms
+
+- Logging out of Gatherle on mobile cleared the local app session but left the native Google Sign-In session intact.
+- The next "Continue with Google" attempt could silently reuse the previously selected Google account instead of letting
+  QA or multi-account users choose again.
+- This made account-switch testing clumsy and reduced user control over which Google identity was used.
+
+### Root Cause
+
+`PreviewSessionProvider.signOut()` only cleared Gatherle's stored session and Apollo cache. It never called the native
+Google Sign-In SDK logout path, so Google still considered the device session active.
+
+### Fix
+
+- Add `clearMobileGoogleSignInSession()` in `apps/mobile/src/lib/auth/googleSignIn.ts`
+- On mobile logout, clear the local Gatherle session **and** sign out of the native Google session when one exists
+- Add unit coverage for both the Google helper and the preview session provider logout path
+
+### Files Changed
+
+- `apps/mobile/src/lib/auth/googleSignIn.ts`
+- `apps/mobile/src/app/providers/PreviewSessionProvider.tsx`
+- `apps/mobile/test/unit/spec/lib/auth.test.ts`
+- `apps/mobile/test/unit/spec/hooks/previewSessionProvider.test.tsx`
+
+### Lessons Learned
+
+1. Clearing app auth state is not enough when native OAuth providers cache their own session state.
+2. Logout behavior for social providers should be tested as a full sign-out/sign-back-in loop, not only as token
+   deletion.
+
+---
+
 ## BUG-007: iPhone Search Cancel Leaves Keyboard-Sized Blank Gap In Home And Events
 
 **Date Discovered:** May 27, 2026  

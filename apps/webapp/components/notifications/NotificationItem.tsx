@@ -21,6 +21,7 @@ import { NotificationType } from '@/data/graphql/types/graphql';
 import { logger } from '@/lib/utils';
 
 interface NotificationItemProps {
+  eyebrow?: string;
   notification: Notification;
   onMarkRead?: (notificationId: string) => void;
   onMarkUnread?: (notificationId: string) => void;
@@ -83,6 +84,7 @@ function getNotificationStyle(type: NotificationType): { icon: React.ReactNode; 
 }
 
 export default function NotificationItem({
+  eyebrow,
   notification,
   onMarkRead,
   onMarkUnread,
@@ -168,6 +170,21 @@ export default function NotificationItem({
         primary={
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <Box sx={{ flex: 1, pr: 1 }}>
+              {eyebrow ? (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    fontWeight: 700,
+                    letterSpacing: 0.8,
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                    mb: 0.25,
+                  }}
+                >
+                  {eyebrow}
+                </Typography>
+              ) : null}
               <Typography
                 variant="body2"
                 fontWeight={notification.isRead ? 400 : 600}

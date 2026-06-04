@@ -114,6 +114,45 @@ export default function ProfileEventsTabs({
       {isOwnProfile ? 'Create Your First Event' : 'Explore Events'}
     </Button>
   );
+  const formatTabCount = (count: number) => (count > 99 ? '99+' : String(count));
+  const tabItems = [
+    {
+      key: 'going',
+      ariaLabel: 'RSVPs',
+      count: upcomingRsvpdEvents.length,
+      icon: FiCheckSquare,
+      label: 'RSVPs',
+      tooltip: `RSVPs — events ${perspectivePronoun}'ve locked in`,
+    },
+    {
+      key: 'attended',
+      ariaLabel: 'Attended',
+      count: pastRsvpdEvents.length,
+      icon: FiClock,
+      label: 'Attended',
+      tooltip: `Attended — past events ${perspectivePronoun} showed up for`,
+    },
+    {
+      key: 'hosted',
+      ariaLabel: 'Hosted',
+      count: hostedEventsTotalCount,
+      icon: FiCalendar,
+      label: 'Hosted',
+      tooltip: `Hosted — events ${perspectivePronoun}'ve created or co-hosted`,
+    },
+    ...(isOwnProfile
+      ? [
+          {
+            key: 'saved',
+            ariaLabel: 'Saved',
+            count: savedEvents.length,
+            icon: FiBookmark,
+            label: 'Saved',
+            tooltip: 'Saved — bookmarked events',
+          },
+        ]
+      : []),
+  ] as const;
 
   return (
     <Card
@@ -131,10 +170,10 @@ export default function ProfileEventsTabs({
             display: 'none',
           },
           '& .MuiTab-root': {
-            minHeight: { xs: 38, md: 42 },
+            minHeight: { xs: 60, md: 66 },
             minWidth: 'auto',
             position: 'relative',
-            py: { xs: 1.125, md: 1.5 },
+            py: { xs: 1, md: 1.25 },
             color: 'text.secondary',
             '&::after': {
               content: '""',
@@ -155,52 +194,53 @@ export default function ProfileEventsTabs({
             },
           },
           '& .MuiTab-icon': {
-            margin: '0 !important',
+            marginBottom: '4px !important',
           },
         }}
       >
-        <Tab
-          aria-label="Going"
-          icon={
-            <Tooltip title={`Going — events ${perspectivePronoun}'ve RSVPed to`} placement="bottom" arrow>
-              <Box component="span" sx={tabIconSx}>
-                <FiCheckSquare />
-              </Box>
-            </Tooltip>
-          }
-        />
-        <Tab
-          aria-label="Attended"
-          icon={
-            <Tooltip title={`Attended — past events ${perspectivePronoun} went to`} placement="bottom" arrow>
-              <Box component="span" sx={tabIconSx}>
-                <FiClock />
-              </Box>
-            </Tooltip>
-          }
-        />
-        <Tab
-          aria-label="Hosted"
-          icon={
-            <Tooltip title={`Hosted — events ${perspectivePronoun}'ve created or co-hosted`} placement="bottom" arrow>
-              <Box component="span" sx={tabIconSx}>
-                <FiCalendar />
-              </Box>
-            </Tooltip>
-          }
-        />
-        {isOwnProfile && (
+        {tabItems.map((tab) => (
           <Tab
-            aria-label="Saved"
+            aria-label={tab.ariaLabel}
+            key={tab.key}
             icon={
-              <Tooltip title="Saved — bookmarked events" placement="bottom" arrow>
+              <Tooltip title={tab.tooltip} placement="bottom" arrow>
                 <Box component="span" sx={tabIconSx}>
-                  <FiBookmark />
+                  <tab.icon />
                 </Box>
               </Tooltip>
             }
+            iconPosition="top"
+            label={
+              <Stack spacing={0.45} alignItems="center">
+                <Typography
+                  component="span"
+                  sx={{ fontSize: { xs: '0.68rem', md: '0.72rem' }, fontWeight: 700, lineHeight: 1 }}
+                >
+                  {tab.label}
+                </Typography>
+                <Box
+                  component="span"
+                  sx={{
+                    px: 0.9,
+                    py: 0.2,
+                    borderRadius: 999,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'action.hover',
+                    color: 'text.secondary',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                    minWidth: 24,
+                    textAlign: 'center',
+                  }}
+                >
+                  {formatTabCount(tab.count)}
+                </Box>
+              </Stack>
+            }
           />
-        )}
+        ))}
       </Tabs>
 
       <Box sx={{ p: { xs: 2.5, md: 3 } }}>

@@ -31,6 +31,7 @@ export default {
       authorization: {
         url: 'https://accounts.google.com/o/oauth2/v2/auth',
         params: {
+          prompt: 'select_account',
           scope: 'openid profile email',
         },
       },

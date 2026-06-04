@@ -10,7 +10,7 @@ test.describe('Home Route', () => {
     await page.goto('/home', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole('heading', { name: 'Where unforgettable experiences find their people.' }),
+      page.getByRole('heading', { name: 'Find the gatherings your people will not want to miss.' }),
     ).toBeVisible();
   });
 });

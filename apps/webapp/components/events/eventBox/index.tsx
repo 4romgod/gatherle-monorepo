@@ -21,6 +21,7 @@ import {
   getEventPreviewOccurrenceId,
   getEventPreviewParticipantCount,
   getEventPreviewParticipants,
+  getEventPreviewSaveCount,
   getEventPreviewScheduleText,
   getEventPreviewSlug,
   getEventPreviewStatusLabel,
@@ -43,6 +44,8 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
   const nextRsvpStatus = getEventPreviewMyRsvpStatus(event);
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
+  const saveCount = getEventPreviewSaveCount(event);
+  const isTrending = participantCount >= 20 || saveCount >= 12;
 
   const [isSaved, setIsSaved] = useState(nextSavedState);
   const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(nextRsvpStatus);
@@ -169,6 +172,22 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
                 size="small"
                 variant="outlined"
                 sx={{ height: 18, fontSize: '0.65rem' }}
+              />
+            )}
+            {saveCount > 0 && (
+              <Chip
+                label={`${saveCount} saves`}
+                size="small"
+                variant="outlined"
+                sx={{ height: 18, fontSize: '0.65rem' }}
+              />
+            )}
+            {isTrending && (
+              <Chip
+                label="Trending"
+                size="small"
+                color="secondary"
+                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }}
               />
             )}
           </Stack>

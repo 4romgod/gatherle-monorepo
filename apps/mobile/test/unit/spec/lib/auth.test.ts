@@ -17,18 +17,26 @@ type GoogleSignInModule = typeof import('@/lib/auth/googleSignIn');
 
 function loadGoogleSignInModule({
   applicationId = 'com.gatherle.mobile',
+  currentUser = null,
+  hasPreviousSignIn = false,
   isDev = false,
   iosClientId,
   platform,
   webClientId,
 }: {
   applicationId?: string;
+  currentUser?: Record<string, unknown> | null;
+  hasPreviousSignIn?: boolean;
   isDev?: boolean;
   iosClientId?: string;
   platform: MobilePlatform;
   webClientId?: string;
 }) {
   const configureMock = jest.fn();
+  const getCurrentUserMock = jest.fn(() => currentUser);
+  const hasPreviousSignInMock = jest.fn(() => hasPreviousSignIn);
+  const revokeAccessMock = jest.fn().mockResolvedValue(null);
+  const signOutMock = jest.fn().mockResolvedValue(null);
   const nextEnv = { ...process.env };
   const originalDev = global.__DEV__;
 
@@ -49,6 +57,10 @@ function loadGoogleSignInModule({
   jest.doMock('@react-native-google-signin/google-signin', () => ({
     GoogleSignin: {
       configure: configureMock,
+      getCurrentUser: getCurrentUserMock,
+      hasPreviousSignIn: hasPreviousSignInMock,
+      revokeAccess: revokeAccessMock,
+      signOut: signOutMock,
     },
   }));
   jest.doMock('expo-application', () => ({
@@ -69,6 +81,9 @@ function loadGoogleSignInModule({
   return {
     configureMock,
     googleSignInModule: googleSignInModule!,
+    hasPreviousSignInMock,
+    revokeAccessMock,
+    signOutMock,
     resetDevFlag() {
       global.__DEV__ = originalDev;
     },
@@ -642,5 +657,47 @@ describe('mobile auth helpers', () => {
     googleSignInModule.configureMobileGoogleSignIn();
 
     expect(configureMock).not.toHaveBeenCalled();
+  });
+
+  it('clears the native Google session on logout when a prior sign-in exists', async () => {
+    const { configureMock, googleSignInModule, revokeAccessMock, signOutMock } = loadGoogleSignInModule({
+      hasPreviousSignIn: true,
+      platform: 'android',
+      webClientId: 'android-web-client.apps.googleusercontent.com',
+    });
+
+    await googleSignInModule.clearMobileGoogleSignInSession();
+
+    expect(configureMock).toHaveBeenCalledTimes(1);
+    expect(revokeAccessMock).toHaveBeenCalledTimes(1);
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('still signs out locally when Google access revocation fails', async () => {
+    const { googleSignInModule, revokeAccessMock, signOutMock } = loadGoogleSignInModule({
+      hasPreviousSignIn: true,
+      platform: 'android',
+      webClientId: 'android-web-client.apps.googleusercontent.com',
+    });
+
+    revokeAccessMock.mockRejectedValueOnce(new Error('revoke failed'));
+
+    await googleSignInModule.clearMobileGoogleSignInSession();
+
+    expect(revokeAccessMock).toHaveBeenCalledTimes(1);
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips Google session clearing when no native Google user is cached', async () => {
+    const { configureMock, googleSignInModule, signOutMock } = loadGoogleSignInModule({
+      hasPreviousSignIn: false,
+      platform: 'android',
+      webClientId: 'android-web-client.apps.googleusercontent.com',
+    });
+
+    await googleSignInModule.clearMobileGoogleSignInSession();
+
+    expect(configureMock).toHaveBeenCalledTimes(1);
+    expect(signOutMock).not.toHaveBeenCalled();
   });
 });

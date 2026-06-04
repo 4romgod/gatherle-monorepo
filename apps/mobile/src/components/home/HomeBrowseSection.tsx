@@ -22,7 +22,11 @@ export function HomeBrowseSection({ items }: HomeBrowseSectionProps) {
 
   return (
     <View style={styles.section}>
-      <SectionHeading title="Explore more" />
+      <SectionHeading
+        eyebrow="Discovery lanes"
+        subtitle="Browse by category, host, venue, or community when you want to widen the search."
+        title="Explore more"
+      />
 
       <View style={styles.row}>
         {items.map((item) => (

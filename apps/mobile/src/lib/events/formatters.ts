@@ -60,6 +60,22 @@ export function dedupeOccurrencesBySeries<T extends { eventSeriesId: string }>(o
   return results;
 }
 
+export function buildRecommendedOccurrences<T extends { eventSeriesId: string }>(
+  trendingOccurrences: T[],
+  upcomingOccurrences: T[],
+  excludedOccurrences: T[] = [],
+  limit?: number,
+): T[] {
+  const excludedSeriesIds = new Set(excludedOccurrences.map((occurrence) => occurrence.eventSeriesId));
+
+  return dedupeOccurrencesBySeries(
+    [...trendingOccurrences, ...upcomingOccurrences].filter(
+      (occurrence) => !excludedSeriesIds.has(occurrence.eventSeriesId),
+    ),
+    limit,
+  );
+}
+
 export function sortCategoriesByInterest(categories: MobileEventCategory[]) {
   return [...categories].sort((left, right) => (right.interestedUsersCount ?? 0) - (left.interestedUsersCount ?? 0));
 }
