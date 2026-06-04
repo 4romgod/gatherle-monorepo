@@ -2,6 +2,8 @@
 
 import React, { FormEvent, useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import {
+  Autocomplete,
+  Avatar,
   TextField,
   Button,
   Grid,
@@ -26,16 +28,19 @@ import {
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Link as LinkIcon, Save, CloudUpload, Close } from '@mui/icons-material';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery } from '@apollo/client';
 import { useRouter } from 'next/navigation';
 import {
   CreateEventInput,
   EventPrivacySetting,
+  EventOrganizerRole,
   EventStatus,
   EventVisibility,
   EventLifecycleStatus,
   Location,
   OrganizationRole,
+  QueryOptionsInput,
+  SortOrderInput,
 } from '@/data/graphql/types/graphql';
 import { EventMutationFormProps, BUTTON_STYLES, SECTION_TITLE_STYLES, getEventCategoryIcon } from '@/lib/constants';
 import CategoryFilter from '@/components/events/filters/category';
@@ -49,12 +54,157 @@ import { MediaEntityType, MediaType } from '@/data/graphql/types/graphql';
 import { STORAGE_NAMESPACES } from '@/hooks/usePersistentState';
 import { useSession } from 'next-auth/react';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
+import { GetUsersDocument } from '@/data/graphql/query/User/query';
 import { CreateEventDocument, UpdateEventDocument } from '@/data/graphql/query/Event/mutation';
 import { ROUTES } from '@/lib/constants';
 import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { getAuthHeader } from '@/lib/utils/auth';
 
 const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
+const EVENT_ORGANIZER_ROLES = [EventOrganizerRole.Host, EventOrganizerRole.CoHost, EventOrganizerRole.Volunteer];
+const ORGANIZER_SEARCH_FIELDS = ['username', 'email', 'given_name', 'family_name'];
+const ORGANIZER_SEARCH_LIMIT = 10;
+
+type OrganizerUserOption = {
+  email?: string | null;
+  family_name?: string | null;
+  given_name?: string | null;
+  profile_picture?: string | null;
+  userId: string;
+  username?: string | null;
+};
+type PersistedOrganizerValue =
+  | string
+  | {
+      user?: string | null;
+      role?: EventOrganizerRole | string | null;
+    }
+  | null
+  | undefined;
+type EventOrganizerDraft = {
+  user: string;
+  role: EventOrganizerRole;
+};
+type EventMutationDraft = Omit<CreateEventInput, 'organizers'> & {
+  organizers: PersistedOrganizerValue[];
+};
+
+const ORGANIZER_ROLE_PRIORITY: Record<EventOrganizerRole, number> = {
+  [EventOrganizerRole.Host]: 0,
+  [EventOrganizerRole.CoHost]: 1,
+  [EventOrganizerRole.Volunteer]: 2,
+};
+
+function buildOrganizerSearchOptions(searchQuery: string): QueryOptionsInput {
+  return {
+    pagination: { limit: ORGANIZER_SEARCH_LIMIT },
+    sort: [{ field: 'username', order: SortOrderInput.Asc }],
+    search: {
+      value: searchQuery,
+      fields: ORGANIZER_SEARCH_FIELDS,
+    },
+  };
+}
+
+function formatOrganizerRoleLabel(role: EventOrganizerRole): string {
+  if (role === EventOrganizerRole.CoHost) {
+    return 'Co-host';
+  }
+
+  return role;
+}
+
+function formatOrganizerLabel(user?: Partial<OrganizerUserOption> | null, fallbackUserId?: string): string {
+  if (!user && fallbackUserId) {
+    return fallbackUserId;
+  }
+
+  if (!user) {
+    return 'Unknown organizer';
+  }
+
+  if (user.username) {
+    return `@${user.username}`;
+  }
+
+  const fullName = [user.given_name, user.family_name].filter(Boolean).join(' ').trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  return user.email ?? fallbackUserId ?? 'Unknown organizer';
+}
+
+function formatOrganizerMeta(user?: Partial<OrganizerUserOption> | null): string | undefined {
+  if (!user) {
+    return undefined;
+  }
+
+  const fullName = [user.given_name, user.family_name].filter(Boolean).join(' ').trim();
+  if (fullName && user.email) {
+    return `${fullName} • ${user.email}`;
+  }
+
+  return fullName || user.email || undefined;
+}
+
+function getOrganizerInitials(user?: Partial<OrganizerUserOption> | null, fallbackUserId?: string): string {
+  const fullName = [user?.given_name, user?.family_name].filter(Boolean).join(' ').trim();
+  if (fullName) {
+    return fullName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((segment) => segment.charAt(0).toUpperCase())
+      .join('');
+  }
+
+  const seed = user?.username || user?.email || fallbackUserId || 'O';
+  return seed.slice(0, 2).toUpperCase();
+}
+
+function normalizeOrganizers(
+  values: PersistedOrganizerValue[] | undefined,
+  currentUserId?: string | null,
+  options?: { ensureCurrentUserHost?: boolean },
+): EventOrganizerDraft[] {
+  const organizerRolesByUserId = new Map<string, EventOrganizerRole>();
+
+  (values ?? []).forEach((value) => {
+    let userId: string | undefined;
+    let role: EventOrganizerRole | undefined;
+
+    if (typeof value === 'string') {
+      userId = value.trim();
+      role = userId && userId === currentUserId ? EventOrganizerRole.Host : EventOrganizerRole.CoHost;
+    } else if (value && typeof value === 'object' && typeof value.user === 'string') {
+      userId = value.user.trim();
+      role = EVENT_ORGANIZER_ROLES.includes(value.role as EventOrganizerRole)
+        ? (value.role as EventOrganizerRole)
+        : userId === currentUserId
+          ? EventOrganizerRole.Host
+          : EventOrganizerRole.CoHost;
+    }
+
+    if (!userId || !role) {
+      return;
+    }
+
+    const existingRole = organizerRolesByUserId.get(userId);
+    if (!existingRole || ORGANIZER_ROLE_PRIORITY[role] < ORGANIZER_ROLE_PRIORITY[existingRole]) {
+      organizerRolesByUserId.set(userId, role);
+    }
+  });
+
+  if (options?.ensureCurrentUserHost && currentUserId) {
+    organizerRolesByUserId.set(currentUserId, EventOrganizerRole.Host);
+  }
+
+  return Array.from(organizerRolesByUserId.entries()).map(([user, role]) => ({ user, role }));
+}
+
+function hasHostOrganizer(organizers: EventOrganizerDraft[]): boolean {
+  return organizers.some((organizer) => organizer.role === EventOrganizerRole.Host);
+}
 
 export default function EventMutationForm({ categoryList, event }: EventMutationFormProps) {
   const isEditMode = !!event;
@@ -65,6 +215,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const draftEntityId = useRef(crypto.randomUUID());
 
   const { data: sessionData, status: sessionStatus } = useSession();
+  const currentUserId = sessionData?.user?.userId;
   const { data: myOrganizationsData, loading: myOrganizationsLoading } = useQuery(GetMyOrganizationsDocument, {
     fetchPolicy: 'cache-and-network',
     skip: sessionStatus !== 'authenticated',
@@ -72,8 +223,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       headers: getAuthHeader(sessionData?.user?.token),
     },
   });
+  const [loadOrganizerCandidates, { data: organizerCandidatesData, loading: organizerSearchLoading }] = useLazyQuery(
+    GetUsersDocument,
+    {
+      fetchPolicy: 'network-only',
+    },
+  );
 
-  const defaultEventData = useMemo<CreateEventInput>(() => {
+  const defaultEventData = useMemo<EventMutationDraft>(() => {
     return {
       title: event?.title ?? '',
       summary: event?.summary ?? '',
@@ -102,7 +259,16 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       remindersEnabled: true,
       showAttendees: true,
       eventCategories: event?.eventCategories?.map((c) => c.eventCategoryId) ?? [],
-      organizers: event?.organizers?.map((o) => o.user.userId) ?? [],
+      organizers: normalizeOrganizers(
+        event?.organizers?.map((organizer) => ({
+          user: organizer.user.userId,
+          role: organizer.role,
+        })),
+        currentUserId,
+        {
+          ensureCurrentUserHost: !isEditMode,
+        },
+      ),
       tags: event?.tags ?? {},
       media: event?.media ?? {},
       additionalDetails: {},
@@ -113,7 +279,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
       venueId: event?.venueId,
       locationSnapshot: undefined,
     };
-  }, [event]);
+  }, [currentUserId, event, isEditMode]);
 
   const persistenceId = event?.eventId ?? event?.slug ?? 'new';
   const {
@@ -121,7 +287,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setValue: setEventData,
     clearStorage,
     isHydrated,
-  } = usePersistentState<CreateEventInput>(persistenceId, defaultEventData, {
+  } = usePersistentState<EventMutationDraft>(persistenceId, defaultEventData, {
     namespace: STORAGE_NAMESPACES.EVENT_MUTATION,
     userId: sessionData?.user?.userId,
     ttl: 1000 * 60 * 60 * 24 * 7,
@@ -131,6 +297,16 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
 
   // Use default data during SSR and initial render to prevent hydration mismatch
   const displayEventData = isHydrated ? eventData : defaultEventData;
+  const normalizedOrganizers = useMemo(
+    () =>
+      normalizeOrganizers(displayEventData.organizers, currentUserId, {
+        ensureCurrentUserHost: !isEditMode,
+      }),
+    [currentUserId, displayEventData.organizers, isEditMode],
+  );
+  const hostOrganizerCount = normalizedOrganizers.filter(
+    (organizer) => organizer.role === EventOrganizerRole.Host,
+  ).length;
 
   const getFeaturedImageUrl = (media: unknown): string => {
     if (!media || typeof media !== 'object') {
@@ -203,6 +379,8 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [organizerSearchInput, setOrganizerSearchInput] = useState('');
+  const [selectedOrganizerCandidate, setSelectedOrganizerCandidate] = useState<OrganizerUserOption | null>(null);
   const {
     clearSelection: clearFeaturedImageSelection,
     cropDialog: featuredImageCropDialog,
@@ -232,6 +410,54 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   });
 
   const submitting = createLoading || updateLoading;
+  const organizerIds = useMemo(
+    () => new Set(normalizedOrganizers.map((organizer) => organizer.user)),
+    [normalizedOrganizers],
+  );
+  const organizerCandidates = useMemo(
+    () => (organizerCandidatesData?.readUsers ?? []).filter((user) => user.userId && !organizerIds.has(user.userId)),
+    [organizerCandidatesData?.readUsers, organizerIds],
+  );
+  const organizerDirectory = useMemo(() => {
+    const organizersById = new Map<string, OrganizerUserOption>();
+
+    const registerUser = (user?: Partial<OrganizerUserOption> | null) => {
+      if (!user?.userId) {
+        return;
+      }
+
+      organizersById.set(user.userId, {
+        userId: user.userId,
+        username: user.username ?? null,
+        email: user.email ?? null,
+        given_name: user.given_name ?? null,
+        family_name: user.family_name ?? null,
+        profile_picture: user.profile_picture ?? null,
+      });
+    };
+
+    event?.organizers?.forEach((organizer) => registerUser(organizer.user));
+    organizerCandidates.forEach((user) => registerUser(user));
+    registerUser({
+      userId: currentUserId ?? undefined,
+      username: sessionData?.user?.username,
+      email: sessionData?.user?.email,
+      given_name: sessionData?.user?.given_name,
+      family_name: sessionData?.user?.family_name,
+      profile_picture: sessionData?.user?.profile_picture,
+    });
+
+    return organizersById;
+  }, [
+    currentUserId,
+    event?.organizers,
+    organizerCandidates,
+    sessionData?.user?.email,
+    sessionData?.user?.family_name,
+    sessionData?.user?.given_name,
+    sessionData?.user?.profile_picture,
+    sessionData?.user?.username,
+  ]);
 
   const handleLocationChange = (newLocation: Location) => {
     setEventData((prev) => ({ ...prev, location: newLocation }));
@@ -302,14 +528,104 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setEventData((prev) => ({ ...prev, [name]: checked }));
   };
 
+  useEffect(() => {
+    const trimmedSearch = organizerSearchInput.trim();
+    if (sessionStatus !== 'authenticated' || trimmedSearch.length < 2) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void loadOrganizerCandidates({
+        variables: {
+          options: buildOrganizerSearchOptions(trimmedSearch),
+        },
+        context: {
+          headers: getAuthHeader(sessionData?.user?.token),
+        },
+      });
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadOrganizerCandidates, organizerSearchInput, sessionData?.user?.token, sessionStatus]);
+
+  const handleAddOrganizer = useCallback(() => {
+    const candidateUserId = selectedOrganizerCandidate?.userId;
+    if (!candidateUserId) {
+      return;
+    }
+
+    setEventData((prev) => {
+      const nextOrganizers = normalizeOrganizers(prev.organizers, currentUserId, {
+        ensureCurrentUserHost: !isEditMode,
+      });
+
+      if (nextOrganizers.some((organizer) => organizer.user === candidateUserId)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        organizers: [...nextOrganizers, { user: candidateUserId, role: EventOrganizerRole.CoHost }],
+      };
+    });
+    setSelectedOrganizerCandidate(null);
+    setOrganizerSearchInput('');
+  }, [currentUserId, isEditMode, selectedOrganizerCandidate?.userId, setEventData]);
+
+  const handleOrganizerRoleChange = useCallback(
+    (userId: string, role: EventOrganizerRole) => {
+      setEventData((prev) => {
+        const nextOrganizers = normalizeOrganizers(prev.organizers, currentUserId, {
+          ensureCurrentUserHost: !isEditMode,
+        }).map((organizer) => (organizer.user === userId ? { ...organizer, role } : organizer));
+
+        return {
+          ...prev,
+          organizers: nextOrganizers,
+        };
+      });
+    },
+    [currentUserId, isEditMode, setEventData],
+  );
+
+  const handleRemoveOrganizer = useCallback(
+    (userId: string) => {
+      setEventData((prev) => {
+        const nextOrganizers = normalizeOrganizers(prev.organizers, currentUserId, {
+          ensureCurrentUserHost: !isEditMode,
+        });
+        const organizerToRemove = nextOrganizers.find((organizer) => organizer.user === userId);
+        const hostCount = nextOrganizers.filter((organizer) => organizer.role === EventOrganizerRole.Host).length;
+
+        if (!organizerToRemove || (organizerToRemove.role === EventOrganizerRole.Host && hostCount === 1)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          organizers: nextOrganizers.filter((organizer) => organizer.user !== userId),
+        };
+      });
+    },
+    [currentUserId, isEditMode, setEventData],
+  );
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const submissionOrganizers = normalizeOrganizers(eventData.organizers, currentUserId, {
+      ensureCurrentUserHost: !isEditMode,
+    });
 
     if (!eventData.title?.trim()) newErrors.title = 'Title is required';
     if (!eventData.summary?.trim()) newErrors.summary = 'Summary is required';
     if (!eventData.description?.trim()) newErrors.description = 'Description is required';
     if (!eventData.primarySchedule?.recurrenceRule) newErrors.recurrenceRule = 'Event date is required';
     if (eventData.eventCategories.length === 0) newErrors.categories = 'Select at least one category';
+    if (submissionOrganizers.length === 0) {
+      newErrors.organizers = 'Add at least one organizer';
+    } else if (!hasHostOrganizer(submissionOrganizers)) {
+      newErrors.organizers = 'At least one organizer must be a host';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -325,6 +641,10 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     setSubmitError(null);
 
     try {
+      const submissionOrganizers = normalizeOrganizers(eventData.organizers, currentUserId, {
+        ensureCurrentUserHost: !isEditMode,
+      });
+
       if (isEditMode && event?.eventId) {
         const { data } = await updateEvent({
           variables: {
@@ -350,6 +670,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
               privacySetting: eventData.privacySetting,
               eventLink: eventData.eventLink,
               orgId: eventData.orgId,
+              organizers: submissionOrganizers,
               tags: eventData.tags,
             },
           },
@@ -366,7 +687,14 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
         return;
       }
 
-      const { data } = await createEvent({ variables: { input: eventData } });
+      const { data } = await createEvent({
+        variables: {
+          input: {
+            ...eventData,
+            organizers: submissionOrganizers,
+          },
+        },
+      });
       const slug = data?.createEvent.slug;
       if (slug) {
         clearStorage();
@@ -723,6 +1051,153 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
     </Box>
   ) : null;
 
+  const organizerField = (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+        Organizer team
+      </Typography>
+      {!isMobileLayout ? (
+        <Typography variant="body2" color="text.secondary" sx={helperCopySx}>
+          Add co-hosts or volunteers so the right people can manage this event across devices.
+        </Typography>
+      ) : null}
+      <Stack spacing={1.5}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+          <Autocomplete
+            options={organizerCandidates}
+            value={selectedOrganizerCandidate}
+            inputValue={organizerSearchInput}
+            onChange={(_, value) => setSelectedOrganizerCandidate(value)}
+            onInputChange={(_, value) => setOrganizerSearchInput(value)}
+            loading={organizerSearchLoading}
+            getOptionLabel={(option) => formatOrganizerLabel(option, option.userId)}
+            isOptionEqualToValue={(option, value) => option.userId === value.userId}
+            filterOptions={(options) => options}
+            noOptionsText={
+              organizerSearchInput.trim().length < 2
+                ? 'Type at least 2 characters to search'
+                : organizerSearchLoading
+                  ? 'Searching...'
+                  : 'No eligible users found'
+            }
+            fullWidth
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Add organizer"
+                placeholder="Search by username, email, or name"
+                size="small"
+                color="secondary"
+                helperText="Search by username, email, or name"
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.userId}>
+                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                  <Avatar src={option.profile_picture ?? undefined} sx={{ width: 32, height: 32 }}>
+                    {getOrganizerInitials(option, option.userId)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>
+                      {formatOrganizerLabel(option, option.userId)}
+                    </Typography>
+                    {formatOrganizerMeta(option) ? (
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {formatOrganizerMeta(option)}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                </Stack>
+              </Box>
+            )}
+          />
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={handleAddOrganizer}
+            disabled={!selectedOrganizerCandidate?.userId}
+            sx={{ minWidth: { sm: 124 }, whiteSpace: 'nowrap' }}
+          >
+            Add
+          </Button>
+        </Stack>
+
+        <Stack spacing={1}>
+          {normalizedOrganizers.map((organizer) => {
+            const organizerUser = organizerDirectory.get(organizer.user);
+            const canRemoveOrganizer = !(organizer.role === EventOrganizerRole.Host && hostOrganizerCount === 1);
+
+            return (
+              <Box
+                key={organizer.user}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  p: 1.25,
+                }}
+              >
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1.5}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Avatar src={organizerUser?.profile_picture ?? undefined}>
+                      {getOrganizerInitials(organizerUser, organizer.user)}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {formatOrganizerLabel(organizerUser, organizer.user)}
+                        {organizer.user === currentUserId ? ' (you)' : ''}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {formatOrganizerMeta(organizerUser) ?? organizer.user}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <FormControl size="small" sx={{ minWidth: 132 }}>
+                      <InputLabel id={`organizer-role-${organizer.user}`}>Role</InputLabel>
+                      <Select
+                        labelId={`organizer-role-${organizer.user}`}
+                        label="Role"
+                        value={organizer.role}
+                        onChange={(event) =>
+                          handleOrganizerRoleChange(organizer.user, event.target.value as EventOrganizerRole)
+                        }
+                      >
+                        {EVENT_ORGANIZER_ROLES.map((role) => (
+                          <MenuItem key={role} value={role}>
+                            {formatOrganizerRoleLabel(role)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <IconButton
+                      aria-label={`Remove organizer ${formatOrganizerLabel(organizerUser, organizer.user)}`}
+                      onClick={() => handleRemoveOrganizer(organizer.user)}
+                      disabled={!canRemoveOrganizer}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+              </Box>
+            );
+          })}
+        </Stack>
+
+        <Typography color={errors.organizers ? 'error.main' : 'text.secondary'} variant="caption">
+          {errors.organizers ?? 'At least one host is required. Co-hosts and volunteers can help manage the event.'}
+        </Typography>
+      </Stack>
+    </Box>
+  );
+
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
@@ -881,6 +1356,7 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 {isMobileLayout ? 'Community context' : 'Categories & Media'}
               </Typography>
               {isMobileLayout ? organizationField : null}
+              {organizerField}
               {categoryField}
               {!isMobileLayout ? featuredImageField : null}
               {!isMobileLayout ? eventLinkField : null}

@@ -4,6 +4,7 @@ import {
   isMobileRealtimeFollowRequestPayload,
   isMobileRealtimeMomentCreatedPayload,
   isMobileRealtimeMomentDeletedPayload,
+  isMobileRealtimeMomentUpdatedPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
   isMobileRealtimeNotificationsAllReadPayload,
@@ -144,6 +145,7 @@ describe('mobile notification realtime protocol', () => {
 
     expect(isMobileRealtimeMomentCreatedPayload(momentCreatedPayload)).toBe(true);
     expect(isMobileRealtimeMomentCreatedPayload({ moment: { eventId: 'event-1' } })).toBe(false);
+    expect(isMobileRealtimeMomentUpdatedPayload(momentCreatedPayload)).toBe(true);
 
     expect(isMobileRealtimeMomentDeletedPayload(momentDeletedPayload)).toBe(true);
     expect(isMobileRealtimeMomentDeletedPayload({ momentId: 'moment-1', eventId: 'event-1' })).toBe(false);
@@ -181,6 +183,12 @@ describe('mobile notification realtime protocol', () => {
     ).toEqual({
       payload: momentCreatedPayload,
       type: 'moment.created',
+    });
+    expect(
+      parseNotificationRealtimeEvent(JSON.stringify({ type: 'moment.updated', payload: momentCreatedPayload })),
+    ).toEqual({
+      payload: momentCreatedPayload,
+      type: 'moment.updated',
     });
     expect(
       parseNotificationRealtimeEvent(JSON.stringify({ type: 'moment.deleted', payload: momentDeletedPayload })),

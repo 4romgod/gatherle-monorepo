@@ -22,6 +22,7 @@ type NotificationRealtimeEventType =
   | 'event.rsvp.updated'
   | 'event.save.updated'
   | 'moment.created'
+  | 'moment.updated'
   | 'moment.deleted';
 
 export type MobileRealtimeNotificationPayload = {
@@ -104,6 +105,8 @@ export type MobileRealtimeMomentCreatedPayload = {
     };
   };
 };
+
+export type MobileRealtimeMomentUpdatedPayload = MobileRealtimeMomentCreatedPayload;
 
 export type MobileRealtimeMomentDeletedPayload = {
   momentId: string;
@@ -266,6 +269,10 @@ export const isMobileRealtimeMomentCreatedPayload = (value: unknown): value is M
   );
 };
 
+export const isMobileRealtimeMomentUpdatedPayload = (value: unknown): value is MobileRealtimeMomentUpdatedPayload => {
+  return isMobileRealtimeMomentCreatedPayload(value);
+};
+
 export const isMobileRealtimeMomentDeletedPayload = (value: unknown): value is MobileRealtimeMomentDeletedPayload => {
   return (
     isRecord(value) &&
@@ -287,6 +294,7 @@ const isNotificationRealtimeEventType = (value: unknown): value is NotificationR
     value === 'event.rsvp.updated' ||
     value === 'event.save.updated' ||
     value === 'moment.created' ||
+    value === 'moment.updated' ||
     value === 'moment.deleted'
   );
 };

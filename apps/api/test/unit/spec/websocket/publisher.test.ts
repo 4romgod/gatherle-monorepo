@@ -6,8 +6,9 @@ import {
   publishEventRsvpUpdated,
   publishFollowRequestCreated,
   publishFollowRequestUpdated,
-  publishMomentCreated,
-  publishMomentDeleted,
+  publishMomentCreatedToRecipients,
+  publishMomentDeletedToRecipients,
+  publishMomentUpdatedToRecipients,
   publishNotificationDeleted,
   publishNotificationsMarkedAllRead,
   publishNotificationCreated,
@@ -228,7 +229,7 @@ describe('websocket publisher', () => {
       .mockResolvedValueOnce([connectionOne])
       .mockResolvedValueOnce([connectionTwo]);
 
-    await publishEventRsvpUpdated(['user-1', 'user-1', '   ', 'user-2'], eventRsvpPayload);
+    await publishEventRsvpUpdated([' user-1 ', 'user-1', '   ', ' user-2 '], eventRsvpPayload);
 
     expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(
       WEBSOCKET_EVENT_TYPES.EVENT_RSVP_UPDATED,
@@ -244,7 +245,7 @@ describe('websocket publisher', () => {
   it('publishes event.save.updated to the recipient connections', async () => {
     (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
 
-    await publishEventSaveUpdated('user-1', {
+    await publishEventSaveUpdated(' user-1 ', {
       eventId: 'event-1',
       isSaved: true,
       followId: 'follow-1',
@@ -255,24 +256,50 @@ describe('websocket publisher', () => {
       isSaved: true,
       followId: 'follow-1',
     });
+    expect(WebSocketConnectionDAO.readConnectionsByUserId).toHaveBeenCalledWith('user-1');
     expect(postToConnection).toHaveBeenCalledTimes(1);
   });
 
-  it('publishes moment.created to the recipient connections', async () => {
-    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+  it('publishes moment.created once per unique recipient user', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
+      .mockResolvedValueOnce([connectionOne])
+      .mockResolvedValueOnce([connectionTwo]);
 
-    await publishMomentCreated('user-1', { moment } as any);
+    await publishMomentCreatedToRecipients([' user-1 ', 'user-1', ' user-2 '], { moment } as any);
 
     expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.MOMENT_CREATED, {
       moment,
     });
-    expect(postToConnection).toHaveBeenCalledTimes(1);
+    expect((WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mock.calls.map((call) => call[0])).toEqual([
+      'user-1',
+      'user-2',
+    ]);
+    expect(postToConnection).toHaveBeenCalledTimes(2);
   });
 
-  it('publishes moment.deleted to the recipient connections', async () => {
-    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+  it('publishes moment.updated once per unique recipient user', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
+      .mockResolvedValueOnce([connectionOne])
+      .mockResolvedValueOnce([connectionTwo]);
 
-    await publishMomentDeleted('user-1', {
+    await publishMomentUpdatedToRecipients([' user-1 ', ' user-2 '], { moment } as any);
+
+    expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.MOMENT_UPDATED, {
+      moment,
+    });
+    expect((WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mock.calls.map((call) => call[0])).toEqual([
+      'user-1',
+      'user-2',
+    ]);
+    expect(postToConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes moment.deleted once per unique recipient user', async () => {
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
+      .mockResolvedValueOnce([connectionOne])
+      .mockResolvedValueOnce([connectionTwo]);
+
+    await publishMomentDeletedToRecipients([' user-1 ', ' user-2 ', 'user-2'], {
       momentId: 'moment-1',
       eventId: 'event-1',
       occurrenceId: 'event-1#2026-02-16T00:00:00.000Z',
@@ -285,6 +312,10 @@ describe('websocket publisher', () => {
       occurrenceId: 'event-1#2026-02-16T00:00:00.000Z',
       authorId: 'user-1',
     });
-    expect(postToConnection).toHaveBeenCalledTimes(1);
+    expect((WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mock.calls.map((call) => call[0])).toEqual([
+      'user-1',
+      'user-2',
+    ]);
+    expect(postToConnection).toHaveBeenCalledTimes(2);
   });
 });

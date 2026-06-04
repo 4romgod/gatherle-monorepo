@@ -30,7 +30,7 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
       routeKey: event.requestContext.routeKey,
     });
     return response(HttpStatusCode.UNAUTHENTICATED, {
-      message: 'Missing auth token. Provide Authorization or Sec-WebSocket-Protocol header.',
+      message: 'Missing auth token. Provide Sec-WebSocket-Protocol auth.',
     });
   }
 

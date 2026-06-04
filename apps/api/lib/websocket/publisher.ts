@@ -120,12 +120,20 @@ interface MomentCreatedPayload {
   moment: RealtimeMomentSnapshot;
 }
 
+interface MomentUpdatedPayload {
+  moment: RealtimeMomentSnapshot;
+}
+
 interface MomentDeletedPayload {
   momentId: string;
   eventId: string;
   occurrenceId?: string | null;
   authorId: string;
 }
+
+const normalizeRecipientUserIds = (recipientUserIds: string[]): string[] => [
+  ...new Set(recipientUserIds.map((userId) => userId.trim()).filter((userId) => userId.length > 0)),
+];
 
 const publishToUserConnections = async <TPayload>(
   userId: string,
@@ -315,7 +323,7 @@ export const publishEventRsvpUpdated = async (
   payload: EventRsvpUpdatedPayload,
 ): Promise<void> => {
   try {
-    const uniqueRecipientUserIds = [...new Set(recipientUserIds.filter((userId) => userId.trim().length > 0))];
+    const uniqueRecipientUserIds = normalizeRecipientUserIds(recipientUserIds);
 
     if (uniqueRecipientUserIds.length === 0) {
       return;
@@ -349,16 +357,26 @@ export const publishEventSaveUpdated = async (
   payload: EventSaveUpdatedPayload,
 ): Promise<void> => {
   try {
+    const uniqueRecipientUserIds = normalizeRecipientUserIds([recipientUserId]);
+
+    if (uniqueRecipientUserIds.length === 0) {
+      return;
+    }
+
     const eventPayload: RealtimeEventEnvelope<EventSaveUpdatedPayload> = createRealtimeEventEnvelope(
       WEBSOCKET_EVENT_TYPES.EVENT_SAVE_UPDATED,
       payload,
     );
 
-    await publishToUserConnections(recipientUserId, eventPayload, {
-      eventId: payload.eventId,
-      isSaved: payload.isSaved,
-      followId: payload.followId ?? null,
-    });
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (resolvedRecipientUserId) => {
+        await publishToUserConnections(resolvedRecipientUserId, eventPayload, {
+          eventId: payload.eventId,
+          isSaved: payload.isSaved,
+          followId: payload.followId ?? null,
+        });
+      }),
+    );
   } catch (error) {
     logger.error('Failed to publish event.save.updated event', {
       error,
@@ -376,17 +394,95 @@ export const publishMomentCreated = async (recipientUserId: string, payload: Mom
       payload,
     );
 
-    await publishToUserConnections(recipientUserId, eventPayload, {
-      momentId: payload.moment.momentId,
-      eventId: payload.moment.eventId,
-      authorId: payload.moment.authorId,
-    });
+    const uniqueRecipientUserIds = normalizeRecipientUserIds([recipientUserId]);
+
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (resolvedRecipientUserId) => {
+        await publishToUserConnections(resolvedRecipientUserId, eventPayload, {
+          momentId: payload.moment.momentId,
+          eventId: payload.moment.eventId,
+          authorId: payload.moment.authorId,
+        });
+      }),
+    );
   } catch (error) {
     logger.error('Failed to publish moment.created event', {
       error,
       recipientUserId,
       momentId: payload.moment.momentId,
       eventId: payload.moment.eventId,
+    });
+  }
+};
+
+export const publishMomentCreatedToRecipients = async (
+  recipientUserIds: string[],
+  payload: MomentCreatedPayload,
+): Promise<void> => {
+  try {
+    const uniqueRecipientUserIds = normalizeRecipientUserIds(recipientUserIds);
+
+    if (uniqueRecipientUserIds.length === 0) {
+      return;
+    }
+
+    const eventPayload: RealtimeEventEnvelope<MomentCreatedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.MOMENT_CREATED,
+      payload,
+    );
+
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (recipientUserId) => {
+        await publishToUserConnections(recipientUserId, eventPayload, {
+          momentId: payload.moment.momentId,
+          eventId: payload.moment.eventId,
+          authorId: payload.moment.authorId,
+        });
+      }),
+    );
+  } catch (error) {
+    logger.error('Failed to publish moment.created event', {
+      error,
+      recipientUserIds,
+      momentId: payload.moment.momentId,
+      eventId: payload.moment.eventId,
+    });
+  }
+};
+
+export const publishMomentUpdatedToRecipients = async (
+  recipientUserIds: string[],
+  payload: MomentUpdatedPayload,
+): Promise<void> => {
+  try {
+    const uniqueRecipientUserIds = normalizeRecipientUserIds(recipientUserIds);
+
+    if (uniqueRecipientUserIds.length === 0) {
+      return;
+    }
+
+    const eventPayload: RealtimeEventEnvelope<MomentUpdatedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.MOMENT_UPDATED,
+      payload,
+    );
+
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (recipientUserId) => {
+        await publishToUserConnections(recipientUserId, eventPayload, {
+          momentId: payload.moment.momentId,
+          eventId: payload.moment.eventId,
+          authorId: payload.moment.authorId,
+          state: payload.moment.state,
+        });
+      }),
+    );
+  } catch (error) {
+    logger.error('Failed to publish moment.updated event', {
+      error,
+      recipientUserIds,
+      momentId: payload.moment.momentId,
+      eventId: payload.moment.eventId,
+      state: payload.moment.state,
     });
   }
 };
@@ -398,15 +494,56 @@ export const publishMomentDeleted = async (recipientUserId: string, payload: Mom
       payload,
     );
 
-    await publishToUserConnections(recipientUserId, eventPayload, {
-      momentId: payload.momentId,
-      eventId: payload.eventId,
-      authorId: payload.authorId,
-    });
+    const uniqueRecipientUserIds = normalizeRecipientUserIds([recipientUserId]);
+
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (resolvedRecipientUserId) => {
+        await publishToUserConnections(resolvedRecipientUserId, eventPayload, {
+          momentId: payload.momentId,
+          eventId: payload.eventId,
+          authorId: payload.authorId,
+        });
+      }),
+    );
   } catch (error) {
     logger.error('Failed to publish moment.deleted event', {
       error,
       recipientUserId,
+      momentId: payload.momentId,
+      eventId: payload.eventId,
+    });
+  }
+};
+
+export const publishMomentDeletedToRecipients = async (
+  recipientUserIds: string[],
+  payload: MomentDeletedPayload,
+): Promise<void> => {
+  try {
+    const uniqueRecipientUserIds = normalizeRecipientUserIds(recipientUserIds);
+
+    if (uniqueRecipientUserIds.length === 0) {
+      return;
+    }
+
+    const eventPayload: RealtimeEventEnvelope<MomentDeletedPayload> = createRealtimeEventEnvelope(
+      WEBSOCKET_EVENT_TYPES.MOMENT_DELETED,
+      payload,
+    );
+
+    await Promise.all(
+      uniqueRecipientUserIds.map(async (recipientUserId) => {
+        await publishToUserConnections(recipientUserId, eventPayload, {
+          momentId: payload.momentId,
+          eventId: payload.eventId,
+          authorId: payload.authorId,
+        });
+      }),
+    );
+  } catch (error) {
+    logger.error('Failed to publish moment.deleted event', {
+      error,
+      recipientUserIds,
       momentId: payload.momentId,
       eventId: payload.eventId,
     });

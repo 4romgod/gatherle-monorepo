@@ -106,6 +106,9 @@ native/runtime upgrade.
 **Severity:** High  
 **Status:** 🔴 Open
 
+**Beta Scope Note:** Not on the critical path for the current **website-first beta** launch. It becomes a top-priority
+blocker for any mobile beta.
+
 ### Steps To Reproduce
 
 1. Install the Expo mobile app on a physical iPhone.

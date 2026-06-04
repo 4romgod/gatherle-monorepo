@@ -202,7 +202,8 @@ We will consider phase success when:
 
 ## Living Update: 17 February 2026 (Implementation Snapshot)
 
-**Status:** ✅ WebSocket foundation is live in API + webapp, with notifications/chat/follow/RSVP realtime paths active.
+**Status:** ✅ WebSocket foundation is live in API + webapp, with notifications/chat/follow/RSVP/save-event/moment
+realtime paths active.
 
 This section documents what is implemented today so this plan can evolve as a living reference.
 
@@ -217,6 +218,8 @@ This section documents what is implemented today so this plan can evolve as a li
   - notification creation (`notification.new`)
   - follow request create/update (`follow.request.created`, `follow.request.updated`)
   - event RSVP updates (`event.rsvp.updated`)
+  - event save/unsave updates (`event.save.updated`)
+  - moment lifecycle updates (`moment.created`, `moment.updated`, `moment.deleted`)
   - chat send/read flows (`chat.message`, `chat.read`, `chat.conversation.updated`)
 - Webapp now uses one shared WebSocket connection per browser tab, with multiple subscribers (chat, notifications, and
   feature-specific subscribers like share dialog send).
@@ -259,8 +262,7 @@ This section documents what is implemented today so this plan can evolve as a li
 #### 4. Auth + lifecycle
 
 - Token extraction: `apps/api/lib/websocket/event.ts`
-  - primary: query param `token`
-  - fallback: `Authorization: Bearer <token>`
+  - `Sec-WebSocket-Protocol` with `gatherle.jwt.<token>`
 - Connect flow: `apps/api/lib/websocket/routes/connect.ts`
   - verifies JWT
   - rejects missing/invalid token with `401`
@@ -304,9 +306,13 @@ This section documents what is implemented today so this plan can evolve as a li
 - `follow.request.created`
 - `follow.request.updated`
 - `event.rsvp.updated`
+- `event.save.updated`
 - `chat.message`
 - `chat.read`
 - `chat.conversation.updated`
+- `moment.created`
+- `moment.updated`
+- `moment.deleted`
 
 ### Where Events Are Published From
 
@@ -314,8 +320,12 @@ This section documents what is implemented today so this plan can evolve as a li
   - `apps/api/lib/services/notification.ts` -> `publishNotificationCreated` / `publishNotificationsCreated`
 - Follow:
   - `apps/api/lib/services/follow.ts` -> `publishFollowRequestCreated` / `publishFollowRequestUpdated`
+  - same service also publishes `publishEventSaveUpdated` for save/unsave sync
 - Event RSVP:
   - `apps/api/lib/services/eventSeriesParticipant.ts` -> `publishEventRsvpUpdated`
+- Event moments:
+  - `apps/api/lib/services/eventMoment.ts` -> `moment.created` / `moment.deleted`
+  - `apps/api/lib/lambdaHandlers/startTranscodeJob.ts` + `onTranscodeEvent.ts` -> `moment.updated`
 - Chat:
   - `apps/api/lib/services/chatMessaging.ts`
   - send path publishes `chat.message` + `chat.conversation.updated`
@@ -327,7 +337,7 @@ This section documents what is implemented today so this plan can evolve as a li
 - Bootstrapped from API start script: `apps/api/lib/scripts/startServer.ts`
 - Local server emulates API Gateway events and invokes the same websocket Lambda handler.
 - Local domain marker: `local.websocket.internal` (`apps/api/lib/websocket/localGateway.ts`)
-- Example local URL pattern: `ws://localhost:<api-port>/<stage>?token=<jwt>`
+- Example local URL pattern: `ws://localhost:<api-port>/<stage>` with auth passed via `Sec-WebSocket-Protocol`.
 
 ### Webapp Connection Architecture (Detailed)
 
@@ -382,7 +392,7 @@ Key behavior:
 ### Operational Notes and Known Gaps
 
 - `notification.subscribe` is currently acknowledged but topic state is not yet persisted server-side.
-- Connect auth accepts `Authorization` and `Sec-WebSocket-Protocol` headers; query-string token auth is no longer used.
+- Connect auth accepts only `Sec-WebSocket-Protocol`; query-string token auth remains disabled.
 - Event ordering/dedupe is primarily handled at consumer/cache logic level; no global sequence number yet.
 - `$default` route includes fallback action dispatch for robustness.
 
@@ -390,7 +400,8 @@ Key behavior:
 
 #### Security and protocol hardening
 
-- Add short-lived websocket connection tickets (minted via GraphQL/REST) to avoid passing long-lived JWTs in URL.
+- Add short-lived websocket connection tickets (minted via GraphQL/REST) to avoid passing long-lived JWTs in the
+  handshake.
 - Add protocol version field in envelope (`v`) for safer contract evolution.
 - Add optional event IDs and replay-safe idempotency hints.
 

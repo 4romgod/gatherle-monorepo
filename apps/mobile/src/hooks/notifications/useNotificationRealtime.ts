@@ -8,6 +8,7 @@ import {
   isMobileRealtimeFollowRequestPayload,
   isMobileRealtimeMomentCreatedPayload,
   isMobileRealtimeMomentDeletedPayload,
+  isMobileRealtimeMomentUpdatedPayload,
   isMobileRealtimeNotificationDeletedPayload,
   isMobileRealtimeNotificationPayload,
   isMobileRealtimeNotificationsAllReadPayload,
@@ -42,6 +43,7 @@ export function useNotificationRealtime(enabled = true) {
   const handleEventRsvpRef = useRef<((payload: unknown) => void) | null>(null);
   const handleEventSaveRef = useRef<((payload: unknown) => void) | null>(null);
   const handleMomentCreatedRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleMomentUpdatedRef = useRef<((payload: unknown) => void) | null>(null);
   const handleMomentDeletedRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export function useNotificationRealtime(enabled = true) {
       handleEventRsvpRef.current = null;
       handleEventSaveRef.current = null;
       handleMomentCreatedRef.current = null;
+      handleMomentUpdatedRef.current = null;
       handleMomentDeletedRef.current = null;
       return;
     }
@@ -65,6 +68,7 @@ export function useNotificationRealtime(enabled = true) {
       handleRealtimeFollowRequest,
       handleRealtimeEventRsvp,
       handleRealtimeMomentCreated,
+      handleRealtimeMomentUpdated,
       handleRealtimeMomentDeleted,
     } = createMobileNotificationRealtimeCacheHandlers({
       client,
@@ -127,6 +131,14 @@ export function useNotificationRealtime(enabled = true) {
       handleRealtimeMomentCreated(payload);
     };
 
+    handleMomentUpdatedRef.current = (payload: unknown) => {
+      if (!isMobileRealtimeMomentUpdatedPayload(payload)) {
+        return;
+      }
+
+      handleRealtimeMomentUpdated(payload);
+    };
+
     handleMomentDeletedRef.current = (payload: unknown) => {
       if (!isMobileRealtimeMomentDeletedPayload(payload)) {
         return;
@@ -181,6 +193,11 @@ export function useNotificationRealtime(enabled = true) {
 
     if (realtimeEvent.type === 'moment.created') {
       handleMomentCreatedRef.current?.(realtimeEvent.payload);
+      return;
+    }
+
+    if (realtimeEvent.type === 'moment.updated') {
+      handleMomentUpdatedRef.current?.(realtimeEvent.payload);
       return;
     }
 

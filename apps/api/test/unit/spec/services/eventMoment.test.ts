@@ -103,9 +103,9 @@ jest.mock('@/utils/logger', () => ({
   initLogger: jest.fn(),
 }));
 
-jest.mock('@/websocket/publisher', () => ({
-  publishMomentCreated: jest.fn().mockResolvedValue(undefined),
-  publishMomentDeleted: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/services/eventMomentRealtime', () => ({
+  publishMomentCreatedForScopedRecipients: jest.fn().mockResolvedValue(undefined),
+  publishMomentDeletedForScopedRecipients: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/clients/AWS/s3Client', () => ({
@@ -122,7 +122,10 @@ import {
   UserDAO,
 } from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
-import { publishMomentCreated, publishMomentDeleted } from '@/websocket/publisher';
+import {
+  publishMomentCreatedForScopedRecipients,
+  publishMomentDeletedForScopedRecipients,
+} from '@/services/eventMomentRealtime';
 import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
 import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
 import {
@@ -200,31 +203,6 @@ describe('EventMomentService', () => {
     endAt: futureEndDate,
   };
 
-  const createRealtimeMomentPayload = (moment: EventMoment) => ({
-    moment: {
-      momentId: moment.momentId,
-      eventId: moment.eventId,
-      occurrenceId: moment.occurrenceId ?? null,
-      authorId: moment.authorId,
-      type: moment.type,
-      state: moment.state,
-      caption: moment.caption ?? null,
-      mediaUrl: moment.mediaUrl ?? null,
-      thumbnailUrl: moment.thumbnailUrl ?? null,
-      imageDisplayMode: moment.imageDisplayMode ?? null,
-      background: moment.background ?? null,
-      durationSeconds: moment.durationSeconds ?? null,
-      expiresAt: moment.expiresAt.toISOString(),
-      createdAt: moment.createdAt.toISOString(),
-      author: mockAuthor,
-      event: {
-        eventId: mockEvent.eventId,
-        slug: mockEvent.slug,
-        title: mockEvent.title,
-      },
-    },
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -264,7 +242,7 @@ describe('EventMomentService', () => {
         mockOccurrence.occurrenceId,
       );
       expect(result).toEqual(mockMoment);
-      expect(publishMomentCreated).toHaveBeenCalledWith('user-1', createRealtimeMomentPayload(mockMoment));
+      expect(publishMomentCreatedForScopedRecipients).toHaveBeenCalledWith(mockMoment);
     });
 
     it('builds a CloudFront mediaUrl for an image moment', async () => {
@@ -308,10 +286,7 @@ describe('EventMomentService', () => {
       });
       expect(EventMomentDAO.create).not.toHaveBeenCalled();
       expect(result).toEqual(mockPublishedVideoMoment);
-      expect(publishMomentCreated).toHaveBeenCalledWith(
-        'user-1',
-        createRealtimeMomentPayload(mockPublishedVideoMoment),
-      );
+      expect(publishMomentCreatedForScopedRecipients).toHaveBeenCalledWith(mockPublishedVideoMoment);
     });
 
     it('rejects a video moment without a reserved momentId', async () => {
@@ -619,12 +594,7 @@ describe('EventMomentService', () => {
 
       expect(EventMomentDAO.delete).toHaveBeenCalledWith('moment-1');
       expect(result).toBe(true);
-      expect(publishMomentDeleted).toHaveBeenCalledWith('user-1', {
-        momentId: 'moment-1',
-        eventId: 'event-1',
-        occurrenceId: mockMoment.occurrenceId,
-        authorId: 'user-1',
-      });
+      expect(publishMomentDeletedForScopedRecipients).toHaveBeenCalledWith(mockMoment);
     });
 
     it('throws NOT_FOUND when moment does not exist', async () => {
@@ -647,11 +617,9 @@ describe('EventMomentService', () => {
 
       expect(EventMomentDAO.delete).toHaveBeenCalledWith('moment-1');
       expect(result).toBe(true);
-      expect(publishMomentDeleted).toHaveBeenCalledWith('organizer-1', {
-        momentId: 'moment-1',
-        eventId: 'event-1',
-        occurrenceId: othersMoment.occurrenceId,
-        authorId: 'other-user',
+      expect(publishMomentDeletedForScopedRecipients).toHaveBeenCalledWith(othersMoment, {
+        ...mockEvent,
+        organizers: [{ user: 'organizer-1' }],
       });
     });
 
