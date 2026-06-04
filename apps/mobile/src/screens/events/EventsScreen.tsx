@@ -19,9 +19,11 @@ import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
+import { sortEventOccurrencesForViewer } from '@/lib/events/personalization';
 
 function applySeriesSelection(
   event: MobileSearchResult,
@@ -34,13 +36,14 @@ function applySeriesSelection(
 
 export function EventsScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, userId } = useAppShell();
+  const { authToken, isAuthenticated, userId } = useAppShell();
   const { theme } = useAppTheme();
   const route = useRoute<RouteProp<MainTabParamList, 'Events'>>();
   const [searchQuery, setSearchQuery] = useState(route.params?.initialSearch ?? '');
   const [selectedEventId, setSelectedEventId] = useState(route.params?.initialEventId ?? '');
   const [searchVisible, setSearchVisible] = useState(false);
   const appliedSeriesSelectionRef = useRef<string | null>(null);
+  const { profile } = usePreviewProfile(userId, authToken, isAuthenticated);
 
   const {
     appliedFilters,
@@ -129,6 +132,44 @@ export function EventsScreen() {
       return haystack.includes(normalizedQuery);
     });
   }, [events, searchQuery, selectedEventId]);
+  const hasAppliedLocation = Boolean(
+    appliedFilters.location.city || appliedFilters.location.state || appliedFilters.location.country,
+  );
+  const effectivePersonalizationLocation = useMemo(
+    () =>
+      hasAppliedLocation
+        ? appliedFilters.location
+        : {
+            city: profile?.location?.city,
+            country: profile?.location?.country,
+            state: profile?.location?.state,
+          },
+    [
+      appliedFilters.location,
+      hasAppliedLocation,
+      profile?.location?.city,
+      profile?.location?.country,
+      profile?.location?.state,
+    ],
+  );
+  const personalizedEvents = useMemo(() => {
+    const canPersonalize = Boolean(isAuthenticated && !selectedEventId && !searchQuery.trim());
+    if (!canPersonalize) {
+      return filteredEvents;
+    }
+
+    return sortEventOccurrencesForViewer(filteredEvents, {
+      interests: profile?.interests,
+      location: effectivePersonalizationLocation,
+    });
+  }, [
+    effectivePersonalizationLocation,
+    filteredEvents,
+    isAuthenticated,
+    profile?.interests,
+    searchQuery,
+    selectedEventId,
+  ]);
 
   const serverFilterCount = countActiveFilters(appliedFilters);
   const totalActiveFilterCount =
@@ -141,7 +182,11 @@ export function EventsScreen() {
     onEndReached: () => void loadMore(),
     resetKey: `${filtersKey}:${searchQuery}:${selectedEventId}`,
   });
-  const visibleEventCount = selectedEventId ? totalEvents : searchQuery.trim() ? filteredEvents.length : totalEvents;
+  const visibleEventCount = selectedEventId
+    ? totalEvents
+    : searchQuery.trim()
+      ? personalizedEvents.length
+      : totalEvents;
 
   const handleClearAll = () => {
     setSearchQuery('');
@@ -288,9 +333,9 @@ export function EventsScreen() {
             message="The event feed failed to load."
             onPressAction={() => void refetch()}
           />
-        ) : filteredEvents.length > 0 ? (
+        ) : personalizedEvents.length > 0 ? (
           <View style={styles.feedList}>
-            {filteredEvents.map((event) => (
+            {personalizedEvents.map((event) => (
               <EventCard
                 key={event.occurrenceId}
                 occurrence={event}

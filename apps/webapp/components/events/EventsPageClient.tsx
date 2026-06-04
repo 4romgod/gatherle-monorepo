@@ -23,6 +23,7 @@ import { useFilteredEvents } from '@/hooks/useFilteredEvents';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import EventSearchBar from '@/components/search/EventSearchBar';
 import { getEventPreviewEventId, getEventPreviewTitle } from '@/components/events/event-preview-utils';
+import { sortEventOccurrencesForViewer } from '@/lib/utils/event-personalization';
 import { buildDefaultOccurrenceDateRange } from '@/lib/utils/occurrence-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ToolbarEventSearchAction from '@/components/navigation/ToolbarEventSearchAction';
@@ -283,7 +284,37 @@ function EventsContent({
         event.eventSeries?.eventCategories?.some((category) => category.name?.toLowerCase().includes(query)),
     );
   }, [serverEvents, filters.searchQuery]);
-  const visibleEventCount = filters.searchQuery.trim() ? filteredEvents.length : totalEvents;
+  const effectivePersonalizationLocation = useMemo(
+    () =>
+      hasLocation
+        ? {
+            city: filters.location?.city,
+            country: filters.location?.country,
+            state: filters.location?.state,
+          }
+        : session?.user?.location,
+    [filters.location, hasLocation, session?.user?.location],
+  );
+  const personalizedEvents = useMemo(() => {
+    const canPersonalize = Boolean(token && userId && !hasSeriesSelection && !filters.searchQuery.trim());
+    if (!canPersonalize) {
+      return filteredEvents;
+    }
+
+    return sortEventOccurrencesForViewer(filteredEvents, {
+      interests: session?.user?.interests,
+      location: effectivePersonalizationLocation,
+    });
+  }, [
+    effectivePersonalizationLocation,
+    filteredEvents,
+    filters.searchQuery,
+    hasSeriesSelection,
+    session?.user?.interests,
+    token,
+    userId,
+  ]);
+  const visibleEventCount = filters.searchQuery.trim() ? personalizedEvents.length : totalEvents;
   const activeSearchLabel = useMemo(() => {
     if (!hasSeriesSelection) {
       return '';
@@ -532,7 +563,7 @@ function EventsContent({
           )}
 
           <EventsList
-            events={filteredEvents}
+            events={personalizedEvents}
             loading={loading}
             error={error}
             hasActiveFilters={hasActiveFilters || hasSeriesSelection}

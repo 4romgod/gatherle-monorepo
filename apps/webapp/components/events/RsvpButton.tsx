@@ -17,6 +17,7 @@ interface RsvpButtonProps {
   eventId: string;
   occurrenceId?: string;
   currentStatus: ParticipantStatus | null;
+  rsvpClosed?: boolean;
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
   onRsvpChange?: (status: ParticipantStatus | null) => void;
@@ -33,6 +34,7 @@ export default function RsvpButton({
   eventId,
   occurrenceId,
   currentStatus,
+  rsvpClosed = false,
   size = 'medium',
   showTooltip = true,
   onRsvpChange,
@@ -58,6 +60,10 @@ export default function RsvpButton({
     if (!session?.user?.token) {
       NProgress.start();
       router.push(ROUTES.AUTH.LOGIN);
+      return;
+    }
+
+    if (rsvpClosed) {
       return;
     }
 
@@ -124,7 +130,7 @@ export default function RsvpButton({
     }
   };
 
-  const tooltipText = hasRsvpd ? (isGoing ? 'Going' : 'Interested') : 'RSVP to this event';
+  const tooltipText = rsvpClosed ? 'Event ended' : hasRsvpd ? (isGoing ? 'Going' : 'Interested') : 'RSVP to this event';
   const icon = isLoading ? (
     <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
   ) : hasRsvpd ? (
@@ -165,7 +171,7 @@ export default function RsvpButton({
   const button = label ? (
     <Button
       ref={anchorRef}
-      disabled={isLoading}
+      disabled={isLoading || rsvpClosed}
       fullWidth={fullWidth}
       onClick={handleButtonClick}
       size={size}
@@ -179,7 +185,7 @@ export default function RsvpButton({
     <IconButton
       ref={anchorRef}
       onClick={handleButtonClick}
-      disabled={isLoading}
+      disabled={isLoading || rsvpClosed}
       size={size}
       sx={iconButtonSx}
       aria-label={tooltipText}

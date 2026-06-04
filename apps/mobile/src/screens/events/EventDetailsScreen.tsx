@@ -35,6 +35,7 @@ import {
   getParticipantKey,
 } from '@/lib/events/formatters';
 import { mapNavigableEventOccurrences, mergeNavigableOccurrences } from '@/lib/events/adapters';
+import { isUpcomingEventTime } from '@/lib/events/eventCollections';
 import {
   addEventToCalendar,
   openEventLocationInMaps,
@@ -232,7 +233,7 @@ export function EventDetailsScreen() {
     occurrence.eventSeries?.description?.trim() ||
     occurrence.eventSeries?.summary?.trim() ||
     'Event details will appear here once the organizer adds a full description.';
-  const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, loading, rsvpStatus, toggleSave } =
+  const { cancelRsvp, goingToEvent, interestedInEvent, isSaved, rsvpLoading, rsvpStatus, saveLoading, toggleSave } =
     useEventDetailActions(occurrence, authToken);
   const [deleteEventById] = useMutation(DeleteEventByIdDocument, getApolloAuthContext(authToken));
   const { error: momentsError, moments, refetch: refetchMoments } = useEventMoments(eventId, authToken);
@@ -257,6 +258,7 @@ export function EventDetailsScreen() {
   );
   const [heroGoingCount, setHeroGoingCount] = useState(initialGoingCount);
   const [heroInterestedCount, setHeroInterestedCount] = useState(initialInterestedCount);
+  const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -281,8 +283,14 @@ export function EventDetailsScreen() {
     setHeroInterestedCount(initialInterestedCount);
   }, [initialGoingCount, initialInterestedCount]);
 
-  const rsvpLabel = rsvpStatus === 'Going' ? 'Going' : rsvpStatus === 'Interested' ? 'Interested' : 'RSVP';
-  const rsvpTone = !isAuthenticated || !rsvpStatus ? 'primary' : 'successSoft';
+  const rsvpLabel = rsvpClosed
+    ? 'Event ended'
+    : rsvpStatus === 'Going'
+      ? 'Going'
+      : rsvpStatus === 'Interested'
+        ? 'Interested'
+        : 'RSVP';
+  const rsvpTone = rsvpClosed ? 'secondary' : !isAuthenticated || !rsvpStatus ? 'primary' : 'successSoft';
   const saveTone = isSaved ? 'primarySoft' : 'secondary';
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
   const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
@@ -356,6 +364,10 @@ export function EventDetailsScreen() {
 
   const handleRsvpPress = () => {
     if (promptLoginIfNeeded()) {
+      return;
+    }
+
+    if (rsvpClosed) {
       return;
     }
 
@@ -811,7 +823,7 @@ export function EventDetailsScreen() {
 
         <EventRsvpSheet
           currentStatus={rsvpStatus}
-          loading={loading}
+          loading={rsvpLoading}
           onCancelRsvp={handleCancelRsvp}
           onClose={() => setRsvpSheetVisible(false)}
           onSelectStatus={(status) => {
@@ -846,15 +858,16 @@ export function EventDetailsScreen() {
         >
           <EventDetailActionButton
             compact
-            disabled={loading}
+            disabled={rsvpClosed}
             icon={rsvpIcon}
             label={rsvpLabel}
+            loading={rsvpLoading}
             onPress={handleRsvpPress}
             tone={rsvpTone}
           />
           <EventDetailActionButton
             compact
-            disabled={loading}
+            loading={saveLoading}
             icon="bookmark"
             label={isSaved ? 'Saved' : 'Save'}
             onPress={handleToggleSave}

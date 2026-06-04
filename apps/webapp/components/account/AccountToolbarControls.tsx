@@ -3,7 +3,17 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { Add, Apartment, DarkMode, LightMode, Logout, MoreHoriz, Security, Settings } from '@mui/icons-material';
+import {
+  Add,
+  Apartment,
+  ChevronRight,
+  DarkMode,
+  LightMode,
+  Logout,
+  MoreHoriz,
+  Security,
+  Settings,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -35,6 +45,7 @@ export type AccountToolbarUser = {
 };
 
 type AccountActionLink = {
+  destructive?: boolean;
   id: string;
   href: string;
   icon: ReactNode;
@@ -44,6 +55,7 @@ type AccountActionLink = {
 
 type AccountActionButton = {
   disabled?: boolean;
+  destructive?: boolean;
   id: string;
   icon: ReactNode;
   keepOpen?: boolean;
@@ -162,7 +174,7 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
     },
     {
       id: 'settings',
-      href: ROUTES.ACCOUNT.TAB('account'),
+      href: ROUTES.ACCOUNT.SETTINGS,
       icon: <Settings fontSize="small" />,
       label: 'Settings',
       secondaryText: 'Update account details and preferences',
@@ -188,6 +200,7 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
     },
     {
       disabled: isLoggingOut,
+      destructive: true,
       id: 'logout',
       icon: <Logout fontSize="small" />,
       label: isLoggingOut ? 'Logging out...' : 'Logout',
@@ -217,15 +230,36 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
       <Box sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
         <List disablePadding sx={{ display: 'grid', gap: 0.75 }}>
           {actionItems.map((item) => {
+            const isDestructive = item.destructive ?? false;
             const content = (
               <>
-                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 36 }}>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      alignItems: 'center',
+                      bgcolor: isDestructive ? 'error.light' : 'action.hover',
+                      borderRadius: WEB_RADIUS.control,
+                      color: isDestructive ? 'error.main' : 'text.primary',
+                      display: 'flex',
+                      height: 38,
+                      justifyContent: 'center',
+                      width: 38,
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+                </ListItemIcon>
                 <ListItemText
                   primary={item.label}
                   secondary={item.secondaryText}
-                  primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 700 }}
+                  primaryTypographyProps={{
+                    color: isDestructive ? 'error.main' : 'text.primary',
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                  }}
                   secondaryTypographyProps={{ fontSize: '0.8125rem', lineHeight: 1.45 }}
                 />
+                <ChevronRight sx={{ color: 'text.secondary', fontSize: 20 }} />
               </>
             );
 
@@ -237,11 +271,14 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
                   key={item.id}
                   onClick={() => setActionsOpen(false)}
                   sx={{
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: WEB_RADIUS.card,
-                    px: 1.5,
+                    borderRadius: WEB_RADIUS.control,
+                    gap: 1.5,
+                    minHeight: 54,
+                    px: 1.75,
                     py: 1,
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    },
                   }}
                 >
                   {content}
@@ -261,11 +298,14 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
                   item.onClick();
                 }}
                 sx={{
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: WEB_RADIUS.card,
-                  px: 1.5,
+                  borderRadius: WEB_RADIUS.control,
+                  gap: 1.5,
+                  minHeight: 54,
+                  px: 1.75,
                   py: 1,
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  },
                 }}
               >
                 {content}

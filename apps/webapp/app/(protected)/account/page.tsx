@@ -43,7 +43,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
 
   const { tab } = await searchParams;
-  const hasExplicitTab = Boolean(tab);
+  const showSettingsHub = Boolean(tab);
+  const hasExplicitTab = Boolean(tab) && tab !== 'settings';
   const requestedTabKey = tab ? (TAB_ALIASES[tab] ?? 'account') : 'account';
 
   const [groupsResult, userPasswordStateResult] = await Promise.all([
@@ -72,6 +73,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       hasExplicitTab={hasExplicitTab}
       hasLocalPassword={hasLocalPassword}
       requestedTabKey={requestedTabKey}
+      showSettingsHub={showSettingsHub}
       token={session.user.token}
       user={user}
     />

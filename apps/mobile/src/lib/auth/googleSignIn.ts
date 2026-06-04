@@ -64,8 +64,9 @@ export async function clearMobileGoogleSignInSession(): Promise<void> {
   }
 
   configureMobileGoogleSignIn();
+  const hasPreviousSignIn = await GoogleSignin.hasPreviousSignIn();
 
-  if (!GoogleSignin.hasPreviousSignIn() && !GoogleSignin.getCurrentUser()) {
+  if (!hasPreviousSignIn && !GoogleSignin.getCurrentUser()) {
     return;
   }
 

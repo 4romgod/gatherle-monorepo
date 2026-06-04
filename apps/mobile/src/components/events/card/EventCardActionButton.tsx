@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, type GestureResponderEvent } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, type GestureResponderEvent } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { MOBILE_RADIUS } from '@/app/theme/radius';
 
@@ -8,6 +8,7 @@ type EventCardActionButtonProps = {
   active?: boolean;
   disabled?: boolean;
   icon: ComponentProps<typeof Feather>['name'];
+  loading?: boolean;
   onPress: (event: GestureResponderEvent) => void;
   tone?: 'primary' | 'success' | 'neutral';
 };
@@ -16,6 +17,7 @@ export function EventCardActionButton({
   active = false,
   disabled = false,
   icon,
+  loading = false,
   onPress,
   tone = 'neutral',
 }: EventCardActionButtonProps) {
@@ -47,7 +49,9 @@ export function EventCardActionButton({
 
   return (
     <Pressable
-      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ busy: loading, disabled: disabled || loading }}
+      disabled={disabled || loading}
       hitSlop={8}
       onPress={onPress}
       style={({ pressed }) => [
@@ -55,14 +59,18 @@ export function EventCardActionButton({
         {
           backgroundColor: active ? palette.activeBackground : 'transparent',
           borderColor: active ? palette.activeBorder : 'transparent',
-          opacity: disabled ? 0.45 : pressed ? 0.82 : 1,
+          opacity: disabled || loading ? 0.45 : pressed ? 0.82 : 1,
           shadowColor: active ? palette.activeShadowColor : 'transparent',
           shadowOpacity: active ? 0.18 : 0,
           transform: [{ scale: pressed ? 0.96 : 1 }],
         },
       ]}
     >
-      <Feather color={active ? palette.activeColor : palette.color} name={icon} size={20} />
+      {loading ? (
+        <ActivityIndicator color={active ? palette.activeColor : palette.color} size="small" />
+      ) : (
+        <Feather color={active ? palette.activeColor : palette.color} name={icon} size={20} />
+      )}
     </Pressable>
   );
 }

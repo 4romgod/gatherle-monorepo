@@ -410,6 +410,7 @@ export function AccountScreen() {
         ) : (
           <SwipePagerTabs
             onActiveKeyChange={(key) => setActiveTab(key as AccountTab)}
+            persistenceKey={`account-events:${profileUserId ?? userId ?? 'guest'}`}
             routes={accountRoutes}
             variant="icon"
           />
@@ -425,7 +426,7 @@ export function AccountScreen() {
         onClose={() => setAccountSheetVisible(false)}
         onOpenAdmin={isAdmin ? () => navigation.navigate('Admin') : undefined}
         onOpenOrganizations={() => navigation.navigate('MyOrganizations')}
-        onOpenSettings={() => navigation.navigate('Settings', { initialTab: 'account' })}
+        onOpenSettings={() => navigation.navigate('Settings')}
         onLogout={signOut}
         visible={accountSheetVisible}
       />

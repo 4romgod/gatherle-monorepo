@@ -10,12 +10,14 @@ import { GetMyEventOccurrenceRsvpStatusDocument, IsEventSavedDocument } from '@d
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { FollowTargetType, ParticipantStatus } from '@data/graphql/types/graphql';
 import { getApolloAuthContext } from '@/lib/auth';
+import { isUpcomingEventTime } from '@/lib/events/eventCollections';
 
 export function useEventDetailActions(occurrence: MobileEventOccurrence, authToken: string | null) {
   const eventId = occurrence.eventSeries?.eventId ?? occurrence.eventSeriesId;
   const occurrenceId = occurrence.occurrenceId;
   const initialSaved = occurrence.eventSeries?.isSavedByMe ?? false;
   const initialRsvpStatus = occurrence.myRsvp?.status ?? null;
+  const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
   const queryOptions = getApolloAuthContext(authToken);
 
   const {
@@ -99,6 +101,10 @@ export function useEventDetailActions(occurrence: MobileEventOccurrence, authTok
       throw new Error('Authentication is required to RSVP to this event.');
     }
 
+    if (rsvpClosed) {
+      throw new Error('This event has already ended. RSVPs are closed.');
+    }
+
     if (status === null) {
       await cancelRsvpMutation({
         variables: {
@@ -132,11 +138,15 @@ export function useEventDetailActions(occurrence: MobileEventOccurrence, authTok
     await Promise.all([refetchSaved(), refetchRsvp()]);
   };
 
-  const loading = useMemo(
-    () =>
-      savedLoading || rsvpQueryLoading || followLoading || unfollowLoading || upsertRsvpLoading || cancelRsvpLoading,
-    [cancelRsvpLoading, followLoading, rsvpQueryLoading, savedLoading, unfollowLoading, upsertRsvpLoading],
+  const saveLoading = useMemo(
+    () => savedLoading || followLoading || unfollowLoading,
+    [followLoading, savedLoading, unfollowLoading],
   );
+  const rsvpLoading = useMemo(
+    () => rsvpQueryLoading || upsertRsvpLoading || cancelRsvpLoading,
+    [cancelRsvpLoading, rsvpQueryLoading, upsertRsvpLoading],
+  );
+  const loading = useMemo(() => saveLoading || rsvpLoading, [rsvpLoading, saveLoading]);
 
   return {
     eventId,
@@ -147,7 +157,9 @@ export function useEventDetailActions(occurrence: MobileEventOccurrence, authTok
     isInterested: rsvpStatus === ParticipantStatus.Interested,
     loading,
     refreshEngagement,
+    rsvpLoading,
     rsvpStatus,
+    saveLoading,
     interestedInEvent,
     toggleSave,
     updateRsvp,

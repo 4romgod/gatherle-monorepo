@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MockedProvider } from '@apollo/client/testing';
 import ProfileEventsTabs from '@/components/users/ProfileEventsTabs';
 
 jest.mock('@mui/material', () => {
@@ -25,8 +26,14 @@ jest.mock('@/components/users/ProfileEventTile', () => ({
 }));
 
 describe('ProfileEventsTabs', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  const renderWithProviders = (ui: React.ReactElement) => render(<MockedProvider>{ui}</MockedProvider>);
+
   it('uses viewer-correct tooltip copy on another user profile', () => {
-    render(
+    renderWithProviders(
       <ProfileEventsTabs upcomingRsvpdEvents={[]} pastRsvpdEvents={[]} organizedEvents={[]} isOwnProfile={false} />,
     );
 
@@ -38,7 +45,7 @@ describe('ProfileEventsTabs', () => {
   });
 
   it('shows labels and embedded counts in the tab controls', () => {
-    render(
+    renderWithProviders(
       <ProfileEventsTabs
         upcomingRsvpdEvents={[{ eventId: 'upcoming-1', title: 'Upcoming One' } as any]}
         pastRsvpdEvents={[
@@ -60,7 +67,7 @@ describe('ProfileEventsTabs', () => {
   });
 
   it('renders hosted-event search controls on the hosted tab for your own account', () => {
-    render(
+    renderWithProviders(
       <ProfileEventsTabs
         initialTabKey="hosted"
         hostedEventsSearchTerm=""
@@ -75,5 +82,43 @@ describe('ProfileEventsTabs', () => {
 
     expect(screen.getByPlaceholderText(/search hosted events/i)).toBeTruthy();
     expect(screen.getByText('0 of 4 hosted events')).toBeTruthy();
+  });
+
+  it('restores the persisted tab selection for the current viewer', () => {
+    window.localStorage.setItem('gatherle:sessionstate:viewer-1:profile-events-tabs', JSON.stringify({ value: 2 }));
+
+    renderWithProviders(
+      <ProfileEventsTabs
+        tabPersistence={{ key: 'profile-events-tabs', userId: 'viewer-1' }}
+        hostedEventsSearchTerm=""
+        hostedEventsTotalCount={4}
+        onHostedEventsSearchChange={jest.fn()}
+        upcomingRsvpdEvents={[]}
+        pastRsvpdEvents={[]}
+        organizedEvents={[]}
+        isOwnProfile
+      />,
+    );
+
+    expect(screen.getByPlaceholderText(/search hosted events/i)).toBeTruthy();
+    expect(screen.getByText('0 of 4 hosted events')).toBeTruthy();
+  });
+
+  it('persists the selected tab index when the viewer switches tabs', () => {
+    renderWithProviders(
+      <ProfileEventsTabs
+        tabPersistence={{ key: 'profile-events-tabs', userId: 'viewer-1' }}
+        upcomingRsvpdEvents={[]}
+        pastRsvpdEvents={[]}
+        organizedEvents={[]}
+        isOwnProfile={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Hosted' }));
+
+    expect(window.localStorage.getItem('gatherle:sessionstate:viewer-1:profile-events-tabs')).toBe(
+      JSON.stringify({ value: 2 }),
+    );
   });
 });

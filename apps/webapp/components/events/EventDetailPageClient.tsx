@@ -45,6 +45,7 @@ import {
 } from '@/data/graphql/types/graphql';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { isUpcomingEventTime } from '@/lib/utils/eventCollections';
 import EventCategoryBadge from '@/components/categories/CategoryBadge';
 import EventDetailSkeleton from '@/components/events/EventDetailSkeleton';
 import EventLocationMap from '@/components/events/EventLocationMap';
@@ -483,6 +484,11 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     selectedOccurrence && (hasExplicitOccurrenceSelection || selectedOccurrence.myRsvp?.status != null || !myRsvp)
       ? (selectedOccurrence.myRsvp?.status ?? null)
       : (myRsvp?.status ?? null);
+  const activeOccurrenceRsvpClosed = Boolean(
+    activeOccurrenceId &&
+    selectedOccurrence &&
+    !isUpcomingEventTime(selectedOccurrence.startAt, selectedOccurrence.endAt ?? scheduleFallbackEndAt),
+  );
   const selectedOccurrenceDateLabel = formatOccurrenceDateTime(
     selectedOccurrence?.startAt,
     selectedOccurrence?.endAt,
@@ -1544,14 +1550,17 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     eventId={eventId}
                     fullWidth
                     label={
-                      mobileRsvpStatus === ParticipantStatus.Going
-                        ? 'Going'
-                        : mobileRsvpStatus === ParticipantStatus.Interested
-                          ? 'Interested'
-                          : 'RSVP'
+                      activeOccurrenceRsvpClosed
+                        ? 'Event ended'
+                        : mobileRsvpStatus === ParticipantStatus.Going
+                          ? 'Going'
+                          : mobileRsvpStatus === ParticipantStatus.Interested
+                            ? 'Interested'
+                            : 'RSVP'
                     }
                     occurrenceId={activeOccurrenceId ?? undefined}
                     onRsvpChange={setMobileRsvpStatus}
+                    rsvpClosed={activeOccurrenceRsvpClosed}
                     showTooltip={false}
                     size="medium"
                     sx={{
