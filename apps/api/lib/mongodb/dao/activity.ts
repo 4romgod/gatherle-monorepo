@@ -1,7 +1,7 @@
 import { GraphQLError } from 'graphql';
 import { Types } from 'mongoose';
-import { ActivityObjectType, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
-import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/types';
+import { ActivityObjectType, FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/server/types';
+import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/server/types';
 import { Activity as ActivityModel, Follow as FollowModel } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 

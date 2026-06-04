@@ -6,7 +6,7 @@ jest.mock('@/constants', () => ({
   WEBAPP_URL: 'http://localhost:3000',
 }));
 
-jest.mock('@gatherle/commons', () => ({
+jest.mock('@gatherle/commons/server', () => ({
   APPLICATION_STAGES: {
     DEV: 'Dev',
   },

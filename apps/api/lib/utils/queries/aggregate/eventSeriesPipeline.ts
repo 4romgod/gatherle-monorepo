@@ -1,4 +1,4 @@
-import type { EventsQueryOptionsInput } from '@gatherle/commons/types';
+import type { EventsQueryOptionsInput } from '@gatherle/commons/server/types';
 import type { PipelineStage } from 'mongoose';
 import { createEventPipelineStages, createLocationMatchStage, createTextSearchMatchStage } from './filter';
 import { createEventLookupStages } from './lookup';

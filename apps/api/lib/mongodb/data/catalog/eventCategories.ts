@@ -1,4 +1,4 @@
-import type { CreateEventCategoryInput } from '@gatherle/commons/types';
+import type { CreateEventCategoryInput } from '@gatherle/commons/server/types';
 
 export const eventCategories: CreateEventCategoryInput[] = [
   {

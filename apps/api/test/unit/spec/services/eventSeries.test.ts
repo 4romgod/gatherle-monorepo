@@ -1,6 +1,16 @@
 import EventSeriesService from '@/services/eventSeries';
-import type { CreateEventInput, EventSeries, SplitEventSeriesInput, UpdateEventInput } from '@gatherle/commons/types';
-import { EventOccurrenceStatus, EventStatus, FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
+import type {
+  CreateEventInput,
+  EventSeries,
+  SplitEventSeriesInput,
+  UpdateEventInput,
+} from '@gatherle/commons/server/types';
+import {
+  EventOccurrenceStatus,
+  EventStatus,
+  FollowTargetType,
+  NotificationTargetType,
+} from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
@@ -72,7 +82,7 @@ import {
 } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import { logger } from '@/utils/logger';
-import { UserRole } from '@gatherle/commons/types';
+import { UserRole } from '@gatherle/commons/server/types';
 
 const makePrimarySchedule = (
   anchorStartAt = new Date('2026-05-01T18:00:00.000Z'),

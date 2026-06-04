@@ -5,7 +5,7 @@ import {
   type EventOccurrenceParticipant,
   type EventSeries,
   type EventSeriesParticipant,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 
 type CountableParticipant = Pick<EventOccurrenceParticipant | EventSeriesParticipant, 'status' | 'quantity'>;
 

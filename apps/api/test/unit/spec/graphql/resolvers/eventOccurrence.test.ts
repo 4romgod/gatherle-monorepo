@@ -1,8 +1,8 @@
 import DataLoader from 'dataloader';
 import { EventOccurrenceResolver } from '@/graphql/resolvers/eventOccurrence';
 import type { ServerContext } from '@/graphql';
-import type { EventOccurrence, EventOccurrenceParticipant, EventSeries, User } from '@gatherle/commons/types';
-import { EventStatus, ParticipantStatus } from '@gatherle/commons/types';
+import type { EventOccurrence, EventOccurrenceParticipant, EventSeries, User } from '@gatherle/commons/server/types';
+import { EventStatus, ParticipantStatus } from '@gatherle/commons/server/types';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 import EventOccurrenceService from '@/services/eventOccurrence';
 

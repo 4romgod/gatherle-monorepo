@@ -1,5 +1,5 @@
 import EventOccurrence from '@/mongodb/models/eventOccurrence';
-import { EventOccurrenceStatus } from '@gatherle/commons/types';
+import { EventOccurrenceStatus } from '@gatherle/commons/server/types';
 
 describe('EventOccurrence Model', () => {
   describe('validation', () => {

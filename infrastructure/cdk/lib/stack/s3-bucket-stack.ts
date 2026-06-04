@@ -13,7 +13,7 @@ import {
 import { Bucket, BucketEncryption, BlockPublicAccess, ObjectOwnership, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { Construct } from 'constructs';
-import { APPLICATION_STAGES, buildAllowedCorsOrigins } from '@gatherle/commons';
+import { APPLICATION_STAGES, buildAllowedCorsOrigins } from '@gatherle/commons/server';
 import { buildTargetSuffix } from '../utils/naming';
 
 export interface S3BucketStackProps extends StackProps {

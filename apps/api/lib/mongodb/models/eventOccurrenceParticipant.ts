@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { EventOccurrenceParticipant as EventOccurrenceParticipantEntity } from '@gatherle/commons/types';
+import { EventOccurrenceParticipant as EventOccurrenceParticipantEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<EventOccurrenceParticipantModel>('validate', function () {

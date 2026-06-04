@@ -1,5 +1,5 @@
-import type { Notification } from '@gatherle/commons/types';
-import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import type { Notification } from '@gatherle/commons/server/types';
+import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/server/types';
 import { NotificationDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import {
   publishEventSaveUpdated,

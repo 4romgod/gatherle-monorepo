@@ -7,7 +7,7 @@ import {
   User,
   UserRole,
   EventSeries,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { UserFeedDAO } from '@/mongodb/dao';
 import { validateMongodbId } from '@/validation';
 import type { ServerContext } from '@/graphql';

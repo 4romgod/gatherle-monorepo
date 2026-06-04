@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { UserFeedItem as UserFeedItemEntity } from '@gatherle/commons/types';
+import { UserFeedItem as UserFeedItemEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<UserFeedItemModel>('validate', function () {

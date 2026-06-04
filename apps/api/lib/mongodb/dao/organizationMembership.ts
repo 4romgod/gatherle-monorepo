@@ -3,7 +3,7 @@ import type {
   CreateOrganizationMembershipInput,
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
 class OrganizationMembershipDAO {

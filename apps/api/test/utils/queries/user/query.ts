@@ -1,4 +1,4 @@
-import type { QueryOptionsInput } from '@gatherle/commons/types';
+import type { QueryOptionsInput } from '@gatherle/commons/server/types';
 
 export const getReadUserByIdQuery = (userId: string) => {
   return {

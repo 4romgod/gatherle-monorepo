@@ -1,5 +1,5 @@
 import type { PipelineStage } from 'mongoose';
-import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/types';
+import { FollowApprovalStatus, FollowTargetType } from '@gatherle/commons/server/types';
 
 export const createEventLookupStages = (options?: { skipCounts?: boolean }): PipelineStage[] => {
   const skipCounts = options?.skipCounts ?? false;

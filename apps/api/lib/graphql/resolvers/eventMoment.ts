@@ -9,7 +9,7 @@ import {
   EventMomentPage,
   User,
   UserRole,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { validateInput } from '@/validation';
 import { CreateEventMomentInputSchema } from '@/validation/zod';
 import type { ServerContext } from '@/graphql';

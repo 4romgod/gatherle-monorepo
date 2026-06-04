@@ -1,4 +1,4 @@
-import type { PaginationInput } from '@gatherle/commons/types';
+import type { PaginationInput } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes } from '../../exceptions';
 
 export const MAX_QUERY_PAGE_SIZE = 50;

@@ -1,7 +1,7 @@
 import { RRule, type Options, type RRuleSet } from 'rrule';
 import { rrulestr } from 'rrule';
 import { logger } from './logger';
-import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@gatherle/commons';
+import { DATE_FILTER_OPTIONS, type DateFilterOption } from '@gatherle/commons/server';
 
 function toUtcDateTimeString(date: Date): string {
   return date

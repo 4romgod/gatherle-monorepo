@@ -10,7 +10,7 @@ import {
   QueryOptionsInput,
   UpdateOrganizationInput,
   UserRole,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { FollowDAO, OrganizationDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { validateInput, validateMongodbId } from '@/validation';

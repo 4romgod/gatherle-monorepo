@@ -1,6 +1,6 @@
 import { AuditLogDAO } from '@/mongodb/dao';
 import { AuditLog as AuditLogModel } from '@/mongodb/models';
-import { AuditAction, AuditTargetType, UserRole } from '@gatherle/commons/types';
+import { AuditAction, AuditTargetType, UserRole } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 

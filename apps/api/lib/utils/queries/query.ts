@@ -4,8 +4,8 @@ import type {
   QueryOptionsInput,
   SortInput,
   TextSearchInput,
-} from '@gatherle/commons/types';
-import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/server/types';
 import type { Model, Query } from 'mongoose';
 import { CustomError, ErrorTypes } from '../exceptions';
 import { buildTextSearchRegex } from './text-search';

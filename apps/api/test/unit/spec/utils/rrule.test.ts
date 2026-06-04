@@ -5,7 +5,7 @@ import {
   getNextOccurrence,
   splitRecurringRuleAtOccurrence,
 } from '@/utils/rrule';
-import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server';
 
 describe('RRule Utilities', () => {
   describe('hasOccurrenceInRange', () => {

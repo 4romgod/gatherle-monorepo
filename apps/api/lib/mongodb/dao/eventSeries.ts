@@ -7,7 +7,7 @@ import type {
   UpdateEventInput,
   CreateEventInput,
   EventsQueryOptionsInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import {
   CustomError,
   ErrorTypes,
@@ -19,7 +19,7 @@ import {
   logDaoError,
   areEventSchedulesEqual,
 } from '@/utils';
-import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus, EventStatus } from '@gatherle/commons';
+import { ParticipantStatus, DATE_FILTER_OPTIONS, EventOccurrenceStatus, EventStatus } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
 import { getDateRangeForFilter } from '@/utils/rrule';
 

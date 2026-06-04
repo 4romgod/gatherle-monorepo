@@ -5,8 +5,8 @@ import {
   testUserSystemUser,
   testUser2SystemUser,
 } from '@/mongodb/data/system';
-import type { UserWithToken } from '@gatherle/commons/types';
-import type { UserRole } from '@gatherle/commons/types';
+import type { UserWithToken } from '@gatherle/commons/server/types';
+import type { UserRole } from '@gatherle/commons/server/types';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 import { readRuntimeContext } from '../runtimeContext';
 

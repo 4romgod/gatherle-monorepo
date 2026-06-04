@@ -1,6 +1,6 @@
 import { EventSchema, CreateEventInputSchema, UpdateEventInputSchema, LocationSchema } from '@/validation';
 import mongoose from 'mongoose';
-import { EventStatus } from '@gatherle/commons/types/eventSeries';
+import { EventStatus } from '@gatherle/commons/server/types';
 
 describe('EventSeries', () => {
   const mockID = new mongoose.Types.ObjectId().toString();

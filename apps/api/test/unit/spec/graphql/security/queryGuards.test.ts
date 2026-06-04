@@ -2,8 +2,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { parse, type OperationDefinitionNode } from 'graphql';
 import { enforceQueryGuards, resolveQueryGuardLimits } from '@/graphql/security';
-import { APPLICATION_STAGES } from '@gatherle/commons';
-import { SortOrderInput } from '@gatherle/commons/types';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
+import { SortOrderInput } from '@gatherle/commons/server/types';
 
 const getOperation = (source: string): { document: ReturnType<typeof parse>; operation: OperationDefinitionNode } => {
   const document = parse(source);

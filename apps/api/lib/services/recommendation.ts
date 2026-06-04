@@ -4,7 +4,7 @@ import {
   FollowTargetType,
   type EventOccurrence,
   type User,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { GraphQLError } from 'graphql';
 import {
   EventOccurrenceDAO,

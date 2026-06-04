@@ -1,14 +1,14 @@
 import 'reflect-metadata';
 import { FollowResolver } from '@/graphql/resolvers/follow';
 import { EventSeriesDAO, FollowDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
-import type { CreateFollowInput, Follow, User, EventSeries } from '@gatherle/commons/types';
+import type { CreateFollowInput, Follow, User, EventSeries } from '@gatherle/commons/server/types';
 import {
   FollowTargetType,
   FollowApprovalStatus,
   UserRole,
   FollowPolicy,
   SocialVisibility,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { Types } from 'mongoose';
 import type { ServerContext } from '@/graphql';
 

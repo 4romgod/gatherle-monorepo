@@ -13,7 +13,7 @@ import { logger } from '@/utils/logger';
 import type { ApolloServerPlugin } from '@apollo/server';
 import { ApolloServer } from '@apollo/server';
 import { createServer } from 'http';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { ApolloServerErrorCode } from '@apollo/server/errors';
 import { HttpStatusCode } from '@/constants';
 import { ERROR_MESSAGES } from '@/validation';
@@ -32,7 +32,7 @@ import type {
   EventSeries,
   EventOccurrence,
   EventOccurrenceParticipant,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import type { AuthClaims } from '@/utils/auth';
 import type { APIGatewayProxyEvent, Context as LambdaContext } from 'aws-lambda';
 import { emitGraphqlQueryGuardMetrics } from '@/utils/graphqlQueryGuardMetrics';

@@ -7,8 +7,8 @@ import {
   SortOrderInput,
   type EventOccurrence,
   type EventSeries,
-} from '@gatherle/commons/types';
-import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
+} from '@gatherle/commons/server/types';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
 
 jest.mock('@/mongodb/dao', () => ({

@@ -1,5 +1,5 @@
-import type { CreateEventCategoryGroupInput, EventCategoryGroup } from '@gatherle/commons/types';
-import type { UserRole } from '@gatherle/commons/types';
+import type { CreateEventCategoryGroupInput, EventCategoryGroup } from '@gatherle/commons/server/types';
+import type { UserRole } from '@gatherle/commons/server/types';
 import { EventCategoryGroupDAO } from '@/mongodb/dao';
 import AuditLogService from './auditLog';
 

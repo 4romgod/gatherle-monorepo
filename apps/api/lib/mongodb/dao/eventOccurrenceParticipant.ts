@@ -3,8 +3,8 @@ import type {
   ParticipantVisibility,
   QueryOptionsInput,
   UpsertEventOccurrenceParticipantInput,
-} from '@gatherle/commons/types';
-import { FilterOperatorInput, ParticipantStatus, SortOrderInput } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { FilterOperatorInput, ParticipantStatus, SortOrderInput } from '@gatherle/commons/server/types';
 import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError, transformOptionsToQuery } from '@/utils';
 import type { PipelineStage } from 'mongoose';

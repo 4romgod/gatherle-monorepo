@@ -7,7 +7,7 @@ import type {
   SelectionSetNode,
 } from 'graphql';
 import { Kind } from 'graphql';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { CustomError, ErrorTypes } from '@/utils';
 
 type VariablesMap = Record<string, unknown>;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import { getDateFilterLabel } from '@gatherle/commons/client/utils';
 import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
@@ -266,15 +267,7 @@ export function EventsScreen() {
               <FilterChip
                 active
                 small
-                label={
-                  {
-                    TODAY: 'Today',
-                    TOMORROW: 'Tomorrow',
-                    THIS_WEEK: 'This Week',
-                    THIS_WEEKEND: 'This Weekend',
-                    THIS_MONTH: 'This Month',
-                  }[appliedFilters.dateOption] ?? appliedFilters.dateOption
-                }
+                label={getDateFilterLabel(appliedFilters.dateOption)}
                 onPress={openSheet}
                 onRemove={removeAppliedDateOption}
               />

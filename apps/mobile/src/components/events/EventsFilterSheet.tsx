@@ -9,6 +9,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
+import { getDateFilterLabel } from '@gatherle/commons/client/utils';
 import { DateFilterOption, EventCategory, EventStatus } from '@data/graphql/types/graphql';
 import { FilterChip } from '@/components/core/FilterChip';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
@@ -23,12 +24,15 @@ const STATUS_OPTIONS: { label: string; value: EventStatus; tone: 'primary' | 'su
 ];
 
 const DATE_OPTIONS: { label: string; value: DateFilterOption }[] = [
-  { label: 'Today', value: DateFilterOption.Today },
-  { label: 'Tomorrow', value: DateFilterOption.Tomorrow },
-  { label: 'This Week', value: DateFilterOption.ThisWeek },
-  { label: 'This Weekend', value: DateFilterOption.ThisWeekend },
-  { label: 'This Month', value: DateFilterOption.ThisMonth },
-];
+  DateFilterOption.Today,
+  DateFilterOption.Tomorrow,
+  DateFilterOption.ThisWeek,
+  DateFilterOption.ThisWeekend,
+  DateFilterOption.ThisMonth,
+].map((value) => ({
+  label: getDateFilterLabel(value),
+  value,
+}));
 
 type EventsFilterSheetProps = {
   visible: boolean;

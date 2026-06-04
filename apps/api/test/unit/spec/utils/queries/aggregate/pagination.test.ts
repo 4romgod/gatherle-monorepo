@@ -1,4 +1,4 @@
-import type { PaginationInput } from '@gatherle/commons/types';
+import type { PaginationInput } from '@gatherle/commons/server/types';
 import { MAX_QUERY_PAGE_SIZE, createPaginationStages } from '@/utils';
 
 describe('createPaginationStages', () => {

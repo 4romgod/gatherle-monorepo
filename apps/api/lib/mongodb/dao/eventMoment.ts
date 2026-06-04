@@ -1,6 +1,6 @@
-import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
-import type { EventMoment as EventMomentEntity, CreateEventMomentInput } from '@gatherle/commons/types';
-import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/server/constants';
+import type { EventMoment as EventMomentEntity, CreateEventMomentInput } from '@gatherle/commons/server/types';
+import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/server/types';
 import { EventMoment } from '@/mongodb/models';
 import { KnownCommonError, logDaoError } from '@/utils';
 

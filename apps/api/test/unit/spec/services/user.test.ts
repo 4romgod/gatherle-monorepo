@@ -133,8 +133,8 @@ import {
 } from '@/mongodb/dao';
 import AuditLogService from '@/services/auditLog';
 import { logger } from '@/utils/logger';
-import type { User } from '@gatherle/commons/types';
-import { FollowTargetType, UserRole } from '@gatherle/commons/types';
+import type { User } from '@gatherle/commons/server/types';
+import { FollowTargetType, UserRole } from '@gatherle/commons/server/types';
 
 describe('UserService', () => {
   const mockUser: Partial<User> = {

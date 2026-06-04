@@ -1,7 +1,7 @@
 import EventOccurrenceMaintenanceService from '@/services/eventOccurrenceMaintenance';
 import { EventOccurrenceDAO, EventSeriesDAO } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
-import { EventStatus, type EventSeries } from '@gatherle/commons/types';
+import { EventStatus, type EventSeries } from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceDAO: {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EventMomentType } from '@gatherle/commons/types';
+import { EventMomentType } from '@gatherle/commons/server/types';
 import { CHAT_MESSAGE_MAX_LENGTH } from '@/websocket/constants';
 
 const MOMENT_CAPTION_MAX_LENGTH = 280;

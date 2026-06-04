@@ -1,7 +1,7 @@
 import { createEventSeriesLoader } from '@/graphql/loaders';
 import { FollowDAO } from '@/mongodb/dao';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
-import type { EventSeries } from '@gatherle/commons/types';
+import type { EventSeries } from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/models', () => ({
   EventSeries: {

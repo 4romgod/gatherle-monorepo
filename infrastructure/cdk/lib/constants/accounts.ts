@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons/server';
 
 type Stage = (typeof APPLICATION_STAGES)[keyof typeof APPLICATION_STAGES];
 type Region = (typeof AWS_REGIONS)[keyof typeof AWS_REGIONS];

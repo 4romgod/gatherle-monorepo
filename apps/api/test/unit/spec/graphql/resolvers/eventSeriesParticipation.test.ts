@@ -9,8 +9,8 @@ import type {
   EventSeriesParticipant,
   EventSeries,
   User,
-} from '@gatherle/commons/types';
-import { ParticipantStatus } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { ParticipantStatus } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import { createMockContext } from '../../../../utils/mockContext';
 

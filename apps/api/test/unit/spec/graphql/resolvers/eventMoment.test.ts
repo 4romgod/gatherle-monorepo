@@ -3,7 +3,7 @@ import { __resetAnonymousMomentsFeedLimiterForTests, EventMomentResolver } from 
 import { EventMomentService } from '@/services';
 import { getAuthenticatedUser } from '@/utils';
 import { validateInput } from '@/validation';
-import { EventMomentType, EventMomentState } from '@gatherle/commons/types';
+import { EventMomentType, EventMomentState } from '@gatherle/commons/server/types';
 import { GraphQLError } from 'graphql';
 
 jest.mock('@/services', () => ({

@@ -1,6 +1,6 @@
 import { APPLE_OAUTH_CLIENT_IDS, GOOGLE_CLIENT_IDS } from '@/constants';
-import type { ExchangeOAuthInput } from '@gatherle/commons/types';
-import { OAuthProvider } from '@gatherle/commons/types';
+import type { ExchangeOAuthInput } from '@gatherle/commons/server/types';
+import { OAuthProvider } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes } from './exceptions';
 import { logger } from './logger';
 

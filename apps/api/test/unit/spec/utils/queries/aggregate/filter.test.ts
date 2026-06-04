@@ -1,7 +1,7 @@
 import { createEventPipelineStages, createLocationMatchStage, createTextSearchMatchStage } from '@/utils';
 import type { PipelineStage } from 'mongoose';
-import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/types';
-import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
+import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/server/types';
 
 describe('createEventPipelineStages', () => {
   it('should return a valid pipeline for simple equality filters', () => {

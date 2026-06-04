@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { REGEX_PHONE_NUMBER } from '@/constants';
-import { isDateNotInFuture } from '@gatherle/commons/utils';
-import { Gender, FollowPolicy, OAuthProvider, SocialVisibility } from '@gatherle/commons/types/user';
+import { isDateNotInFuture } from '@gatherle/commons/server/utils';
+import { Gender, FollowPolicy, OAuthProvider, SocialVisibility } from '@gatherle/commons/server/types';
 import { ERROR_MESSAGES, validateDate } from '@/validation/common';
 import mongoose from 'mongoose';
 

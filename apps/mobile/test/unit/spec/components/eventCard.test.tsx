@@ -141,7 +141,7 @@ describe('EventCard', () => {
     expect(screen.getByText('GH')).toBeTruthy();
   });
 
-  it('does not render a zero-going social proof pill when there is no social proof yet', () => {
+  it('renders only the standard attendance label when there is no social proof yet', () => {
     mockUseEventCardActions.mockReturnValue({
       cancelRsvp: jest.fn(),
       goingToEvent: jest.fn(),

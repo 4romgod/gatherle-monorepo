@@ -6,7 +6,7 @@ import { EmailService, UserService } from '@/services';
 import { emitAuthAbuseMetric } from '@/utils/authAbuseMetrics';
 import { logger } from '@/utils/logger';
 import type { ServerContext } from '@/graphql';
-import { UserRole } from '@gatherle/commons/types';
+import { UserRole } from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/dao', () => ({
   AuthAttemptDAO: {

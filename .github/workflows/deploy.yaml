@@ -480,6 +480,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
@@ -654,6 +657,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Commons TypeScript Artifacts Build
+        run: npm run build:ts -w @gatherle/commons
 
       - name: Generate Mobile GraphQL Artifacts
         working-directory: ./apps/mobile

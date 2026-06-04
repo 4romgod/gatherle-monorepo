@@ -1,5 +1,5 @@
-import type { EventMoment, EventSeries } from '@gatherle/commons/types';
-import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import type { EventMoment, EventSeries } from '@gatherle/commons/server/types';
+import { EventMomentState, EventMomentType, EventOrganizerRole } from '@gatherle/commons/server/types';
 import { EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import {
   buildRealtimeMomentSnapshot,
@@ -36,6 +36,7 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 type RealtimeEventContext = Pick<EventSeries, 'eventId' | 'organizers' | 'slug' | 'title'>;
+type RealtimeOrganizerUser = RealtimeEventContext['organizers'][number]['user'];
 
 const mockMoment: EventMoment = {
   momentId: 'moment-1',
@@ -66,6 +67,9 @@ const makeRealtimeEvent = (overrides: Partial<RealtimeEventContext> = {}): Realt
     organizers: [{ user: 'organizer-1' }, { user: { userId: 'organizer-2' } }],
     ...overrides,
   }) as RealtimeEventContext;
+
+const asOrganizerUser = (value: unknown): RealtimeOrganizerUser => value as RealtimeOrganizerUser;
+const makeOrganizer = (value: unknown) => ({ role: EventOrganizerRole.Host, user: asOrganizerUser(value) });
 
 describe('eventMomentRealtime', () => {
   beforeEach(() => {
@@ -125,15 +129,15 @@ describe('eventMomentRealtime', () => {
     it('dedupes recipients and ignores malformed organizer user shapes', async () => {
       const event = makeRealtimeEvent({
         organizers: [
-          { user: ' author-1 ' },
-          { user: ' organizer-1 ' },
-          { user: { userId: ' organizer-2 ' } },
-          { user: { _id: { toString: () => ' organizer-3 ' } } },
-          { user: { toString: () => ' organizer-4 ' } },
-          { user: { toString: () => '[object Object]' } },
-          { user: '' },
-          { user: '   ' },
-          { user: undefined },
+          makeOrganizer(' author-1 '),
+          makeOrganizer(' organizer-1 '),
+          makeOrganizer({ userId: ' organizer-2 ' }),
+          makeOrganizer({ _id: { toString: () => ' organizer-3 ' } }),
+          makeOrganizer({ toString: () => ' organizer-4 ' }),
+          makeOrganizer({ toString: () => '[object Object]' }),
+          makeOrganizer(''),
+          makeOrganizer('   '),
+          makeOrganizer(undefined),
         ],
       });
 

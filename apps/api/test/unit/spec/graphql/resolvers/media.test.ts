@@ -21,7 +21,7 @@ jest.mock('@/constants', () => ({
 }));
 
 import { MediaResolver } from '@/graphql/resolvers/media';
-import { MediaEntityType, MediaType } from '@gatherle/commons/types';
+import { MediaEntityType, MediaType } from '@gatherle/commons/server/types';
 import * as authUtils from '@/utils';
 import * as ServicesModule from '@/services';
 

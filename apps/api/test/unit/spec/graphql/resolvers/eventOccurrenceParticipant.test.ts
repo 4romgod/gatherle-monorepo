@@ -83,8 +83,8 @@ import { EventOccurrenceDAO, UserFeedDAO } from '@/mongodb/dao';
 import { EventOccurrenceParticipantService } from '@/services';
 import RecommendationService from '@/services/recommendation';
 import type { ServerContext } from '@/graphql';
-import type { EventOccurrence, EventOccurrenceParticipant, User } from '@gatherle/commons/types';
-import { ParticipantStatus } from '@gatherle/commons/types';
+import type { EventOccurrence, EventOccurrenceParticipant, User } from '@gatherle/commons/server/types';
+import { ParticipantStatus } from '@gatherle/commons/server/types';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({

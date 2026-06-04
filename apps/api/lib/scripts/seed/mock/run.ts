@@ -34,9 +34,9 @@ import type {
   UpdateVenueInput,
   User,
   Venue,
-} from '@gatherle/commons/types';
-import { ParticipantStatus, ParticipantVisibility } from '@gatherle/commons/types';
-import { EventVisibility } from '@gatherle/commons/types/eventSeries';
+} from '@gatherle/commons/server/types';
+import { ParticipantStatus, ParticipantVisibility } from '@gatherle/commons/server/types';
+import { EventVisibility } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 import EventSeriesService from '@/services/eventSeries';
 import { readSeededCatalogOrThrow } from '../catalog/run';

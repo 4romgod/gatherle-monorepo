@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { FeedResolver } from '@/graphql/resolvers/feed';
-import type { UserFeedItem, User } from '@gatherle/commons/types';
-import { FeedReason, UserRole } from '@gatherle/commons/types';
+import type { UserFeedItem, User } from '@gatherle/commons/server/types';
+import { FeedReason, UserRole } from '@gatherle/commons/server/types';
 import { createMockContext } from '../../../../utils/mockContext';
 
 jest.mock('@/mongodb/dao', () => {

@@ -8,7 +8,7 @@ import {
   User,
   UserRole,
   UpsertEventOccurrenceParticipantInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
 import { EventOccurrenceDAO, UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';

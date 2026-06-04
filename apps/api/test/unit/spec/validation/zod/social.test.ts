@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { CreateEventMomentInputSchema } from '@/validation/zod/social';
-import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/types';
+import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/server/types';
 
 const validId = new mongoose.Types.ObjectId().toString();
 

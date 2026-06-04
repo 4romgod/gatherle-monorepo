@@ -73,8 +73,8 @@ import {
 import AuditLogService from '@/services/auditLog';
 import OrganizationService from '@/services/organization';
 import { logger } from '@/utils/logger';
-import type { Organization, OrganizationMembership } from '@gatherle/commons/types';
-import { FollowTargetType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
+import type { Organization, OrganizationMembership } from '@gatherle/commons/server/types';
+import { FollowTargetType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/server/types';
 
 describe('OrganizationService', () => {
   const mockOrganization: Partial<Organization> = {

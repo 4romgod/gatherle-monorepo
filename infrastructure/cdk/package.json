@@ -15,12 +15,16 @@
     "cdk:dns": "cdk --app \"ts-node --project ./tsconfig.json --prefer-ts-exts ./lib/dns-app.ts\"",
     "cdk:github-auth": "cdk --app \"ts-node --project ./tsconfig.json --prefer-ts-exts ./lib/github-auth-app.ts\"",
     "cdk:secrets": "cdk --app \"ts-node --project ./tsconfig.json --prefer-ts-exts ./lib/secrets-app.ts\"",
-    "clean": "node -e \"require('fs').rmSync('cdk.out', { recursive: true, force: true })\""
+    "clean": "node -e \"require('fs').rmSync('cdk.out', { recursive: true, force: true })\"",
+    "lint:check": "eslint \"lib/**/*.ts\"",
+    "lint:fix": "eslint \"lib/**/*.ts\" --fix"
   },
   "devDependencies": {
+    "@typescript-eslint/parser": "^8.56.0",
     "aws-cdk": "^2.1117.0",
     "aws-cdk-lib": "^2.248.0",
     "dotenv": "^16.6.1",
+    "eslint": "^9.39.4",
     "esbuild": "^0.27.7",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"

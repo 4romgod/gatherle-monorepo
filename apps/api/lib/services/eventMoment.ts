@@ -4,14 +4,14 @@ import type {
   EventMoment,
   EventMomentPage,
   CreateEventMomentInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import {
   EventMomentState,
   EventMomentType,
   FollowApprovalStatus,
   FollowTargetType,
   ParticipantStatus,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { EventMomentDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, FollowDAO, UserDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import { MEDIA_CDN_DOMAIN, MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES } from '@/constants';

@@ -1,6 +1,6 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { GraphQLError } from 'graphql';
-import { EventMomentType } from '@gatherle/commons/types';
+import { EventMomentType } from '@gatherle/commons/server/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';

@@ -1,4 +1,4 @@
-import type { PaginationInput } from '@gatherle/commons/types';
+import type { PaginationInput } from '@gatherle/commons/server/types';
 import type { PipelineStage } from 'mongoose';
 import { validatePaginationInput } from '../validation';
 

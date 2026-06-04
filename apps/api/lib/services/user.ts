@@ -1,5 +1,5 @@
-import type { User, UserRole } from '@gatherle/commons/types';
-import { FollowTargetType } from '@gatherle/commons/types';
+import type { User, UserRole } from '@gatherle/commons/server/types';
+import { FollowTargetType } from '@gatherle/commons/server/types';
 import {
   ActivityDAO,
   EmailVerificationTokenDAO,

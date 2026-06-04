@@ -126,15 +126,15 @@ import {
   publishMomentCreatedForScopedRecipients,
   publishMomentDeletedForScopedRecipients,
 } from '@/services/eventMomentRealtime';
-import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
-import type { EventMoment, EventMomentPage } from '@gatherle/commons/types';
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/server/constants';
+import type { EventMoment, EventMomentPage } from '@gatherle/commons/server/types';
 import {
   EventMomentState,
   EventMomentType,
   FollowApprovalStatus,
   FollowTargetType,
   ParticipantStatus,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 
 describe('EventMomentService', () => {
   const now = Date.now();

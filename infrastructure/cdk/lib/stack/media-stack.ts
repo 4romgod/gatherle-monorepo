@@ -12,7 +12,7 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { CfnQueue } from 'aws-cdk-lib/aws-mediaconvert';
 import { join } from 'path';
 import { buildBackendSecretName, buildResourceName } from '../utils/naming';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 
 const pathRoot = join(__dirname, '../../../../');
 const pathApi = join(pathRoot, 'apps', 'api');

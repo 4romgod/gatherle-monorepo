@@ -1,8 +1,8 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/data/mock';
 import { usersMockData } from '@/mongodb/data/mock';
-import type { CreateEventInput, CreateUserInput, UserWithToken } from '@gatherle/commons/types';
-import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/types';
+import type { CreateEventInput, CreateUserInput, UserWithToken } from '@gatherle/commons/server/types';
+import { EventLifecycleStatus, EventStatus, EventVisibility } from '@gatherle/commons/server/types';
 import {
   getDeleteEventByIdMutation,
   getReadEventParticipantsQuery,

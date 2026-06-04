@@ -12,9 +12,7 @@ export {
   APP_LOGO_PATH,
   APP_NAMESPACE,
 } from './app';
-
-// Synced from @gatherle/commons/lib/constants/general.ts
-export const IMPORTED_EVENT_SYSTEM_USERNAME = 'gatherle-imports';
+export { IMPORTED_EVENT_SYSTEM_USERNAME } from '@gatherle/commons/client/constants';
 
 export type EventCategoryIconComponents = {
   [key: string]: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement> & React.RefAttributes<SVGSVGElement>>;

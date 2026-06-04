@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Ctx, Mutation, Resolver, Query, Authorized } from 'type-graphql';
-import { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, UserRole, Venue } from '@gatherle/commons/types';
+import { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, UserRole, Venue } from '@gatherle/commons/server/types';
 import { VenueDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';

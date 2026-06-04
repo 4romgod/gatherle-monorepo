@@ -1,5 +1,5 @@
-import type { Follow as FollowEntity, CreateFollowInput, QueryOptionsInput } from '@gatherle/commons/types';
-import { FollowApprovalStatus, FollowTargetType, SortOrderInput } from '@gatherle/commons/types';
+import type { Follow as FollowEntity, CreateFollowInput, QueryOptionsInput } from '@gatherle/commons/server/types';
+import { FollowApprovalStatus, FollowTargetType, SortOrderInput } from '@gatherle/commons/server/types';
 import { Follow as FollowModel } from '@/mongodb/models';
 import { CustomError, ErrorTypes, KnownCommonError, logDaoError, transformOptionsToQuery } from '@/utils';
 

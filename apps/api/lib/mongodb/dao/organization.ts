@@ -4,7 +4,7 @@ import type {
   Organization,
   QueryOptionsInput,
   UpdateOrganizationInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 
 class OrganizationDAO {

@@ -23,10 +23,10 @@ import type {
   QueryOptionsInput,
   UpdateEventOccurrenceInput,
   SortInput,
-} from '@gatherle/commons/types';
-import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/types';
-import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
-import { DATE_FILTER_OPTIONS } from '@gatherle/commons';
+} from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/server/types';
+import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/server/types';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server';
 import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
 import { logger } from '@/utils/logger';
 

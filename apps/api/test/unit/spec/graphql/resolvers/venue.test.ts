@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { VenueResolver } from '@/graphql/resolvers/venue';
 import { VenueDAO } from '@/mongodb/dao';
-import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/types';
-import { UserRole, VenueType } from '@gatherle/commons/types';
+import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/server/types';
+import { UserRole, VenueType } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 

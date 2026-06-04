@@ -1,10 +1,10 @@
-import type { CreateEventInput } from '@gatherle/commons/types';
+import type { CreateEventInput } from '@gatherle/commons/server/types';
 import {
   EventLifecycleStatus,
   EventPrivacySetting,
   EventStatus,
   EventVisibility,
-} from '@gatherle/commons/types/eventSeries';
+} from '@gatherle/commons/server/types';
 import { addDays, buildPrimarySchedule, nextWeekday, withTime } from '../utils';
 
 export type EventSeriesSeedData = CreateEventInput & {

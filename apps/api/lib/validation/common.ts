@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
-import { EventStatus } from '@gatherle/commons/types/eventSeries';
-import { Gender } from '@gatherle/commons/types/user';
+import { EventStatus } from '@gatherle/commons/server/types';
+import { Gender } from '@gatherle/commons/server/types';
 import { isValid, parseISO } from 'date-fns';
 
 export const validateMongodbId = (id: string, message?: string) => {

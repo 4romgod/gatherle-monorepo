@@ -1,7 +1,7 @@
 import { createUserLoader } from '@/graphql/loaders';
 import { User as UserModel } from '@/mongodb/models';
-import type { User } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { User } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/models', () => ({
   User: {

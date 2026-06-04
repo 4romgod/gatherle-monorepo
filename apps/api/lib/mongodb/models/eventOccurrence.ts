@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass } from '@typegoose/typegoose';
-import { EventOccurrence as EventOccurrenceEntity } from '@gatherle/commons/types';
+import { EventOccurrence as EventOccurrenceEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 class EventOccurrenceModel extends EventOccurrenceEntity {}

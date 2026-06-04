@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { FollowTargetType } from '@gatherle/commons/types/follow';
-import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
-import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/types/eventMoment';
+import { FollowTargetType } from '@gatherle/commons/server/types';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/server/types';
+import { EventMomentImageDisplayMode, EventMomentType } from '@gatherle/commons/server/types';
 import { ERROR_MESSAGES } from '@/validation';
 
 const objectIdSchema = z

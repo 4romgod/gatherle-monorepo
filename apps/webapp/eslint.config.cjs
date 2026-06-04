@@ -30,6 +30,35 @@ module.exports = [
         { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/consistent-type-imports': 'warn',
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@gatherle/commons',
+              message: 'Import browser-safe code from @gatherle/commons/client instead.',
+            },
+            {
+              name: '@gatherle/commons/types',
+              message: 'Do not import server model/schema code into the webapp.',
+            },
+            {
+              name: '@gatherle/commons/utils',
+              message: 'Import browser-safe utilities from @gatherle/commons/client/utils instead.',
+            },
+            {
+              name: '@gatherle/commons/validation',
+              message: 'Import browser-safe validation primitives from @gatherle/commons/client/validation instead.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['@gatherle/commons/types/*', '@gatherle/commons/validation/*', '@gatherle/commons/utils/*'],
+              message: 'Use the @gatherle/commons/client surface in the webapp.',
+            },
+          ],
+        },
+      ],
     },
   },
 ];

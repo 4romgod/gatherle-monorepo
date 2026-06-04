@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { kebabCase } from 'lodash';
-import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
-import { SortOrderInput } from '@gatherle/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/server/types';
+import { SortOrderInput } from '@gatherle/commons/server/types';
 import {
   getCreateEventCategoryMutation,
   getDeleteEventCategoryByIdMutation,

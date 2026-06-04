@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import request from 'supertest';
-import { SortOrderInput } from '@gatherle/commons/types';
+import { SortOrderInput } from '@gatherle/commons/server/types';
 import { testUserSystemUser } from '@/mongodb/data/system';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';

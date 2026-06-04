@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { buildAllowedCorsOrigins } from '@gatherle/commons';
+import { buildAllowedCorsOrigins } from '@gatherle/commons/server';
 import { CORS_ALLOWED_ORIGINS, STAGE } from '@/constants';
 
 export const getAllowedCorsOrigins = (): string[] => {

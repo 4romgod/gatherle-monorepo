@@ -1,8 +1,8 @@
 import { authChecker, generateToken, verifyToken, isAuthorizedByOperation } from '@/utils';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import { ERROR_MESSAGES } from '@/validation';
-import type { User } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { User } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
 import { EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';

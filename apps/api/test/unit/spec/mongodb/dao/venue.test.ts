@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { VenueDAO } from '@/mongodb/dao';
 import { Venue as VenueModel } from '@/mongodb/models';
-import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/types';
-import { VenueType } from '@gatherle/commons/types';
+import type { CreateVenueInput, QueryOptionsInput, UpdateVenueInput, Venue } from '@gatherle/commons/server/types';
+import { VenueType } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, transformOptionsToQuery } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

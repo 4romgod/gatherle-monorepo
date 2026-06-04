@@ -8,8 +8,8 @@ import type {
   EventOccurrence,
   EventOccurrenceParticipant,
   OrganizationMembership,
-} from '@gatherle/commons/types';
-import { EventStatus, ParticipantStatus, OrganizationRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { EventStatus, ParticipantStatus, OrganizationRole } from '@gatherle/commons/server/types';
 import type { ServerContext } from '@/graphql';
 import DataLoader from 'dataloader';
 import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';

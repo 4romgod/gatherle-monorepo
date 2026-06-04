@@ -1,4 +1,4 @@
-import { OAuthProvider } from '@gatherle/commons/types';
+import { OAuthProvider } from '@gatherle/commons/server/types';
 
 const mockCreateRemoteJWKSet = jest.fn();
 const mockJwtVerify = jest.fn();

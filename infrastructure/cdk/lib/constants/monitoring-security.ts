@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 
 // These thresholds are tuned for sustained operator-relevant spikes rather than
 // every ordinary 4xx/auth/query-guard blip. The corresponding alarms now use

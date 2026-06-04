@@ -7,7 +7,7 @@ import type {
   Organization,
   EventOccurrence,
   EventOccurrenceParticipant,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import type { ServerContext } from '@/graphql';
 import { getActiveOccurrenceRsvpCountContribution, pickRepresentativeOccurrence } from '@/utils';
 

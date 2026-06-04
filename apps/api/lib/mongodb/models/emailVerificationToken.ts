@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, index } from '@typegoose/typegoose';
-import { EmailVerificationToken as EmailVerificationTokenEntity } from '@gatherle/commons/types';
+import { EmailVerificationToken as EmailVerificationTokenEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 // Automatically expire documents 24 hours after creation (TTL index)

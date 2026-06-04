@@ -11,8 +11,8 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(?!test)(.*)$': '<rootDir>/lib/$1',
     '^@/test/(.*)$': '<rootDir>/test/$1',
-    '^@gatherle/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
-    '^@gatherle/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    '^@gatherle/commons/server$': '<rootDir>/../../packages/commons/lib/server/index.ts',
+    '^@gatherle/commons/server/(.*)$': '<rootDir>/../../packages/commons/lib/server/$1',
     // Map .js extension imports to .ts source files (required for Node16 module resolution with Jest)
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },

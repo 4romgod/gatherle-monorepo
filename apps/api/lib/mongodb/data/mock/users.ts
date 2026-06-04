@@ -1,5 +1,5 @@
-import type { CreateUserInput } from '@gatherle/commons/types';
-import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@gatherle/commons/types/user';
+import type { CreateUserInput } from '@gatherle/commons/server/types';
+import { Gender, SocialVisibility, UserRole, FollowPolicy } from '@gatherle/commons/server/types';
 
 export type MockUserSeedData = Omit<CreateUserInput, 'password'>;
 

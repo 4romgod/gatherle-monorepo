@@ -1,6 +1,6 @@
 import { readRuntimeContext } from './runtimeContext';
 import { cleanupOrphanedE2EUsers } from './utils/userResolverHelpers';
-import { UserRole } from '@gatherle/commons/types';
+import { UserRole } from '@gatherle/commons/server/types';
 
 const teardown = async () => {
   const graphqlUrl = process.env.GRAPHQL_URL;

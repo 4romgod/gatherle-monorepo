@@ -10,7 +10,7 @@ import {
   Organization,
   SocialVisibility,
   EventSeries,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { CreateFollowInputSchema } from '@/validation/zod';
 import { validateInput } from '@/validation';
 import { FollowDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';

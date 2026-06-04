@@ -1,7 +1,7 @@
 import { EventMomentDAO } from '@/mongodb/dao';
 import { EventMoment as EventMomentModel } from '@/mongodb/models';
-import type { EventMoment } from '@gatherle/commons/types';
-import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import type { EventMoment } from '@gatherle/commons/server/types';
+import { EventMomentImageDisplayMode, EventMomentState, EventMomentType } from '@gatherle/commons/server/types';
 import { MockMongoError } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({

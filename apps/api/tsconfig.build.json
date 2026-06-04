@@ -8,8 +8,6 @@
     "declaration": true,
     "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
     "paths": {
-      "@gatherle/commons": ["packages/commons/lib/index.ts"],
-      "@gatherle/commons/*": ["packages/commons/lib/*.ts", "packages/commons/lib/*/index.ts"],
       "@/*": ["apps/api/lib/*.ts", "apps/api/lib/*/index.ts"]
     }
   },

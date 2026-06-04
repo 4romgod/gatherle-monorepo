@@ -15,7 +15,7 @@ import type {
   UpdateEventInput,
   UpdateOrganizationInput,
   User,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import {
   EventLifecycleStatus,
   EventOrganizerRole,
@@ -25,7 +25,7 @@ import {
   FollowPolicy,
   SocialVisibility,
   UserRole,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { readSeededCatalogOrThrow } from '../catalog/run';
 import { ensureOwnerMembershipForOrganization } from '../shared/organizations';
 import { markSeedUserVerified } from '../shared/users';

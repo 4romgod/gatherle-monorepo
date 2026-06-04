@@ -65,8 +65,8 @@ jest.mock('@/utils/logger', () => ({
 
 import { NotificationService } from '@/services';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
-import type { Notification, User } from '@gatherle/commons/types';
-import { NotificationType, NotificationTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import type { Notification, User } from '@gatherle/commons/server/types';
+import { NotificationType, NotificationTargetType, ParticipantStatus } from '@gatherle/commons/server/types';
 
 describe('NotificationService', () => {
   const mockNotification: Notification = {

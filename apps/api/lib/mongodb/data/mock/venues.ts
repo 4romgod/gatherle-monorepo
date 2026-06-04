@@ -1,4 +1,4 @@
-import { VenueType } from '@gatherle/commons/types';
+import { VenueType } from '@gatherle/commons/server/types';
 
 export type VenueSeedData = {
   orgSlug: string;

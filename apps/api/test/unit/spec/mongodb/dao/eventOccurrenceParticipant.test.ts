@@ -1,7 +1,11 @@
 import { GraphQLError } from 'graphql';
 import { EventOccurrenceParticipantDAO } from '@/mongodb/dao';
 import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
-import { ParticipantStatus, ParticipantVisibility, type EventOccurrenceParticipant } from '@gatherle/commons/types';
+import {
+  ParticipantStatus,
+  ParticipantVisibility,
+  type EventOccurrenceParticipant,
+} from '@gatherle/commons/server/types';
 import { createMockSuccessMongooseQuery, createMockFailedMongooseQuery, type MockQueryOptions } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { Notification as NotificationEntity } from '@gatherle/commons/types';
+import { Notification as NotificationEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<NotificationModel>('validate', function () {

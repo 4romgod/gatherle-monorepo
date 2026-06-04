@@ -1,6 +1,10 @@
 import { EventCategoryDAO, EventCategoryGroupDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
-import type { CreateEventCategoryGroupInput, CreateEventCategoryInput, EventCategory } from '@gatherle/commons/types';
+import type {
+  CreateEventCategoryGroupInput,
+  CreateEventCategoryInput,
+  EventCategory,
+} from '@gatherle/commons/server/types';
 
 export async function seedEventCategories(categories: Array<CreateEventCategoryInput>) {
   logger.info('Ensuring event categories exist...');

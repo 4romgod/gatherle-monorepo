@@ -125,7 +125,7 @@ nationally then globally.
 **Strengths:**
 
 - ✅ Clean monorepo structure with proper workspace separation
-- ✅ Shared types via `@gatherle/commons` preventing duplication
+- ✅ Shared contracts via `@gatherle/commons/client/*` and `@gatherle/commons/server/*` preventing duplication
 - ✅ TypeGraphQL + Typegoose providing type-safe schema-to-DB pipeline
 - ✅ DataLoader implementation (User, EventCategory) addressing N+1 queries
 - ✅ Serverless Lambda deployment via CDK with API Gateway

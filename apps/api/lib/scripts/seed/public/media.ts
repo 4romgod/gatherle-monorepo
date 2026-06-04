@@ -2,7 +2,7 @@ import { CONTENT_TYPE_MAP, MEDIA_CDN_DOMAIN, MEDIA_ENTITY_FOLDER, STAGE } from '
 import { getS3ObjectSize, uploadToS3 } from '@/clients/AWS/s3Client';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import { logger } from '@/utils/logger';
-import { MediaEntityType, MediaType } from '@gatherle/commons/types';
+import { MediaEntityType, MediaType } from '@gatherle/commons/server/types';
 
 const MAX_IMPORTED_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 

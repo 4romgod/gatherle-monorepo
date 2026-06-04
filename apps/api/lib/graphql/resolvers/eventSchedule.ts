@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { FieldResolver, Int, Resolver, Root } from 'type-graphql';
-import { EventSchedule } from '@gatherle/commons/types';
+import { EventSchedule } from '@gatherle/commons/server/types';
 import { getScheduleAnchorStartAt, getScheduleDurationMinutes } from '@/utils';
 import { normalizeRecurrenceRule } from '@/utils/rrule';
 

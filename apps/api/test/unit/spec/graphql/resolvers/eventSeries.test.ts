@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { EventSeriesResolver } from '@/graphql/resolvers/eventSeries';
 import { EventSeriesDAO } from '@/mongodb/dao';
-import type { EventSeries } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { EventSeries } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 import EventSeriesService from '@/services/eventSeries';

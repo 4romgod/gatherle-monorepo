@@ -10,10 +10,10 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@gatherle/commons": ["packages/commons/lib/index.ts"],
-      "@gatherle/commons/types": ["packages/commons/lib/types/index.ts"],
-      "@gatherle/commons/types/*": ["packages/commons/lib/types/*.ts", "packages/commons/lib/types/*/index.ts"],
-      "@gatherle/commons/*": ["packages/commons/lib/*.ts", "packages/commons/lib/*/index.ts"]
+      "@gatherle/commons/client": ["packages/commons/lib/client/index.ts"],
+      "@gatherle/commons/client/*": ["packages/commons/lib/client/*.ts", "packages/commons/lib/client/*/index.ts"],
+      "@gatherle/commons/server": ["packages/commons/lib/server/index.ts"],
+      "@gatherle/commons/server/*": ["packages/commons/lib/server/*.ts", "packages/commons/lib/server/*/index.ts"]
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, ID, Int, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { NOTIFICATION_DESCRIPTIONS } from '@gatherle/commons';
-import { Notification, NotificationConnection, User, UserRole } from '@gatherle/commons/types';
+import { NOTIFICATION_DESCRIPTIONS } from '@gatherle/commons/server';
+import { Notification, NotificationConnection, User, UserRole } from '@gatherle/commons/server/types';
 import { NotificationDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { getAuthenticatedUser, CustomError, ErrorTypes } from '@/utils';

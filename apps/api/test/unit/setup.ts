@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons/server';
 
 const setup = async () => {
   console.log('\nSetting up unit tests...');

@@ -111,8 +111,8 @@ import {
   publishFollowRequestUpdated,
 } from '@/websocket/publisher';
 import { CustomError, ErrorTypes } from '@/utils';
-import type { Follow, User, Organization, EventSeries } from '@gatherle/commons/types';
-import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@gatherle/commons/types';
+import type { Follow, User, Organization, EventSeries } from '@gatherle/commons/server/types';
+import { FollowTargetType, FollowApprovalStatus, FollowPolicy, NotificationType } from '@gatherle/commons/server/types';
 import { GraphQLError } from 'graphql';
 
 // Set up mock implementations after imports so we can use GraphQLError
