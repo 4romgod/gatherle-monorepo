@@ -1,13 +1,14 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { useMutation } from '@apollo/client';
+import { useLazyQuery, useMutation } from '@apollo/client';
 import { usePersistentState } from '@/hooks';
 import EventMutationForm from '@/components/forms/eventMutation';
-import type { EventCategory } from '@/data/graphql/types/graphql';
+import { EventOrganizerRole, type EventCategory } from '@/data/graphql/types/graphql';
 
 const mockPush = jest.fn();
 const mockClearStorage = jest.fn();
 const mockCreateEvent = jest.fn();
 const mockUpdateEvent = jest.fn();
+const mockLoadUsers = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -32,6 +33,7 @@ jest.mock('@/data/graphql/query/Organization/query', () => ({
 
 jest.mock('@apollo/client', () => ({
   useQuery: jest.fn(() => ({ data: null, loading: false })),
+  useLazyQuery: jest.fn(),
   useMutation: jest.fn(),
 }));
 
@@ -105,7 +107,7 @@ const emptyEventData = {
   media: {},
   tags: {},
   location: { locationType: 'venue' },
-  organizers: [] as string[],
+  organizers: [{ user: 'user-123', role: EventOrganizerRole.Host }],
   additionalDetails: {},
   comments: {},
   eventLink: '',
@@ -113,8 +115,8 @@ const emptyEventData = {
   venueId: undefined,
   locationSnapshot: undefined,
   primarySchedule: {
-    startAt: undefined as unknown as Date,
-    endAt: undefined,
+    anchorStartAt: undefined as unknown as Date,
+    occurrenceDurationMinutes: 0,
     timezone: 'Africa/Johannesburg',
     recurrenceRule: '',
   },
@@ -126,7 +128,8 @@ const validEventData = {
   summary: 'A short event summary',
   description: 'A detailed description of the test event',
   primarySchedule: {
-    startAt: new Date('2026-06-01T10:00:00Z'),
+    anchorStartAt: new Date('2026-06-01T10:00:00Z'),
+    occurrenceDurationMinutes: 120,
     timezone: 'UTC',
     recurrenceRule: 'DTSTART:20260601T100000Z\nRRULE:FREQ=WEEKLY',
   },
@@ -141,7 +144,8 @@ const mockEventProp: any = {
   summary: 'Existing summary',
   description: 'Existing description',
   primarySchedule: {
-    startAt: new Date('2026-06-01T10:00:00Z'),
+    anchorStartAt: new Date('2026-06-01T10:00:00Z'),
+    occurrenceDurationMinutes: 120,
     timezone: 'UTC',
     recurrenceRule: 'DTSTART:20260601T100000Z',
   },
@@ -151,7 +155,18 @@ const mockEventProp: any = {
   privacySetting: 'Public',
   capacity: 50,
   eventCategories: [{ eventCategoryId: 'cat-1' }],
-  organizers: [],
+  organizers: [
+    {
+      role: EventOrganizerRole.Host,
+      user: {
+        userId: 'user-123',
+        username: 'testuser',
+        given_name: 'Test',
+        family_name: 'User',
+        profile_picture: null,
+      },
+    },
+  ],
   tags: {},
   media: {},
   eventLink: '',
@@ -159,6 +174,7 @@ const mockEventProp: any = {
 };
 
 function setupMutationMocks() {
+  (useLazyQuery as jest.Mock).mockReturnValue([mockLoadUsers, { data: { readUsers: [] }, loading: false }]);
   (useMutation as jest.Mock).mockImplementation((doc: unknown) => {
     if (doc === 'CreateEventDocument') {
       return [mockCreateEvent, { loading: false }];

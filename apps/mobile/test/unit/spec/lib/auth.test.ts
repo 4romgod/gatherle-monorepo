@@ -85,6 +85,11 @@ function loadAppleSignInModule({
   webappUrl?: string;
 }) {
   const isAvailableAsync = jest.fn().mockResolvedValue(appleAvailable);
+  const randomUUID = jest
+    .fn()
+    .mockReturnValueOnce('uuid-1')
+    .mockReturnValueOnce('uuid-2')
+    .mockReturnValue('uuid-repeat');
   const signInAsync = jest.fn();
   const openAuthSessionAsync = jest.fn();
   const nextEnv = { ...process.env };
@@ -105,6 +110,9 @@ function loadAppleSignInModule({
     isAvailableAsync,
     signInAsync,
   }));
+  jest.doMock('expo-crypto', () => ({
+    randomUUID,
+  }));
   jest.doMock('expo-web-browser', () => ({
     openAuthSessionAsync,
   }));
@@ -123,6 +131,7 @@ function loadAppleSignInModule({
     appleSignInModule: appleSignInModule!,
     isAvailableAsync,
     openAuthSessionAsync,
+    randomUUID,
     signInAsync,
   };
 }

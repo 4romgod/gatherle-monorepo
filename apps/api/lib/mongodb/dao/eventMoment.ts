@@ -429,9 +429,14 @@ class EventMomentDAO {
   }
 
   /** Mark a status as Failed after a MediaConvert error. */
-  static async markFailed(momentId: string): Promise<void> {
+  static async markFailed(momentId: string): Promise<EventMomentEntity | null> {
     try {
-      await EventMoment.updateOne({ momentId }, { $set: { state: EventMomentState.Failed } }).exec();
+      const doc = await EventMoment.findOneAndUpdate(
+        { momentId },
+        { $set: { state: EventMomentState.Failed } },
+        { new: true },
+      ).exec();
+      return doc ? doc.toObject() : null;
     } catch (error) {
       logDaoError('Error marking event moment failed', { error });
       throw KnownCommonError(error);

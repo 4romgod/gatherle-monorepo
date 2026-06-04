@@ -1,4 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
@@ -41,9 +42,7 @@ function asOptionalString(value: string | null | undefined): string | undefined 
 }
 
 function createAuthState() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}${Math.random()
-    .toString(36)
-    .slice(2, 12)}`;
+  return `${Crypto.randomUUID()}-${Crypto.randomUUID()}`;
 }
 
 function isAppleRequestCanceled(error: unknown): boolean {

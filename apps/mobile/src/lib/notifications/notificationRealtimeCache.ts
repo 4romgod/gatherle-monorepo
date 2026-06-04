@@ -16,6 +16,7 @@ import type {
   MobileRealtimeFollowRequestPayload,
   MobileRealtimeMomentCreatedPayload,
   MobileRealtimeMomentDeletedPayload,
+  MobileRealtimeMomentUpdatedPayload,
   MobileRealtimeNotificationDeletedPayload,
   MobileRealtimeNotificationPayload,
   MobileRealtimeNotificationsAllReadPayload,
@@ -607,6 +608,10 @@ export const createMobileNotificationRealtimeCacheHandlers = ({
     });
   };
 
+  const handleRealtimeMomentUpdated = (payload: MobileRealtimeMomentUpdatedPayload) => {
+    handleRealtimeMomentCreated(payload);
+  };
+
   const handleRealtimeMomentDeleted = (payload: MobileRealtimeMomentDeletedPayload) => {
     const momentCacheId = client.cache.identify({
       __typename: 'EventMoment',
@@ -668,6 +673,7 @@ export const createMobileNotificationRealtimeCacheHandlers = ({
     handleRealtimeNotificationsAllRead,
     handleRealtimeFollowRequest,
     handleRealtimeMomentCreated,
+    handleRealtimeMomentUpdated,
     handleRealtimeMomentDeleted,
   };
 };

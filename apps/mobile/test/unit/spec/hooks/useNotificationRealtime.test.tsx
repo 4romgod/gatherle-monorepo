@@ -40,6 +40,7 @@ const mockCacheHandlers = {
   handleRealtimeEventRsvp: jest.fn(),
   handleRealtimeFollowRequest: jest.fn(),
   handleRealtimeMomentCreated: jest.fn(),
+  handleRealtimeMomentUpdated: jest.fn(),
   handleRealtimeMomentDeleted: jest.fn(),
   handleRealtimeNotification: jest.fn(),
   handleRealtimeNotificationDeleted: jest.fn(),
@@ -179,6 +180,18 @@ describe('useNotificationRealtime', () => {
     });
 
     expect(mockCacheHandlers.handleRealtimeMomentCreated).toHaveBeenCalledWith(validMomentCreatedPayload);
+  });
+
+  it('dispatches moment.updated messages to the moment updated handler', () => {
+    renderHook(() => useNotificationRealtime(true));
+
+    const subscriberConfig = mockAddSharedRealtimeSubscriber.mock.calls[0][0];
+
+    act(() => {
+      subscriberConfig.onMessage(JSON.stringify({ type: 'moment.updated', payload: validMomentCreatedPayload }));
+    });
+
+    expect(mockCacheHandlers.handleRealtimeMomentUpdated).toHaveBeenCalledWith(validMomentCreatedPayload);
   });
 
   it('dispatches moment.deleted messages to the moment deleted handler', () => {

@@ -10,6 +10,7 @@ import {
   MAX_EVENT_MOMENT_VIDEO_SIZE_BYTES,
 } from '@/constants';
 import { EventMomentDAO } from '@/mongodb/dao';
+import { publishMomentUpdatedForScopedRecipients } from '@/services/eventMomentRealtime';
 import { logger } from '@/utils/logger';
 
 interface S3ObjectCreatedDetail {
@@ -33,6 +34,23 @@ const MEDIA_CONVERT_ROLE_ARN = getRequiredEnvVar('MEDIA_CONVERT_ROLE_ARN');
 
 let mediaConvertClient: MediaConvertClient | undefined;
 let isDbConnected = false;
+
+async function publishMomentLifecycleUpdateBestEffort(moment: Awaited<ReturnType<typeof EventMomentDAO.markFailed>>) {
+  if (!moment) {
+    return;
+  }
+
+  try {
+    await publishMomentUpdatedForScopedRecipients(moment);
+  } catch (error) {
+    logger.warn('Failed to publish moment.updated websocket event', {
+      error,
+      momentId: moment.momentId,
+      eventId: moment.eventId,
+      state: moment.state,
+    });
+  }
+}
 
 function getMediaConvertClient(): MediaConvertClient {
   if (!mediaConvertClient) {
@@ -62,7 +80,8 @@ async function markUploadedMomentFailed(rawKey: string): Promise<void> {
     return;
   }
 
-  await EventMomentDAO.markFailed(moment.momentId);
+  const failedMoment = await EventMomentDAO.markFailed(moment.momentId);
+  await publishMomentLifecycleUpdateBestEffort(failedMoment);
   logger.info('Marked rejected video moment as Failed', { momentId: moment.momentId, rawKey });
 }
 
@@ -139,6 +158,8 @@ export const startTranscodeJobHandler = async (
     logger.warn('No upload-pending video moment found for transcode key', { rawKey });
     return;
   }
+
+  await publishMomentLifecycleUpdateBestEffort(moment);
 
   const client = getMediaConvertClient();
   const hlsPrefix = hlsOutputPrefix(rawKey);
@@ -236,7 +257,8 @@ export const startTranscodeJobHandler = async (
 
     let failureUpdateError: unknown;
     try {
-      await EventMomentDAO.markFailed(moment.momentId);
+      const failedMoment = await EventMomentDAO.markFailed(moment.momentId);
+      await publishMomentLifecycleUpdateBestEffort(failedMoment);
     } catch (markFailedErr) {
       failureUpdateError = markFailedErr;
       logger.error('Failed to mark video moment Failed after MediaConvert submission error', {

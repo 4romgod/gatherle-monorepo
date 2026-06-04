@@ -20,6 +20,7 @@ import {
   isRealtimeFollowRequestPayload,
   isRealtimeMomentCreatedPayload,
   isRealtimeMomentDeletedPayload,
+  isRealtimeMomentUpdatedPayload,
   isRealtimeNotificationDeletedPayload,
   isRealtimeNotificationPayload,
   isRealtimeNotificationsAllReadPayload,
@@ -46,6 +47,7 @@ export function useNotificationRealtime(enabled: boolean = true) {
   const handleRealtimeNotificationsAllReadRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeEventSaveRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeMomentCreatedRef = useRef<((payload: unknown) => void) | null>(null);
+  const handleRealtimeMomentUpdatedRef = useRef<((payload: unknown) => void) | null>(null);
   const handleRealtimeMomentDeletedRef = useRef<((payload: unknown) => void) | null>(null);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export function useNotificationRealtime(enabled: boolean = true) {
       handleRealtimeNotificationsAllReadRef.current = null;
       handleRealtimeEventSaveRef.current = null;
       handleRealtimeMomentCreatedRef.current = null;
+      handleRealtimeMomentUpdatedRef.current = null;
       handleRealtimeMomentDeletedRef.current = null;
       return;
     }
@@ -70,6 +73,7 @@ export function useNotificationRealtime(enabled: boolean = true) {
       handleRealtimeNotificationsAllRead,
       handleRealtimeEventSave,
       handleRealtimeMomentCreated,
+      handleRealtimeMomentUpdated,
       handleRealtimeMomentDeleted,
     } = createNotificationRealtimeCacheHandlers({
       client,
@@ -144,6 +148,15 @@ export function useNotificationRealtime(enabled: boolean = true) {
       handleRealtimeMomentCreated(payload);
     };
 
+    handleRealtimeMomentUpdatedRef.current = (payload: unknown) => {
+      if (!isRealtimeMomentUpdatedPayload(payload)) {
+        logger.warn('Received malformed moment updated websocket payload');
+        return;
+      }
+
+      handleRealtimeMomentUpdated(payload);
+    };
+
     handleRealtimeMomentDeletedRef.current = (payload: unknown) => {
       if (!isRealtimeMomentDeletedPayload(payload)) {
         logger.warn('Received malformed moment deleted websocket payload');
@@ -203,6 +216,11 @@ export function useNotificationRealtime(enabled: boolean = true) {
 
     if (parsed.type === 'moment.created') {
       handleRealtimeMomentCreatedRef.current?.(parsed.payload);
+      return;
+    }
+
+    if (parsed.type === 'moment.updated') {
+      handleRealtimeMomentUpdatedRef.current?.(parsed.payload);
       return;
     }
 

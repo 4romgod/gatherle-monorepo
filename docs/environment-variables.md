@@ -130,6 +130,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
     `docs/frontend/media-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
     `S3BucketStack` CloudFormation output.
+  - `NEXT_PUBLIC_MEDIA_CDN_URL` — optional in local development and preview/beta paths. When omitted, the webapp CSP
+    falls back to `NEXT_PUBLIC_S3_MEDIA_URL` for `connect-src` / `media-src` so remote media previews still load.
 - These values stay local and are never checked in (respect `.gitignore` for `.env*`).
 
 ### Production & Staging
@@ -142,6 +144,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
 - `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
   reads come back from the API as stable CloudFront URLs in deployed environments.
+- `NEXT_PUBLIC_MEDIA_CDN_URL` should be set for deployed environments that serve media from CloudFront; if it is
+  temporarily absent, the webapp now falls back to `NEXT_PUBLIC_S3_MEDIA_URL` instead of blocking remote media.
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in

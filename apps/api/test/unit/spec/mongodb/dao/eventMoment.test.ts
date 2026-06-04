@@ -781,21 +781,37 @@ describe('EventMomentDAO', () => {
   });
 
   describe('markFailed', () => {
-    it('marks a moment as Failed', async () => {
-      (EventMomentModel.updateOne as jest.Mock).mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+    it('marks a moment as Failed and returns the updated moment', async () => {
+      const failedMoment: EventMoment = {
+        ...mockMoment,
+        state: EventMomentState.Failed,
+      };
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ toObject: () => failedMoment }),
       });
 
-      await EventMomentDAO.markFailed('moment-1');
+      const result = await EventMomentDAO.markFailed('moment-1');
 
-      expect(EventMomentModel.updateOne).toHaveBeenCalledWith(
+      expect(EventMomentModel.findOneAndUpdate).toHaveBeenCalledWith(
         { momentId: 'moment-1' },
         { $set: { state: EventMomentState.Failed } },
+        { new: true },
       );
+      expect(result).toEqual(failedMoment);
+    });
+
+    it('returns null when the moment does not exist', async () => {
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await EventMomentDAO.markFailed('moment-1');
+
+      expect(result).toBeNull();
     });
 
     it('throws on DB error', async () => {
-      (EventMomentModel.updateOne as jest.Mock).mockReturnValue({
+      (EventMomentModel.findOneAndUpdate as jest.Mock).mockReturnValue({
         exec: jest.fn().mockRejectedValue(new MockMongoError(0)),
       });
 

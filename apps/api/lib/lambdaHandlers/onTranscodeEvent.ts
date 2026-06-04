@@ -4,12 +4,30 @@ import { MongoDbClient, getConfigValue } from '@/clients';
 import { SECRET_KEYS, MAX_EVENT_MOMENT_VIDEO_DURATION_MS } from '@/constants';
 import { EventMomentDAO } from '@/mongodb/dao';
 import { deleteFromS3, deleteS3Prefix } from '@/clients/AWS/s3Client';
+import { publishMomentUpdatedForScopedRecipients } from '@/services/eventMomentRealtime';
 import { logger } from '@/utils/logger';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 
 const MEDIA_CDN_DOMAIN = process.env.MEDIA_CDN_DOMAIN || '';
 
 let isDbConnected = false;
+
+async function publishMomentLifecycleUpdateBestEffort(moment: Awaited<ReturnType<typeof EventMomentDAO.markFailed>>) {
+  if (!moment) {
+    return;
+  }
+
+  try {
+    await publishMomentUpdatedForScopedRecipients(moment);
+  } catch (error) {
+    logger.warn('Failed to publish moment.updated websocket event', {
+      error,
+      momentId: moment.momentId,
+      eventId: moment.eventId,
+      state: moment.state,
+    });
+  }
+}
 
 async function ensureDbConnected(): Promise<void> {
   if (!isDbConnected) {
@@ -112,7 +130,8 @@ export const onTranscodeEventHandler = async (
 
     if (!manifestS3Uri) {
       logger.error('No HLS manifest found in MediaConvert output', { momentId, rawS3Key });
-      await EventMomentDAO.markFailed(momentId);
+      const failedMoment = await EventMomentDAO.markFailed(momentId);
+      await publishMomentLifecycleUpdateBestEffort(failedMoment);
       return;
     }
 
@@ -125,7 +144,8 @@ export const onTranscodeEventHandler = async (
         momentId,
         rawS3Key,
       });
-      await EventMomentDAO.markFailed(momentId);
+      const failedMoment = await EventMomentDAO.markFailed(momentId);
+      await publishMomentLifecycleUpdateBestEffort(failedMoment);
       await cleanupRejectedVideoArtifacts(momentId, rawS3Key, hlsKey);
       return;
     }
@@ -140,7 +160,8 @@ export const onTranscodeEventHandler = async (
         durationSeconds,
         maxSeconds: MAX_EVENT_MOMENT_VIDEO_DURATION_MS / 1000,
       });
-      await EventMomentDAO.markFailed(momentId);
+      const failedMoment = await EventMomentDAO.markFailed(momentId);
+      await publishMomentLifecycleUpdateBestEffort(failedMoment);
       await cleanupRejectedVideoArtifacts(momentId, rawS3Key, hlsKey);
       return;
     }
@@ -148,7 +169,8 @@ export const onTranscodeEventHandler = async (
     logger.info('Marking moment as Ready', { momentId, rawS3Key, hlsUrl, durationSeconds });
 
     // thumbnailUrl is already set on the moment from the client upload — do not overwrite it.
-    await EventMomentDAO.markReady(momentId, hlsUrl, undefined, durationSeconds);
+    const readyMoment = await EventMomentDAO.markReady(momentId, hlsUrl, undefined, durationSeconds);
+    await publishMomentLifecycleUpdateBestEffort(readyMoment);
 
     // Delete the original raw upload — the HLS rendition(s) are the canonical source.
     // Use a non-throwing delete so a storage failure doesn't roll back the Ready state.
@@ -160,7 +182,8 @@ export const onTranscodeEventHandler = async (
     }
   } else if (detail.status === 'ERROR') {
     logger.error('MediaConvert job failed', { momentId, rawS3Key, errorMessage: detail.errorMessage ?? 'unknown' });
-    await EventMomentDAO.markFailed(momentId);
+    const failedMoment = await EventMomentDAO.markFailed(momentId);
+    await publishMomentLifecycleUpdateBestEffort(failedMoment);
   } else {
     logger.info('Ignoring non-terminal MediaConvert status', { momentId, status: detail.status });
   }

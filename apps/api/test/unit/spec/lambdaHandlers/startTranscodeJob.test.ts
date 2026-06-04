@@ -24,8 +24,10 @@ jest.mock('@/constants', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
     findByRawS3Key: jest.fn().mockResolvedValue(null),
-    claimTranscodeStart: jest.fn().mockResolvedValue({ momentId: 'moment-claim' }),
-    markFailed: jest.fn().mockResolvedValue(undefined),
+    claimTranscodeStart: jest
+      .fn()
+      .mockResolvedValue({ momentId: 'moment-claim', eventId: 'event-1', state: 'Transcoding' }),
+    markFailed: jest.fn().mockResolvedValue({ momentId: 'moment-claim', eventId: 'event-1', state: 'Failed' }),
   },
 }));
 
@@ -33,7 +35,12 @@ jest.mock('@/utils/logger', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+jest.mock('@/services/eventMomentRealtime', () => ({
+  publishMomentUpdatedForScopedRecipients: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Set required env vars before the module is loaded so getRequiredEnvVar() does not throw.
+process.env.AWS_REGION = process.env.AWS_REGION || 'eu-west-1';
 process.env.MEDIA_CONVERT_QUEUE_ARN =
   process.env.MEDIA_CONVERT_QUEUE_ARN || 'arn:aws:mediaconvert:eu-west-1:123456789012:queues/test-queue';
 process.env.MEDIA_CONVERT_ROLE_ARN = process.env.MEDIA_CONVERT_ROLE_ARN || 'arn:aws:iam::123456789012:role/test-role';
@@ -42,6 +49,7 @@ import type { EventBridgeEvent } from 'aws-lambda';
 import { CreateJobCommand } from '@aws-sdk/client-mediaconvert';
 import { deleteFromS3 } from '@/clients/AWS/s3Client';
 import { EventMomentDAO } from '@/mongodb/dao';
+import { publishMomentUpdatedForScopedRecipients } from '@/services/eventMomentRealtime';
 import { logger } from '@/utils/logger';
 import { startTranscodeJobHandler } from '@/lambdaHandlers/startTranscodeJob';
 
@@ -70,9 +78,18 @@ describe('startTranscodeJobHandler', () => {
     jest.clearAllMocks();
     mockSend.mockResolvedValue({});
     (EventMomentDAO.findByRawS3Key as jest.Mock).mockResolvedValue(null);
-    (EventMomentDAO.claimTranscodeStart as jest.Mock).mockResolvedValue({ momentId: 'moment-claim' });
-    (EventMomentDAO.markFailed as jest.Mock).mockResolvedValue(undefined);
+    (EventMomentDAO.claimTranscodeStart as jest.Mock).mockResolvedValue({
+      momentId: 'moment-claim',
+      eventId: 'event-1',
+      state: 'Transcoding',
+    });
+    (EventMomentDAO.markFailed as jest.Mock).mockResolvedValue({
+      momentId: 'moment-claim',
+      eventId: 'event-1',
+      state: 'Failed',
+    });
     (deleteFromS3 as jest.Mock).mockResolvedValue(undefined);
+    (publishMomentUpdatedForScopedRecipients as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('file type filtering', () => {

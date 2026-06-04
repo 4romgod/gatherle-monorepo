@@ -143,7 +143,6 @@ Realtime connections are authenticated separately in `apps/api/lib/websocket/rou
 
 The socket handshake accepts:
 
-- `Authorization` header
 - `Sec-WebSocket-Protocol` with `gatherle.jwt.<token>`
 
 It verifies the same Gatherle JWT via `verifyToken(...)` and ties the connection to the authenticated `userId`.

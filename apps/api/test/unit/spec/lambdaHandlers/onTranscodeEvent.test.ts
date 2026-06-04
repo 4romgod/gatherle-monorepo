@@ -13,8 +13,8 @@ jest.mock('@/constants', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventMomentDAO: {
     findByRawS3Key: jest.fn().mockResolvedValue(null),
-    markReady: jest.fn().mockResolvedValue(null),
-    markFailed: jest.fn().mockResolvedValue(undefined),
+    markReady: jest.fn().mockResolvedValue({ momentId: 'moment-ready', eventId: 'event-1', state: 'Ready' }),
+    markFailed: jest.fn().mockResolvedValue({ momentId: 'moment-failed', eventId: 'event-1', state: 'Failed' }),
   },
 }));
 
@@ -27,7 +27,12 @@ jest.mock('@/utils/logger', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+jest.mock('@/services/eventMomentRealtime', () => ({
+  publishMomentUpdatedForScopedRecipients: jest.fn().mockResolvedValue(undefined),
+}));
+
 import type { EventBridgeEvent } from 'aws-lambda';
+import { publishMomentUpdatedForScopedRecipients } from '@/services/eventMomentRealtime';
 
 interface MediaConvertEventDetail {
   status: string;
@@ -93,6 +98,7 @@ describe('onTranscodeEventHandler', () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.MEDIA_CDN_DOMAIN = 'cdn.example.com';
+    (publishMomentUpdatedForScopedRecipients as jest.Mock).mockResolvedValue(undefined);
   });
 
   afterEach(() => {

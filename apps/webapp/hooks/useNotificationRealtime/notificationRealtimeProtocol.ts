@@ -153,6 +153,8 @@ export type RealtimeMomentCreatedPayload = {
   };
 };
 
+export type RealtimeMomentUpdatedPayload = RealtimeMomentCreatedPayload;
+
 export type RealtimeMomentDeletedPayload = {
   momentId: string;
   eventId: string;
@@ -339,6 +341,10 @@ export const isRealtimeMomentCreatedPayload = (value: unknown): value is Realtim
     typeof value.moment.event.slug === 'string' &&
     typeof value.moment.event.title === 'string'
   );
+};
+
+export const isRealtimeMomentUpdatedPayload = (value: unknown): value is RealtimeMomentUpdatedPayload => {
+  return isRealtimeMomentCreatedPayload(value);
 };
 
 export const isRealtimeMomentDeletedPayload = (value: unknown): value is RealtimeMomentDeletedPayload => {

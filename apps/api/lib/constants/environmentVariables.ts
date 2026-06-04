@@ -23,6 +23,7 @@ const BaseEnvSchema = z.object({
   GOOGLE_OAUTH_CLIENT_ID_WEB: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_ANDROID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_IOS: z.string().optional(),
+  // Apple client IDs are fixed constants in code (`com.gatherle.web` / `com.gatherle.mobile`).
   LOG_LEVEL: z
     .string()
     .toLowerCase()

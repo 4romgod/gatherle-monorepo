@@ -30,6 +30,7 @@ export const WEBSOCKET_EVENT_TYPES = {
   FOLLOW_REQUEST_CREATED: 'follow.request.created',
   FOLLOW_REQUEST_UPDATED: 'follow.request.updated',
   MOMENT_CREATED: 'moment.created',
+  MOMENT_UPDATED: 'moment.updated',
   MOMENT_DELETED: 'moment.deleted',
   PING_PONG: 'ping.pong',
 } as const;

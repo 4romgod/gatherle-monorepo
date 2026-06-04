@@ -24,6 +24,7 @@ const buildContentSecurityPolicy = () => {
   const websocketOrigin = getOrigin(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
   const s3MediaOrigin = getOrigin(process.env.NEXT_PUBLIC_S3_MEDIA_URL);
   const mediaCdnOrigin = getOrigin(process.env.NEXT_PUBLIC_MEDIA_CDN_URL);
+  const effectiveMediaOrigin = mediaCdnOrigin ?? s3MediaOrigin;
 
   if (graphqlOrigin) {
     connectSources.add(graphqlOrigin);
@@ -40,13 +41,13 @@ const buildContentSecurityPolicy = () => {
   // hls.js loads .m3u8 manifests and .ts segments via XHR — the CDN origin must
   // appear in connect-src for these requests to succeed. Same origin also goes in
   // media-src so the <video> element can load the stream directly.
-  if (mediaCdnOrigin) {
-    connectSources.add(mediaCdnOrigin);
+  if (effectiveMediaOrigin) {
+    connectSources.add(effectiveMediaOrigin);
   }
 
   const mediaSources = ["'self'", 'blob:'];
-  if (mediaCdnOrigin) {
-    mediaSources.push(mediaCdnOrigin);
+  if (effectiveMediaOrigin) {
+    mediaSources.push(effectiveMediaOrigin);
   }
 
   const imgSources = ["'self'", 'data:', 'blob:', 'https:'];
